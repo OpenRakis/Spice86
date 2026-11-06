@@ -51,6 +51,10 @@ public class DosProcessManagerTests {
         rootPsp.CurrentSize.Should().Be(
             (ushort)(DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs));
         rootPsp.EnvironmentTableSegment.Should().Be((ushort)(DosProcessManager.CommandComSegment + 8));
+
+        EnvironmentBlockInfo environment = ReadEnvironmentBlockInfo(context.Memory, rootPsp.EnvironmentTableSegment);
+        environment.AdditionalStringCount.Should().Be(AdditionalEnvironmentStringsCount);
+        environment.ProgramPath.Should().Be(@"C:\COMMAND.COM");
     }
 
     [Fact]

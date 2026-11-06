@@ -50,13 +50,28 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService) : base(state, loggerService) {
+    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService)
+        : this(memory, functionHandlerProvider, stack, state, loggerService, ServiceSelector.Ah) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="serviceSelector">The register used to select a service.</param>
+    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ILogger loggerService, ServiceSelector serviceSelector) : base(state, loggerService) {
         Memory = memory;
         FunctionHandlerProvider = functionHandlerProvider;
         Stack = stack;
-        _declarations = InterruptServiceAttributes.Of(GetType());
-        foreach (InterruptServiceEntry entry in _declarations.Services) {
-            AddServiceAction(entry.SelectorValue, ServiceActionOf(entry.Method), entry.Contract);
+        ServiceSelector = serviceSelector;
+        _declarations = InterruptServiceAttributes.Of(GetType(), serviceSelector);
+        foreach ((MethodInfo method, InterruptServiceEntry entry) in _declarations.Services) {
+            AddServiceAction(entry.SelectorValue, ServiceActionOf(method), entry);
         }
     }
 
@@ -78,18 +93,18 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>Register the handler reads to select the service to run. Used only when the
     /// type declares its services with the selector form of
     /// <see cref="InterruptServiceAttribute"/>.</summary>
-    protected virtual ServiceSelector ServiceSelector => ServiceSelector.Ah;
+    protected ServiceSelector ServiceSelector { get; }
 
     /// <inheritdoc />
     public HandlerServices Services => _services ??= BuildServices();
 
     private HandlerServices BuildServices() {
-        return _declarations.SingleContract is { } single
-            ? new HandlerServices.SingleService(single)
-            : new HandlerServices.SelectedServices(ServiceSelector, _serviceContracts);
+        return _declarations.SingleService is { } single
+            ? new HandlerServices.SingleService(single.Entry)
+            : new HandlerServices.SelectedServices(ServiceSelector, _serviceEntries);
     }
 
-    private readonly Dictionary<int, ServiceContract> _serviceContracts = new();
+    private readonly Dictionary<int, InterruptServiceEntry> _serviceEntries = new();
 
     /// <summary>
     /// Runs the runnables at the given index.
@@ -111,23 +126,24 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     /// <summary>
-    /// Stores the Action at the given index, with <see cref="ServiceContract.Unknown"/> as its contract.
+    /// Stores the Action at the given index, with <see cref="InterruptServiceEntry.Unknown"/> effects.
     /// </summary>
     /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
     /// <param name="action">The C# method that implements the function called via the interrupt.</param>
     public void AddAction(int index, Action action) {
-        AddServiceAction(index, action, ServiceContract.Unknown);
+        AddServiceAction(index, action, new InterruptServiceEntry(index, action.Method.Name,
+            ServiceContract.Unknown, ServiceStringArgument.None, null, []));
     }
 
     /// <summary>
-    /// Stores the Action at the given index along with its service contract.
+    /// Stores the Action at the given index along with its service entry.
     /// </summary>
     /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
     /// <param name="action">The C# method that implements the function called via the interrupt.</param>
-    /// <param name="contract">The declared contract of the service.</param>
-    private void AddServiceAction(int index, Action action, ServiceContract contract) {
+    /// <param name="entry">The declared entry of the service.</param>
+    private void AddServiceAction(int index, Action action, InterruptServiceEntry entry) {
         AddRunnable(index, new RunnableAction(action));
-        _serviceContracts[index] = contract;
+        _serviceEntries[index] = entry;
     }
 
     /// <inheritdoc />
@@ -165,6 +181,24 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         if (_interruptStackPresent && setOnStack) {
             Stack.SetFlagOnInterruptStack(Flags.Zero, value);
         }
+    }
+
+    /// <summary>Reads the caller's Carry Flag: the stacked flag word of the interrupt frame when
+    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
+    protected bool ReadCarryFlag(bool calledFromVm) {
+        if (_interruptStackPresent && calledFromVm) {
+            return (Stack.Peek16(4) & Flags.Carry) != 0;
+        }
+        return State.CarryFlag;
+    }
+
+    /// <summary>Reads the caller's Zero Flag: the stacked flag word of the interrupt frame when
+    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
+    protected bool ReadZeroFlag(bool calledFromVm) {
+        if (_interruptStackPresent && calledFromVm) {
+            return (Stack.Peek16(4) & Flags.Zero) != 0;
+        }
+        return State.ZeroFlag;
     }
 
     /// <summary>

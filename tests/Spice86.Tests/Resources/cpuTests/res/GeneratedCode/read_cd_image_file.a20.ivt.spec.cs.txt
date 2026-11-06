@@ -154,7 +154,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte flagOperand_011D = 0;
@@ -169,9 +169,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x016A
         DX = 0x016A;
         // 016D:0103 mov AX,0x3D00
-        AX = 0x3D00;
         // 016D:0106 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0108, 0, 0x016A, DS, "D:\\README.TXT");
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016A, '\0', "D:\\README.TXT"));
         // 016D:0108 jb short 0x0159
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0159, SpeculativeRun_0159);
@@ -188,7 +188,8 @@ public partial class CfgGeneratedOverrides {
             DX = 0x0178;
             // 016D:0112 mov AH,0x3F
             // 016D:0114 int 0x21
-            Dos.ReadFileOrDevice(cs1, 0x0116, 8, 0x0178, BX, DS);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.ReadFile(BX, 8, DS, 0x0178);
             // 016D:0116 jb short 0x015D
             if (!CarryFlag) {
                 // 016D:0118 cmp AX,8
@@ -265,7 +266,8 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(AX);
             // 016D:0160 mov AH,0x3E
             // 016D:0162 int 0x21
-            Dos.CloseFileOrDevice(cs1, 0x0164, BX);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
             // 016D:0164 pop AX
             AX = Stack.Pop16();
         }

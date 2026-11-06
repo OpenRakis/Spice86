@@ -151,23 +151,26 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         byte al1 = 0;
         ushort flagOperand_010F = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        bx1 = Dos.ReadPspAddress();
         // 016D:0104 mov ES,BX
-        ES = BX;
+        ES = bx1;
         // 016D:0106 mov AH,0x67
+        AH = 0x67;
         // 016D:0108 mov BX,0x0030
         BX = 0x0030;
         // 016D:010B int 0x21
-        Dos.SetHandleCount(cs1, 0x010D, 0x0030);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.ResizeHandleTable(0x0030, AX);
         // 016D:010D jb short 0x011B
         if (!CarryFlag) {
             // 016D:010F cmp word ptr ES:[0x0032],0x0030
@@ -357,7 +360,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: BX, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

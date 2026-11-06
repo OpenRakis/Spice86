@@ -163,21 +163,22 @@ public partial class CfgGeneratedOverrides {
         // 016D:0109 mov AH,0x3F
         AH = 0x3F;
         // 016D:010B int 0x21
-        Dos.ReadFileOrDevice(cs1, 0x010D, 1, 0x0125, 0, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.ReadFile(0, 1, DS, 0x0125);
         // 016D:010D mov AH,0x44
         AH = 0x44;
         // 016D:010F mov AL,6
         AL = 6;
         // 016D:0111 xor BX,BX
         BX = 0;
-        CarryFlag = false;
         ParityFlag = true;
         AuxiliaryFlag = false;
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
         // 016D:0113 int 0x21
-        Dos.IoControl(cs1, 0x0115, 6, 1, 0x0125, 0, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, DX, CarryFlag) = Dos.IoControl(0x4406, 1, 0x0125, 0, DS);
         // 016D:0115 mov AH,7
         AH = 7;
         // 016D:0117 mov BX,0xB800

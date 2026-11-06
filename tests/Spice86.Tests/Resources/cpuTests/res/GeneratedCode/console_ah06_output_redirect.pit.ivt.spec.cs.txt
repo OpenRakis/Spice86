@@ -157,7 +157,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 mov DL,0x51
         DL = 0x51;
         // 016D:0104 int 0x21
-        Dos.DirectConsoleIo(cs1, 0x0106, 0x51);
+        Dos.RecordCallerStack(SS, SP);
+        (AL, ZeroFlag) = Dos.DirectConsoleIo(0x51, AL, ZeroFlag);
         // 016D:0106 mov AX,0x4C00
         AX = 0x4C00;
         // 016D:0109 int 0x21

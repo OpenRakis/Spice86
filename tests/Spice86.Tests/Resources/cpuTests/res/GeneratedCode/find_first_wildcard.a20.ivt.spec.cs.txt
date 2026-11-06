@@ -155,9 +155,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort dx1 = 0;
         byte al;
         byte al1 = 0;
         byte flagOperand_0122 = 0;
@@ -166,9 +167,10 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x1A
         AH = 0x1A;
         // 016D:0102 mov DX,0x0258
-        DX = 0x0258;
+        dx1 = 0x0258;
         // 016D:0105 int 0x21
-        Dos.SetDiskTransferAddress(cs1, 0x0107, 0x0258, DS);
+        Dos.RecordCallerStack(SS, SP);
+        Dos.SetDiskTransferAddress(DS, 0x0258);
         // 016D:0107 mov SI,0x0147
         SI = 0x0147;
         // 016D:010A mov CX,0
@@ -188,12 +190,12 @@ public partial class CfgGeneratedOverrides {
             // 016D:0114 push SI
             Stack.Push16(SI);
             // 016D:0115 mov DX,BX
-            DX = BX;
+            dx1 = BX;
             // 016D:0117 mov CX,0
-            CX = 0;
             // 016D:011A mov AH,0x4E
             // 016D:011C int 0x21
-            Dos.FindFirstMatchingFile(cs1, 0x011E, 0, DX, DS);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, dx1, '\0'), 0);
             // 016D:011E pop SI
             SI = Stack.Pop16();
             // 016D:011F pop CX
@@ -230,7 +232,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0136 mov AL,CL
         al = CL;
         // 016D:0138 mov DX,0x0998
-        DX = 0x0998;
+        dx1 = 0x0998;
         // 016D:013B out DX,AL
         Out8(0x0998, al);
         VerifySpeculativeRunOrFail(cs1, 0x013C, SpeculativeRun_013C);

@@ -186,8 +186,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0112 pop DS
         DS = Stack.Pop16();
         // 016D:0113 mov AH,2
+        AH = 2;
         // 016D:0115 int 0x21
-        Dos.DisplayOutput(cs1, 0x0117, DL);
+        InterruptCall(cs1, 0x0117, 0x21);
         // 016D:0117 mov AL,0
         AL = 0;
         // 016D:0119 jmp short 0x011D
@@ -202,7 +203,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0122 mov AH,0x62
         AH = 0x62;
         // 016D:0124 int 0x21
-        Dos.GetPspAddress(cs1, 0x0126);
+        BX = Dos.ReadPspAddress();
         // 016D:0126 mov ES,BX
         ES = BX;
         // 016D:0128 mov AX,word ptr ES:[0x002C]

@@ -14,8 +14,8 @@ public class DummyInt1CHandler : IInterruptHandler {
     public byte VectorNumber => 0x1C;
 
     /// <summary>The handler is a bare <c>iret</c>: it has no effect.</summary>
-    [InterruptService]
-    private void Tick() {
+    [InterruptService(Implementation = nameof(Tick), Inputs = [])]
+    public void Tick() {
     }
 
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {

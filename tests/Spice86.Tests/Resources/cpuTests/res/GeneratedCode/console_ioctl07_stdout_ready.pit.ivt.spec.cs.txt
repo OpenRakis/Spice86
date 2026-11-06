@@ -161,7 +161,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 mov BX,1
         BX = 1;
         // 016D:0107 int 0x21
-        Dos.IoControl(cs1, 0x0109, 7, CX, DX, 1, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, DX, CarryFlag) = Dos.IoControl(0x4407, CX, DX, 1, DS);
         // 016D:0109 mov AH,7
         AH = 7;
         // 016D:010B mov BX,0xB800

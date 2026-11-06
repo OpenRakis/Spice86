@@ -2,8 +2,9 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
+
 using System.Linq;
-using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 
 /// <summary>
 /// Computes a one-line description of every registered callback for the generated code's
@@ -36,15 +37,15 @@ public static class CallbackDescriptions {
     private static string DescribeHandler(IInterruptHandler handler) {
         string vector = $"INT {handler.VectorNumber:X2}h";
         string group = handler.GetType().Name;
-        if (InterruptServiceGroups.TryGetPropertyName(handler.VectorNumber,
-            out string? propertyName)) {
-            group = propertyName;
+        string? receiverName = IrInterruptServiceCalls.ReceiverName(handler.GetType());
+        if (receiverName is not null) {
+            group = receiverName;
         }
         switch (handler.Services) {
             case HandlerServices.SingleService single:
-                if (single.Contract is { IsUnknown: false }
-                    && InterruptServiceGroups.TryGetPropertyName(handler.VectorNumber, out _)) {
-                    return $"{vector}: {group}.{single.Contract.Name}";
+                if (!ReferenceEquals(single.Service.Contract, ServiceContract.Unknown)
+                    && receiverName is not null) {
+                    return $"{vector}: {group}.{single.Service.Name}";
                 }
                 return $"{vector}: {handler.GetType().Name}";
             case HandlerServices.SelectedServices selected:

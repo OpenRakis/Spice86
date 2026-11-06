@@ -85,6 +85,26 @@ public sealed class AsmFixtureGoldenCoverageTest {
             .And.NotContain("has no committed golden file");
     }
 
+    /// <summary>The committed readability baseline files cover exactly the catalogue generated-source
+    /// keys: every key needs a validated fixture file and no orphan file may remain.</summary>
+    [Fact]
+    public void ReadabilityBaselineCoversExactlyTheCatalogue() {
+        // Arrange
+        IEnumerable<string> expected = GeneratedScenarioCatalog.CaseKeys
+            .Select(row => (string)row[0] + ".json").Append("metadata.json");
+        GeneratedCodeMetricsAssertions.LoadBaseline();
+        IEnumerable<string> actual = Directory.EnumerateFiles(GeneratedCodeMetricsAssertions.BaselineDirectory)
+            .Select(path => Path.GetFileName(path));
+
+        // Act
+        GoldenFileSetDiff diff = GoldenCoverageGate.CompareFileSet(expected.ToArray(), actual.ToArray());
+        List<string> problems = new();
+        AppendFileSetProblems(problems, "GeneratedCodeReadability", diff);
+
+        // Assert
+        problems.Should().BeEmpty("every catalogue key needs a validated readability baseline, with no orphan files");
+    }
+
     /// <summary>Every resource a catalogue scenario depends on exists in the committed resources, so a
     /// renamed or deleted child program, overlay or data file fails here instead of at run time.</summary>
     [Fact]

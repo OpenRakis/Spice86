@@ -10,8 +10,8 @@ internal sealed record InterruptCallHelperNode : MethodCallNode {
     /// <param name="kind">How the site ends up printed.</param>
     /// <param name="service">The installed service vector of the site, non-null only for
     /// <see cref="InterruptSiteKind.BuiltInNotAnalysed"/> and the refined kinds
-    /// (<see cref="InterruptSiteKind.SelectorUnknown"/>, <see cref="InterruptSiteKind.NoContract"/>)
-    /// the service-call pass prints.</param>
+    /// (<see cref="InterruptSiteKind.SelectorUnknown"/>, <see cref="InterruptSiteKind.NoContract"/>,
+    /// <see cref="InterruptSiteKind.BuiltInDispatch"/>) the service-call pass prints.</param>
     /// <param name="selectorValue">The selector value the site was classified with, when the
     /// selector is a known constant; null when it is not.</param>
     /// <param name="arguments">The arguments to pass to the method.</param>

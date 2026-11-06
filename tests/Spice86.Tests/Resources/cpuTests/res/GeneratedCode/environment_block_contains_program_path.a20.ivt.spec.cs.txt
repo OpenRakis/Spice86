@@ -213,7 +213,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:012B mov AH,0x62
         AH = 0x62;
         // 016D:012D int 0x21
-        Dos.GetPspAddress(cs1, 0x012F);
+        BX = Dos.ReadPspAddress();
         // 016D:012F mov ES,BX
         ES = BX;
         // 016D:0131 mov AX,word ptr ES:[0x002C]
@@ -449,7 +449,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EBX. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

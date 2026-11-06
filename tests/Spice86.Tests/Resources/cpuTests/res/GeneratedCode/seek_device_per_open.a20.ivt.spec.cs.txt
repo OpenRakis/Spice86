@@ -151,21 +151,21 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov BX,1
-        BX = 1;
+        bx1 = 1;
         // 016D:0103 xor CX,CX
         CX = Alu16.Xor(CX, CX);
         // 016D:0105 mov DX,7
-        DX = 7;
         // 016D:0108 mov AX,0x4200
-        AX = 0x4200;
         // 016D:010B int 0x21
-        Dos.MoveFilePointerUsingHandle(cs1, 0x010D, 0, 0, 7, 1);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7);
         // 016D:010D jb near 0x02B8
         if (!CarryFlag) {
             // 016D:0111 cmp DX,0
@@ -179,29 +179,28 @@ public partial class CfgGeneratedOverrides {
                     // 016D:011F mov DX,0x02C7
                     DX = 0x02C7;
                     // 016D:0122 mov AX,0x3D02
-                    AX = 0x3D02;
                     // 016D:0125 int 0x21
-                    Dos.OpenFileOrDevice(cs1, 0x0127, 2, 0x02C7, DS, "CON");
+                    Dos.RecordCallerStack(SS, SP);
+                    (AX, CarryFlag) = Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON"));
                     // 016D:0127 jb near 0x02B8
                     if (!CarryFlag) {
                         // 016D:012B mov word ptr DS:[0x02BF],AX
                         ImageMinus0003Globals.Word02BF = AX;
                         // 016D:012E mov BX,word ptr DS:[0x02BF]
-                        BX = ImageMinus0003Globals.Word02BF;
+                        bx1 = ImageMinus0003Globals.Word02BF;
                         // 016D:0132 xor CX,CX
                         CX = 0;
                         // 016D:0134 xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:0136 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:0139 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x013B, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:013B jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -219,10 +218,11 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:014D mov BX,word ptr DS:[0x02BF]
-                        BX = ImageMinus0003Globals.Word02BF;
+                        bx1 = ImageMinus0003Globals.Word02BF;
                         // 016D:0151 mov AH,0x45
                         // 016D:0153 int 0x21
-                        Dos.DuplicateFileHandle(cs1, 0x0155, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.DuplicateHandle(bx1);
                         // 016D:0155 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -230,21 +230,19 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0159 mov word ptr DS:[0x02C1],AX
                         ImageMinus0003Globals.Word02C1 = AX;
                         // 016D:015C mov BX,word ptr DS:[0x02C1]
-                        BX = ImageMinus0003Globals.Word02C1;
+                        bx1 = ImageMinus0003Globals.Word02C1;
                         // 016D:0160 xor CX,CX
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:0162 mov DX,4
-                        DX = 4;
                         // 016D:0165 mov AX,0x4200
-                        AX = 0x4200;
                         // 016D:0168 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x016A, 0, 0, 4, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, bx1, 0, 4);
                         // 016D:016A jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -262,15 +260,15 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:017C mov BX,word ptr DS:[0x02BF]
-                        BX = ImageMinus0003Globals.Word02BF;
+                        bx1 = ImageMinus0003Globals.Word02BF;
                         // 016D:0180 xor CX,CX
                         CX = 0;
                         // 016D:0182 xor DX,DX
                         DX = Alu16.Xor(DX, DX);
                         // 016D:0184 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:0187 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x0189, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:0189 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -288,7 +286,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:019B mov BX,word ptr DS:[0x02BF]
-                        BX = ImageMinus0003Globals.Word02BF;
+                        bx1 = ImageMinus0003Globals.Word02BF;
                         // 016D:019F mov CX,2
                         CX = 2;
                         // 016D:01A2 mov DX,0x02CF
@@ -296,7 +294,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01A5 mov AH,0x40
                         // 016D:01A7 int 0x21
                         // DOS 40h write "xy"
-                        Dos.WriteToFileOrDevice(cs1, 0x01A9, 2, 0x02CF, BX, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.WriteFile(bx1, 2, DS, 0x02CF);
                         // 016D:01A9 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -308,21 +307,20 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:01B4 mov BX,word ptr DS:[0x02C1]
-                        BX = ImageMinus0003Globals.Word02C1;
+                        bx1 = ImageMinus0003Globals.Word02C1;
                         // 016D:01B8 xor CX,CX
                         CX = 0;
                         // 016D:01BA xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:01BC mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:01BF int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x01C1, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:01C1 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -340,24 +338,25 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:01D3 mov BX,word ptr DS:[0x02BF]
-                        BX = ImageMinus0003Globals.Word02BF;
+                        bx1 = ImageMinus0003Globals.Word02BF;
                         // 016D:01D7 mov AH,0x3E
                         // 016D:01D9 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x01DB, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(bx1, 0x3E);
                         // 016D:01DB jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
                         }
                         // 016D:01DF mov BX,word ptr DS:[0x02C1]
-                        BX = ImageMinus0003Globals.Word02C1;
+                        bx1 = ImageMinus0003Globals.Word02C1;
                         // 016D:01E3 xor CX,CX
                         CX = 0;
                         // 016D:01E5 xor DX,DX
                         DX = Alu16.Xor(DX, DX);
                         // 016D:01E7 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:01EA int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x01EC, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:01EC jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -375,10 +374,11 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:01FE mov BX,word ptr DS:[0x02C1]
-                        BX = ImageMinus0003Globals.Word02C1;
+                        bx1 = ImageMinus0003Globals.Word02C1;
                         // 016D:0202 mov AH,0x3E
                         // 016D:0204 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x0206, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(bx1, 0x3E);
                         // 016D:0206 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -386,9 +386,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:020A mov DX,0x02C7
                         DX = 0x02C7;
                         // 016D:020D mov AX,0x3D02
-                        AX = 0x3D02;
                         // 016D:0210 int 0x21
-                        Dos.OpenFileOrDevice(cs1, 0x0212, 2, 0x02C7, DS, "CON");
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON"));
                         // 016D:0212 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -396,21 +396,20 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0216 mov word ptr DS:[0x02C3],AX
                         ImageMinus0003Globals.Word02C3 = AX;
                         // 016D:0219 mov BX,word ptr DS:[0x02C3]
-                        BX = ImageMinus0003Globals.Word02C3;
+                        bx1 = ImageMinus0003Globals.Word02C3;
                         // 016D:021D xor CX,CX
                         CX = 0;
                         // 016D:021F xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:0221 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:0224 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x0226, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:0226 jb near 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -428,21 +427,19 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:0238 mov BX,word ptr DS:[0x02C3]
-                        BX = ImageMinus0003Globals.Word02C3;
+                        bx1 = ImageMinus0003Globals.Word02C3;
                         // 016D:023C xor CX,CX
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:023E mov DX,3
-                        DX = 3;
                         // 016D:0241 mov AX,0x4202
-                        AX = 0x4202;
                         // 016D:0244 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x0246, 2, 0, 3, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.End, bx1, 0, 3);
                         // 016D:0246 jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -460,10 +457,11 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:0252 mov BX,word ptr DS:[0x02C3]
-                        BX = ImageMinus0003Globals.Word02C3;
+                        bx1 = ImageMinus0003Globals.Word02C3;
                         // 016D:0256 mov AH,0x3E
                         // 016D:0258 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x025A, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(bx1, 0x3E);
                         // 016D:025A jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -471,9 +469,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:025C mov DX,0x02CB
                         DX = 0x02CB;
                         // 016D:025F mov AX,0x3D02
-                        AX = 0x3D02;
                         // 016D:0262 int 0x21
-                        Dos.OpenFileOrDevice(cs1, 0x0264, 2, 0x02CB, DS, "AUX");
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX"));
                         // 016D:0264 jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -481,14 +479,15 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0266 mov word ptr DS:[0x02C5],AX
                         ImageMinus0003Globals.Word02C5 = AX;
                         // 016D:0269 mov BX,word ptr DS:[0x02C5]
-                        BX = ImageMinus0003Globals.Word02C5;
+                        bx1 = ImageMinus0003Globals.Word02C5;
                         // 016D:026D mov CX,5
                         CX = 5;
                         // 016D:0270 mov DX,0x02CF
                         DX = 0x02CF;
                         // 016D:0273 mov AH,0x40
                         // 016D:0275 int 0x21
-                        Dos.WriteToFileOrDevice(cs1, 0x0277, 5, 0x02CF, BX, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.WriteFile(bx1, 5, DS, 0x02CF);
                         // 016D:0277 jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -500,21 +499,20 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:027E mov BX,word ptr DS:[0x02C5]
-                        BX = ImageMinus0003Globals.Word02C5;
+                        bx1 = ImageMinus0003Globals.Word02C5;
                         // 016D:0282 xor CX,CX
                         CX = 0;
                         // 016D:0284 xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:0286 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:0289 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x028B, 1, 0, 0, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0);
                         // 016D:028B jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
@@ -532,24 +530,25 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         // 016D:0297 mov BX,word ptr DS:[0x02C5]
-                        BX = ImageMinus0003Globals.Word02C5;
+                        bx1 = ImageMinus0003Globals.Word02C5;
                         // 016D:029B mov AH,0x3E
                         // 016D:029D int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x029F, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(bx1, 0x3E);
                         // 016D:029F jb short 0x02B8
                         if (CarryFlag) {
                             goto L_02B8;
                         }
                         // 016D:02A1 mov BX,1
-                        BX = 1;
+                        bx1 = 1;
                         // 016D:02A4 xor CX,CX
                         CX = 0;
                         // 016D:02A6 xor DX,DX
                         DX = Alu16.Xor(DX, DX);
                         // 016D:02A8 mov AX,0x4203
-                        AX = 0x4203;
                         // 016D:02AB int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x02AD, 3, 0, 0, 1);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0);
                         // 016D:02AD jae short 0x02B8
                         if (!CarryFlag) {
                             goto L_02B8;
@@ -578,6 +577,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:02BD out DX,AL
         Out8(0x0999, al1);
         // 016D:02BE hlt
+        BX = bx1;
         AL = al1;
         return Hlt();
     }

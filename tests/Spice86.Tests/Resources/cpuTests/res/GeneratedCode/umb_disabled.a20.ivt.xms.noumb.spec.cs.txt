@@ -149,9 +149,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, ES, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         byte al1 = 0;
         ushort flagOperand_0105 = 0;
         byte flagOperand_010C = 0;
@@ -159,23 +160,24 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AX,0x5200
         AX = 0x5200;
         // 016D:0103 int 0x21
-        Dos.GetListOfLists(cs1, 0x0105);
+        Dos.RecordCallerStack(SS, SP);
+        (bx1, ES) = Dos.ReadListOfListsAddress();
         // 016D:0105 cmp word ptr ES:[BX+0x66],-1
-        flagOperand_0105 = UInt16[ES, (ushort)(BX + 0x66)];
+        flagOperand_0105 = UInt16[ES, (ushort)(bx1 + 0x66)];
         Alu16.Sub(flagOperand_0105, 0xFFFF);
         // 016D:010A jne short 0x0131
         if (flagOperand_0105 == 0xFFFF) {
             // 016D:010C test byte ptr ES:[BX+0x63],1
-            flagOperand_010C = UInt8[ES, (ushort)(BX + 0x63)];
+            flagOperand_010C = UInt8[ES, (ushort)(bx1 + 0x63)];
             Alu8.And(flagOperand_010C, 1);
             // 016D:0111 jne short 0x0131
             if ((flagOperand_010C & 1) == 0) {
                 // 016D:0113 mov AX,0x5803
-                AX = 0x5803;
                 // 016D:0116 mov BX,1
-                BX = 1;
+                bx1 = 1;
                 // 016D:0119 int 0x21
-                Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x011B, 3, 1);
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5803, 1);
                 // 016D:011B jae short 0x0131
                 if (CarryFlag) {
                     // 016D:011D cmp AX,1
@@ -183,9 +185,9 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0120 jne short 0x0131
                     if (AX == 1) {
                         // 016D:0122 mov AX,0x5802
-                        AX = 0x5802;
                         // 016D:0125 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0127, 2, 1);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5802, 1);
                         // 016D:0127 jb short 0x0131
                         if (CarryFlag) {
                             goto L_0131;
@@ -214,6 +216,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0136 out DX,AL
         Out8(0x0999, al1);
         // 016D:0137 hlt
+        BX = bx1;
         AL = al1;
         return Hlt();
     }
@@ -379,7 +382,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, ES, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, BX, ES, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

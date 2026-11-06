@@ -159,7 +159,8 @@ public partial class CfgGeneratedOverrides {
         // 016E:0105 mov AL,0x22
         AL = 0x22;
         // 016E:0107 int 0x21
-        Dos.SetInterruptVector(cs1, 0x0109, 0x22, 0x0111, DS);
+        Dos.RecordCallerStack(SS, SP);
+        Dos.SetInterruptVector(0x22, DS, 0x0111);
         // 016E:0109 mov AX,0x3100
         AX = 0x3100;
         // 016E:010C mov DX,0x0020
@@ -330,7 +331,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

@@ -116,7 +116,17 @@ internal static class Int21ScenarioCatalog {
                 ]
             }, NoDetailAssertions),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
-        WithHandleTestFiles("set_handle_count_relocates_jft.com")
+        WithHandleTestFiles("set_handle_count_relocates_jft.com"),
+        ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
+            new Int21RunSetup { ExeArgs = "h" }, NoDetailAssertions),
+        ProgramScenario("bios_disk_parameters_floppy", "bios_disk_parameters.com",
+            new Int21RunSetup {
+                ExeArgs = "f",
+                CreateHostFiles = CreateFloppyImageFile,
+                FloppyImages = directory => new Dictionary<char, string> { ['A'] = Path.Join(directory, "disk.img") }
+            }, NoDetailAssertions),
+        ProgramScenario("bios_disk_parameters_absent", "bios_disk_parameters.com",
+            new Int21RunSetup { ExeArgs = "a" }, NoDetailAssertions)
     ];
 
     private static AsmScenario Simple(string programFileName) {
@@ -325,6 +335,7 @@ internal static class Int21ScenarioCatalog {
                 BinName = programPath,
                 ScenarioName = identity,
                 MaxCycles = MaxCycles,
+                ExeArgs = setup.ExeArgs,
                 InstallInterruptVectors = true,
                 EnableA20Gate = true,
                 CDrive = directory,
@@ -357,8 +368,8 @@ internal static class Int21ScenarioCatalog {
         Action<TestIoPortHandler> assertDetails) {
         return result => {
             TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
-            testHandler.Results.Should().Contain(TestPortSuccess, $"{programFileName} must report success");
-            testHandler.Results.Should().NotContain(TestPortFailure, $"{programFileName} must not report failure");
+            testHandler.Results.Should().Contain(TestPortSuccess, $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+            testHandler.Results.Should().NotContain(TestPortFailure, $"{programFileName} must not report failure (details: {string.Join(",", testHandler.Details)})");
             assertDetails(testHandler);
         };
     }
@@ -452,6 +463,9 @@ internal static class Int21ScenarioCatalog {
 
         /// <summary>Configures the fresh machine before the program runs, e.g. redirected input.</summary>
         public Action<Machine> ConfigureMachine { get; init; } = _ => { };
+
+        /// <summary>Command tail passed to the loaded program.</summary>
+        public string ExeArgs { get; init; } = string.Empty;
 
         /// <summary>Maps the run's working directory to the ISO images mounted as CD-ROM drives.</summary>
         public Func<string, IReadOnlyDictionary<char, string>> CdRomImages { get; init; } =

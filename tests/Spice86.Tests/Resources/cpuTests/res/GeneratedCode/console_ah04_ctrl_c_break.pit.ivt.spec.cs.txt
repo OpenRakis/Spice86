@@ -156,7 +156,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,4
         AH = 4;
         // 016D:0102 int 0x21
-        Dos.WriteCharacterToStdAux(cs1, 0x0104, AL);
+        InterruptCall(cs1, 0x0104, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0102");
     }
 

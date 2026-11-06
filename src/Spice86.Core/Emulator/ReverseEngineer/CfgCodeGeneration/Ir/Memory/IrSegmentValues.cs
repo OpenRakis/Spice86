@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using System.Linq;
@@ -212,6 +214,11 @@ internal sealed class IrSegmentValues {
     private SegmentValue DefinitionValue(int version, IrSsaVersionInfo info, HashSet<int> visiting) {
         IrStatement? statement = _ssa.DefiningStatement(version);
         if (statement is null) {
+            return SegmentValue.Unknown.Instance;
+        }
+        if (statement.Node is InterruptServiceCallNode) {
+            // A direct service call defines only its result targets, whose values are whatever
+            // the service returned.
             return SegmentValue.Unknown.Instance;
         }
         if (info.Value == IrSsaValue.Direction

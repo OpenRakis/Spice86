@@ -1,0 +1,204 @@
+016D:0100 mov SI,0x0081
+016D:0103 mov AL,byte ptr DS:[SI]
+016D:0105 cmp AL,0x20
+016D:0107 jne short 0x010C
+016D:0109 inc SI
+016D:010A jmp short 0x0103
+016D:010C mov byte ptr CS:[0x02FB],AL
+016D:0110 mov DL,0x80
+016D:0112 cmp AL,0x68
+016D:0114 je short 0x0125
+016D:0116 mov DL,0
+016D:0118 cmp AL,0x66
+016D:011A je short 0x0125
+016D:011C cmp AL,0x61
+016D:011E je short 0x0125
+016D:0120 mov AL,0x6D
+016D:0122 jmp near 0x02F0
+016D:0125 int 0x11
+016D:0127 test AX,AX
+016D:0129 mov AL,1
+016D:012B jne near 0x02F0
+016D:012F int 0x12
+016D:0131 cmp AX,0x0280
+016D:0134 mov AL,2
+016D:0136 jne near 0x02F0
+016D:013A mov DL,0x80
+016D:013C cmp byte ptr CS:[0x02FB],0x68
+016D:0142 je short 0x0146
+016D:0144 mov DL,0
+016D:0146 mov AL,0x5A
+016D:0148 mov BX,0xA5C3
+016D:014B mov CX,0x1234
+016D:014E mov DH,0x56
+016D:0150 mov AH,8
+016D:0152 mov word ptr CS:[0x0304],SP
+016D:0157 mov word ptr CS:[0x0306],DS
+016D:015C mov word ptr CS:[0x0308],ES
+016D:0161 mov word ptr CS:[0x030A],SI
+016D:0166 mov word ptr CS:[0x030C],DI
+016D:016B mov word ptr CS:[0x030E],BP
+016D:0170 int 0x13
+016D:0172 pushf
+016D:0173 pop word ptr CS:[0x0310]
+016D:0178 mov word ptr CS:[0x0312],AX
+016D:017C mov word ptr CS:[0x0314],BX
+016D:0181 mov word ptr CS:[0x0316],CX
+016D:0186 mov word ptr CS:[0x0318],DX
+016D:018B mov AL,3
+016D:018D cmp SP,word ptr CS:[0x0304]
+016D:0192 jne near 0x02F0
+016D:0196 mov AX,DS
+016D:0198 cmp AX,word ptr CS:[0x0306]
+016D:019D jne near 0x02F0
+016D:01A1 mov AX,ES
+016D:01A3 cmp AX,word ptr CS:[0x0308]
+016D:01A8 jne near 0x02F0
+016D:01AC cmp SI,word ptr CS:[0x030A]
+016D:01B1 jne near 0x02F0
+016D:01B5 cmp DI,word ptr CS:[0x030C]
+016D:01BA jne near 0x02F0
+016D:01BE cmp BP,word ptr CS:[0x030E]
+016D:01C3 jne near 0x02F0
+016D:01C7 mov AL,byte ptr CS:[0x02FB]
+016D:01CB cmp AL,0x68
+016D:01CD je short 0x0218
+016D:01CF cmp AL,0x66
+016D:01D1 je near 0x025A
+016D:01D5 mov AL,4
+016D:01D7 test word ptr CS:[0x0310],1
+016D:01DE je near 0x02F0
+016D:01E2 mov AL,5
+016D:01E4 cmp word ptr CS:[0x0312],0x805A
+016D:01EB jne near 0x02F0
+016D:01EF mov AL,6
+016D:01F1 cmp word ptr CS:[0x0314],0xA5C3
+016D:01F8 jne near 0x02F0
+016D:01FC mov AL,7
+016D:01FE cmp word ptr CS:[0x0316],0x1234
+016D:0205 jne near 0x02F0
+016D:0209 mov AL,8
+016D:020B cmp word ptr CS:[0x0318],0x5600
+016D:0212 jne near 0x02F0
+016D:0216 jmp short 0x0292
+016D:0218 mov AL,9
+016D:021A test word ptr CS:[0x0310],1
+016D:0221 jne near 0x02F0
+016D:0225 mov AL,0x0A
+016D:0227 cmp word ptr CS:[0x0312],0x005A
+016D:022D jne near 0x02F0
+016D:0231 mov AL,0x0B
+016D:0233 cmp word ptr CS:[0x0314],0xA5C3
+016D:023A jne near 0x02F0
+016D:023E mov AL,0x0C
+016D:0240 cmp word ptr CS:[0x0316],0xFE3F
+016D:0247 jne near 0x02F0
+016D:024B mov AL,0x0D
+016D:024D cmp word ptr CS:[0x0318],0xFF01
+016D:0254 jne near 0x02F0
+016D:0258 jmp short 0x0292
+016D:025A mov AL,0x0E
+016D:025C test word ptr CS:[0x0310],1
+016D:0263 jne near 0x02F0
+016D:0267 mov AL,0x0F
+016D:0269 cmp word ptr CS:[0x0312],0
+016D:026F jne short 0x02F0
+016D:0271 mov AL,0x10
+016D:0273 cmp word ptr CS:[0x0314],0xA504
+016D:027A jne short 0x02F0
+016D:027C mov AL,0x11
+016D:027E cmp word ptr CS:[0x0316],0x4F12
+016D:0285 jne short 0x02F0
+016D:0287 mov AL,0x12
+016D:0289 cmp word ptr CS:[0x0318],0x0101
+016D:0290 jne short 0x02F0
+016D:0292 mov AX,SP
+016D:0294 sub AX,6
+016D:0297 mov word ptr CS:[0x02FC],AX
+016D:029B mov word ptr CS:[0x02FE],SS
+016D:02A0 mov AH,0x30
+016D:02A2 int 0x21
+016D:02A4 movsx ECX,AX
+016D:02A8 movsx EDX,AX
+016D:02AC mov EAX,0
+016D:02B2 mov AL,0x13
+016D:02B4 cmp ECX,5
+016D:02B8 jne short 0x02F0
+016D:02BA mov AL,0x14
+016D:02BC cmp EDX,5
+016D:02C0 jne short 0x02F0
+016D:02C2 mov AX,word ptr CS:[0x002E]
+016D:02C6 mov word ptr CS:[0x0300],AX
+016D:02CA mov AX,word ptr CS:[0x0030]
+016D:02CE mov word ptr CS:[0x0302],AX
+016D:02D2 mov AL,0x15
+016D:02D4 mov AX,word ptr CS:[0x02FC]
+016D:02D8 cmp word ptr CS:[0x0300],AX
+016D:02DD jne short 0x02F0
+016D:02DF mov AL,0x16
+016D:02E1 mov AX,word ptr CS:[0x02FE]
+016D:02E5 cmp word ptr CS:[0x0302],AX
+016D:02EA jne short 0x02F0
+016D:02EC mov AL,0
+016D:02EE jmp short 0x02F6
+016D:02F0 mov DX,0x0998
+016D:02F3 out DX,AL
+016D:02F4 mov AL,0xFF
+016D:02F6 mov DX,0x0999
+016D:02F9 out DX,AL
+016D:02FA hlt
+F000:0006 callback 8
+F000:000A push DS
+F000:000B push AX
+F000:000C push DX
+F000:000D int 0x1C
+F000:000F callback 0x0101
+F000:0013 pop DX
+F000:0014 pop AX
+F000:0015 pop DS
+F000:0016 iret
+F000:0017 callback 9
+F000:001B iret
+F000:001C callback 0x0011
+F000:0020 iret
+F000:0021 callback 0x0012
+F000:0025 iret
+F000:0058 callback 0x0013
+F000:005C iret
+F000:005D callback 0x0070
+F000:0061 iret
+F000:0063 call far F000:00E9
+F000:0068 callback 0x0074
+F000:006C iret
+F000:006D callback 0x0104
+F000:0071 iret
+F000:0072 callback 0x0105
+F000:0076 iret
+F000:0077 callback 0x0106
+F000:007B iret
+F000:007C callback 0x0107
+F000:0080 iret
+F000:0081 callback 0x0108
+F000:0085 iret
+F000:0086 callback 0x0109
+F000:008A iret
+F000:0096 cmp AH,7
+F000:0099 je short 0x00AA
+F000:009B cmp AH,8
+F000:009E je short 0x00AA
+F000:00A0 cmp AH,0x0A
+F000:00A3 je short 0x00AA
+F000:00A5 callback 0x0021
+F000:00A9 iret
+F000:00AA sti
+F000:00AB callback 0x010A
+F000:00AF cmp byte ptr CS:[0x0095],0
+F000:00B5 jne short 0x00BB
+F000:00B7 int 0x28
+F000:00BB callback 0x010B
+F000:00BF iret
+F000:00E8 ret far
+F000:00E9 callback 0x010C
+F000:00ED call far F000:00E8
+F000:00F2 callback 0x010D
+F000:00F6 ret far

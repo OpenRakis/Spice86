@@ -28,10 +28,14 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     public override byte VectorNumber => 0x11;
 
     /// <inheritdoc />
-    public override void Run() => GetEquipmentList();
+    public override void Run() => WriteEquipmentList();
 
-    [InterruptService(Writes = CpuValues.Ax)]
-    private void GetEquipmentList() {
-        State.AX = 0;
+    /// <summary>Returns the BIOS equipment list.</summary>
+    public ushort GetEquipmentList() => 0;
+
+    [InterruptService(Name = nameof(GetEquipmentList), Writes = CpuValues.Ax,
+        Implementation = nameof(GetEquipmentList))]
+    private void WriteEquipmentList() {
+        State.AX = GetEquipmentList();
     }
 }

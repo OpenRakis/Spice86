@@ -50,6 +50,7 @@ internal sealed class GeneratorInputsCollector {
         ProgramImages.Create(_programEntryPointSegment, _loadedImageRegistry.Images),
         _changedMemoryMap.Snapshot(),
         _memory.ReadRam(),
-        _ioPortDispatcher.RegisteredHandlers.Select(pair => (ushort)pair.Key).ToHashSet(),
+        _ioPortDispatcher.RegisteredHandlers.ToDictionary(
+            pair => (ushort)pair.Key, pair => pair.Value.GetType()),
         _loadedImageRegistry.ProgramEntryPoint);
 }

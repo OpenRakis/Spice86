@@ -84,73 +84,113 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         }
     }
 
-    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void InitializePort(bool calledFromVm) {
-        if (!TryGetPort(State.DX, out ushort port)) {
-            SetCarryFlag(false, calledFromVm);
-            return;
+    /// <summary>Initializes serial port <paramref name="portIndex"/> with
+    /// <paramref name="configuration"/>; returns both line/modem status bytes in AX, or
+    /// <see langword="null"/> when the port is invalid or absent.</summary>
+    public (ushort? ax, bool carryFlag) InitializePort(byte configuration, ushort portIndex) {
+        if (!TryGetPort(portIndex, out ushort port)) {
+            return (null, false);
         }
 
-        ushort baudDivisor = ComputeBaudDivisor(State.AL);
+        ushort baudDivisor = ComputeBaudDivisor(configuration);
         _ioPortDispatcher.WriteByte((ushort)(port + 3), LcrDivisorAccessBit);
         _ioPortDispatcher.WriteByte(port, (byte)(baudDivisor & 0xFF));
         _ioPortDispatcher.WriteByte((ushort)(port + 1), (byte)(baudDivisor >> 8));
-        _ioPortDispatcher.WriteByte((ushort)(port + 3), (byte)(State.AL & 0x1F));
+        _ioPortDispatcher.WriteByte((ushort)(port + 3), (byte)(configuration & 0x1F));
         _ioPortDispatcher.WriteByte((ushort)(port + 1), 0);
 
-        State.AH = _ioPortDispatcher.ReadByte((ushort)(port + 5));
-        State.AL = _ioPortDispatcher.ReadByte((ushort)(port + 6));
-        SetCarryFlag(false, calledFromVm);
+        byte ah = _ioPortDispatcher.ReadByte((ushort)(port + 5));
+        byte al = _ioPortDispatcher.ReadByte((ushort)(port + 6));
+        return ((ushort)((ah << 8) | al), false);
     }
 
-    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void TransmitCharacter(bool calledFromVm) {
-        if (!TryGetPort(State.DX, out ushort port)) {
-            SetCarryFlag(false, calledFromVm);
-            return;
+    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
+    private void InitializePort(bool calledFromVm) {
+        (ushort? ax, bool carryFlag) = InitializePort(State.AL, State.DX);
+        if (ax is { } value) {
+            State.AX = value;
+        }
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
+
+    /// <summary>Writes <paramref name="character"/> to serial port
+    /// <paramref name="portIndex"/> when the transmitter is empty; returns the line status in
+    /// AH, or <see langword="null"/> when the port is invalid or absent.</summary>
+    public (byte? ah, bool carryFlag) TransmitCharacter(byte character, ushort portIndex) {
+        if (!TryGetPort(portIndex, out ushort port)) {
+            return (null, false);
         }
 
         _ioPortDispatcher.WriteByte((ushort)(port + 4), McrDtrAndRts);
         byte lineStatus = _ioPortDispatcher.ReadByte((ushort)(port + 5));
-        State.AH = lineStatus;
+        byte ah = lineStatus;
         if ((lineStatus & LineStatusTxHoldingEmpty) == LineStatusTxHoldingEmpty) {
-            _ioPortDispatcher.WriteByte(port, State.AL);
+            _ioPortDispatcher.WriteByte(port, character);
         } else {
-            State.AH = (byte)(lineStatus | 0x80);
+            ah = (byte)(lineStatus | 0x80);
         }
 
-        SetCarryFlag(false, calledFromVm);
+        return (ah, false);
     }
 
-    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void ReceiveCharacter(bool calledFromVm) {
-        if (!TryGetPort(State.DX, out ushort port)) {
-            SetCarryFlag(false, calledFromVm);
-            return;
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
+    private void TransmitCharacter(bool calledFromVm) {
+        (byte? ah, bool carryFlag) = TransmitCharacter(State.AL, State.DX);
+        if (ah is { } value) {
+            State.AH = value;
+        }
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
+
+    /// <summary>Reads a character from serial port <paramref name="portIndex"/>; with no
+    /// data ready, returns the line status in AH and
+    /// <paramref name="previousCharacter"/> in AL, or <see langword="null"/> when the port is
+    /// invalid or absent.</summary>
+    public (ushort? ax, bool carryFlag) ReceiveCharacter(byte previousCharacter, ushort portIndex) {
+        if (!TryGetPort(portIndex, out ushort port)) {
+            return (null, false);
         }
 
         _ioPortDispatcher.WriteByte((ushort)(port + 4), McrDtr);
         byte lineStatus = _ioPortDispatcher.ReadByte((ushort)(port + 5));
         if ((lineStatus & LineStatusRxDataReady) == LineStatusRxDataReady) {
-            State.AH = (byte)(lineStatus & LineStatusReadMask);
-            State.AL = _ioPortDispatcher.ReadByte(port);
-        } else {
-            State.AH = (byte)(lineStatus | 0x80);
+            byte ah = (byte)(lineStatus & LineStatusReadMask);
+            byte al = _ioPortDispatcher.ReadByte(port);
+            return ((ushort)((ah << 8) | al), false);
         }
 
-        SetCarryFlag(false, calledFromVm);
+        return ((ushort)(((lineStatus | 0x80) << 8) | previousCharacter), false);
+    }
+
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
+    private void ReceiveCharacter(bool calledFromVm) {
+        (ushort? ax, bool carryFlag) = ReceiveCharacter(State.AL, State.DX);
+        if (ax is { } value) {
+            State.AX = value;
+        }
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
+
+    /// <summary>Returns the line and modem status bytes of serial port
+    /// <paramref name="portIndex"/> in AX, or <see langword="null"/> when the port is invalid
+    /// or absent.</summary>
+    public (ushort? ax, bool carryFlag) GetPortStatus(ushort portIndex) {
+        if (!TryGetPort(portIndex, out ushort port)) {
+            return (null, false);
+        }
+
+        byte ah = _ioPortDispatcher.ReadByte((ushort)(port + 5));
+        byte al = _ioPortDispatcher.ReadByte((ushort)(port + 6));
+        return ((ushort)((ah << 8) | al), false);
     }
 
     [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
     private void GetPortStatus(bool calledFromVm) {
-        if (!TryGetPort(State.DX, out ushort port)) {
-            SetCarryFlag(false, calledFromVm);
-            return;
+        (ushort? ax, bool carryFlag) = GetPortStatus(State.DX);
+        if (ax is { } value) {
+            State.AX = value;
         }
-
-        State.AH = _ioPortDispatcher.ReadByte((ushort)(port + 5));
-        State.AL = _ioPortDispatcher.ReadByte((ushort)(port + 6));
-        SetCarryFlag(false, calledFromVm);
+        SetCarryFlag(carryFlag, calledFromVm);
     }
 
     private bool TryGetPort(ushort portIndex, out ushort port) {

@@ -24,12 +24,13 @@ internal sealed class GeneratedOverrideCompiler {
             syntaxTrees: syntaxTrees,
             references: PlatformMetadataReferences,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                .WithMetadataImportOptions(MetadataImportOptions.All)
                 .WithGeneralDiagnosticOption(ReportDiagnostic.Error)
                 .WithOverflowChecks(false));
 
         MemoryStream peStream = new();
         EmitResult emitResult = compilation.Emit(peStream);
-        return new GeneratedCompilation(sources, syntaxTrees, emitResult, peStream);
+        return new GeneratedCompilation(sources, compilation, emitResult, peStream);
     }
 
     public GeneratedCompilation Compile(GeneratedCSharpProgram program) => Compile(TextsOf(program));

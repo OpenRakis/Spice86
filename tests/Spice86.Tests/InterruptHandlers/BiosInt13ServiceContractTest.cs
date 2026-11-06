@@ -1,5 +1,7 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using FluentAssertions;
+
 using Xunit;
 
 /// <summary>
@@ -74,5 +76,42 @@ public class BiosInt13ServiceContractTest {
     public void ServicesHonourDeclaredContract(ServiceContractCase testCase) {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContract(testCase);
+    }
+
+    /// <summary>INT 13h AH=04h (verify sectors): a nonfloppy success always writes AH=0, it
+    /// does not preserve the selector.</summary>
+    [Fact]
+    public void VerifySectorsUnwrittenOutputsArePreserved() {
+        ServiceContractHarness.RunOnceThroughStub(new ServiceContractCase {
+            Vector = 0x13,
+            SelectorValue = 0x04,
+            Setup = machine => {
+                machine.Spice86.Machine.CpuState.AL = 1;
+                machine.Spice86.Machine.CpuState.DX = 0x0180;
+            }
+        }, state => {
+            state.AX.Should().Be(0x0001);
+            state.CarryFlag.Should().BeFalse();
+        });
+    }
+
+    /// <summary>INT 13h AH=15h (diskette/HDD type): CX and DX are outputs only for drive
+    /// 0x80; other drives preserve them.</summary>
+    [Theory]
+    [InlineData(0x00)]
+    [InlineData(0x81)]
+    public void DisketteOrHddTypeUnwrittenOutputsArePreserved(byte drive) {
+        ushort dx = (ushort)(0x5600 | drive);
+        ServiceContractHarness.RunOnceThroughStub(new ServiceContractCase {
+            Vector = 0x13,
+            SelectorValue = 0x15,
+            Setup = machine => {
+                machine.Spice86.Machine.CpuState.CX = 0x1234;
+                machine.Spice86.Machine.CpuState.DX = dx;
+            }
+        }, state => {
+            state.CX.Should().Be(0x1234);
+            state.DX.Should().Be(dx);
+        });
     }
 }

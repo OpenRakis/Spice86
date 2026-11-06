@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -144,6 +145,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 when CompoundAssignment(assignment) is string compound:
                 writer.Line(compound);
                 return;
+            case InterruptServiceCallNode serviceCall:
+                PrintInterruptServiceCall(serviceCall);
+                return;
             default:
                 writer.Line(expressions.Print(node).Text + ";");
                 return;
@@ -188,6 +192,26 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             }
         }
         return null;
+    }
+
+    /// <summary>A typed service call and the assignment of its return value to the contract's
+    /// output lvalues: the bare invocation for a void contract, <c>AX = call</c> for one output
+    /// or <c>(AX, CarryFlag) = call</c> for several. Register-local promotion can turn an output
+    /// target into a local (<c>ax = call</c>), which the existing writeback machinery stores back.</summary>
+    private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
+        if (call.Vector == 0x21 && DosInt21Handler.SavesCallerStack((byte)call.SelectorValue)) {
+            // The saved pointer addresses the frame top, six bytes below this caller SP.
+            writer.Line($"{call.PropertyPath}.{nameof(DosInt21Handler.RecordCallerStack)}(SS, SP);");
+        }
+        string invocation = expressions.Print(call).Text;
+        if (call.Results.Count == 0) {
+            writer.Line(invocation + ";");
+            return;
+        }
+        string targets = string.Join(", ",
+            call.Results.Select(result => expressions.Print(result).Text));
+        string left = call.Results.Count == 1 ? targets : $"({targets})";
+        writer.Line($"{left} = {invocation};");
     }
 
     private void PushIfElse(Stack<object> pending, IfElseNode node) {

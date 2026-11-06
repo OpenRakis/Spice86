@@ -158,7 +158,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0103 mov AH,9
         AH = 9;
         // 016D:0105 int 0x21
-        Dos.PrintString(cs1, 0x0107, 0x0115, DS, "HELLO");
+        // DOS 09h print "HELLO$"
+        InterruptCall(cs1, 0x0107, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0105");
     }
 

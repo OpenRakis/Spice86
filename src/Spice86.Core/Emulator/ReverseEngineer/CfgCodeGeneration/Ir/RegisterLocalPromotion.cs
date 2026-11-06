@@ -117,6 +117,14 @@ internal static class RegisterLocalPromotion {
             }
             accepted.Add((candidate, name));
         }
+        HashSet<IVisitableAstNode> serviceResults = new(ReferenceEqualityComparer.Instance);
+        foreach (InterruptServiceCallNode serviceCall in method.Blocks.SelectMany(block => block.Statements)
+            .Select(statement => statement.Node).OfType<InterruptServiceCallNode>()) {
+            serviceResults.UnionWith(serviceCall.Results);
+        }
+        HashSet<string> unsignedNames = accepted
+            .Where(item => item.Candidate.DefTargets.Any(serviceResults.Contains))
+            .Select(item => item.Name).ToHashSet(StringComparer.Ordinal);
         Dictionary<string, (int Signed, int Unsigned)> votes = new(StringComparer.Ordinal);
         foreach ((Candidate candidate, string name) in accepted) {
             (int signed, int unsigned) = (0, 0);
@@ -127,7 +135,7 @@ internal static class RegisterLocalPromotion {
         }
         foreach ((Candidate candidate, string name) in accepted) {
             DataType signedType = DataType.SignedFromBitWidth(candidate.Register.DataType.BitWidth);
-            bool signed = votes[name].Unsigned < votes[name].Signed;
+            bool signed = !unsignedNames.Contains(name) && votes[name].Unsigned < votes[name].Signed;
             DataType localType = signed ? signedType : candidate.Register.DataType;
             if (declared.Add(name)) {
                 declarations.Add(new LocalDeclarationNode(localType, name,
@@ -416,6 +424,22 @@ internal static class RegisterLocalPromotion {
             }
             if (definition.Effects.MayFault) {
                 return null;
+            }
+            if (definition.Node is InterruptServiceCallNode serviceCall) {
+                // The call is an explicit definition only for a register its return writes: the
+                // concrete result target is the local's def target, like an assignment's left.
+                // A parameter-, selector- or flag-only version keeps no target and stays
+                // ineligible.
+                if (serviceCall.Results.OfType<RegisterNode>()
+                        .FirstOrDefault(result => RegisterMatchesValue(result, value))
+                        is not { } result
+                    || !SingleOccurrence(occurrences, result, definition)) {
+                    return null;
+                }
+                hasCall = true;
+                defTargets.Add(result);
+                definitions.Add(new Definition(info.Block, definitionIndex, definition));
+                continue;
             }
             if (definition.Node is not BinaryOperationNode {
                     BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register }) {
@@ -840,6 +864,11 @@ internal static class RegisterLocalPromotion {
                         case MultiplicationNode multiplication:
                             instances.Add(multiplication.Low);
                             instances.Add(multiplication.High);
+                            break;
+                        case InterruptServiceCallNode serviceCall:
+                            foreach (ValueNode result in serviceCall.Results) {
+                                instances.Add(result);
+                            }
                             break;
                         case SegmentedPointerNode pointer:
                             instances.Add(pointer.Segment);

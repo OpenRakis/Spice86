@@ -338,7 +338,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort di1 = 0;
         ushort di2 = 0;
@@ -355,16 +355,16 @@ public partial class CfgGeneratedOverrides {
         // F000:4009 mov AX,0x0013
         AX = 0x0013;
         // F000:400C int 0x10
-        Video.SetVideoMode(biosSegment, 0x400E, 0x13);
+        AL = Video.SetVideoMode(0x13);
         // F000:400E cli
         InterruptFlag = false;
         // F000:400F mov DX,0x03C4
         // F000:4012 mov AX,0x0604
         // F000:4015 out DX,AX
-        VgaPorts.WriteSequencerIndexAndData(0x0604);
+        Vga.WriteSequencerRegister(4, 6);
         // F000:4016 mov AX,0x0101
         // F000:4019 out DX,AX
-        VgaPorts.WriteSequencerIndexAndData(0x0101);
+        Vga.WriteSequencerRegister(1, 1);
         // F000:401A mov DX,0x03D4
         // F000:401D mov AX,0x2C11
         // F000:4020 out DX,AX
@@ -401,7 +401,7 @@ public partial class CfgGeneratedOverrides {
         // F000:4047 mov DX,0x03C4
         // F000:404A mov AX,0x0F02
         // F000:404D out DX,AX
-        VgaPorts.WriteSequencerIndexAndData(0x0F02);
+        Vga.WriteSequencerRegister(2, 0x0F);
         // F000:404E xor DI,DI
         di1 = 0;
         // F000:4050 xor AX,AX
@@ -425,7 +425,7 @@ public partial class CfgGeneratedOverrides {
             // F000:405E mov AL,2
             AL = 2;
             // F000:4060 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(AX);
+            Vga.WriteSequencerRegister((byte)AX, (byte)(AX >> 8));
             // F000:4061 xor DI,DI
             di2 = 0;
             // F000:4063 xor BX,BX

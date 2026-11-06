@@ -156,6 +156,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, ESI, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         ushort bp1 = 0;
         ushort di1 = 0;
         byte al1 = 0;
@@ -167,11 +168,11 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        bx1 = Dos.ReadPspAddress();
         // 016D:0104 mov BP,BX
-        bp1 = BX;
+        bp1 = bx1;
         // 016D:0106 mov ES,BX
-        ES = BX;
+        ES = bx1;
         // 016D:0108 mov DI,word ptr ES:[0x002C]
         di1 = EsGlobals.Word002C;
         // 016D:010D mov DX,0x2000
@@ -179,24 +180,26 @@ public partial class CfgGeneratedOverrides {
         // 016D:0110 mov SI,0x0010
         SI = 0x0010;
         // 016D:0113 mov AH,0x55
+        AH = 0x55;
         // 016D:0115 int 0x21
-        Dos.CreateChildPsp(cs1, 0x0117, 0x2000, 0x0010);
+        InterruptCall(cs1, 0x0117, 0x21);
         // 016D:0117 cmp AL,0xF0
         Alu8.Sub(AL, 0xF0);
         // 016D:0119 jne short 0x0152
         if (AL == 0xF0) {
             // 016D:011B mov AH,0x62
+            AH = 0x62;
             // 016D:011D int 0x21
-            Dos.GetPspAddress(cs1, 0x011F);
+            bx1 = Dos.ReadPspAddress();
             // 016D:011F cmp BX,0x2000
-            Alu16.Sub(BX, 0x2000);
+            Alu16.Sub(bx1, 0x2000);
             // 016D:0123 jne short 0x0152
-            if (BX == 0x2000) {
+            if (bx1 == 0x2000) {
                 // 016D:0125 mov BX,BP
-                BX = bp1;
+                bx1 = bp1;
                 // 016D:0127 mov AH,0x50
                 // 016D:0129 int 0x21
-                Dos.SetCurrentPsp(cs1, 0x012B, BX);
+                Dos.SetCurrentPsp(bx1);
                 // 016D:012B mov AX,0x2000
                 AX = 0x2000;
                 // 016D:012E mov ES,AX
@@ -243,6 +246,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0157 out DX,AL
         Out8(0x0999, al1);
         // 016D:0158 hlt
+        BX = bx1;
         BP = bp1;
         DI = di1;
         AL = al1;
@@ -410,7 +414,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL, EBX. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

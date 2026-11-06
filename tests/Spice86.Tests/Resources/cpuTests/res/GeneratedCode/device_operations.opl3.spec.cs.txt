@@ -1,0 +1,312 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_010D_F010DEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment0000Globals Segment0000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+
+        unknown_F000_010D_F010DEntry = _ => unknown_F000_010D_F010D();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x010D, unknown_F000_010D_F010DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Outputs: none. Changes: AL.</summary>
+    /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x0000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_010D_F010D() {
+        CheckExternalEvents(biosSegment, 0x010D);
+        // F000:010D mov AL,0xA0
+        AL = 0xA0;
+        // F000:010F out 0x70,AL
+        RealTimeClockPorts.WriteAddress(0xA0);
+        // F000:0111 ret near
+        return NearRet();
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte al;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0
+        AX = 0;
+        // F000:0003 mov DS,AX
+        DS = 0;
+        // F000:0005 mov ES,AX
+        ES = 0;
+        // F000:0007 mov SS,AX
+        SS = 0;
+        // F000:0009 mov SP,0x0100
+        SP = 0x0100;
+        // F000:000C cld
+        DirectionFlag = false;
+        // F000:000D xor BX,BX
+        BX = 0;
+        // F000:000F mov AL,0x8B
+        // F000:0011 out 0x70,AL
+        // F000:0013 in AL,0x71
+        AL = Cmos.ReadRegister(0x8B);
+        // F000:0015 and AL,0x7F
+        AL &= 0x7F;
+        // F000:0017 mov byte ptr DS:[BX],AL
+        Segment0000Globals.Byte0000 = AL;
+        // F000:0019 mov AL,0xA0
+        // F000:001B out 0x70,AL
+        // F000:001D mov AL,0x45
+        // F000:001F out 0x71,AL
+        Cmos.WriteRegister(0xA0, 0x45);
+        // F000:0021 mov AL,0xA0
+        // F000:0023 out 0x70,AL
+        // F000:0025 in AL,0x71
+        al = Cmos.ReadRegister(0xA0);
+        // F000:0027 mov byte ptr DS:[BX+1],AL
+        Segment0000Globals.Byte0001 = al;
+        // F000:002A mov AL,0x8B
+        // F000:002C out 0x70,AL
+        RealTimeClockPorts.WriteAddress(0x8B);
+        // F000:002E out 0x80,AL
+        Out8((ushort)0x80 /* no device */, 0x8B);
+        // F000:0030 in AL,0x71
+        AL = RealTimeClockPorts.ReadData();
+        // F000:0032 and AL,0x7F
+        AL &= 0x7F;
+        // F000:0034 mov byte ptr DS:[BX+2],AL
+        Segment0000Globals.Byte0002 = AL;
+        // F000:0037 mov AL,0x8B
+        // F000:0039 out 0x70,AL
+        RealTimeClockPorts.WriteAddress(0x8B);
+        // F000:003B mov CL,byte ptr DS:[BX]
+        CL = Segment0000Globals.Byte0000;
+        // F000:003D in AL,0x71
+        AL = RealTimeClockPorts.ReadData();
+        // F000:003F and AL,0x7F
+        AL = Alu8.And(AL, 0x7F);
+        // F000:0041 mov byte ptr DS:[BX+3],AL
+        Segment0000Globals.Byte0003 = AL;
+        // F000:0044 mov AL,0x8B
+        AL = 0x8B;
+        // F000:0046 out 0x70,AL
+        RealTimeClockPorts.WriteAddress(0x8B);
+        // F000:0048 call near 0x010D
+        NearCall(biosSegment, 0x004B, unknown_F000_010D_F010DEntry);
+        // F000:004B in AL,0x71
+        AL = RealTimeClockPorts.ReadData();
+        // F000:004D and AL,0x7F
+        AL &= 0x7F;
+        // F000:004F mov byte ptr DS:[BX+4],AL
+        UInt8[DS, (ushort)(BX + 4)] = AL;
+        // F000:0052 mov AL,0x34
+        // F000:0054 out 0x43,AL
+        // F000:0056 mov AL,5
+        // F000:0058 out 0x40,AL
+        // F000:005A mov AL,0
+        // F000:005C out 0x40,AL
+        Pit.ProgramChannel(0, 0x34, 5);
+        // F000:005E mov AL,0xC2
+        // F000:0060 out 0x43,AL
+        PitPorts.WriteControlWord(0xC2);
+        // F000:0062 in AL,0x40
+        AL = PitPorts.ReadChannel0Data();
+        // F000:0064 and AL,0x3F
+        AL &= 0x3F;
+        // F000:0066 mov byte ptr DS:[BX+5],AL
+        UInt8[DS, (ushort)(BX + 5)] = AL;
+        // F000:0069 mov AL,0xB6
+        // F000:006B out 0x43,AL
+        // F000:006D mov AL,0x34
+        // F000:006F out 0x42,AL
+        // F000:0071 mov AL,0x12
+        // F000:0073 out 0x42,AL
+        Pit.ProgramChannel(2, 0xB6, 0x1234);
+        // F000:0075 mov AL,0xC8
+        // F000:0077 out 0x43,AL
+        PitPorts.WriteControlWord(0xC8);
+        // F000:0079 in AL,0x42
+        AL = PitPorts.ReadChannel2Data();
+        // F000:007B and AL,0x3F
+        AL &= 0x3F;
+        // F000:007D mov byte ptr DS:[BX+6],AL
+        UInt8[DS, (ushort)(BX + 6)] = AL;
+        // F000:0080 mov DX,0x03C8
+        // F000:0083 mov AL,0x10
+        // F000:0085 out DX,AL
+        // F000:0086 mov DX,0x03C9
+        // F000:0089 mov AL,1
+        // F000:008B out DX,AL
+        // F000:008C mov AL,2
+        // F000:008E out DX,AL
+        // F000:008F mov AL,3
+        // F000:0091 out DX,AL
+        Vga.SetPaletteEntry(0x10, 1, 2, 3);
+        // F000:0092 mov AL,0x3F
+        // F000:0094 out DX,AL
+        VgaPorts.WriteDacData(0x3F);
+        // F000:0095 mov DX,0x03C7
+        // F000:0098 mov AL,0x10
+        // F000:009A out DX,AL
+        VgaPorts.WriteDacReadIndex(0x10);
+        // F000:009B mov DX,0x03C9
+        // F000:009E in AL,DX
+        al = VgaPorts.ReadDacData();
+        // F000:009F mov byte ptr DS:[BX+7],AL
+        UInt8[DS, (ushort)(BX + 7)] = al;
+        // F000:00A2 in AL,DX
+        AL = VgaPorts.ReadDacData();
+        // F000:00A3 mov byte ptr DS:[BX+8],AL
+        UInt8[DS, (ushort)(BX + 8)] = AL;
+        // F000:00A6 in AL,DX
+        al = VgaPorts.ReadDacData();
+        // F000:00A7 mov byte ptr DS:[BX+9],AL
+        UInt8[DS, (ushort)(BX + 9)] = al;
+        // F000:00AA mov DX,0x03C7
+        // F000:00AD mov AL,0x11
+        // F000:00AF out DX,AL
+        VgaPorts.WriteDacReadIndex(0x11);
+        // F000:00B0 mov DX,0x03C9
+        // F000:00B3 in AL,DX
+        AL = VgaPorts.ReadDacData();
+        // F000:00B4 mov byte ptr DS:[BX+0x0A],AL
+        UInt8[DS, (ushort)(BX + 0x0A)] = AL;
+        // F000:00B7 mov DX,0x03C4
+        // F000:00BA mov AL,2
+        // F000:00BC out DX,AL
+        // F000:00BD mov DX,0x03C5
+        // F000:00C0 mov AL,0x0F
+        // F000:00C2 out DX,AL
+        Vga.WriteSequencerRegister(2, 0x0F);
+        // F000:00C3 mov DX,0x03C4
+        // F000:00C6 mov AL,2
+        // F000:00C8 out DX,AL
+        VgaPorts.WriteSequencerAddress(2);
+        // F000:00C9 mov DX,0x03C5
+        // F000:00CC in AL,DX
+        al = VgaPorts.ReadSequencerData();
+        // F000:00CD mov byte ptr DS:[BX+0x0B],AL
+        UInt8[DS, (ushort)(BX + 0x0B)] = al;
+        // F000:00D0 mov AX,0x4005
+        AX = 0x4005;
+        // F000:00D3 mov DX,0x03CE
+        // F000:00D6 out DX,AX
+        Vga.WriteGraphicsControllerRegister(5, 0x40);
+        // F000:00D7 mov DX,0x03CE
+        // F000:00DA mov AL,5
+        // F000:00DC out DX,AL
+        VgaPorts.WriteGraphicsControllerAddress(5);
+        // F000:00DD mov DX,0x03CF
+        // F000:00E0 in AL,DX
+        al = VgaPorts.ReadGraphicsControllerData();
+        // F000:00E1 mov byte ptr DS:[BX+0x0C],AL
+        UInt8[DS, (ushort)(BX + 0x0C)] = al;
+        // F000:00E4 mov DX,0x0388
+        // F000:00E7 mov AL,0x20
+        // F000:00E9 out DX,AL
+        Opl3Ports.WriteAdlibAddress0(0x20);
+        // F000:00EA mov DX,0x0389
+        // F000:00ED mov AL,0xF1
+        // F000:00EF out DX,AL
+        Opl3Ports.WriteAdlibData0(0xF1);
+        // F000:00F0 mov DX,0x0388
+        // F000:00F3 in AL,DX
+        AL = Opl3Ports.ReadAdlibAddress0();
+        // F000:00F4 mov byte ptr DS:[BX+0x0D],AL
+        UInt8[DS, (ushort)(BX + 0x0D)] = AL;
+        // F000:00F7 mov DX,0x038A
+        // F000:00FA mov AL,4
+        // F000:00FC out DX,AL
+        // F000:00FD mov DX,0x038B
+        // F000:0100 mov AL,0x21
+        // F000:0102 out DX,AL
+        Opl.WriteRegister(0x038A, 4, 0x21);
+        // F000:0103 mov DX,0x038A
+        DX = 0x038A;
+        // F000:0106 in AL,DX
+        AL = Opl3Ports.ReadAdlibAddress1();
+        // F000:0107 and AL,0xC0
+        AL = Alu8.And(AL, 0xC0);
+        // F000:0109 mov byte ptr DS:[BX+0x0E],AL
+        UInt8[DS, (ushort)(BX + 0x0E)] = AL;
+        // F000:010C hlt
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public byte Byte0000 { get => _memory.UInt8[Segment, 0x0000]; set => _memory.UInt8[Segment, 0x0000] = value; }
+
+    public byte Byte0001 { get => _memory.UInt8[Segment, 0x0001]; set => _memory.UInt8[Segment, 0x0001] = value; }
+
+    public byte Byte0002 { get => _memory.UInt8[Segment, 0x0002]; set => _memory.UInt8[Segment, 0x0002] = value; }
+
+    public byte Byte0003 { get => _memory.UInt8[Segment, 0x0003]; set => _memory.UInt8[Segment, 0x0003] = value; }
+}

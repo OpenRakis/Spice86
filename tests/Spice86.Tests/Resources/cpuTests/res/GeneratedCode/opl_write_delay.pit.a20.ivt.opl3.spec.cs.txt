@@ -467,14 +467,14 @@ public partial class CfgGeneratedOverrides {
             // 016D:01ED mov BX,7
             BX = 7;
             // 016D:01F0 int 0x10
-            Video.WriteTextInTeletypeMode(cs1, 0x01F2, AL, 7);
+            Video.WriteTextInTeletypeMode(AL, 7);
             // 016D:01F2 jmp short 0x01E6
         }
         // 016D:01F4 ret near
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, EBX, DF. Outputs: CX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, EBX. Outputs: CX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01F5_018C5() {
         ushort bx1 = 0;
@@ -514,8 +514,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:020C mov BX,7
             bx1 = 7;
             // 016D:020F int 0x10
-            BX = bx1;
-            Video.WriteTextInTeletypeMode(cs1, 0x0211, AL, 7);
+            Video.WriteTextInTeletypeMode(AL, 7);
             // 016D:0211 loop 0x0207
             CX--;
         } while (CX != 0);

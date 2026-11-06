@@ -157,7 +157,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x0B
         AH = 0x0B;
         // 016D:0102 int 0x21
-        Dos.CheckStandardInputStatus(cs1, 0x0104);
+        InterruptCall(cs1, 0x0104, 0x21);
         // 016D:0104 mov AH,7
         AH = 7;
         // 016D:0106 mov BX,0xB800

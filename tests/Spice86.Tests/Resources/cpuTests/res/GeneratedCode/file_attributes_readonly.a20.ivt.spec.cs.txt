@@ -149,7 +149,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -157,9 +157,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x0120
         DX = 0x0120;
         // 016D:0103 mov AX,0x4300
-        AX = 0x4300;
         // 016D:0106 int 0x21
-        Dos.GetSetFileAttributes(cs1, 0x0108, 0, CX, 0x0120, DS, "TESTATTR.TXT");
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CX, CarryFlag) = Dos.GetSetFileAttributes(0x4300, Dos.StringDecoder.GetDosString(DS, 0x0120, '\0', "TESTATTR.TXT"), CX);
         // 016D:0108 jb short 0x0119
         if (!CarryFlag) {
             // 016D:010A mov AL,CL

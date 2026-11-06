@@ -225,6 +225,98 @@ public sealed class VgaIoPortTimingTests {
         (status & 1).Should().Be(expectedStatus);
     }
 
+    [Fact]
+    public void SetPaletteEntryMatchesThePortSequence() {
+        // Arrange: two independent VGA devices, one writes the palette entry through its ports,
+        // one through the operation.
+        (_, IOPortDispatcher portsA) = CreateVga();
+        (VgaIoPortHandler vgaB, IOPortDispatcher portsB) = CreateVga();
+
+        // Act
+        portsA.WriteByte(Ports.DacAddressWriteIndex, 0x10);
+        portsA.WriteByte(Ports.DacData, 0x01);
+        portsA.WriteByte(Ports.DacData, 0x02);
+        portsA.WriteByte(Ports.DacData, 0x03);
+        vgaB.SetPaletteEntry(0x10, 0x01, 0x02, 0x03);
+
+        // Assert: the DAC write index advanced past the entry in both, so the next data write
+        // lands on entry 0x11's red component.
+        portsA.WriteByte(Ports.DacData, 0x3F);
+        portsB.WriteByte(Ports.DacData, 0x3F);
+
+        ReadPaletteEntry(portsA, 0x10).Should().Equal(ReadPaletteEntry(portsB, 0x10));
+        ReadPaletteEntry(portsA, 0x11).Should().Equal(ReadPaletteEntry(portsB, 0x11));
+    }
+
+    [Fact]
+    public void WriteSequencerRegisterMatchesThePortSequence() {
+        // Arrange
+        (_, IOPortDispatcher portsA) = CreateVga();
+        (VgaIoPortHandler vgaB, IOPortDispatcher portsB) = CreateVga();
+
+        // Act
+        portsA.WriteByte(Ports.SequencerAddress, 0x02);
+        portsA.WriteByte(Ports.SequencerData, 0x0F);
+        vgaB.WriteSequencerRegister(0x02, 0x0F);
+
+        // Assert: the index stayed selected - reading the data port without reselection returns
+        // the programmed value.
+        portsB.ReadByte(Ports.SequencerData).Should().Be(portsA.ReadByte(Ports.SequencerData))
+            .And.Be(0x0F);
+
+        // Act: a data-only write reaches the same register in both.
+        portsA.WriteByte(Ports.SequencerData, 0x05);
+        portsB.WriteByte(Ports.SequencerData, 0x05);
+
+        // Assert: reselecting the register reads the follow-up value back.
+        portsA.WriteByte(Ports.SequencerAddress, 0x02);
+        portsB.WriteByte(Ports.SequencerAddress, 0x02);
+        portsB.ReadByte(Ports.SequencerData).Should().Be(portsA.ReadByte(Ports.SequencerData))
+            .And.Be(0x05);
+    }
+
+    [Fact]
+    public void WriteGraphicsControllerRegisterMatchesThePortSequence() {
+        // Arrange
+        (_, IOPortDispatcher portsA) = CreateVga();
+        (VgaIoPortHandler vgaB, IOPortDispatcher portsB) = CreateVga();
+
+        // Act
+        portsA.WriteByte(Ports.GraphicsControllerAddress, 0x05);
+        portsA.WriteByte(Ports.GraphicsControllerData, 0x40);
+        vgaB.WriteGraphicsControllerRegister(0x05, 0x40);
+
+        // Assert: the index stayed selected - reading the data port without reselection returns
+        // the programmed value.
+        portsB.ReadByte(Ports.GraphicsControllerData).Should().Be(portsA.ReadByte(Ports.GraphicsControllerData))
+            .And.Be(0x40);
+
+        // Act: a data-only write reaches the same register in both.
+        portsA.WriteByte(Ports.GraphicsControllerData, 0x55);
+        portsB.WriteByte(Ports.GraphicsControllerData, 0x55);
+
+        // Assert: reselecting the register reads the follow-up value back.
+        portsA.WriteByte(Ports.GraphicsControllerAddress, 0x05);
+        portsB.WriteByte(Ports.GraphicsControllerAddress, 0x05);
+        portsB.ReadByte(Ports.GraphicsControllerData).Should().Be(portsA.ReadByte(Ports.GraphicsControllerData))
+            .And.Be(0x55);
+    }
+
+    private static (VgaIoPortHandler Vga, IOPortDispatcher Ports) CreateVga() {
+        State cpuState = new(CpuModel.INTEL_80286);
+        IOPortDispatcher ports = new(new(), cpuState, NullLogger.Instance, true);
+        VideoState state = CreateVideoState();
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        VgaIoPortHandler vga = new(cpuState, ports, NullLogger.Instance, state, clock, true);
+        return (vga, ports);
+    }
+
+    private static byte[] ReadPaletteEntry(IOPortDispatcher ports, byte index) {
+        ports.WriteByte(Ports.DacAddressReadIndex, index);
+        return [ports.ReadByte(Ports.DacData), ports.ReadByte(Ports.DacData),
+            ports.ReadByte(Ports.DacData)];
+    }
+
     private static VideoState CreateVideoState() {
         VideoState state = new();
         state.SequencerRegisters.ClockingModeRegister.DotsPerClock = 8;

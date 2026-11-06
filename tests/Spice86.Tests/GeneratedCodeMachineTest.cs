@@ -5,10 +5,14 @@ using FluentAssertions;
 using NSubstitute;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
@@ -17,6 +21,7 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Tests.AsmFixtures;
 
+using System.Buffers.Binary;
 using System.Reflection;
 
 using Xunit;
@@ -489,5 +494,134 @@ public sealed class GeneratedCodeMachineTest {
     public void Test386ButNotProtectedModeGeneratedOverrideCompilesAndReachesPostFinished() {
         GeneratedCodeMachineTestRunner runner = new();
         runner.TestGeneratedCode(AsmFixtureCatalog.Test386());
+    }
+
+    /// <summary>The one approved frame difference: an <c>int 11h</c> to the installed stub pushes
+    /// the six-byte interrupt frame in the interpreter, while the generated direct call to
+    /// <c>GetEquipmentList</c> builds none. The program sets known entry flags, seeds the six bytes
+    /// below SP, invokes the service and halts with no instruction in between touching flags or the
+    /// stack. The interpreted run must show return IP, caller CS and the entry FLAGS in the seeded
+    /// slots; the generated run must leave the seeds untouched; SP, AX and the flags must match the
+    /// interpreted run's.</summary>
+    [Fact]
+    public void BuiltInOperationWithoutFrameDependencyLeavesStackBytesUntouched() {
+        // mov ax,2000h; mov ss,ax; mov sp,1000h; mov bp,sp; push word 0CD7h; popf;
+        // six seeded bytes at [bp-6..bp-1]; int 11h; hlt
+        byte[] program = [
+            0xB8, 0x00, 0x20, 0x8E, 0xD0, 0xBC, 0x00, 0x10, 0x89, 0xE5,
+            0x68, 0xD7, 0x0C, 0x9D,
+            0xC6, 0x46, 0xFA, 0x11, 0xC6, 0x46, 0xFB, 0x22,
+            0xC6, 0x46, 0xFC, 0x33, 0xC6, 0x46, 0xFD, 0x44,
+            0xC6, 0x46, 0xFE, 0x55, 0xC6, 0x46, 0xFF, 0x66,
+            0xCD, 0x11,
+            0xF4
+        ];
+        const uint frameBase = 0x20000 + 0x1000 - 6;
+        ushort returnOffset = (ushort)(0x100 + program.Length - 1);
+        ushort entryFlags = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0CD7 }.FlagRegister16;
+
+        // The interpreted run leaves the interrupt frame in the seeded slots and provides the
+        // discovered CFG the generated run is compiled from.
+        byte[] interpretedFrame = new byte[6];
+        ushort interpretedAx;
+        ushort interpretedFlags;
+        ushort callerSegment;
+        CfgPartitionedProgram partitioned;
+        using (AsmRunScope interpretedScope = FrameScope(program)) {
+            using AsmFixtureRun interpretedRun =
+                AsmFixtureRunner.RunEmulated(interpretedScope, JitMode.InterpretedOnly);
+            Machine interpreted = interpretedRun.Machine;
+            callerSegment = interpreted.CpuState.CS;
+            for (int i = 0; i < 6; i++) {
+                interpretedFrame[i] = interpreted.Memory.UInt8[frameBase + i];
+            }
+            interpretedAx = interpreted.CpuState.AX;
+            interpretedFlags = interpreted.CpuState.Flags.FlagRegister16;
+            interpreted.CpuState.SP.Should().Be(0x1000);
+
+            CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(
+                interpreted.CfgCpu.ExecutionContextManager, null).Graph;
+            GeneratorInputs inputs = interpretedRun.DependencyInjection
+                .GeneratorInputsCollector.Capture();
+            partitioned = new CfgFunctionPartitioner().Partition(graph,
+                interpreted.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
+        }
+
+        BinaryPrimitives.ReadUInt16LittleEndian(interpretedFrame.AsSpan(0)).Should().Be(returnOffset,
+            "the interpreted int pushed the continuation IP at SP-6");
+        BinaryPrimitives.ReadUInt16LittleEndian(interpretedFrame.AsSpan(2)).Should().Be(callerSegment,
+            "the interpreted int pushed the caller CS at SP-4");
+        BinaryPrimitives.ReadUInt16LittleEndian(interpretedFrame.AsSpan(4)).Should().Be(entryFlags,
+            "the interpreted int pushed the entry FLAGS at SP-2");
+        interpretedFlags.Should().Be(entryFlags,
+            "the service leaves the flags the int entered with");
+
+        // The generated run of the same discovered CFG calls the service directly.
+        GeneratedCSharpProgram generated = new CfgCSharpGenerator(
+            collectCensuses: false, verify: true).Generate(partitioned);
+        generated.SourceText.Should().Contain("GetEquipmentList(");
+        using CompiledGeneratedOverride compiled =
+            new GeneratedOverrideCompiler().CompileSupplier(generated);
+        using AsmRunScope executionScope = FrameScope(program);
+        using AsmFixtureRun generatedRun =
+            AsmFixtureRunner.RunWithOverride(executionScope, compiled.Supplier);
+        Machine generatedMachine = generatedRun.Machine;
+        byte[] generatedFrame = new byte[6];
+        for (int i = 0; i < 6; i++) {
+            generatedFrame[i] = generatedMachine.Memory.UInt8[frameBase + i];
+        }
+        generatedMachine.CpuState.SP.Should().Be(0x1000);
+        generatedMachine.CpuState.AX.Should().Be(interpretedAx,
+            "the direct call returns the same AX as the interrupt");
+        generatedMachine.CpuState.Flags.FlagRegister16.Should().Be(entryFlags,
+            "the direct call leaves the same flags as the interrupt");
+        generatedFrame.Should().Equal([0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+            "the direct call builds no interrupt frame: the seeded bytes survive");
+    }
+
+    /// <summary>The recorded <c>NOFILE.TXT</c> literal of the <c>data_strings</c> open call is
+    /// checked at run time: bytes that changed since discovery throw instead of silently opening
+    /// another name, whether a filename byte or the terminator changed.</summary>
+    [Theory]
+    [InlineData((ushort)0x016F)]
+    [InlineData((ushort)0x0179)]
+    public void DataStringsCheckedLiteralFailsOnMutatedBytes(ushort offset) {
+        // Arrange
+        GeneratedScenarioCase scenarioCase = GeneratedScenarioCatalog.Case("data_strings.ivt.spec");
+        using AsmRunScope discovery = scenarioCase.DiscoveryScenario.Prepare();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(discovery);
+        generatedProgram.SourceText.Should().Contain("GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\")");
+        using CompiledGeneratedOverride compiled =
+            runner.CompileGeneratedProgram(discovery.Fixture.Settings, generatedProgram);
+
+        AsmScenario mutated = scenarioCase.DiscoveryScenario.WithOracle(fixture =>
+            new AsmFixture(fixture.Settings with {
+                ConfigureMachine = machine => {
+                    fixture.Settings.ConfigureMachine(machine);
+                    // Corrupt one byte of the filename or its terminator in the loaded image.
+                    machine.Memory.UInt8[machine.CpuState.DS, offset] = (byte)'X';
+                }
+            }, fixture.ExpectedMemory, fixture.AssertResult));
+        using AsmRunScope execution = mutated.Prepare();
+
+        // Act / Assert
+        Action run = () => AsmFixtureRunner.RunWithOverride(execution, compiled.Supplier).Dispose();
+        run.Should().Throw<InvalidVMOperationException>()
+            .WithInnerException<InvalidOperationException>()
+            .WithMessage("*differs from the recorded literal*");
+    }
+
+    private static AsmRunScope FrameScope(byte[] program) {
+        AsmRunScope scope = new();
+        string directory = scope.CreateWorkingDirectory("frame_omission");
+        string comPath = Path.Join(directory, "frame.com");
+        File.WriteAllBytes(comPath, program);
+        scope.AttachFixture(new AsmFixture(new AsmRunSettings {
+            BinName = comPath,
+            MaxCycles = 100000,
+            InstallInterruptVectors = true
+        }, [], _ => { }));
+        return scope;
     }
 }

@@ -152,24 +152,25 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         ushort flagOperand_014E = 0;
         ushort flagOperand_0156 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov DX,0x017E
         DX = 0x017E;
         // 016D:0103 mov AX,0x3D00
-        AX = 0x3D00;
         // 016D:0106 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0108, 0, 0x017E, DS, "RO.TXT");
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT"));
         // 016D:0108 jb short 0x0170
         if (!CarryFlag) {
             // 016D:010A mov word ptr DS:[0x0177],AX
             ImageMinus0003Globals.Word0177 = AX;
             // 016D:010D mov BX,word ptr DS:[0x0177]
-            BX = ImageMinus0003Globals.Word0177;
+            bx1 = ImageMinus0003Globals.Word0177;
             // 016D:0111 mov CX,1
             CX = 1;
             // 016D:0114 mov DX,0x0179
@@ -177,7 +178,8 @@ public partial class CfgGeneratedOverrides {
             // 016D:0117 mov AH,0x40
             // 016D:0119 int 0x21
             // DOS 40h write "x"
-            Dos.WriteToFileOrDevice(cs1, 0x011B, 1, 0x0179, BX, DS);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.WriteFile(bx1, 1, DS, 0x0179);
             // 016D:011B jae short 0x0162
             if (CarryFlag) {
                 // 016D:011D cmp AX,5
@@ -188,15 +190,16 @@ public partial class CfgGeneratedOverrides {
                     BX = ImageMinus0003Globals.Word0177;
                     // 016D:0126 mov AH,0x3E
                     // 016D:0128 int 0x21
-                    Dos.CloseFileOrDevice(cs1, 0x012A, BX);
+                    Dos.RecordCallerStack(SS, SP);
+                    (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
                     // 016D:012A jb short 0x0170
                     if (!CarryFlag) {
                         // 016D:012C mov DX,0x017E
                         DX = 0x017E;
                         // 016D:012F mov AX,0x3D00
-                        AX = 0x3D00;
                         // 016D:0132 int 0x21
-                        Dos.OpenFileOrDevice(cs1, 0x0134, 0, 0x017E, DS, "RO.TXT");
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT"));
                         // 016D:0134 jb short 0x0170
                         if (CarryFlag) {
                             goto L_0170;
@@ -204,14 +207,15 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0136 mov word ptr DS:[0x0177],AX
                         ImageMinus0003Globals.Word0177 = AX;
                         // 016D:0139 mov BX,word ptr DS:[0x0177]
-                        BX = ImageMinus0003Globals.Word0177;
+                        bx1 = ImageMinus0003Globals.Word0177;
                         // 016D:013D mov CX,4
                         CX = 4;
                         // 016D:0140 mov DX,0x017A
                         DX = 0x017A;
                         // 016D:0143 mov AH,0x3F
                         // 016D:0145 int 0x21
-                        Dos.ReadFileOrDevice(cs1, 0x0147, 4, 0x017A, BX, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.ReadFile(bx1, 4, DS, 0x017A);
                         // 016D:0147 jb short 0x0162
                         if (CarryFlag) {
                             goto L_0162;
@@ -255,7 +259,8 @@ public partial class CfgGeneratedOverrides {
             BX = ImageMinus0003Globals.Word0177;
             // 016D:0169 mov AH,0x3E
             // 016D:016B int 0x21
-            Dos.CloseFileOrDevice(cs1, 0x016D, BX);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
             // 016D:016D pop AX
             AX = Stack.Pop16();
             // 016D:016E jmp short 0x0172

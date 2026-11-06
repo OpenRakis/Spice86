@@ -36,10 +36,14 @@ public class SystemBiosInt12Handler : InterruptHandler {
     public override byte VectorNumber => 0x12;
 
     /// <inheritdoc />
-    public override void Run() => GetConventionalMemorySize();
+    public override void Run() => WriteConventionalMemorySize();
 
-    [InterruptService(Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.Read)]
-    private void GetConventionalMemorySize() {
-        State.AX = _biosDataArea.ConventionalMemorySizeKb;
+    /// <summary>Returns the conventional memory size in KB.</summary>
+    public ushort GetConventionalMemorySize() => _biosDataArea.ConventionalMemorySizeKb;
+
+    [InterruptService(Name = nameof(GetConventionalMemorySize), Writes = CpuValues.Ax,
+        Memory = ServiceMemoryEffect.Read, Implementation = nameof(GetConventionalMemorySize))]
+    private void WriteConventionalMemorySize() {
+        State.AX = GetConventionalMemorySize();
     }
 }

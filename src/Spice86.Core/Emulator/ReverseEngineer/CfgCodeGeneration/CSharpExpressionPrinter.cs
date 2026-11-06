@@ -9,6 +9,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
@@ -67,11 +70,12 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// </summary>
     /// <param name="segmentVariables">The names generated code refers to, keyed by segment.</param>
     /// <param name="ioPorts">The ports the machine the program was dumped from had a registered
-    /// device handler for; <see langword="null"/> suppresses the <c>no device</c> comment.</param>
+    /// device handler for, keyed by port to the handler's type; <see langword="null"/> suppresses
+    /// the <c>no device</c> comment.</param>
     /// <param name="method">The analyzed method being printed.</param>
     /// <param name="analysis">The program-wide values of the generation run.</param>
     public CSharpExpressionPrinter(IReadOnlyDictionary<ushort, string> segmentVariables,
-        IReadOnlySet<ushort>? ioPorts, AnalyzedMethod method, ProgramAnalysis analysis)
+        IReadOnlyDictionary<ushort, Type>? ioPorts, AnalyzedMethod method, ProgramAnalysis analysis)
         : this(method, analysis, segmentVariables, ioPorts) {
     }
 
@@ -81,7 +85,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     private CSharpExpressionPrinter(AnalyzedMethod? method, ProgramAnalysis? analysis,
-        IReadOnlyDictionary<ushort, string> segmentVariables, IReadOnlySet<ushort>? ioPorts) {
+        IReadOnlyDictionary<ushort, string> segmentVariables, IReadOnlyDictionary<ushort, Type>? ioPorts) {
         _segmentVariables = segmentVariables;
         IoPorts = ioPorts;
         _method = method;
@@ -92,9 +96,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public string LocalVariableSuffix { get; set; } = string.Empty;
 
     /// <summary>The ports the machine the program was dumped from had a registered device handler
-    /// for; <see langword="null"/> when the program was built without a machine, which suppresses
-    /// the <c>no device</c> comment.</summary>
-    internal IReadOnlySet<ushort>? IoPorts { get; }
+    /// for, keyed by port to the handler's type; <see langword="null"/> when the program was built
+    /// without a machine, which suppresses the <c>no device</c> comment.</summary>
+    internal IReadOnlyDictionary<ushort, Type>? IoPorts { get; }
 
     /// <summary>The class every global access prints through; unset, every global prints through
     /// the register class of its segment register.</summary>
@@ -163,9 +167,6 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         string target = node.PropertyPath is null ? string.Empty : node.PropertyPath + ".";
         string arguments = string.Join(", ", FormatMethodArguments(node));
-        if (node is InterruptServiceCallNode { StringLiteral: { } literal }) {
-            arguments += ", " + StringLiteral(literal);
-        }
         return $"{target}{MethodName(node)}({arguments})";
     }
 
@@ -189,25 +190,17 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         };
     }
 
-    private static string StringLiteral(string text) {
-        StringBuilder literal = new("\"");
-        foreach (char c in text) {
-            literal.Append(c switch {
-                '"' => "\\\"",
-                '\\' => "\\\\",
-                '\t' => "\\t",
-                '\n' => "\\n",
-                '\r' => "\\r",
-                _ => c
-            });
-        }
-        return literal.Append('"').ToString();
-    }
-
     private static readonly
         Dictionary<(Type Type, string Name, int ArgumentCount), ParameterInfo[]?> ParametersByCall = [];
 
     private IEnumerable<string> FormatMethodArguments(MethodCallNode node) {
+        if (node is InterruptServiceCallNode serviceCall) {
+            ParameterInfo[] implementationParameters =
+                (serviceCall.Service.Implementation ?? throw new InvalidOperationException(
+                    $"{serviceCall.Service.Name} has no implementation to call")).GetParameters();
+            return node.Arguments.Select((argument, index) =>
+                Argument(serviceCall, implementationParameters[index], argument));
+        }
         Type? targetType = ResolveKnownMethodTargetType(node.PropertyPath);
         if (targetType is null) {
             return node.Arguments.Select(argument => Expr(argument).Text);
@@ -236,6 +229,29 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         return node.Arguments.Select((argument, index) => Argument(parameters[index], argument));
     }
 
+    /// <summary>An argument of a typed service call. A string parameter is the decoded DOS string
+    /// at the <c>DS:DX</c> address of its <see cref="SegmentedAddressNode"/>, checked against the
+    /// constant literal the snapshot proved when there is one.</summary>
+    private string Argument(InterruptServiceCallNode call, ParameterInfo parameter,
+        IVisitableAstNode argument) {
+        if (parameter.ParameterType != typeof(string)) {
+            return Argument(parameter, argument);
+        }
+        if (argument is not SegmentedAddressNode address
+            || call.Service.StringArgument.Terminator() is not { } terminator) {
+            throw new InvalidOperationException(
+                $"{call.Service.Name}: a string parameter needs a DS:DX argument on a string service");
+        }
+        string expected = string.Empty;
+        if (call.StringLiteral is { } literal) {
+            expected = $", \"{EscapeString(literal)}\"";
+        }
+        string end = terminator == 0 ? "'\\0'" : $"'{(char)terminator}'";
+        return $"{call.PropertyPath}.{nameof(DosInt21Handler.StringDecoder)}." +
+            $"{nameof(DosStringDecoder.GetDosString)}({Expr(address.Segment).Text}, " +
+            $"{Expr(address.Offset).Text}, {end}{expected})";
+    }
+
     /// <summary>
     /// An argument for <paramref name="parameter"/>. A constant is written as a literal of the
     /// parameter type, without a cast: C# converts a constant argument implicitly when its value fits. An
@@ -244,6 +260,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// </summary>
     private string Argument(ParameterInfo parameter, IVisitableAstNode argument) {
         Type parameterType = parameter.ParameterType;
+        if (parameterType.IsEnum) {
+            return EnumArgument(parameterType, Expr(argument));
+        }
         DataType? parameterDataType = TryToDataType(parameterType);
         if (parameterDataType is not null
             && SameWidthSignRoundTripOperand(parameterDataType, argument) is ValueNode unwrapped) {
@@ -257,6 +276,26 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
                     constant.ConvertAsCSharpCast(parameterDataType))).Text;
         }
         return Cast(parameterType, fragment);
+    }
+
+    /// <summary>An argument for an enum parameter: the member name when the constant is a defined
+    /// member, an explicit cast of the numeric value otherwise. The type is printed fully
+    /// qualified so no using directive is needed.</summary>
+    private static string EnumArgument(Type enumType, CSharpFragment fragment) {
+        string fullName = enumType.FullName
+            ?? throw new InvalidOperationException($"{enumType} has no full name");
+        string typeName = $"global::{fullName.Replace('+', '.')}";
+        if (fragment.Constant is ConstantNode constant
+            && TryToDataType(Enum.GetUnderlyingType(enumType)) is { } underlyingDataType) {
+            ConstantNode converted = new(underlyingDataType,
+                constant.ConvertAsCSharpCast(underlyingDataType));
+            object value = underlyingDataType.Signed ? converted.SignedValue : converted.Value;
+            if (Enum.GetName(enumType, value) is { } member) {
+                return $"{typeName}.{member}";
+            }
+            return $"({typeName}){Parenthesize(ConstantLiteral(converted), CastPrecedence)}";
+        }
+        return $"({typeName}){Parenthesize(fragment, CastPrecedence)}";
     }
 
     /// <summary>
@@ -286,7 +325,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         nameof(Alu16) => typeof(Alu16),
         nameof(Alu32) => typeof(Alu32),
         nameof(Stack) => typeof(Stack),
-        _ => null
+        _ => DeviceOperationRegistry.ReceiverType(propertyPath)
     };
 
     public CSharpFragment VisitMethodCallValueNode(MethodCallValueNode node) {
@@ -926,7 +965,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     private string NoDeviceComment(CSharpFragment portFragment) {
         if (IoPorts is not null && portFragment.Constant is ConstantNode constant
-            && !IoPorts.Contains((ushort)constant.Value)) {
+            && !IoPorts.ContainsKey((ushort)constant.Value)) {
             return " /* no device */";
         }
         return string.Empty;

@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -38,10 +39,11 @@ public class DataCommentTest {
 
     private static readonly SegmentedAddress DosStub = new(0xF000, 0x9000);
 
-    private static ServiceContract DosContract(string name, CpuValues reads,
-        CpuValues writes) =>
-        new(name, new CallEffect(reads, CpuValues.All),
-            ServiceMemoryEffect.Read, false);
+    private static InterruptServiceEntry DosEntry(int selectorValue, string name,
+        CpuValues reads, CpuValues writes) =>
+        new(selectorValue, name,
+            new ServiceContract(new CallEffect(reads, writes), ServiceMemoryEffect.Read, false),
+            ServiceStringArgument.None, null, []);
 
     private static CfgBlock[] SplitAfterInterrupt(TestInstructionHelper helper,
         (ushort Offset, byte[] Bytes)[] instructions, bool withDosStub) {
@@ -71,7 +73,7 @@ public class DataCommentTest {
         Generate(changed, memory, null, instructions);
 
     private static GeneratedCSharpProgram Generate(ChangedMemorySnapshot changed, byte[] memory,
-        IReadOnlyDictionary<int, ServiceContract>? dosContracts,
+        IReadOnlyDictionary<int, InterruptServiceEntry>? dosContracts,
         params (ushort Offset, byte[] Bytes)[] instructions) {
         CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), instructions,
             dosContracts is not null);
@@ -89,7 +91,7 @@ public class DataCommentTest {
                 ServiceVectors = new Dictionary<byte, InterruptServiceVector> {
                     [0x21] = new InterruptServiceVector(0x21, DosStub,
                         new HandlerServices.SelectedServices(ServiceSelector.Ah, dosContracts),
-                        "Dos")
+                        typeof(DosInt21Handler))
                 }
             };
         }
@@ -186,8 +188,8 @@ public class DataCommentTest {
     public void OpenServiceShowsTheAsciiZName() {
         // Arrange / Act: a non-printable byte keeps the string off the literal argument, so the
         // comment shows it escaped under the contract's name.
-        IReadOnlyDictionary<int, ServiceContract> contracts = new Dictionary<int, ServiceContract> {
-            [0x3D] = DosContract("OpenFileOrDevice",
+        IReadOnlyDictionary<int, InterruptServiceEntry> contracts = new Dictionary<int, InterruptServiceEntry> {
+            [0x3D] = DosEntry(0x3D, "OpenFileOrDevice",
                 CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
                 CpuValues.Ax | CpuValues.Carry) with { StringArgument = ServiceStringArgument.AsciiZ }
@@ -277,11 +279,12 @@ public class DataCommentTest {
         noMemory.SourceText.Should().NotContain("DOS 09h");
     }
 
-    /// <summary>The <c>data_strings</c> fixture's golden carries the <c>40h</c> comment and the
-    /// <c>09h</c>/<c>3Dh</c> string literals: DS stays <c>Known</c> across the earlier typed DOS
-    /// calls because their contracts do not write DS, so the resolver proves DS at the surviving
-    /// interrupt statement. The message patched at run time before its print keeps the generic
-    /// call and no comment: the bytes the snapshot saw are not the bytes the call reads.</summary>
+    /// <summary>The <c>data_strings</c> fixture's golden keeps the <c>09h</c> comment on its
+    /// generic <c>InterruptCall</c> (real dispatch: printing can terminate the program), retains
+    /// the <c>40h</c> write comment next to its named call, and calls the open service by name with
+    /// the snapshot's literal as the checked expected value. The message patched at run time before
+    /// its print keeps the generic call and no comment: the bytes the snapshot saw are not the
+    /// bytes the call reads.</summary>
     [Fact]
     public void DataStringsGoldenShowsTheWriteCommentAndTheLiterals() {
         // Arrange / Act
@@ -289,39 +292,40 @@ public class DataCommentTest {
             "Resources", "cpuTests", "res", "GeneratedCode", "data_strings.ivt.spec.cs.txt"));
 
         // Assert
-        golden.Should().Contain("Dos.PrintString(cs1, 0x0111, 0x0169, DS, \"HELLO\")");
-        golden.Should().Contain("// DOS 40h write handle 1 ");
-        golden.Should().Contain("Dos.OpenFileOrDevice(cs1, 0x0139, 0, 0x016F, DS, \"NOFILE.TXT\")");
-        golden.Should().Contain("Dos.PrintString(cs1, 0x015D, 0x017E, DS);");
-        golden.Should().NotContain("// DOS 09h");
+        golden.Should().Contain("// DOS 09h print \"HELLO$\"");
+        golden.Should().Contain("InterruptCall(cs1, 0x0111, 0x21)");
+        golden.Should().Contain("Dos.WriteFile(");
+        golden.Should().Contain("// DOS 40h write handle 1 \"");
+        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\"))");
         golden.Should().NotContain("// DOS 3Dh");
     }
 
-    private static readonly IReadOnlyDictionary<int, ServiceContract> PrintContracts =
-        new Dictionary<int, ServiceContract> {
-            [0x09] = DosContract("PrintString",
+    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
+        new Dictionary<int, InterruptServiceEntry> {
+            [0x09] = DosEntry(0x09, "PrintString",
                 CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.Ax) with { StringArgument = ServiceStringArgument.DollarTerminated }
+                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
         };
 
-    /// <summary>A typed 09h call whose string is a printable unchanged constant inside the
-    /// segment shows it as the last argument and gets no <c>// DOS</c> comment.</summary>
+    /// <summary>A 09h service without an implementation binding keeps the generic call; the
+    /// string shows in the <c>// DOS</c> comment.</summary>
     [Fact]
-    public void ATypedCallWhoseStringIsConstantPrintsTheLiteral() {
+    public void AnUnboundPrintServiceKeepsTheComment() {
         // Arrange / Act
         byte[] memory = MemoryWith(ImageStart + 0x0100, "Hi$"u8.ToArray());
         GeneratedCSharpProgram program = Generate(
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS, \"Hi\")");
-        program.SourceText.Should().NotContain("DOS 09h");
+        program.SourceText.Should().NotContain("PrintString(");
+        program.SourceText.Should().Contain("InterruptCall(");
+        program.SourceText.Should().Contain("// DOS 09h print \"Hi$\"");
         AssertCompiles(program);
     }
 
-    /// <summary>When a byte of the string changed during discovery the call keeps the plain
-    /// form - and the comment, which the same changed byte suppresses, is absent too.</summary>
+    /// <summary>When a byte of the string changed during discovery the comment is suppressed
+    /// too.</summary>
     [Fact]
     public void AChangedByteDuringDiscoveryKeepsTheGenericCall() {
         // Arrange / Act
@@ -331,13 +335,12 @@ public class DataCommentTest {
             memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS);");
+        program.SourceText.Should().Contain("InterruptCall(");
         program.SourceText.Should().NotContain("DOS 09h");
         AssertCompiles(program);
     }
 
-    /// <summary>A byte a C# literal cannot hold keeps the comment (with its <c>\x</c> escape)
-    /// and the generic call.</summary>
+    /// <summary>A byte outside the printable range is escaped in the comment.</summary>
     [Fact]
     public void AnUnprintableByteKeepsTheComment() {
         // Arrange / Act
@@ -346,13 +349,54 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS);");
         program.SourceText.Should().Contain("// DOS 09h print \"\\x01A$\"");
         AssertCompiles(program);
     }
 
-    /// <summary>A string whose terminator would land past offset <c>0xFFFF</c> keeps the
-    /// comment: the segmented and the linear addresses would disagree.</summary>
+    /// <summary>When a filename byte or its terminator changed during discovery the bound
+    /// <c>OpenFile</c> call keeps its dynamic string read but drops the recorded literal: changed
+    /// bytes can never be checked against a stale expectation.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(8)]
+    public void AChangedFilenameByteKeepsTheDynamicStringRead(int changedByte) {
+        // Arrange: the real bound 3Dh entry of the DOS handler.
+        InterruptServiceEntry openFile = InterruptServiceAttributes
+            .Of(typeof(DosInt21Handler), ServiceSelector.Ah).Services
+            .Select(pair => pair.Entry)
+            .Single(entry => entry.SelectorValue == 0x3D);
+        IReadOnlyDictionary<int, InterruptServiceEntry> contracts =
+            new Dictionary<int, InterruptServiceEntry> { [0x3D] = openFile };
+        byte[] memory = MemoryWith(ImageStart + 0x0200, "NAME.TXT\0"u8.ToArray());
+        // The recorded IVT entry must still point at the DOS stub for the direct call.
+        int ivtEntry = 0x21 * 4;
+        memory[ivtEntry] = (byte)DosStub.Offset;
+        memory[ivtEntry + 1] = (byte)(DosStub.Offset >> 8);
+        memory[ivtEntry + 2] = (byte)DosStub.Segment;
+        memory[ivtEntry + 3] = (byte)(DosStub.Segment >> 8);
+        uint changed = ImageStart + 0x0200 + (uint)changedByte;
+
+        // Act
+        GeneratedCSharpProgram program = Generate(
+            Unchanged(ImageStart, ImageStart + 0x1000, (changed, changed + 1)),
+            memory, contracts,
+            (0x0000, [0xB8, 0x00, 0x20]),   // mov ax, 0x2000
+            (0x0003, [0x50]),             // push ax
+            (0x0004, [0x1F]),             // pop ds
+            (0x0005, [0xBA, 0x00, 0x02]), // mov dx, 0x0200
+            (0x0008, [0xB0, 0x00]),       // mov al, 0
+            (0x000A, [0xB4, 0x3D]),       // mov ah, 0x3D
+            (0x000C, [0xCD, 0x21]),       // int 0x21
+            (0x000E, [0xC3]));            // ret
+
+        // Assert
+        program.SourceText.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0200, '\\0'))");
+        program.SourceText.Should().NotContain("\"NAME.TXT\")");
+        AssertCompiles(program);
+    }
+
+    /// <summary>A string whose terminator sits past offset <c>0xFFFF</c> still resolves: the
+    /// comment only reads the snapshot bytes.</summary>
     [Fact]
     public void AnOffsetWrapKeepsTheComment() {
         // Arrange / Act
@@ -366,7 +410,6 @@ public class DataCommentTest {
             memory, PrintContracts, PrintCall(0xFFFF));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0xFFFF, DS);");
         program.SourceText.Should().Contain("DOS 09h print \"A$\"");
         AssertCompiles(program);
     }
@@ -392,12 +435,12 @@ public class DataCommentTest {
     [Fact]
     public void AHandleWriteKeepsTheComment() {
         // Arrange / Act
-        IReadOnlyDictionary<int, ServiceContract> contracts = new Dictionary<int, ServiceContract> {
-            [0x40] = DosContract("WriteToFileOrDevice",
+        IReadOnlyDictionary<int, InterruptServiceEntry> contracts = new Dictionary<int, InterruptServiceEntry> {
+            [0x40] = DosEntry(0x40, "WriteToFileOrDevice",
                 CpuValues.Ah | CpuValues.Ds | CpuValues.Bx
                 | CpuValues.Cx | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.Ax)
+                CpuValues.Ax | CpuValues.Carry)
         };
         byte[] memory = MemoryWith(ImageStart + 0x0100, "DATA"u8.ToArray());
         (ushort, byte[])[] call = [
@@ -415,7 +458,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, contracts, call);
 
         // Assert
-        program.SourceText.Should().Contain("Dos.WriteToFileOrDevice(biosSegment, 0x0012, 4, 0x0100, 1, DS);");
+        program.SourceText.Should().Contain("InterruptCall(");
         program.SourceText.Should().Contain("// DOS 40h write handle 1 \"DATA\"");
         AssertCompiles(program);
     }

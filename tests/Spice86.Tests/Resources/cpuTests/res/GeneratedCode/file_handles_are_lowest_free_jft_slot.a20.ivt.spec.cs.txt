@@ -157,9 +157,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         byte al1 = 0;
         byte flagOperand_0145 = 0;
         byte flagOperand_014F = 0;
@@ -171,21 +172,23 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        bx1 = Dos.ReadPspAddress();
         // 016D:0104 mov word ptr DS:[0x01EB],BX
-        ImageMinus0003Globals.Word01EB = BX;
+        ImageMinus0003Globals.Word01EB = bx1;
         // 016D:0108 mov DX,0x2000
         DX = 0x2000;
         // 016D:010B mov SI,0x0010
         SI = 0x0010;
         // 016D:010E mov AH,0x55
+        AH = 0x55;
         // 016D:0110 int 0x21
-        Dos.CreateChildPsp(cs1, 0x0112, 0x2000, 0x0010);
+        InterruptCall(cs1, 0x0112, 0x21);
         // 016D:0112 mov BX,word ptr DS:[0x01EB]
         BX = ImageMinus0003Globals.Word01EB;
         // 016D:0116 mov AH,0x50
+        AH = 0x50;
         // 016D:0118 int 0x21
-        Dos.SetCurrentPsp(cs1, 0x011A, BX);
+        Dos.SetCurrentPsp(BX);
         // 016D:011A mov DX,0x01ED
         DX = 0x01ED;
         // 016D:011D call near 0x01D8
@@ -235,7 +238,8 @@ public partial class CfgGeneratedOverrides {
                         BX = 6;
                         // 016D:0162 mov AH,0x3E
                         // 016D:0164 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x0166, 6);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(6, 0x3E);
                         // 016D:0166 jb short 0x01D1
                         if (CarryFlag) {
                             goto L_01D1;
@@ -261,7 +265,8 @@ public partial class CfgGeneratedOverrides {
                         BX = 5;
                         // 016D:017E mov AH,0x45
                         // 016D:0180 int 0x21
-                        Dos.DuplicateFileHandle(cs1, 0x0182, 5);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.DuplicateHandle(5);
                         // 016D:0182 jb short 0x01D1
                         if (CarryFlag) {
                             goto L_01D1;
@@ -287,7 +292,8 @@ public partial class CfgGeneratedOverrides {
                         CX = 7;
                         // 016D:019A mov AH,0x46
                         // 016D:019C int 0x21
-                        Dos.ForceDuplicateFileHandle(cs1, 0x019E, 7, 5);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.ForceDuplicateHandle(5, 7);
                         // 016D:019E jb short 0x01D1
                         if (CarryFlag) {
                             goto L_01D1;
@@ -307,7 +313,8 @@ public partial class CfgGeneratedOverrides {
                             CheckExternalEvents(cs1, 0x01AE);
                             // 016D:01AE mov AH,0x3E
                             // 016D:01B0 int 0x21
-                            Dos.CloseFileOrDevice(cs1, 0x01B2, BX);
+                            Dos.RecordCallerStack(SS, SP);
+                            (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
                             // 016D:01B2 jb short 0x01D1
                             if (CarryFlag) {
                                 goto L_01D1;
@@ -332,7 +339,8 @@ public partial class CfgGeneratedOverrides {
                         BX = AX;
                         // 016D:01C7 mov AH,0x3E
                         // 016D:01C9 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x01CB, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
                         // 016D:01CB jb short 0x01D1
                         if (CarryFlag) {
                             goto L_01D1;
@@ -359,26 +367,29 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX. Changes: EAX, CF.</summary>
+    /// <summary>Inputs: EAX, EDX, DS. Outputs: EAX. Changes: EAX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_016D_01D8_018A8() {
+        ushort ax1 = 0;
         CheckExternalEvents(cs1, 0x01D8);
         // 016D:01D8 mov AX,0x3D00
         AX = 0x3D00;
         // 016D:01DB int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x01DD, 0, DX, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (ax1, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0'));
         // 016D:01DD jae short 0x01E2
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x01DF, Signature_01DF_mov);
             // 016D:01DF mov AX,0xFFFF
-            AX = 0xFFFF;
+            ax1 = 0xFFFF;
         }
         // 016D:01E2 push AX
-        Stack.Push16(AX);
+        Stack.Push16(ax1);
         // 016D:01E3 push DX
         Stack.Push16(DX);
         // 016D:01E4 mov DX,0x0998
         // 016D:01E7 out DX,AL
+        AX = ax1;
         Out8(0x0998, AL);
         // 016D:01E8 pop DX
         DX = Stack.Pop16();

@@ -166,7 +166,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0109 mov AH,0x3F
         AH = 0x3F;
         // 016D:010B int 0x21
-        Dos.ReadFileOrDevice(cs1, 0x010D, 1, DX, 0, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.ReadFile(0, 1, DS, DX);
         // 016D:010D selector
         if (SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_123)) {
             // 016D:010D mov AX,0xB800
@@ -200,7 +201,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0116 mov AH,0x40
         AH = 0x40;
         // 016D:0118 int 0x21
-        Dos.WriteToFileOrDevice(cs1, 0x011A, 1, 0x011F, 1, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.WriteFile(1, 1, DS, 0x011F);
         // 016D:011A mov AX,0x4C00
         AX = 0x4C00;
         // 016D:011D int 0x21

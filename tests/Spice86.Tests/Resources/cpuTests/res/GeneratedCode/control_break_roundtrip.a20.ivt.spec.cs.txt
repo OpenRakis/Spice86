@@ -149,25 +149,28 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
+        ushort bx2 = 0;
+        ushort bx3 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x33
         AH = 0x33;
         // 016D:0102 mov AL,1
-        AL = 1;
         // 016D:0104 mov DL,1
         DL = 1;
         // 016D:0106 int 0x21
-        Dos.GetSetControlBreak(cs1, 0x0108, 1, 1);
+        Dos.RecordCallerStack(SS, SP);
+        (AL, DX, bx1) = Dos.GetSetControlBreak(1, 1, DH, BX);
         // 016D:0108 mov AH,0x33
         AH = 0x33;
         // 016D:010A mov AL,0
-        AL = 0;
         // 016D:010C int 0x21
-        Dos.GetSetControlBreak(cs1, 0x010E, 0, DL);
+        Dos.RecordCallerStack(SS, SP);
+        (AL, DX, bx2) = Dos.GetSetControlBreak(0, DL, DH, bx1);
         // 016D:010E cmp DL,1
         Alu8.Sub(DL, 1);
         // 016D:0111 jne short 0x012A
@@ -175,17 +178,17 @@ public partial class CfgGeneratedOverrides {
             // 016D:0113 mov AH,0x33
             AH = 0x33;
             // 016D:0115 mov AL,1
-            AL = 1;
             // 016D:0117 mov DL,0
             DL = 0;
             // 016D:0119 int 0x21
-            Dos.GetSetControlBreak(cs1, 0x011B, 1, 0);
+            Dos.RecordCallerStack(SS, SP);
+            (AL, DX, bx3) = Dos.GetSetControlBreak(1, 0, DH, bx2);
             // 016D:011B mov AH,0x33
             AH = 0x33;
             // 016D:011D mov AL,0
-            AL = 0;
             // 016D:011F int 0x21
-            Dos.GetSetControlBreak(cs1, 0x0121, 0, DL);
+            Dos.RecordCallerStack(SS, SP);
+            (AL, DX, bx2) = Dos.GetSetControlBreak(0, DL, DH, bx3);
             // 016D:0121 cmp DL,0
             Alu8.Sub(DL, 0);
             // 016D:0124 jne short 0x012A
@@ -207,6 +210,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:012F out DX,AL
         Out8(0x0999, al1);
         // 016D:0130 hlt
+        BX = bx2;
         AL = al1;
         return Hlt();
     }

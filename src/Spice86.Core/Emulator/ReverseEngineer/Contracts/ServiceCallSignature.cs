@@ -3,15 +3,17 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 
 /// <summary>
-/// Computes the typed C# parameter list an interrupt service helper gets from a
-/// <see cref="ServiceContract"/>: one parameter per register field and per flag the
-/// service reads, in <see cref="CpuValueParameters"/> order. The helper's parameters
-/// are <c>ushort expectedReturnCs, ushort expectedReturnIp</c> followed by this list.
+/// Computes the default input and result lists a direct service implementation gets from a
+/// <see cref="ServiceContract"/>: one input per register field and per flag the service reads,
+/// in <see cref="CpuValueParameters"/> order, and one result per register field and per flag the
+/// service writes. An implementation returns a scalar for one output, a flat value tuple for
+/// several and stays <see langword="void"/> for none.
 /// </summary>
 public static class ServiceCallSignature {
     /// <summary>
-    /// The parameter list of the helper for <paramref name="contract"/> on a vector
-    /// whose selector register is <paramref name="selector"/>.
+    /// The default input list of the implementation for <paramref name="contract"/> on a vector
+    /// whose selector register is <paramref name="selector"/>: the service's reads minus the
+    /// selector itself. An explicit attribute Inputs list replaces it.
     /// </summary>
     /// <param name="contract">The service contract whose inputs become parameters.</param>
     /// <param name="selector">The selector register of the handler, or <see langword="null"/> for
@@ -20,4 +22,15 @@ public static class ServiceCallSignature {
     public static IReadOnlyList<TypedParameter> Parameters(ServiceContract contract,
         ServiceSelector? selector) =>
         CpuValueParameters.Decompose(contract.Registers.Reads & ~(selector?.ToCpuValues() ?? CpuValues.None));
+
+    /// <summary>The result list of the implementation for <paramref name="contract"/>: one value
+    /// per register field and per flag the service writes, in <see cref="CpuValueParameters"/>
+    /// order. A scalar for one output, a named tuple for several, <see langword="void"/> for
+    /// none.</summary>
+    /// <param name="contract">The service contract whose writes become outputs.</param>
+    /// <returns>The ordered output list.</returns>
+    public static IReadOnlyList<TypedParameter> Outputs(ServiceContract contract) =>
+        ReferenceEquals(contract, ServiceContract.Unknown)
+            ? []
+            : CpuValueParameters.Decompose(contract.Registers.Writes);
 }

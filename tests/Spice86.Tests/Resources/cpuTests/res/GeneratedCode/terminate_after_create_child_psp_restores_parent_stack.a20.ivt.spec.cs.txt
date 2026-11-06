@@ -157,9 +157,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AL, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         ushort ax;
         byte al1 = 0;
         ushort flagOperand_0159 = 0;
@@ -171,9 +172,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        bx1 = Dos.ReadPspAddress();
         // 016D:0104 mov word ptr DS:[0x0192],BX
-        ImageMinus0003Globals.Word0192 = BX;
+        ImageMinus0003Globals.Word0192 = bx1;
         // 016D:0108 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // 016D:010A mov ES,AX
@@ -195,11 +196,13 @@ public partial class CfgGeneratedOverrides {
         // 016D:0124 mov word ptr DS:[0x0196],SP
         ImageMinus0003Globals.Word0196 = SP;
         // 016D:0128 mov AH,0x55
+        AH = 0x55;
         // 016D:012A int 0x21
-        Dos.CreateChildPsp(cs1, 0x012C, 0x2000, 0x0010);
+        InterruptCall(cs1, 0x012C, 0x21);
         // 016D:012C mov AH,0x62
+        AH = 0x62;
         // 016D:012E int 0x21
-        Dos.GetPspAddress(cs1, 0x0130);
+        BX = Dos.ReadPspAddress();
         // 016D:0130 cmp BX,0x2000
         Alu16.Sub(BX, 0x2000);
         // 016D:0134 jne short 0x018B
@@ -208,7 +211,7 @@ public partial class CfgGeneratedOverrides {
             BX = 0x2000;
             // 016D:0139 mov AH,0x50
             // 016D:013B int 0x21
-            Dos.SetCurrentPsp(cs1, 0x013D, 0x2000);
+            Dos.SetCurrentPsp(0x2000);
             // 016D:013D mov AX,0x2000
             // 016D:0140 mov ES,AX
             ES = 0x2000;
@@ -242,8 +245,9 @@ public partial class CfgGeneratedOverrides {
                 // 016D:0163 jne short 0x018B
                 if (SP == flagOperand_015F) {
                     // 016D:0165 mov AH,0x62
+                    AH = 0x62;
                     // 016D:0167 int 0x21
-                    Dos.GetPspAddress(cs1, 0x0169);
+                    BX = Dos.ReadPspAddress();
                     // 016D:0169 cmp BX,word ptr DS:[0x0192]
                     flagOperand_0169 = DsGlobals.Word0192;
                     Alu16.Sub(BX, flagOperand_0169);

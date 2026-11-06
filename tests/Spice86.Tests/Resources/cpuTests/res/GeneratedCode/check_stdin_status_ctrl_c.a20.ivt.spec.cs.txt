@@ -149,7 +149,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 mov DL,1
         DL = 1;
         // 016D:0106 int 0x21
-        Dos.GetSetControlBreak(cs1, 0x0108, 1, 1);
+        Dos.RecordCallerStack(SS, SP);
+        (AL, DX, BX) = Dos.GetSetControlBreak(1, 1, DH, BX);
         // 016D:0108 mov AL,0
         AL = 0;
         // 016D:010A mov DX,0x0999
@@ -166,7 +167,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0113 mov AH,0x0B
         AH = 0x0B;
         // 016D:0115 int 0x21
-        Dos.CheckStandardInputStatus(cs1, 0x0117);
+        InterruptCall(cs1, 0x0117, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0115");
     }
 
@@ -206,7 +207,7 @@ public partial class CfgGeneratedOverrides {
         // F000:000C push DX
         Stack.Push16(DX);
         // F000:000D int 0x1C
-        UserTimer.Tick(biosSegment, 0x000F);
+        UserTimer.Tick();
         // F000:000F callback 0x0101
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);

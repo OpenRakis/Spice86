@@ -416,6 +416,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
             AsmScenario.FromFixture("ioports", AsmFixtureCatalog.IoPorts),
+            AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
             AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry),
             AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister),
             AsmScenario.FromFixture("divfaultloop", AsmFixtureCatalog.DivFaultLoop),

@@ -22,15 +22,20 @@ public class DosInt24Handler : InterruptHandler {
 
     /// <inheritdoc />
 
-    public override void Run() => HandleCriticalError();
+    public override void Run() => WriteCriticalErrorResult();
 
-    [InterruptService(Writes = CpuValues.Al)]
-    private void HandleCriticalError() {
+    /// <summary>Runs the default critical error handler, returning FAIL (0x03).</summary>
+    public byte HandleCriticalError() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 24h: Critical error handler invoked, returning FAIL (AL=3).");
         }
 
-        State.AL = 0x03;
+        return 0x03;
+    }
+
+    [InterruptService(Name = nameof(HandleCriticalError), Writes = CpuValues.Al)]
+    private void WriteCriticalErrorResult() {
+        State.AL = HandleCriticalError();
     }
 }
 

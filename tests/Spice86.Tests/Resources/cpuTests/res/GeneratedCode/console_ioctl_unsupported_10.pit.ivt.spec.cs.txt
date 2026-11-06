@@ -162,7 +162,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         // 016D:0106 int 0x21
-        Dos.IoControl(cs1, 0x0108, 0x10, CX, DX, 0, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, DX, CarryFlag) = Dos.IoControl(0x4410, CX, DX, 0, DS);
         // 016D:0108 mov DL,AL
         DL = AL;
         // 016D:010A pushf

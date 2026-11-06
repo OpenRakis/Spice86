@@ -149,7 +149,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -157,19 +157,18 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x012D
         DX = 0x012D;
         // 016D:0103 mov CX,0x0021
-        CX = 0x0021;
         // 016D:0106 mov AX,0x4301
-        AX = 0x4301;
         // 016D:0109 int 0x21
-        Dos.GetSetFileAttributes(cs1, 0x010B, 1, 0x0021, 0x012D, DS, "SETATR.TXT");
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CX, CarryFlag) = Dos.GetSetFileAttributes(0x4301, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), 0x0021);
         // 016D:010B jb short 0x0126
         if (!CarryFlag) {
             // 016D:010D mov DX,0x012D
             DX = 0x012D;
             // 016D:0110 mov AX,0x4300
-            AX = 0x4300;
             // 016D:0113 int 0x21
-            Dos.GetSetFileAttributes(cs1, 0x0115, 0, CX, 0x012D, DS, "SETATR.TXT");
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CX, CarryFlag) = Dos.GetSetFileAttributes(0x4300, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), CX);
             // 016D:0115 jb short 0x0126
             if (!CarryFlag) {
                 // 016D:0117 mov AL,CL
