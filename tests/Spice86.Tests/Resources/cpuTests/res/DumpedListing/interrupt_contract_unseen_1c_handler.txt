@@ -6,9 +6,9 @@ F000:0007 mov SP,0x1000
 F000:000A xor AX,AX
 F000:000C mov ES,AX
 F000:000E mov word ptr ES:[0x0070],0x0032
-F000:0011 jo short 0x0013
-F000:0013 xor AL,byte ptr DS:[BX+SI]
 F000:0015 mov word ptr ES:[0x0072],CS
+F000:0017 push CS
+F000:0018 jb short 0x001A
 F000:001A mov AX,DS
 F000:001C mov ES,AX
 F000:001E sti

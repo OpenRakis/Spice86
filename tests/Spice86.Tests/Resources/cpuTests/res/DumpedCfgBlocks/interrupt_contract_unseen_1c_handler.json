@@ -4,7 +4,7 @@
   "totalEntryPoints": 3,
   "entryPointAddresses": [
     "F000:0006",
-    "F000:0011",
+    "F000:0017",
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0031",
@@ -17,7 +17,7 @@
       "term": "F000:0006",
       "pred": [],
       "succ": [
-        44
+        43
       ],
       "asm": [
         "D0BC0010|sar byte ptr DS:[SI\u002B0x1000],1"
@@ -25,15 +25,16 @@
     },
     {
       "id": 23,
-      "entry": "F000:0011",
+      "entry": "F000:0017",
       "dead": true,
-      "term": "F000:0011",
+      "term": "F000:0018",
       "pred": [],
       "succ": [
-        24
+        25
       ],
       "asm": [
-        "7000|jo short 0x0013"
+        "0E|push CS",
+        "7200|jb short 0x001A"
       ]
     },
     {
@@ -50,47 +51,50 @@
       ]
     },
     {
-      "id": 38,
+      "id": 37,
       "entry": "F000:FFF0",
       "term": "F000:FFF0",
       "pred": [],
       "succ": [
-        39
+        38
       ],
       "asm": [
         "EB0E|jmp short 0"
       ]
     },
     {
-      "id": 44,
+      "id": 43,
       "entry": "F000:000A",
-      "term": "F000:000E",
+      "term": "F000:0015",
       "pred": [
         2,
-        39
+        38
       ],
       "succ": [
-        27
+        25
       ],
       "asm": [
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C70670003200|mov word ptr ES:[0x0070],0x0032"
+        "26C70670003200|mov word ptr ES:[0x0070],0x0032",
+        "268C0E7200|mov word ptr ES:[0x0072],CS"
       ]
     },
     {
-      "id": 24,
-      "entry": "F000:0013",
-      "dead": true,
-      "term": "F000:0013",
+      "id": 25,
+      "entry": "F000:001A",
+      "term": "F000:001E",
       "pred": [
-        23
+        23,
+        43
       ],
       "succ": [
-        27
+        10
       ],
       "asm": [
-        "3200|xor AL,byte ptr DS:[BX\u002BSI]"
+        "8CD8|mov AX,DS",
+        "8EC0|mov ES,AX",
+        "FB|sti"
       ]
     },
     {
@@ -112,14 +116,14 @@
       ]
     },
     {
-      "id": 39,
+      "id": 38,
       "entry": "F000:0000",
       "term": "F000:0007",
       "pred": [
-        38
+        37
       ],
       "succ": [
-        44
+        43
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -129,29 +133,11 @@
       ]
     },
     {
-      "id": 27,
-      "entry": "F000:0015",
-      "term": "F000:001E",
-      "pred": [
-        24,
-        44
-      ],
-      "succ": [
-        10
-      ],
-      "asm": [
-        "268C0E7200|mov word ptr ES:[0x0072],CS",
-        "8CD8|mov AX,DS",
-        "8EC0|mov ES,AX",
-        "FB|sti"
-      ]
-    },
-    {
       "id": 10,
       "entry": "F000:001F",
       "term": "F000:0025",
       "pred": [
-        27
+        25
       ],
       "succ": [
         17

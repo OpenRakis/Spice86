@@ -1011,6 +1011,9 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                // Release host files DOS still has open so they can be deleted on Windows.
+                Machine.Dos.FileManager.CloseAllOpenFiles();
+
                 _debuggerTabRegistry.Dispose();
                 _dumpProgressUiService?.Dispose();
                 _mcpHttpTransport?.Stop();
