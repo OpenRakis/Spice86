@@ -3,6 +3,7 @@ namespace Spice86.Tests.CfgCpu;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
@@ -13,6 +14,23 @@ using Xunit;
 /// </summary>
 public class FpuParsingTest {
     private readonly TestInstructionHelper _helper = new();
+
+    [Theory]
+    [InlineData(0xD9, 0xE8)]
+    [InlineData(0xD9, 0xF8)]
+    [InlineData(0xD9, 0x20)]
+    [InlineData(0xDB, 0x21)]
+    [InlineData(0xDB, 0xE2)]
+    public void UnsupportedFpuEncodingsRemainInvalid(byte opcode, byte modRm) {
+        // Arrange & Act
+        CfgInstruction instruction = _helper.WriteAndParse(new SegmentedAddress(0, 0), writer => {
+            writer.WriteUInt8(opcode);
+            writer.WriteUInt8(modRm);
+        });
+
+        // Assert
+        instruction.ExecutionAst.Should().BeOfType<InvalidInstructionNode>();
+    }
 
     [Fact]
     public void ParseFnInit_ShouldProduceTwoByteInstruction() {
