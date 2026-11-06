@@ -45,7 +45,7 @@ public sealed class GhidraSymbolsExporterTest {
         text.Should().Contain("PlayerScore_D000_0030_D0030 ");
         text.Should().Contain("PlayerScore_F000_0030_F0030 ");
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Count(line => line.EndsWith(" l")).Should().Be(2);
+            .Count(line => line.TrimEnd('\r').EndsWith(" l")).Should().Be(2);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class GhidraSymbolsExporterTest {
         // Assert: one l line at linear 0x20030.
         text.Should().Contain("Word0030_2000_0030_20030 ");
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Count(line => line.EndsWith(" l")).Should().Be(1);
+            .Count(line => line.TrimEnd('\r').EndsWith(" l")).Should().Be(1);
     }
 
     [Fact]
@@ -107,6 +107,6 @@ public sealed class GhidraSymbolsExporterTest {
         text.Should().Contain("First_D000_0050_D0050 ");
         text.Should().NotContain("Second_");
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Count(line => line.EndsWith(" l")).Should().Be(1);
+            .Count(line => line.TrimEnd('\r').EndsWith(" l")).Should().Be(1);
     }
 }

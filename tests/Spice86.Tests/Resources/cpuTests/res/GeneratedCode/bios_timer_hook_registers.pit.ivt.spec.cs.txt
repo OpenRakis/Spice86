@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,9 +17,23 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
-    protected readonly ushort cs2;
+    protected readonly ushort biosSegment;
 
     private static readonly byte?[] Signature_0178_cld = [0xFC];
     private static readonly byte?[] Signature_0179_mov = [0xBA, 0x99, 0x09];
@@ -50,27 +65,87 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0x016E;
-        cs2 = 0xF000;
+    private static readonly byte?[][] SpeculativeRun_0178 = [Signature_0178_cld, Signature_0179_mov, Signature_017C_mov, Signature_017E_out];
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0180, unknown_016E_0180_01860, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0006, unknown_F000_0006_F0006, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0017, unknown_F000_0017_F0017, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x005D, unknown_F000_005D_F005D, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0063, unknown_F000_0063_F0063, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x006D, unknown_F000_006D_F006D, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0072, unknown_F000_0072_F0072, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0077, unknown_F000_0077_F0077, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x007C, unknown_F000_007C_F007C, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0081, unknown_F000_0081_F0081, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0086, unknown_F000_0086_F0086, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E8, unknown_F000_00E8_F00E8, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E9, unknown_F000_00E9_F00E9, "unknown");
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_0180_01860Entry;
+    private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
+    private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
+    private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
+    private readonly Func<int, Action> unknown_F000_0063_F0063Entry;
+    private readonly Func<int, Action> unknown_F000_006D_F006DEntry;
+    private readonly Func<int, Action> unknown_F000_0072_F0072Entry;
+    private readonly Func<int, Action> unknown_F000_0077_F0077Entry;
+    private readonly Func<int, Action> unknown_F000_007C_F007CEntry;
+    private readonly Func<int, Action> unknown_F000_0081_F0081Entry;
+    private readonly Func<int, Action> unknown_F000_0086_F0086Entry;
+    private readonly Func<int, Action> unknown_F000_00E8_F00E8_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly EsGlobals EsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
+    protected readonly Segment0040Globals Segment0040Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = (ushort)(programStartSegment - 0x0002);
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+        Segment0040Globals = new Segment0040Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
+
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_0180_01860Entry = _ => unknown_016E_0180_01860();
+        unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
+        unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
+        unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
+        unknown_F000_0063_F0063Entry = _ => unknown_F000_0063_F0063();
+        unknown_F000_006D_F006DEntry = _ => unknown_F000_006D_F006D();
+        unknown_F000_0072_F0072Entry = _ => unknown_F000_0072_F0072();
+        unknown_F000_0077_F0077Entry = _ => unknown_F000_0077_F0077();
+        unknown_F000_007C_F007CEntry = _ => unknown_F000_007C_F007C();
+        unknown_F000_0081_F0081Entry = _ => unknown_F000_0081_F0081();
+        unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
+        unknown_F000_00E8_F00E8_AsmEntry = _ => unknown_F000_00E8_F00E8_Asm();
+        unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0180, unknown_016E_0180_01860Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0063, unknown_F000_0063_F0063Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x006D, unknown_F000_006D_F006DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0072, unknown_F000_0072_F0072Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0077, unknown_F000_0077_F0077Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007C, unknown_F000_007C_F007CEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0081, unknown_F000_0081_F0081Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
     }
 
-    public virtual Action unknown_016E_0100_017E0(int loadOffset) {
+}
+
+// ==== file: CfgGeneratedOverrides.016E.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS. Does not return.</summary>
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort flagOperand_015A = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 cli
@@ -78,23 +153,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0101 push CS
         Stack.Push16(CS);
         // 016E:0102 pop DS
-        DS = UInt16[SS, SP];
-        SP += 2;
+        DS = Stack.Pop16();
         // 016E:0103 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // 016E:0105 mov ES,AX
         ES = 0;
         // 016E:0107 mov word ptr ES:[0x0070],0x0180
-        UInt16[ES, 0x0070] = 0x0180;
+        Segment0000Globals.Word0070 = 0x0180;
         // 016E:010E mov word ptr ES:[0x0072],CS
-        UInt16[ES, 0x0072] = CS;
+        Segment0000Globals.Word0072 = CS;
         // 016E:0113 mov AX,0x0040
         // 016E:0116 mov ES,AX
         ES = 0x0040;
         // 016E:0118 mov AX,word ptr ES:[0x006C]
-        AX = UInt16[ES, 0x006C];
+        AX = Segment0040Globals.Word006C;
         // 016E:011C mov word ptr DS:[0x018E],AX
-        UInt16[DS, 0x018E] = AX;
+        ImageMinus0002Globals.Word018E = AX;
         // 016E:011F mov SI,SP
         SI = SP;
         // 016E:0121 mov CX,3
@@ -161,55 +235,58 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0157 mov AL,1
         AL = 1;
         // 016E:0159 out DX,AL
-        Out8(0x0998, AL);
+        Out8(0x0998, 1);
         // 016E:015A cmp word ptr DS:[0x0190],3
-        flagOperand_015A = UInt16[DS, 0x0190];
+        flagOperand_015A = DsGlobals.Word0190;
         Alu16.Sub(flagOperand_015A, 3);
         // 016E:015F jne short 0x0178
         if (flagOperand_015A == 3) {
             // 016E:0161 mov AX,word ptr ES:[0x006C]
             // 016E:0165 sub AX,word ptr DS:[0x018E]
-            AX = (ushort)(UInt16[ES, 0x006C] - UInt16[DS, 0x018E]);
+            AX = (ushort)(EsGlobals.Word006C - DsGlobals.Word018E);
             // 016E:0169 cmp AX,3
             Alu16.Sub(AX, 3);
             // 016E:016C jne short 0x0178
             if (AX == 3) {
                 // 016E:016E mov AL,2
-                AL = 2;
                 // 016E:0170 out DX,AL
-                Out8(0x0998, AL);
+                Out8(0x0998, 2);
                 // 016E:0171 mov DX,0x0999
                 DX = 0x0999;
                 // 016E:0174 xor AL,AL
-                AL = Alu8.Xor(2, 2);
+                AL = 0;
+                CarryFlag = false;
+                ParityFlag = true;
+                AuxiliaryFlag = false;
+                ZeroFlag = true;
+                SignFlag = false;
+                OverflowFlag = false;
                 // 016E:0176 out DX,AL
-                Out8(0x0999, AL);
+                Out8(0x0999, 0);
                 // 016E:0177 hlt
                 return Hlt();
             }
         }
     L_0178:
-        VerifySpeculativeEntryOrFail(cs1, 0x0178, Signature_0178_cld);
+        VerifySpeculativeRunOrFail(cs1, 0x0178, SpeculativeRun_0178);
         // 016E:0178 cld
         DirectionFlag = false;
-        VerifySpeculativeEntryOrFail(cs1, 0x0179, Signature_0179_mov);
         // 016E:0179 mov DX,0x0999
         DX = 0x0999;
-        VerifySpeculativeEntryOrFail(cs1, 0x017C, Signature_017C_mov);
         // 016E:017C mov AL,0xFF
         AL = 0xFF;
-        VerifySpeculativeEntryOrFail(cs1, 0x017E, Signature_017E_out);
         // 016E:017E out DX,AL
-        Out8(0x0999, AL);
+        Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x017F, Signature_017F_hlt);
         // 016E:017F hlt
         return Hlt();
     }
 
-    public virtual Action unknown_016E_0180_01860(int loadOffset) {
+    /// <summary>Inputs: none. Outputs: AX, DX, DS, flags, DF. Changes: AX, DX, DS, flags, DF.</summary>
+    public virtual Action unknown_016E_0180_01860() {
         CheckExternalEvents(cs1, 0x0180);
         // 016E:0180 inc word ptr CS:[0x0190]
-        UInt16[CS, 0x0190] += 1;
+        ImageMinus0002Globals.Word0190 += 1;
         // 016E:0185 xor AX,AX
         AX = 0;
         // 016E:0187 mov DX,0x1234
@@ -222,10 +299,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0006_F0006(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0006);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_0006_F0006() {
+        CheckExternalEvents(biosSegment, 0x0006);
         // F000:0006 callback 8
-        Callback(cs2, 0x0006, 8);
+        // Spice86 callback: TimerInt8Handler.IncTickCounterValue
+        Callback(biosSegment, 0x0006, 8);
         // F000:000A push DS
         Stack.Push16(DS);
         // F000:000B push AX
@@ -233,134 +328,273 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000C push DX
         Stack.Push16(DX);
         // F000:000D int 0x1C
-        InterruptCall(cs2, 0x000F, 0x1C);
+        InterruptCall(biosSegment, 0x000F, 0x1C, cs1, 0x0180, unknown_016E_0180_01860Entry);
         // F000:000F callback 0x0101
-        Callback(cs2, 0x000F, 0x0101);
+        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
+        Callback(biosSegment, 0x000F, 0x0101);
         // F000:0013 pop DX
         DX = Stack.Pop16();
         // F000:0014 pop AX
         AX = Stack.Pop16();
         // F000:0015 pop DS
-        DS = UInt16[SS, SP];
-        SP += 2;
+        DS = Stack.Pop16();
         // F000:0016 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0017_F0017(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0017);
-        VerifySpeculativeEntryOrFail(cs2, 0x0017, Signature_0017_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0017_F0017() {
+        CheckExternalEvents(biosSegment, 0x0017);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);
         // F000:0017 callback 9
-        Callback(cs2, 0x0017, 9);
-        VerifySpeculativeEntryOrFail(cs2, 0x001B, Signature_001B_iret);
+        // INT 09h: BiosKeyboardInt9Handler
+        Callback(biosSegment, 0x0017, 9);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_iret);
         // F000:001B iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_005D_F005D(int loadOffset) {
-        CheckExternalEvents(cs2, 0x005D);
-        VerifySpeculativeEntryOrFail(cs2, 0x005D, Signature_005D_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_005D_F005D() {
+        CheckExternalEvents(biosSegment, 0x005D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
         // F000:005D callback 0x0070
-        Callback(cs2, 0x005D, 0x0070);
-        VerifySpeculativeEntryOrFail(cs2, 0x0061, Signature_0061_iret);
+        // INT 70h: Rtc.HandleInterrupt
+        Callback(biosSegment, 0x005D, 0x0070);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_iret);
         // F000:0061 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0063_F0063(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0063);
-        VerifySpeculativeEntryOrFail(cs2, 0x0063, Signature_0063_call);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0063_F0063() {
+        CheckExternalEvents(biosSegment, 0x0063);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
         // F000:0063 call far F000:00E9
-        FarCall(cs2, 0x0068, cs2, unknown_F000_00E9_F00E9);
-        VerifySpeculativeEntryOrFail(cs2, 0x0068, Signature_0068_callback);
+        FarCall(biosSegment, 0x0068, biosSegment, unknown_F000_00E9_F00E9Entry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0068, Signature_0068_callback);
         // F000:0068 callback 0x0074
-        Callback(cs2, 0x0068, 0x0074);
-        VerifySpeculativeEntryOrFail(cs2, 0x006C, Signature_006C_iret);
+        // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
+        Callback(biosSegment, 0x0068, 0x0074);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x006C, Signature_006C_iret);
         // F000:006C iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_006D_F006D(int loadOffset) {
-        CheckExternalEvents(cs2, 0x006D);
-        VerifySpeculativeEntryOrFail(cs2, 0x006D, Signature_006D_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_006D_F006D() {
+        CheckExternalEvents(biosSegment, 0x006D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x006D, Signature_006D_callback);
         // F000:006D callback 0x0104
-        Callback(cs2, 0x006D, 0x0104);
-        VerifySpeculativeEntryOrFail(cs2, 0x0071, Signature_0071_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x006D, 0x0104);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0071, Signature_0071_iret);
         // F000:0071 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0072_F0072(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0072);
-        VerifySpeculativeEntryOrFail(cs2, 0x0072, Signature_0072_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0072_F0072() {
+        CheckExternalEvents(biosSegment, 0x0072);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0072, Signature_0072_callback);
         // F000:0072 callback 0x0105
-        Callback(cs2, 0x0072, 0x0105);
-        VerifySpeculativeEntryOrFail(cs2, 0x0076, Signature_0076_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0072, 0x0105);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0076, Signature_0076_iret);
         // F000:0076 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0077_F0077(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0077);
-        VerifySpeculativeEntryOrFail(cs2, 0x0077, Signature_0077_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0077_F0077() {
+        CheckExternalEvents(biosSegment, 0x0077);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0077, Signature_0077_callback);
         // F000:0077 callback 0x0106
-        Callback(cs2, 0x0077, 0x0106);
-        VerifySpeculativeEntryOrFail(cs2, 0x007B, Signature_007B_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0077, 0x0106);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007B, Signature_007B_iret);
         // F000:007B iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_007C_F007C(int loadOffset) {
-        CheckExternalEvents(cs2, 0x007C);
-        VerifySpeculativeEntryOrFail(cs2, 0x007C, Signature_007C_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_007C_F007C() {
+        CheckExternalEvents(biosSegment, 0x007C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007C, Signature_007C_callback);
         // F000:007C callback 0x0107
-        Callback(cs2, 0x007C, 0x0107);
-        VerifySpeculativeEntryOrFail(cs2, 0x0080, Signature_0080_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x007C, 0x0107);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0080, Signature_0080_iret);
         // F000:0080 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0081_F0081(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0081);
-        VerifySpeculativeEntryOrFail(cs2, 0x0081, Signature_0081_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0081_F0081() {
+        CheckExternalEvents(biosSegment, 0x0081);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0081, Signature_0081_callback);
         // F000:0081 callback 0x0108
-        Callback(cs2, 0x0081, 0x0108);
-        VerifySpeculativeEntryOrFail(cs2, 0x0085, Signature_0085_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0081, 0x0108);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_iret);
         // F000:0085 iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_0086_F0086(int loadOffset) {
-        CheckExternalEvents(cs2, 0x0086);
-        VerifySpeculativeEntryOrFail(cs2, 0x0086, Signature_0086_callback);
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0086_F0086() {
+        CheckExternalEvents(biosSegment, 0x0086);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0086, Signature_0086_callback);
         // F000:0086 callback 0x0109
-        Callback(cs2, 0x0086, 0x0109);
-        VerifySpeculativeEntryOrFail(cs2, 0x008A, Signature_008A_iret);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0086, 0x0109);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_iret);
         // F000:008A iret
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_00E8_F00E8(int loadOffset) {
-        CheckExternalEvents(cs2, 0x00E8);
-        VerifySpeculativeEntryOrFail(cs2, 0x00E8, Signature_00E8_ret);
+    /// <summary>Inputs: AX, DX, DS. Outputs: AX, DX, DS. Changes: AX, DX, DS.</summary>
+    public virtual (ushort ax, ushort dx, ushort ds) unknown_F000_00E8_F00E8(ushort ax, ushort dx, ushort ds) {
+        AX = ax;
+        DX = dx;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x00E8);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
         // F000:00E8 ret far
-        return FarRet();
+        FarReturn();
+        return (AX, DX, DS);
     }
 
-    public virtual Action unknown_F000_00E9_F00E9(int loadOffset) {
-        CheckExternalEvents(cs2, 0x00E9);
-        VerifySpeculativeEntryOrFail(cs2, 0x00E9, Signature_00E9_callback);
+    public virtual Action unknown_F000_00E8_F00E8_Asm() {
+        (AX, DX, DS) = unknown_F000_00E8_F00E8(AX, DX, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_00E9_F00E9() {
+        CheckExternalEvents(biosSegment, 0x00E9);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);
         // F000:00E9 callback 0x010C
-        Callback(cs2, 0x00E9, 0x010C);
-        VerifySpeculativeEntryOrFail(cs2, 0x00ED, Signature_00ED_call);
+        // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
+        Callback(biosSegment, 0x00E9, 0x010C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
         // F000:00ED call far F000:00E8
-        FarCall(cs2, 0x00F2, cs2, unknown_F000_00E8_F00E8);
-        VerifySpeculativeEntryOrFail(cs2, 0x00F2, Signature_00F2_callback);
+        (AX, DX, DS) = FarCall(biosSegment, 0x00F2, biosSegment, () => unknown_F000_00E8_F00E8(AX, DX, DS));
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
         // F000:00F2 callback 0x010D
-        Callback(cs2, 0x00F2, 0x010D);
-        VerifySpeculativeEntryOrFail(cs2, 0x00F6, Signature_00F6_ret);
+        // Spice86 callback: MouseDriver.AfterUserHandlerExecution
+        Callback(biosSegment, 0x00F2, 0x010D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F6, Signature_00F6_ret);
         // F000:00F6 ret far
         return FarRet();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x018E, whatever DS holds at the access.
+    public ushort Word018E { get => _memory.UInt16[Segment, 0x018E]; set => _memory.UInt16[Segment, 0x018E] = value; }
+
+    /// DS:0x0190, whatever DS holds at the access.
+    public ushort Word0190 { get => _memory.UInt16[Segment, 0x0190]; set => _memory.UInt16[Segment, 0x0190] = value; }
+}
+
+// ==== file: EsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class EsGlobals : MemoryBasedDataStructureWithEsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex];
+
+    public EsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// ES:0x006C, whatever ES holds at the access.
+    public ushort Word006C { get => _memory.UInt16[Segment, 0x006C]; set => _memory.UInt16[Segment, 0x006C] = value; }
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
+
+    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
+}
+
+// ==== file: Segment0040Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0040Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0040Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x400) {
+        _memory = memory;
+        Segment = 0x0040;
+    }
+
+    public ushort Word006C { get => _memory.UInt16[Segment, 0x006C]; set => _memory.UInt16[Segment, 0x006C] = value; }
+}
+
+// ==== file: ImageMinus0002Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
+        _memory = memory;
+        Segment = (ushort)(programStartSegment - 0x0002);
+    }
+
+    public ushort Word018E { get => _memory.UInt16[Segment, 0x018E]; set => _memory.UInt16[Segment, 0x018E] = value; }
+
+    public ushort Word0190 { get => _memory.UInt16[Segment, 0x0190]; set => _memory.UInt16[Segment, 0x0190] = value; }
 }

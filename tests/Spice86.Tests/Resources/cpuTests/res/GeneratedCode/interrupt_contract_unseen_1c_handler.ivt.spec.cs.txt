@@ -35,29 +35,27 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private static readonly byte?[] Signature_0006_sar = [0xD0, 0xBC, 0x00, 0x10];
-    private static readonly byte?[] Signature_0011_jo = [0x70, 0x00];
-    private static readonly byte?[] Signature_0013_xor = [0x32, 0x00];
+    private static readonly byte?[] Signature_0017_push = [0x0E];
+    private static readonly byte?[] Signature_0018_jb = [0x72, 0x00];
 
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
-    private readonly Func<int, Action> unknown_F000_0011_F0011Entry;
+    private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
-    protected readonly EsGlobals EsGlobals;
     protected readonly Segment0000Globals Segment0000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
-        EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
-        unknown_F000_0011_F0011Entry = _ => unknown_F000_0011_F0011();
+        unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0011, unknown_F000_0011_F0011Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x000A, unknown_F000_000A_F000A, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0015, _ => unknown_F000_000A_F000A(0x0015), "unknown_entry");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001A, _ => unknown_F000_000A_F000A(0x001A), "unknown_entry");
     }
 
 }
@@ -85,15 +83,20 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_000A_F000A(0x0000);
     }
 
-    /// <summary>Inputs: AL, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, OF, DF. Does not return.</summary>
-    public virtual Action unknown_F000_0011_F0011() {
-        CheckExternalEvents(biosSegment, 0x0011);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0011, Signature_0011_jo);
-        // F000:0011 jo short 0x0013
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0013, Signature_0013_xor);
-        // F000:0013 xor AL,byte ptr DS:[BX+SI]
-        AL = Alu8.Xor(AL, UInt8[DS, (ushort)(BX + SI)]);
-        return unknown_F000_000A_F000A(0x0015);
+    /// <summary>Inputs: all. Does not return.</summary>
+    public virtual Action unknown_F000_0017_F0017() {
+        CheckExternalEvents(biosSegment, 0x0017);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_push);
+        // F000:0017 push CS
+        Stack.Push16(CS);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0018, Signature_0018_jb);
+        // F000:0018 jb short 0x001A
+        if (CarryFlag) {
+            return unknown_F000_000A_F000A(0x001A);
+        }
+        else {
+            return unknown_F000_000A_F000A(0x001A);
+        }
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
@@ -113,14 +116,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>
     /// Entry F000:000A: inputs DS; does not return.
-    /// Entry F000:0015: inputs ES, DS; does not return.
+    /// Entry F000:001A: inputs DS; does not return.
     /// </summary>
     public virtual Action unknown_F000_000A_F000A(int loadOffset) {
         switch (loadOffset) {
             case 0x0000:
                 goto L_000A;
-            case 0x0015:
-                goto L_0015;
+            case 0x001A:
+                goto L_001A;
             default:
                 throw FailAsUntested($"Untested entry offset 0x{loadOffset:X4}");
         }
@@ -133,10 +136,10 @@ public partial class CfgGeneratedOverrides {
         ES = 0;
         // F000:000E mov word ptr ES:[0x0070],0x0032
         Segment0000Globals.Word0070 = 0x0032;
-    L_0015:
-        CheckExternalEvents(biosSegment, 0x0015);
         // F000:0015 mov word ptr ES:[0x0072],CS
-        EsGlobals.Word0072 = CS;
+        Segment0000Globals.Word0072 = CS;
+    L_001A:
+        CheckExternalEvents(biosSegment, 0x001A);
         // F000:001A mov AX,DS
         AX = DS;
         // F000:001C mov ES,AX
@@ -167,28 +170,6 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-// ==== file: EsGlobals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
-
-namespace Spice86.Generated;
-
-public sealed class EsGlobals : MemoryBasedDataStructureWithEsBaseAddress {
-    private readonly IMemory _memory;
-    private readonly SegmentRegisters _segmentRegisters;
-
-    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex];
-
-    public EsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
-        _memory = memory;
-        _segmentRegisters = segmentRegisters;
-    }
-
-    /// ES:0x0072, whatever ES holds at the access.
-    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
-}
-
 // ==== file: Segment0000Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -206,4 +187,6 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
     }
 
     public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
+
+    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
 }

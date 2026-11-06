@@ -65,6 +65,18 @@ public class DosFileManager {
     /// </summary>
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
+    /// <summary>
+    /// Closes every file DOS currently has open, releasing the host file handles
+    /// so the host files can be deleted on Windows.
+    /// </summary>
+    public void CloseAllOpenFiles() {
+        foreach (VirtualFileBase? openFile in OpenFiles) {
+            if (openFile is not null) {
+                openFile.Close();
+            }
+        }
+    }
+
     private readonly byte[] _jobFileTableReferenceCounts = new byte[0xFF];
     private readonly uint[] _characterDevicePositions = new uint[0xFF];
 
