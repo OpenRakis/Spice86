@@ -22,7 +22,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Bio Menace | :sunglasses: Fully playable |  | 2023/09/30  |
 | Betrayal at Krondor | :sunglasses: Fully playable |  | 2023/06/25  |
 | Cryo Dune | :sunglasses: Fully playable | | 2021/09/26  |
-| Day of the Tentacle | :sunglasses: Fully playable | Disable logs with -s to not distrub game Adlib OPL music driver startup with unexpected delays | 2026/02/22  |
+| Day of the Tentacle | :sunglasses: Fully playable | Disable logs with -s to not disturb game Adlib OPL music driver startup with unexpected delays | 2026/02/22  |
 | Doom8088 | :sunglasses: Fully playable | | 2026/02/22  |
 | Double dragon 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26  |
 | Duke Nukem | :sunglasses: Fully playable | But with no PC Speaker sound effects | 2023/06/18  |

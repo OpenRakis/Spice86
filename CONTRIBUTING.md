@@ -77,7 +77,7 @@ $ dotnet test
 
 This project works already quite well for rewriting games such as DUNE, but it is still in early development.
 
-There is still some amount of code to be written, especially for emulating additionnal hardware, reamaining CPU tests work for 32 bit, DOS services, BIOS services, and such.
+There is still some amount of code to be written, especially for emulating additional hardware, remaining CPU tests work for 32 bit, DOS services, BIOS services, and such.
 
 ### Bug Reports
 
