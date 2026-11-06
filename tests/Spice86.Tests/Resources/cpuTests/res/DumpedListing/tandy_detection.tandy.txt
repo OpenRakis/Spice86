@@ -39,15 +39,21 @@
 016D:0169 mov AX,0x4C00
 016D:016C int 0x21
 F000:0006 callback 8
-F000:000A int 0x1C
-F000:000C callback 0x0101
-F000:0010 iret
-F000:0011 callback 9
-F000:0015 iret
-F000:001B callback 0x0012
-F000:001F iret
-F000:0025 callback 0x0015
-F000:0029 iret
+F000:000A push DS
+F000:000B push AX
+F000:000C push DX
+F000:000D int 0x1C
+F000:000F callback 0x0101
+F000:0013 pop DX
+F000:0014 pop AX
+F000:0015 pop DS
+F000:0016 iret
+F000:0017 callback 9
+F000:001B iret
+F000:0021 callback 0x0012
+F000:0025 iret
+F000:002B callback 0x0015
+F000:002F iret
 F000:006D callback 0x0070
 F000:0071 iret
 F000:0073 call far F000:010C

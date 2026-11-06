@@ -50,9 +50,9 @@ public sealed class TandySystemBiosInt15Handler : SystemBiosInt15Handler {
             return;
         }
         _systemConfigurationTable.InitializeTandy();
+        State.AX = 0;
         State.ES = _systemConfigurationAddress.Segment;
         State.BX = _systemConfigurationAddress.Offset;
-        State.AH = 0;
         SetCarryFlag(false, calledFromVm);
     }
 

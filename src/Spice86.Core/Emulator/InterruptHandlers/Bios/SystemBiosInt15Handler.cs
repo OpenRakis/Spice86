@@ -67,7 +67,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether to update the interrupt-stack carry flag.</param>
     [InterruptService(0xC0, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Es | CpuValues.Bx | CpuValues.Carry, Memory = ServiceMemoryEffect.Write)]
     public virtual void GetSystemConfiguration(bool calledFromVm) {
-        State.AH = 0x86;
+        State.AX = 0x86;
+        State.ES = 0;
+        State.BX = 0;
         SetCarryFlag(true, calledFromVm);
     }
 

@@ -93,11 +93,17 @@
 016D:01D5 pop AX
 016D:01D6 iret
 F000:0006 callback 8
-F000:000A int 0x1C
-F000:000C callback 0x0101
-F000:0010 iret
-F000:0011 callback 9
-F000:0015 iret
+F000:000A push DS
+F000:000B push AX
+F000:000C push DX
+F000:000D int 0x1C
+F000:000F callback 0x0101
+F000:0013 pop DX
+F000:0014 pop AX
+F000:0015 pop DS
+F000:0016 iret
+F000:0017 callback 9
+F000:001B iret
 F000:0063 callback 0x001A
 F000:0067 iret
 F000:006D callback 0x0070
