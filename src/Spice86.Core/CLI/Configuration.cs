@@ -7,13 +7,40 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.Devices.Sound.Tandy;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Platform;
 
 using System.ComponentModel;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration : CommandSettings {
+    /// <summary>Guest platform. The existing PC/VGA platform remains the default.</summary>
+    [CommandOption("--MachineType <MACHINETYPE>")]
+    [DefaultValue(MachineType.Pc)]
+    public MachineType MachineType { get; init; }
+
+    /// <summary>Tandy sound selection. Auto enables native sound on a Tandy platform.</summary>
+    [CommandOption("--TandySoundMode <TANDYSOUNDMODE>")]
+    [DefaultValue(TandySoundMode.Auto)]
+    public TandySoundMode TandySoundMode { get; init; }
+
+    /// <summary>Tandy PSG fade-out choice, matching DOSBox Staging syntax.</summary>
+    [CommandOption("--TandyFadeout <TANDYFADEOUT>")]
+    [DefaultValue("off")]
+    public string TandyFadeout { get; init; } = "off";
+
+    /// <summary>Tandy PSG filter selection.</summary>
+    [CommandOption("--TandyFilter <TANDYFILTER>")]
+    [DefaultValue("on")]
+    public string TandyFilter { get; init; } = "on";
+
+    /// <summary>Tandy DAC filter selection.</summary>
+    [CommandOption("--TandyDacFilter <TANDYDACFILTER>")]
+    [DefaultValue("on")]
+    public string TandyDacFilter { get; init; } = "on";
+
     /// <summary>
     /// CPU cycles per ms. Can be more precisely specified than instructions per second. Overrides instructions per second if used.
     /// </summary>

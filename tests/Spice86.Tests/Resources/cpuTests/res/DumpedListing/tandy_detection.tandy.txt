@@ -1,0 +1,93 @@
+016D:0100 mov AX,0xFFFF
+016D:0103 mov ES,AX
+016D:0105 cmp byte ptr ES:[0x000E],0xFF
+016D:010B jne short 0x0159
+016D:010D mov AX,0xFC00
+016D:0110 mov ES,AX
+016D:0112 cmp byte ptr ES:[0],0x21
+016D:0118 jne short 0x0159
+016D:011A mov AH,0xC0
+016D:011C int 0x15
+016D:011E jb short 0x0163
+016D:0120 cmp AH,0
+016D:0123 jne short 0x0163
+016D:0125 cmp word ptr ES:[BX],8
+016D:0129 jne short 0x0163
+016D:012B cmp byte ptr ES:[BX+2],0xFF
+016D:0130 jne short 0x0163
+016D:0132 cmp byte ptr ES:[BX+3],0x0A
+016D:0137 jne short 0x0163
+016D:0139 cmp byte ptr ES:[BX+5],0x70
+016D:013E jne short 0x0163
+016D:0140 int 0x12
+016D:0142 cmp AX,0x0270
+016D:0145 jne short 0x0163
+016D:0147 mov AX,0x0040
+016D:014A mov ES,AX
+016D:014C cmp word ptr ES:[0x0015],0x0280
+016D:0153 jne short 0x0163
+016D:0155 mov AL,1
+016D:0157 jmp short 0x015B
+016D:0159 xor AL,AL
+016D:015B mov DX,0x0998
+016D:015E out DX,AL
+016D:015F xor AL,AL
+016D:0161 jmp short 0x0165
+016D:0163 mov AL,0xFF
+016D:0165 mov DX,0x0999
+016D:0168 out DX,AL
+016D:0169 mov AX,0x4C00
+016D:016C int 0x21
+F000:0006 callback 8
+F000:000A push DS
+F000:000B push AX
+F000:000C push DX
+F000:000D int 0x1C
+F000:000F callback 0x0101
+F000:0013 pop DX
+F000:0014 pop AX
+F000:0015 pop DS
+F000:0016 iret
+F000:0017 callback 9
+F000:001B iret
+F000:0021 callback 0x0012
+F000:0025 iret
+F000:002B callback 0x0015
+F000:002F iret
+F000:006D callback 0x0070
+F000:0071 iret
+F000:0073 call far F000:010C
+F000:0078 callback 0x0074
+F000:007C iret
+F000:007D callback 0x0104
+F000:0081 iret
+F000:0082 callback 0x0105
+F000:0086 iret
+F000:0087 callback 0x0106
+F000:008B iret
+F000:008C callback 0x0107
+F000:0090 iret
+F000:0091 callback 0x0108
+F000:0095 iret
+F000:0096 callback 0x0109
+F000:009A iret
+F000:00B9 cmp AH,7
+F000:00BC je short 0x00CD
+F000:00BE cmp AH,8
+F000:00C1 je short 0x00CD
+F000:00C3 cmp AH,0x0A
+F000:00C6 je short 0x00CD
+F000:00C8 callback 0x0021
+F000:00CC iret
+F000:00CD sti
+F000:00CE callback 0x010A
+F000:00D2 cmp byte ptr CS:[0x00B8],0
+F000:00D8 jne short 0x00DE
+F000:00DA int 0x28
+F000:00DE callback 0x010B
+F000:00E2 iret
+F000:010B ret far
+F000:010C callback 0x010C
+F000:0110 call far F000:010B
+F000:0115 callback 0x010D
+F000:0119 ret far

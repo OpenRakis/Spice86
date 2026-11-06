@@ -8,36 +8,39 @@ public class VideoState : IVideoState {
     ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>
     public VideoState() {
-        DacRegisters = new DacRegisters();
-        GeneralRegisters = new GeneralRegisters();
-        SequencerRegisters = new SequencerRegisters();
-        CrtControllerRegisters = new CrtControllerRegisters();
-        GraphicsControllerRegisters = new GraphicsControllerRegisters();
-        AttributeControllerRegisters = new AttributeControllerRegisters();
         BeamTiming = new(this);
     }
 
-    /// <inheritdoc />
-    public DacRegisters DacRegisters { get; }
+    /// <summary>Creates video state with native Tandy registers and beam timing.</summary>
+    public VideoState(TandyVideoState tandy) {
+        Tandy = tandy;
+        BeamTiming = new TandyBeamTiming(this, tandy);
+    }
 
     /// <inheritdoc />
-    public GeneralRegisters GeneralRegisters { get; }
+    public DacRegisters DacRegisters { get; } = new();
 
     /// <inheritdoc />
-    public SequencerRegisters SequencerRegisters { get; }
+    public GeneralRegisters GeneralRegisters { get; } = new();
 
     /// <inheritdoc />
-    public CrtControllerRegisters CrtControllerRegisters { get; }
+    public SequencerRegisters SequencerRegisters { get; } = new();
 
     /// <inheritdoc />
-    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
+    public CrtControllerRegisters CrtControllerRegisters { get; } = new();
 
     /// <inheritdoc />
-    public AttributeControllerRegisters AttributeControllerRegisters { get; }
+    public GraphicsControllerRegisters GraphicsControllerRegisters { get; } = new();
+
+    /// <inheritdoc />
+    public AttributeControllerRegisters AttributeControllerRegisters { get; } = new();
 
     /// <inheritdoc />
     public bool IsRenderingDirty { get; set; }
 
     /// <inheritdoc />
     public VgaBeamTiming BeamTiming { get; }
+
+    /// <summary>Native gate array state, absent on VGA machines.</summary>
+    public TandyVideoState? Tandy { get; }
 }

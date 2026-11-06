@@ -40,6 +40,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     public IEmulatedClock Clock => _clock;
 
     /// <summary>
+    /// Mirrors the BIOS equipment byte into CMOS RAM without changing the selected register or RTC state.
+    /// </summary>
+    /// <param name="equipment">The low byte of the BIOS equipment word.</param>
+    public void SetEquipmentByte(byte equipment) {
+        _cmosRegisters[CmosRegisterAddresses.Equipment] = equipment;
+    }
+
+    /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
@@ -245,7 +253,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.StatusRegisterD:
             case CmosRegisterAddresses.ShutdownStatus:
 
-            case 0x14:
+            case CmosRegisterAddresses.Equipment:
             case 0x15:
             case 0x16:
             case 0x17:

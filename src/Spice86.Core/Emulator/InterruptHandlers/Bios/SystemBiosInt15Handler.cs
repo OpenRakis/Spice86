@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
@@ -52,6 +56,48 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _ioPortDispatcher = ioPortDispatcher;
         if (initializeResetVector) {
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
+        }
+    }
+
+    /// <summary>
+    /// INT 15h, AH=C0h - System Configuration Table.
+    /// On Tandy 1000, returns the pointer (ES:BX) to the platform configuration table
+    /// and clears CF. On other platforms it is unsupported: AH=86h and CF set.
+    /// </summary>
+    /// <param name="calledFromVm">Whether to update the interrupt-stack carry flag.</param>
+    [InterruptService(0xC0, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Es | CpuValues.Bx | CpuValues.Carry, Memory = ServiceMemoryEffect.Write)]
+    public virtual void GetSystemConfiguration(bool calledFromVm) {
+        State.AX = 0x86;
+        State.ES = 0;
+        State.BX = 0;
+        SetCarryFlag(true, calledFromVm);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=84h - Joystick Support.
+    /// Returns the reference BIOS results for the emulator's unplugged game port.
+    /// </summary>
+    /// <param name="calledFromVm">Whether to update the interrupt-stack carry flag.</param>
+    [InterruptService(0x84, Reads = CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    public void JoystickSupport(bool calledFromVm) {
+        switch (State.DX) {
+            case 0:
+                State.AX = 0x00F0;
+                State.DX = 0x0201;
+                SetCarryFlag(true, calledFromVm);
+                break;
+            case 1:
+                State.AX = 0;
+                State.BX = 0;
+                State.CX = 0;
+                State.DX = 0;
+                SetCarryFlag(true, calledFromVm);
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("Unknown BIOS joystick function {Function:X4}", State.DX);
+                }
+                break;
         }
     }
 
@@ -306,7 +352,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     [InterruptService(0x06, Name = "Unsupported06", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     [InterruptService(0x41, Name = "Unsupported41", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
-    [InterruptService(0xC0, Name = "UnsupportedC0", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     [InterruptService(0xC2, Name = "UnsupportedC2", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     [InterruptService(0xC4, Name = "UnsupportedC4", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     public void Unsupported() {

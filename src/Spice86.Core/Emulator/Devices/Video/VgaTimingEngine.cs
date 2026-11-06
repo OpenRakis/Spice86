@@ -1,3 +1,8 @@
+// Native Tandy resize scheduling adapted from DOSBox Staging.
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.VM.Clock;
@@ -121,15 +126,27 @@ public class VgaTimingEngine {
         if (ReferenceEquals(timing, _timing)) {
             return false;
         }
+        CancelFrameEvents();
+        _timing = timing;
+        _state.IsRenderingDirty = true;
+        _scheduler.AddEvent(OnFrameStart, 0);
+        return true;
+    }
+
+    private void CancelFrameEvents() {
         _scheduler.RemoveEvents(OnFrameStart);
         _scheduler.RemoveEvents(OnScanlineActive);
         _scheduler.RemoveEvents(OnScanlineHBlank);
         _scheduler.RemoveEvents(OnDisplayEnd);
         _scheduler.RemoveEvents(OnBeamStatusChange);
-        _timing = timing;
+    }
+
+    /// <summary>Restarts scanout after a platform-specific drawing setup has been committed.</summary>
+    protected void RestartFrame() {
+        CancelFrameEvents();
+        _timing = _state.BeamTiming.Refresh(_scheduler.EventTimeMs);
         _state.IsRenderingDirty = true;
-        _scheduler.AddEvent(OnFrameStart, 0);
-        return true;
+        OnFrameStart(0);
     }
 
     private void OnBlinkToggle(uint value) {

@@ -34,7 +34,6 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x1A;
 
-
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;

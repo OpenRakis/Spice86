@@ -11,13 +11,54 @@ using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
+using System.Threading;
+
 using Xunit;
 
 public sealed class DeviceSchedulerTests {
+    [Fact]
+    public void DispatchFromAnotherThreadWaitsForOwnerPumpEvenWithNoEvents() {
+        // Arrange
+        _scheduler.ProcessEvents();
+        int ownerThreadId = Environment.CurrentManagedThreadId;
+        RecordingCommand command = new(_scheduler);
+        Thread producer = new(() => _scheduler.Dispatch(command));
+
+        // Act
+        producer.Start();
+        producer.Join();
+        command.ThreadId.Should().Be(0);
+        _scheduler.ProcessEvents();
+
+        // Assert
+        command.ThreadId.Should().Be(ownerThreadId);
+        command.EventInvoked.Should().BeTrue();
+    }
+
     private readonly ILogger _logger;
     private readonly State _state;
     private readonly CyclesClock _cyclesClock;
     private readonly DeviceScheduler _scheduler;
+
+    private sealed class RecordingCommand : IDeviceSchedulerCommand {
+        private readonly DeviceScheduler _scheduler;
+
+        public RecordingCommand(DeviceScheduler scheduler) {
+            _scheduler = scheduler;
+        }
+
+        public int ThreadId { get; private set; }
+        public bool EventInvoked { get; private set; }
+
+        public void Execute() {
+            ThreadId = Environment.CurrentManagedThreadId;
+            _scheduler.AddEvent(OnEvent, 0);
+        }
+
+        private void OnEvent(uint value) {
+            EventInvoked = true;
+        }
+    }
 
     public DeviceSchedulerTests() {
         _logger = Substitute.For<ILogger>();

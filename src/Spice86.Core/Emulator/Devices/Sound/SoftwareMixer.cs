@@ -158,6 +158,19 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
         _queueNotifiers.Add(notifier);
     }
 
+    /// <summary>Removes a stopped device from mixer lock notifications.</summary>
+    internal void UnregisterQueueNotifier(IMixerQueueNotifier notifier) {
+        _queueNotifiers.Remove(notifier);
+    }
+
+    /// <summary>Removes a disabled channel while its owner holds the mixer lock.</summary>
+    internal void DeregisterChannel(SoundChannel channel) {
+        if (_channels.TryGetValue(channel.Name, out SoundChannel? registered) &&
+            ReferenceEquals(registered, channel)) {
+            _channels.Remove(channel.Name);
+        }
+    }
+
     /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
     /// The queues listed here are for audio devices that run on the main thread.
@@ -600,6 +613,13 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
             } else if (typeof(TItem) == typeof(AudioFrame)) {
                 AudioFrame[] frameArray = toMix as AudioFrame[] ?? [];
                 device.Channel.AddAudioFrames(frameArray.AsSpan());
+            } else if (typeof(TItem) == typeof(byte)) {
+                byte[] byteArray = toMix as byte[] ?? [];
+                float[] converted = new float[framesReceived];
+                for (int index = 0; index < framesReceived; index++) {
+                    converted[index] = (byteArray[index] - 128) * 256.0f;
+                }
+                device.Channel.AddSamplesGeneric(framesReceived, converted.AsSpan(), isStereo: false);
             }
         }
 

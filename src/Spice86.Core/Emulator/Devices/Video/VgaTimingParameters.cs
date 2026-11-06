@@ -43,7 +43,7 @@ public sealed record VgaTimingParameters {
 
     /// <summary>Calculates the timing model without modifying registers.</summary>
     public static VgaTimingParameters Calculate(IVideoState state) {
-        return Calculate(VgaTimingRegisters.Read(state));
+        return state.BeamTiming.CalculateTiming();
     }
 
     internal static VgaTimingParameters Calculate(VgaTimingRegisters registers) {

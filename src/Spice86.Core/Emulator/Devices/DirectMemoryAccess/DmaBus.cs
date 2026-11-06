@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
 using Microsoft.Extensions.Logging;
@@ -22,10 +26,13 @@ public sealed class DmaBus : DefaultIOPortHandler {
         { 0x8A, 7 } // channel 7
     };
 
-    private readonly DmaChannel[] _channels = new DmaChannel[8];
     private readonly ILogger _logger;
+    private readonly IMemory _memory;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly uint _wrappingMask;
     private readonly DmaController _primary;
-    private readonly DmaController _secondary;
+    private DmaController? _secondary;
+    private ISecondaryDmaPortOwner? _secondaryPortOwner;
 
     /// <summary>
     ///     Initializes the DMA system with both controllers and registers the ISA port map.
@@ -46,15 +53,11 @@ public sealed class DmaBus : DefaultIOPortHandler {
         bool failOnUnhandledPort,
         ILogger loggerService, uint wrappingMask = 0xFFFF) : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
+        _memory = memory;
+        _ioPortDispatcher = ioPortDispatcher;
+        _wrappingMask = wrappingMask;
         _primary = new DmaController(0, memory, loggerService, wrappingMask);
         _secondary = new DmaController(1, memory, loggerService, wrappingMask);
-
-        for (byte i = 0; i < _channels.Length; i++) {
-            DmaController controller = i < 4 ? _primary : _secondary;
-            byte channelIndex = (byte)(i % 4);
-            DmaChannel? channel = controller.GetChannel(channelIndex);
-            _channels[i] = channel ?? throw new InvalidOperationException($"DMA channel {i} initialization failed.");
-        }
 
         InitializePortHandlers(ioPortDispatcher);
     }
@@ -63,7 +66,58 @@ public sealed class DmaBus : DefaultIOPortHandler {
     ///     Retrieves the DMA channel for the given absolute channel number (0..7).
     /// </summary>
     public DmaChannel? GetChannel(byte channelNumber) {
-        return channelNumber < _channels.Length ? _channels[channelNumber] : null;
+        return channelNumber switch {
+            < 4 => _primary.GetChannel(channelNumber),
+            < 8 => GetSecondaryController().GetChannel((byte)(channelNumber - 4)),
+            _ => null
+        };
+    }
+
+    /// <summary>Releases high-DMA ports and evicts owners of the removed controller's channels.</summary>
+    /// <remarks>Matches the DOSBox Staging Tandy/secondary-DMA port ownership transition (GPL-2.0-or-later).</remarks>
+    public void ShutdownSecondaryController() {
+        DmaController? secondary = _secondary;
+        if (secondary is null) {
+            return;
+        }
+
+        _secondary = null;
+        for (ushort offset = 0; offset < 0x10; offset++) {
+            _ioPortDispatcher.RemoveIOPortHandler(0xC0 + (offset << 1), this);
+        }
+        for (byte channel = 0; channel < 4; channel++) {
+            secondary.GetChannel(channel)?.Shutdown();
+        }
+    }
+
+    /// <summary>Transfers the secondary controller's shared ports to conflicting hardware.</summary>
+    public void ClaimSecondaryControllerPorts(ISecondaryDmaPortOwner owner) {
+        ShutdownSecondaryController();
+        ISecondaryDmaPortOwner? previousOwner = _secondaryPortOwner;
+        _secondaryPortOwner = owner;
+        if (previousOwner is not null && !ReferenceEquals(previousOwner, owner)) {
+            previousOwner.ReleaseSecondaryDmaPorts();
+        }
+    }
+
+    /// <summary>Releases a hardware claim without restoring the secondary controller.</summary>
+    public void ReleaseSecondaryControllerPorts(ISecondaryDmaPortOwner owner) {
+        if (ReferenceEquals(_secondaryPortOwner, owner)) {
+            _secondaryPortOwner = null;
+        }
+    }
+
+    private DmaController GetSecondaryController() {
+        if (_secondary is not null) {
+            return _secondary;
+        }
+
+        ISecondaryDmaPortOwner? owner = _secondaryPortOwner;
+        _secondaryPortOwner = null;
+        owner?.ReleaseSecondaryDmaPorts();
+        _secondary = new DmaController(1, _memory, _logger, _wrappingMask);
+        RegisterSecondaryPorts();
+        return _secondary;
     }
 
     /// <summary>
@@ -75,7 +129,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
                 _primary.ResetChannel(channelNumber);
                 break;
             case < 8:
-                _secondary.ResetChannel((byte)(channelNumber - 4));
+                GetSecondaryController().ResetChannel((byte)(channelNumber - 4));
                 break;
         }
     }
@@ -87,7 +141,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
         }
 
         if (PageRegisterToChannel.TryGetValue(port, out byte channelIndex)) {
-            return _channels[channelIndex].PageRegisterValue;
+            return GetChannel(channelIndex)?.PageRegisterValue ?? 0xFF;
         }
 
         _logger.LogWarning("DMA: Read from undefined port 0x{Port:X4}", port);
@@ -109,7 +163,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
         }
 
         if (PageRegisterToChannel.TryGetValue(port, out byte channelIndex)) {
-            _channels[channelIndex].SetPage(value);
+            GetChannel(channelIndex)?.SetPage(value);
             return;
         }
 
@@ -128,15 +182,19 @@ public sealed class DmaBus : DefaultIOPortHandler {
             dispatcher.AddIOPortHandler(port, this);
         }
 
-        // Secondary controller ports 0xC0-0xDE (even addresses).
-        for (ushort offset = 0; offset < 0x10; offset++) {
-            ushort port = (ushort)(0xC0 + (offset << 1));
-            dispatcher.AddIOPortHandler(port, this);
-        }
+        RegisterSecondaryPorts();
 
         // Page registers.
         foreach (ushort port in PageRegisterToChannel.Keys) {
             dispatcher.AddIOPortHandler(port, this);
+        }
+    }
+
+    private void RegisterSecondaryPorts() {
+        // Secondary controller ports 0xC0-0xDE (even addresses).
+        for (ushort offset = 0; offset < 0x10; offset++) {
+            ushort port = (ushort)(0xC0 + (offset << 1));
+            _ioPortDispatcher.AddIOPortHandler(port, this);
         }
     }
 
@@ -147,7 +205,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
                 register = (byte)port;
                 return true;
             case >= 0xC0 and <= 0xDE when (port & 0x1) == 0:
-                controller = _secondary;
+                controller = GetSecondaryController();
                 register = (byte)((port - 0xC0) >> 1);
                 return true;
         }

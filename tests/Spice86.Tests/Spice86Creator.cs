@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Platform;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -36,13 +37,14 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null)
+        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null,
+        MachineType machineType = MachineType.Pc)
         : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
             recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
-            enableSpeculativeCfgExploration, clockStartTime) {
+            enableSpeculativeCfgExploration, clockStartTime, MachineType.Pc) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
@@ -52,7 +54,7 @@ public sealed class Spice86Creator : IDisposable {
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, null) {
+            settings.EnableSpeculativeCfgExploration, null, settings.MachineType) {
         EnableUmb = settings.EnableUmb;
     }
 
@@ -63,7 +65,8 @@ public sealed class Spice86Creator : IDisposable {
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
-        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
+        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime,
+        MachineType machineType) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -84,6 +87,7 @@ public sealed class Spice86Creator : IDisposable {
         _configuration = new Configuration {
             Exe = executablePath,
             CpuModel = cpuModel ?? CpuModel.ZET_86,
+            MachineType = machineType,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = [],
             // when false: making sure int8 is not going to be triggered during the tests
@@ -137,8 +141,10 @@ public sealed class Spice86Creator : IDisposable {
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
             (breakpoint, _) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
         // Init VGA card to map some addresses correctly otherwise there will be errors when saving the ram image
-        res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
-        res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);
+        if (_configuration.MachineType == MachineType.Pc) {
+            res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
+            res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);
+        }
         return res;
     }
 

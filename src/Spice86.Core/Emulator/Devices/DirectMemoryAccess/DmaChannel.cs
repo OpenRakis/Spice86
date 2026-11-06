@@ -52,6 +52,7 @@ public sealed class DmaChannel {
     ///     Callback used to inform a previous reservation owner that it lost control over the channel.
     /// </summary>
     private DmaEvictCallback? _evictCallback;
+    private bool _isAvailable = true;
 
     /// <summary>
     ///     Human-readable label of the component currently holding the reservation, if any.
@@ -172,6 +173,9 @@ public sealed class DmaChannel {
     ///     Applies the mask bit controlling whether the channel is allowed to perform transfers.
     /// </summary>
     public void SetMask(bool mask) {
+        if (!_isAvailable) {
+            return;
+        }
         IsMasked = mask;
         _logger.LogDebug("DMA[{Channel}]: Mask set to {Masked}", ChannelNumber, mask);
         DoCallback(IsMasked ? DmaEvent.IsMasked : DmaEvent.IsUnmasked);
@@ -181,6 +185,9 @@ public sealed class DmaChannel {
     ///     Registers a callback to observe channel events, updating the request line accordingly.
     /// </summary>
     public void RegisterCallback(DmaCallback? callback) {
+        if (!_isAvailable) {
+            return;
+        }
         _callback = callback;
         SetMask(IsMasked);
         if (_callback is not null) {
@@ -306,6 +313,9 @@ public sealed class DmaChannel {
     public void ReserveFor(string ownerName, DmaEvictCallback evictCallback) {
         ArgumentNullException.ThrowIfNull(ownerName);
         ArgumentNullException.ThrowIfNull(evictCallback);
+        if (!_isAvailable) {
+            throw new InvalidOperationException("The DMA controller has been removed.");
+        }
 
         if (HasReservation()) {
             if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -326,10 +336,55 @@ public sealed class DmaChannel {
         _logger.LogDebug("DMA[{Channel}]: Reserved for {Owner}", ChannelNumber, ownerName);
     }
 
+    /// <summary>Changes device ownership without discarding DMA registers already programmed by the guest.</summary>
+    public void ReserveForPreservingTransfer(string ownerName, DmaEvictCallback evictCallback) {
+        ArgumentNullException.ThrowIfNull(ownerName);
+        ArgumentNullException.ThrowIfNull(evictCallback);
+        if (!_isAvailable) {
+            throw new InvalidOperationException("The DMA controller has been removed.");
+        }
+        if (string.Equals(_reservationOwnerName, ownerName, StringComparison.Ordinal)) {
+            return;
+        }
+
+        TransferState transfer = new(BaseAddress, BaseCount, CurrentAddress, CurrentCount,
+            HasRaisedRequest, HasReachedTerminalCount, IsAutoiniting, IsIncremented, IsMasked,
+            PageBase, PageRegisterValue);
+        if (HasReservation()) {
+            EvictReserver();
+        }
+        BaseAddress = transfer.BaseAddress;
+        BaseCount = transfer.BaseCount;
+        CurrentAddress = transfer.CurrentAddress;
+        CurrentCount = transfer.CurrentCount;
+        HasRaisedRequest = transfer.HasRaisedRequest;
+        HasReachedTerminalCount = transfer.HasReachedTerminalCount;
+        IsAutoiniting = transfer.IsAutoiniting;
+        IsIncremented = transfer.IsIncremented;
+        IsMasked = transfer.IsMasked;
+        PageBase = transfer.PageBase;
+        PageRegisterValue = transfer.PageRegisterValue;
+        _callback = null;
+        _evictCallback = evictCallback;
+        _reservationOwnerName = ownerName;
+    }
+
+    /// <summary>Invalidates a channel when its controller is removed.</summary>
+    internal void Shutdown() {
+        _isAvailable = false;
+        if (HasReservation()) {
+            EvictReserver();
+        }
+        Reset();
+    }
+
     /// <summary>
     ///     Implements shared transfer logic for reads and writes, updating address and count registers.
     /// </summary>
     private int ReadOrWrite(DmaDirection direction, int words, Span<byte> readBuffer, ReadOnlySpan<byte> writeBuffer) {
+        if (!_isAvailable) {
+            return 0;
+        }
         switch (words) {
             case < 0:
                 _logger.LogWarning(
@@ -469,4 +524,8 @@ public sealed class DmaChannel {
         Read,
         Write
     }
+
+    private readonly record struct TransferState(ushort BaseAddress, ushort BaseCount,
+        uint CurrentAddress, ushort CurrentCount, bool HasRaisedRequest, bool HasReachedTerminalCount,
+        bool IsAutoiniting, bool IsIncremented, bool IsMasked, uint PageBase, byte PageRegisterValue);
 }

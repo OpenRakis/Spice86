@@ -16,6 +16,23 @@ using Xunit;
 
 public sealed class VgaIoPortTimingTests {
     [Theory]
+    [InlineData(5, 3, 3)]
+    [InlineData(160, 3, 152)]
+    [InlineData(160, 4, 232)]
+    public void LightPenCountsWholeWordsAndScanlinePairs(int addressAdd, int scanline, ushort expectedAddress) {
+        // Arrange
+        VideoState state = CreateVideoState();
+        VgaTimingParameters timing = state.BeamTiming.StartFrame(0);
+        double elapsed = scanline * timing.LineDurationMs + 0.9 * timing.HorizontalDisplayEndMs;
+
+        // Act
+        ushort address = state.BeamTiming.GetLightPenAddress(elapsed, addressAdd);
+
+        // Assert
+        address.Should().Be(expectedAddress);
+    }
+
+    [Theory]
     [InlineData(0x3DA, 399.0, 0)]
     [InlineData(0x3DA, 400.25, 1)]
     [InlineData(0x3DA, 411.75, 1)]

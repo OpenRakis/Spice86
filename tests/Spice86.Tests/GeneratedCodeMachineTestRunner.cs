@@ -224,7 +224,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
         }
-        return key + settings.HandlerSegmentGoldenSuffix;
+        return key + settings.HandlerSegmentGoldenSuffix + settings.PlatformGoldenSuffix;
     }
 
     public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunScope scope) {

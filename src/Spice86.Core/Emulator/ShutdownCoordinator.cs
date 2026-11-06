@@ -22,6 +22,7 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private readonly Machine _machine;
     private readonly ILogger _loggerService;
+    private readonly IReadOnlyList<IDisposable> _platformDevices;
     private bool _shutdownCompleted;
 
     internal ShutdownCoordinator(
@@ -30,13 +31,26 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
         Spice86HttpApiServer? httpApiServer,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler,
         Machine machine,
-        ILogger loggerService) {
+        ILogger loggerService)
+        : this(vgaTimingThread, emulatedClock, httpApiServer, cfgNodeExecutionCompiler,
+            machine, loggerService, Array.Empty<IDisposable>()) {
+    }
+
+    internal ShutdownCoordinator(
+        DeviceSchedulerThread? vgaTimingThread,
+        IEmulatedClock emulatedClock,
+        Spice86HttpApiServer? httpApiServer,
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler,
+        Machine machine,
+        ILogger loggerService,
+        IReadOnlyList<IDisposable> platformDevices) {
         _vgaTimingThread = vgaTimingThread;
         _emulatedClock = emulatedClock;
         _httpApiServer = httpApiServer;
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
         _machine = machine;
         _loggerService = loggerService;
+        _platformDevices = platformDevices;
     }
 
     public void Shutdown() {
@@ -47,6 +61,9 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
         _shutdownCompleted = true;
 
         DisposeSafely(_vgaTimingThread, nameof(_vgaTimingThread));
+        foreach (IDisposable device in _platformDevices) {
+            DisposeSafely(device, device.GetType().Name);
+        }
         DisposeSafely(_emulatedClock, nameof(_emulatedClock));
         DisposeSafely(_httpApiServer, nameof(_httpApiServer));
         DisposeSafely(_cfgNodeExecutionCompiler, nameof(_cfgNodeExecutionCompiler));

@@ -25,12 +25,13 @@ internal sealed class DevicesTabPlugin : IDebuggerTabPlugin {
     }
 
     public void Register(IDebuggerTabRegistry registry) {
-        VideoCardViewModel videoCardViewModel = new(_vgaRenderer, _videoState, _vgaTimingEngine, _storageProvider);
-        PaletteViewModel paletteViewModel = new(_argbPalette, _uiDispatcher);
         MidiViewModel midiViewModel = new(_midi);
-
-        registry.AddSubTab(DebuggerTabId.DevicesGroup, new DebuggerSubTabViewModel(DebuggerTabId.DeviceVideoCard, videoCardViewModel));
-        registry.AddSubTab(DebuggerTabId.DevicesGroup, new DebuggerSubTabViewModel(DebuggerTabId.DevicePalette, paletteViewModel));
+        if ((_videoState as VideoState)?.Tandy == null) {
+            VideoCardViewModel videoCardViewModel = new(_vgaRenderer, _videoState, _vgaTimingEngine, _storageProvider);
+            PaletteViewModel paletteViewModel = new(_argbPalette, _uiDispatcher);
+            registry.AddSubTab(DebuggerTabId.DevicesGroup, new DebuggerSubTabViewModel(DebuggerTabId.DeviceVideoCard, videoCardViewModel));
+            registry.AddSubTab(DebuggerTabId.DevicesGroup, new DebuggerSubTabViewModel(DebuggerTabId.DevicePalette, paletteViewModel));
+        }
         registry.AddSubTab(DebuggerTabId.DevicesGroup, new DebuggerSubTabViewModel(DebuggerTabId.DeviceMidi, midiViewModel));
     }
 }

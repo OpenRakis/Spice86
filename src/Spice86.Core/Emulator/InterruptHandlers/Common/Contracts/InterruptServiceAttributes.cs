@@ -43,6 +43,11 @@ public static class InterruptServiceAttributes {
         for (Type? current = type; current is not null && current != typeof(object);
             current = current.BaseType) {
             foreach (MethodInfo method in current.GetMethods(MethodFlags)) {
+                // Attributes are inherited by overrides in reflection; only count a
+                // declaration on the type that declares it, once per hierarchy walk.
+                if (!method.IsDefined(typeof(InterruptServiceAttribute), inherit: false)) {
+                    continue;
+                }
                 foreach (InterruptServiceAttribute attribute in
                     method.GetCustomAttributes<InterruptServiceAttribute>()) {
                     attributes.Add((method, attribute));

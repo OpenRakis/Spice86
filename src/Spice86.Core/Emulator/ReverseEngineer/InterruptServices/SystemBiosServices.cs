@@ -122,6 +122,14 @@ public sealed class SystemBiosServices : InterruptServiceGroup {
     }
 
     /// <summary>
+    /// INT 15h AH=C0h: returns the system configuration table address in ES:BX, or AH=86h with CF when unsupported.
+    /// </summary>
+    public void GetSystemConfiguration(ushort expectedReturnCs, ushort expectedReturnIp) {
+        CheckVector();
+        Call(expectedReturnCs, expectedReturnIp, 0xC0);
+    }
+
+    /// <summary>
     /// INT 15h AH=C2h: unsupported function; reports the error in AH and CF.
     /// </summary>
     public void UnsupportedC2(ushort expectedReturnCs, ushort expectedReturnIp) {

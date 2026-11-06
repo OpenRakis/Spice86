@@ -1,0 +1,19 @@
+Tandy 1000 support
+
+The Tandy platform implementation is derived from DOSBox Staging:
+https://github.com/dosbox-staging/dosbox-staging
+Reference commit: 27b1b7ca719c21ef3444f7ad1cf2d9cd439527cc
+
+Copyright The DOSBox Staging Team and The DOSBox Team.
+Individual translated files retain their applicable copyright notices.
+DOSBox-derived and DOSBox Staging-original code is licensed under the
+GNU General Public License, version 2 or later (GPL-2.0-or-later).
+The corresponding license text accompanies this notice.
+
+The NCR8496 synthesis core is derived from MAME's sn76496.cpp.
+Copyright Nicola Salmoria.
+That core is separately licensed under the BSD 3-Clause License.
+The corresponding license text accompanies this notice.
+
+These notices describe the applicable upstream terms. They do not replace
+the copyright notices or license terms for unrelated Spice86 code.

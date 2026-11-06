@@ -35,7 +35,7 @@ internal static class MachineGoldens {
         if (fixture.Settings.VariantName.Length > 0) {
             key += "." + fixture.Settings.VariantName;
         }
-        return key + fixture.Settings.HandlerSegmentGoldenSuffix;
+        return key + fixture.Settings.HandlerSegmentGoldenSuffix + fixture.Settings.PlatformGoldenSuffix;
     }
 
     /// <summary>Compares the finished machine's assembly listing with the committed golden.</summary>

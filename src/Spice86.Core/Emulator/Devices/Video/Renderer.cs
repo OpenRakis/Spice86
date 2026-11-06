@@ -1,17 +1,22 @@
+// Tandy scanout adapted from DOSBox Staging.
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using System;
-using System.Threading;
+using Microsoft.Extensions.Logging;
 
-using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
+using System;
+using System.Threading;
 
-using Microsoft.Extensions.Logging;
+using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
@@ -81,13 +86,19 @@ public class Renderer : IVgaRenderer {
     /// <param name="blinkState">Shared blink state for text-mode attribute blinking.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="renderer256Color">The 256-color scanline renderer selected for the current CPU.</param>
-    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, ILogger loggerService, IVgaRenderer256Color renderer256Color) {
+    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, ILogger loggerService, IVgaRenderer256Color renderer256Color)
+        : this(state, blinkState, loggerService, renderer256Color) {
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
+    }
+
+    /// <summary>Initializes shared frame publication without registering a memory aperture.</summary>
+    protected Renderer(IVideoState state, VgaBlinkState blinkState, ILogger loggerService,
+        IVgaRenderer256Color renderer256Color) {
         _state = state;
         _blinkState = blinkState;
         _renderer256Color = renderer256Color;
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
-        memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
     /// <inheritdoc />
@@ -102,11 +113,11 @@ public class Renderer : IVgaRenderer {
             return (_state.CrtControllerRegisters.HorizontalDisplayEnd + 1) * pixelsPerClock;
         }
         return (_state.GeneralRegisters.MiscellaneousOutput.ClockSelect, _state.SequencerRegisters.ClockingModeRegister.HalfDotClock) switch {
-        (ClockSelect.Use25175Khz, true) => 320,
-        (ClockSelect.Use25175Khz, false) => 640,
-        (ClockSelect.Use28322Khz, true) => 360,
-        (ClockSelect.Use28322Khz, false) => 720,
-        _ => throw new ArgumentOutOfRangeException()
+            (ClockSelect.Use25175Khz, true) => 320,
+            (ClockSelect.Use25175Khz, false) => 640,
+            (ClockSelect.Use28322Khz, true) => 360,
+            (ClockSelect.Use28322Khz, false) => 720,
+            _ => throw new ArgumentOutOfRangeException()
         };
     }
 
@@ -125,7 +136,8 @@ public class Renderer : IVgaRenderer {
         return 1;
     }
 
-    private VideoFrameInfo CalculateFrameInfo() {
+    /// <summary>Calculates the geometry of the next frame from programmed video state.</summary>
+    protected virtual VideoFrameInfo CalculateFrameInfo() {
         int width = CalculateWidth();
         int physicalHeight = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
         if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved) {
@@ -152,7 +164,7 @@ public class Renderer : IVgaRenderer {
     ///     Called by <see cref="VgaTimingEngine"/> at frame start on the emulation thread.
     ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
     /// </summary>
-    public void BeginFrame() {
+    public virtual void BeginFrame() {
         VideoFrameInfo frameInfo = CalculateFrameInfo();
         bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged
             || frameInfo != _publishedFrameInfo;
@@ -222,7 +234,7 @@ public class Renderer : IVgaRenderer {
     ///     Called by <see cref="VgaTimingEngine"/> for each physical scanline on the emulation thread.
     ///     Renders one horizontal line of pixels from VRAM into the back buffer and advances state.
     /// </summary>
-    public void RenderScanline() {
+    public virtual void RenderScanline() {
         if (!_frameActive || _frameLineCounter >= _frameTotalHeight) {
             return;
         }
@@ -333,7 +345,7 @@ public class Renderer : IVgaRenderer {
             // readers that observe `_hasPendingFrame` will see the fully-published
             // buffer contents when they do a Volatile.Read on `_lastPublishedFrame`.
             Volatile.Write(ref _lastPublishedFrame, Volatile.Read(ref _frontBuffer));
-            double aspect = _frameInGraphicsMode ? 3.0 * _frameWidth / (4.0 * _frameHeight) : 1;
+            double aspect = CorrectPixelAspectRatio ? 3.0 * _frameWidth / (4.0 * _frameHeight) : 1;
             Volatile.Write(ref _publishedFrameInfo, new VideoFrameInfo(_frameWidth, _frameHeight, aspect));
             Volatile.Write(ref _hasPendingFrame, 1);
         }
@@ -386,6 +398,35 @@ public class Renderer : IVgaRenderer {
             }
             lastFrame.AsSpan().CopyTo(buffer);
         }
+    }
+
+    /// <summary>Whether the current frame should be presented with a 4:3 display aspect ratio.</summary>
+    protected virtual bool CorrectPixelAspectRatio => _frameInGraphicsMode;
+
+    /// <summary>Starts a frame whose scanlines are rendered without dirty-frame skipping.</summary>
+    protected void BeginUnconditionallyRenderedFrame(VideoFrameInfo info, bool isGraphics) {
+        _frameWidth = info.Width;
+        _frameHeight = info.Height;
+        _framePhysicalScanline = 0;
+        _frameInGraphicsMode = isGraphics;
+        _skipThisFrame = false;
+        _frameActive = true;
+        if (_backBuffer.Length != info.Width * info.Height) {
+            _backBuffer = new uint[info.Width * info.Height];
+        }
+        _state.IsRenderingDirty = false;
+    }
+
+    /// <summary>Obtains the next visible row in an unconditionally rendered frame.</summary>
+    protected bool TryGetNextScanline(out Span<uint> row, out int scanline) {
+        scanline = _framePhysicalScanline;
+        row = default;
+        if (!_frameActive || scanline >= _frameHeight) {
+            return false;
+        }
+        _framePhysicalScanline++;
+        row = _backBuffer.AsSpan(scanline * _frameWidth, _frameWidth);
+        return true;
     }
 
     private void InitCharRow() {

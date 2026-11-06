@@ -2,13 +2,14 @@ using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 
-using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
@@ -26,6 +27,36 @@ using System.Runtime.InteropServices;
 /// 2022-2025 The DOSBox Staging Team
 /// </remarks>
 public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
+    private bool _biosDacEvicted;
+
+    private TandySoundBios? _biosSound;
+
+    internal void AttachBiosSound(TandySoundBios biosSound) {
+        _biosSound = biosSound;
+    }
+
+    internal void DetachBiosSound(TandySoundBios biosSound) {
+        if (ReferenceEquals(_biosSound, biosSound)) {
+            _biosSound = null;
+        }
+    }
+
+    /// <summary>Whether the configured DAC can currently back Tandy BIOS services.</summary>
+    public bool IsBiosDacAvailable => !_biosDacEvicted && _sb.Type is not (SbType.None or SbType.GameBlaster) &&
+        BaseAddress != 0 && IRQ != 0 && LowDma is > 0 and < 4;
+
+    /// <summary>Removes the hot speaker warmup for edge-to-edge BIOS sound buffers.</summary>
+    internal void UseBiosSoundWarmup() {
+        _sb.Dsp.HotWarmupMs = 0;
+    }
+
+    /// <summary>Stops a BIOS route without re-entering the DSP command parser during DMA eviction.</summary>
+    internal void StopBiosDacTransfer() {
+        SetSpeakerEnabled(false);
+        _sb.Mode = DspMode.DmaPause;
+        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+    }
+
     /// <summary>
     /// Initializes a new instance of the Sound Blaster device.
     /// </summary>
@@ -1187,7 +1218,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             case (byte)DspCommand.SingleCycle8BitDmaAdc:
                 _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                 _sb.Dma.Sign = false;
-                _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspAdcCallback);
+                AcquireDmaChannel(_sb.Hw.Dma8)?.RegisterCallback(DspAdcCallback);
                 break;
 
             case (byte)DspCommand.SingleCycle8BitDmaDac:
@@ -1428,7 +1459,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 _sb.E2.Value += E2IncrTable[_sb.E2.Count % 4][8];
                 _sb.E2.Count++;
-                _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspE2DmaCallback);
+                AcquireDmaChannel(_sb.Hw.Dma8)?.RegisterCallback(DspE2DmaCallback);
                 break;
 
             case (byte)DspCommand.GetDspCopyright:
@@ -1856,7 +1887,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
 
         // Always use 8-bit DMA channel for old-style commands
-        _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+        _sb.Dma.Channel = AcquireDmaChannel(_sb.Hw.Dma8);
         DspDoDmaTransfer(mode,
             (uint)(_sb.FreqHz / (_sb.Mixer.StereoEnabled ? 2 : 1)),
             autoInit,
@@ -1874,21 +1905,21 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // Equal length if data format and dma channel are both 16-bit or 8-bit
         if (mode == DmaMode.Pcm16Bit) {
             if (_sb.Hw.Dma16 != 0xff) {
-                _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma16);
+                _sb.Dma.Channel = AcquireDmaChannel(_sb.Hw.Dma16);
                 if (_sb.Dma.Channel is null) {
-                    _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+                    _sb.Dma.Channel = AcquireDmaChannel(_sb.Hw.Dma8);
                     newMode = DmaMode.Pcm16BitAliased;
                     newLength *= 2;
                 }
             } else {
-                _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+                _sb.Dma.Channel = AcquireDmaChannel(_sb.Hw.Dma8);
                 newMode = DmaMode.Pcm16BitAliased;
                 // UNDOCUMENTED: In aliased mode sample length is written to DSP as
                 // number of 16-bit samples so we need double 8-bit DMA buffer length
                 newLength *= 2;
             }
         } else {
-            _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+            _sb.Dma.Channel = AcquireDmaChannel(_sb.Hw.Dma8);
         }
 
         // Set the length to the correct register depending on mode
@@ -1962,6 +1993,20 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
     }
 
+    private DmaChannel? AcquireDmaChannel(byte number) {
+        DmaChannel? channel = _dmaBus.GetChannel(number);
+        if (channel is null) {
+            return null;
+        }
+        string owner = number >= 4 ? "SoundBlaster16" : "SoundBlaster";
+        channel.ReserveForPreservingTransfer(owner, OnDmaChannelEvicted);
+        if (_biosDacEvicted) {
+            _biosDacEvicted = false;
+            _biosSound?.RefreshRouting();
+        }
+        return channel;
+    }
+
     private void OnDmaChannelEvicted() {
         // Stop any active DMA transfer
         _sb.Mode = DspMode.None;
@@ -1973,6 +2018,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
+        _biosDacEvicted = true;
+        _biosSound?.RefreshRouting();
     }
 
     /// <summary>
@@ -2549,4 +2596,3 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         return _sb.Dma.Left > _sb.Dma.Min;
     }
 }
-

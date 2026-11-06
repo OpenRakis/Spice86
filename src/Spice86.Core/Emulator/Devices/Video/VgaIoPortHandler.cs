@@ -1,3 +1,8 @@
+// Tandy register dispatch adapted from DOSBox Staging.
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Video;
 
@@ -33,7 +38,14 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="clock">The emulated clock driving the beam independently of rendering.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILogger loggerService,
-        IVideoState videoState, IEmulatedClock clock, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        IVideoState videoState, IEmulatedClock clock, bool failOnUnhandledPort)
+        : this(state, ioPortDispatcher, loggerService, videoState, clock, failOnUnhandledPort, HandledPorts) {
+    }
+
+    /// <summary>Initializes registers and registers the supplied device ports.</summary>
+    protected VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILogger loggerService,
+        IVideoState videoState, IEmulatedClock clock, bool failOnUnhandledPort, IEnumerable<int> handledPorts)
+        : base(state, failOnUnhandledPort, loggerService) {
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;
@@ -45,7 +57,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _videoState = videoState;
         _clock = clock;
         _videoState.BeamTiming.Refresh(0);
-        InitPortHandlers(ioPortDispatcher);
+        foreach (int port in handledPorts) {
+            ioPortDispatcher.AddIOPortHandler(port, this);
+        }
     }
 
     private static IEnumerable<int> HandledPorts =>
@@ -80,12 +94,6 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.CgaModeControl,
             Ports.CgaColorSelect
         };
-
-    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        foreach (int port in HandledPorts) {
-            ioPortDispatcher.AddIOPortHandler(port, this);
-        }
-    }
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
@@ -404,4 +412,5 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         WriteByte(port, (byte)(value & 0xFF));
         WriteByte((ushort)(port + 1), (byte)(value >> 8));
     }
+
 }

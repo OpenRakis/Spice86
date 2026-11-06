@@ -46,6 +46,11 @@
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <None Include="..\..\licenses\dosbox-staging\*.txt"
+              Link="licenses\dosbox-staging\%(Filename)%(Extension)"
+              CopyToOutputDirectory="PreserveNewest"
+              Pack="true"
+              PackagePath="licenses\dosbox-staging\" />
         <None Include="..\..\3rdparty\Release\FastExpressionCompiler.dll" Pack="true" PackagePath="lib\$(TargetFramework)\" Visible="false" />
         <None Update="Resources\2MGM.license">
             <Link>2MGM.license</Link>

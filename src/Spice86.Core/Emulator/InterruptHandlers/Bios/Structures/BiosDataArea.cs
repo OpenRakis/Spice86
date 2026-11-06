@@ -11,8 +11,7 @@ using Spice86.Shared.Utils;
 /// Provides access to emulated memory mapped BIOS values. <br/>
 /// <see href="https://flint.cs.yale.edu/feng/cos/resources/BIOS/Resources/biosdata.htm" />
 /// </summary>
-public sealed class BiosDataArea : MemoryBasedDataStructure
-{
+public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -49,7 +48,11 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// </summary>
     public ushort ConventionalMemorySizeKb { get => UInt16[0x13]; init => UInt16[0x13] = value; }
 
-    // Padding at 0x15
+    /// <summary>
+    /// Gets or sets Tandy's true conventional-memory size at physical address 0415h.
+    /// This word overlaps the PC PS/2 control byte.
+    /// </summary>
+    public ushort TrueConventionalMemorySizeKb { get => UInt16[0x15]; set => UInt16[0x15] = value; }
 
     /// <summary>
     /// Gets or sets the PS/2 CTRL flag.
