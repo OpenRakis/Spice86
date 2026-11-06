@@ -523,7 +523,7 @@ Importing the dump into Ghidra is **optional**. Spice86 already generates a runn
 
 This uses Ghidra and Java 17.
 
-Before using it, define an environnement variable named SPICE86_DUMPS_FOLDER pointing to a folder where the Spice86 dumps are located.
+Before using it, define an environment variable named SPICE86_DUMPS_FOLDER pointing to a folder where the Spice86 dumps are located.
 They are generated on exit.
 
 General procedure, in order:
@@ -580,7 +580,7 @@ The NukedOpl3 port to C# was done by codeEngine. It is bit-accurate. Thanks a lo
 
 The DOS implementation is heavily inspired by the clean code from FreeDOS, and DOSBox Staging.
 
-The implementations of MSCDEX, CDDA, Floppy emulation, CD images support, CD drive emulation all used DOSBox Staging as a model (even if the architecture is different), escpecially for conformance about expected behavior (ie. IOCTL).
+The implementations of MSCDEX, CDDA, Floppy emulation, CD images support, CD drive emulation all used DOSBox Staging as a model (even if the architecture is different), especially for conformance about expected behavior (ie. IOCTL).
 
 The BIOS implementation draws heavily from SeaBIOS, IBM PC BIOS reconstructionns, and sometimes DOSBox Staging.
 
