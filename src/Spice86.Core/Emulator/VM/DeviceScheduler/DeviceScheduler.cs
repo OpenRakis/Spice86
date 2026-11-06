@@ -27,7 +27,7 @@ public class DeviceScheduler {
 
     private readonly TimePriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
-    private readonly ConcurrentQueue<Action> _pendingActions = new();
+    private readonly ConcurrentQueue<IDeviceSchedulerCommand> _pendingCommands = new();
 
     private readonly DeviceSchedulerMonitor? _monitor;
 
@@ -57,12 +57,12 @@ public class DeviceScheduler {
     }
 
     /// <summary>Runs work on the scheduler thread, queueing it until the next pump when called elsewhere.</summary>
-    /// <param name="action">Work that may access the scheduler and its device state.</param>
-    public void Dispatch(Action action) {
+    /// <param name="command">Work that may access the scheduler and its device state.</param>
+    public void Dispatch(IDeviceSchedulerCommand command) {
         if (Volatile.Read(ref _ownerThreadId) == Environment.CurrentManagedThreadId) {
-            action();
+            command.Execute();
         } else {
-            _pendingActions.Enqueue(action);
+            _pendingCommands.Enqueue(command);
         }
     }
 
@@ -135,8 +135,8 @@ public class DeviceScheduler {
     /// </summary>
     public void ProcessEvents() {
         Volatile.Write(ref _ownerThreadId, Environment.CurrentManagedThreadId);
-        while (_pendingActions.TryDequeue(out Action? action)) {
-            action();
+        while (_pendingCommands.TryDequeue(out IDeviceSchedulerCommand? command)) {
+            command.Execute();
         }
         if (_queue.Count == 0) {
             return;

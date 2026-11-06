@@ -32,9 +32,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
     private readonly uint _wrappingMask;
     private readonly DmaController _primary;
     private DmaController? _secondary;
-
-    /// <summary>Raised before high-DMA ports replace conflicting Tandy sound hardware.</summary>
-    public event Action? SecondaryControllerActivating;
+    private ISecondaryDmaPortOwner? _secondaryPortOwner;
 
     /// <summary>
     ///     Initializes the DMA system with both controllers and registers the ISA port map.
@@ -92,12 +90,31 @@ public sealed class DmaBus : DefaultIOPortHandler {
         }
     }
 
+    /// <summary>Transfers the secondary controller's shared ports to conflicting hardware.</summary>
+    public void ClaimSecondaryControllerPorts(ISecondaryDmaPortOwner owner) {
+        ShutdownSecondaryController();
+        ISecondaryDmaPortOwner? previousOwner = _secondaryPortOwner;
+        _secondaryPortOwner = owner;
+        if (previousOwner is not null && !ReferenceEquals(previousOwner, owner)) {
+            previousOwner.ReleaseSecondaryDmaPorts();
+        }
+    }
+
+    /// <summary>Releases a hardware claim without restoring the secondary controller.</summary>
+    public void ReleaseSecondaryControllerPorts(ISecondaryDmaPortOwner owner) {
+        if (ReferenceEquals(_secondaryPortOwner, owner)) {
+            _secondaryPortOwner = null;
+        }
+    }
+
     private DmaController GetSecondaryController() {
         if (_secondary is not null) {
             return _secondary;
         }
 
-        SecondaryControllerActivating?.Invoke();
+        ISecondaryDmaPortOwner? owner = _secondaryPortOwner;
+        _secondaryPortOwner = null;
+        owner?.ReleaseSecondaryDmaPorts();
         _secondary = new DmaController(1, _memory, _logger, _wrappingMask);
         RegisterSecondaryPorts();
         return _secondary;

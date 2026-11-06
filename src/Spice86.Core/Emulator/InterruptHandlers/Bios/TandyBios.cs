@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Platform;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -19,48 +18,40 @@ using Spice86.Shared.Emulator.Memory;
 public sealed class TandyBios : IAssemblyRoutineWriter {
     private readonly BiosDataArea _biosDataArea;
     private readonly InterruptVectorTable _interruptVectorTable;
-    private readonly MachineProfile _machineProfile;
+    private readonly ushort _trueMemoryKb;
     private readonly AssemblyRoutineInstaller _assemblyRoutineInstaller;
     private readonly TandyBiosRom _rom;
 
     /// <summary>
-    /// Creates the platform firmware installer without writing guest memory.
+    /// Installs native firmware after the shared interrupt handlers have been installed.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="biosDataArea">The shared BIOS data area.</param>
     /// <param name="interruptVectorTable">The shared interrupt vectors.</param>
-    /// <param name="machineProfile">The selected platform.</param>
+    /// <param name="trueMemoryKb">Physical conventional-memory size.</param>
     /// <param name="assemblyRoutineInstaller">The existing firmware routine installer.</param>
+    /// <param name="realTimeClock">The shared RTC and CMOS device.</param>
     public TandyBios(IMemory memory, BiosDataArea biosDataArea, InterruptVectorTable interruptVectorTable,
-        MachineProfile machineProfile, AssemblyRoutineInstaller assemblyRoutineInstaller) {
+        ushort trueMemoryKb, AssemblyRoutineInstaller assemblyRoutineInstaller, RealTimeClock realTimeClock) {
         _biosDataArea = biosDataArea;
         _interruptVectorTable = interruptVectorTable;
-        _machineProfile = machineProfile;
+        _trueMemoryKb = trueMemoryKb;
         _assemblyRoutineInstaller = assemblyRoutineInstaller;
         _rom = new TandyBiosRom(memory);
+        Initialize();
+        realTimeClock.SetEquipmentByte((byte)_biosDataArea.EquipmentListFlags);
     }
 
     /// <summary>
     /// Reserves the firmware tail, including the DAC silence buffer, before any routines are installed.
     /// </summary>
     /// <param name="memoryAsmWriter">The shared provided-handler writer.</param>
-    public void ReserveFirmware(MemoryAsmWriter memoryAsmWriter) {
-        if (_machineProfile.IsTandy) {
-            memoryAsmWriter.ReserveRange(0xFA000, 0x6000);
-        }
+    public static void ReserveFirmware(MemoryAsmWriter memoryAsmWriter) {
+        memoryAsmWriter.ReserveRange(0xFA000, 0x6000);
     }
 
-    /// <summary>
-    /// Initializes built-in firmware after interrupt installation.
-    /// Does nothing when DOS/firmware initialization is disabled or the platform is not Tandy.
-    /// </summary>
-    /// <param name="initializeFirmware">Whether built-in DOS and BIOS services are enabled.</param>
-    public void Initialize(bool initializeFirmware) {
-        if (!initializeFirmware || !_machineProfile.IsTandy) {
-            return;
-        }
-
-        _biosDataArea.TrueConventionalMemorySizeKb = _machineProfile.TrueMemoryKb;
+    private void Initialize() {
+        _biosDataArea.TrueConventionalMemorySizeKb = _trueMemoryKb;
         int parallelPorts = 0;
         for (int index = 0; index < 3; index++) {
             if (_biosDataArea.PortLpt[index] != 0) {
@@ -81,18 +72,6 @@ public sealed class TandyBios : IAssemblyRoutineWriter {
         _interruptVectorTable[0x18] = resetHandler;
         _interruptVectorTable[0x19] = resetHandler;
         _interruptVectorTable[0x1D] = TandyBiosRom.VideoParameterTable;
-    }
-
-    /// <summary>
-    /// Initializes built-in firmware and mirrors its equipment byte into the shared CMOS device.
-    /// </summary>
-    /// <param name="initializeFirmware">Whether built-in DOS and BIOS services are enabled.</param>
-    /// <param name="realTimeClock">The shared RTC and CMOS device.</param>
-    public void Initialize(bool initializeFirmware, RealTimeClock realTimeClock) {
-        Initialize(initializeFirmware);
-        if (initializeFirmware && _machineProfile.IsTandy) {
-            realTimeClock.SetEquipmentByte((byte)_biosDataArea.EquipmentListFlags);
-        }
     }
 
     /// <inheritdoc />

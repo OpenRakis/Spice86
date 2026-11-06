@@ -22,7 +22,6 @@ public class VgaTimingEngine {
     private readonly IEmulatedClock _clock;
     private readonly Renderer _renderer;
     private readonly VgaBlinkState _blinkState;
-    private readonly TandyVideoState? _tandy;
 
     private VgaTimingParameters _timing;
     private int _visibleScanlines;
@@ -50,11 +49,6 @@ public class VgaTimingEngine {
         _clock = clock;
         _renderer = renderer;
         _blinkState = blinkState;
-        _tandy = (state as VideoState)?.Tandy;
-        if (_tandy != null) {
-            _tandy.CommitResize();
-            _tandy.ResizeRequested += RequestNativeResize;
-        }
         _timing = state.BeamTiming.Refresh(0);
         _scheduler.AddEvent(OnFrameStart, 0);
         _scheduler.AddEvent(OnBlinkToggle, BlinkPeriodMs);
@@ -147,27 +141,8 @@ public class VgaTimingEngine {
         _scheduler.RemoveEvents(OnBeamStatusChange);
     }
 
-    private void RequestNativeResize(int delayMs) {
-        double deadlineMs = _clock.ElapsedTimeMs + delayMs;
-        _scheduler.Dispatch(() => ScheduleNativeResize(deadlineMs));
-    }
-
-    private void ScheduleNativeResize(double deadlineMs) {
-        _scheduler.RemoveEvents(OnNativeResize);
-        double delayMs = Math.Max(0, deadlineMs - _scheduler.EventTimeMs);
-        if (delayMs == 0) {
-            OnNativeResize(0);
-        } else {
-            _scheduler.AddEvent(OnNativeResize, delayMs);
-        }
-    }
-
-    private void OnNativeResize(uint value) {
-        if (_tandy == null) {
-            return;
-        }
-        _scheduler.RemoveEvents(OnNativeResize);
-        _tandy.CommitResize();
+    /// <summary>Restarts scanout after a platform-specific drawing setup has been committed.</summary>
+    protected void RestartFrame() {
         CancelFrameEvents();
         _timing = _state.BeamTiming.Refresh(_scheduler.EventTimeMs);
         _state.IsRenderingDirty = true;

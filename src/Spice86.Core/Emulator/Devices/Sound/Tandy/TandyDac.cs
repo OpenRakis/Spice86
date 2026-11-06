@@ -33,7 +33,7 @@ public sealed class TandyDac : DefaultIOPortHandler, IAudioQueueDevice<byte>, IM
     private readonly DeviceScheduler _scheduler;
     private readonly SchedulerEventHandler _tickHandler;
     private readonly byte[] _dmaBuffer = new byte[128];
-    private readonly Action _evicted;
+    private readonly TandySoundDevice _owner;
     private readonly DmaChannel _dmaChannel;
     private ushort _clockDivider;
     private byte _mode;
@@ -55,13 +55,13 @@ public sealed class TandyDac : DefaultIOPortHandler, IAudioQueueDevice<byte>, IM
     /// <summary>Installs the native DAC and reserves primary DMA 1.</summary>
     public TandyDac(State state, IOPortDispatcher ports, DmaBus dmaBus, DualPic pic,
         SoftwareMixer mixer, DeviceScheduler scheduler, IEmulatedClock clock,
-        string filter, Action evicted, ILogger logger) : base(state, false, logger) {
+        string filter, TandySoundDevice owner, ILogger logger) : base(state, false, logger) {
         _ports = ports;
         _dmaBus = dmaBus;
         _pic = pic;
         _mixer = mixer;
         _scheduler = scheduler;
-        _evicted = evicted;
+        _owner = owner;
         _tickHandler = Tick;
         _dmaChannel = dmaBus.GetChannel(Dma)
             ?? throw new InvalidOperationException("Tandy DAC requires DMA 1.");
@@ -222,7 +222,7 @@ public sealed class TandyDac : DefaultIOPortHandler, IAudioQueueDevice<byte>, IM
 
     private void OnEvicted() {
         Dispose();
-        _evicted();
+        _owner.OnDacEvicted();
     }
 
     /// <inheritdoc />

@@ -10,31 +10,24 @@ using System.Threading;
 /// <summary>
 /// Shared programmed beam timing and frame epoch for rendering and status reads.
 /// </summary>
-public sealed class VgaBeamTiming {
+public class VgaBeamTiming {
     private readonly IVideoState _state;
     private readonly object _lock = new();
     private Snapshot _snapshot;
 
     /// <summary>Creates a beam model from the initial register state.</summary>
-    public VgaBeamTiming(IVideoState state) {
+    public VgaBeamTiming(IVideoState state) : this(state, VgaTimingParameters.Calculate(VgaTimingRegisters.Read(state))) {
+    }
+
+    /// <summary>Creates a beam model with platform-specific initial timing.</summary>
+    protected VgaBeamTiming(IVideoState state, VgaTimingParameters timing) {
         _state = state;
         VgaTimingRegisters registers = VgaTimingRegisters.Read(state);
-        VgaTimingParameters timing = (state as VideoState)?.Tandy?.CalculateTiming() ?? VgaTimingParameters.Calculate(registers);
         _snapshot = new(registers, timing, 0);
     }
 
     /// <summary>Refreshes changed timing registers and starts their new frame epoch.</summary>
-    public VgaTimingParameters Refresh(double elapsedTimeMs) {
-        if ((_state as VideoState)?.Tandy is TandyVideoState tandy) {
-            lock (_lock) {
-                VgaTimingParameters timing = tandy.CalculateTiming();
-                Snapshot current = _snapshot;
-                if (current.Parameters != timing) {
-                    Volatile.Write(ref _snapshot, current with { Parameters = timing, FrameStartMs = elapsedTimeMs });
-                }
-                return _snapshot.Parameters;
-            }
-        }
+    public virtual VgaTimingParameters Refresh(double elapsedTimeMs) {
         VgaTimingRegisters registers = VgaTimingRegisters.Read(_state);
         Snapshot snapshot = Volatile.Read(ref _snapshot);
         if (registers == snapshot.Registers) {
@@ -54,6 +47,22 @@ public sealed class VgaBeamTiming {
                 Volatile.Write(ref _snapshot, snapshot);
             }
             return snapshot.Parameters;
+        }
+    }
+
+    /// <summary>Reads programmed platform timing without changing the beam epoch.</summary>
+    public virtual VgaTimingParameters CalculateTiming() {
+        return VgaTimingParameters.Calculate(VgaTimingRegisters.Read(_state));
+    }
+
+    /// <summary>Publishes changed platform timing and starts its new frame epoch.</summary>
+    protected VgaTimingParameters UpdateTiming(VgaTimingParameters timing, double elapsedTimeMs) {
+        lock (_lock) {
+            Snapshot current = _snapshot;
+            if (current.Parameters != timing) {
+                Volatile.Write(ref _snapshot, current with { Parameters = timing, FrameStartMs = elapsedTimeMs });
+            }
+            return _snapshot.Parameters;
         }
     }
 

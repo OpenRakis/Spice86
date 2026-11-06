@@ -1,47 +1,39 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.Platform;
 
 /// <inheritdoc cref="IVideoState" />
 public class VideoState : IVideoState {
     /// <summary>
     ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>
-    public VideoState() : this(MachineProfile.For(MachineType.Pc)) {
-    }
-
-    /// <summary>Creates video state for the selected machine.</summary>
-    public VideoState(MachineProfile profile) {
-        if (profile.IsTandy) {
-            Tandy = new TandyVideoState();
-        }
-        DacRegisters = new DacRegisters();
-        GeneralRegisters = new GeneralRegisters();
-        SequencerRegisters = new SequencerRegisters();
-        CrtControllerRegisters = new CrtControllerRegisters();
-        GraphicsControllerRegisters = new GraphicsControllerRegisters();
-        AttributeControllerRegisters = new AttributeControllerRegisters();
+    public VideoState() {
         BeamTiming = new(this);
     }
 
-    /// <inheritdoc />
-    public DacRegisters DacRegisters { get; }
+    /// <summary>Creates video state with native Tandy registers and beam timing.</summary>
+    public VideoState(TandyVideoState tandy) {
+        Tandy = tandy;
+        BeamTiming = new TandyBeamTiming(this, tandy);
+    }
 
     /// <inheritdoc />
-    public GeneralRegisters GeneralRegisters { get; }
+    public DacRegisters DacRegisters { get; } = new();
 
     /// <inheritdoc />
-    public SequencerRegisters SequencerRegisters { get; }
+    public GeneralRegisters GeneralRegisters { get; } = new();
 
     /// <inheritdoc />
-    public CrtControllerRegisters CrtControllerRegisters { get; }
+    public SequencerRegisters SequencerRegisters { get; } = new();
 
     /// <inheritdoc />
-    public GraphicsControllerRegisters GraphicsControllerRegisters { get; }
+    public CrtControllerRegisters CrtControllerRegisters { get; } = new();
 
     /// <inheritdoc />
-    public AttributeControllerRegisters AttributeControllerRegisters { get; }
+    public GraphicsControllerRegisters GraphicsControllerRegisters { get; } = new();
+
+    /// <inheritdoc />
+    public AttributeControllerRegisters AttributeControllerRegisters { get; } = new();
 
     /// <inheritdoc />
     public bool IsRenderingDirty { get; set; }

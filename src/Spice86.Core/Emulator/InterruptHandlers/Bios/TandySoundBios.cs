@@ -39,7 +39,8 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
     private bool _initialized;
     private bool _disposed;
 
-    /// <summary>Creates BIOS sound support without touching guest firmware until Initialize.</summary>
+    /// <summary>Installs BIOS sound support after built-in interrupt and platform firmware routines.</summary>
+    /// <remarks>Construction order preserves callback placement and the vectors saved for restoration.</remarks>
     public TandySoundBios(State state, IMemory memory, Stack stack, IOPortDispatcher ports,
         InterruptVectorTable vectors, AssemblyRoutineInstaller installer,
         TandySoundDevice sound, SoundBlaster? blaster) {
@@ -51,6 +52,7 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         _installer = installer;
         _sound = sound;
         _blaster = blaster;
+        Initialize();
     }
 
     /// <summary>Protects the fixed BIOS DAC buffer before interrupt routines are installed on either platform.</summary>
@@ -59,16 +61,13 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         writer.ReserveRange(((uint)SilenceSegment << 4) + SilenceOffset, SilenceLength);
     }
 
-    /// <summary>Configures callbacks after the built-in BIOS has installed its IRQ vectors.</summary>
-    public void Initialize() {
+    private void Initialize() {
         if (_initialized || _disposed || !_sound.BiosRequested) {
             return;
         }
         _initialized = true;
-        _sound.AvailabilityChanged += RefreshRouting;
-        if (_blaster is not null) {
-            _blaster.BiosDacAvailabilityChanged += RefreshRouting;
-        }
+        _sound.AttachBiosSound(this);
+        _blaster?.AttachBiosSound(this);
         RefreshRouting();
     }
 
@@ -92,7 +91,7 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         set => _memory.SegmentedAddress16[BdaSegment, SavedVectorOffset] = value;
     }
 
-    private void RefreshRouting() {
+    internal void RefreshRouting() {
         if (!_initialized || _disposed) {
             return;
         }
@@ -313,10 +312,8 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         if (!_initialized) {
             return;
         }
-        _sound.AvailabilityChanged -= RefreshRouting;
-        if (_blaster is not null) {
-            _blaster.BiosDacAvailabilityChanged -= RefreshRouting;
-        }
+        _sound.DetachBiosSound(this);
+        _blaster?.DetachBiosSound(this);
         ShutdownRoute();
     }
 

@@ -4,22 +4,133 @@
 
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Shared.Emulator.Memory;
 
-public partial class VgaFunctionality {
+/// <summary>Native Tandy video BIOS memory, palette, and mode services.</summary>
+public sealed class TandyVgaFunctionality : VgaFunctionality {
+    /// <inheritdoc />
+    public override bool IsTandy => true;
+
+    private readonly TandyVideoState _tandy;
+
+    /// <summary>Creates native Tandy video services with the shared hardware registers.</summary>
+    public TandyVgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, IVideoState videoState, TandyVideoState tandy, bool bootUpInTextMode)
+        : base(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, videoState, false) {
+        _tandy = tandy;
+        if (bootUpInTextMode) {
+            VgaSetMode(0x03, ModeFlags.Legacy);
+        }
+    }
+
+    /// <inheritdoc />
+    public override void SetPalette(byte paletteId) {
+        _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & ~0x20) | ((paletteId & 1) << 5));
+        _ioPortDispatcher.WriteByte(0x3D9, _biosDataArea.VideoPal);
+    }
+
+    /// <inheritdoc />
+    public override void SetBorderColor(byte color) {
+        SetTandyBackground(color);
+    }
+
+    /// <inheritdoc />
+    public override byte ReadPixel(ushort x, ushort y) {
+        return ReadTandyPixel(x, y);
+    }
+
+    /// <inheritdoc />
+    public override void WritePixel(byte color, ushort x, ushort y) {
+        WriteTandyPixel(x, y, color, (color & 0x80) != 0);
+    }
+
+    /// <inheritdoc />
+    public override VgaMode GetCurrentMode() {
+        return (TandyVideoMode.Find(_biosDataArea.VideoMode) ?? TandyVideoMode.Default).Mode;
+    }
+
+    /// <inheritdoc />
+    public override void SetEgaPaletteRegister(byte register, byte value) {
+        SetTandyPalette(register, value);
+    }
+
+    /// <inheritdoc />
+    protected override CharacterPlusAttribute GetScrollBlank(CursorPosition cursorPosition) {
+        byte fill = 0;
+        if (GetCurrentMode().MemoryModel == MemoryModel.Text && cursorPosition.Page is >= 0 and <= 7) {
+            fill = ReadChar(GetCursorPosition((byte)cursorPosition.Page)).Attribute;
+        }
+        return new CharacterPlusAttribute(' ', fill, true);
+    }
+
+    /// <inheritdoc />
+    protected override VgaPort GetCrtControllerPort() {
+        return VgaPort.CrtControllerAddressAlt;
+    }
+
+    /// <inheritdoc />
+    protected override ushort GetCursorShape() {
+        return _biosDataArea.CursorType;
+    }
+
+    /// <inheritdoc />
+    protected override byte GetTextAttribute(CharacterPlusAttribute character, VgaMode mode, ushort offset) {
+        return character.UseAttribute ? character.Attribute : _memory.UInt8[mode.StartSegment, (ushort)(offset + 1)];
+    }
+
+    /// <inheritdoc />
+    private protected override GraphicsOperation CreateGraphicsOperation(VgaMode vgaMode) {
+        return new GraphicsOperation {
+            Pixels = new byte[8],
+            VgaMode = vgaMode,
+            LineLength = vgaMode.Width * vgaMode.BitsPerPixel / 8,
+            DisplayStart = 0,
+            Width = 0,
+            Height = 0,
+            X = 0,
+            Y = 0,
+            MemoryAction = MemoryAction.ReadByte
+        };
+    }
+
+    /// <inheritdoc />
+    protected override byte GraphicsFontVector => 0x44;
+
+    /// <inheritdoc />
+    protected override void WriteToAttributeController(byte index, byte value) {
+        byte register = index == 0x11 ? (byte)2 : (byte)(index + 0x10);
+        WriteTandyRegister(register, value);
+    }
+
+    /// <inheritdoc />
+    protected override byte ReadAttributeController(byte index) {
+        int register = index == 0x11 ? 2 : index + 0x10;
+        return register < _tandy.Registers.Length ? _tandy.Registers[register] : (byte)0;
+    }
+
+    /// <inheritdoc />
+    protected override void SetDisplayStart(VgaMode vgaMode, int value) {
+        value /= 2;
+        WriteToCrtController(VgaPort.CrtControllerAddressAlt, 0x0C, (byte)(value >> 8));
+        WriteToCrtController(VgaPort.CrtControllerAddressAlt, 0x0D, (byte)value);
+    }
+
     /// <summary>Programs the native processor/display page register and its BIOS shadow.</summary>
     public void SetTandyPageBank(byte value) {
-        if (_tandy == null) {
-            return;
-        }
         _memory.UInt8[0x40, 0x8A] = value;
         _ioPortDispatcher.WriteByte(0x3DF, value);
     }
 
-    private void SetTandyMode(int modeId, ModeFlags flags) {
+    /// <inheritdoc />
+    public override void VgaSetMode(int modeId, ModeFlags flags) {
         TandyVideoMode? mode = TandyVideoMode.Find(modeId);
-        if (mode == null || _tandy == null) {
+        if (mode == null) {
             return;
         }
         WriteToCrtController(VgaPort.CrtControllerAddressAlt, 0, (byte)mode.HorizontalTotal);
@@ -68,7 +179,7 @@ public partial class VgaFunctionality {
         _interruptVectorTable[0x44] = _vgaRom.VgaFont8Address;
         _interruptVectorTable[0x1F] = _vgaRom.VgaFont8Address2;
         _videoState.IsRenderingDirty = true;
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(mode.Mode));
+        NotifyVideoModeChanged(mode.Mode);
     }
 
     private void WriteTandyRegister(byte index, byte value) {
@@ -94,9 +205,6 @@ public partial class VgaFunctionality {
     }
 
     private void SetTandyPalette(byte index, byte value) {
-        if (_tandy == null) {
-            return;
-        }
         if (_tandy.BitsPerPixel == 1 && _tandy.IsGraphics) {
             if (index >= 16) {
                 return;
@@ -165,7 +273,8 @@ public partial class VgaFunctionality {
         _memory.UInt8[0xB800, offset] = (byte)result;
     }
 
-    private void HandleTandyGraphicsOperation(GraphicsOperation operation) {
+    /// <inheritdoc />
+    private protected override void HandleGraphicsOperation(GraphicsOperation operation) {
         if (operation.MemoryAction is MemoryAction.ReadByte or MemoryAction.WriteByte) {
             for (int pixel = 0; pixel < 8; pixel++) {
                 if (operation.MemoryAction == MemoryAction.ReadByte) {

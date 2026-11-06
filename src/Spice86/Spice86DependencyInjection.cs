@@ -379,13 +379,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("DMA controller created...");
         }
 
-        VideoState videoState = new(machineProfile);
-        VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
-            loggerService, videoState, _emulatedClock, configuration.FailOnUnhandledPort, machineProfile);
+        VideoState videoState = machineProfile.CreateVideoState();
+        VgaIoPortHandler vgaIoPortHandler = machineProfile.CreateVideoPortHandler(state, ioPortDispatcher,
+            loggerService, videoState, _emulatedClock, configuration.FailOnUnhandledPort);
         VgaBlinkState vgaBlinkState = new();
         IVgaRenderer256Color renderer256Color = VgaRenderer256ColorSimd.CreateBestRenderer();
-        Renderer vgaRenderer = new(memory, videoState, vgaBlinkState, loggerService, renderer256Color,
-            machineProfile);
+        Renderer vgaRenderer = machineProfile.CreateRenderer(memory, videoState, vgaBlinkState, loggerService, renderer256Color);
 
         bool isSyncRendering = configuration.RenderingMode == RenderingMode.Sync;
 
@@ -395,16 +394,16 @@ public class Spice86DependencyInjection : IDisposable {
             ? emulationLoopScheduler
             : new DeviceScheduler(_emulatedClock, loggerService, "VGA");
 
-        VgaTimingEngine vgaTimingEngine = new(videoState, vgaScheduler,
+        VgaTimingEngine vgaTimingEngine = machineProfile.CreateVideoTimingEngine(videoState, vgaScheduler,
             _emulatedClock, vgaRenderer, vgaBlinkState);
         VgaRom vgaRom = new(loggerService);
         memory.RegisterMapping(VgaRom.Segment << 4, vgaRom.Size, vgaRom);
-        VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
+        VgaFunctionality vgaFunctionality = machineProfile.CreateVideoFunctions(memory,
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom, videoState,
-            configuration.InitializeDOS is not false, machineProfile);
-        VgaBios vgaBios = new VgaBios(memory, cfgCpu, stack,
-            state, vgaFunctionality, biosDataArea, loggerService, machineProfile);
+            configuration.InitializeDOS is not false);
+        VgaBios vgaBios = machineProfile.CreateVideoBios(memory, cfgCpu, stack,
+            state, vgaFunctionality, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("Video card support classes created...");
@@ -423,30 +422,23 @@ public class Spice86DependencyInjection : IDisposable {
                 configuration.ProvidedAsmHandlersSegment, 0),
             callbackHandler);
         AssemblyRoutineInstaller assemblyRoutineInstaller = new(memoryAsmWriter, functionCatalogue);
-        TandyBios tandyBios = new(memory, biosDataArea, interruptVectorTable,
-            machineProfile, assemblyRoutineInstaller);
         bool enableTandySound = configuration.TandySoundMode is TandySoundMode.On or TandySoundMode.Psg
             || (configuration.TandySoundMode == TandySoundMode.Auto && machineProfile.IsTandy);
         if (configuration.InitializeDOS is not false) {
-            tandyBios.ReserveFirmware(memoryAsmWriter);
-            if (enableTandySound) {
-                TandySoundBios.ReserveSoundBuffer(memoryAsmWriter);
-            }
+            machineProfile.ReserveFirmware(memoryAsmWriter, enableTandySound);
         }
 
         SharedMouseData sharedMouseData = new();
         SharedMouseData = sharedMouseData;
 
-        SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
+        SystemBiosInt15Handler systemBiosInt15Handler = machineProfile.CreateSystemBios(configuration, memory,
             cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
-            ioPortDispatcher, loggerService, configuration.InitializeDOS is not false, machineProfile);
+            ioPortDispatcher, loggerService);
         SystemBiosInt14Handler systemBiosInt14Handler = new(memory,
             cfgCpu, stack, state, biosDataArea, ioPortDispatcher, loggerService);
         SystemBiosInt17Handler systemBiosInt17Handler = new(memory,
             cfgCpu, stack, state, biosDataArea, loggerService);
 
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
-            realTimeClock, cfgCpu, stack, state, loggerService);
         RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
@@ -489,6 +481,15 @@ public class Spice86DependencyInjection : IDisposable {
             tandySoundDevice = new TandySoundDevice(state, ioPortDispatcher, dmaSystem, dualPic,
                 mixer, emulationLoopScheduler, _emulatedClock, tandyAudioOptions, loggerService);
             platformDevices.Add(tandySoundDevice);
+        }
+
+        SystemClockInt1AHandler systemClockInt1AHandler;
+        if (configuration.InitializeDOS is not false && (machineProfile.IsTandy || enableTandySound)) {
+            systemClockInt1AHandler = new TandySystemClockInt1AHandler(memory, biosDataArea,
+                realTimeClock, cfgCpu, stack, state, loggerService, tandySoundDevice);
+        } else {
+            systemClockInt1AHandler = new SystemClockInt1AHandler(memory, biosDataArea,
+                realTimeClock, cfgCpu, stack, state, loggerService);
         }
 
         loggerService.LogInformation("Sound devices created...");
@@ -673,19 +674,15 @@ public class Spice86DependencyInjection : IDisposable {
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
         }
 
-        tandyBios.Initialize(configuration.InitializeDOS is not false, realTimeClock);
-        if (configuration.InitializeDOS is not false && machineProfile.IsTandy) {
-            systemClockInt1AHandler.EnableTandySoundFunctions();
+        if (configuration.InitializeDOS is not false) {
+            machineProfile.InstallFirmware(memory, biosDataArea, interruptVectorTable, assemblyRoutineInstaller, realTimeClock);
         }
         if (tandySoundDevice is not null) {
             if (configuration.InitializeDOS is not false) {
                 TandySoundBios tandySoundBios = new(state, memory, stack, ioPortDispatcher,
                     interruptVectorTable, assemblyRoutineInstaller, tandySoundDevice, soundBlaster);
-                tandySoundBios.Initialize();
-                systemClockInt1AHandler.AttachTandySoundBios(tandySoundBios);
                 platformDevices.Insert(0, tandySoundBios);
             }
-            tandySoundDevice.InitializePsg();
         }
 
         emulatorMcpServices.Intel8042Controller = intel8042Controller;

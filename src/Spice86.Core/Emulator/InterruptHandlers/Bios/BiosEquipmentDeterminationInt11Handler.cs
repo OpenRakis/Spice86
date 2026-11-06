@@ -50,6 +50,6 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
 
     [InterruptService(Writes = CpuValues.Ax)]
     private void GetEquipmentList() {
-        State.AX = _machineProfile.IsTandy ? Memory.UInt16[MemoryMap.BiosDataSegment, 0x10] : (ushort)0;
+        State.AX = _machineProfile.ReadEquipmentWord(Memory);
     }
 }

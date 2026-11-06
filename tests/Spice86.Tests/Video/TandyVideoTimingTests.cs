@@ -20,6 +20,20 @@ using System.Threading;
 using Xunit;
 
 public sealed class TandyVideoTimingTests {
+    [Fact]
+    public void InitialCrtcTimingIsLatchedBeforeSchedulerStarts() {
+        // Arrange
+        VideoHarness video = new(true);
+        VgaTimingParameters timing = video.Tandy.Scanout.Timing;
+        double blankingMidpointMs = (timing.HorizontalBlankingStartMs + timing.HorizontalBlankingEndMs) / 2;
+
+        // Act
+        byte status = video.ReadStatusAt(blankingMidpointMs);
+
+        // Assert
+        (status & 1).Should().Be(1);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -69,9 +83,12 @@ public sealed class TandyVideoTimingTests {
         private readonly IOPortDispatcher _ports;
         private readonly DeviceScheduler _scheduler;
 
-        public VideoHarness() {
+        public VideoHarness() : this(false) {
+        }
+
+        public VideoHarness(bool programTimingWithoutResizeRequest) {
             MachineProfile profile = MachineProfile.For(MachineType.Tandy1000);
-            VideoState state = new(profile);
+            VideoState state = profile.CreateVideoState();
             Tandy = state.Tandy ?? throw new InvalidOperationException("Missing native video state.");
             Tandy.Crtc[0] = 56;
             Tandy.Crtc[1] = 40;
@@ -80,19 +97,27 @@ public sealed class TandyVideoTimingTests {
             Tandy.Crtc[7] = 112;
             Tandy.Crtc[9] = 1;
             Tandy.WriteMode(0x0B);
+            if (programTimingWithoutResizeRequest) {
+                Tandy.Crtc[0] = 113;
+            }
             State cpu = new(CpuModel.INTEL_80286);
             _ports = new(new(), cpu, NullLogger.Instance, true);
             Clock = Substitute.For<IEmulatedClock>();
-            _ = new VgaIoPortHandler(cpu, _ports, NullLogger.Instance, state, Clock, true, profile);
+            _ = profile.CreateVideoPortHandler(cpu, _ports, NullLogger.Instance, state, Clock, true);
             Memory memory = new(new(), new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
             VgaBlinkState blink = new();
-            Renderer renderer = new(memory, state, blink, NullLogger.Instance, new VgaRenderer256ColorScalar(), profile);
+            Renderer renderer = profile.CreateRenderer(memory, state, blink, NullLogger.Instance, new VgaRenderer256ColorScalar());
             _scheduler = new(Clock, NullLogger.Instance, "Tandy video test");
-            _ = new VgaTimingEngine(state, _scheduler, Clock, renderer, blink);
+            _ = profile.CreateVideoTimingEngine(state, _scheduler, Clock, renderer, blink);
         }
 
         public TandyVideoState Tandy { get; }
         public IEmulatedClock Clock { get; }
+
+        public byte ReadStatusAt(double timeMs) {
+            Clock.ElapsedTimeMs.Returns(timeMs);
+            return _ports.ReadByte(0x3DA);
+        }
 
         public void WriteFormat(byte value) {
             _ports.WriteByte(0x3DA, 3);

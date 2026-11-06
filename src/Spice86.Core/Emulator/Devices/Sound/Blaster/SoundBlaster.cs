@@ -2,13 +2,14 @@ using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 
-using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
@@ -28,8 +29,17 @@ using System.Runtime.InteropServices;
 public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
     private bool _biosDacEvicted;
 
-    /// <summary>Raised when DMA ownership changes BIOS DAC availability.</summary>
-    public event Action? BiosDacAvailabilityChanged;
+    private TandySoundBios? _biosSound;
+
+    internal void AttachBiosSound(TandySoundBios biosSound) {
+        _biosSound = biosSound;
+    }
+
+    internal void DetachBiosSound(TandySoundBios biosSound) {
+        if (ReferenceEquals(_biosSound, biosSound)) {
+            _biosSound = null;
+        }
+    }
 
     /// <summary>Whether the configured DAC can currently back Tandy BIOS services.</summary>
     public bool IsBiosDacAvailable => !_biosDacEvicted && _sb.Type is not (SbType.None or SbType.GameBlaster) &&
@@ -1992,7 +2002,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         channel.ReserveForPreservingTransfer(owner, OnDmaChannelEvicted);
         if (_biosDacEvicted) {
             _biosDacEvicted = false;
-            BiosDacAvailabilityChanged?.Invoke();
+            _biosSound?.RefreshRouting();
         }
         return channel;
     }
@@ -2009,7 +2019,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Irq.Pending16Bit = false;
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
         _biosDacEvicted = true;
-        BiosDacAvailabilityChanged?.Invoke();
+        _biosSound?.RefreshRouting();
     }
 
     /// <summary>

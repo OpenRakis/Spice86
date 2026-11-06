@@ -15,23 +15,27 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Core.Emulator.Platform;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <inheritdoc cref="IVgaFunctionality" />
-public partial class VgaFunctionality : IVgaFunctionality {
-    private const byte DefaultAttribute = 0x07;
-    private readonly BiosDataArea _biosDataArea;
-    private readonly IIOPortHandler _ioPortDispatcher;
-    private readonly IIndexable _memory;
-    private readonly VgaRom _vgaRom;
-    private readonly InterruptVectorTable _interruptVectorTable;
-    private readonly IVideoState _videoState;
-    private readonly TandyVideoState? _tandy;
+public class VgaFunctionality : IVgaFunctionality {
+    /// <summary>Whether native Tandy services replace EGA/VGA hardware.</summary>
+    public virtual bool IsTandy => false;
 
-    /// <summary>Whether the native Tandy services replace EGA/VGA hardware.</summary>
-    public bool IsTandy => _tandy != null;
+    private const byte DefaultAttribute = 0x07;
+    /// <summary>The global BIOS variables.</summary>
+    protected readonly BiosDataArea _biosDataArea;
+    /// <summary>The video I/O ports.</summary>
+    protected readonly IIOPortHandler _ioPortDispatcher;
+    /// <summary>The emulator memory.</summary>
+    protected readonly IIndexable _memory;
+    /// <summary>The ROM fonts.</summary>
+    protected readonly VgaRom _vgaRom;
+    /// <summary>The BIOS font vectors.</summary>
+    protected readonly InterruptVectorTable _interruptVectorTable;
+    /// <summary>The shared video registers.</summary>
+    protected readonly IVideoState _videoState;
 
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
@@ -43,19 +47,13 @@ public partial class VgaFunctionality : IVgaFunctionality {
     /// <param name="vgaRom">The VGA ROM, so we can access the IBM fonts.</param>
     /// <param name="videoState">The shared video registers.</param>
     /// <param name="bootUpInTextMode">Whether we begin with mode 0x03.</param>
-    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, IVideoState videoState, bool bootUpInTextMode)
-        : this(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, videoState, bootUpInTextMode, MachineProfile.For(MachineType.Pc)) {
-    }
-
-    /// <summary>Creates BIOS video services for the selected machine.</summary>
-    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, IVideoState videoState, bool bootUpInTextMode, MachineProfile profile) {
+    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, IVideoState videoState, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
         _interruptVectorTable = interruptVectorTable;
         _videoState = videoState;
-        _tandy = profile.IsTandy ? (videoState as VideoState)?.Tandy : null;
         if (bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
@@ -113,12 +111,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public void SetPalette(byte paletteId) {
-        if (_tandy != null) {
-            _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & ~0x20) | ((paletteId & 1) << 5));
-            _ioPortDispatcher.WriteByte(0x3D9, _biosDataArea.VideoPal);
-            return;
-        }
+    public virtual void SetPalette(byte paletteId) {
         if (_videoState.GeneralRegisters.CgaBitsPerPixel != 0) {
             _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & ~0x20) | ((paletteId & 1) << 5));
             _ioPortDispatcher.WriteByte(Ports.CgaColorSelect, _biosDataArea.VideoPal);
@@ -130,11 +123,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public void SetBorderColor(byte color) {
-        if (_tandy != null) {
-            SetTandyBackground(color);
-            return;
-        }
+    public virtual void SetBorderColor(byte color) {
         if (_videoState.GeneralRegisters.CgaBitsPerPixel != 0) {
             _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & 0xE0) | (color & 0x1F));
             _ioPortDispatcher.WriteByte(Ports.CgaColorSelect, _biosDataArea.VideoPal);
@@ -233,10 +222,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public byte ReadPixel(ushort x, ushort y) {
-        if (_tandy != null) {
-            return ReadTandyPixel(x, y);
-        }
+    public virtual byte ReadPixel(ushort x, ushort y) {
         VgaMode vgaMode = GetCurrentMode();
 
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
@@ -249,11 +235,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public void WritePixel(byte color, ushort x, ushort y) {
-        if (_tandy != null) {
-            WriteTandyPixel(x, y, color, (color & 0x80) != 0);
-            return;
-        }
+    public virtual void WritePixel(byte color, ushort x, ushort y) {
         VgaMode vgaMode = GetCurrentMode();
 
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
@@ -273,11 +255,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public void VgaSetMode(int modeId, ModeFlags flags) {
-        if (_tandy != null) {
-            SetTandyMode(modeId, flags);
-            return;
-        }
+    public virtual void VgaSetMode(int modeId, ModeFlags flags) {
         VideoMode videoMode = GetVideoMode(modeId);
         VgaMode vgaMode = videoMode.VgaMode;
         _videoState.GeneralRegisters.CgaBitsPerPixel = 0;
@@ -335,7 +313,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
         }
         SetInterruptVectorAddress(0x43, address.Segment, address.Offset);
 
-        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(vgaMode));
+        NotifyVideoModeChanged(vgaMode);
     }
 
     /// <inheritdoc />
@@ -484,11 +462,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public VgaMode GetCurrentMode() {
+    public virtual VgaMode GetCurrentMode() {
         int id = _biosDataArea.VideoMode;
-        if (_tandy != null) {
-            return (TandyVideoMode.Find(id) ?? TandyVideoMode.Default).Mode;
-        }
         return RegisterValueSet.VgaModes[id].VgaMode;
     }
 
@@ -631,11 +606,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
-    public void SetEgaPaletteRegister(byte register, byte value) {
-        if (_tandy != null) {
-            SetTandyPalette(register, value);
-            return;
-        }
+    public virtual void SetEgaPaletteRegister(byte register, byte value) {
         if (register > 0x14) {
             return;
         }
@@ -687,14 +658,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
 
             CursorPosition position = new(0, 0, cursorPosition.Page);
             Area area = new(_biosDataArea.ScreenColumns, numberOfRows + 1);
-            CharacterPlusAttribute blank = new(' ', 0, false);
-            if (_tandy != null) {
-                byte fill = 0;
-                if (GetCurrentMode().MemoryModel == MemoryModel.Text && cursorPosition.Page is >= 0 and <= 7) {
-                    fill = ReadChar(GetCursorPosition((byte)cursorPosition.Page)).Attribute;
-                }
-                blank = new CharacterPlusAttribute(' ', fill, true);
-            }
+            CharacterPlusAttribute blank = GetScrollBlank(cursorPosition);
             Scroll(position, area, 1, blank);
         }
         return cursorPosition;
@@ -747,6 +711,16 @@ public partial class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public event EventHandler<VideoModeChangedEventArgs>? VideoModeChanged;
+
+    /// <summary>Notifies the existing UI subscribers of a mode change.</summary>
+    protected void NotifyVideoModeChanged(VgaMode mode) {
+        VideoModeChanged?.Invoke(this, new VideoModeChangedEventArgs(mode));
+    }
+
+    /// <summary>Gets the character used to fill the row exposed by teletype scrolling.</summary>
+    protected virtual CharacterPlusAttribute GetScrollBlank(CursorPosition cursorPosition) {
+        return new CharacterPlusAttribute(' ', 0, false);
+    }
 
     private ushort SetBiosDataArea(int modeId, ModeFlags flags, VgaMode vgaMode) {
         ushort width = vgaMode.Width;
@@ -802,10 +776,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         WriteToCrtController(port, 0x0F, (byte)address);
     }
 
-    private VgaPort GetCrtControllerPort() {
-        if (_tandy != null) {
-            return VgaPort.CrtControllerAddressAlt;
-        }
+    /// <summary>Gets the active CRT controller port.</summary>
+    protected virtual VgaPort GetCrtControllerPort() {
         return (ReadMiscellaneousOutput() & 1) != 0
             ? VgaPort.CrtControllerAddressAlt
             : VgaPort.CrtControllerAddress;
@@ -897,11 +869,9 @@ public partial class VgaFunctionality : IVgaFunctionality {
         return 0;
     }
 
-    private ushort GetCursorShape() {
+    /// <summary>Gets the hardware cursor shape.</summary>
+    protected virtual ushort GetCursorShape() {
         ushort cursorType = _biosDataArea.CursorType;
-        if (_tandy != null) {
-            return cursorType;
-        }
         bool emulateCursor = (_biosDataArea.VideoCtl & 1) == 0;
         if (!emulateCursor) {
             return cursorType;
@@ -1003,11 +973,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         HandleGraphicsOperation(operation);
     }
 
-    private void HandleGraphicsOperation(GraphicsOperation operation) {
-        if (_tandy != null) {
-            HandleTandyGraphicsOperation(operation);
-            return;
-        }
+    /// <summary>Executes a graphics memory operation.</summary>
+    private protected virtual void HandleGraphicsOperation(GraphicsOperation operation) {
         switch (operation.VgaMode.MemoryModel) {
             case MemoryModel.Planar:
                 HandlePlanarGraphicsOperation(operation);
@@ -1191,10 +1158,7 @@ public partial class VgaFunctionality : IVgaFunctionality {
             WriteCharacterGraphics(cursorPosition, characterPlusAttribute, vgaMode);
         } else {
             ushort offset = TextAddress(cursorPosition);
-            int attribute = characterPlusAttribute.UseAttribute ? characterPlusAttribute.Attribute : DefaultAttribute;
-            if (_tandy != null && !characterPlusAttribute.UseAttribute) {
-                attribute = _memory.UInt8[vgaMode.StartSegment, (ushort)(offset + 1)];
-            }
+            int attribute = GetTextAttribute(characterPlusAttribute, vgaMode, offset);
             _memory.UInt16[vgaMode.StartSegment, offset] = (ushort)(attribute << 8 | characterPlusAttribute.Character);
         }
         cursorPosition.X++;
@@ -1239,13 +1203,13 @@ public partial class VgaFunctionality : IVgaFunctionality {
         }
     }
 
-    private GraphicsOperation CreateGraphicsOperation(VgaMode vgaMode) {
-        if (_tandy != null) {
-            return new GraphicsOperation {
-                Pixels = new byte[8], VgaMode = vgaMode, LineLength = vgaMode.Width * vgaMode.BitsPerPixel / 8,
-                DisplayStart = 0, Width = 0, Height = 0, X = 0, Y = 0, MemoryAction = MemoryAction.ReadByte
-            };
-        }
+    /// <summary>Gets the text attribute for a character write.</summary>
+    protected virtual byte GetTextAttribute(CharacterPlusAttribute character, VgaMode mode, ushort offset) {
+        return character.UseAttribute ? character.Attribute : DefaultAttribute;
+    }
+
+    /// <summary>Creates a graphics operation using the current display layout.</summary>
+    private protected virtual GraphicsOperation CreateGraphicsOperation(VgaMode vgaMode) {
         VgaPort port = GetCrtControllerPort();
         byte value = ReadCrtController(port, 0x13);
         int vramRatio = GetVramRatio(vgaMode);
@@ -1273,11 +1237,14 @@ public partial class VgaFunctionality : IVgaFunctionality {
             address = _interruptVectorTable[0x1F];
             character = (char)(character - 128);
         } else {
-            address = _interruptVectorTable[_tandy != null ? (byte)0x44 : (byte)0x43];
+            address = _interruptVectorTable[GraphicsFontVector];
         }
         address += (ushort)(character * characterHeight);
         return address;
     }
+
+    /// <summary>The interrupt vector containing the primary graphics font.</summary>
+    protected virtual byte GraphicsFontVector => 0x43;
 
     private void HandlePackedGraphicsOperation(GraphicsOperation operation) {
         ushort destination = (ushort)(operation.Y * operation.LineLength + operation.X);
@@ -1324,7 +1291,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         WriteByteToIoPort(value, VgaPort.MiscOutputWrite);
     }
 
-    private void WriteToCrtController(VgaPort port, byte index, byte value) {
+    /// <summary>Writes an indexed CRT controller register.</summary>
+    protected void WriteToCrtController(VgaPort port, byte index, byte value) {
         WriteWordToIoPort((ushort)(value << 8 | index), port);
     }
 
@@ -1345,12 +1313,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         _ioPortDispatcher.WriteWord((ushort)port, value);
     }
 
-    private void WriteToAttributeController(byte index, byte value) {
-        if (_tandy != null) {
-            byte register = index == 0x11 ? (byte)2 : (byte)(index + 0x10);
-            WriteTandyRegister(register, value);
-            return;
-        }
+    /// <summary>Writes a palette or border register.</summary>
+    protected virtual void WriteToAttributeController(byte index, byte value) {
         ReadByteFromIoPort(VgaPort.InputStatus1ReadAlt);
         byte orig = ReadByteFromIoPort(VgaPort.AttributeAddress);
         WriteByteToIoPort(index, VgaPort.AttributeAddress);
@@ -1378,11 +1342,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         _ioPortDispatcher.WriteByte((ushort)port, value);
     }
 
-    private byte ReadAttributeController(byte index) {
-        if (_tandy != null) {
-            int register = index == 0x11 ? 2 : index + 0x10;
-            return register < _tandy.Registers.Length ? _tandy.Registers[register] : (byte)0;
-        }
+    /// <summary>Reads a palette or border register.</summary>
+    protected virtual byte ReadAttributeController(byte index) {
         ReadByteFromIoPort(VgaPort.InputStatus1ReadAlt);
         byte original = ReadByteFromIoPort(VgaPort.AttributeAddress);
         WriteByteToIoPort(index, VgaPort.AttributeAddress);
@@ -1415,9 +1376,10 @@ public partial class VgaFunctionality : IVgaFunctionality {
         return vde;
     }
 
-    private void SetDisplayStart(VgaMode vgaMode, int value) {
+    /// <summary>Programs the display start address.</summary>
+    protected virtual void SetDisplayStart(VgaMode vgaMode, int value) {
         VgaPort port = GetCrtControllerPort();
-        value = _tandy != null ? value / 2 : value * GetVramRatio(vgaMode) / 4;
+        value = value * GetVramRatio(vgaMode) / 4;
         WriteToCrtController(port, 0x0C, (byte)(value >> 8));
         WriteToCrtController(port, 0x0D, (byte)value);
     }
@@ -1498,7 +1460,8 @@ public partial class VgaFunctionality : IVgaFunctionality {
         }
     }
 
-    private void ClearScreen(VgaMode vgaMode) {
+    /// <summary>Clears the video memory for the mode.</summary>
+    protected void ClearScreen(VgaMode vgaMode) {
         switch (vgaMode.MemoryModel) {
             case MemoryModel.Text:
                 // Write white (0x07) spaces (0x20) to memory. 

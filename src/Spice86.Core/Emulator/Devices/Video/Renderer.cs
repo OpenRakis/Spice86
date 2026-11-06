@@ -5,20 +5,18 @@
 
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Microsoft.Extensions.Logging;
+
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
+using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Interfaces;
+
 using System;
 using System.Threading;
 
-using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
-using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Platform;
-using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
-using Spice86.Shared.Interfaces;
-
 using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
-
-using Microsoft.Extensions.Logging;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
@@ -26,8 +24,6 @@ public class Renderer : IVgaRenderer {
     private readonly IVideoState _state;
     private readonly VgaBlinkState _blinkState;
     private readonly IVgaRenderer256Color _renderer256Color;
-    private readonly TandyVideoState? _tandy;
-    private readonly TandyVideoMemory? _tandyMemory;
 
     private uint[] _frontBuffer = Array.Empty<uint>();
     private uint[] _backBuffer = Array.Empty<uint>();
@@ -91,24 +87,18 @@ public class Renderer : IVgaRenderer {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="renderer256Color">The 256-color scanline renderer selected for the current CPU.</param>
     public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, ILogger loggerService, IVgaRenderer256Color renderer256Color)
-        : this(memory, state, blinkState, loggerService, renderer256Color, MachineProfile.For(MachineType.Pc)) {
+        : this(state, blinkState, loggerService, renderer256Color) {
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
-    /// <summary>Creates a renderer and native memory aperture for the selected machine.</summary>
-    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, ILogger loggerService,
-        IVgaRenderer256Color renderer256Color, MachineProfile profile) {
+    /// <summary>Initializes shared frame publication without registering a memory aperture.</summary>
+    protected Renderer(IVideoState state, VgaBlinkState blinkState, ILogger loggerService,
+        IVgaRenderer256Color renderer256Color) {
         _state = state;
         _blinkState = blinkState;
         _renderer256Color = renderer256Color;
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
-        _tandy = profile.IsTandy ? (state as VideoState)?.Tandy : null;
-        if (_tandy != null) {
-            _tandyMemory = new TandyVideoMemory(memory.Ram, _tandy);
-            memory.RegisterMapping(videoBaseAddress, _tandyMemory.Size, _tandyMemory);
-        } else {
-            memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
-        }
     }
 
     /// <inheritdoc />
@@ -146,12 +136,8 @@ public class Renderer : IVgaRenderer {
         return 1;
     }
 
-    private VideoFrameInfo CalculateFrameInfo() {
-        if (_tandy != null) {
-            TandyVideoState.ScanoutParameters scanout = _tandy.Scanout;
-            double aspect = 3.0 * scanout.Width / (4.0 * scanout.Height);
-            return new VideoFrameInfo(scanout.Width, scanout.Height, aspect);
-        }
+    /// <summary>Calculates the geometry of the next frame from programmed video state.</summary>
+    protected virtual VideoFrameInfo CalculateFrameInfo() {
         int width = CalculateWidth();
         int physicalHeight = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
         if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved) {
@@ -178,11 +164,7 @@ public class Renderer : IVgaRenderer {
     ///     Called by <see cref="VgaTimingEngine"/> at frame start on the emulation thread.
     ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
     /// </summary>
-    public void BeginFrame() {
-        if (_tandy != null) {
-            BeginTandyFrame();
-            return;
-        }
+    public virtual void BeginFrame() {
         VideoFrameInfo frameInfo = CalculateFrameInfo();
         bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged
             || frameInfo != _publishedFrameInfo;
@@ -252,11 +234,7 @@ public class Renderer : IVgaRenderer {
     ///     Called by <see cref="VgaTimingEngine"/> for each physical scanline on the emulation thread.
     ///     Renders one horizontal line of pixels from VRAM into the back buffer and advances state.
     /// </summary>
-    public void RenderScanline() {
-        if (_tandy != null) {
-            RenderTandyScanline();
-            return;
-        }
+    public virtual void RenderScanline() {
         if (!_frameActive || _frameLineCounter >= _frameTotalHeight) {
             return;
         }
@@ -367,7 +345,7 @@ public class Renderer : IVgaRenderer {
             // readers that observe `_hasPendingFrame` will see the fully-published
             // buffer contents when they do a Volatile.Read on `_lastPublishedFrame`.
             Volatile.Write(ref _lastPublishedFrame, Volatile.Read(ref _frontBuffer));
-            double aspect = _frameInGraphicsMode || _tandy != null ? 3.0 * _frameWidth / (4.0 * _frameHeight) : 1;
+            double aspect = CorrectPixelAspectRatio ? 3.0 * _frameWidth / (4.0 * _frameHeight) : 1;
             Volatile.Write(ref _publishedFrameInfo, new VideoFrameInfo(_frameWidth, _frameHeight, aspect));
             Volatile.Write(ref _hasPendingFrame, 1);
         }
@@ -422,12 +400,15 @@ public class Renderer : IVgaRenderer {
         }
     }
 
-    private void BeginTandyFrame() {
-        VideoFrameInfo info = CalculateFrameInfo();
+    /// <summary>Whether the current frame should be presented with a 4:3 display aspect ratio.</summary>
+    protected virtual bool CorrectPixelAspectRatio => _frameInGraphicsMode;
+
+    /// <summary>Starts a frame whose scanlines are rendered without dirty-frame skipping.</summary>
+    protected void BeginUnconditionallyRenderedFrame(VideoFrameInfo info, bool isGraphics) {
         _frameWidth = info.Width;
         _frameHeight = info.Height;
         _framePhysicalScanline = 0;
-        _frameInGraphicsMode = _tandy?.Scanout.IsGraphics == true;
+        _frameInGraphicsMode = isGraphics;
         _skipThisFrame = false;
         _frameActive = true;
         if (_backBuffer.Length != info.Width * info.Height) {
@@ -436,69 +417,16 @@ public class Renderer : IVgaRenderer {
         _state.IsRenderingDirty = false;
     }
 
-    private void RenderTandyScanline() {
-        if (!_frameActive || _tandy == null || _tandyMemory == null || _framePhysicalScanline >= _frameHeight) {
-            return;
+    /// <summary>Obtains the next visible row in an unconditionally rendered frame.</summary>
+    protected bool TryGetNextScanline(out Span<uint> row, out int scanline) {
+        scanline = _framePhysicalScanline;
+        row = default;
+        if (!_frameActive || scanline >= _frameHeight) {
+            return false;
         }
-        int y = _framePhysicalScanline++;
-        Span<uint> row = _backBuffer.AsSpan(y * _frameWidth, _frameWidth);
-        if (!_tandy.IsEnabled) {
-            row.Fill(_tandy.BlankedColor);
-            return;
-        }
-        TandyVideoState.ScanoutParameters scanout = _tandy.Scanout;
-        if (!scanout.IsGraphics) {
-            DrawTandyTextRow(row, y, _tandy, _tandyMemory, scanout);
-            return;
-        }
-        int bits = scanout.BitsPerPixel;
-        int stride = scanout.Width * bits / 8;
-        int addressMask = _tandy.LineMask != 0 ? 0x1FFF : 0x1FFFF;
-        int address = _tandy.DisplayStart + y / scanout.CharacterHeight * stride;
-        int bank = (y % scanout.CharacterHeight & _tandy.LineMask) << 13;
-        for (int x = 0; x < row.Length; x++) {
-            int pixel;
-            if (scanout.IsHighResolutionFourColor) {
-                int offset = (address + (x / 8) * 2) & addressMask;
-                int low = _tandyMemory.ReadDisplay(bank + offset);
-                int high = _tandyMemory.ReadDisplay(bank + ((offset + 1) & addressMask));
-                pixel = ((low >> (7 - (x & 7))) & 1) | (((high >> (7 - (x & 7))) & 1) << 1);
-            } else {
-                int pixelsPerByte = 8 / bits;
-                int offset = (address + x / pixelsPerByte) & addressMask;
-                byte data = _tandyMemory.ReadDisplay(bank + offset);
-                int shift = (pixelsPerByte - 1 - x % pixelsPerByte) * bits;
-                pixel = (data >> shift) & ((1 << bits) - 1);
-            }
-            row[x] = _tandy.GetColor(pixel);
-        }
-    }
-
-    private void DrawTandyTextRow(Span<uint> row, int y, TandyVideoState tandy, TandyVideoMemory memory,
-        TandyVideoState.ScanoutParameters scanout) {
-        int glyphLine = y % scanout.CharacterHeight;
-        int columns = scanout.Width / 8;
-        int address = tandy.DisplayStart + y / scanout.CharacterHeight * columns * 2;
-        int cursorAddress = (tandy.Crtc[14] << 8 | tandy.Crtc[15]) * 2;
-        int cursorStart = tandy.Crtc[10] & 31;
-        int cursorEnd = tandy.Crtc[11] & 31;
-        bool cursorEnabled = tandy.CursorEnabled && _blinkState.IsBlinkPhaseHigh;
-        for (int x = 0; x < row.Length; x++) {
-            int cellAddress = (address + x / 8 * 2) & 0x3FFF;
-            byte character = memory.ReadDisplay(cellAddress);
-            byte attribute = memory.ReadDisplay((cellAddress + 1) & 0x3FFF);
-            int glyph = glyphLine < 8 ? Fonts.VgaFont8[character * 8 + glyphLine] : 0;
-            bool foreground = (glyph & (0x80 >> (x & 7))) != 0;
-            if (tandy.BlinkEnabled && (attribute & 0x80) != 0 && !_blinkState.IsBlinkPhaseHigh) {
-                foreground = false;
-            }
-            if (cursorEnabled && cellAddress == (cursorAddress & 0x3FFF) && glyphLine >= cursorStart && glyphLine <= cursorEnd) {
-                foreground = true;
-            }
-            int backgroundMask = tandy.BlinkEnabled ? 7 : 15;
-            int color = foreground ? attribute & 15 : (attribute >> 4) & backgroundMask;
-            row[x] = tandy.GetColor(color);
-        }
+        _framePhysicalScanline++;
+        row = _backBuffer.AsSpan(scanline * _frameWidth, _frameWidth);
+        return true;
     }
 
     private void InitCharRow() {

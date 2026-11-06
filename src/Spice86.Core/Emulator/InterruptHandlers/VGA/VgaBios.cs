@@ -15,7 +15,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Platform;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -24,10 +23,10 @@ using Spice86.Shared.Utils;
 ///     A VGA BIOS implementation.
 /// </summary>
 public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension {
-    private readonly BiosDataArea _biosDataArea;
+    /// <summary>The global BIOS variables.</summary>
+    protected readonly BiosDataArea _biosDataArea;
     private readonly ILogger _logger;
     private readonly IVgaFunctionality _vgaFunctions;
-    private readonly bool _isTandy;
 
     /// <summary>
     /// "Several new BIOS calls have been defined to support Super VGA modes. For
@@ -305,23 +304,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILogger loggerService)
-        : this(memory, functionHandlerProvider, stack, state, vgaFunctions, biosDataArea, loggerService, MachineProfile.For(MachineType.Pc)) {
-    }
-
-    /// <summary>Creates INT 10h services with the selected machine's capability boundary.</summary>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILogger loggerService, MachineProfile profile)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        _isTandy = profile.IsTandy;
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("Initializing VGA BIOS");
         }
         InitializeBiosArea();
-        if (!_isTandy) {
-            InitializeStaticFunctionalityTable();
-        }
     }
 
     /// <summary>
@@ -350,10 +340,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x1A, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bl, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite)]
-    public void GetSetDisplayCombinationCode() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
                     State.AL = BiosConstants.FunctionSupported;
@@ -382,10 +369,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x12, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Cx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void VideoSubsystemConfiguration() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void VideoSubsystemConfiguration() {
         if (_logger.IsEnabled(LogLevel.Trace)) {
             _logger.LogTrace("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), State.BL);
@@ -426,10 +410,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x11, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bp, Writes = CpuValues.Cx | CpuValues.Dl | CpuValues.Es | CpuValues.Bp, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void LoadFontInfo() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void LoadFontInfo() {
         if (_logger.IsEnabled(LogLevel.Trace)) {
             _logger.LogTrace("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), State.AL);
@@ -496,10 +477,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Es, Writes = CpuValues.Bx | CpuValues.Cx | CpuValues.Dh, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void SetPaletteRegisters() {
-        if (_isTandy && State.AL > 2) {
-            return;
-        }
+    public virtual void SetPaletteRegisters() {
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(SetPaletteRegisters), State.AL);
@@ -580,13 +558,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     [InterruptService(0x0F, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Bh, Memory = ServiceMemoryEffect.Read)]
     public void GetVideoState() {
         State.BH = _biosDataArea.CurrentVideoPage;
-        State.AL = _isTandy ? _biosDataArea.VideoMode : (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
+        State.AL = ReportedVideoMode;
         State.AH = (byte)_biosDataArea.ScreenColumns;
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("{ClassName} INT 10 0F {MethodName} - Page {Page}, mode {Mode}, columns {Columns}",
                 nameof(VgaBios), nameof(GetVideoState), State.BH, State.AL, State.AH);
         }
     }
+
+    /// <summary>Gets the mode byte returned by INT 10h AH=0Fh.</summary>
+    protected virtual byte ReportedVideoMode => (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
 
     /// <inheritdoc />
     [InterruptService(0x0E, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
@@ -687,11 +668,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void SelectActiveDisplayPage() {
-        if (_isTandy && (State.AL & 0x80) != 0) {
-            HandleTandyPageBank();
-            return;
-        }
+    public virtual void SelectActiveDisplayPage() {
         byte page = State.AL;
         int address = _vgaFunctions.SetActivePage(page);
 
@@ -758,15 +735,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void SetVideoMode() {
+    public virtual void SetVideoMode() {
         int modeId = State.AL & BiosConstants.VideoModeMask;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_biosDataArea.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
         if ((State.AL & BiosConstants.DontClearMemoryFlag) != 0) {
             flags |= ModeFlags.NoClearMem;
-        }
-        if (_isTandy) {
-            _vgaFunctions.VgaSetMode(modeId, flags);
-            return;
         }
 
         // Set AL
@@ -792,16 +765,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// </summary>
     public override void Run() {
         byte operation = State.AH;
-        if (_isTandy && (operation is 0x11 or 0x12 or 0x1A or 0x1B or 0x4F || (operation == 0x10 && State.AL > 2))) {
-            return;
-        }
-        if (_isTandy && operation == 5 && (State.AL & 0x80) != 0) {
-            HandleTandyPageBank();
-            return;
-        }
-        if (_isTandy && !HasRunnable(operation)) {
-            return;
-        }
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
@@ -852,10 +815,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         _biosDataArea.EquipmentListFlags = (ushort)(_biosDataArea.EquipmentListFlags & ~BiosConstants.EquipmentListFlagsMask | BiosConstants.VideoControl80x25Color);
 
         // Set the basic modeset options
-        if (!_isTandy) {
-            _biosDataArea.ModesetCtl = BiosConstants.DefaultModeSetControl;
-            _biosDataArea.DisplayCombinationCode = BiosConstants.DefaultDisplayCombinationCode;
-        }
+        InitializeAdapterBiosArea();
+    }
+
+    /// <summary>Initializes the EGA/VGA BIOS options and static functionality table.</summary>
+    protected virtual void InitializeAdapterBiosArea() {
+        _biosDataArea.ModesetCtl = BiosConstants.DefaultModeSetControl;
+        _biosDataArea.DisplayCombinationCode = BiosConstants.DefaultDisplayCombinationCode;
+        InitializeStaticFunctionalityTable();
     }
 
     private void VideoScreenOnOff() {
@@ -949,10 +916,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// Dispatches to specific VBE functions based on AL subfunction.
     /// </summary>
     [InterruptService(0x4F, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
-    public void VesaFunctions() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void VesaFunctions() {
         byte subfunction = State.AL;
         switch ((VbeFunction)subfunction) {
             case VbeFunction.GetControllerInfo:
@@ -975,10 +939,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeGetControllerInfo"/>
-    public void VbeGetControllerInfo() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void VbeGetControllerInfo() {
         ushort segment = State.ES;
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -1020,10 +981,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeGetModeInfo"/>
-    public void VbeGetModeInfo() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void VbeGetModeInfo() {
         ushort requestedModeNumber = State.CX;
         ushort modeNumber = (ushort)(requestedModeNumber & (ushort)VbeModeFlags.ModeNumberMask);
         ushort segment = State.ES;
@@ -1128,10 +1086,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeSetMode"/>
-    public void VbeSetMode() {
-        if (_isTandy) {
-            return;
-        }
+    public virtual void VbeSetMode() {
         ushort modeNumber = State.BX;
         // VBE 1.0/1.2 does not support LFB; bit 14 is ignored (banked mode is always used)
         bool dontClearDisplay = (modeNumber & (ushort)VbeModeFlags.DontClearMemory) != 0;
@@ -1207,13 +1162,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
-    public VideoFunctionalityInfo GetFunctionalityInfo() {
+    public virtual VideoFunctionalityInfo GetFunctionalityInfo() {
         ushort segment = State.ES;
         ushort offset = State.DI;
-        if (_isTandy) {
-            State.AL = 0;
-            return new VideoFunctionalityInfo(Memory, MemoryUtils.ToPhysicalAddress(segment, offset));
-        }
 
         switch (State.BX) {
             case 0x0:
@@ -1234,7 +1185,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         (byte primaryCharacterTable, byte secondaryCharacterTable) = DecodeCharacterMapSelections(characterMapRegister);
 
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        var info = new VideoFunctionalityInfo(Memory, address) {
+        VideoFunctionalityInfo info = new(Memory, address) {
             SftAddress = new SegmentedAddress(MemoryMap.StaticFunctionalityTableSegment, 0),
             VideoMode = _biosDataArea.VideoMode,
             ScreenColumns = _biosDataArea.ScreenColumns,
@@ -1270,31 +1221,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 nameof(VgaBios), nameof(GetFunctionalityInfo), info.CreateFunctionalityInfoLogSnapshot());
         }
         return info;
-    }
-
-    /// <summary>
-    /// Writes values to the static functionality table in emulated memory.
-    /// </summary>
-    private void HandleTandyPageBank() {
-        byte page = Memory.UInt8[0x40, 0x8A];
-        switch (State.AL) {
-            case 0x80:
-                State.BH = (byte)(page & 7);
-                State.BL = (byte)((page >> 3) & 7);
-                break;
-            case 0x81:
-                page = (byte)((page & 0xC7) | ((State.BL & 7) << 3));
-                break;
-            case 0x82:
-                page = (byte)((page & 0xF8) | (State.BH & 7));
-                break;
-            case 0x83:
-                page = (byte)((page & 0xC0) | (State.BH & 7) | ((State.BL & 7) << 3));
-                break;
-        }
-        if (_vgaFunctions is VgaFunctionality functionality) {
-            functionality.SetTandyPageBank(page);
-        }
     }
 
     private void InitializeStaticFunctionalityTable() {

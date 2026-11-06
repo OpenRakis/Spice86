@@ -7,14 +7,16 @@ namespace Spice86.Core.Emulator.Devices.Video;
 /// <summary>Native Tandy gate array and 6845 registers.</summary>
 public sealed class TandyVideoState {
     private volatile bool _resizePending;
+    private TandyTimingEngine? _timingEngine;
 
     /// <summary>Initializes the native scanout latch.</summary>
     public TandyVideoState() {
         Scanout = ReadScanout();
     }
 
-    /// <summary>Requests a coalesced emulation-time drawing setup, in milliseconds.</summary>
-    public event Action<int>? ResizeRequested;
+    internal void AttachTimingEngine(TandyTimingEngine timingEngine) {
+        _timingEngine = timingEngine;
+    }
 
     /// <summary>Geometry and beam periods latched by the last drawing setup.</summary>
     public ScanoutParameters Scanout { get; private set; }
@@ -174,12 +176,12 @@ public sealed class TandyVideoState {
         if (_resizePending) {
             return;
         }
-        if (ResizeRequested == null) {
+        if (_timingEngine == null) {
             CommitResize();
             return;
         }
         _resizePending = true;
-        ResizeRequested.Invoke(delayMs);
+        _timingEngine.RequestResize(delayMs);
     }
 
     /// <summary>Applies all coalesced register changes at the scheduled setup deadline.</summary>

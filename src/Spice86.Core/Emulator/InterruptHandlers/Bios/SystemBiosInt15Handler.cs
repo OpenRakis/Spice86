@@ -11,10 +11,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Platform;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -31,9 +29,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
     private readonly BiosDataArea _biosDataArea;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly DeviceScheduler _emulationLoopScheduler;
-    private readonly MachineProfile _machineProfile;
-    private BiosSystemConfigurationTable? _systemConfigurationTable;
-    private SegmentedAddress _systemConfigurationAddress;
 
     /// <summary>
     /// Initializes a new instance.
@@ -53,56 +48,15 @@ public class SystemBiosInt15Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
         IOPortDispatcher ioPortDispatcher, ILogger loggerService, bool initializeResetVector)
-        : this(configuration, memory, functionHandlerProvider, stack, state, a20Gate, biosDataArea,
-            emulationLoopScheduler, ioPortDispatcher, loggerService, initializeResetVector, MachineProfile.For(MachineType.Pc)) {
-    }
-
-    /// <summary>
-    /// Initializes platform BIOS services while retaining shared RTC and extended-memory behavior.
-    /// </summary>
-    /// <param name="configuration">The emulator configuration.</param>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="functionHandlerProvider">The call-flow handler provider.</param>
-    /// <param name="stack">The CPU stack.</param>
-    /// <param name="state">The CPU state.</param>
-    /// <param name="a20Gate">The A20 line gate.</param>
-    /// <param name="biosDataArea">The shared BIOS data area.</param>
-    /// <param name="emulationLoopScheduler">The emulated device scheduler.</param>
-    /// <param name="ioPortDispatcher">The I/O port dispatcher.</param>
-    /// <param name="loggerService">The logger.</param>
-    /// <param name="initializeResetVector">Whether built-in firmware is enabled.</param>
-    /// <param name="machineProfile">The selected platform.</param>
-    public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
-        IOPortDispatcher ioPortDispatcher, ILogger loggerService, bool initializeResetVector, MachineProfile machineProfile)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _machineProfile = machineProfile;
         _a20Gate = a20Gate;
         _emulationLoopScheduler = emulationLoopScheduler;
         _configuration = configuration;
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
-        if (initializeResetVector && !machineProfile.IsTandy) {
+        if (initializeResetVector) {
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
-    }
-
-    /// <inheritdoc />
-    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        SegmentedAddress handlerAddress = base.WriteAssemblyInRam(memoryAsmWriter);
-        if (_machineProfile.IsTandy) {
-            while ((memoryAsmWriter.CurrentAddress.Linear & 0x0F) != 0) {
-                memoryAsmWriter.WriteUInt8(0);
-            }
-            _systemConfigurationAddress = new SegmentedAddress((ushort)(memoryAsmWriter.CurrentAddress.Linear >> 4), 0);
-            for (int index = 0; index < BiosSystemConfigurationTable.AllocationSize; index++) {
-                memoryAsmWriter.WriteUInt8(0);
-            }
-            _systemConfigurationTable = new BiosSystemConfigurationTable(Memory, _systemConfigurationAddress.Linear);
-            _systemConfigurationTable.InitializeTandy();
-        }
-        return handlerAddress;
     }
 
     /// <summary>
@@ -112,17 +66,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm">Whether to update the interrupt-stack carry flag.</param>
     [InterruptService(0xC0, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Es | CpuValues.Bx | CpuValues.Carry, Memory = ServiceMemoryEffect.Write)]
-    public void GetSystemConfiguration(bool calledFromVm) {
-        if (!_machineProfile.IsTandy || _systemConfigurationTable is null) {
-            State.AH = 0x86;
-            SetCarryFlag(true, calledFromVm);
-            return;
-        }
-        _systemConfigurationTable.InitializeTandy();
-        State.ES = _systemConfigurationAddress.Segment;
-        State.BX = _systemConfigurationAddress.Offset;
-        State.AH = 0;
-        SetCarryFlag(false, calledFromVm);
+    public virtual void GetSystemConfiguration(bool calledFromVm) {
+        State.AH = 0x86;
+        SetCarryFlag(true, calledFromVm);
     }
 
     /// <summary>
@@ -189,15 +135,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = State.AH;
         Run(operation);
-    }
-
-    /// <inheritdoc />
-    public override void Run(int index) {
-        if (_machineProfile.IsTandy && !HasRunnable(index)) {
-            Unsupported();
-            return;
-        }
-        base.Run(index);
     }
 
     /// <summary>

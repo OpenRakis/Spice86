@@ -21,28 +21,44 @@ public sealed class DeviceSchedulerTests {
         // Arrange
         _scheduler.ProcessEvents();
         int ownerThreadId = Environment.CurrentManagedThreadId;
-        int actionThreadId = 0;
-        bool eventInvoked = false;
-        Thread producer = new(() => _scheduler.Dispatch(() => {
-            actionThreadId = Environment.CurrentManagedThreadId;
-            _scheduler.AddEvent(_ => eventInvoked = true, 0);
-        }));
+        RecordingCommand command = new(_scheduler);
+        Thread producer = new(() => _scheduler.Dispatch(command));
 
         // Act
         producer.Start();
         producer.Join();
-        actionThreadId.Should().Be(0);
+        command.ThreadId.Should().Be(0);
         _scheduler.ProcessEvents();
 
         // Assert
-        actionThreadId.Should().Be(ownerThreadId);
-        eventInvoked.Should().BeTrue();
+        command.ThreadId.Should().Be(ownerThreadId);
+        command.EventInvoked.Should().BeTrue();
     }
 
     private readonly ILogger _logger;
     private readonly State _state;
     private readonly CyclesClock _cyclesClock;
     private readonly DeviceScheduler _scheduler;
+
+    private sealed class RecordingCommand : IDeviceSchedulerCommand {
+        private readonly DeviceScheduler _scheduler;
+
+        public RecordingCommand(DeviceScheduler scheduler) {
+            _scheduler = scheduler;
+        }
+
+        public int ThreadId { get; private set; }
+        public bool EventInvoked { get; private set; }
+
+        public void Execute() {
+            ThreadId = Environment.CurrentManagedThreadId;
+            _scheduler.AddEvent(OnEvent, 0);
+        }
+
+        private void OnEvent(uint value) {
+            EventInvoked = true;
+        }
+    }
 
     public DeviceSchedulerTests() {
         _logger = Substitute.For<ILogger>();

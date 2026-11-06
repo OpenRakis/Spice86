@@ -2,7 +2,6 @@
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
-using Spice86.Core.Emulator.Platform;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Memory;
@@ -20,18 +19,6 @@ public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// <param name="conventionalMemorySizeKb">The size of conventional memory for DOS applications, in kilobytes.</param>
     public BiosDataArea(IByteReaderWriter byteReaderWriter, ushort conventionalMemorySizeKb) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0)) {
         ConventionalMemorySizeKb = conventionalMemorySizeKb;
-    }
-
-    /// <summary>
-    /// Initializes the BIOS memory report without changing physical RAM or the DOS allocation ceiling.
-    /// </summary>
-    /// <param name="byteReaderWriter">The memory bus.</param>
-    /// <param name="machineProfile">The selected platform.</param>
-    public BiosDataArea(IByteReaderWriter byteReaderWriter, MachineProfile machineProfile)
-        : this(byteReaderWriter, machineProfile.BiosReportedMemoryKb) {
-        if (machineProfile.IsTandy) {
-            TrueConventionalMemorySizeKb = machineProfile.TrueMemoryKb;
-        }
     }
 
     /// <summary>
