@@ -209,6 +209,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort ds1 = 0;
+        ushort es;
         ushort bx1 = 0;
         byte flagOperand_0145 = 0;
         CheckExternalEvents(cs1, 0x0100);
@@ -218,7 +219,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 push DS
         Stack.Push16(ds1);
         // 016D:0103 pop ES
-        ES = Stack.Pop16();
+        es = Stack.Pop16();
         // 016D:0104 mov DX,0x03A4
         // 016D:0107 sub DX,0x0100
         // 016D:010B add DX,0x030F
@@ -232,10 +233,10 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         // 016D:0112 mov BX,DX
-        BX = 0x005B;
         // 016D:0114 mov AH,0x4A
+        AH = 0x4A;
         // 016D:0116 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x0118, 0x005B, ES);
+        (AX, BX, CarryFlag) = Dos.ModifyMemoryBlock(cs1, 0x0118, 0x005B, es);
         // 016D:0118 jb short 0x0121
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0121, SpeculativeRun_0121);
@@ -304,19 +305,20 @@ public partial class CfgGeneratedOverrides {
             NearCall(cs1, 0x0155, unknown_016D_02E0_019B0Entry);
             // 016D:0155 jmp short 0x015E
             // 016D:015E mov AH,0x48
+            AH = 0x48;
             // 016D:0160 mov BX,0x0020
-            BX = 0x0020;
             // 016D:0163 int 0x21
-            Dos.AllocateMemoryBlock(cs1, 0x0165, 0x0020);
+            (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x0165, 0x0020);
             // 016D:0165 jb short 0x017B
             if (!CarryFlag) {
                 // 016D:0167 mov word ptr DS:[0x02E9],AX
                 ImageMinus0003Globals.Word02E9 = AX;
                 // 016D:016A mov ES,AX
-                ES = AX;
+                es = AX;
                 // 016D:016C mov AH,0x49
+                AH = 0x49;
                 // 016D:016E int 0x21
-                Dos.FreeMemoryBlock(cs1, 0x0170, ES);
+                (AX, CarryFlag) = Dos.FreeMemoryBlock(cs1, 0x0170, es);
                 // 016D:0170 jb short 0x017B
                 if (!CarryFlag) {
                     // 016D:0172 push DS
@@ -346,8 +348,9 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0193 jb short 0x01A4
                     if (!CarryFlag) {
                         // 016D:0195 mov AH,0x4D
+                        AH = 0x4D;
                         // 016D:0197 int 0x21
-                        Dos.GetReturnCode(cs1, 0x0199);
+                        AX = Dos.GetReturnCode(cs1, 0x0199);
                         // 016D:0199 cmp AL,0x42
                         Alu8.Sub(AL, 0x42);
                         // 016D:019B jne short 0x01A4
@@ -416,10 +419,10 @@ public partial class CfgGeneratedOverrides {
                                     NearCall(cs1, 0x01F2, unknown_016D_02E0_019B0Entry);
                                     // 016D:01F2 jmp short 0x01FB
                                     // 016D:01FB mov AH,0x48
+                                    AH = 0x48;
                                     // 016D:01FD mov BX,0x0040
-                                    BX = 0x0040;
                                     // 016D:0200 int 0x21
-                                    Dos.AllocateMemoryBlock(cs1, 0x0202, 0x0040);
+                                    (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x0202, 0x0040);
                                     // 016D:0202 jb short 0x0240
                                     if (CarryFlag) {
                                         goto L_0240;
@@ -521,7 +524,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:015B");
     }
 
-    /// <summary>Inputs: EAX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     public virtual Action unknown_016D_0239_01909() {
         CheckExternalEvents(cs1, 0x0239);
         // 016D:0239 mov AL,0x56
@@ -679,7 +682,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, EBX, flags, DF. Outputs: EAX. Changes: EAX, BX.</summary>
+    /// <summary>Inputs: EAX, flags, DF. Outputs: none. Changes: AH, BX.</summary>
     public virtual Action unknown_016D_02E0_019B0() {
         CheckExternalEvents(cs1, 0x02E0);
         // 016D:02E0 mov AH,0x0E
@@ -749,7 +752,6 @@ public partial class CfgGeneratedOverrides {
         // 0226:0006 mov BL,7
         BL = 7;
         // 0226:0008 mov AL,0x4F
-        AL = 0x4F;
         // 0226:000A int 0x10
         Video.WriteTextInTeletypeMode(cs3, 0x000C, 0x4F, 7);
         // 0226:000C mov AL,0x41
@@ -933,6 +935,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
+        ushort ds;
         byte flagOperand_00AF = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0096);
@@ -990,13 +993,13 @@ public partial class CfgGeneratedOverrides {
             // 01D6:0100 push CS
             Stack.Push16(CS);
             // 01D6:0101 pop DS
-            DS = Stack.Pop16();
+            ds = Stack.Pop16();
             // 01D6:0102 mov DX,0x0118
             DX = 0x0118;
             // 01D6:0105 mov AX,0x2560
             AX = 0x2560;
             // 01D6:0108 int 0x21
-            Dos.SetInterruptVector(cs2, 0x010A, 0x60, 0x0118, DS);
+            Dos.SetInterruptVector(cs2, 0x010A, 0x60, 0x0118, ds);
             // 01D6:010A mov DX,0x011B
             DX = 0x011B;
             // 01D6:010D add DX,0x000F

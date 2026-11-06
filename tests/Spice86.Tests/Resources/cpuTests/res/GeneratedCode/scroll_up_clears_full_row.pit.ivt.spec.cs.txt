@@ -159,7 +159,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0100 mov AX,3
         AX = 3;
         // 016E:0103 int 0x10
-        Video.SetVideoMode(cs1, 0x0105, 3);
+        AL = Video.SetVideoMode(cs1, 0x0105, 3);
         // 016E:0105 mov AH,2
         AH = 2;
         // 016E:0107 mov BH,0

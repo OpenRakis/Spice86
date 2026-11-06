@@ -213,7 +213,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:012B mov AH,0x62
         AH = 0x62;
         // 016D:012D int 0x21
-        Dos.GetPspAddress(cs1, 0x012F);
+        BX = Dos.GetPspAddress(cs1, 0x012F);
         // 016D:012F mov ES,BX
         ES = BX;
         // 016D:0131 mov AX,word ptr ES:[0x002C]

@@ -155,6 +155,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort ax;
+        ushort es;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AX,CS
         ax = CS;
@@ -163,7 +164,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 mov DS,AX
         DS = ax;
         // 016D:0106 mov ES,AX
-        ES = ax;
+        es = ax;
         // 016D:0108 mov SP,0x017D
         SP = 0x017D;
         // 016D:010B mov BX,0x017D
@@ -182,7 +183,7 @@ public partial class CfgGeneratedOverrides {
         AX = ax;
         AH = 0x4A;
         // 016D:0114 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x0116, 0x0018, ES);
+        (AX, BX, CarryFlag) = Dos.ModifyMemoryBlock(cs1, 0x0116, 0x0018, es);
         // 016D:0116 mov AX,0xB800
         AX = 0xB800;
         // 016D:0119 mov ES,AX

@@ -152,6 +152,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort cx1 = 0;
+        ushort dx1 = 0;
+        ushort bx1 = 0;
         byte al1 = 0;
         byte flagOperand_0126 = 0;
         CheckExternalEvents(cs1, 0x0100);
@@ -160,7 +163,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 mov DL,0
         DL = 0;
         // 016D:0104 int 0x21
-        Dos.GetAllocationInfoForAnyDrive(cs1, 0x0106, 0);
+        (AX, cx1, dx1, bx1, DS) = Dos.GetAllocationInfoForAnyDrive(cs1, 0x0106, 0);
         // 016D:0106 cmp AL,0xFF
         Alu8.Sub(AL, 0xFF);
         // 016D:0108 je short 0x012F
@@ -174,23 +177,23 @@ public partial class CfgGeneratedOverrides {
                 // 016D:0111 jne short 0x012F
                 if (AL == 0x20) {
                     // 016D:0113 cmp CX,0x0200
-                    Alu16.Sub(CX, 0x0200);
+                    Alu16.Sub(cx1, 0x0200);
                     // 016D:0117 jne short 0x012F
-                    if (CX == 0x0200) {
+                    if (cx1 == 0x0200) {
                         // 016D:0119 cmp DX,0x7FFD
-                        Alu16.Sub(DX, 0x7FFD);
+                        Alu16.Sub(dx1, 0x7FFD);
                         // 016D:011D jne short 0x012F
-                        if (DX != 0x7FFD) {
+                        if (dx1 != 0x7FFD) {
                             goto L_012F;
                         }
                         // 016D:011F cmp BX,0x0029
-                        Alu16.Sub(BX, 0x0029);
+                        Alu16.Sub(bx1, 0x0029);
                         // 016D:0122 jne short 0x012F
-                        if (BX != 0x0029) {
+                        if (bx1 != 0x0029) {
                             goto L_012F;
                         }
                         // 016D:0124 mov SI,BX
-                        SI = BX;
+                        SI = bx1;
                         // 016D:0126 cmp byte ptr DS:[SI],0xF8
                         flagOperand_0126 = UInt8[DS, SI];
                         Alu8.Sub(flagOperand_0126, 0xF8);
@@ -216,6 +219,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0134 out DX,AL
         Out8(0x0999, al1);
         // 016D:0135 hlt
+        CX = cx1;
+        BX = bx1;
         AL = al1;
         return Hlt();
     }

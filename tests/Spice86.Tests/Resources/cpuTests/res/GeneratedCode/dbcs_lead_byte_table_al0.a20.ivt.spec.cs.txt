@@ -153,17 +153,18 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
+        byte al2 = 0;
         ushort flagOperand_0112 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AX,0x6300
         AX = 0x6300;
         // 016D:0103 int 0x21
-        Dos.GetLeadByteTable(cs1, 0x0105, 0);
+        (al1, SI, DS, CarryFlag) = Dos.GetLeadByteTable(cs1, 0x0105, 0);
         // 016D:0105 cmp AL,0
-        Alu8.Sub(AL, 0);
+        Alu8.Sub(al1, 0);
         // 016D:0107 jne short 0x011B
         // 016D:0109 jb short 0x011B
-        if (AL == 0 && AL >= 0) {
+        if (al1 == 0 && al1 >= 0) {
             // 016D:010B mov DX,DS
             DX = DS;
             // 016D:010D cmp DX,0
@@ -178,7 +179,7 @@ public partial class CfgGeneratedOverrides {
                     goto L_011B;
                 }
                 // 016D:0117 mov AL,0
-                al1 = 0;
+                al2 = 0;
                 // 016D:0119 jmp short 0x011D
                 goto L_011D;
             }
@@ -186,14 +187,14 @@ public partial class CfgGeneratedOverrides {
     L_011B:
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
         // 016D:011B mov AL,0xFF
-        al1 = 0xFF;
+        al2 = 0xFF;
     L_011D:
         // 016D:011D mov DX,0x0999
         DX = 0x0999;
         // 016D:0120 out DX,AL
-        Out8(0x0999, al1);
+        Out8(0x0999, al2);
         // 016D:0121 hlt
-        AL = al1;
+        AL = al2;
         return Hlt();
     }
 

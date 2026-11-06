@@ -328,13 +328,11 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Byte0300 = 0;
         // F000:E066 mov AL,0x36
         // F000:E068 out 0x43,AL
-        PitPorts.WriteControlWord(0x36);
         // F000:E06A mov AL,0x51
         // F000:E06C out 0x40,AL
-        PitPorts.WriteChannel0Data(0x51);
         // F000:E06E mov AL,0x22
         // F000:E070 out 0x40,AL
-        PitPorts.WriteChannel0Data(0x22);
+        Pit.ProgramChannel(0, 0x36, 0x2251);
         // F000:E072 mov AL,0xFE
         AL = 0xFE;
         // F000:E074 out 0x21,AL

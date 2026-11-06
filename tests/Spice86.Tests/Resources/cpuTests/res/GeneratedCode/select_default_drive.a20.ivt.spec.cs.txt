@@ -153,52 +153,56 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
+        byte al2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x0E
         AH = 0x0E;
         // 016D:0102 mov DL,2
-        DL = 2;
         // 016D:0104 int 0x21
-        Dos.SelectDefaultDrive(cs1, 0x0106, 2);
+        al1 = Dos.SelectDefaultDrive(cs1, 0x0106, 2);
         // 016D:0106 mov DX,0x0998
         DX = 0x0998;
         // 016D:0109 out DX,AL
-        Out8(0x0998, AL);
+        Out8(0x0998, al1);
         // 016D:010A cmp AL,0x1A
-        Alu8.Sub(AL, 0x1A);
+        Alu8.Sub(al1, 0x1A);
         // 016D:010C jne short 0x0130
-        if (AL == 0x1A) {
+        if (al1 == 0x1A) {
             // 016D:010E mov AH,0x19
+            AL = al1;
+            AH = 0x19;
             // 016D:0110 int 0x21
-            Dos.GetCurrentDefaultDrive(cs1, 0x0112);
+            al1 = Dos.GetCurrentDefaultDrive(cs1, 0x0112);
             // 016D:0112 mov DX,0x0998
             DX = 0x0998;
             // 016D:0115 out DX,AL
-            Out8(0x0998, AL);
+            Out8(0x0998, al1);
             // 016D:0116 cmp AL,2
-            Alu8.Sub(AL, 2);
+            Alu8.Sub(al1, 2);
             // 016D:0118 jne short 0x0130
-            if (AL == 2) {
+            if (al1 == 2) {
                 // 016D:011A mov AH,0x0E
+                AL = al1;
+                AH = 0x0E;
                 // 016D:011C mov DL,0x1A
-                DL = 0x1A;
                 // 016D:011E int 0x21
-                Dos.SelectDefaultDrive(cs1, 0x0120, 0x1A);
+                AL = Dos.SelectDefaultDrive(cs1, 0x0120, 0x1A);
                 // 016D:0120 mov AH,0x19
+                AH = 0x19;
                 // 016D:0122 int 0x21
-                Dos.GetCurrentDefaultDrive(cs1, 0x0124);
+                al1 = Dos.GetCurrentDefaultDrive(cs1, 0x0124);
                 // 016D:0124 mov DX,0x0998
                 DX = 0x0998;
                 // 016D:0127 out DX,AL
-                Out8(0x0998, AL);
+                Out8(0x0998, al1);
                 // 016D:0128 cmp AL,2
-                Alu8.Sub(AL, 2);
+                Alu8.Sub(al1, 2);
                 // 016D:012A jne short 0x0130
-                if (AL != 2) {
+                if (al1 != 2) {
                     goto L_0130;
                 }
                 // 016D:012C mov AL,0
-                al1 = 0;
+                al2 = 0;
                 // 016D:012E jmp short 0x0132
                 goto L_0132;
             }
@@ -206,14 +210,14 @@ public partial class CfgGeneratedOverrides {
     L_0130:
         VerifySpeculativeEntryOrFail(cs1, 0x0130, Signature_0130_mov);
         // 016D:0130 mov AL,0xFF
-        al1 = 0xFF;
+        al2 = 0xFF;
     L_0132:
         // 016D:0132 mov DX,0x0999
         DX = 0x0999;
         // 016D:0135 out DX,AL
-        Out8(0x0999, al1);
+        Out8(0x0999, al2);
         // 016D:0136 hlt
-        AL = al1;
+        AL = al2;
         return Hlt();
     }
 
@@ -378,7 +382,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

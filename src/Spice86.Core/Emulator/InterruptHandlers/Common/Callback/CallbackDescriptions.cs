@@ -36,15 +36,15 @@ public static class CallbackDescriptions {
     private static string DescribeHandler(IInterruptHandler handler) {
         string vector = $"INT {handler.VectorNumber:X2}h";
         string group = handler.GetType().Name;
-        if (InterruptServiceGroups.TryGetPropertyName(handler.VectorNumber,
+        if (InterruptServiceGroups.TryGetPropertyName(handler.GetType(),
             out string? propertyName)) {
             group = propertyName;
         }
         switch (handler.Services) {
             case HandlerServices.SingleService single:
-                if (single.Contract is { IsUnknown: false }
-                    && InterruptServiceGroups.TryGetPropertyName(handler.VectorNumber, out _)) {
-                    return $"{vector}: {group}.{single.Contract.Name}";
+                if (!ReferenceEquals(single.Service.Contract, ServiceContract.Unknown)
+                    && InterruptServiceGroups.TryGetPropertyName(handler.GetType(), out _)) {
+                    return $"{vector}: {group}.{single.Service.Name}";
                 }
                 return $"{vector}: {handler.GetType().Name}";
             case HandlerServices.SelectedServices selected:

@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -38,10 +39,11 @@ public class DataCommentTest {
 
     private static readonly SegmentedAddress DosStub = new(0xF000, 0x9000);
 
-    private static ServiceContract DosContract(string name, CpuValues reads,
-        CpuValues writes) =>
-        new(name, new CallEffect(reads, CpuValues.All),
-            ServiceMemoryEffect.Read, false);
+    private static InterruptServiceEntry DosEntry(int selectorValue, string name,
+        CpuValues reads, CpuValues writes) =>
+        new(selectorValue, name,
+            new ServiceContract(new CallEffect(reads, writes), ServiceMemoryEffect.Read, false),
+            ServiceStringArgument.None, ServiceExecutionPath.Stub);
 
     private static CfgBlock[] SplitAfterInterrupt(TestInstructionHelper helper,
         (ushort Offset, byte[] Bytes)[] instructions, bool withDosStub) {
@@ -71,7 +73,7 @@ public class DataCommentTest {
         Generate(changed, memory, null, instructions);
 
     private static GeneratedCSharpProgram Generate(ChangedMemorySnapshot changed, byte[] memory,
-        IReadOnlyDictionary<int, ServiceContract>? dosContracts,
+        IReadOnlyDictionary<int, InterruptServiceEntry>? dosContracts,
         params (ushort Offset, byte[] Bytes)[] instructions) {
         CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), instructions,
             dosContracts is not null);
@@ -89,7 +91,7 @@ public class DataCommentTest {
                 ServiceVectors = new Dictionary<byte, InterruptServiceVector> {
                     [0x21] = new InterruptServiceVector(0x21, DosStub,
                         new HandlerServices.SelectedServices(ServiceSelector.Ah, dosContracts),
-                        "Dos")
+                        typeof(DosInt21Handler))
                 }
             };
         }
@@ -186,8 +188,8 @@ public class DataCommentTest {
     public void OpenServiceShowsTheAsciiZName() {
         // Arrange / Act: a non-printable byte keeps the string off the literal argument, so the
         // comment shows it escaped under the contract's name.
-        IReadOnlyDictionary<int, ServiceContract> contracts = new Dictionary<int, ServiceContract> {
-            [0x3D] = DosContract("OpenFileOrDevice",
+        IReadOnlyDictionary<int, InterruptServiceEntry> contracts = new Dictionary<int, InterruptServiceEntry> {
+            [0x3D] = DosEntry(0x3D, "OpenFileOrDevice",
                 CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
                 CpuValues.Ax | CpuValues.Carry) with { StringArgument = ServiceStringArgument.AsciiZ }
@@ -297,12 +299,12 @@ public class DataCommentTest {
         golden.Should().NotContain("// DOS 3Dh");
     }
 
-    private static readonly IReadOnlyDictionary<int, ServiceContract> PrintContracts =
-        new Dictionary<int, ServiceContract> {
-            [0x09] = DosContract("PrintString",
+    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
+        new Dictionary<int, InterruptServiceEntry> {
+            [0x09] = DosEntry(0x09, "PrintString",
                 CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.Ax) with { StringArgument = ServiceStringArgument.DollarTerminated }
+                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
         };
 
     /// <summary>A typed 09h call whose string is a printable unchanged constant inside the
@@ -315,7 +317,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS, \"Hi\")");
+        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, ds, \"Hi\")");
         program.SourceText.Should().NotContain("DOS 09h");
         AssertCompiles(program);
     }
@@ -331,7 +333,7 @@ public class DataCommentTest {
             memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS);");
+        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, ds);");
         program.SourceText.Should().NotContain("DOS 09h");
         AssertCompiles(program);
     }
@@ -346,7 +348,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintContracts, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, DS);");
+        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0x0100, ds);");
         program.SourceText.Should().Contain("// DOS 09h print \"\\x01A$\"");
         AssertCompiles(program);
     }
@@ -366,7 +368,7 @@ public class DataCommentTest {
             memory, PrintContracts, PrintCall(0xFFFF));
 
         // Assert
-        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0xFFFF, DS);");
+        program.SourceText.Should().Contain("Dos.PrintString(biosSegment, 0x000C, 0xFFFF, ds);");
         program.SourceText.Should().Contain("DOS 09h print \"A$\"");
         AssertCompiles(program);
     }
@@ -392,12 +394,12 @@ public class DataCommentTest {
     [Fact]
     public void AHandleWriteKeepsTheComment() {
         // Arrange / Act
-        IReadOnlyDictionary<int, ServiceContract> contracts = new Dictionary<int, ServiceContract> {
-            [0x40] = DosContract("WriteToFileOrDevice",
+        IReadOnlyDictionary<int, InterruptServiceEntry> contracts = new Dictionary<int, InterruptServiceEntry> {
+            [0x40] = DosEntry(0x40, "WriteToFileOrDevice",
                 CpuValues.Ah | CpuValues.Ds | CpuValues.Bx
                 | CpuValues.Cx | CpuValues.Dx
                 | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.Ax)
+                CpuValues.Ax | CpuValues.Carry)
         };
         byte[] memory = MemoryWith(ImageStart + 0x0100, "DATA"u8.ToArray());
         (ushort, byte[])[] call = [
@@ -415,7 +417,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, contracts, call);
 
         // Assert
-        program.SourceText.Should().Contain("Dos.WriteToFileOrDevice(biosSegment, 0x0012, 4, 0x0100, 1, DS);");
+        program.SourceText.Should().Contain("Dos.WriteToFileOrDevice(biosSegment, 0x0012, 4, 0x0100, 1, ds);");
         program.SourceText.Should().Contain("// DOS 40h write handle 1 \"DATA\"");
         AssertCompiles(program);
     }

@@ -157,17 +157,15 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x33
         AH = 0x33;
         // 016D:0102 mov AL,1
-        AL = 1;
         // 016D:0104 mov DL,1
         DL = 1;
         // 016D:0106 int 0x21
-        Dos.GetSetControlBreak(cs1, 0x0108, 1, 1);
+        (AL, DX, BX) = Dos.GetSetControlBreak(cs1, 0x0108, 1, 1);
         // 016D:0108 mov AH,0x33
         AH = 0x33;
         // 016D:010A mov AL,0
-        AL = 0;
         // 016D:010C int 0x21
-        Dos.GetSetControlBreak(cs1, 0x010E, 0, DL);
+        (AL, DX, BX) = Dos.GetSetControlBreak(cs1, 0x010E, 0, DL);
         // 016D:010E cmp DL,1
         Alu8.Sub(DL, 1);
         // 016D:0111 jne short 0x012A
@@ -175,17 +173,15 @@ public partial class CfgGeneratedOverrides {
             // 016D:0113 mov AH,0x33
             AH = 0x33;
             // 016D:0115 mov AL,1
-            AL = 1;
             // 016D:0117 mov DL,0
             DL = 0;
             // 016D:0119 int 0x21
-            Dos.GetSetControlBreak(cs1, 0x011B, 1, 0);
+            (AL, DX, BX) = Dos.GetSetControlBreak(cs1, 0x011B, 1, 0);
             // 016D:011B mov AH,0x33
             AH = 0x33;
             // 016D:011D mov AL,0
-            AL = 0;
             // 016D:011F int 0x21
-            Dos.GetSetControlBreak(cs1, 0x0121, 0, DL);
+            (AL, DX, BX) = Dos.GetSetControlBreak(cs1, 0x0121, 0, DL);
             // 016D:0121 cmp DL,0
             Alu8.Sub(DL, 0);
             // 016D:0124 jne short 0x012A

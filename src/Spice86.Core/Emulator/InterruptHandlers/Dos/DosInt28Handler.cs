@@ -32,8 +32,8 @@ public class DosInt28Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() => Idle();
 
-    [InterruptService]
-    private void Idle() {
+    [InterruptService(ExecutionPath = ServiceExecutionPath.Direct)]
+    public void Idle() {
         LoggerService.LogTrace("DOS IDLE");
     }
 }

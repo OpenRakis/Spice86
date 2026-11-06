@@ -152,18 +152,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort ds;
+        ushort bx;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 push CS
         Stack.Push16(CS);
         // 016E:0101 pop DS
-        DS = Stack.Pop16();
+        ds = Stack.Pop16();
         // 016E:0102 mov AX,0x3D00
-        AX = 0x3D00;
         // 016E:0105 mov DX,0x011E
-        DX = 0x011E;
         // 016E:0108 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x010A, 0, 0x011E, DS, "EMMXXXX0");
+        (AX, CarryFlag) = Dos.OpenFileOrDevice(cs1, 0x010A, 0, 0x011E, ds, "EMMXXXX0");
         // 016E:010A jb short 0x0117
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_mov);
@@ -172,11 +172,11 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             // 016E:010C mov BX,AX
-            BX = AX;
+            bx = AX;
             // 016E:010E mov AX,0x3E00
             AX = 0x3E00;
             // 016E:0111 int 0x21
-            Dos.CloseFileOrDevice(cs1, 0x0113, BX);
+            (AX, CarryFlag) = Dos.CloseFileOrDevice(cs1, 0x0113, bx);
             // 016E:0113 mov AL,0
             al1 = 0;
             // 016E:0115 jmp short 0x0119

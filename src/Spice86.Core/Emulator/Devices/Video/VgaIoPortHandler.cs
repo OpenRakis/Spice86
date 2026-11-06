@@ -224,6 +224,50 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
+        WritePort(port, value);
+    }
+
+    /// <summary>
+    ///     Writes the DAC palette entry <paramref name="index"/> with its three components, as the port
+    ///     sequence <c>out 0x3C8, index; out 0x3C9, red; out 0x3C9, green; out 0x3C9, blue</c> does: the
+    ///     DAC write index advances past the entry like it does after three data writes.
+    /// </summary>
+    /// <param name="index">The palette index to start writing at.</param>
+    /// <param name="red">The red component (6-bit).</param>
+    /// <param name="green">The green component (6-bit).</param>
+    /// <param name="blue">The blue component (6-bit).</param>
+    public void SetPaletteEntry(byte index, byte red, byte green, byte blue) {
+        WritePort(Ports.DacAddressWriteIndex, index);
+        WritePort(Ports.DacData, red);
+        WritePort(Ports.DacData, green);
+        WritePort(Ports.DacData, blue);
+    }
+
+    /// <summary>
+    ///     Writes sequencer register <paramref name="index"/> with <paramref name="value"/>, as the
+    ///     port pair <c>out 0x3C4, index; out 0x3C5, value</c> does: the sequencer address register
+    ///     keeps <paramref name="index"/> selected.
+    /// </summary>
+    /// <param name="index">The sequencer register index.</param>
+    /// <param name="value">The value to write.</param>
+    public void WriteSequencerRegister(byte index, byte value) {
+        WritePort(Ports.SequencerAddress, index);
+        WritePort(Ports.SequencerData, value);
+    }
+
+    /// <summary>
+    ///     Writes graphics controller register <paramref name="index"/> with <paramref name="value"/>,
+    ///     as the port pair <c>out 0x3CE, index; out 0x3CF, value</c> does: the graphics controller
+    ///     address register keeps <paramref name="index"/> selected.
+    /// </summary>
+    /// <param name="index">The graphics controller register index.</param>
+    /// <param name="value">The value to write.</param>
+    public void WriteGraphicsControllerRegister(byte index, byte value) {
+        WritePort(Ports.GraphicsControllerAddress, index);
+        WritePort(Ports.GraphicsControllerData, value);
+    }
+
+    private void WritePort(ushort port, byte value) {
         _videoState.IsRenderingDirty = true;
         switch (port) {
             case Ports.DacAddressReadIndex:

@@ -152,6 +152,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         StackCallNode { Operation: StackOperation.PopAll } stack => PopAll(stack.Width),
         StackCallNode { Operation: StackOperation.Leave } stack => Leave(stack.Width),
         PortWriteCallNode => ReadWriteIo,
+        DeviceOperationCallNode => ReadWriteIo,
         BoundCheckCallNode => IrEffects.None,
         InterruptServiceCallNode service => ServiceContractEffects.Of(service),
         _ => IrEffects.Unknown
@@ -165,6 +166,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
             => StackAccess(StackPointerOf(stack.Width) | CpuValues.Ss, CpuValues.None,
                 IrTokens.Memory, IrTokens.None),
         PortReadCallNode => ReadWriteIo,
+        DeviceOperationValueNode => ReadWriteIo,
         BitScanCallNode => IrEffects.None,
         SignatureMatchesHelperNode => ReadMemory,
         _ => IrEffects.Unknown

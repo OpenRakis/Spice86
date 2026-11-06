@@ -160,7 +160,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0109 mov AH,0x40
         AH = 0x40;
         // 016D:010B int 0x21
-        Dos.WriteToFileOrDevice(cs1, 0x010D, 2, 0x0112, 1, DS);
+        (AX, CarryFlag) = Dos.WriteToFileOrDevice(cs1, 0x010D, 2, 0x0112, 1, DS);
         // 016D:010D mov AX,0x4C00
         AX = 0x4C00;
         // 016D:0110 int 0x21
@@ -329,7 +329,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, DS. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
     entrydispatcher:

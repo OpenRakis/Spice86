@@ -164,11 +164,12 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
+        ushort dx;
+        byte al2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x1A
         AH = 0x1A;
         // 016D:0102 mov DX,0x0288
-        DX = 0x0288;
         // 016D:0105 int 0x21
         Dos.SetDiskTransferAddress(cs1, 0x0107, 0x0288, DS);
         // 016D:0107 mov SI,0x0162
@@ -190,23 +191,26 @@ public partial class CfgGeneratedOverrides {
             // 016D:0114 push SI
             Stack.Push16(SI);
             // 016D:0115 mov AL,byte ptr DS:[SI+4]
-            AL = UInt8[DS, (ushort)(SI + 4)];
+            al1 = UInt8[DS, (ushort)(SI + 4)];
             // 016D:0118 test AL,AL
-            Alu8.And(AL, AL);
+            Alu8.And(al1, al1);
             // 016D:011A jne short 0x0127
-            if (AL != 0) {
+            if (al1 != 0) {
                 // 016D:0127 mov AH,0x4F
+                AL = al1;
+                AH = 0x4F;
                 // 016D:0129 int 0x21
-                Dos.FindNextMatchingFile(cs1, 0x012B);
+                (AX, CarryFlag) = Dos.FindNextMatchingFile(cs1, 0x012B);
             }
             else {
                 // 016D:011C mov DX,BX
-                DX = BX;
+                dx = BX;
                 // 016D:011E mov CX,0
-                CX = 0;
                 // 016D:0121 mov AH,0x4E
+                AL = al1;
+                AH = 0x4E;
                 // 016D:0123 int 0x21
-                Dos.FindFirstMatchingFile(cs1, 0x0125, 0, DX, DS);
+                (AX, CarryFlag) = Dos.FindFirstMatchingFile(cs1, 0x0125, 0, dx, DS);
                 // 016D:0125 jmp short 0x012B
             }
             // 016D:012B pop SI
@@ -270,19 +274,19 @@ public partial class CfgGeneratedOverrides {
         Out8(0x0998, AL);
         VerifySpeculativeRunOrFail(cs1, 0x0151, SpeculativeRun_0151);
         // 016D:0151 mov AL,0xFF
-        al1 = 0xFF;
+        al2 = 0xFF;
         // 016D:0153 jmp short 0x015D
         goto L_015D;
     L_015B:
         // 016D:015B mov AL,0
-        al1 = 0;
+        al2 = 0;
     L_015D:
         // 016D:015D mov DX,0x0999
         DX = 0x0999;
         // 016D:0160 out DX,AL
-        Out8(0x0999, al1);
+        Out8(0x0999, al2);
         // 016D:0161 hlt
-        AL = al1;
+        AL = al2;
         return Hlt();
     }
 
@@ -447,8 +451,8 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, DS, CF. Changes: all.</summary>
+    /// Segment values at entry, from every call site: ES = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

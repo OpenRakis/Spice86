@@ -63,7 +63,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetStatus_ShouldReturnNoError() {
         // Act
-        _ems.GetStatus();
+        _ems.WriteStatus();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "GetStatus should return no error");
@@ -75,7 +75,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetPageFrameSegment_ShouldReturnCorrectSegment() {
         // Act
-        _ems.GetPageFrameSegment();
+        _ems.WritePageFrameSegment();
 
         // Assert
         _state.BX.Should().Be(ExpandedMemoryManager.EmmPageFrameSegment, "Page frame segment should be 0xE000");
@@ -88,7 +88,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetUnallocatedPageCount_ShouldReturnCorrectCounts() {
         // Act
-        _ems.GetUnallocatedPageCount();
+        _ems.WriteUnallocatedPageCount();
 
         // Assert
         _state.DX.Should().Be(EmmMemory.TotalPages, "Total pages should be 512");
@@ -106,7 +106,7 @@ public class EmsUnitTests {
         _state.BX = 4; // Allocate 4 pages
 
         // Act
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "AllocatePages should return no error");
@@ -122,7 +122,7 @@ public class EmsUnitTests {
         _state.BX = 0; // Try to allocate 0 pages
 
         // Act
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmTriedToAllocateZeroPages, "Should return error for zero page allocation");
@@ -137,7 +137,7 @@ public class EmsUnitTests {
         _state.BX = (ushort)(EmmMemory.TotalPages + 1); // Try to allocate more than total
 
         // Act
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNotEnoughPages, "Should return not enough pages error");
@@ -150,7 +150,7 @@ public class EmsUnitTests {
     public void MapUnmapHandlePage_ShouldMapSuccessfully() {
         // Arrange - First allocate some pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Map logical page
@@ -170,7 +170,7 @@ public class EmsUnitTests {
     public void MapUnmapHandlePage_ShouldUnmapSuccessfully() {
         // Arrange - First allocate and map
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         _state.AL = 0; // Physical page 0
@@ -212,7 +212,7 @@ public class EmsUnitTests {
     public void MapUnmapHandlePage_WithInvalidPhysicalPage_ShouldFail() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Try to map to invalid physical page
@@ -232,7 +232,7 @@ public class EmsUnitTests {
     public void MapUnmapHandlePage_WithLogicalPageOutOfRange_ShouldFail() {
         // Arrange - Allocate 2 pages
         _state.BX = 2;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Try to map logical page 5 (only 0-1 are allocated)
@@ -252,7 +252,7 @@ public class EmsUnitTests {
     public void DeallocatePages_ShouldSucceed() {
         // Arrange - Allocate pages first
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Deallocate
@@ -286,7 +286,7 @@ public class EmsUnitTests {
     public void DeallocatePages_WithSavedPageMap_ShouldFail() {
         // Arrange - Allocate pages and save page map
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         _state.DX = handle;
@@ -309,7 +309,7 @@ public class EmsUnitTests {
         _state.AH = 0x46;
 
         // Act
-        _ems.GetEmmVersion();
+        _ems.WriteEmmVersion();
 
         // Assert
         _state.AL.Should().Be(0x32, "EMS version should be 3.2 (0x32)");
@@ -376,7 +376,7 @@ public class EmsUnitTests {
         int initialCount = _ems.EmmHandles.Count;
 
         // Act
-        _ems.GetEmmHandleCount();
+        _ems.WriteEmmHandleCount();
 
         // Assert
         _state.BX.Should().Be((ushort)initialCount, "Handle count should match actual count");
@@ -390,12 +390,12 @@ public class EmsUnitTests {
     public void GetHandlePages_ShouldReturnCorrectPageCount() {
         // Arrange - Allocate 8 pages
         _state.BX = 8;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act
         _state.DX = handle;
-        _ems.GetHandlePages();
+        _ems.WriteHandlePages();
 
         // Assert
         _state.BX.Should().Be(8, "Should return 8 pages for the handle");
@@ -409,11 +409,11 @@ public class EmsUnitTests {
     public void GetAllHandlePages_ShouldReturnAllHandles() {
         // Arrange - Allocate some pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle1 = _state.DX;
 
         _state.BX = 8;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle2 = _state.DX;
 
         // Setup ES:DI to point to a buffer
@@ -422,7 +422,7 @@ public class EmsUnitTests {
         _state.DI = (ushort)bufferAddress;
 
         // Act
-        _ems.GetAllHandlePages();
+        _ems.WriteAllHandlePages();
 
         // Assert
         _state.AX.Should().Be(EmmStatus.EmmNoError, "GetAllHandlePages should return no error");
@@ -442,7 +442,7 @@ public class EmsUnitTests {
     public void MapUnmapMultipleHandlePages_WithPhysicalPageNumbers_ShouldSucceed() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Setup mapping structure in memory
@@ -471,7 +471,7 @@ public class EmsUnitTests {
     public void MapUnmapMultipleHandlePages_WithSegmentedAddress_ShouldSucceed() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Setup mapping structure with segment addresses
@@ -498,7 +498,7 @@ public class EmsUnitTests {
     public void ReallocatePages_GrowingAllocation_ShouldSucceed() {
         // Arrange - Allocate 4 pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Reallocate to 8 pages
@@ -518,7 +518,7 @@ public class EmsUnitTests {
     public void ReallocatePages_ShrinkingAllocation_ShouldSucceed() {
         // Arrange - Allocate 8 pages
         _state.BX = 8;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Reallocate to 4 pages
@@ -538,7 +538,7 @@ public class EmsUnitTests {
     public void ReallocatePages_WithSameSize_ShouldSucceed() {
         // Arrange - Allocate 4 pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Reallocate to same size (4 pages)
@@ -558,7 +558,7 @@ public class EmsUnitTests {
     public void ReallocatePages_ToZero_ShouldClearPages() {
         // Arrange - Allocate 4 pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Reallocate to 0 pages
@@ -594,7 +594,7 @@ public class EmsUnitTests {
     public void GetSetHandleName_SetName_ShouldSucceed() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Write name to memory
@@ -624,7 +624,7 @@ public class EmsUnitTests {
     public void GetSetHandleName_GetName_ShouldSucceed() {
         // Arrange - Allocate pages and set name
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
         const string testName = "MYHANDLE";
         const uint nameBufferAddress = 0x3000;
@@ -679,7 +679,7 @@ public class EmsUnitTests {
     public void GetSetHandleName_WithInvalidSubFunction_ShouldFail() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Use invalid subfunction
@@ -797,7 +797,7 @@ public class EmsUnitTests {
     public void MappedEmsPage_ShouldAllowMemoryAccess() {
         // Arrange - Allocate and map pages
         _state.BX = 1;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         _state.AL = 0; // Physical page 0
@@ -821,7 +821,7 @@ public class EmsUnitTests {
     public void DifferentLogicalPages_ShouldHaveSeparateData() {
         // Arrange - Allocate multiple pages
         _state.BX = 2;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
@@ -935,7 +935,7 @@ public class EmsUnitTests {
     public void SaveAndRestorePageMap_ShouldMaintainMappings() {
         // Arrange - Allocate and map a page
         _state.BX = 1;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         _state.AL = 0; // Physical page 0
@@ -970,7 +970,7 @@ public class EmsUnitTests {
     public void MapUnmapHandlePage_WithPhysicalPage4_ShouldFail() {
         // Arrange - Allocate pages
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         // Act - Try to map to physical page 4 (invalid, only 0-3 are valid)
@@ -991,12 +991,12 @@ public class EmsUnitTests {
     public void AllocatePages_AfterDeallocation_ShouldNotCollideWithExistingHandles() {
         // Arrange - Allocate handle 1 (system handle 0 already exists)
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle1 = _state.DX;
 
         // Allocate handle 2
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle2 = _state.DX;
 
         // Map handle2's page and write data
@@ -1014,7 +1014,7 @@ public class EmsUnitTests {
 
         // Act - Allocate a new handle (should get a new ID, not reuse handle2's ID)
         _state.BX = 4;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle3 = _state.DX;
 
         // Assert
@@ -1035,7 +1035,7 @@ public class EmsUnitTests {
     public void SaveAndRestorePageMap_ShouldRestoreActualMappings() {
         // Arrange - Allocate 2 logical pages
         _state.BX = 2;
-        _ems.AllocatePages();
+        _ems.WriteAllocatedPages();
         ushort handle = _state.DX;
 
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
@@ -1064,5 +1064,37 @@ public class EmsUnitTests {
 
         // Assert - Should read the original value from logical page 0
         _memory.UInt8[pageFrameAddress].Should().Be(0x11, "After restore, logical page 0 should be mapped back");
+    }
+
+    /// <summary>
+    /// Tests that MapUnmapMultipleHandlePages (Function 0x50) keeps mapping later
+    /// entries after an entry fails: the original implementation ignores the
+    /// per-entry result and always returns EmmNoError.
+    /// </summary>
+    [Fact]
+    public void MapUnmapMultipleHandlePagesContinuesAfterAnInvalidEntry() {
+        // Arrange - Allocate one page
+        EmmHandle handle = _ems.AllocatePages(1);
+
+        // Setup mapping structure: first entry invalid (physical page 4 is out of
+        // range), second entry valid (logical 0 -> physical 1)
+        const uint mapAddress = 0x2000;
+        _memory.UInt16[mapAddress] = 0; // Logical page 0
+        _memory.UInt16[mapAddress + 2] = 4; // Physical page 4 (invalid)
+        _memory.UInt16[mapAddress + 4] = 0; // Logical page 0
+        _memory.UInt16[mapAddress + 6] = 1; // Physical page 1
+
+        // Act
+        _state.AL = EmmSubFunctionsCodes.UsePhysicalPageNumbers;
+        _state.DX = handle.HandleNumber;
+        _state.CX = 2;
+        _state.DS = 0;
+        _state.SI = (ushort)mapAddress;
+        _ems.MapUnmapMultipleHandlePages();
+
+        // Assert
+        _state.AH.Should().Be(EmmStatus.EmmNoError, "MapUnmapMultipleHandlePages should return no error");
+        _ems.EmmPageFrame[1].PhysicalPage.Should().BeSameAs(handle.LogicalPages[0],
+            "the second entry must still be mapped after the first entry failed");
     }
 }

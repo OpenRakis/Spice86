@@ -143,24 +143,26 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort dx1 = 0;
+        ushort bx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov AH,0x42
         AH = 0x42;
         // 016E:0102 int 0x67
-        Ems.GetUnallocatedPageCount(cs1, 0x0104, AL);
+        (AH, dx1, bx1) = Ems.GetUnallocatedPageCount(cs1, 0x0104, AL);
         // 016E:0104 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:0107 jne short 0x0116
         if (AH == 0) {
             // 016E:0109 cmp DX,0
-            Alu16.Sub(DX, 0);
+            Alu16.Sub(dx1, 0);
             // 016E:010C jbe short 0x0116
-            if (DX > 0) {
+            if (dx1 > 0) {
                 // 016E:010E cmp BX,DX
-                Alu16.Sub(BX, DX);
+                Alu16.Sub(bx1, dx1);
                 // 016E:0110 ja short 0x0116
-                if (BX > DX) {
+                if (bx1 > dx1) {
                     goto L_0116;
                 }
                 // 016E:0112 mov AL,0
@@ -179,6 +181,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:011B out DX,AL
         Out8(0x0999, al1);
         // 016E:011C hlt
+        BX = bx1;
         AL = al1;
         return Hlt();
     }

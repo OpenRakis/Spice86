@@ -4,8 +4,11 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
@@ -195,5 +198,45 @@ public class CfgCSharpGeneratorLocationsTest {
             ?? throw new InvalidOperationException("The shared node kept no target.");
         resolved.Class.Name.Should().Be("DsGlobals");
         resolved.Class.Properties.Should().ContainKey((0x0020, 2));
+    }
+
+    [Fact]
+    public void CallResultTargetDoesNotResolveToTheSelectorConstant() {
+        // Arrange: an AX-selected service (selector 0) whose result target is AX itself.
+        // Checking the selector before the result overlap would resolve the value AX holds
+        // after the call to the selector constant 0.
+        IrMethod method = Lift(Linear(new TestInstructionHelper(),
+            (0x0000, [0xCD, 0x33]),       // int 0x33
+            (0x0002, [0x8E, 0xD8]),       // mov ds, ax
+            (0x0004, [0xA1, 0x20, 0x00]), // mov ax, [0x0020]
+            (0x0007, [0xC3])));           // ret
+        InterruptServiceEntry entry = new(0x00, "ResetMouseDriver",
+            new ServiceContract(
+                new CallEffect(CpuValues.Ax | CpuValues.Ss | CpuValues.Sp, CpuValues.Ax),
+                ServiceMemoryEffect.None, false),
+            ServiceStringArgument.None, ServiceExecutionPath.Stub);
+        IrBlock block = method.Blocks.Single(b =>
+            b.Statements.Any(statement => statement.Node is InterruptCallHelperNode));
+        int callIndex = block.Statements.ToList()
+            .FindIndex(statement => statement.Node is InterruptCallHelperNode);
+        callIndex.Should().BeGreaterThanOrEqualTo(0);
+        InterruptServiceCallNode callNode = new(0x33, ServiceSelector.Ax, entry, "Mouse",
+            new ConstantNode(DataType.UINT16, 0xF000), new ConstantNode(DataType.UINT16, 0x0100)) {
+            Results = [new RegisterNode(DataType.UINT16, 0)]
+        };
+        block.Statements[callIndex] = IrStatement.Create(callNode,
+            block.Statements[callIndex].Origin);
+        IrSsa ssa = IrSsa.Build(method);
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());
+
+        // Act: DS after `mov ds, ax` follows the call-defined AX version.
+        IrStatement read = method.Blocks.SelectMany(b => b.Statements).First(statement =>
+            IrAstChildren.Descendants(statement.Node).OfType<SegmentedPointerNode>().Any());
+        SegmentValue resolved = values.ValueAt(read, IrSsaValue.Ds);
+
+        // Assert: the result version is Unknown, not the selector constant.
+        resolved.Should().BeOfType<SegmentValue.Unknown>(
+            "the AX the call returns is not the selector 0 the helper stored");
     }
 }

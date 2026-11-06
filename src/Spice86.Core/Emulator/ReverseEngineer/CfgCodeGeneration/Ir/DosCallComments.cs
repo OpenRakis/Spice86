@@ -52,15 +52,15 @@ internal static class DosCallComments {
                     || !facts.TryGetBefore(block, index, Ah, out ulong service)) {
                     continue;
                 }
-                ServiceContract? contract =
+                InterruptServiceEntry? entry =
                     call.Service is { VectorNumber: 0x21, Services: HandlerServices.SelectedServices selected }
-                        ? selected.Contracts.GetValueOrDefault((byte)service)
+                        ? selected.Services.GetValueOrDefault((byte)service)
                         : null;
                 if ((byte)service is not 0x09 and not 0x40
-                    && (contract?.StringArgument ?? ServiceStringArgument.None).Terminator() is null) {
+                    && (entry?.StringArgument ?? ServiceStringArgument.None).Terminator() is null) {
                     continue;
                 }
-                dosCalls[statement.Origin] = new DosCallRecord((byte)service, contract,
+                dosCalls[statement.Origin] = new DosCallRecord((byte)service, entry,
                     Known(Dx), Known(Cx), Known(Bx));
 
                 ushort? Known(RegisterNode register) =>
@@ -94,7 +94,7 @@ internal static class DosCallComments {
                 uint physical = (uint)(ds.Value * 16 + dx);
                 InterruptServiceCallNode? serviceCall = FindServiceCall(statement.Node);
                 if (serviceCall is not null
-                    && serviceCall.Contract.StringArgument.Terminator() is { } terminator
+                    && serviceCall.Service.StringArgument.Terminator() is { } terminator
                     && StringLiteral(record, memory, changed, physical, dx, terminator)
                         is { } literal) {
                     resolutions[statement.Origin.Address] = new DosCallResolution(null, literal);
@@ -203,8 +203,8 @@ internal static class DosCallComments {
     /// at <c>DS:DX</c>; the terminator byte counts for the unchanged check but is not shown.</summary>
     private static string? AsciiZComment(DosCallRecord record, byte[] memory,
         ChangedMemorySnapshot changed, uint physical) {
-        if (record.Contract is null
-            || record.Contract.StringArgument.Terminator() is not { } terminator) {
+        if (record.ServiceEntry is null
+            || record.ServiceEntry.StringArgument.Terminator() is not { } terminator) {
             return null;
         }
         int end = ScanFor(memory, physical, terminator);
@@ -214,7 +214,7 @@ internal static class DosCallComments {
         if (!changed.IsUnchanged(physical, end + 1)) {
             return null;
         }
-        return $"DOS {record.Service:X2}h {record.Contract.Name} \"{Escape(memory, physical, end)}\"";
+        return $"DOS {record.Service:X2}h {record.ServiceEntry.Name} \"{Escape(memory, physical, end)}\"";
     }
 
     /// <summary><c>DOS 40h write handle 1 "DATA"</c>: the CX bytes at <c>DS:DX</c>, the handle number

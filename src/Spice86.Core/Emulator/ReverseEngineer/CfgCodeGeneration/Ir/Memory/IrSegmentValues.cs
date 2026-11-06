@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using System.Linq;
@@ -213,6 +215,31 @@ internal sealed class IrSegmentValues {
         IrStatement? statement = _ssa.DefiningStatement(version);
         if (statement is null) {
             return SegmentValue.Unknown.Instance;
+        }
+        if (statement.Node is InterruptServiceCallNode serviceCall) {
+            // On the stub path the helper stores every passed input register into State and the
+            // stub leaves non-output registers alone, so a call-defined parameter register holds
+            // the argument the call read; a full-width selector holds the constant the helper
+            // stores. A result target's version is whatever the service returned: the call reads
+            // the pre-call value only because the contract's write is conditional, so resolving
+            // it would report a may-written output as preserved. On the direct path the helper
+            // stores no input at all, so only result targets (which are Unknown) are defined.
+            if (serviceCall.Service.ExecutionPath == ServiceExecutionPath.Direct) {
+                return SegmentValue.Unknown.Instance;
+            }
+            CpuValues resultMask = serviceCall.Results.Aggregate(CpuValues.None,
+                (mask, result) => mask | IrEffectsVisitor.Of(result, false).Reads);
+            if ((resultMask & IrSsaValues.MaskOf(info.Value)) != CpuValues.None) {
+                return SegmentValue.Unknown.Instance;
+            }
+            if (serviceCall.Selector is { } selector
+                && selector.ToCpuValues() == IrSsaValues.MaskOf(info.Value)) {
+                return new SegmentValue.Known((ushort)serviceCall.SelectorValue);
+            }
+            int readVersion = _ssa.VersionUsed(statement, info.Value);
+            return readVersion < 0
+                ? SegmentValue.Unknown.Instance
+                : Resolve(readVersion, visiting);
         }
         if (info.Value == IrSsaValue.Direction
             && statement.Node is BinaryOperationNode {

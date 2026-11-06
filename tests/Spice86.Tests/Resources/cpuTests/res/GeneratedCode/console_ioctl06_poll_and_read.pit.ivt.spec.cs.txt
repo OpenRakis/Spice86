@@ -155,7 +155,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:0104 xor BX,BX
             BX = Alu16.Xor(BX, BX);
             // 016D:0106 int 0x21
-            Dos.IoControl(cs1, 0x0108, 6, CX, DX, 0, DS);
+            (AX, DX, CarryFlag) = Dos.IoControl(cs1, 0x0108, 6, CX, DX, 0, DS);
             // 016D:0108 or AL,AL
             AL = Alu8.Or(AL, AL);
             // 016D:010A je short 0x0100

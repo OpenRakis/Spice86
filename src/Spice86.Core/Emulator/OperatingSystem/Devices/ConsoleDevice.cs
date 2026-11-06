@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -48,7 +46,6 @@ public class ConsoleDevice : CharacterDevice {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IVgaFunctionality _vga;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
-    private readonly State _cpuState;
 
     private readonly AnsiState _ansiState = new();
     private readonly AnsiSequenceHandler _ansiHandler;
@@ -69,13 +66,12 @@ public class ConsoleDevice : CharacterDevice {
     /// <param name="memory">Memory reader/writer used by the device header.</param>
     /// <param name="baseAddress">Physical address of the DOS device header in memory.</param>
     /// <param name="loggerService">Logger for ANSI diagnostics and warnings.</param>
-    /// <param name="state">CPU register state, used to read keystroke results from INT 16h.</param>
     /// <param name="biosDataArea">BIOS data area for screen dimensions, cursor positions, and active video page.</param>
     /// <param name="keyboardInt16Handler">INT 16h handler that provides blocking keystroke reads.</param>
     /// <param name="vgaFunctionality">VGA BIOS interface for cursor movement, scrolling, and character output.</param>
     /// <param name="biosKeyboardBuffer">Keyboard ring buffer used to check input availability without blocking.</param>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
-        ILogger loggerService, State state, BiosDataArea biosDataArea,
+        ILogger loggerService, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,
@@ -83,7 +79,6 @@ public class ConsoleDevice : CharacterDevice {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _keyboardInt16Handler = keyboardInt16Handler;
-        _cpuState = state;
         _biosDataArea = biosDataArea;
         _vga = vgaFunctionality;
         _currentMode = vgaFunctionality.GetCurrentMode();
@@ -157,7 +152,6 @@ public class ConsoleDevice : CharacterDevice {
         if (count == 0 || offset >= buffer.Length || buffer.Length == 0) {
             return 0;
         }
-        ushort savedAx = _cpuState.AX;
         int index = offset;
         int bytesRead = 0;
 
@@ -176,9 +170,9 @@ public class ConsoleDevice : CharacterDevice {
                 continue;
             }
 
-            _keyboardInt16Handler.GetKeystroke();
-            byte asciiCode = _cpuState.AL;
-            byte scanCode = _cpuState.AH;
+            ushort keystroke = _keyboardInt16Handler.ReadKeystroke();
+            byte asciiCode = (byte)keystroke;
+            byte scanCode = (byte)(keystroke >> 8);
 
             // Key reassignment lookup (NANSI: lookup in getchar).
             // Normal keys: lookup by ASCII code. Function/extended keys (AL=0 or 0xE0): lookup by scanCode<<8.
@@ -213,7 +207,7 @@ public class ConsoleDevice : CharacterDevice {
                 EchoCharacter(asciiCode);
             }
         }
-        _cpuState.AX = savedAx;
+
         return bytesRead;
     }
 

@@ -163,21 +163,15 @@ public partial class CfgGeneratedOverrides {
         // 016D:0109 mov AH,0x3F
         AH = 0x3F;
         // 016D:010B int 0x21
-        Dos.ReadFileOrDevice(cs1, 0x010D, 1, 0x0125, 0, DS);
+        (AX, CarryFlag) = Dos.ReadFileOrDevice(cs1, 0x010D, 1, 0x0125, 0, DS);
         // 016D:010D mov AH,0x44
         AH = 0x44;
         // 016D:010F mov AL,6
         AL = 6;
         // 016D:0111 xor BX,BX
-        BX = 0;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = true;
-        SignFlag = false;
-        OverflowFlag = false;
+        BX = Alu16.Xor(BX, BX);
         // 016D:0113 int 0x21
-        Dos.IoControl(cs1, 0x0115, 6, 1, 0x0125, 0, DS);
+        (AX, DX, CarryFlag) = Dos.IoControl(cs1, 0x0115, 6, CX, DX, 0, DS);
         // 016D:0115 mov AH,7
         AH = 7;
         // 016D:0117 mov BX,0xB800
@@ -357,7 +351,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, DS. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

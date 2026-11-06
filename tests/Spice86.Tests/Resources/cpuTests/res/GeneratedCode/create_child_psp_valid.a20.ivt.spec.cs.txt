@@ -158,6 +158,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort bp1 = 0;
         ushort di1 = 0;
+        ushort bx;
         byte al1 = 0;
         byte flagOperand_0130 = 0;
         byte flagOperand_0138 = 0;
@@ -167,7 +168,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        BX = Dos.GetPspAddress(cs1, 0x0104);
         // 016D:0104 mov BP,BX
         bp1 = BX;
         // 016D:0106 mov ES,BX
@@ -175,28 +176,27 @@ public partial class CfgGeneratedOverrides {
         // 016D:0108 mov DI,word ptr ES:[0x002C]
         di1 = EsGlobals.Word002C;
         // 016D:010D mov DX,0x2000
-        DX = 0x2000;
         // 016D:0110 mov SI,0x0010
-        SI = 0x0010;
         // 016D:0113 mov AH,0x55
+        AH = 0x55;
         // 016D:0115 int 0x21
-        Dos.CreateChildPsp(cs1, 0x0117, 0x2000, 0x0010);
+        AL = Dos.CreateChildPsp(cs1, 0x0117, 0x2000, 0x0010);
         // 016D:0117 cmp AL,0xF0
         Alu8.Sub(AL, 0xF0);
         // 016D:0119 jne short 0x0152
         if (AL == 0xF0) {
             // 016D:011B mov AH,0x62
             // 016D:011D int 0x21
-            Dos.GetPspAddress(cs1, 0x011F);
+            BX = Dos.GetPspAddress(cs1, 0x011F);
             // 016D:011F cmp BX,0x2000
             Alu16.Sub(BX, 0x2000);
             // 016D:0123 jne short 0x0152
             if (BX == 0x2000) {
                 // 016D:0125 mov BX,BP
-                BX = bp1;
+                bx = bp1;
                 // 016D:0127 mov AH,0x50
                 // 016D:0129 int 0x21
-                Dos.SetCurrentPsp(cs1, 0x012B, BX);
+                Dos.SetCurrentPsp(cs1, 0x012B, bx);
                 // 016D:012B mov AX,0x2000
                 AX = 0x2000;
                 // 016D:012E mov ES,AX

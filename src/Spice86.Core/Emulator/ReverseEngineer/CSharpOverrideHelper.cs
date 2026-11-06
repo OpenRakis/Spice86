@@ -16,7 +16,9 @@ using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.ReverseEngineer;
@@ -485,6 +487,31 @@ public class CSharpOverrideHelper {
     protected FloppyControllerPorts FloppyControllerPorts { get; }
 
     /// <summary>
+    /// The CMOS/RTC device; its register operations are the device-level form of the port 0x70/0x71
+    /// sequences. The interrupt-service helper of int 70h is <see cref="Rtc"/>.
+    /// </summary>
+    protected RealTimeClock Cmos { get; }
+
+    /// <summary>
+    /// The programmable interval timer device; its channel programming operation is the
+    /// device-level form of the port 0x43 / 0x40+channel sequences.
+    /// </summary>
+    protected PitTimer Pit { get; }
+
+    /// <summary>
+    /// The VGA I/O port device; its register and palette operations are the device-level form of the
+    /// index/data port sequences.
+    /// </summary>
+    protected VgaIoPortHandler Vga => Machine.VgaIoPortHandler as VgaIoPortHandler
+        ?? throw FailAsUntested("The installed VGA port handler has no device-operation API");
+
+    /// <summary>
+    /// The OPL synthesizer device; its register write operation is the device-level form of the
+    /// address/data port pairs.
+    /// </summary>
+    protected Opl3Fm Opl { get; }
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
@@ -528,6 +555,9 @@ public class CSharpOverrideHelper {
         GravisUltrasoundPorts = new(machine.IoPortDispatcher);
         JoystickPorts = new(machine.IoPortDispatcher);
         FloppyControllerPorts = new(machine.IoPortDispatcher);
+        Cmos = machine.RealTimeClock;
+        Pit = machine.Timer;
+        Opl = machine.OPL;
         Video = new VideoServices(this);
         Equipment = new EquipmentServices(this);
         MemorySize = new MemorySizeServices(this);
@@ -1182,6 +1212,69 @@ public class CSharpOverrideHelper {
     public void InterruptServiceCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
         CheckInterruptServiceVector(vectorNumber);
         InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber);
+    }
+
+    /// <summary>
+    /// Returns the installed interrupt handler of type <typeparamref name="THandler"/>.
+    /// </summary>
+    /// <typeparam name="THandler">The handler type.</typeparam>
+    /// <exception cref="UnrecoverableException">No handler of the type is installed.</exception>
+    internal THandler GetInterruptHandler<THandler>() where THandler : class, IInterruptHandler {
+        return Machine.InstalledInterruptHandlers.Handlers.Values.OfType<THandler>()
+            .FirstOrDefault() ?? throw FailAsUntested(
+                $"No installed interrupt handler of type {typeof(THandler).Name}");
+    }
+
+    /// <summary>
+    /// Runs the declared <see cref="ServiceExecutionPath.Direct"/> service <paramref name="service"/>
+    /// of <paramref name="handler"/> without executing its stub bytes: after checking the vector and
+    /// the stub bytes themselves, the same frame as <see cref="ExecuteInterruptCall"/> is pushed
+    /// (FLAGS, IF cleared, return address), <paramref name="invoke"/> runs with CS:IP at the
+    /// installed callback address, <paramref name="writeFrameFlags"/> updates the output flag bits
+    /// the service promises on the stacked FLAGS word, and the frame is popped by an interrupt
+    /// return validated like a typed call return.
+    /// </summary>
+    /// <typeparam name="T">The result type of the service implementation.</typeparam>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="handler">The installed interrupt handler the service belongs to.</param>
+    /// <param name="service">The declared entry of the called service.</param>
+    /// <param name="invoke">The service implementation invocation.</param>
+    /// <param name="writeFrameFlags">Writes the stacked output flag bits from the result.</param>
+    /// <exception cref="UnrecoverableException">The service is not declared
+    /// <see cref="ServiceExecutionPath.Direct"/>, the vector was hooked, or the installed stub
+    /// bytes differ from the callback-plus-iret shape the call replaces.</exception>
+    internal T DirectInterruptServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, InterruptServiceEntry service, Func<T> invoke,
+        Action<T> writeFrameFlags) {
+        CheckInterruptServiceVector(handler.VectorNumber);
+        if (service.ExecutionPath != ServiceExecutionPath.Direct) {
+            throw FailAsUntested(
+                $"Service {service.Name} of vector 0x{handler.VectorNumber:X2} is not declared Direct");
+        }
+        SegmentedAddress stub = Machine.InterruptVectorTable[handler.VectorNumber];
+        byte[] expectedBytes = [0xFE, 0x38, handler.VectorNumber, 0x00, 0xCF];
+        for (int i = 0; i < expectedBytes.Length; i++) {
+            byte actual = Memory.UInt8[stub.Segment, (ushort)(stub.Offset + i)];
+            if (actual != expectedBytes[i]) {
+                throw FailAsUntested(
+                    $"Stub byte {i} of the direct service {service.Name} at {stub}: "
+                    + $"expected 0x{expectedBytes[i]:X2}, found 0x{actual:X2}");
+            }
+        }
+
+        uint expectedStackAddress = State.StackPhysicalAddress;
+        Stack.Push16(State.Flags.FlagRegister16);
+        InterruptFlag = false;
+        Stack.Push16(expectedReturnCs);
+        Stack.Push16(expectedReturnIp);
+        State.CS = stub.Segment;
+        State.IP = stub.Offset;
+        T result = invoke();
+        writeFrameFlags(result);
+        ReturnOperationsHelper.InterruptRet();
+        CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
+        return result;
     }
 
     /// <summary>

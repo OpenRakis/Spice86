@@ -158,7 +158,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AX,0x6300
         AX = 0x6300;
         // 016D:0103 int 0x21
-        Dos.GetLeadByteTable(cs1, 0x0105, 0);
+        (AL, SI, DS, CarryFlag) = Dos.GetLeadByteTable(cs1, 0x0105, 0);
         // 016D:0105 mov DX,DS
         dx1 = DS;
         // 016D:0107 cmp DX,0xC800

@@ -350,7 +350,7 @@ public partial class CfgGeneratedOverrides {
         // F000:4009 mov AX,0x0013
         AX = 0x0013;
         // F000:400C int 0x10
-        Video.SetVideoMode(biosSegment, 0x400E, 0x13);
+        AL = Video.SetVideoMode(biosSegment, 0x400E, 0x13);
         // F000:400E cli
         InterruptFlag = false;
         // F000:400F mov AX,0xA000

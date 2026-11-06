@@ -160,14 +160,14 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        BX = Dos.GetPspAddress(cs1, 0x0104);
         // 016D:0104 mov ES,BX
         ES = BX;
         // 016D:0106 mov AH,0x67
+        AH = 0x67;
         // 016D:0108 mov BX,0x0030
-        BX = 0x0030;
         // 016D:010B int 0x21
-        Dos.SetHandleCount(cs1, 0x010D, 0x0030);
+        (AX, CarryFlag) = Dos.SetHandleCount(cs1, 0x010D, 0x0030);
         // 016D:010D jb short 0x011B
         if (!CarryFlag) {
             // 016D:010F cmp word ptr ES:[0x0032],0x0030

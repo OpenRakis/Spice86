@@ -85,47 +85,44 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         // F000:000B mov AX,CS
         // F000:000D add AX,0x0100
-        AX = (ushort)(CS + 0x0100);
+        ax = (ushort)(CS + 0x0100);
         // F000:0010 mov word ptr DS:[0x0040],AX
-        Segment2000Globals.Word0040 = AX;
+        Segment2000Globals.Word0040 = ax;
         // F000:0013 mov AX,CS
         // F000:0015 add AX,0x0200
-        ax = (ushort)(CS + 0x0200);
+        AX = (ushort)(CS + 0x0200);
         // F000:0018 mov word ptr DS:[0x0042],AX
-        Segment2000Globals.Word0042 = ax;
+        Segment2000Globals.Word0042 = AX;
         // F000:001B mov AX,0x0040
         AX = 0x0040;
         // F000:001E mov ES,AX
         ES = 0x0040;
         // F000:0020 mov AL,byte ptr ES:[0x0017]
-        AL = Segment0040Globals.Byte0017;
+        al = Segment0040Globals.Byte0017;
         // F000:0024 mov byte ptr DS:[0x0044],AL
-        Segment2000Globals.Byte0044 = AL;
+        Segment2000Globals.Byte0044 = al;
         // F000:0027 mov DX,0x03CE
         // F000:002A mov AL,6
         // F000:002C out DX,AL
-        VgaPorts.WriteGraphicsControllerAddress(6);
         // F000:002D mov DX,0x03CF
         // F000:0030 mov AL,0x0C
         // F000:0032 out DX,AL
-        VgaPorts.WriteGraphicsControllerData(0x0C);
+        Vga.WriteGraphicsControllerRegister(6, 0x0C);
         // F000:0033 mov DX,0x03CE
         // F000:0036 mov AL,8
         // F000:0038 out DX,AL
-        VgaPorts.WriteGraphicsControllerAddress(8);
         // F000:0039 mov DX,0x03CF
         // F000:003C mov AL,0xFF
         // F000:003E out DX,AL
-        VgaPorts.WriteGraphicsControllerData(0xFF);
+        Vga.WriteGraphicsControllerRegister(8, 0xFF);
         // F000:003F mov DX,0x03C4
         // F000:0042 mov AL,2
         // F000:0044 out DX,AL
-        VgaPorts.WriteSequencerAddress(2);
         // F000:0045 mov DX,0x03C5
         DX = 0x03C5;
         // F000:0048 mov AL,0x0F
         // F000:004A out DX,AL
-        VgaPorts.WriteSequencerData(0x0F);
+        Vga.WriteSequencerRegister(2, 0x0F);
         // F000:004B mov AX,0xB800
         // F000:004E mov ES,AX
         ES = 0xB800;

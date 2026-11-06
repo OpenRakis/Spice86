@@ -514,7 +514,6 @@ public partial class CfgGeneratedOverrides {
             // 016D:020C mov BX,7
             bx1 = 7;
             // 016D:020F int 0x10
-            BX = bx1;
             Video.WriteTextInTeletypeMode(cs1, 0x0211, AL, 7);
             // 016D:0211 loop 0x0207
             CX--;

@@ -159,7 +159,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 mov DL,0xFF
         DL = 0xFF;
         // 016D:0104 int 0x21
-        Dos.DirectConsoleIo(cs1, 0x0106, 0xFF);
+        (AL, ZeroFlag) = Dos.DirectConsoleIo(cs1, 0x0106, 0xFF);
         // 016D:0106 mov AH,7
         AH = 7;
         // 016D:0108 mov BX,0xB800
@@ -339,7 +339,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

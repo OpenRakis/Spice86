@@ -154,34 +154,31 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort es;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 push CS
         Stack.Push16(CS);
         // 016D:0101 pop ES
-        ES = Stack.Pop16();
+        es = Stack.Pop16();
         // 016D:0102 mov AX,0x4A00
         AX = 0x4A00;
         // 016D:0105 mov BX,0x1000
-        BX = 0x1000;
         // 016D:0108 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x010A, 0x1000, ES);
+        (AX, BX, CarryFlag) = Dos.ModifyMemoryBlock(cs1, 0x010A, 0x1000, es);
         // 016D:010A jb near 0x01AA
         if (!CarryFlag) {
             // 016D:010E mov AX,0x5801
-            AX = 0x5801;
             // 016D:0111 mov BX,0x0040
-            BX = 0x0040;
             // 016D:0114 int 0x21
-            Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0116, 1, 0x0040);
+            (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0116, 1, 0x0040);
             // 016D:0116 jb near 0x01AA
             if (!CarryFlag) {
                 // 016D:011A mov AX,0x4800
                 AX = 0x4800;
                 // 016D:011D mov BX,0x2000
-                BX = 0x2000;
                 // 016D:0120 int 0x21
-                Dos.AllocateMemoryBlock(cs1, 0x0122, 0x2000);
+                (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x0122, 0x2000);
                 // 016D:0122 jae near 0x01AA
                 if (CarryFlag) {
                     // 016D:0126 cmp BX,0x1FFF
@@ -191,9 +188,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:012C mov AX,0x4800
                         AX = 0x4800;
                         // 016D:012F mov BX,0x1FFF
-                        BX = 0x1FFF;
                         // 016D:0132 int 0x21
-                        Dos.AllocateMemoryBlock(cs1, 0x0134, 0x1FFF);
+                        (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x0134, 0x1FFF);
                         // 016D:0134 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -207,11 +203,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:013B mov word ptr DS:[0x01B1],AX
                         ImageMinus0003Globals.Word01B1 = AX;
                         // 016D:013E mov AX,0x5801
-                        AX = 0x5801;
                         // 016D:0141 mov BX,0x0080
-                        BX = 0x0080;
                         // 016D:0144 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0146, 1, 0x0080);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0146, 1, 0x0080);
                         // 016D:0146 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -219,9 +213,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0148 mov AX,0x4800
                         AX = 0x4800;
                         // 016D:014B mov BX,0x2000
-                        BX = 0x2000;
                         // 016D:014E int 0x21
-                        Dos.AllocateMemoryBlock(cs1, 0x0150, 0x2000);
+                        (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x0150, 0x2000);
                         // 016D:0150 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -235,11 +228,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0157 mov word ptr DS:[0x01B3],AX
                         ImageMinus0003Globals.Word01B3 = AX;
                         // 016D:015A mov AX,0x5801
-                        AX = 0x5801;
                         // 016D:015D mov BX,0x00C3
-                        BX = 0x00C3;
                         // 016D:0160 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0162, 1, 0x00C3);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0162, 1, 0x00C3);
                         // 016D:0162 jae short 0x01AA
                         if (!CarryFlag) {
                             goto L_01AA;
@@ -251,11 +242,9 @@ public partial class CfgGeneratedOverrides {
                             goto L_01AA;
                         }
                         // 016D:0169 mov AX,0x5801
-                        AX = 0x5801;
                         // 016D:016C mov BX,0x00C0
-                        BX = 0x00C0;
                         // 016D:016F int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0171, 1, 0x00C0);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0171, 1, 0x00C0);
                         // 016D:0171 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -263,9 +252,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0173 mov AX,0x4800
                         AX = 0x4800;
                         // 016D:0176 mov BX,0x0100
-                        BX = 0x0100;
                         // 016D:0179 int 0x21
-                        Dos.AllocateMemoryBlock(cs1, 0x017B, 0x0100);
+                        (AX, BX, CarryFlag) = Dos.AllocateMemoryBlock(cs1, 0x017B, 0x0100);
                         // 016D:017B jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -281,9 +269,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0185 mov AX,0x4900
                         AX = 0x4900;
                         // 016D:0188 mov ES,word ptr DS:[0x01B5]
-                        ES = ImageMinus0003Globals.Word01B5;
+                        es = ImageMinus0003Globals.Word01B5;
                         // 016D:018C int 0x21
-                        Dos.FreeMemoryBlock(cs1, 0x018E, ES);
+                        (AX, CarryFlag) = Dos.FreeMemoryBlock(cs1, 0x018E, es);
                         // 016D:018E jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -291,9 +279,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0190 mov AX,0x4900
                         AX = 0x4900;
                         // 016D:0193 mov ES,word ptr DS:[0x01B3]
-                        ES = ImageMinus0003Globals.Word01B3;
+                        es = ImageMinus0003Globals.Word01B3;
                         // 016D:0197 int 0x21
-                        Dos.FreeMemoryBlock(cs1, 0x0199, ES);
+                        (AX, CarryFlag) = Dos.FreeMemoryBlock(cs1, 0x0199, es);
                         // 016D:0199 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
@@ -301,9 +289,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:019B mov AX,0x4900
                         AX = 0x4900;
                         // 016D:019E mov ES,word ptr DS:[0x01B1]
-                        ES = ImageMinus0003Globals.Word01B1;
+                        es = ImageMinus0003Globals.Word01B1;
                         // 016D:01A2 int 0x21
-                        Dos.FreeMemoryBlock(cs1, 0x01A4, ES);
+                        (AX, CarryFlag) = Dos.FreeMemoryBlock(cs1, 0x01A4, es);
                         // 016D:01A4 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;

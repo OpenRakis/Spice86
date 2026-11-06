@@ -165,22 +165,19 @@ public partial class CfgGeneratedOverrides {
         // 016D:0108 mov ES,AX
         ES = 0x2000;
         // 016D:010A mov DX,0x0169
-        DX = 0x0169;
         // 016D:010D mov AH,9
         // 016D:010F int 0x21
         Dos.PrintString(cs1, 0x0111, 0x0169, DS, "HELLO");
         // 016D:0111 mov word ptr ES:[0x0040],AX
         Segment2000Globals.Word0040 = AX;
         // 016D:0115 mov BX,1
-        BX = 1;
         // 016D:0118 mov CX,4
-        CX = 4;
         // 016D:011B mov DX,0x017A
-        DX = 0x017A;
         // 016D:011E mov AH,0x40
+        AH = 0x40;
         // 016D:0120 int 0x21
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        Dos.WriteToFileOrDevice(cs1, 0x0122, 4, 0x017A, 1, DS);
+        (AX, CarryFlag) = Dos.WriteToFileOrDevice(cs1, 0x0122, 4, 0x017A, 1, DS);
         // 016D:0122 mov word ptr ES:[0x0042],AX
         Segment2000Globals.Word0042 = AX;
         // 016D:0126 mov AX,0
@@ -189,13 +186,11 @@ public partial class CfgGeneratedOverrides {
         // 016D:012C mov byte ptr ES:[0x0044],AL
         Segment2000Globals.Byte0044 = AL;
         // 016D:0130 mov DX,0x016F
-        DX = 0x016F;
         // 016D:0133 mov AL,0
         AL = 0;
         // 016D:0135 mov AH,0x3D
-        AH = 0x3D;
         // 016D:0137 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0139, 0, 0x016F, DS, "NOFILE.TXT");
+        (AX, CarryFlag) = Dos.OpenFileOrDevice(cs1, 0x0139, 0, 0x016F, DS, "NOFILE.TXT");
         // 016D:0139 mov word ptr ES:[0x0045],AX
         Segment2000Globals.Word0045 = AX;
         // 016D:013D mov AX,0
@@ -210,7 +205,6 @@ public partial class CfgGeneratedOverrides {
         // 016D:0151 mov byte ptr DS:[0x0180],0x24
         ImageMinus0003Globals.Byte0180 = 0x24;
         // 016D:0156 mov DX,0x017E
-        DX = 0x017E;
         // 016D:0159 mov AH,9
         // 016D:015B int 0x21
         Dos.PrintString(cs1, 0x015D, 0x017E, DS);
@@ -385,7 +379,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, DS, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

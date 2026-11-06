@@ -231,7 +231,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         _mscdex = new Mscdex(state, memory, _loggerService, _activityNotifier);
         DosDriveManager = new(_mscdex, channelCreator, activityNotifier, options.CDrive, options.Exe, mediaIdTable, _loggerService);
 
-        VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
+        VirtualFileBase[] dosDevices = AddDefaultDevices(keyboardInt16Handler);
         DosSysVars = new DosSysVars(options, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
@@ -355,11 +355,11 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private uint GetDefaultNewDeviceBaseAddress()
         => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
-    private VirtualFileBase[] AddDefaultDevices(State state, KeyboardInt16Handler keyboardInt16Handler) {
+    private VirtualFileBase[] AddDefaultDevices(KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
-            _loggerService, state,
+            _loggerService,
             _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
             _biosKeyboardBuffer);
         AddDevice(consoleDevice);

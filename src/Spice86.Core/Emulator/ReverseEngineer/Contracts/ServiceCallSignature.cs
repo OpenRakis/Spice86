@@ -20,4 +20,15 @@ public static class ServiceCallSignature {
     public static IReadOnlyList<TypedParameter> Parameters(ServiceContract contract,
         ServiceSelector? selector) =>
         CpuValueParameters.Decompose(contract.Registers.Reads & ~(selector?.ToCpuValues() ?? CpuValues.None));
+
+    /// <summary>The output list of the helper for <paramref name="contract"/>: one value per
+    /// register field and per flag the service writes, in <see cref="CpuValueParameters"/>
+    /// order. A helper returns a scalar for one output, a named tuple for several and stays
+    /// <see langword="void"/> for none.</summary>
+    /// <param name="contract">The service contract whose writes become outputs.</param>
+    /// <returns>The ordered output list.</returns>
+    public static IReadOnlyList<TypedParameter> Outputs(ServiceContract contract) =>
+        ReferenceEquals(contract, ServiceContract.Unknown)
+            ? []
+            : CpuValueParameters.Decompose(contract.Registers.Writes);
 }

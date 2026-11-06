@@ -148,7 +148,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0100 mov AH,0x40
         AH = 0x40;
         // 016E:0102 int 0x67
-        Ems.GetStatus(cs1, 0x0104, AL);
+        AH = Ems.GetStatus(cs1, 0x0104, AL);
         // 016E:0104 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:0107 jne short 0x010D
