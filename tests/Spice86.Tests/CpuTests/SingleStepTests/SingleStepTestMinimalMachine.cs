@@ -54,7 +54,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
-            emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, false, loggerService,
+            emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, true, false, loggerService,
             loggerState, executionCompiler, new SequentialIdAllocator());
     }
 

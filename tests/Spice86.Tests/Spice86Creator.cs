@@ -26,6 +26,8 @@ public sealed class Spice86Creator : IDisposable {
     /// passes a different one.</summary>
     internal const ushort ProgramEntryPointSegment = 0x170;
 
+    public bool HltStopsEmulation { get; set; } = true;
+
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
@@ -54,6 +56,7 @@ public sealed class Spice86Creator : IDisposable {
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
             settings.EnableSpeculativeCfgExploration, null) {
         EnableUmb = settings.EnableUmb;
+        HltStopsEmulation = settings.HltStopsEmulation;
     }
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
@@ -130,6 +133,8 @@ public sealed class Spice86Creator : IDisposable {
 
     public Spice86DependencyInjection Create() {
         _configuration.Umb = EnableUmb;
+        // Test programs end with HLT, often with interrupts enabled.
+        _configuration.HltStopsEmulation = HltStopsEmulation;
         Spice86DependencyInjection res = new(_configuration);
         MachineLeakTracker.Track(res.Machine);
         res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
