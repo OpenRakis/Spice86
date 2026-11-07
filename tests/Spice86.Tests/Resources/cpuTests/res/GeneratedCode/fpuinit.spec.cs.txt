@@ -99,7 +99,7 @@ public partial class CfgGeneratedOverrides {
             CX--;
         } while (CX != 0);
         // F000:0012 fnstcw word ptr DS:[0x0100]
-        Segment1000Globals.Word0100 = State.GetFpuControlWord();
+        Segment1000Globals.Word0100 = State.FpuControlWord;
         // F000:0016 mov CX,0x000A
         CX = 0x000A;
         do {
@@ -119,20 +119,20 @@ public partial class CfgGeneratedOverrides {
         if (AH == 3) {
             // F000:002A fwait
             // F000:002B fnstcw word ptr DS:[0x0100]
-            Segment1000Globals.Word0100 = State.GetFpuControlWord();
+            Segment1000Globals.Word0100 = State.FpuControlWord;
             // F000:002F inc BX
             BX = 1;
             // F000:0030 fwait
             // F000:0031 and byte ptr DS:[0x0100],0x7F
             Segment1000Globals.Byte0100 &= 0x7F;
             // F000:0036 fldcw word ptr DS:[0x0100]
-            State.SetFpuControlWord(Segment1000Globals.Word0100);
+            State.FpuControlWord = Segment1000Globals.Word0100;
             // F000:003A fwait
             // F000:003B fndisi
             State.DisableFpuInterrupts();
             // F000:003D fwait
             // F000:003E fnstcw word ptr DS:[0x0100]
-            Segment1000Globals.Word0100 = State.GetFpuControlWord();
+            Segment1000Globals.Word0100 = State.FpuControlWord;
             // F000:0042 fwait
             // F000:0043 test byte ptr DS:[0x0100],0x80
             flagOperand_0043 = Segment1000Globals.Byte0100;
@@ -144,9 +144,9 @@ public partial class CfgGeneratedOverrides {
                 // F000:0050 mov word ptr DS:[0x0104],0xA55A
                 Segment1000Globals.Word0104 = 0xA55A;
                 // F000:0056 fldcw word ptr DS:[0x0100]
-                State.SetFpuControlWord(0x0B7F);
+                State.FpuControlWord = 0x0B7F;
                 // F000:005B fnstcw word ptr DS:[0x0102]
-                Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                Segment1000Globals.Word0102 = State.FpuControlWord;
                 // F000:0060 cmp word ptr DS:[0x0102],0x0B7F
                 flagOperand_0060 = Segment1000Globals.Word0102;
                 Alu16.Sub(flagOperand_0060, 0x0B7F);
@@ -160,7 +160,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0070 fndisi
                         State.DisableFpuInterrupts();
                         // F000:0072 fnstcw word ptr DS:[0x0102]
-                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        Segment1000Globals.Word0102 = State.FpuControlWord;
                         // F000:0076 cmp word ptr DS:[0x0102],0x0BFF
                         flagOperand_0076 = Segment1000Globals.Word0102;
                         Alu16.Sub(flagOperand_0076, 0x0BFF);
@@ -177,9 +177,9 @@ public partial class CfgGeneratedOverrides {
                         // F000:0089 mov word ptr ES:[DI],0x077F
                         Segment2000Globals.Word0100 = 0x077F;
                         // F000:008E fldcw word ptr ES:[EDI]
-                        State.SetFpuControlWord(Segment2000Globals.Word0100);
+                        State.FpuControlWord = Segment2000Globals.Word0100;
                         // F000:0092 fnstcw word ptr DS:[0x0102]
-                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        Segment1000Globals.Word0102 = State.FpuControlWord;
                         // F000:0096 cmp word ptr DS:[0x0102],0x077F
                         flagOperand_0096 = Segment1000Globals.Word0102;
                         Alu16.Sub(flagOperand_0096, 0x077F);
@@ -190,7 +190,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:009E fninit
                         State.InitializeFpu();
                         // F000:00A0 fnstcw word ptr DS:[0x0102]
-                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        Segment1000Globals.Word0102 = State.FpuControlWord;
                         // F000:00A4 cmp word ptr DS:[0x0102],0x03FF
                         flagOperand_00A4 = Segment1000Globals.Word0102;
                         Alu16.Sub(flagOperand_00A4, 0x03FF);
@@ -199,13 +199,13 @@ public partial class CfgGeneratedOverrides {
                             goto L_00C4;
                         }
                         // F000:00AC fldcw word ptr DS:[0x0100]
-                        State.SetFpuControlWord(Segment1000Globals.Word0100);
+                        State.FpuControlWord = Segment1000Globals.Word0100;
                         // F000:00B0 fwait
                         // F000:00B1 fninit
                         State.InitializeFpu();
                         // F000:00B3 fwait
                         // F000:00B4 fnstcw word ptr DS:[0x0102]
-                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        Segment1000Globals.Word0102 = State.FpuControlWord;
                         // F000:00B8 cmp word ptr DS:[0x0102],0x03FF
                         flagOperand_00B8 = Segment1000Globals.Word0102;
                         Alu16.Sub(flagOperand_00B8, 0x03FF);

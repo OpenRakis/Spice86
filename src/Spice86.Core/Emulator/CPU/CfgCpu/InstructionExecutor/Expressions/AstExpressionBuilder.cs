@@ -480,6 +480,17 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             .Select(arg => arg.Accept(this))
             .ToArray();
 
+        if (node.Arguments.Count == 0) {
+            bool hasNoArgumentMethod = targetType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Any(m => m.Name == node.MethodName && m.GetParameters().Length == 0);
+            if (!hasNoArgumentMethod) {
+                PropertyInfo? property = targetType.GetProperty(node.MethodName, BindingFlags.Public | BindingFlags.Instance);
+                if (property != null) {
+                    return Expression.Property(target, property);
+                }
+            }
+        }
+
         (MethodInfo method, Expression[] convertedArguments) = ResolveMethodCall(targetType, node.MethodName, argumentExpressions);
 
         // Create the method call

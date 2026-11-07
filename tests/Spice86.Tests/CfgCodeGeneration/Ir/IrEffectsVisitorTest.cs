@@ -34,13 +34,11 @@ public sealed class IrEffectsVisitorTest {
     private static ConstantNode Constant() => new(DataType.UINT16, 0x1234);
 
     [Theory]
-    [InlineData(InstructionOperation.FLDCW)]
     [InlineData(InstructionOperation.FNINIT)]
     [InlineData(InstructionOperation.FNDISI)]
-    public void FpuControl_SerializesOpaqueStateWithoutClobberingRegistersOrFlags(InstructionOperation operation) {
+    public void FpuResetAndMask_WritesOnlyTheControlWord(InstructionOperation operation) {
         // Arrange
-        IVisitableAstNode[] arguments = operation == InstructionOperation.FLDCW ? [Constant()] : [];
-        FpuControlCallNode call = new(operation, arguments);
+        FpuControlCallNode call = new(operation);
 
         // Act
         IVisitableAstNode typed = IrNodeTyper.TypeStatement(call);
@@ -48,12 +46,39 @@ public sealed class IrEffectsVisitorTest {
 
         // Assert
         typed.Should().BeOfType<FpuControlCallNode>();
-        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None,
-            IrTokens.All, IrTokens.All, false, false));
+        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.FpuControlWord, CpuValues.None,
+            IrTokens.None, IrTokens.None, false, false));
     }
 
     [Fact]
-    public void FpuControlWord_ReadsOpaqueStateWithoutClobberingRegistersOrFlags() {
+    public void FldcwAssignment_ReadsTheOperandAndWritesOnlyTheControlWord() {
+        // Arrange
+        BinaryOperationNode assign = new(DataType.UINT16, new FpuControlWordNode(), BinaryOperation.ASSIGN, Constant());
+
+        // Act
+        IrEffects effects = Of(assign);
+
+        // Assert
+        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.FpuControlWord, CpuValues.None,
+            IrTokens.None, IrTokens.None, false, false));
+    }
+
+    [Fact]
+    public void FnstcwAssignment_ReadsOnlyTheControlWordAndWritesMemory() {
+        // Arrange
+        SegmentedPointerNode pointer = new(DataType.UINT16, Ds(), null, Constant());
+        BinaryOperationNode assign = new(DataType.UINT16, pointer, BinaryOperation.ASSIGN, new FpuControlWordNode());
+
+        // Act
+        IrEffects effects = Of(assign);
+
+        // Assert
+        effects.Should().Be(new IrEffects(CpuValues.Ds | CpuValues.FpuControlWord,
+            CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Memory, false, false));
+    }
+
+    [Fact]
+    public void FpuControlWord_ReadsOnlyTheControlWord() {
         // Arrange
         FpuControlWordNode call = new();
 
@@ -63,8 +88,8 @@ public sealed class IrEffectsVisitorTest {
 
         // Assert
         typed.Should().BeOfType<FpuControlWordNode>();
-        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None,
-            IrTokens.All, IrTokens.None, false, false));
+        effects.Should().Be(new IrEffects(CpuValues.FpuControlWord, CpuValues.None, CpuValues.None,
+            IrTokens.None, IrTokens.None, false, false));
     }
 
     [Fact]

@@ -36,16 +36,13 @@ public class FpuParser : BaseInstructionParser {
             throw new InvalidGroupIndexException(_state, groupIndex);
         }
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(DataType.UINT16, modRmContext);
+        ValueNode controlWord = new FpuControlWordNode();
+        ValueNode destination = groupIndex == 5 ? controlWord : rmNode;
+        ValueNode source = groupIndex == 5 ? rmNode : controlWord;
         InstructionOperation operation = groupIndex == 5 ? InstructionOperation.FLDCW : InstructionOperation.FNSTCW;
-        IVisitableAstNode action;
-        if (groupIndex == 5) {
-            action = new FpuControlCallNode(operation, rmNode);
-        } else {
-            ValueNode controlWord = new FpuControlWordNode();
-            action = _astBuilder.Assign(DataType.UINT16, rmNode, controlWord);
-        }
         InstructionNode displayAst = new InstructionNode(operation, rmNode);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, action);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr,
+            _astBuilder.Assign(DataType.UINT16, destination, source));
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }
