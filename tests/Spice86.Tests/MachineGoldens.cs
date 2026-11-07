@@ -35,6 +35,9 @@ internal static class MachineGoldens {
         if (fixture.Settings.VariantName.Length > 0) {
             key += "." + fixture.Settings.VariantName;
         }
+        if (!fixture.Settings.HltStopsEmulation) {
+            key += ".hltwait";
+        }
         return key + fixture.Settings.HandlerSegmentGoldenSuffix;
     }
 

@@ -46,6 +46,13 @@ internal sealed record AsmRunSettings {
     /// <summary>Whether the BIOS interrupt vectors are installed.</summary>
     public bool InstallInterruptVectors { get; init; }
 
+    /// <summary>
+    /// Whether HLT stops the emulation while interrupts are enabled. When false (the real-hardware behavior),
+    /// HLT halts the CPU until the next hardware interrupt resumes execution; when true (the test default),
+    /// HLT ends the run, which test programs use as an end marker.
+    /// </summary>
+    public bool HltStopsEmulation { get; init; } = true;
+
     /// <summary>Whether an unhandled I/O port access fails the run.</summary>
     public bool FailOnUnhandledPort { get; init; }
 

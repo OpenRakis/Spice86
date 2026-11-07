@@ -180,7 +180,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// Builds the golden-file key for a run: the stable scenario identity, followed by one fixed suffix
     /// per enabled configuration of the <see cref="AsmRunSettings"/>, in a fixed order (PIT, A20, interrupt
     /// vectors, fail-on-port, XMS, EMS, non-default UMB, Sound Blaster model, OPL mode, speculation,
-    /// relocated handler segment). Runs of the same
+    /// non-default HLT, relocated handler segment). Runs of the same
     /// bin with different options therefore get distinct goldens instead of overwriting each other, and
     /// two scenarios that execute the same-named program (two START.BAT scenarios) get distinct goldens
     /// through their distinct identities. <c>MaxCycles</c>, <c>CDrive</c>, <c>VariantName</c> and
@@ -223,6 +223,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
         if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
+        }
+        if (!settings.HltStopsEmulation) {
+            key += ".hltwait";
         }
         return key + settings.HandlerSegmentGoldenSuffix;
     }

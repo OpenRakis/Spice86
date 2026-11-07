@@ -10,6 +10,8 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Core.CLI;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
@@ -261,6 +263,55 @@ internal static class AsmFixtureCatalog {
         };
         return MemoryFixture(settings, expectedMemory);
     }
+
+    /// <summary>Runs hlt: the run ends at the first HLT, so the IRQ0 handler never ran and the program
+    /// stored nothing after the HLT.</summary>
+    public static AsmFixture Hlt() {
+        AsmRunSettings settings = new() {
+            BinName = "hlt"
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt8[0, 0x0002].Should().Be(0xAA, "hlt: the program reached the wait marker before the HLT");
+            result.State.DX.Should().Be(0, "hlt: the run ended at the HLT, so the IRQ0 handler never ran");
+        });
+    }
+
+    /// <summary>Runs hlt with the real-hardware HLT: the STI; HLT pair waits for the timer tick, the IRQ0
+    /// handler sets DX to 1, and the program stores it after resuming past the HLT.</summary>
+    public static AsmFixture HltWaitsForHardwareInterrupt() {
+        AsmRunSettings settings = new() {
+            BinName = "hlt",
+            EnablePit = true,
+            HltStopsEmulation = false
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt8[0, 0x0002].Should().Be(0xAA, "hlt wait: the program reached the wait marker before the HLT");
+            result.State.DX.Should().Be(1, "hlt wait: the IRQ0 handler ran while the CPU was halted");
+            result.Memory.UInt8[0, 0x0000].Should().Be(1, "hlt wait: the program stored DX after resuming past the HLT");
+        });
+    }
+
+    /// <summary>Runs hltmask: every PIC line is masked, so the HLT waits forever; the run ends only when
+    /// the CPU cycle breakpoint fires while the CPU is halted.</summary>
+    public static AsmFixture HltCycleBreakpointWhileHalted() {
+        byte[] expectedMemory = new byte[3];
+        expectedMemory[0x00] = 0x5C;
+        expectedMemory[0x02] = 0xAA;
+        AsmRunSettings settings = new() {
+            BinName = "hltmask",
+            HltStopsEmulation = false,
+            ConfigureMachine = machine => machine.EmulatorBreakpointsManager.ToggleBreakPoint(
+                new AddressBreakPoint(BreakPointType.CPU_CYCLES, HaltedCycleBreakpoint,
+                    (_, _) => {
+                        machine.Memory.UInt8[0, 0x0000] = 0x5C;
+                        machine.CpuState.IsRunning = false;
+                    }, true), true)
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>CPU cycle count at which the hltmask breakpoint fires, while the CPU is halted at the HLT.</summary>
+    private const long HaltedCycleBreakpoint = 1000;
 
     /// <summary>Runs ioports: every IN/OUT/INS/OUTS form reads back through a latch port.</summary>
     public static AsmFixture IoPorts() {

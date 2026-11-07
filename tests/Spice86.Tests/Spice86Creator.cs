@@ -56,6 +56,7 @@ public sealed class Spice86Creator : IDisposable {
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
             settings.EnableSpeculativeCfgExploration, null) {
         EnableUmb = settings.EnableUmb;
+        HltStopsEmulation = settings.HltStopsEmulation;
     }
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,

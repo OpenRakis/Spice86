@@ -516,6 +516,30 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestHlt(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.Hlt(), jitMode);
+    }
+
+    /// <summary>The STI; HLT pair waits for the timer tick instead of stopping the emulation: the IRQ0
+    /// handler runs while the CPU is halted, and the program stores DX after resuming past the HLT.</summary>
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestHltWaitsForHardwareInterrupt(JitMode jitMode) {
+        using (AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.HltWaitsForHardwareInterrupt(), jitMode)) {
+        }
+    }
+
+    /// <summary>With every PIC line masked the HLT waits forever, so the run ends only when the CPU cycle
+    /// breakpoint fires while the CPU is halted.</summary>
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestHltCycleBreakpointTriggersWhileHalted(JitMode jitMode) {
+        using (AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.HltCycleBreakpointWhileHalted(), jitMode)) {
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestIoPorts(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.IoPorts(), jitMode);
     }
