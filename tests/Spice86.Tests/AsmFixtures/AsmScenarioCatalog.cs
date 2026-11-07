@@ -473,6 +473,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
+            AsmScenario.FromFixture("hlt", AsmFixtureCatalog.Hlt),
             AsmScenario.FromFixture("ioports", AsmFixtureCatalog.IoPorts),
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
             AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry),
