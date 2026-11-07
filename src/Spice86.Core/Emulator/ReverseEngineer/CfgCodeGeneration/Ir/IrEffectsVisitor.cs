@@ -28,11 +28,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Memory, false, false);
     private static readonly IrEffects ReadWriteIo =
         new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.Io, IrTokens.Io, false, false);
-    // FPU state has no separate token: serialize its accesses with all opaque resources.
-    private static readonly IrEffects ReadWriteFpu =
-        new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.All, false, false);
-    private static readonly IrEffects ReadFpu =
-        new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
+    private static readonly IrEffects ReadFpuControlWord =
+        new(CpuValues.FpuControlWord, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+    private static readonly IrEffects WriteFpuControlWord =
+        new(CpuValues.None, CpuValues.FpuControlWord, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects InterruptReturnUse =
         new(CpuValues.Registers, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
     private const CpuValues PopAllRegisters16 = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
@@ -159,7 +158,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         PortWriteCallNode => ReadWriteIo,
         BoundCheckCallNode => IrEffects.None,
         InterruptServiceCallNode service => ServiceContractEffects.Of(service),
-        FpuControlCallNode => ReadWriteFpu,
+        FpuControlCallNode => WriteFpuControlWord,
         _ => IrEffects.Unknown
     };
 
@@ -173,7 +172,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         PortReadCallNode => ReadWriteIo,
         BitScanCallNode => IrEffects.None,
         SignatureMatchesHelperNode => ReadMemory,
-        FpuControlWordNode => ReadFpu,
+        FpuControlWordNode => ReadFpuControlWord,
         _ => IrEffects.Unknown
     };
 
@@ -249,6 +248,9 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
             return right.Accept(this).Then(new IrEffects(
                 CpuValues.None, CpuValues.StatusFlags | CpuValues.Direction, CpuValues.None,
                 IrTokens.None, IrTokens.None, false, false));
+        }
+        if (left is FpuControlWordNode) {
+            return right.Accept(this).Then(WriteFpuControlWord);
         }
         if (left is VariableReferenceNode or RegisterLocalNode) {
             return right.Accept(this);
