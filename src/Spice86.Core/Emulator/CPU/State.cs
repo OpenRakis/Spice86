@@ -37,11 +37,8 @@ public class State(CpuModel cpuModel) {
     private const ushort FpuInterruptMask = 0x0080;
     private ushort _fpuControlWord = InitialFpuControlWord;
 
-    /// <summary>Gets the control word of the limited 8087-compatible initialization state.</summary>
-    public ushort GetFpuControlWord() => _fpuControlWord;
-
-    /// <summary>Loads the FPU control word. Floating-point arithmetic is not implemented.</summary>
-    public void SetFpuControlWord(ushort value) => _fpuControlWord = value;
+    /// <summary>Gets or sets the control word of the limited 8087-compatible initialization state.</summary>
+    public ushort FpuControlWord { get => _fpuControlWord; set => _fpuControlWord = value; }
 
     /// <summary>Resets the FPU control word to the 8087 initial value, including its interrupt mask.</summary>
     public void InitializeFpu() => _fpuControlWord = InitialFpuControlWord;

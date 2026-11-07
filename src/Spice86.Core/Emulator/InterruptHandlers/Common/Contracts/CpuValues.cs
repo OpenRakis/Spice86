@@ -8,7 +8,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 /// per segment register at bit <c>32 + index</c>: ES, CS, SS, DS, FS, GS). Bits 38 to
 /// 43 are the six status flags; bit 44 is the direction flag. The byte names cover
 /// one byte each, the 16-bit names two, the 32-bit names four; the
-/// <c>*High</c> names cover the upper word of a 32-bit register.
+/// <c>*High</c> names cover the upper word of a 32-bit register. Bit 45 is the FPU control word.
 /// </summary>
 [System.Flags]
 public enum CpuValues : ulong {
@@ -104,10 +104,12 @@ public enum CpuValues : ulong {
     Overflow = 1UL << 43,
     /// <summary>Direction flag.</summary>
     Direction = 1UL << 44,
+    /// <summary>FPU control word.</summary>
+    FpuControlWord = 1UL << 45,
     /// <summary>Every register byte and segment register.</summary>
     Registers = (1UL << 38) - 1,
     /// <summary>The six status flags.</summary>
     StatusFlags = Carry | Parity | Auxiliary | Zero | Sign | Overflow,
     /// <summary>Every value.</summary>
-    All = (1UL << 45) - 1
+    All = (1UL << 46) - 1
 }

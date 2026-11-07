@@ -329,6 +329,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     };
 
     public CSharpFragment VisitMethodCallValueNode(MethodCallValueNode node) {
+        if (node is FpuControlWordNode controlWord) {
+            // FpuControlWord is a property, not a method.
+            return Atomic($"{controlWord.CallNode.PropertyPath}.{controlWord.CallNode.MethodName}", node.DataType);
+        }
         if (node is PortReadCallNode port) {
             return PortRead(port);
         }
