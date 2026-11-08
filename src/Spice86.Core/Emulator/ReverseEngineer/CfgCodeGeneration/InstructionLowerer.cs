@@ -186,7 +186,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                         new OffsetLiteralNode(handler.Entry.Address.Offset),
                         new MethodGroupNode(Context.GetMethodName(handler.Partition),
                             Context.GetEntryLoadOffset(handler.Partition, handler.Entry.Node),
-                            handler.Partition.Entries.Count == 1)],
+                            Context.GetEntries(handler.Partition).Count == 1)],
                     handler.Effect, HardwareInterruptEffect),
                 Transfer.EmitPostCallContinuation(node.Instruction, continuation));
         }

@@ -134,6 +134,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// its header or its step.</summary>
     internal GotoTargets MethodGotoTargets => _method?.Prepared.Targets ?? GotoTargets.None;
 
+    /// <summary>Whether the current method dispatches between multiple entry points.</summary>
+    internal bool NeedsEntryDispatch => _method?.Prepared.Method.NeedsEntryDispatch ?? false;
+
     /// <summary>Prints <paramref name="node"/>, which must be an expression.</summary>
     public CSharpFragment Print(IVisitableAstNode node) => node.Accept(this);
 
