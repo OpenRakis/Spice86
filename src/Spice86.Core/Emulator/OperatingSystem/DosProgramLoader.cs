@@ -40,7 +40,15 @@ internal class DosProgramLoader : DosFileLoader {
             cDrive = Path.GetDirectoryName(file) ?? "C:\\";
         }
 
-        string absoluteDosPath = ToDosPathOnCDrive(file, cDrive);
+        string? absoluteDosPath = TryGetDosPathOnCDrive(file, cDrive);
+        if (absoluteDosPath is null) {
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("Cannot start {HostFile}: it is outside of the C: drive folder {CDrive}",
+                    file, cDrive);
+            }
+            _state.IsRunning = false;
+            return File.ReadAllBytes(file);
+        }
 
         string commandTail = arguments ?? string.Empty;
         _processManager.BatchExecutionEngine.ConfigureHostStartupProgram(absoluteDosPath, commandTail);
@@ -78,12 +86,12 @@ internal class DosProgramLoader : DosFileLoader {
     /// <summary>
     /// Maps the host path of the startup program to its DOS path on C:. Both paths are made absolute first,
     /// because the C: drive folder can be given relative to the working directory while the program path is
-    /// absolute. A program outside the C: drive folder keeps the previous fallback: its file name on C:.
+    /// absolute. Returns <c>null</c> for a program outside the C: drive folder, which DOS cannot reach.
     /// </summary>
-    private static string ToDosPathOnCDrive(string file, string cDrive) {
+    private static string? TryGetDosPathOnCDrive(string file, string cDrive) {
         string pathInCDrive = Path.GetRelativePath(Path.GetFullPath(cDrive), Path.GetFullPath(file));
         if (IsOutsideOfFolder(pathInCDrive)) {
-            return $"C:{Path.GetFileName(file)}";
+            return null;
         }
         return $"C:{Path.DirectorySeparatorChar}{pathInCDrive}";
     }

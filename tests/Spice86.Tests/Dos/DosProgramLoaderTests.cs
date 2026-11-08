@@ -41,4 +41,38 @@ public class DosProgramLoaderTests {
             Directory.Delete(relativeCDrive, true);
         }
     }
+
+    /// <summary>
+    /// A program outside the C: drive folder has no DOS path. Resolving its file name on C: instead would
+    /// start whichever program of that name the C: folder holds, not the one the user selected.
+    /// This is an initialization-only test, not an execution test.
+    /// </summary>
+    [Fact]
+    public void ProgramOutsideOfCDriveIsNotReplacedByAProgramOfTheSameNameOnC() {
+        string cDrive = Path.GetFullPath($"c_drive_{Guid.NewGuid():N}");
+        string otherFolder = Path.GetFullPath($"outside_c_drive_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(cDrive);
+        Directory.CreateDirectory(otherFolder);
+        try {
+            // Arrange
+            File.WriteAllBytes(Path.Join(cDrive, "HALT.COM"), [HltOpcode]);
+            string programPath = Path.Join(otherFolder, "HALT.COM");
+            File.WriteAllBytes(programPath, [HltOpcode]);
+
+            // Act
+            using Spice86Creator creator = new(
+                binName: programPath,
+                enablePit: false,
+                maxCycles: 1000L,
+                installInterruptVectors: true,
+                cDrive: cDrive);
+            using Spice86DependencyInjection spice86 = creator.Create();
+
+            // Assert
+            spice86.Machine.CpuState.IsRunning.Should().BeFalse("the selected program is not on the C: drive");
+        } finally {
+            Directory.Delete(cDrive, true);
+            Directory.Delete(otherFolder, true);
+        }
+    }
 }
