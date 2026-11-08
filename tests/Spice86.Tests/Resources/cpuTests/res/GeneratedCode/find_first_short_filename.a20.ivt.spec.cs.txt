@@ -160,7 +160,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -170,7 +170,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 mov DX,0x0288
         DX = 0x0288;
         // 016D:0105 int 0x21
-        Dos.SetDiskTransferAddress(cs1, 0x0107, 0x0288, DS);
+        Dos.RecordCallerStack(SS, SP);
+        Dos.SetDiskTransferAddress(DS, 0x0288);
         // 016D:0107 mov SI,0x0162
         SI = 0x0162;
         // 016D:010A mov CX,0
@@ -192,12 +193,12 @@ public partial class CfgGeneratedOverrides {
             // 016D:0115 mov AL,byte ptr DS:[SI+4]
             AL = UInt8[DS, (ushort)(SI + 4)];
             // 016D:0118 test AL,AL
-            Alu8.And(AL, AL);
             // 016D:011A jne short 0x0127
             if (AL != 0) {
                 // 016D:0127 mov AH,0x4F
                 // 016D:0129 int 0x21
-                Dos.FindNextMatchingFile(cs1, 0x012B);
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.FindNext();
             }
             else {
                 // 016D:011C mov DX,BX
@@ -206,7 +207,8 @@ public partial class CfgGeneratedOverrides {
                 CX = 0;
                 // 016D:0121 mov AH,0x4E
                 // 016D:0123 int 0x21
-                Dos.FindFirstMatchingFile(cs1, 0x0125, 0, DX, DS);
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, DX, '\0'), 0);
                 // 016D:0125 jmp short 0x012B
             }
             // 016D:012B pop SI

@@ -143,7 +143,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         do {
@@ -153,9 +153,10 @@ public partial class CfgGeneratedOverrides {
             // 016D:0102 mov AL,6
             AL = 6;
             // 016D:0104 xor BX,BX
-            BX = Alu16.Xor(BX, BX);
+            BX = 0;
             // 016D:0106 int 0x21
-            Dos.IoControl(cs1, 0x0108, 6, CX, DX, 0, DS);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, DX, CarryFlag) = Dos.IoControl(0x4406, CX, DX, 0, DS);
             // 016D:0108 or AL,AL
             AL = Alu8.Or(AL, AL);
             // 016D:010A je short 0x0100

@@ -162,7 +162,8 @@ public partial class CfgGeneratedOverrides {
         AH = 0x40;
         // 016D:010B int 0x21
         // DOS 40h write handle 1 "M"
-        Dos.WriteToFileOrDevice(cs1, 0x010D, 1, 0x0112, 1, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.WriteFile(1, 1, DS, 0x0112);
         // 016D:010D mov AX,0x4C00
         AX = 0x4C00;
         // 016D:0110 int 0x21

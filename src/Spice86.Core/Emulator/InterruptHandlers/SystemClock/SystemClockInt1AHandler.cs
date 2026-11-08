@@ -41,22 +41,36 @@ public class SystemClockInt1AHandler : InterruptHandler {
         Run(operation);
     }
 
-    /// <summary>
-    /// INT 1A, AH=00h - Get System Clock Counter.
-    /// Returns the number of clock ticks since midnight.
-    /// Clock ticks at 18.2 Hz (approximately 1,193,180 / 65,536 times per second).
-    /// </summary>
-    [InterruptService(0x00, Reads = CpuValues.Ah, Writes = CpuValues.Al | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite)]
-    public void GetSystemClockCounter() {
+    /// <summary>Returns the BIOS tick counter in CX:DX and the midnight flag in AL.</summary>
+    public (byte al, ushort cx, ushort dx) ReadSystemClockCounter() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=00h - Get System Clock Counter");
         }
 
         uint ticks = _biosDataArea.TimerCounter;
-        State.CX = (ushort)(ticks >> 16);
-        State.DX = (ushort)(ticks & 0xFFFF);
-        State.AL = _biosDataArea.TimerRollover;
+        byte al = _biosDataArea.TimerRollover;
+        _biosDataArea.TimerRollover = 0;
+        return (al, (ushort)(ticks >> 16), (ushort)(ticks & 0xFFFF));
+    }
 
+    /// <summary>
+    /// INT 1A, AH=00h - Get System Clock Counter.
+    /// Returns the number of clock ticks since midnight.
+    /// Clock ticks at 18.2 Hz (approximately 1,193,180 / 65,536 times per second).
+    /// </summary>
+    [InterruptService(0x00, Reads = CpuValues.Ah, Writes = CpuValues.Al | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(ReadSystemClockCounter), Inputs = [])]
+    public void GetSystemClockCounter() {
+        (State.AL, State.CX, State.DX) = ReadSystemClockCounter();
+    }
+
+    /// <summary>Sets the BIOS tick counter to CX:DX.</summary>
+    public void SetSystemClockCounter(ushort cx, ushort dx) {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=01h - Set System Clock Counter");
+        }
+
+        _biosDataArea.TimerCounter = ((uint)cx << 16) | dx;
         _biosDataArea.TimerRollover = 0;
     }
 
@@ -64,33 +78,46 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=01h - Set System Clock Counter.
     /// Sets the system clock counter to the specified value.
     /// </summary>
-    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.None, Memory = ServiceMemoryEffect.Write)]
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.None, Memory = ServiceMemoryEffect.Write,
+        Implementation = nameof(SetSystemClockCounter), Inputs = [CpuValues.Cx, CpuValues.Dx])]
     public void SetSystemClockCounter() {
+        SetSystemClockCounter(State.CX, State.DX);
+    }
+
+    /// <summary>Returns the real-time clock time in CH, CL and DH (BCD); CF is clear.</summary>
+    public (ushort cx, ushort dx, bool carryFlag) ReadTimeFromRTC() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 1A, AH=01h - Set System Clock Counter");
+            LoggerService.LogTrace("INT 1A, AH=02h - Read Time from RTC");
         }
 
-        uint ticks = ((uint)State.CX << 16) | State.DX;
-        _biosDataArea.TimerCounter = ticks;
-        _biosDataArea.TimerRollover = 0;
+        DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
+        ushort cx = (ushort)((BcdConverter.ToBcd((byte)now.Hour) << 8)
+            | BcdConverter.ToBcd((byte)now.Minute));
+        // DL is 0: standard time (not daylight savings)
+        ushort dx = (ushort)(BcdConverter.ToBcd((byte)now.Second) << 8);
+        return (cx, dx, false);
     }
 
     /// <summary>
     /// INT 1A, AH=02h - Read Time from RTC.
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
-    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+        Implementation = nameof(ReadTimeFromRTC), Inputs = [])]
     public void ReadTimeFromRTC(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 1A, AH=02h - Read Time from RTC");
-        }
+        (ushort cx, ushort dx, bool carryFlag) = ReadTimeFromRTC();
+        State.CX = cx;
+        State.DX = dx;
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
 
-        DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
-        State.CH = BcdConverter.ToBcd((byte)now.Hour);
-        State.CL = BcdConverter.ToBcd((byte)now.Minute);
-        State.DH = BcdConverter.ToBcd((byte)now.Second);
-        State.DL = 0; // Standard time (not daylight savings)
-        SetCarryFlag(false, calledFromVm);
+    /// <summary>Returns whether setting the RTC time failed: it always does, because
+    /// modifying the host system time is not permitted.</summary>
+    public bool SetRTCTime() {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
+        }
+        return true;
     }
 
     /// <summary>
@@ -98,30 +125,46 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system time is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
-    [InterruptService(0x03, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    [InterruptService(0x03, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+        Implementation = nameof(SetRTCTime), Inputs = [])]
     public void SetRTCTime(bool calledFromVm) {
+        SetCarryFlag(SetRTCTime(), calledFromVm);
+    }
+
+    /// <summary>Returns the real-time clock date in CH, CL, DH and DL (BCD); CF is clear.</summary>
+    public (ushort cx, ushort dx, bool carryFlag) ReadDateFromRTC() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
+            LoggerService.LogTrace("INT 1A, AH=04h - Read Date from RTC");
         }
-        SetCarryFlag(true, calledFromVm);
+
+        DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
+        ushort cx = (ushort)((BcdConverter.ToBcd((byte)(now.Year / 100)) << 8)
+            | BcdConverter.ToBcd((byte)(now.Year % 100)));
+        ushort dx = (ushort)((BcdConverter.ToBcd((byte)now.Month) << 8)
+            | BcdConverter.ToBcd((byte)now.Day));
+        return (cx, dx, false);
     }
 
     /// <summary>
     /// INT 1A, AH=04h - Read Date from RTC.
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
-    [InterruptService(0x04, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    [InterruptService(0x04, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+        Implementation = nameof(ReadDateFromRTC), Inputs = [])]
     public void ReadDateFromRTC(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 1A, AH=04h - Read Date from RTC");
-        }
+        (ushort cx, ushort dx, bool carryFlag) = ReadDateFromRTC();
+        State.CX = cx;
+        State.DX = dx;
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
 
-        DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
-        State.CH = BcdConverter.ToBcd((byte)(now.Year / 100));
-        State.CL = BcdConverter.ToBcd((byte)(now.Year % 100));
-        State.DH = BcdConverter.ToBcd((byte)now.Month);
-        State.DL = BcdConverter.ToBcd((byte)now.Day);
-        SetCarryFlag(false, calledFromVm);
+    /// <summary>Returns whether setting the RTC date failed: it always does, because
+    /// modifying the host system date is not permitted.</summary>
+    public bool SetRTCDate() {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
+        }
+        return true;
     }
 
     /// <summary>
@@ -129,11 +172,9 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
-    [InterruptService(0x05, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    [InterruptService(0x05, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+        Implementation = nameof(SetRTCDate), Inputs = [])]
     public void SetRTCDate(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
-        }
-        SetCarryFlag(true, calledFromVm);
+        SetCarryFlag(SetRTCDate(), calledFromVm);
     }
 }

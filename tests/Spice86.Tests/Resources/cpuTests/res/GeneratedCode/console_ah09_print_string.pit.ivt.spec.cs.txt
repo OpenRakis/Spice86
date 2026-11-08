@@ -163,15 +163,17 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0000");
     }
 
-    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX, DX. Changes: EAX, DX.</summary>
+    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: AH, DX. Changes: AH, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov DX,0x0108
         DX = 0x0108;
         // 016D:0103 mov AH,9
+        AH = 9;
         // 016D:0105 int 0x21
-        Dos.PrintString(cs1, 0x0107, 0x0108, DS, "Hello DOS");
+        // DOS 09h print "Hello DOS$"
+        InterruptCall(cs1, 0x0107, 0x21);
         // 016D:0107 ret near
         return NearRet();
     }
@@ -348,7 +350,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

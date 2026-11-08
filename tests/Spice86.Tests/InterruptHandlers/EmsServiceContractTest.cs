@@ -1,5 +1,7 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using FluentAssertions;
+
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using Xunit;
@@ -100,13 +102,54 @@ public class EmsServiceContractTest {
         ServiceContractHarness.AssertContract(testCase);
     }
 
+    /// <summary>INT 67h AH=43h (allocate pages): a failed allocation preserves DX instead of
+    /// overwriting the handle output.</summary>
+    [Theory]
+    [InlineData(0x0000)]
+    [InlineData(0xFFFF)]
+    public void AllocatePagesUnwrittenOutputsArePreserved(ushort pageCount) {
+        ServiceContractHarness.RunOnceThroughStub(new ServiceContractCase {
+            Vector = 0x67,
+            SelectorValue = 0x43,
+            NeedsEms = true,
+            Setup = machine => {
+                machine.Spice86.Machine.CpuState.BX = pageCount;
+                machine.Spice86.Machine.CpuState.DX = 0xBEEF;
+            }
+        }, state => state.DX.Should().Be(0xBEEF));
+    }
+
+    /// <summary>INT 67h AH=59h (hardware info): operation 0 and unsupported operations
+    /// preserve AH, BX and DX.</summary>
+    [Theory]
+    [InlineData(0x00)]
+    [InlineData(0xFF)]
+    public void HardwareInfoUnwrittenOutputsArePreserved(byte operation) {
+        ServiceContractHarness.RunOnceThroughStub(new ServiceContractCase {
+            Vector = 0x67,
+            SelectorValue = 0x59,
+            NeedsEms = true,
+            Setup = machine => {
+                machine.Spice86.Machine.CpuState.AL = operation;
+                machine.Spice86.Machine.CpuState.BX = 0xBEEF;
+                machine.Spice86.Machine.CpuState.DX = 0xCAFE;
+                machine.Spice86.Machine.CpuState.ES = 0x0800;
+                machine.Spice86.Machine.CpuState.DI = 0x0100;
+            }
+        }, state => {
+            state.AH.Should().Be(0x59);
+            state.BX.Should().Be(0xBEEF);
+            state.DX.Should().Be(0xCAFE);
+        });
+    }
+
     private static ExpandedMemoryManager Emm(ServiceContractMachine machine) {
         return (ExpandedMemoryManager)machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x67];
     }
 
     private static ushort AllocateHandle(ServiceContractMachine machine) {
         machine.Spice86.Machine.CpuState.BX = 4;
-        Emm(machine).AllocatePages();
+        Emm(machine).WriteAllocatedPages();
         return machine.Spice86.Machine.CpuState.DX;
     }
 }

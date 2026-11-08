@@ -140,29 +140,28 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov BX,4
         BX = 4;
         // 016E:0103 mov AH,0x43
-        AH = 0x43;
         // 016E:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 4);
+        (AH, dx1) = Ems.AllocatePageHandle(4, DX);
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x011D
         if (AH == 0) {
             // 016E:010C mov CX,DX
-            CX = DX;
+            CX = dx1;
             // 016E:010E mov DX,CX
-            DX = CX;
+            dx1 = CX;
             // 016E:0110 mov AH,0x45
-            AH = 0x45;
             // 016E:0112 int 0x67
-            Ems.DeallocatePages(cs1, 0x0114, AL, DX);
+            AH = Ems.DeallocatePages(dx1);
             // 016E:0114 cmp AH,0
             Alu8.Sub(AH, 0);
             // 016E:0117 jne short 0x011D

@@ -152,14 +152,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov AX,3
         AX = 3;
         // 016E:0103 int 0x10
-        Video.SetVideoMode(cs1, 0x0105, 3);
+        AL = Video.SetVideoMode(3);
         // 016E:0105 mov AH,2
         AH = 2;
         // 016E:0107 mov BH,0
@@ -169,7 +169,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:010B mov DL,0
         DL = 0;
         // 016E:010D int 0x10
-        Video.SetCursorPosition(cs1, 0x010F, 0, BX);
+        Video.SetCursorPosition(0, BX);
         // 016E:010F mov AH,9
         AH = 9;
         // 016E:0111 mov AL,0x41
@@ -181,7 +181,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0117 mov CX,0x0050
         CX = 0x0050;
         // 016E:011A int 0x10
-        Video.WriteCharacterAndAttributeAtCursor(cs1, 0x011C, 0x41, 0x0050, 0x001F);
+        Video.WriteCharacterAndAttributeAtCursor(0x41, 0x0050, 0x001F);
         // 016E:011C mov AH,2
         AH = 2;
         // 016E:011E mov BH,0
@@ -191,7 +191,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0122 mov DL,0
         DL = 0;
         // 016E:0124 int 0x10
-        Video.SetCursorPosition(cs1, 0x0126, 0x0100, 0x001F);
+        Video.SetCursorPosition(0x0100, 0x001F);
         // 016E:0126 mov AH,9
         AH = 9;
         // 016E:0128 mov AL,0x42
@@ -203,7 +203,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:012E mov CX,0x0050
         CX = 0x0050;
         // 016E:0131 int 0x10
-        Video.WriteCharacterAndAttributeAtCursor(cs1, 0x0133, 0x42, 0x0050, 0x001F);
+        Video.WriteCharacterAndAttributeAtCursor(0x42, 0x0050, 0x001F);
         // 016E:0133 mov AH,2
         AH = 2;
         // 016E:0135 mov BH,0
@@ -213,7 +213,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0139 mov DL,0
         DL = 0;
         // 016E:013B int 0x10
-        Video.SetCursorPosition(cs1, 0x013D, 0x0200, 0x001F);
+        Video.SetCursorPosition(0x0200, 0x001F);
         // 016E:013D mov AH,9
         AH = 9;
         // 016E:013F mov AL,0x43
@@ -225,7 +225,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0145 mov CX,0x0050
         CX = 0x0050;
         // 016E:0148 int 0x10
-        Video.WriteCharacterAndAttributeAtCursor(cs1, 0x014A, 0x43, 0x0050, 0x001F);
+        Video.WriteCharacterAndAttributeAtCursor(0x43, 0x0050, 0x001F);
         // 016E:014A mov AH,6
         AH = 6;
         // 016E:014C mov AL,1
@@ -241,7 +241,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0156 mov DL,0x4F
         DL = 0x4F;
         // 016E:0158 int 0x10
-        Video.ScrollPageUp(cs1, 0x015A, 1, 0, 0x024F, 0x071F);
+        Video.ScrollPageUp(1, 0, 0x024F, 0x071F);
         // 016E:015A mov AX,0x4C00
         AX = 0x4C00;
         // 016E:015D int 0x21

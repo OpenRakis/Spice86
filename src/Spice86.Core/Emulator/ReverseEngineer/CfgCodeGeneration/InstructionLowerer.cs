@@ -200,9 +200,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (continuation.RedirectedContinuationEdges.Count != 0) {
             return (InterruptSiteKind.RedirectedReturn, null);
         }
-        IVisitableAstNode vectorValue = node.VectorNumber is InstructionFieldNode field ? field.ResolvedNode : node.VectorNumber;
-        if (TryGetConstantWord(vectorValue) is not ushort vectorNumber
-            || vectorNumber > byte.MaxValue) {
+        if (HardwareInterruptEffectBuilder.InterruptVectorOf(node.Instruction) is not { } vectorNumber) {
             return (InterruptSiteKind.NotObserved, null);
         }
         List<SegmentedAddress> targets = HardwareInterruptEffectBuilder
@@ -210,7 +208,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (targets.Count == 0) {
             return (InterruptSiteKind.NotObserved, null);
         }
-        return ClassifyObservedSite(Context.Program.Inputs.HardwareInterrupts, (byte)vectorNumber, targets);
+        return ClassifyObservedSite(Context.Program.Inputs.HardwareInterrupts, vectorNumber, targets);
     }
 
     private static (InterruptSiteKind Kind, InterruptServiceVector? Service) ClassifyObservedSite(

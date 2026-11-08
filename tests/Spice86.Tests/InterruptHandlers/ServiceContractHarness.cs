@@ -23,21 +23,21 @@ internal static class ServiceContractHarness {
     internal static ServiceSelector? SelectorOf(IInterruptHandler handler) =>
         (handler.Services as HandlerServices.SelectedServices)?.Selector;
 
-    /// <summary>The contract <paramref name="handler"/> declares for
+    /// <summary>The service entry <paramref name="handler"/> declares for
     /// <paramref name="selectorValue"/>, or <see langword="null"/> when undeclared.</summary>
-    internal static ServiceContract? ContractOf(IInterruptHandler handler, int selectorValue) =>
+    internal static InterruptServiceEntry? EntryOf(IInterruptHandler handler, int selectorValue) =>
         handler.Services switch {
-            HandlerServices.SingleService single => single.Contract,
+            HandlerServices.SingleService single => single.Service,
             HandlerServices.SelectedServices selected =>
-                selected.Contracts.GetValueOrDefault(selectorValue),
+                selected.Services.GetValueOrDefault(selectorValue),
             _ => null
         };
 
-    /// <summary>Every contract <paramref name="handler"/> declares.</summary>
-    internal static IEnumerable<ServiceContract> DeclaredContracts(IInterruptHandler handler) =>
+    /// <summary>Every service entry <paramref name="handler"/> declares.</summary>
+    internal static IEnumerable<InterruptServiceEntry> DeclaredEntries(IInterruptHandler handler) =>
         handler.Services switch {
-            HandlerServices.SingleService single => [single.Contract],
-            HandlerServices.SelectedServices selected => selected.Contracts.Values,
+            HandlerServices.SingleService single => [single.Service],
+            HandlerServices.SelectedServices selected => selected.Services.Values,
             _ => []
         };
 
@@ -102,7 +102,7 @@ internal static class ServiceContractHarness {
         (CpuValues.Direction, "DF", Flags.Direction, (s, v) => s.DirectionFlag = v)
     ];
 
-    private sealed record RunResult(ServiceContract Contract,
+    private sealed record RunResult(InterruptServiceEntry Entry,
         IReadOnlyDictionary<RegisterField, uint> Inputs,
         IReadOnlyDictionary<RegisterField, uint> Outputs,
         ushort InputFrameFlags, ushort OutputFrameFlags,
@@ -126,34 +126,69 @@ internal static class ServiceContractHarness {
         AssertContract(testCase, ServiceRunMode.Stub);
     }
 
+    /// <summary>Runs <paramref name="testCase"/> once through the vector's installed stub and
+    /// hands the post-service <see cref="State"/> to <paramref name="assert"/> for explicit
+    /// output assertions beyond the differential contract.</summary>
+    internal static void RunOnceThroughStub(ServiceContractCase testCase, Action<State> assert) {
+        using ServiceContractMachine machine = new(testCase.NeedsEms, testCase.NeedsXms);
+        Spice86DependencyInjection spice86 = machine.Spice86;
+        IInterruptHandler handler = spice86.Machine.InstalledInterruptHandlers
+            .Handlers[testCase.Vector];
+        State state = spice86.Machine.CpuState;
+        testCase.Setup?.Invoke(machine);
+        SetSelector(state, SelectorOf(handler), testCase.SelectorValue);
+        spice86.Machine.Memory.UInt8[ScratchLinear] = 0xCD;
+        spice86.Machine.Memory.UInt8[ScratchLinear + 1] = testCase.Vector;
+        state.CS = ScratchSegment;
+        state.IP = ScratchOffset;
+        state.InterruptFlag = false;
+        InterruptServiceEntry entry = EntryOf(handler, testCase.SelectorValue)
+            ?? throw new InvalidOperationException(
+                $"int 0x{testCase.Vector:X2} selector 0x{testCase.SelectorValue:X2} has no service entry");
+        RunThroughStub(spice86, state, testCase, entry);
+        assert(state);
+    }
+
+    /// <summary>Captures the whole post-service machine of <paramref name="testCase"/> run
+    /// through the stub as one frozen line: every register lane, the output frame flags and a
+    /// hash of the full memory, so a refactor can be checked against the pre-refactor state
+    /// without regenerating the line.</summary>
+    internal static string CaptureBaseline(ServiceContractCase testCase) {
+        RunResult result = RunCase(testCase, 0, ServiceRunMode.Stub);
+        string registers = string.Join(",", Fields.Select(field => $"{field.Name}={result.Outputs[field]:X8}"));
+        string memoryHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(result.MemoryAfter));
+        return $"{registers};FLAGS={result.OutputFrameFlags:X4};MEMORY={memoryHash}";
+    }
+
     private static void AssertContract(ServiceContractCase testCase, ServiceRunMode mode) {
         RunResult first = RunCase(testCase, 0, mode);
         RunResult second = RunCase(testCase, 1, mode);
-        ServiceContract contract = first.Contract;
+        InterruptServiceEntry entry = first.Entry;
+        ServiceContract contract = entry.Contract;
 
         foreach (RegisterField field in Fields) {
             if (!contract.Registers.Writes.HasFlag(field.Bit)) {
                 continue;
             }
             second.Outputs[field].Should().Be(first.Outputs[field],
-                "{0} is in Writes of {1} but differed between the two runs", field.Name, contract.Name);
+                "{0} is in Writes of {1} but differed between the two runs", field.Name, entry.Name);
         }
 
         ushort frameFlagsMask = FrameFlagsOf(contract.Registers.Writes);
         (second.OutputFrameFlags & frameFlagsMask).Should().Be(first.OutputFrameFlags & frameFlagsMask,
-            "frame flags in FlagsWritten of {0} differed between the two runs", contract.Name);
+            "frame flags in FlagsWritten of {0} differed between the two runs", entry.Name);
 
         if (contract.Memory is ServiceMemoryEffect.Write or ServiceMemoryEffect.ReadWrite) {
             int differingOffset = FirstDifference(first.MemoryAfter, second.MemoryAfter, first.FrameBytes);
             differingOffset.Should().Be(-1,
-                "memory differed between the two runs of {0} at offset 0x{1:X}", contract.Name,
+                "memory differed between the two runs of {0} at offset 0x{1:X}", entry.Name,
                 Math.Max(differingOffset, 0));
         } else {
             foreach (RunResult run in new[] { first, second }) {
                 int differingOffset = FirstDifference(run.MemoryBefore, run.MemoryAfter, run.FrameBytes);
                 differingOffset.Should().Be(-1,
                     "Memory of {0} does not allow writes but memory at offset 0x{1:X} changed",
-                    contract.Name, Math.Max(differingOffset, 0));
+                    entry.Name, Math.Max(differingOffset, 0));
             }
         }
 
@@ -163,22 +198,22 @@ internal static class ServiceContractHarness {
                     continue;
                 }
                 run.Outputs[field].Should().Be(run.Inputs[field],
-                    "{0} is not in Writes of {1} but was not preserved", field.Name, contract.Name);
+                    "{0} is not in Writes of {1} but was not preserved", field.Name, entry.Name);
             }
             ushort preservedMask = (ushort)(0xFF7 & ~frameFlagsMask);
             (run.OutputFrameFlags & preservedMask).Should().Be(run.InputFrameFlags & preservedMask,
-                "a frame flag not in FlagsWritten of {0} was not preserved", contract.Name);
+                "a frame flag not in FlagsWritten of {0} was not preserved", entry.Name);
             if (!contract.Io) {
                 run.IoAccesses.Should().Be(0,
-                    "Io of {0} is false but an I/O port was accessed", contract.Name);
+                    "Io of {0} is false but an I/O port was accessed", entry.Name);
             }
             if (contract.Memory is ServiceMemoryEffect.None or ServiceMemoryEffect.Read) {
                 run.MemoryWrites.Should().Be(0,
-                    "Memory of {0} does not allow writes but a memory write happened", contract.Name);
+                    "Memory of {0} does not allow writes but a memory write happened", entry.Name);
             }
             if (contract.Memory is ServiceMemoryEffect.None or ServiceMemoryEffect.Write) {
                 run.MemoryReads.Should().Be(0,
-                    "Memory of {0} does not allow reads but a memory read happened", contract.Name);
+                    "Memory of {0} does not allow reads but a memory read happened", entry.Name);
             }
         }
     }
@@ -214,10 +249,10 @@ internal static class ServiceContractHarness {
             throw new InvalidOperationException($"No handler installed on vector 0x{testCase.Vector:X2}");
         }
         ServiceSelector? selector = SelectorOf(handler);
-        ServiceContract? contract = ContractOf(handler, testCase.SelectorValue);
-        if (contract is null) {
+        InterruptServiceEntry? entry = EntryOf(handler, testCase.SelectorValue);
+        if (entry is null) {
             throw new InvalidOperationException(
-                $"No contract declared for {testCase} (handler selector is {selector})");
+                $"No service entry declared for {testCase} (handler selector is {selector})");
         }
 
         if (handler is not InterruptHandler interruptHandler) {
@@ -229,7 +264,7 @@ internal static class ServiceContractHarness {
         State state = spice86.Machine.CpuState;
         Random random = new(testCase.Vector * 131071 + testCase.SelectorValue * 131 + runIndex);
         RandomizeInputs(state, random);
-        FillContractReads(state, selector, testCase.SelectorValue, contract);
+        FillContractReads(state, selector, testCase.SelectorValue, entry.Contract);
         testCase.Setup?.Invoke(machine);
         // A Setup that invokes services (like EMS handle allocation) leaves the
         // selector register at its own result value; a real `int` caller sets it
@@ -237,7 +272,7 @@ internal static class ServiceContractHarness {
         SetSelector(state, selector, testCase.SelectorValue);
         SelectorValue(state, selector).Should().Be((uint)testCase.SelectorValue,
             "the selector register must hold the case value when {0} runs",
-            contract.Name);
+            entry.Name);
 
         ushort inputFrameFlags;
         ushort frameBaseOffset;
@@ -311,7 +346,7 @@ internal static class ServiceContractHarness {
         state.InterruptFlag = false;
         try {
             if (mode == ServiceRunMode.Stub) {
-                RunThroughStub(spice86, state, testCase, contract);
+                RunThroughStub(spice86, state, testCase, entry);
             } else {
                 interruptHandler.Run();
             }
@@ -334,11 +369,11 @@ internal static class ServiceContractHarness {
         }
         state.InterruptFlag.Should().BeFalse(
             "{0} ran with IF clear, the state an `int` leaves; a precise service that set IF "
-            + "would deliver a hardware interrupt inside a typed call", contract.Name);
+            + "would deliver a hardware interrupt inside a typed call", entry.Name);
         memoryReads = readAddresses.Count(address => !fetchedBytes.Contains(address));
         ushort outputFrameFlags = mode == ServiceRunMode.Stub ? state.Flags.FlagRegister16 : spice86.Machine.Stack.Peek16(4);
 
-        return new RunResult(contract,
+        return new RunResult(entry,
             inputs,
             SnapshotRegisters(state),
             inputFrameFlags,
@@ -352,7 +387,7 @@ internal static class ServiceContractHarness {
     }
 
     private static void RunThroughStub(Spice86DependencyInjection spice86, State state,
-        ServiceContractCase testCase, ServiceContract contract) {
+        ServiceContractCase testCase, InterruptServiceEntry entry) {
         int steps = 0;
         while ((state.CS != ScratchSegment || state.IP != ScratchReturnOffset)
                && steps < StubStepLimit) {
@@ -360,11 +395,11 @@ internal static class ServiceContractHarness {
             steps++;
             state.InterruptFlag.Should().BeFalse(
                 "the stub of {0} set IF; a hardware interrupt could be delivered "
-                + "inside a typed call", contract.Name);
+                + "inside a typed call", entry.Name);
         }
         (state.CS == ScratchSegment && state.IP == ScratchReturnOffset).Should().BeTrue(
             "the stub of {0} did not return to the scratch address within {1} steps",
-            contract.Name, StubStepLimit);
+            entry.Name, StubStepLimit);
     }
 
     internal static void RandomizeInputs(State state, Random random) {

@@ -86,9 +86,10 @@ internal static class GeneratedCodeCoverageReport {
             status = CompileErrorStatus;
             errorIds = JoinErrorIds(compilation.EmitResult.Diagnostics);
         }
-        GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
-            testName, compilation.SyntaxTrees, compilation.EmitResult.Diagnostics);
-        return JoinColumns(testName, program, status, errorIds, metrics.Methods.ToString(), metrics.Lines.ToString());
+        int methods = compilation.SyntaxTrees.Sum(tree => tree.GetRoot().DescendantNodes()
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Count());
+        int lines = compilation.SyntaxTrees.Sum(tree => tree.GetText().Lines.Count);
+        return JoinColumns(testName, program, status, errorIds, methods.ToString(), lines.ToString());
     }
 
     private static string? FindGeneratedDirectory(string exportFolder) {

@@ -1,6 +1,7 @@
 ; compile it with fasm
-; Typed-service-call fixture: every int 21h site lands in one kind. Results go to
-; ES=2000h offsets 40h-84h (physical 20040h-20084h).
+; Service-call fixture: the program hooks int 21h mid-run, so the whole vector keeps
+; ordinary InterruptCall dispatch - no site may become a direct call. Results go to
+; ES=2000h offsets 40h-98h (physical 20040h-20098h).
 org 100h
 use16
 str_off equ 00E8h
@@ -10,7 +11,7 @@ start:
     mov sp, 1000h
     mov es, ax
 
-; outputs of a typed call used after it: AH=30h (version) writes AX, BX and CX - wrong rewrite:
+; outputs of a service call used after it: AH=30h (version) writes AX, BX and CX - wrong rewrite:
 ; treating a register the service writes as preserved across the call
     mov bx, 1111h
     mov cx, 2222h
@@ -20,7 +21,7 @@ start:
     mov [es:42h], bx
     mov [es:44h], cx
 
-; values preserved across a typed call: AH=02h (print char) writes nothing of SI or BP - wrong
+; values preserved across a service call: AH=02h (print char) writes nothing of SI or BP - wrong
 ; rewrite: killing a live value because the untyped call could have written it
     mov si, 3333h
     mov bp, 4444h
@@ -30,9 +31,9 @@ start:
     mov [es:46h], si
     mov [es:48h], bp
 
-; the selector write the helper does: AH reads as the service result after the call, and stays
-; the selector value for a service that writes nothing - wrong rewrite: dropping the selector
-; write because the program's own mov to AH is dead
+; the selector value around a dispatched call: AH reads as the service result after the call,
+; and stays the selector value for a service that writes nothing - wrong rewrite: dropping the
+; selector write because the program's own mov to AH is dead
     mov ah, 30h
     int 21h
     mov [es:4Ah], ah
@@ -68,8 +69,8 @@ start:
     mov word [es:50h], 0BEEFh
 .carry_done:
 
-; the interrupt frame below SP: the call pushed FLAGS, CS, IP on the stack - wrong rewrite: a
-; typed call that does not build the same frame the int did
+; the interrupt frame below SP: the dispatched call pushes FLAGS, CS, IP on the stack - wrong
+; rewrite: a direct call that does not build the same frame the int did
     mov ax, 0
     push ax
     popf
@@ -132,14 +133,14 @@ start:
     mov [es:72h], si
 
 ; a constant-selector site with mixed targets: do_int30 is called before the hook (the stub
-; answers) and after it (the program handler answers) - wrong rewrite: typing a site whose
-; observed targets are not all the installed stub
+; answers) and after it (the program handler answers) - wrong rewrite: direct-calling a site
+; whose observed targets are not all the installed stub
     call do_int30
     mov [es:74h], ax
     mov [es:76h], bx
 
 ; a varying selector: one site, two different AH values - must stay InterruptCall - wrong
-; rewrite: typing the site with the first value discovery saw
+; rewrite: direct-calling the site with the first value discovery saw
     mov ah, 30h
     call do_int
     mov [es:58h], ax
@@ -148,8 +149,9 @@ start:
     call do_int
     mov [es:5Ah], ax
 
-; a hooked vector: the program handler answers AH=30h itself and chains the rest - wrong
-; rewrite: typing a site whose observed targets are not all the installed stub
+; a hooked vector: the program handler answers AH=30h itself and chains the rest. Once this
+; runs, no int 21h site may go direct - wrong rewrite: direct-calling a site whose observed
+; targets are not all the installed stub
     mov ah, 35h
     mov al, 21h
     int 21h
@@ -173,6 +175,51 @@ start:
     call do_int30
     mov [es:78h], ax
     mov [es:7Ah], bx
+
+; a custom-handler call answered through the real frame: while the hook is installed,
+; AX=30A5h makes the program handler read SI into BX, write DI=BEEFh, record the saved
+; return IP/CS and set the caller's stacked carry before IRET - wrong rewrite: dispatching
+; this site to the built-in service, which would drop the handler's reads and its frame
+; effects entirely. SI=1234h is stored before the call and checked after it: the handler
+; must not clobber it
+    mov si, 1200h
+    add si, 34h
+    mov [es:96h], si
+    mov [cs:before_sp], sp
+    mov ax, 30A5h
+    int 21h
+int_a5_continuation:
+    pushf
+    pop ax
+    and ax, 1
+    mov [es:8Eh], ax
+    mov [es:8Ah], bx
+    mov [es:8Ch], di
+    mov word [es:90h], 0
+    mov ax, [cs:saved_ip]
+    cmp ax, int_a5_continuation
+    jne .ip_done
+    mov word [es:90h], 1
+.ip_done:
+    mov word [es:92h], 0
+    mov ax, [cs:saved_cs]
+    mov bx, cs
+    cmp ax, bx
+    jne .cs_done
+    mov word [es:92h], 1
+.cs_done:
+    mov word [es:94h], 0
+    cmp sp, [cs:before_sp]
+    jne .sp_done
+    mov word [es:94h], 1
+.sp_done:
+    mov ax, si
+    cmp si, 1234h
+    je .si_kept
+    mov ax, 0DEADh
+.si_kept:
+    mov [es:96h], ax
+
     mov dx, [cs:saved_off]
     mov ax, [cs:saved_seg]
     mov ds, ax
@@ -210,9 +257,9 @@ start:
     mov al, [ds:0F0h]
     mov [es:7Eh], al
 
-; a DX output of a typed call read after it: AH=44h AL=00h (IOCTL get device information,
+; a DX output of a service call read after it: AH=44h AL=00h (IOCTL get device information,
 ; BX=1 stdout) writes DX with the device information word - wrong rewrite: DX left out of
-; the typed call's writes, so the pre-call constant 0BEEFh would be folded into the store
+; the call's writes, so the pre-call constant 0BEEFh would be folded into the store
     mov dx, 0BEEFh
     mov ax, 4400h
     mov bx, 1
@@ -244,12 +291,15 @@ start:
     mov ds, ax
 
 ; a constant selector whose contract stays Unknown: AH=0Ch AL=FFh (flush the keyboard
-; buffer and run no function) has no precise contract - wrong rewrite: typing the site
-; anyway, which calls a helper that does not exist (the generated program no longer compiles)
+; buffer and run no function) has no precise contract - wrong rewrite: direct-calling the
+; site anyway, which calls a service that is not bound (the generated program no longer
+; compiles)
     mov dx, 0BEEFh
     mov ax, 0CFFh
     int 21h
     mov [es:84h], dx
+
+    call preserved_output
 
     hlt
 
@@ -265,11 +315,27 @@ do_int30:
     int 21h
     ret
 
-; program handler for int 21h: answers AH=30h, chains everything else to the saved vector
+; program handler for int 21h: AX=30A5h exercises the real frame (SI to BX, DI=BEEFh,
+; saved IP/CS recorded, caller's stacked carry set), AH=30h is answered, everything else
+; chains to the saved vector
 handler:
+    cmp ax, 30A5h
+    je .frame_case
     cmp ah, 30h
     je .answer
     jmp dword [cs:saved_off]
+.frame_case:
+    push bp
+    mov bp, sp
+    mov ax, [bp+2]
+    mov [cs:saved_ip], ax
+    mov ax, [bp+4]
+    mov [cs:saved_cs], ax
+    or word [bp+6], 1
+    pop bp
+    mov bx, si
+    mov di, 0BEEFh
+    iret
 .answer:
     mov ax, 1234h
     mov bx, 5678h
@@ -310,3 +376,21 @@ str_w:
 missing_name db 'NOFILE.XYZ', 0
 saved_off    dw 0
 saved_seg    dw 0
+saved_ip     dw 0
+saved_cs     dw 0
+before_sp    dw 0
+
+; AH=67h with a handle table size equal to the current one clears CF and preserves AX:
+; storing AX and the carry bit afterwards catches a generated call that forgets the
+; output registers the service does not write on this path
+preserved_output:
+    nop
+    mov ax, 675Ah
+    mov bx, 20
+    int 21h
+    mov [es:86h], ax
+    pushf
+    pop ax
+    and ax, 1
+    mov [es:88h], ax
+    ret

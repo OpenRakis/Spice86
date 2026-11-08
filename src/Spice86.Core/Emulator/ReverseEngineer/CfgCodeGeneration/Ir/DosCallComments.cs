@@ -11,25 +11,21 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
-using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 using System.Text;
 
 /// <summary>
-/// The <c>// DOS ...</c> comments and the string literals of the generated code.
+/// The <c>// DOS ...</c> comments of the generated code.
 /// <see cref="Record"/> runs right after
 /// <see cref="IrConstants"/> in the pipeline and stores, per <c>int 21h</c> statement whose AH is a
 /// known constant, the service and the known pointer registers; it edits nothing. After the pass
 /// pipeline and the segment summaries, <see cref="Resolve"/> completes each record with the DS value
 /// of <see cref="IrSegmentValues"/> at the surviving interrupt statement and reads the shown bytes
 /// from the dump-time memory snapshot, keeping only bytes <see cref="ChangedMemorySnapshot.IsUnchanged"/>
-/// proves never changed during discovery. A typed call to a string-reading service whose bytes are
-/// all printable, unchanged and inside one segment gets the string as a literal argument instead of
-/// a comment. <see cref="Apply"/> prints each resolved text as a <see cref="CommentNode"/> line
-/// after the instruction's <c>// SEG:OFF asm</c> line, or sets
-/// <see cref="InterruptServiceCallNode.StringLiteral"/>.
+/// proves never changed during discovery. <see cref="Apply"/> prints each resolved text as a
+/// <see cref="CommentNode"/> line after the instruction's <c>// SEG:OFF asm</c> line.
 /// </summary>
 internal static class DosCallComments {
     private const int MaxShownBytes = 64;
@@ -52,15 +48,15 @@ internal static class DosCallComments {
                     || !facts.TryGetBefore(block, index, Ah, out ulong service)) {
                     continue;
                 }
-                ServiceContract? contract =
+                InterruptServiceEntry? entry =
                     call.Service is { VectorNumber: 0x21, Services: HandlerServices.SelectedServices selected }
-                        ? selected.Contracts.GetValueOrDefault((byte)service)
+                        ? selected.Services.GetValueOrDefault((byte)service)
                         : null;
                 if ((byte)service is not 0x09 and not 0x40
-                    && (contract?.StringArgument ?? ServiceStringArgument.None).Terminator() is null) {
+                    && (entry?.StringArgument ?? ServiceStringArgument.None).Terminator() is null) {
                     continue;
                 }
-                dosCalls[statement.Origin] = new DosCallRecord((byte)service, contract,
+                dosCalls[statement.Origin] = new DosCallRecord((byte)service, entry,
                     Known(Dx), Known(Cx), Known(Bx));
 
                 ushort? Known(RegisterNode register) =>
@@ -70,13 +66,10 @@ internal static class DosCallComments {
         return dosCalls;
     }
 
-    /// <summary>Resolves the records of <paramref name="prepared"/> into comment texts or string
-    /// literals, keyed by instruction address. A record drops out when its interrupt statement did
-    /// not survive the passes, when DS has no proven value at it, when a needed register is unknown,
-    /// or when a shown byte is outside the snapshot or not unchanged. A typed service call that
-    /// reads a string at <c>DS:DX</c> gets the string as a literal argument (and no comment) when
-    /// its terminator is found, every byte up to and including it is unchanged, the string does not
-    /// wrap the offset and every byte before the terminator is printable.</summary>
+    /// <summary>Resolves the records of <paramref name="prepared"/> into comment texts, keyed by
+    /// instruction address. A record drops out when its interrupt statement did not survive the
+    /// passes, when DS has no proven value at it, when a needed register is unknown, or when a
+    /// shown byte is outside the snapshot or not unchanged.</summary>
     internal static Dictionary<SegmentedAddress, DosCallResolution> Resolve(PreparedMethod prepared,
         IrSegmentValues values, ChangedMemorySnapshot changed, byte[] memory) {
         Dictionary<SegmentedAddress, DosCallResolution> resolutions = new();
@@ -94,7 +87,7 @@ internal static class DosCallComments {
                 uint physical = (uint)(ds.Value * 16 + dx);
                 InterruptServiceCallNode? serviceCall = FindServiceCall(statement.Node);
                 if (serviceCall is not null
-                    && serviceCall.Contract.StringArgument.Terminator() is { } terminator
+                    && serviceCall.Service.StringArgument.Terminator() is { } terminator
                     && StringLiteral(record, memory, changed, physical, dx, terminator)
                         is { } literal) {
                     resolutions[statement.Origin.Address] = new DosCallResolution(null, literal);
@@ -114,9 +107,7 @@ internal static class DosCallComments {
     }
 
     /// <summary>Replaces <paramref name="body"/> with a copy that prints each resolved comment as a
-    /// <see cref="CommentNode"/> right after the <c>// SEG:OFF asm</c> line of its instruction, and
-    /// each resolved literal as the last argument of the typed service call of its
-    /// instruction.</summary>
+    /// <see cref="CommentNode"/> right after the <c>// SEG:OFF asm</c> line of its instruction.</summary>
     internal static BlockNode Apply(BlockNode body,
         IReadOnlyDictionary<SegmentedAddress, DosCallResolution> resolutions) {
         IVisitableAstNode Rewrite(IVisitableAstNode node) {
@@ -203,8 +194,8 @@ internal static class DosCallComments {
     /// at <c>DS:DX</c>; the terminator byte counts for the unchanged check but is not shown.</summary>
     private static string? AsciiZComment(DosCallRecord record, byte[] memory,
         ChangedMemorySnapshot changed, uint physical) {
-        if (record.Contract is null
-            || record.Contract.StringArgument.Terminator() is not { } terminator) {
+        if (record.ServiceEntry is null
+            || record.ServiceEntry.StringArgument.Terminator() is not { } terminator) {
             return null;
         }
         int end = ScanFor(memory, physical, terminator);
@@ -214,7 +205,7 @@ internal static class DosCallComments {
         if (!changed.IsUnchanged(physical, end + 1)) {
             return null;
         }
-        return $"DOS {record.Service:X2}h {record.Contract.Name} \"{Escape(memory, physical, end)}\"";
+        return $"DOS {record.Service:X2}h {record.ServiceEntry.Name} \"{Escape(memory, physical, end)}\"";
     }
 
     /// <summary><c>DOS 40h write handle 1 "DATA"</c>: the CX bytes at <c>DS:DX</c>, the handle number

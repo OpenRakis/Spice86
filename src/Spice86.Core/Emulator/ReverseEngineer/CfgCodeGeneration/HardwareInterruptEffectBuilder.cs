@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -14,9 +15,11 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Buffers.Binary;
 using System.Linq;
 
 /// <summary>
@@ -380,6 +383,78 @@ internal sealed class HardwareInterruptEffectBuilder {
     internal static bool IsInterruptCall(CfgInstruction instruction) =>
         instruction.ExecutionAst is InterruptCallNode
         || IrAstChildren.Descendants(instruction.ExecutionAst).OfType<InterruptCallNode>().Any();
+
+    /// <summary>The vector an <c>int</c> instruction calls: the constant byte its vector number
+    /// resolves to, or <see langword="null"/> when the instruction has no interrupt call or the
+    /// number is not a constant byte.</summary>
+    internal static byte? InterruptVectorOf(CfgInstruction instruction) {
+        List<InterruptCallNode> calls =
+            [.. IrAstChildren.Descendants(instruction.ExecutionAst).OfType<InterruptCallNode>()];
+        if (calls.Count == 0) {
+            return null;
+        }
+        byte? result = null;
+        foreach (InterruptCallNode call in calls) {
+            IVisitableAstNode value = call.VectorNumber is InstructionFieldNode field ? field.ResolvedNode : call.VectorNumber;
+            if (!ConstantEvaluation.TryEvaluateReplacing(value, _ => null, out ulong vector)
+                || vector > byte.MaxValue) {
+                return null;
+            }
+            if (result is { } previous && previous != (byte)vector) {
+                return null;
+            }
+            result = (byte)vector;
+        }
+        return result;
+    }
+
+    /// <summary>Whether every <c>int</c> site of the program on <paramref name="service"/>'s
+    /// vector observed only the installed stub, so generated code may call the service
+    /// implementation directly at every site: at least one site must target the vector, each
+    /// such site must have observed targets and only the stub, and no <c>int</c> anywhere may
+    /// have an unresolvable vector (it cannot be proven unrelated). Only recorded instructions
+    /// count: a speculative <c>int</c> (<see cref="ICfgNode.IsSpeculative"/>, a failure path
+    /// discovery never executed) has no observed target to qualify or disqualify anything and
+    /// is skipped. The dump-time vector table
+    /// entry, when the snapshot covers it, must still point at the stub: a custom handler that
+    /// was seen and later uninstalled is a conflicting live target like any other.</summary>
+    internal bool HasOnlyBuiltInTargets(InterruptServiceVector service) {
+        EnsureInitialized();
+        bool anySite = false;
+        foreach (CfgInstruction instruction in _context.Program.Partitions
+                .SelectMany(partition => partition.Blocks)
+                .SelectMany(block => block.Instructions)
+                .OfType<CfgInstruction>().Where(node => !node.IsSpeculative).Distinct()) {
+            byte? vector = InterruptVectorOf(instruction);
+            if (vector is null) {
+                if (IsInterruptCall(instruction)) {
+                    return false;
+                }
+                continue;
+            }
+            if (vector.Value != service.VectorNumber) {
+                continue;
+            }
+            anySite = true;
+            List<SegmentedAddress> targets = TransferTargets(instruction)
+                .Select(target => target.Address).ToList();
+            if (targets.Count == 0 || targets.Any(target => target != service.StubAddress)) {
+                return false;
+            }
+        }
+        if (!anySite) {
+            return false;
+        }
+        byte[] snapshot = _context.Program.Inputs.MemorySnapshot;
+        int vectorEntry = service.VectorNumber * 4;
+        if (vectorEntry + 4 > snapshot.Length) {
+            return true;
+        }
+        SegmentedAddress recorded = new SegmentedAddress(
+            BinaryPrimitives.ReadUInt16LittleEndian(snapshot.AsSpan(vectorEntry + 2, 2)),
+            BinaryPrimitives.ReadUInt16LittleEndian(snapshot.AsSpan(vectorEntry, 2)));
+        return recorded == service.StubAddress;
+    }
 
     /// <summary>The register summary computation of one lifted partition.</summary>
     private sealed class PartitionAnalysis {

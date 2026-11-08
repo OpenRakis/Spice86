@@ -83,15 +83,21 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </remarks>
     [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None, Io = true)]
     public void SetTypematicRateAndDelay() {
-        switch (State.AL) {
+        SetTypematicRateAndDelay(State.AL, State.BX);
+    }
+
+    /// <summary>Sets the typematic rate and delay; AL selects the function, BL the rate
+    /// and BH the delay.</summary>
+    public void SetTypematicRateAndDelay(byte al, ushort bx) {
+        switch (al) {
             case TypematicFunctionConsts.SetDefaultFunction:
                 _ioPortDispatcher.WriteByte(KeyboardPorts.Data, (byte)KeyboardCommand.SetTypeRate);
                 _ioPortDispatcher.WriteByte(KeyboardPorts.Data, TypematicFunctionConsts.DefaultRateAndDelayValue);
                 break;
             case TypematicFunctionConsts.SetRateAndDelayFunction:
-                if ((State.BL & TypematicFunctionConsts.RateMask) == 0 && (State.BH & TypematicFunctionConsts.DelayMask) == 0) {
+                if (((bx & 0xFF) & TypematicFunctionConsts.RateMask) == 0 && ((bx >> 8) & TypematicFunctionConsts.DelayMask) == 0) {
                     _ioPortDispatcher.WriteByte(KeyboardPorts.Data, (byte)KeyboardCommand.SetTypeRate);
-                    byte rateAndDelay = (byte)(State.BH << TypematicFunctionConsts.DelayShiftCount | State.BL);
+                    byte rateAndDelay = (byte)(((bx >> 8) << TypematicFunctionConsts.DelayShiftCount) | (bx & 0xFF));
                     _ioPortDispatcher.WriteByte(KeyboardPorts.Data, rateAndDelay);
                 }
                 break;
@@ -99,7 +105,7 @@ public class KeyboardInt16Handler : InterruptHandler {
                 if (LoggerService.IsEnabled(LogLevel.Warning)) {
                     LoggerService.LogWarning(
                         "{ClassName} INT {Int:X2} {operation}: Unhandled {MethodName} command.",
-                        nameof(KeyboardInt16Handler), VectorNumber, State.AL, nameof(SetTypematicRateAndDelay));
+                        nameof(KeyboardInt16Handler), VectorNumber, al, nameof(SetTypematicRateAndDelay));
                 }
                 break;
         }
@@ -108,7 +114,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     [InterruptService(0x1D, Name = "Unsupported", Reads = CpuValues.Ah)]
     private void UnsupportedKeyboardService() => Unsupported(0x1D);
 
-    private void Unsupported(int operation) {
+    /// <summary>Logs and ignores an unsupported keyboard operation.</summary>
+    public void Unsupported(int operation) {
         if (LoggerService.IsEnabled(LogLevel.Warning)) {
             LoggerService.LogWarning(
                 "{ClassName} INT {Int:X2} {operation}: Unhandled/undocumented keyboard interrupt called, will ignore",
@@ -224,23 +231,43 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
     /// <remarks>Returns <c>0</c> if no key is available. Should not happen for emulated programs, see ASM above.</remarks>
     public void GetKeystroke() {
+        State.AX = ReadKeystroke();
+    }
+
+    /// <summary>Dequeues and returns the pending key code (AH = scan code, AL = ASCII);
+    /// returns 0 when no key is available.</summary>
+    public ushort ReadKeystroke() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("READ KEY STROKE");
         }
         if (TryGetPendingKeyCode(out ushort? keyCode)) {
             _biosKeyboardBuffer.DequeueKeyCode();
-            State.AX = keyCode.Value;
-        } else {
-            State.AX = 0; // No key available
+            return keyCode.Value;
         }
+        return 0; // No key available
     }
 
-    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.Read)]
-    public void GetShiftFlags() {
+    /// <summary>Returns the BIOS keyboard shift-flag byte.</summary>
+    public byte GetShiftFlags() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("GET SHIFT FLAGS");
         }
-        State.AL = _biosDataArea.KeyboardStatusFlag;
+        return _biosDataArea.KeyboardStatusFlag;
+    }
+
+    [InterruptService(0x02, Name = nameof(GetShiftFlags), Reads = CpuValues.Ah, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.Read)]
+    public void WriteShiftFlags() {
+        State.AL = GetShiftFlags();
+    }
+
+    /// <summary>Stores <paramref name="keyCode"/> in the BIOS keyboard buffer; AL is 0 on
+    /// success with CF clear, 1 with CF set when the buffer is full.</summary>
+    public (byte al, bool carryFlag) StoreKeystroke(ushort keyCode) {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("STORE KEYSTROKE {KeyCode}", keyCode);
+        }
+        bool enqueued = _biosKeyboardBuffer.EnqueueKeyCode(keyCode);
+        return enqueued ? ((byte)0, false) : ((byte)1, true);
     }
 
     /// <summary>
@@ -248,19 +275,11 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Writes the key code in CX (CH=scan code, CL=ASCII character) into the
     /// BIOS keyboard buffer. On success AL=0, CF=0; if the buffer is full, AL=1, CF=1.
     /// </summary>
-    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Cx, Writes = CpuValues.Al | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Cx, Writes = CpuValues.Al | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(StoreKeystroke), Inputs = [CpuValues.Cx])]
     public void StoreKeystroke(bool calledFromVm) {
-        ushort keyCode = State.CX;
-        if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("STORE KEYSTROKE {KeyCode}", keyCode);
-        }
-        bool enqueued = _biosKeyboardBuffer.EnqueueKeyCode(keyCode);
-        State.AL = enqueued ? (byte)0 : (byte)1;
-        if (enqueued) {
-            SetCarryFlag(false, calledFromVm);
-        } else {
-            SetCarryFlag(true, calledFromVm);
-        }
+        (State.AL, bool carryFlag) = StoreKeystroke(State.CX);
+        SetCarryFlag(carryFlag, calledFromVm);
     }
 
     /// <summary>
@@ -286,12 +305,10 @@ public class KeyboardInt16Handler : InterruptHandler {
         return TryGetPendingKeyCode(out _);
     }
 
-    /// <summary>
-    /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
-    /// </summary>
-    /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
-    [InterruptService(0x01, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read)]
-    public void GetKeystrokeStatus(bool calledFromVm) {
+    /// <summary>Returns the pending key code in AX without dequeuing, and ZF set when
+    /// the buffer is empty; when the peek cannot classify the pending code the caller's
+    /// AX and ZF are preserved.</summary>
+    public (ushort ax, bool zeroFlag) ReadKeystrokeStatus(ushort previousAx, bool previousZero) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("KEY STROKE STATUS");
         }
@@ -301,15 +318,21 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AH = scan code
         // AL = ASCII character or zero if special function key
         if (_biosKeyboardBuffer.IsEmpty) {
-            SetZeroFlag(true, calledFromVm);
-            State.AX = 0;
-        } else {
-            ushort? keyCode = _biosKeyboardBuffer.PeekKeyCode();
-            if (keyCode != null) {
-                SetZeroFlag(false, calledFromVm);
-                State.AX = keyCode.Value;
-            }
+            return (0, true);
         }
+        ushort? keyCode = _biosKeyboardBuffer.PeekKeyCode();
+        return keyCode is { } code ? (code, false) : (previousAx, previousZero);
+    }
+
+    /// <summary>
+    /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
+    /// </summary>
+    /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
+    [InterruptService(0x01, Name = "GetKeystrokeStatus", Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read,
+        Implementation = nameof(ReadKeystrokeStatus), Inputs = [CpuValues.Ax, CpuValues.Zero])]
+    public void WriteKeystrokeStatus(bool calledFromVm) {
+        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag(calledFromVm));
+        SetZeroFlag(zeroFlag, calledFromVm);
     }
 
     /// <summary>
@@ -326,9 +349,11 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Returns key in AX without dequeuing and updates ZF like AH=01h.
     /// </summary>
     /// <param name="calledFromVm"><c>True</c> if the method was called by internal emulator code, <c>False</c> otherwise.</param>
-    [InterruptService(0x11, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read)]
+    [InterruptService(0x11, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read,
+        Implementation = nameof(ReadKeystrokeStatus), Inputs = [CpuValues.Ax, CpuValues.Zero])]
     public void GetEnhancedKeystrokeStatus(bool calledFromVm) {
-        GetKeystrokeStatus(calledFromVm);
+        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag(calledFromVm));
+        SetZeroFlag(zeroFlag, calledFromVm);
     }
 
     /// <summary>

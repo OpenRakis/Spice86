@@ -144,7 +144,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -155,14 +155,14 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 mov DH,4
         DH = 4;
         // 016D:0106 mov DL,9
-        DL = 9;
         // 016D:0108 int 0x10
-        Video.SetCursorPosition(cs1, 0x010A, 0x0409, BX);
+        Video.SetCursorPosition(0x0409, BX);
         // 016D:010A mov AH,2
+        AH = 2;
         // 016D:010C mov DL,0x1B
         DL = 0x1B;
         // 016D:010E int 0x21
-        Dos.DisplayOutput(cs1, 0x0110, 0x1B);
+        InterruptCall(cs1, 0x0110, 0x21);
         // 016D:0110 mov DL,0x5B
         DL = 0x5B;
         // 016D:0112 int 0x21
@@ -216,7 +216,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);

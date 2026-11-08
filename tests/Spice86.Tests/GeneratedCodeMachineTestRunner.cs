@@ -163,8 +163,10 @@ internal sealed class GeneratedCodeMachineTestRunner {
         GeneratedOverrideCompiler compiler = new();
         GeneratedCompilation compilation = compiler.Compile(generatedProgram);
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
-            GoldenKey(settings), compilation.SyntaxTrees, compilation.EmitResult.Diagnostics);
-        WriteMetrics(metrics);
+            GoldenKey(settings), compilation);
+        IReadOnlyDictionary<string, GeneratedCodeMetrics> methods =
+            GeneratedCodeMetricsCollector.CollectMethods(GoldenKey(settings), compilation);
+        WriteMetrics(metrics, methods);
         WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
         generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
             $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
@@ -172,7 +174,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         generatedProgram.FlagReadCensus.Total.Should().Be(metrics.StatusFlagReads,
             $"every printed flag read of {GoldenKey(settings)} has exactly one census line entry");
         WriteWebCensus(WebCensusLine.Format(GoldenKey(settings), generatedProgram.WebCensus));
-        GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText);
+        GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText, methods);
         return compiler.CompileSupplier(compilation);
     }
 
@@ -281,18 +283,17 @@ internal sealed class GeneratedCodeMachineTestRunner {
     }
 
     private static readonly object MetricsFileLock = new();
-    private static bool _metricsFileInitialized;
+    private static readonly SortedDictionary<string, (string Summary, string[] Methods)> MetricsRows = new(StringComparer.Ordinal);
 
-    private static void WriteMetrics(GeneratedCodeMetrics metrics) {
+    private static void WriteMetrics(GeneratedCodeMetrics metrics, IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         Directory.CreateDirectory(outputDirectory);
-        string metricsPath = Path.Join(outputDirectory, "metrics.txt");
+        string[] methodLines = methods.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => $"method={pair.Key} {pair.Value.SourceLocation} {pair.Value.ToLine()}").ToArray();
         lock (MetricsFileLock) {
-            if (!_metricsFileInitialized) {
-                File.Delete(metricsPath);
-                _metricsFileInitialized = true;
-            }
-            File.AppendAllText(metricsPath, metrics.ToLine() + Environment.NewLine);
+            MetricsRows[metrics.Fixture] = (metrics.ToLine(), methodLines);
+            File.WriteAllLines(Path.Join(outputDirectory, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
+            File.WriteAllLines(Path.Join(outputDirectory, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
         }
     }
 

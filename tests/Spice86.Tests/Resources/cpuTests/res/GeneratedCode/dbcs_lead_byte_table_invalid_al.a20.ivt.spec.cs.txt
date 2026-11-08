@@ -149,34 +149,36 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ESI, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ESI, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
+        byte al2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AX,0x6301
         AX = 0x6301;
         // 016D:0103 int 0x21
-        Dos.GetLeadByteTable(cs1, 0x0105, 1);
+        Dos.RecordCallerStack(SS, SP);
+        (al1, SI, DS, CarryFlag) = Dos.ReadLeadByteTable(1, SI, DS, CarryFlag);
         // 016D:0105 cmp AL,0xFF
-        Alu8.Sub(AL, 0xFF);
+        Alu8.Sub(al1, 0xFF);
         // 016D:0107 jne short 0x010D
-        if (AL != 0xFF) {
+        if (al1 != 0xFF) {
             VerifySpeculativeEntryOrFail(cs1, 0x010D, Signature_010D_mov);
             // 016D:010D mov AL,0xFF
-            al1 = 0xFF;
+            al2 = 0xFF;
         }
         else {
             // 016D:0109 mov AL,0
-            al1 = 0;
+            al2 = 0;
             // 016D:010B jmp short 0x010F
         }
         // 016D:010F mov DX,0x0999
         DX = 0x0999;
         // 016D:0112 out DX,AL
-        Out8(0x0999, al1);
+        Out8(0x0999, al2);
         // 016D:0113 hlt
-        AL = al1;
+        AL = al2;
         return Hlt();
     }
 

@@ -167,7 +167,7 @@ public partial class CfgGeneratedOverrides {
         // 0160:0102 mov DX,0x0131
         DX = 0x0131;
         // 0160:0105 int 0x21
-        Dos.PrintString(cs1, 0x0107, 0x0131, DS);
+        InterruptCall(cs1, 0x0107, 0x21);
         while (true) {
             CheckExternalEvents(cs1, 0x0107);
             // 0160:0107 mov AH,8

@@ -13,14 +13,15 @@ internal sealed class LatchIoPortHandler : DefaultIOPortHandler {
     /// <summary>Every value written to the port, in write order.</summary>
     public List<uint> WrittenValues { get; } = new();
 
-    /// <summary>Creates the handler and registers it on the given port.</summary>
+    /// <summary>Creates the handler and registers it on the given port, replacing any handler the
+    /// machine's devices already registered there.</summary>
     /// <param name="state">CPU state, used by error reporting.</param>
     /// <param name="loggerService">Logger used by the base port handler.</param>
     /// <param name="ioPortDispatcher">Dispatcher the handler registers itself on.</param>
     /// <param name="port">Port the latch listens on.</param>
     public LatchIoPortHandler(State state, ILogger loggerService, IOPortDispatcher ioPortDispatcher, ushort port)
         : base(state, true, loggerService) {
-        ioPortDispatcher.AddIOPortHandler(port, this);
+        ioPortDispatcher.ReplaceIOPortHandler(port, this);
     }
 
     /// <inheritdoc />

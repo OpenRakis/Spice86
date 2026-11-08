@@ -151,9 +151,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx1 = 0;
         byte al1 = 0;
         ushort flagOperand_0184 = 0;
         ushort flagOperand_018D = 0;
@@ -163,12 +164,13 @@ public partial class CfgGeneratedOverrides {
         // 016D:0101 pop DS
         DS = Stack.Pop16();
         // 016D:0102 mov BX,0xFFFF
-        BX = 0xFFFF;
+        bx1 = 0xFFFF;
         // 016D:0105 mov AH,0x68
+        AH = 0x68;
         // 016D:0107 clc
-        CarryFlag = false;
         // 016D:0108 int 0x21
-        Dos.CommitFile(cs1, 0x010A, 0xFFFF);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.CommitFile(0xFFFF, AX);
         // 016D:010A jae near 0x01C2
         if (CarryFlag) {
             // 016D:010E cmp AX,6
@@ -181,13 +183,14 @@ public partial class CfgGeneratedOverrides {
                 // 016D:0119 mov DX,0x01CB
                 DX = 0x01CB;
                 // 016D:011C int 0x21
-                Dos.CreateFileUsingHandle(cs1, 0x011E, 0, 0x01CB, DS, "COMMIT.DAT");
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.CreateFile(Dos.StringDecoder.GetDosString(DS, 0x01CB, '\0', "COMMIT.DAT"), 0);
                 // 016D:011E jb near 0x01C2
                 if (!CarryFlag) {
                     // 016D:0122 mov word ptr DS:[0x01C9],AX
                     ImageMinus0003Globals.Word01C9 = AX;
                     // 016D:0125 mov BX,AX
-                    BX = AX;
+                    bx1 = AX;
                     // 016D:0127 mov AH,0x40
                     // 016D:0129 mov CX,4
                     CX = 4;
@@ -195,7 +198,8 @@ public partial class CfgGeneratedOverrides {
                     DX = 0x01D6;
                     // 016D:012F int 0x21
                     // DOS 40h write "DATA"
-                    Dos.WriteToFileOrDevice(cs1, 0x0131, 4, 0x01D6, BX, DS);
+                    Dos.RecordCallerStack(SS, SP);
+                    (AX, CarryFlag) = Dos.WriteFile(bx1, 4, DS, 0x01D6);
                     // 016D:0131 jb near 0x01C2
                     if (!CarryFlag) {
                         // 016D:0135 cmp AX,4
@@ -208,43 +212,45 @@ public partial class CfgGeneratedOverrides {
                         // 016D:013E mov CX,0x000A
                         CX = 0x000A;
                         // 016D:0141 int 0x21
-                        Dos.ForceDuplicateFileHandle(cs1, 0x0143, 0x000A, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.ForceDuplicateHandle(bx1, 0x000A);
                         // 016D:0143 jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         // 016D:0145 mov AH,0x3E
                         // 016D:0147 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x0149, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(bx1, 0x3E);
                         // 016D:0149 jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         // 016D:014B mov BX,0x000A
-                        BX = 0x000A;
+                        bx1 = 0x000A;
                         // 016D:014E mov AH,0x68
+                        AH = 0x68;
                         // 016D:0150 stc
-                        CarryFlag = true;
                         // 016D:0151 int 0x21
-                        Dos.CommitFile(cs1, 0x0153, 0x000A);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CommitFile(0x000A, AX);
                         // 016D:0153 jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         // 016D:0155 mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:0158 xor CX,CX
                         CX = 0;
                         // 016D:015A xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:015C int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x015E, 1, 0, 0, 0x000A);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, 0x000A, 0, 0);
                         // 016D:015E jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
@@ -262,9 +268,9 @@ public partial class CfgGeneratedOverrides {
                             goto L_01C2;
                         }
                         // 016D:0169 mov AX,0x4200
-                        AX = 0x4200;
                         // 016D:016C int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x016E, 0, 0, DX, 0x000A);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 0x000A, 0, DX);
                         // 016D:016E jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
@@ -275,7 +281,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0175 mov DX,0x01DA
                         DX = 0x01DA;
                         // 016D:0178 int 0x21
-                        Dos.ReadFileOrDevice(cs1, 0x017A, 4, 0x01DA, 0x000A, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.ReadFile(0x000A, 4, DS, 0x01DA);
                         // 016D:017A jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
@@ -306,16 +313,18 @@ public partial class CfgGeneratedOverrides {
                         }
                         // 016D:0193 mov AH,0x3E
                         // 016D:0195 int 0x21
-                        Dos.CloseFileOrDevice(cs1, 0x0197, 0x000A);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CloseFile(0x000A, 0x3E);
                         // 016D:0197 jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         // 016D:0199 mov AH,0x68
+                        AH = 0x68;
                         // 016D:019B clc
-                        CarryFlag = false;
                         // 016D:019C int 0x21
-                        Dos.CommitFile(cs1, 0x019E, 0x000A);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CommitFile(0x000A, AX);
                         // 016D:019E jae short 0x01C2
                         if (!CarryFlag) {
                             goto L_01C2;
@@ -327,10 +336,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_01C2;
                         }
                         // 016D:01A5 mov BX,word ptr DS:[0x01C9]
-                        BX = ImageMinus0003Globals.Word01C9;
+                        bx1 = ImageMinus0003Globals.Word01C9;
                         // 016D:01A9 mov AH,0x68
+                        AH = 0x68;
                         // 016D:01AB int 0x21
-                        Dos.CommitFile(cs1, 0x01AD, BX);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CommitFile(bx1, AX);
                         // 016D:01AD jae short 0x01C2
                         if (!CarryFlag) {
                             goto L_01C2;
@@ -342,12 +353,13 @@ public partial class CfgGeneratedOverrides {
                             goto L_01C2;
                         }
                         // 016D:01B4 mov BX,1
-                        BX = 1;
+                        bx1 = 1;
                         // 016D:01B7 mov AH,0x68
+                        AH = 0x68;
                         // 016D:01B9 stc
-                        CarryFlag = true;
                         // 016D:01BA int 0x21
-                        Dos.CommitFile(cs1, 0x01BC, 1);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.CommitFile(1, AX);
                         // 016D:01BC jb short 0x01C2
                         if (CarryFlag) {
                             goto L_01C2;
@@ -370,6 +382,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:01C7 out DX,AL
         Out8(0x0999, al1);
         // 016D:01C8 hlt
+        BX = bx1;
         AL = al1;
         return Hlt();
     }
@@ -535,7 +548,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, DX, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

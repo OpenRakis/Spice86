@@ -1,5 +1,7 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using FluentAssertions;
+
 using Xunit;
 
 /// <summary>
@@ -65,6 +67,31 @@ public class BiosInt15ServiceContractTest {
     public void ServicesHonourDeclaredContract(ServiceContractCase testCase) {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContract(testCase);
+    }
+
+    /// <summary>INT 15h AH=24h preserves the outputs the selected A20 subfunction does not
+    /// write: BX always keeps the caller's value.</summary>
+    [Theory]
+    [InlineData(0x00, 0x2400, false)]
+    [InlineData(0x01, 0x2401, false)]
+    [InlineData(0x02, 0x0001, false)]
+    [InlineData(0xFF, 0x24FF, true)]
+    public void A20UnwrittenOutputsArePreserved(byte operation, ushort expectedAx,
+        bool expectedCarry) {
+        ServiceContractHarness.RunOnceThroughStub(new ServiceContractCase {
+            Vector = 0x15,
+            SelectorValue = 0x24,
+            Setup = machine => {
+                machine.Spice86.Machine.CpuState.AL = operation;
+                machine.Spice86.Machine.CpuState.BX = 0xBEEF;
+                machine.Spice86.Machine.CpuState.CarryFlag = true;
+                machine.Spice86.Machine.Memory.A20Gate.IsEnabled = true;
+            }
+        }, state => {
+            state.AX.Should().Be(expectedAx);
+            state.BX.Should().Be(0xBEEF);
+            state.CarryFlag.Should().Be(expectedCarry);
+        });
     }
 
     private static void WriteDescriptor(ServiceContractMachine machine, uint address,

@@ -167,7 +167,8 @@ public partial class CfgGeneratedOverrides {
         BX = 0x1000;
         // 016D:0103 mov AH,0x4A
         // 016D:0105 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x0107, 0x1000, ES);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, BX, CarryFlag) = Dos.ModifyMemory(ES, 0x1000);
         // 016D:0107 jb short 0x016E
         if (!CarryFlag) {
             // 016D:0109 mov word ptr DS:[0x019F],CS
@@ -217,7 +218,8 @@ public partial class CfgGeneratedOverrides {
                 }
                 // 016D:013E mov AH,0x4D
                 // 016D:0140 int 0x21
-                Dos.GetReturnCode(cs1, 0x0142);
+                Dos.RecordCallerStack(SS, SP);
+                AX = Dos.ReadReturnCode();
                 // 016D:0142 mov DX,0x0998
                 DX = 0x0998;
                 // 016D:0145 out DX,AL
@@ -229,11 +231,11 @@ public partial class CfgGeneratedOverrides {
                     goto L_016E;
                 }
                 // 016D:014A mov AX,0x3D00
-                AX = 0x3D00;
                 // 016D:014D mov DX,0x0183
                 DX = 0x0183;
                 // 016D:0150 int 0x21
-                Dos.OpenFileOrDevice(cs1, 0x0152, 0, 0x0183, DS);
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0183, '\0'));
                 // 016D:0152 jb short 0x016E
                 if (CarryFlag) {
                     goto L_016E;
@@ -256,7 +258,8 @@ public partial class CfgGeneratedOverrides {
                 BX = AX;
                 // 016D:0161 mov AH,0x3E
                 // 016D:0163 int 0x21
-                Dos.CloseFileOrDevice(cs1, 0x0165, BX);
+                Dos.RecordCallerStack(SS, SP);
+                (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
                 // 016D:0165 jb short 0x016E
                 if (CarryFlag) {
                     goto L_016E;
@@ -488,7 +491,8 @@ public partial class CfgGeneratedOverrides {
             // 117B:0106 mov AX,0x3D00
             AX = 0x3D00;
             // 117B:0109 int 0x21
-            Dos.OpenFileOrDevice(cs2, 0x010B, 0, DX, DS);
+            Dos.RecordCallerStack(SS, SP);
+            (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0'));
             // 117B:010B jb short 0x011C
             if (CarryFlag) {
                 goto L_011C;

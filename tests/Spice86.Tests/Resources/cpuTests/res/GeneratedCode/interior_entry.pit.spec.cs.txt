@@ -183,7 +183,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EBX. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -233,13 +233,11 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Word0022 = CS;
         // F000:005C mov AL,0x30
         // F000:005E out 0x43,AL
-        PitPorts.WriteControlWord(0x30);
         // F000:0060 mov AL,0xA9
         // F000:0062 out 0x40,AL
-        PitPorts.WriteChannel0Data(0xA9);
         // F000:0064 mov AL,4
         // F000:0066 out 0x40,AL
-        PitPorts.WriteChannel0Data(4);
+        Pit.ProgramChannel(0, 0x30, 0x04A9);
         // F000:0068 mov AL,0xFE
         AL = 0xFE;
         // F000:006A out 0x21,AL
@@ -259,13 +257,11 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Word0020 = 0x020C;
         // F000:007C mov AL,0x30
         // F000:007E out 0x43,AL
-        PitPorts.WriteControlWord(0x30);
         // F000:0080 mov AL,0xA9
         // F000:0082 out 0x40,AL
-        PitPorts.WriteChannel0Data(0xA9);
         // F000:0084 mov AL,4
         // F000:0086 out 0x40,AL
-        PitPorts.WriteChannel0Data(4);
+        Pit.ProgramChannel(0, 0x30, 0x04A9);
         // F000:0088 mov AL,0xFE
         AL = 0xFE;
         // F000:008A out 0x21,AL
@@ -294,13 +290,11 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Word0406 = 0x9000;
         // F000:00B1 mov AL,0x30
         // F000:00B3 out 0x43,AL
-        PitPorts.WriteControlWord(0x30);
         // F000:00B5 mov AL,0xA9
         // F000:00B7 out 0x40,AL
-        PitPorts.WriteChannel0Data(0xA9);
         // F000:00B9 mov AL,4
         // F000:00BB out 0x40,AL
-        PitPorts.WriteChannel0Data(4);
+        Pit.ProgramChannel(0, 0x30, 0x04A9);
         // F000:00BD mov AL,0x0A
         al1 = 0x0A;
         // F000:00BF out 0x20,AL

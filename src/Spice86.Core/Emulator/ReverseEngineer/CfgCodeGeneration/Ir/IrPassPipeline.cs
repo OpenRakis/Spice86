@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 /// <summary>The IR passes of <see cref="IrMethodEmitter"/>, in the order they run.</summary>
 internal enum IrPass {
@@ -22,6 +23,7 @@ internal enum IrPass {
     DeadRegisterWrites,
     ExpressionPropagation,
     AdditiveConstantFold,
+    DeviceOperations,
     DoublePrecision,
     SpeculativeGuardMerge
 }
@@ -54,15 +56,44 @@ internal static class IrPassPipeline {
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/>, building the webs and timing nothing the caller can read.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify) =>
-        Run(method, last, verify, true, new GenerationStepTimer());
+        Run(method, last, verify, true, GeneratorInputs.Empty.IoPorts, new GenerationStepTimer());
+
+    /// <summary>Runs every pass up to and including <paramref name="last"/> on
+    /// <paramref name="method"/>, with <paramref name="ioPorts"/> the port-to-handler-type map of
+    /// the machine the program was dumped from; passes that recognize device port sequences match
+    /// against it.</summary>
+    public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify,
+        IReadOnlyDictionary<ushort, Type> ioPorts) =>
+        Run(method, last, verify, true, ioPorts, new GenerationStepTimer());
 
     /// <summary>Runs the whole pipeline on <paramref name="method"/>, measuring each pass, each SSA
     /// build, the web build and the verification into <paramref name="timer"/>. The result always has
     /// an SSA, and webs when <paramref name="buildWebs"/> is true; a missing either is a bug and
     /// throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
-        GenerationStepTimer timer) {
-        IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs, timer);
+        GenerationStepTimer timer) =>
+        RunAll(method, verify, buildWebs, GeneratorInputs.Empty.IoPorts, timer);
+
+    /// <summary>Runs the whole pipeline on <paramref name="method"/> with
+    /// <paramref name="ioPorts"/> the port-to-handler-type map of the machine the program was
+    /// dumped from, measuring each pass, each SSA build, the web build and the verification into
+    /// <paramref name="timer"/>. The result always has an SSA, and webs when
+    /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
+    public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
+        IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
+        RunAll(method, verify, buildWebs, ioPorts, _ => false, timer);
+
+    /// <summary>Runs the whole pipeline on <paramref name="method"/> with
+    /// <paramref name="ioPorts"/> and <paramref name="hasOnlyBuiltInTargets"/> the
+    /// built-in-targets check <see cref="IrPass.InterruptServiceCalls"/> gates direct service
+    /// calls on, measuring each pass, each SSA build, the web build and the verification into
+    /// <paramref name="timer"/>. The result always has an SSA, and webs when
+    /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
+    public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
+        IReadOnlyDictionary<ushort, Type> ioPorts,
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
+        IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs,
+            ioPorts, hasOnlyBuiltInTargets, timer);
         if (result.Ssa is not { } ssa || (buildWebs && result.Webs is null)) {
             throw new InvalidOperationException(
                 $"A full IR pipeline run of {method.Name} must produce an SSA and webs.");
@@ -72,9 +103,31 @@ internal static class IrPassPipeline {
 
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/>, measuring each pass, each SSA build, the web build when
-    /// <paramref name="buildWebs"/> is true, and the verification into <paramref name="timer"/>.</summary>
+    /// <paramref name="buildWebs"/> is true, and the verification into <paramref name="timer"/>.
+    /// Without a machine the port map is empty and no device sequence combines.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
-        GenerationStepTimer timer) {
+        GenerationStepTimer timer) =>
+        Run(method, last, verify, buildWebs, GeneratorInputs.Empty.IoPorts, timer);
+
+    /// <summary>Runs every pass up to and including <paramref name="last"/> on
+    /// <paramref name="method"/> with <paramref name="ioPorts"/> the port-to-handler-type map of
+    /// the machine the program was dumped from, measuring each pass, each SSA build, the web build
+    /// when <paramref name="buildWebs"/> is true, and the verification into
+    /// <paramref name="timer"/>. Without the whole-program target analysis no <c>int</c> site
+    /// becomes a direct service call.</summary>
+    public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
+        IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
+        Run(method, last, verify, buildWebs, ioPorts, _ => false, timer);
+
+    /// <summary>Runs every pass up to and including <paramref name="last"/> on
+    /// <paramref name="method"/> with <paramref name="ioPorts"/> and
+    /// <paramref name="hasOnlyBuiltInTargets"/> the built-in-targets check
+    /// <see cref="IrPass.InterruptServiceCalls"/> gates direct service calls on, measuring each
+    /// pass, each SSA build, the web build when <paramref name="buildWebs"/> is true, and the
+    /// verification into <paramref name="timer"/>.</summary>
+    public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
+        IReadOnlyDictionary<ushort, Type> ioPorts,
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
         IrSsa? ssa = null;
         IrSsaWebs? webs = null;
         IReadOnlyDictionary<ICfgNode, DosCallRecord> dosCalls = new Dictionary<ICfgNode, DosCallRecord>();
@@ -100,15 +153,15 @@ internal static class IrPassPipeline {
             return Finish();
         }
         int typedCalls = timer.Measure(IrPass.InterruptServiceCalls.ToString(),
-            () => IrInterruptServiceCalls.Apply(method, ssa1, facts));
-        if (last == IrPass.InterruptServiceCalls) {
-            return Finish();
-        }
+            () => IrInterruptServiceCalls.Apply(method, ssa1, facts, hasOnlyBuiltInTargets));
         if (typedCalls != 0) {
             IrSsa ssaTyped = timer.Measure("ssa build typed calls", () => BuildSsa(method));
             ssa = ssaTyped;
             facts = timer.Measure(IrPass.Constants.ToString(),
                 () => IrConstants.Apply(method, ssaTyped, method.ToStructuringGraph()));
+        }
+        if (last == IrPass.InterruptServiceCalls) {
+            return Finish();
         }
         timer.Measure(IrPass.BranchSimplification.ToString(),
             () => IrBranchSimplification.Apply(method, facts));
@@ -164,6 +217,20 @@ internal static class IrPassPipeline {
         }
         timer.Measure(IrPass.AdditiveConstantFold.ToString(), () => IrConstantFolder.FoldAdditiveConstants(method, ssa2));
         if (last == IrPass.AdditiveConstantFold) {
+            return Finish();
+        }
+        int combinedSequences = timer.Measure(IrPass.DeviceOperations.ToString(),
+            () => IrDeviceOperations.Apply(method, ssa2, ioPorts));
+        if (combinedSequences != 0) {
+            // Combined statements changed the SSA's reads and writes: rebuild it and its webs for
+            // the passes, the census and the verify that follow.
+            ssa2 = timer.Measure("ssa build device operations", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
+        if (last == IrPass.DeviceOperations) {
             return Finish();
         }
         int rewrittenPairs = timer.Measure(IrPass.DoublePrecision.ToString(),

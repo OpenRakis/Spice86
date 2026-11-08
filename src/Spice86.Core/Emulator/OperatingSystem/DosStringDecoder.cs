@@ -75,6 +75,25 @@ public class DosStringDecoder {
         return ConvertDosChars(data[..dataIndex]);
     }
 
+    /// <summary>
+    /// Gets a string from the memory at the given segment and offset and checks it against the
+    /// literal the generation-time snapshot proved there.
+    /// </summary>
+    /// <param name="segment">The segment part of the start address.</param>
+    /// <param name="offset">The offset part of the start address.</param>
+    /// <param name="end">The end character. Usually zero.</param>
+    /// <param name="expected">The string the bytes held when the program was discovered.</param>
+    /// <returns>The string from memory.</returns>
+    /// <exception cref="InvalidOperationException">The bytes at the address differ from
+    /// <paramref name="expected"/>.</exception>
+    public string GetDosString(ushort segment, ushort offset, char end, string expected) {
+        string actual = GetDosString(segment, offset, end);
+        if (!string.Equals(actual, expected, StringComparison.Ordinal)) {
+            throw new InvalidOperationException("The DOS string differs from the recorded literal.");
+        }
+        return actual;
+    }
+
 
     /// <summary>
     /// Gets a zero terminated string from the memory at DS:DX.

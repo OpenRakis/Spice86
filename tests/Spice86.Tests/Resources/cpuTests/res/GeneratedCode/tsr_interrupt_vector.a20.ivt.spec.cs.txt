@@ -151,7 +151,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -166,13 +166,15 @@ public partial class CfgGeneratedOverrides {
         // 016E:010A mov AL,0xF0
         AL = 0xF0;
         // 016E:010C int 0x21
-        Dos.SetInterruptVector(cs1, 0x010E, 0xF0, 0x5678, DS);
+        Dos.RecordCallerStack(SS, SP);
+        Dos.SetInterruptVector(0xF0, DS, 0x5678);
         // 016E:010E mov AH,0x35
         AH = 0x35;
         // 016E:0110 mov AL,0xF0
         AL = 0xF0;
         // 016E:0112 int 0x21
-        Dos.GetInterruptVector(cs1, 0x0114, 0xF0);
+        Dos.RecordCallerStack(SS, SP);
+        (BX, ES) = Dos.ReadInterruptVector(0xF0);
         // 016E:0114 cmp BX,0x5678
         Alu16.Sub(BX, 0x5678);
         // 016E:0118 jne short 0x0128
@@ -361,7 +363,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, ES. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EBX, ES. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x1234.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

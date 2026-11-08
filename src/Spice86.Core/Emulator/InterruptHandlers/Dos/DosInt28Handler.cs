@@ -33,7 +33,7 @@ public class DosInt28Handler : InterruptHandler {
     public override void Run() => Idle();
 
     [InterruptService]
-    private void Idle() {
+    public void Idle() {
         LoggerService.LogTrace("DOS IDLE");
     }
 }

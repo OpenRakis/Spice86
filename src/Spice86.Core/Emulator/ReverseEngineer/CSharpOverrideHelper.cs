@@ -16,11 +16,20 @@ using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
+using Spice86.Core.Emulator.InterruptHandlers.Timer;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -485,6 +494,31 @@ public class CSharpOverrideHelper {
     protected FloppyControllerPorts FloppyControllerPorts { get; }
 
     /// <summary>
+    /// The CMOS/RTC device; its register operations are the device-level form of the port 0x70/0x71
+    /// sequences. The interrupt-service helper of int 70h is <see cref="Rtc"/>.
+    /// </summary>
+    protected RealTimeClock Cmos { get; }
+
+    /// <summary>
+    /// The programmable interval timer device; its channel programming operation is the
+    /// device-level form of the port 0x43 / 0x40+channel sequences.
+    /// </summary>
+    protected PitTimer Pit { get; }
+
+    /// <summary>
+    /// The VGA I/O port device; its register and palette operations are the device-level form of the
+    /// index/data port sequences.
+    /// </summary>
+    protected VgaIoPortHandler Vga => Machine.VgaIoPortHandler as VgaIoPortHandler
+        ?? throw FailAsUntested("The installed VGA port handler has no device-operation API");
+
+    /// <summary>
+    /// The OPL synthesizer device; its register write operation is the device-level form of the
+    /// address/data port pairs.
+    /// </summary>
+    protected Opl3Fm Opl { get; }
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
@@ -528,79 +562,64 @@ public class CSharpOverrideHelper {
         GravisUltrasoundPorts = new(machine.IoPortDispatcher);
         JoystickPorts = new(machine.IoPortDispatcher);
         FloppyControllerPorts = new(machine.IoPortDispatcher);
-        Video = new VideoServices(this);
-        Equipment = new EquipmentServices(this);
-        MemorySize = new MemorySizeServices(this);
-        Disk = new DiskServices(this);
-        Serial = new SerialServices(this);
-        SystemBios = new SystemBiosServices(this);
-        Keyboard = new KeyboardServices(this);
-        Printer = new PrinterServices(this);
-        Clock = new ClockServices(this);
-        UserTimer = new UserTimerServices(this);
-        Dos = new DosServices(this);
-        CriticalError = new CriticalErrorServices(this);
-        DosIdle = new DosIdleServices(this);
-        DosNetwork = new DosNetworkServices(this);
-        DosMultiplex = new DosMultiplexServices(this);
-        Mouse = new MouseServices(this);
-        Ems = new EmsServices(this);
-        Rtc = new RtcServices(this);
+        Cmos = machine.RealTimeClock;
+        Pit = machine.Timer;
+        Opl = machine.OPL;
     }
 
-    /// <summary>Typed helpers for the INT 10h video services.</summary>
-    public VideoServices Video { get; }
+    /// <summary>The installed INT 10h video handler.</summary>
+    public VgaBios Video => GetInterruptHandler<VgaBios>();
 
-    /// <summary>Typed helpers for the INT 11h equipment list service.</summary>
-    public EquipmentServices Equipment { get; }
+    /// <summary>The installed INT 11h equipment list handler.</summary>
+    public BiosEquipmentDeterminationInt11Handler Equipment => GetInterruptHandler<BiosEquipmentDeterminationInt11Handler>();
 
-    /// <summary>Typed helpers for the INT 12h conventional memory size service.</summary>
-    public MemorySizeServices MemorySize { get; }
+    /// <summary>The installed INT 12h conventional memory size handler.</summary>
+    public SystemBiosInt12Handler MemorySize => GetInterruptHandler<SystemBiosInt12Handler>();
 
-    /// <summary>Typed helpers for the INT 13h disk services.</summary>
-    public DiskServices Disk { get; }
+    /// <summary>The installed INT 13h disk handler.</summary>
+    public SystemBiosInt13Handler Disk => GetInterruptHandler<SystemBiosInt13Handler>();
 
-    /// <summary>Typed helpers for the INT 14h serial port services.</summary>
-    public SerialServices Serial { get; }
+    /// <summary>The installed INT 14h serial port handler.</summary>
+    public SystemBiosInt14Handler Serial => GetInterruptHandler<SystemBiosInt14Handler>();
 
-    /// <summary>Typed helpers for the INT 15h system BIOS services.</summary>
-    public SystemBiosServices SystemBios { get; }
+    /// <summary>The installed INT 15h system BIOS handler.</summary>
+    public SystemBiosInt15Handler SystemBios => GetInterruptHandler<SystemBiosInt15Handler>();
 
-    /// <summary>Typed helpers for the INT 16h keyboard services.</summary>
-    public KeyboardServices Keyboard { get; }
+    /// <summary>The installed INT 16h keyboard handler.</summary>
+    public KeyboardInt16Handler Keyboard => GetInterruptHandler<KeyboardInt16Handler>();
 
-    /// <summary>Typed helpers for the INT 17h printer services.</summary>
-    public PrinterServices Printer { get; }
+    /// <summary>The installed INT 17h printer handler.</summary>
+    public SystemBiosInt17Handler Printer => GetInterruptHandler<SystemBiosInt17Handler>();
 
-    /// <summary>Typed helpers for the INT 1Ah clock services.</summary>
-    public ClockServices Clock { get; }
+    /// <summary>The installed INT 1Ah clock handler.</summary>
+    public SystemClockInt1AHandler Clock => GetInterruptHandler<SystemClockInt1AHandler>();
 
-    /// <summary>Typed helpers for the INT 1Ch user timer tick.</summary>
-    public UserTimerServices UserTimer { get; }
+    /// <summary>The installed INT 1Ch user timer tick handler.</summary>
+    public DummyInt1CHandler UserTimer => GetInterruptHandler<DummyInt1CHandler>();
 
-    /// <summary>Typed helpers for the INT 21h DOS services.</summary>
-    public DosServices Dos { get; }
+    /// <summary>The installed INT 21h DOS handler.</summary>
+    public DosInt21Handler Dos => GetInterruptHandler<DosInt21Handler>();
 
-    /// <summary>Typed helpers for the INT 24h critical error handler.</summary>
-    public CriticalErrorServices CriticalError { get; }
+    /// <summary>The installed INT 24h critical error handler.</summary>
+    public DosInt24Handler CriticalError => GetInterruptHandler<DosInt24Handler>();
 
-    /// <summary>Typed helpers for the INT 28h DOS idle service.</summary>
-    public DosIdleServices DosIdle { get; }
+    /// <summary>The installed INT 28h DOS idle handler.</summary>
+    public DosInt28Handler DosIdle => GetInterruptHandler<DosInt28Handler>();
 
-    /// <summary>Typed helpers for the INT 2Ah DOS network services.</summary>
-    public DosNetworkServices DosNetwork { get; }
+    /// <summary>The installed INT 2Ah DOS network handler.</summary>
+    public DosInt2aHandler DosNetwork => GetInterruptHandler<DosInt2aHandler>();
 
-    /// <summary>Typed helpers for the INT 2Fh DOS multiplex services.</summary>
-    public DosMultiplexServices DosMultiplex { get; }
+    /// <summary>The installed INT 2Fh DOS multiplex handler.</summary>
+    public DosInt2fHandler DosMultiplex => GetInterruptHandler<DosInt2fHandler>();
 
-    /// <summary>Typed helpers for the INT 33h mouse services.</summary>
-    public MouseServices Mouse { get; }
+    /// <summary>The installed INT 33h mouse handler.</summary>
+    public MouseInt33Handler Mouse => GetInterruptHandler<MouseInt33Handler>();
 
-    /// <summary>Typed helpers for the INT 67h expanded memory services.</summary>
-    public EmsServices Ems { get; }
+    /// <summary>The installed INT 67h expanded memory handler.</summary>
+    public ExpandedMemoryManager Ems => GetInterruptHandler<ExpandedMemoryManager>();
 
-    /// <summary>Typed helpers for the INT 70h real-time clock interrupt.</summary>
-    public RtcServices Rtc { get; }
+    /// <summary>The installed INT 70h real-time clock handler.</summary>
+    public RtcInt70Handler Rtc => GetInterruptHandler<RtcInt70Handler>();
 
     /// <summary>
     /// Registers a function at the specified segmented address. <br/>
@@ -1156,32 +1175,14 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
-    /// Checks that the interrupt vector <paramref name="vectorNumber"/> still points to the stub of
-    /// the interrupt service the emulator installed at startup. A program that hooked the vector
-    /// points it elsewhere, and calling the built-in service implementation would be wrong.
+    /// Returns the installed interrupt handler of type <typeparamref name="THandler"/>.
     /// </summary>
-    /// <param name="vectorNumber">The interrupt vector number to check.</param>
-    /// <exception cref="UnrecoverableException">The vector does not point to the installed stub.</exception>
-    public void CheckInterruptServiceVector(byte vectorNumber) {
-        SegmentedAddress current = Machine.InterruptVectorTable[vectorNumber];
-        if (!Machine.InstalledInterruptHandlers.TryGetInstalledAddress(vectorNumber, out SegmentedAddress installed)
-            || installed != current) {
-            throw FailAsUntested(
-                $"Interrupt vector 0x{vectorNumber:X2} no longer points to the built-in handler at {installed}: it points to {current}");
-        }
-    }
-
-    /// <summary>
-    /// Performs an interrupt call after checking the vector still points to the built-in handler's
-    /// stub. Used by the typed service helpers before writing their parameters into the registers.
-    /// </summary>
-    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
-    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
-    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
-    /// <exception cref="UnrecoverableException">The vector was hooked, or the interrupt vector number is not recognized.</exception>
-    public void InterruptServiceCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
-        CheckInterruptServiceVector(vectorNumber);
-        InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber);
+    /// <typeparam name="THandler">The handler type.</typeparam>
+    /// <exception cref="UnrecoverableException">No handler of the type is installed.</exception>
+    internal THandler GetInterruptHandler<THandler>() where THandler : class, IInterruptHandler {
+        return Machine.InstalledInterruptHandlers.Handlers.Values.OfType<THandler>()
+            .FirstOrDefault() ?? throw FailAsUntested(
+                $"No installed interrupt handler of type {typeof(THandler).Name}");
     }
 
     /// <summary>

@@ -1626,40 +1626,45 @@ public class DosFileManager {
     /// <summary>
     /// Executes an INT 21h AH=44h IOCTL subfunction. Handle subfunctions take a system file table index in BX.
     /// </summary>
-    /// <param name="state">The CPU state holding the IOCTL registers.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult IoControl(State state) {
+    /// <param name="operation">The IOCTL subfunction (register AL).</param>
+    /// <param name="cx">The IOCTL CX input (count / command for the control and block requests).</param>
+    /// <param name="dx">The IOCTL DX input; the returned <c>dx</c> carries the DX output.</param>
+    /// <param name="bx">The IOCTL BX input (system file table index or drive).</param>
+    /// <param name="ds">The IOCTL DS input (buffer segment).</param>
+    /// <returns>The operation result, the optional <c>AL</c> output and the <c>DX</c> output.</returns>
+    public (DosFileOperationResult result, byte? al, ushort dx) IoControl(
+        byte operation, ushort cx, ushort dx, ushort bx, ushort ds) {
         byte handle = 0;
         byte drive = 0;
-        string operationName = $"IOCTL function 0x{state.AL:X2}";
+        string operationName = $"IOCTL function 0x{operation:X2}";
 
-        IoctlSubfunction subfunction = (IoctlSubfunction)state.AL;
+        IoctlSubfunction subfunction = (IoctlSubfunction)operation;
 
-        if (IsIoctlHandleSubfunction(state.AL)) {
-            handle = (byte)state.BX;
+        if (IsIoctlHandleSubfunction(operation)) {
+            handle = (byte)bx;
             if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
                 if (_loggerService.IsEnabled(LogLevel.Warning)) {
                     _loggerService.LogWarning("IOCTL: Invalid handle {Handle} for {Operation}", handle, operationName);
                 }
-                return DosFileOperationResult.LogError(DosErrorCode.InvalidHandle);
+                return (DosFileOperationResult.LogError(DosErrorCode.InvalidHandle), null, dx);
             }
         } else if (subfunction <= IoctlSubfunction.QueryIoctlDevice) {
             if (subfunction != IoctlSubfunction.SetSharingRetryCount) {
-                drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : (state.BX - 1));
+                drive = (byte)(bx == 0 ? _dosDriveManager.CurrentDriveIndex : (bx - 1));
                 if (drive >= DosDriveManager.MaxDriveCount ||
                     (drive >= 2 && !_dosDriveManager.TryGetDriveAtIndex(drive, out _))) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
                         _loggerService.LogWarning("IOCTL: Invalid drive {Drive} for {Operation}",
                             drive, operationName);
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.InvalidDrive);
+                    return (DosFileOperationResult.LogError(DosErrorCode.InvalidDrive), null, dx);
                 }
             }
         } else {
             if (_loggerService.IsEnabled(LogLevel.Warning)) {
-                _loggerService.LogWarning("IOCTL: Function number 0x{Function:X2} is invalid or unsupported", state.AL);
+                _loggerService.LogWarning("IOCTL: Function number 0x{Function:X2} is invalid or unsupported", operation);
             }
-            return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+            return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
         }
 
         DosDriveBase? mountedDrive;
@@ -1667,7 +1672,7 @@ public class DosFileManager {
             case IoctlSubfunction.GetDeviceInformation:
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
-                    state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
+                    dx = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
                 } else if (fileOrDevice is DosFile dosFile) {
                     if (dosFile.Drive == 0xff) {
                         _loggerService.LogWarning("IOCTL: No drive set for file handle {FileHandle}, defaulting to C:",
@@ -1679,28 +1684,26 @@ public class DosFileManager {
                         dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
                     }
 
-                    state.DX = dosFile.DeviceInformation;
-                    return DosFileOperationResult.Value16(dosFile.DeviceInformation);
+                    dx = dosFile.DeviceInformation;
+                    return (DosFileOperationResult.Value16(dosFile.DeviceInformation), null, dx);
                 }
-                return DosFileOperationResult.Value16(state.DX);
+                return (DosFileOperationResult.Value16(dx), null, dx);
 
             case IoctlSubfunction.SetDeviceInformation:
-                if (state.DH != 0) {
+                if ((dx >> 8) != 0) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
-                        _loggerService.LogWarning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", state.DH);
+                        _loggerService.LogWarning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", dx >> 8);
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.DataInvalid);
+                    return (DosFileOperationResult.LogError(DosErrorCode.DataInvalid), null, dx);
                 } else {
                     if (OpenFiles[handle] is IVirtualDevice device && (device.Information & 0x8000) > 0) {
-                        state.AL = device.GetStatus(true);
-                    } else {
-                        if (_loggerService.IsEnabled(LogLevel.Warning)) {
-                            _loggerService.LogWarning("IOCTL: Device for handle {Handle} doesn't support Set Device Information", handle);
-                        }
-                        return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                        return (DosFileOperationResult.NoValue(), device.GetStatus(true), dx);
                     }
+                    if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                        _loggerService.LogWarning("IOCTL: Device for handle {Handle} doesn't support Set Device Information", handle);
+                    }
+                    return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
                 }
-                return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.ReadControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice readDevice &&
@@ -1709,18 +1712,17 @@ public class DosFileManager {
                         if (_loggerService.IsEnabled(LogLevel.Warning)) {
                             _loggerService.LogWarning("IOCTL: Printer device {Device} doesn't support reading", printer.Name);
                         }
-                        return DosFileOperationResult.LogError(DosErrorCode.AccessDenied);
+                        return (DosFileOperationResult.LogError(DosErrorCode.AccessDenied), null, dx);
                     }
-                    uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
-                    if (readDevice.TryReadFromControlChannel(buffer, state.CX, out ushort? returnCode)) {
-                        state.AX = returnCode.Value;
-                        return DosFileOperationResult.NoValue();
+                    uint buffer = MemoryUtils.ToPhysicalAddress(ds, dx);
+                    if (readDevice.TryReadFromControlChannel(buffer, cx, out ushort? returnCode)) {
+                        return (DosFileOperationResult.Value16(returnCode.Value), null, dx);
                     }
                 }
                 if (_loggerService.IsEnabled(LogLevel.Warning)) {
                     _loggerService.LogWarning("IOCTL: Device for handle {Handle} doesn't support reading from control channel", handle);
                 }
-                return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
 
             case IoctlSubfunction.WriteControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice writtenDevice &&
@@ -1730,26 +1732,26 @@ public class DosFileManager {
                         if (_loggerService.IsEnabled(LogLevel.Warning)) {
                             _loggerService.LogWarning("IOCTL: Printer device {Device} doesn't support writing", printer.Name);
                         }
-                        return DosFileOperationResult.LogError(DosErrorCode.AccessDenied);
+                        return (DosFileOperationResult.LogError(DosErrorCode.AccessDenied), null, dx);
                     }
-                    uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
-                    if (writtenDevice.TryWriteToControlChannel(buffer, state.CX, out ushort? returnCode)) {
-                        state.AX = returnCode.Value;
-                        return DosFileOperationResult.NoValue();
+                    uint buffer = MemoryUtils.ToPhysicalAddress(ds, dx);
+                    if (writtenDevice.TryWriteToControlChannel(buffer, cx, out ushort? returnCode)) {
+                        return (DosFileOperationResult.Value16(returnCode.Value), null, dx);
                     }
                 }
                 if (_loggerService.IsEnabled(LogLevel.Warning)) {
                     _loggerService.LogWarning("IOCTL: Device for handle {Handle} doesn't support writing to control channel", handle);
                 }
-                return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
 
             case IoctlSubfunction.GetInputStatus:
+                byte? inputStatus = null;
                 if (OpenFiles[handle] is IVirtualDevice inputDevice) {
                     if ((inputDevice.Information & 0x8000) > 0) {
                         if (((inputDevice.Information & 0x40) > 0)) {
-                            state.AL = 0;
+                            inputStatus = 0;
                         } else {
-                            state.AL = 0xFF;
+                            inputStatus = 0xFF;
                         }
                     }
                 } else if (OpenFiles[handle] is VirtualFileBase file) {
@@ -1757,92 +1759,85 @@ public class DosFileManager {
                     file.Seek(0, SeekOrigin.End);
                     long endLocation = file.Position;
                     if (oldLocation < endLocation) { //Still data available
-                        state.AL = 0xff;
+                        inputStatus = 0xff;
                     } else {
-                        state.AL = 0x0; //EOF or beyond
+                        inputStatus = 0x0; //EOF or beyond
                     }
                     file.Seek(oldLocation, SeekOrigin.Begin); //restore filelocation
                     if (_loggerService.IsEnabled(LogLevel.Trace)) {
                         _loggerService.LogTrace("IOCTL: Get input status on regular file with handle {Handle}, available={Available}",
-                            handle, state.AL != 0);
+                            handle, inputStatus != 0);
                     }
                 }
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.NoValue(), inputStatus, dx);
 
             case IoctlSubfunction.GetOutputStatus:
                 if (OpenFiles[handle] is IVirtualDevice outputDevice &&
                     (outputDevice.Information & ExtDeviceBit) > 0) {
-                    state.AL = outputDevice.GetStatus(false);
-                    return DosFileOperationResult.NoValue();
+                    return (DosFileOperationResult.NoValue(), outputDevice.GetStatus(false), dx);
                 }
                 if (_loggerService.IsEnabled(LogLevel.Trace)) {
                     _loggerService.LogTrace("IOCTL: Get output status for handle {Handle}, reporting ready (0xFF)", handle);
                 }
-                state.AL = 0xFF;
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.NoValue(), 0xFF, dx);
 
             case IoctlSubfunction.IsDeviceRemovable:
                 //* cdrom drives and drive A and B are removable */
                 if (drive < 2) {
-                    state.AX = 0;
-                } else {
-                    if (!_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
-                        if (_loggerService.IsEnabled(LogLevel.Warning)) {
-                            _loggerService.LogWarning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
-                        }
-                        return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
-                    }
-
-                    if (!mountedDrive.IsRemovable) {
-                        state.AX = 1;
-                    } else {
-                        if (_loggerService.IsEnabled(LogLevel.Warning)) {
-                            _loggerService.LogWarning("IOCTL: Removable drive {Drive} does not support IsDeviceRemovable", drive);
-                        }
-                        return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
-                    }
+                    return (DosFileOperationResult.Value16(0), null, dx);
                 }
-                return DosFileOperationResult.NoValue();
+                if (!_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
+                    if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                        _loggerService.LogWarning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
+                    }
+                    return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
+                }
+                if (!mountedDrive.IsRemovable) {
+                    return (DosFileOperationResult.Value16(1), null, dx);
+                }
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("IOCTL: Removable drive {Drive} does not support IsDeviceRemovable", drive);
+                }
+                return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
 
             case IoctlSubfunction.IsDeviceRemote:
                 if ((drive >= 2) && _dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive) && mountedDrive.IsRemote) {
-                    state.DX = 0x1000;  // device is remote
-                                        // undocumented bits always clear
+                    dx = 0x1000;  // device is remote
+                                  // undocumented bits always clear
                 } else {
-                    state.DX = 0x0802;  // Open/Close supported; 32bit access supported (any use? fixes Fable installer)
-                                        // undocumented bits from device attribute word
-                                        // TODO Set bit 9 on drives that don't support direct I/O
+                    dx = 0x0802;  // Open/Close supported; 32bit access supported (any use? fixes Fable installer)
+                                  // undocumented bits from device attribute word
+                                  // TODO Set bit 9 on drives that don't support direct I/O
                 }
-                state.AX = 0x0300;
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.Value16(0x0300), null, dx);
 
             case IoctlSubfunction.SetSharingRetryCount:
-                if (state.DX == 0) {
+                if (dx == 0) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
                         _loggerService.LogWarning("IOCTL: Invalid retry count 0 for Set sharing retry count");
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                    return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
                 }
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.NoValue(), null, dx);
 
             case IoctlSubfunction.GenericBlockDeviceRequest:
                 if (!_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
                         _loggerService.LogWarning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.AccessDenied);
+                    return (DosFileOperationResult.LogError(DosErrorCode.AccessDenied), null, dx);
                 }
-                if (state.CH != 0x08 || mountedDrive.IsRemovable) {
+                if ((cx >> 8) != 0x08 || mountedDrive.IsRemovable) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
                         _loggerService.LogWarning("IOCTL: Invalid or unsupported command 0x{Command:X2} for drive {Drive}",
-                            state.CH, drive);
+                            cx >> 8, drive);
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                    return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
                 }
 
-                SegmentedAddress parameterBlock = new(state.DS, state.DX);
+                SegmentedAddress parameterBlock = new(ds, dx);
 
-                switch ((IoctlGenericBlockCommand)state.CL) {
+                switch ((IoctlGenericBlockCommand)(byte)cx) {
                     case IoctlGenericBlockCommand.GetDeviceParameters:
                         DosDeviceParameterBlock dosDeviceParameterBlock = new(_memory, parameterBlock.Linear);
                         dosDeviceParameterBlock.DeviceType = (byte)(drive >= 2 ? 0x05 : 0x07);
@@ -1871,47 +1866,45 @@ public class DosFileManager {
                         if (_loggerService.IsEnabled(LogLevel.Error)) {
                             _loggerService.LogError(
                               "IOCTL: Unhandled Generic Block Device request CL=0x{Command:X2} for drive {Drive}",
-                              state.CL, drive);
+                              (byte)cx, drive);
                         }
-                        return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                        return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
                 }
-                state.AX = 0;
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.Value16(0), null, dx);
 
             case IoctlSubfunction.GetLogicalDriveMap:
-                state.AH = 0x07;
+                byte mappedDrive;
                 if (drive < 2) {
                     if (_dosDriveManager.HasDriveAtIndex(drive)) {
-                        state.AL = (byte)(drive + 1);
+                        mappedDrive = (byte)(drive + 1);
                     } else {
-                        state.AL = 1;
+                        mappedDrive = 1;
                     }
                 } else if (_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive) && mountedDrive.IsRemovable) {
                     if (_loggerService.IsEnabled(LogLevel.Warning)) {
                         _loggerService.LogWarning("IOCTL: Get Logical Drive Map not supported for removable drive {Drive}", drive);
                     }
-                    return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                    return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
                 } else { /* Only 1 logical drive assigned */
-                    state.AL = 0;
+                    mappedDrive = 0;
                 }
-                return DosFileOperationResult.NoValue();
+                return (DosFileOperationResult.Value16((ushort)(0x0700 | mappedDrive)), null, dx);
 
             default:
                 if (_loggerService.IsEnabled(LogLevel.Error)) {
-                    _loggerService.LogError("IOCTL: Invalid function number 0x{FunctionCode:X2}", state.AL);
+                    _loggerService.LogError("IOCTL: Invalid function number 0x{FunctionCode:X2}", operation);
                 }
-                return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+                return (DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid), null, dx);
         }
     }
 
     /// <summary>
     /// Gets the proper DOS path for the emulated program.
     /// </summary>
-    /// <param name="programPath">The absolute host path to the executable file.</param>
+    /// <param name="programPath">The DOS or host path to the executable file.</param>
     /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
     internal string GetDosProgramPath(string programPath) {
-        // Extract just the filename without path if it's a full path
-        string fileName = Path.GetFileName(programPath);
+        string fileName = GetFileSpecWithoutSubFolderOrDriveInIt(programPath) ?? programPath;
 
         // Create a DOS path using the current drive and directory
         string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;

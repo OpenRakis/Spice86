@@ -142,9 +142,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort es1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov DX,0x0998
         DX = 0x0998;
@@ -165,9 +166,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0113 push CS
         Stack.Push16(CS);
         // 016D:0114 pop ES
-        ES = Stack.Pop16();
+        es1 = Stack.Pop16();
         // 016D:0115 int 0x15
-        SystemBios.WaitFunction(cs1, 0x0117, 0, 0, 0x1000, 0, ES);
+        (AH, CarryFlag) = SystemBios.WaitFunction(0, 0, 0x1000, es1, 0, 0x83);
         // 016D:0117 jb short 0x0173
         if (!CarryFlag) {
             // 016D:0119 mov DX,0x0998
@@ -188,9 +189,9 @@ public partial class CfgGeneratedOverrides {
             // 016D:012C push CS
             Stack.Push16(CS);
             // 016D:012D pop ES
-            ES = Stack.Pop16();
+            es1 = Stack.Pop16();
             // 016D:012E int 0x15
-            SystemBios.WaitFunction(cs1, 0x0130, 0, 0, 0x1000, 0, ES);
+            (AH, CarryFlag) = SystemBios.WaitFunction(0, 0, 0x1000, es1, 0, 0x83);
             // 016D:0130 jae short 0x0173
             if (CarryFlag) {
                 // 016D:0132 cmp AH,0x80
@@ -208,7 +209,7 @@ public partial class CfgGeneratedOverrides {
                     // 016D:013F mov AL,1
                     AL = 1;
                     // 016D:0141 int 0x15
-                    SystemBios.WaitFunction(cs1, 0x0143, 1, 0, 0x0998, 0, ES);
+                    (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83);
                     // 016D:0143 jb short 0x0173
                     if (!CarryFlag) {
                         // 016D:0145 mov DX,0x0998
@@ -229,9 +230,9 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0158 push CS
                         Stack.Push16(CS);
                         // 016D:0159 pop ES
-                        ES = Stack.Pop16();
+                        es1 = Stack.Pop16();
                         // 016D:015A int 0x15
-                        SystemBios.WaitFunction(cs1, 0x015C, 0, 0, 0x2000, 0, ES);
+                        (AH, CarryFlag) = SystemBios.WaitFunction(0, 0, 0x2000, es1, 0, 0x83);
                         // 016D:015C jb short 0x0173
                         if (CarryFlag) {
                             goto L_0173;
@@ -247,7 +248,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0166 mov AL,1
                         AL = 1;
                         // 016D:0168 int 0x15
-                        SystemBios.WaitFunction(cs1, 0x016A, 1, 0, 0x0998, 0, ES);
+                        (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83);
                         // 016D:016A jb short 0x0173
                         if (!CarryFlag) {
                             // 016D:016C mov DX,0x0999
@@ -257,6 +258,7 @@ public partial class CfgGeneratedOverrides {
                             // 016D:0171 out DX,AL
                             Out8(0x0999, 0);
                             // 016D:0172 hlt
+                            ES = es1;
                             return Hlt();
                         }
                     }
@@ -273,6 +275,7 @@ public partial class CfgGeneratedOverrides {
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0179, Signature_0179_hlt);
         // 016D:0179 hlt
+        ES = es1;
         return Hlt();
     }
 

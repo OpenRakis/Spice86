@@ -143,33 +143,32 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov BX,4
         BX = 4;
         // 016E:0103 mov AH,0x43
-        AH = 0x43;
         // 016E:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 4);
+        (AH, dx1) = Ems.AllocatePageHandle(4, DX);
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x0135
         if (AH == 0) {
             // 016E:010C mov CX,DX
-            CX = DX;
+            CX = dx1;
             // 016E:010E mov AL,0
             AL = 0;
             // 016E:0110 mov BX,0
             BX = 0;
             // 016E:0113 mov DX,CX
-            DX = CX;
+            dx1 = CX;
             // 016E:0115 mov AH,0x44
-            AH = 0x44;
             // 016E:0117 int 0x67
-            Ems.MapUnmapHandlePage(cs1, 0x0119, 0, DX, 0);
+            AH = Ems.MapUnmapHandlePage(0, 0, dx1);
             // 016E:0119 cmp AH,0
             Alu8.Sub(AH, 0);
             // 016E:011C jne short 0x0135

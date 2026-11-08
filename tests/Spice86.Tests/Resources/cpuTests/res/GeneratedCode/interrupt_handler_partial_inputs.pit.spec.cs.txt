@@ -140,13 +140,11 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Word0022 = CS;
         // F000:001B mov AL,0x36
         // F000:001D out 0x43,AL
-        PitPorts.WriteControlWord(0x36);
         // F000:001F mov AL,0
         // F000:0021 out 0x40,AL
-        PitPorts.WriteChannel0Data(0);
         // F000:0023 mov AL,1
         // F000:0025 out 0x40,AL
-        PitPorts.WriteChannel0Data(1);
+        Pit.ProgramChannel(0, 0x36, 0x0100);
         // F000:0027 mov AL,0
         AL = 0;
         // F000:0029 out 0x21,AL

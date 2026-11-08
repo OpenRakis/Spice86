@@ -15,9 +15,15 @@ internal enum InterruptSiteKind {
     SelectorUnknown,
 
     /// <summary>Every observed target is the installed stub and the selector value is known, but
-    /// that value has no declared contract, an <see cref="Emulator.InterruptHandlers.Common.Contracts.ServiceContract.Unknown"/>
-    /// contract or no typed helper group.</summary>
+    /// that value has no declared contract or an <see cref="Emulator.InterruptHandlers.Common.Contracts.ServiceContract.Unknown"/>
+    /// contract.</summary>
     NoContract,
+
+    /// <summary>Every observed target is the installed stub and the selector value is a known
+    /// constant whose entry has a precise contract, but no implementation binding (or a binding
+    /// the site's constant selector inputs do not satisfy). The site keeps real interrupt
+    /// dispatch, with the precise contract's normal-return effects.</summary>
+    BuiltInDispatch,
 
     /// <summary>Every observed target is the installed stub; the pass has not classified the site
     /// yet (or cannot, inside an opaque statement).</summary>

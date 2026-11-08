@@ -145,45 +145,43 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016F:0100 mov BX,4
         BX = 4;
         // 016F:0103 mov AH,0x43
-        AH = 0x43;
         // 016F:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 4);
+        (AH, dx1) = Ems.AllocatePageHandle(4, DX);
         // 016F:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016F:010A jne short 0x014A
         if (AH == 0) {
             // 016F:010C mov DI,DX
-            DI = DX;
+            DI = dx1;
             // 016F:010E mov BX,4
             BX = 4;
             // 016F:0111 mov AH,0x43
-            AH = 0x43;
             // 016F:0113 int 0x67
-            Ems.AllocatePages(cs1, 0x0115, AL, 4);
+            (AH, dx1) = Ems.AllocatePageHandle(4, dx1);
             // 016F:0115 cmp AH,0
             Alu8.Sub(AH, 0);
             // 016F:0118 jne short 0x014A
             if (AH == 0) {
                 // 016F:011A mov SI,DX
-                SI = DX;
+                SI = dx1;
                 // 016F:011C mov AL,0
                 AL = 0;
                 // 016F:011E mov BX,0
                 BX = 0;
                 // 016F:0121 mov DX,SI
-                DX = SI;
+                dx1 = SI;
                 // 016F:0123 mov AH,0x44
-                AH = 0x44;
                 // 016F:0125 int 0x67
-                Ems.MapUnmapHandlePage(cs1, 0x0127, 0, DX, 0);
+                AH = Ems.MapUnmapHandlePage(0, 0, dx1);
                 // 016F:0127 cmp AH,0
                 Alu8.Sub(AH, 0);
                 // 016F:012A jne short 0x014A
@@ -195,11 +193,10 @@ public partial class CfgGeneratedOverrides {
                     // 016F:0131 mov byte ptr ES:[0],0xAA
                     SegmentE000Globals.Byte0000 = 0xAA;
                     // 016F:0137 mov DX,DI
-                    DX = DI;
+                    dx1 = DI;
                     // 016F:0139 mov AH,0x45
-                    AH = 0x45;
                     // 016F:013B int 0x67
-                    Ems.DeallocatePages(cs1, 0x013D, 0, DX);
+                    AH = Ems.DeallocatePages(dx1);
                     // 016F:013D cmp AH,0
                     Alu8.Sub(AH, 0);
                     // 016F:0140 jne short 0x014A

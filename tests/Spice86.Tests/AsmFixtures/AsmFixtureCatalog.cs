@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
@@ -276,6 +277,24 @@ internal static class AsmFixtureCatalog {
             MaxCycles = 10000,
             FailOnUnhandledPort = true,
             ConfigureMachine = machine => new LatchIoPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher, 0xE0)
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs device_operations: safe CMOS/PIT/VGA/OPL port sequences record deterministic device state
+    /// (register contents, PIT read-back status, palette entries), and hazardous neighbours record a CMOS
+    /// read across an unrelated port, a memory access and a call that reselects the chip. The 0x388 handler
+    /// is replaced by a latch, so that OPL pair must stay single-port while the 0x38A alias pair combines.</summary>
+    public static AsmFixture DeviceOperations() {
+        byte[] expectedMemory = [
+            0x02, 0x45, 0x02, 0x02, 0x45, 0x34, 0x36, 0x01,
+            0x02, 0x03, 0x3F, 0x0F, 0x40, 0x20, 0xC0,
+        ];
+        AsmRunSettings settings = new() {
+            BinName = "device_operations",
+            MaxCycles = 10000,
+            OplMode = OplMode.Opl3,
+            ConfigureMachine = machine => new LatchIoPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher, 0x388)
         };
         return MemoryFixture(settings, expectedMemory);
     }
@@ -872,7 +891,7 @@ internal static class AsmFixtureCatalog {
                 return ResultRegionFixture(new AsmRunSettings {
                         BinName = Path.GetFullPath("Resources/cpuTests/int_service_calls.com"),
                         InstallInterruptVectors = true
-                    }, ResultRegion(0x86,
+                    }, ResultRegion(0x98,
                     (0x40, 2, 0x0005), (0x42, 2, 0xFF00), (0x44, 2, 0x0000),
                     (0x46, 2, 0x3333), (0x48, 2, 0x4444),
                     (0x4A, 1, 0x00), (0x4B, 1, 0x02),
@@ -888,7 +907,11 @@ internal static class AsmFixtureCatalog {
                     (0x74, 2, 0x0005), (0x76, 2, 0xFF00), (0x78, 2, 0x1234),
                     (0x7A, 2, 0x5678), (0x7C, 1, 0xFE), (0x7E, 1, 0x24),
                     (0x80, 2, 0x80D3), (0x82, 1, 0x59), (0x83, 1, 0x5A),
-                    (0x84, 2, 0xBEEF)));
+                    (0x84, 2, 0xBEEF),
+                    (0x86, 2, 0x675A), (0x88, 2, 0x0000),
+                    (0x8A, 2, 0x1234), (0x8C, 2, 0xBEEF), (0x8E, 2, 0x0001),
+                    (0x90, 2, 0x0001), (0x92, 2, 0x0001), (0x94, 2, 0x0001),
+                    (0x96, 2, 0x1234)));
             case "interrupt_contract_unseen_handler":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4A,
                     (0x40, 2, 0x0042), (0x42, 2, 0x0042), (0x44, 2, 0x0042), (0x46, 2, 0x0042),

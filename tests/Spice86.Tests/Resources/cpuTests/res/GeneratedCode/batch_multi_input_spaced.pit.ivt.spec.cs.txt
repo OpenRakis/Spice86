@@ -165,7 +165,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0109 mov AH,0x3F
         AH = 0x3F;
         // 016D:010B int 0x21
-        Dos.ReadFileOrDevice(cs1, 0x010D, 1, 0x0120, 0, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.ReadFile(0, 1, DS, 0x0120);
         // 016D:010D mov AX,0xB800
         AX = 0xB800;
         // 016D:0110 mov ES,AX

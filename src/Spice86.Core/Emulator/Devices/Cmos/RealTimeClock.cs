@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Cmos;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
@@ -80,10 +81,10 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
         switch (port) {
             case CmosPorts.Address:
-                HandleAddressPortWrite(value);
+                WriteAddress(value);
                 break;
             case CmosPorts.Data:
-                HandleDataPortWrite(value);
+                WriteData(value);
                 break;
             default:
                 base.WriteByte(port, value);
@@ -97,7 +98,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
-            byte result = HandleDataPortRead();
+            byte result = ReadData();
             if (_loggerService.IsEnabled(LogLevel.Debug) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
                 _loggerService.LogDebug("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
                     result, _cmosRegisters.CurrentRegister, (result & 0x40) != 0);
@@ -108,20 +109,46 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Handles writes to port 0x70 (index register).
+    /// Writes the port 0x70 index register: the register the next data access uses.
     /// Bits 0-5: Register index to select
     /// Bit 7: NMI enable (0=enabled, 1=disabled)
     /// </summary>
-    private void HandleAddressPortWrite(byte value) {
+    public void WriteAddress(byte value) {
         _cmosRegisters.CurrentRegister = (byte)(value & 0x3F);
         _cmosRegisters.NmiEnabled = (value & 0x80) == 0;
     }
 
     /// <summary>
-    /// Handles writes to port 0x71 (data register).
+    /// Reads the register <paramref name="address"/> selects, as the port sequence
+    /// <c>out 0x70, address; in al, 0x71</c> reads it: the index write keeps its NMI bit.
+    /// </summary>
+    /// <param name="address">The register index to select (bit 7 is the NMI flag).</param>
+    /// <returns>The selected register's value.</returns>
+    [PortSequenceStep(0, CmosPorts.Address, PortDirection.Out, nameof(address))]
+    [PortSequenceStep(1, CmosPorts.Data, PortDirection.In)]
+    public byte ReadRegister(byte address) {
+        WriteAddress(address);
+        return ReadData();
+    }
+
+    /// <summary>
+    /// Writes <paramref name="value"/> to the register <paramref name="address"/> selects, as the port
+    /// sequence <c>out 0x70, address; out 0x71, value</c> writes it.
+    /// </summary>
+    /// <param name="address">The register index to select (bit 7 is the NMI flag).</param>
+    /// <param name="value">The value to write.</param>
+    [PortSequenceStep(0, CmosPorts.Address, PortDirection.Out, nameof(address))]
+    [PortSequenceStep(1, CmosPorts.Data, PortDirection.Out, nameof(value))]
+    public void WriteRegister(byte address, byte value) {
+        WriteAddress(address);
+        WriteData(value);
+    }
+
+    /// <summary>
+    /// Writes to port 0x71 (data register).
     /// Behavior depends on the currently selected register (set via port 0x70).
     /// </summary>
-    private void HandleDataPortWrite(byte value) {
+    public void WriteData(byte value) {
         byte reg = _cmosRegisters.CurrentRegister;
         switch (reg) {
             case CmosRegisterAddresses.Seconds:
@@ -197,11 +224,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Handles reads from port 0x71 (data register).
+    /// Reads from port 0x71 (data register).
     /// Returns the value of the currently selected register.
     /// Time/date registers return current system time in BCD or binary format.
     /// </summary>
-    private byte HandleDataPortRead() {
+    public byte ReadData() {
         byte reg = _cmosRegisters.CurrentRegister;
         if (reg > 0x3F) {
             if (_loggerService.IsEnabled(LogLevel.Warning)) {

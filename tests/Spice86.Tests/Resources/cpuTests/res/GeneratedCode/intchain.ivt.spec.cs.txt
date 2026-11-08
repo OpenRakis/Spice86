@@ -171,7 +171,7 @@ public partial class CfgGeneratedOverrides {
         // F000:000C push DX
         Stack.Push16(DX);
         // F000:000D int 0x1C
-        UserTimer.Tick(biosSegment, 0x000F);
+        UserTimer.Tick();
         // F000:000F callback 0x0101
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);

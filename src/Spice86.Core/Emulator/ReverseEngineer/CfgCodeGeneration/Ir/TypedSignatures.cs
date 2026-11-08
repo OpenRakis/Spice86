@@ -291,7 +291,8 @@ internal sealed class TypedSignatures {
     }
 
     /// <summary>The assignment-target occurrences of <paramref name="root"/>: the register or flag
-    /// node that is the left side of an assignment, a swap operand, or a division result.</summary>
+    /// node that is the left side of an assignment, a swap operand, a division result or a typed
+    /// service call's result lvalue.</summary>
     private static void CollectTargets(IVisitableAstNode root, HashSet<IVisitableAstNode> targets) {
         foreach (IVisitableAstNode node in IrAstChildren.Descendants(root)) {
             switch (node) {
@@ -310,6 +311,11 @@ internal sealed class TypedSignatures {
                 case MultiplicationNode multiplication:
                     targets.Add(multiplication.Low);
                     targets.Add(multiplication.High);
+                    break;
+                case InterruptServiceCallNode serviceCall:
+                    foreach (ValueNode result in serviceCall.Results) {
+                        targets.Add(result);
+                    }
                     break;
             }
         }

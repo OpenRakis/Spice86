@@ -153,7 +153,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -165,7 +165,8 @@ public partial class CfgGeneratedOverrides {
         Out8(0x0998, 1);
         // 016D:0106 mov AH,0x2A
         // 016D:0108 int 0x21
-        Dos.GetDate(cs1, 0x010A);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CX, DX) = Dos.ReadDate(0x2A);
         // 016D:010A cmp CX,0x07BC
         Alu16.Sub(CX, 0x07BC);
         // 016D:010E jb near 0x021F
@@ -195,6 +196,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0133 out DX,AL
                         Out8(0x0998, 2);
                         // 016D:0134 mov AH,0x2B
+                        AH = 0x2B;
                         // 016D:0136 mov CX,0x07E8
                         CX = 0x07E8;
                         // 016D:0139 mov DH,0x0B
@@ -202,7 +204,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:013B mov DL,0x0E
                         DL = 0x0E;
                         // 016D:013D int 0x21
-                        Dos.SetDate(cs1, 0x013F, 0x07E8, 0x0B0E);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetDate(0x07E8, 0x0B, 0x0E);
                         // 016D:013F cmp AL,0
                         Alu8.Sub(AL, 0);
                         // 016D:0141 jne near 0x021F
@@ -216,6 +219,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:014A out DX,AL
                         Out8(0x0998, 3);
                         // 016D:014B mov AH,0x2B
+                        AH = 0x2B;
                         // 016D:014D mov CX,0x07BB
                         CX = 0x07BB;
                         // 016D:0150 mov DH,1
@@ -223,7 +227,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0152 mov DL,1
                         DL = 1;
                         // 016D:0154 int 0x21
-                        Dos.SetDate(cs1, 0x0156, 0x07BB, 0x0101);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetDate(0x07BB, 1, 1);
                         // 016D:0156 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:0158 jne near 0x021F
@@ -237,6 +242,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0161 out DX,AL
                         Out8(0x0998, 4);
                         // 016D:0162 mov AH,0x2B
+                        AH = 0x2B;
                         // 016D:0164 mov CX,0x07E8
                         CX = 0x07E8;
                         // 016D:0167 mov DH,0x0D
@@ -244,7 +250,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0169 mov DL,1
                         DL = 1;
                         // 016D:016B int 0x21
-                        Dos.SetDate(cs1, 0x016D, 0x07E8, 0x0D01);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetDate(0x07E8, 0x0D, 1);
                         // 016D:016D cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:016F jne near 0x021F
@@ -258,6 +265,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0178 out DX,AL
                         Out8(0x0998, 5);
                         // 016D:0179 mov AH,0x2B
+                        AH = 0x2B;
                         // 016D:017B mov CX,0x07E8
                         CX = 0x07E8;
                         // 016D:017E mov DH,1
@@ -265,7 +273,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0180 mov DL,0x20
                         DL = 0x20;
                         // 016D:0182 int 0x21
-                        Dos.SetDate(cs1, 0x0184, 0x07E8, 0x0120);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetDate(0x07E8, 1, 0x20);
                         // 016D:0184 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:0186 jne near 0x021F
@@ -273,14 +282,15 @@ public partial class CfgGeneratedOverrides {
                             goto L_021F;
                         }
                         // 016D:018A mov DX,0x0998
-                        DX = 0x0998;
                         // 016D:018D mov AL,6
                         AL = 6;
                         // 016D:018F out DX,AL
                         Out8(0x0998, 6);
                         // 016D:0190 mov AH,0x2C
+                        AH = 0x2C;
                         // 016D:0192 int 0x21
-                        Dos.GetTime(cs1, 0x0194);
+                        Dos.RecordCallerStack(SS, SP);
+                        (CX, DX) = Dos.ReadTime();
                         // 016D:0194 cmp CH,0x17
                         Alu8.Sub(CH, 0x17);
                         // 016D:0197 ja near 0x021F
@@ -312,6 +322,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01AF out DX,AL
                         Out8(0x0998, 7);
                         // 016D:01B0 mov AH,0x2D
+                        AH = 0x2D;
                         // 016D:01B2 mov CH,0x0C
                         CH = 0x0C;
                         // 016D:01B4 mov CL,0x22
@@ -321,7 +332,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01B8 mov DL,0x4E
                         DL = 0x4E;
                         // 016D:01BA int 0x21
-                        Dos.SetTime(cs1, 0x01BC, 0x0C22, 0x384E);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetTime(0x0C, 0x22, 0x38, 0x4E);
                         // 016D:01BC cmp AL,0
                         Alu8.Sub(AL, 0);
                         // 016D:01BE jne short 0x021F
@@ -335,6 +347,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01C5 out DX,AL
                         Out8(0x0998, 8);
                         // 016D:01C6 mov AH,0x2D
+                        AH = 0x2D;
                         // 016D:01C8 mov CH,0x18
                         CH = 0x18;
                         // 016D:01CA mov CL,0
@@ -344,7 +357,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01CE mov DL,0
                         DL = 0;
                         // 016D:01D0 int 0x21
-                        Dos.SetTime(cs1, 0x01D2, 0x1800, 0);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetTime(0x18, 0, 0, 0);
                         // 016D:01D2 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:01D4 jne short 0x021F
@@ -358,6 +372,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01DB out DX,AL
                         Out8(0x0998, 9);
                         // 016D:01DC mov AH,0x2D
+                        AH = 0x2D;
                         // 016D:01DE mov CH,0
                         CH = 0;
                         // 016D:01E0 mov CL,0x3C
@@ -367,7 +382,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01E4 mov DL,0
                         DL = 0;
                         // 016D:01E6 int 0x21
-                        Dos.SetTime(cs1, 0x01E8, 0x003C, 0);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetTime(0, 0x3C, 0, 0);
                         // 016D:01E8 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:01EA jne short 0x021F
@@ -381,6 +397,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01F1 out DX,AL
                         Out8(0x0998, 0x0A);
                         // 016D:01F2 mov AH,0x2D
+                        AH = 0x2D;
                         // 016D:01F4 mov CH,0
                         CH = 0;
                         // 016D:01F6 mov CL,0
@@ -390,7 +407,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01FA mov DL,0
                         DL = 0;
                         // 016D:01FC int 0x21
-                        Dos.SetTime(cs1, 0x01FE, 0, 0x3C00);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetTime(0, 0, 0x3C, 0);
                         // 016D:01FE cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:0200 jne short 0x021F
@@ -404,6 +422,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0207 out DX,AL
                         Out8(0x0998, 0x0B);
                         // 016D:0208 mov AH,0x2D
+                        AH = 0x2D;
                         // 016D:020A mov CH,0
                         CH = 0;
                         // 016D:020C mov CL,0
@@ -413,7 +432,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0210 mov DL,0x64
                         DL = 0x64;
                         // 016D:0212 int 0x21
-                        Dos.SetTime(cs1, 0x0214, 0, 0x0064);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.SetTime(0, 0, 0, 0x64);
                         // 016D:0214 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
                         // 016D:0216 jne short 0x021F

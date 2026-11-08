@@ -140,40 +140,42 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        byte ah1 = 0;
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov BX,4
         BX = 4;
         // 016D:0103 mov AH,0x43
-        AH = 0x43;
         // 016D:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 4);
+        (ah1, dx1) = Ems.AllocatePageHandle(4, DX);
         // 016D:0107 cmp AH,0
-        Alu8.Sub(AH, 0);
+        Alu8.Sub(ah1, 0);
         // 016D:010A jne short 0x0122
-        if (AH == 0) {
+        if (ah1 == 0) {
             // 016D:010C mov CX,DX
-            CX = DX;
+            CX = dx1;
             // 016D:010E mov AL,0
+            AH = ah1;
             AL = 0;
             // 016D:0110 mov BX,0
             BX = 0;
             // 016D:0113 mov DX,CX
-            DX = CX;
+            dx1 = CX;
             // 016D:0115 mov AH,0x44
-            AH = 0x44;
             // 016D:0117 int 0x67
-            Ems.MapUnmapHandlePage(cs1, 0x0119, 0, DX, 0);
+            ah1 = Ems.MapUnmapHandlePage(0, 0, dx1);
             // 016D:0119 cmp AH,0
-            Alu8.Sub(AH, 0);
+            Alu8.Sub(ah1, 0);
             // 016D:011C jne short 0x0122
-            if (AH != 0) {
+            if (ah1 != 0) {
                 goto L_0122;
             }
             // 016D:011E mov AL,0
+            AH = ah1;
             al1 = 0;
             // 016D:0120 jmp short 0x0124
             goto L_0124;
@@ -181,6 +183,7 @@ public partial class CfgGeneratedOverrides {
     L_0122:
         VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_mov);
         // 016D:0122 mov AL,0xFF
+        AH = ah1;
         al1 = 0xFF;
     L_0124:
         // 016D:0124 mov DX,0x0999

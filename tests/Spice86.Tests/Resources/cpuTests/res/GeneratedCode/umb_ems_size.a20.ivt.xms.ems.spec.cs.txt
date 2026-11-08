@@ -151,7 +151,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, ES, DF. Does not return.</summary>
+    /// <summary>Inputs: EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -162,7 +162,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AX,0x5200
         AX = 0x5200;
         // 016D:0103 int 0x21
-        Dos.GetListOfLists(cs1, 0x0105);
+        Dos.RecordCallerStack(SS, SP);
+        (BX, ES) = Dos.ReadListOfListsAddress();
         // 016D:0105 cmp word ptr ES:[BX+0x66],0x9FFF
         flagOperand_0105 = UInt16[ES, (ushort)(BX + 0x66)];
         Alu16.Sub(flagOperand_0105, 0x9FFF);

@@ -161,7 +161,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0102 mov DL,0x1B
         DL = 0x1B;
         // 016D:0104 int 0x21
-        Dos.DisplayOutput(cs1, 0x0106, 0x1B);
+        InterruptCall(cs1, 0x0106, 0x21);
         // 016D:0106 mov DL,0x5B
         DL = 0x5B;
         // 016D:0108 int 0x21
@@ -175,10 +175,11 @@ public partial class CfgGeneratedOverrides {
         // 016D:0110 int 0x21
         InterruptCall(cs1, 0x0112, 0x21);
         // 016D:0112 mov AH,5
+        AH = 5;
         // 016D:0114 mov CX,0x7200
         CX = 0x7200;
         // 016D:0117 int 0x16
-        Keyboard.StoreKeystroke(cs1, 0x0119, 0x7200);
+        (AL, CarryFlag) = Keyboard.StoreKeystroke(0x7200);
         // 016D:0119 mov AH,8
         AH = 8;
         // 016D:011B int 0x21

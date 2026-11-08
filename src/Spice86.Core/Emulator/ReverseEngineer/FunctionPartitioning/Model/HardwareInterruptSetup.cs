@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
-using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -71,9 +70,8 @@ internal sealed record HardwareInterruptSetup {
             if (!installed.TryGetInstalledAddress(vector, out SegmentedAddress stub)) {
                 continue;
             }
-            InterruptServiceGroups.TryGetPropertyName(vector, out string? groupPropertyName);
             vectors[vector] = new InterruptServiceVector(vector, stub, handler.Services,
-                groupPropertyName);
+                handler.GetType());
         }
         return vectors;
     }

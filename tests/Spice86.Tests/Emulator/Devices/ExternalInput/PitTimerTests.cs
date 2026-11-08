@@ -51,17 +51,61 @@ public sealed class PitTimerTests {
         _fixture.Speaker.CounterInvocationCount.Should().Be(2);
     }
 
+    [Theory]
+    [InlineData(0, 0x40, 0x34, 0x0005)]
+    [InlineData(0, 0x40, 0x34, 0x0000)]
+    [InlineData(2, 0x42, 0xB6, 0x1234)]
+    public void ProgramChannelMatchesThePortSequence(int channel, ushort dataPort, byte controlWord,
+        ushort divisor) {
+        // Arrange: two independent timers on the same frozen clock, one programmed through its
+        // ports, one through the operation.
+        IEmulatedClock frozen = Substitute.For<IEmulatedClock>();
+        PitFixture viaPorts = new(frozen);
+        PitFixture viaOperation = new(frozen);
+
+        // Act
+        viaPorts.Dispatcher.WriteByte(0x43, controlWord);
+        viaPorts.Dispatcher.WriteByte(dataPort, (byte)divisor);
+        viaPorts.Dispatcher.WriteByte(dataPort, (byte)(divisor >> 8));
+        viaOperation.PitTimer.ProgramChannel(channel, controlWord, divisor);
+
+        // Assert: the channel snapshot matches, and a following latch read goes through the same
+        // staged state in both.
+        viaOperation.PitTimer.GetChannelSnapshot(channel)
+            .Should().BeEquivalentTo(viaPorts.PitTimer.GetChannelSnapshot(channel));
+        viaOperation.Dispatcher.ReadByte(dataPort).Should().Be(viaPorts.Dispatcher.ReadByte(dataPort));
+        viaOperation.Dispatcher.ReadByte(dataPort).Should().Be(viaPorts.Dispatcher.ReadByte(dataPort));
+    }
+
+    [Fact]
+    public void ProgramChannelRefusesAMismatchedControlWordWithoutMutating() {
+        Action mismatchedChannel = () => _fixture.PitTimer.ProgramChannel(2, 0x34, 0x0005);
+        mismatchedChannel.Should().Throw<ArgumentException>();
+        Action latchOnlyAccess = () => _fixture.PitTimer.ProgramChannel(0, 0x14, 0x0005);
+        latchOnlyAccess.Should().Throw<ArgumentException>();
+        Action unsupportedChannel = () => _fixture.PitTimer.ProgramChannel(1, 0x74, 0x0005);
+        unsupportedChannel.Should().Throw<ArgumentOutOfRangeException>();
+
+        // Assert: the refused calls wrote no control word - the channels keep the state a fresh
+        // timer has.
+        PitFixture fresh = new(Substitute.For<IEmulatedClock>());
+        _fixture.PitTimer.GetChannelSnapshot(0).Should().BeEquivalentTo(fresh.PitTimer.GetChannelSnapshot(0));
+        _fixture.PitTimer.GetChannelSnapshot(2).Should().BeEquivalentTo(fresh.PitTimer.GetChannelSnapshot(2));
+    }
+
     private sealed class PitFixture {
-        public PitFixture() {
+        public PitFixture() : this(new EmulatedClock(null, DateTimeOffset.UnixEpoch)) {
+        }
+
+        public PitFixture(IEmulatedClock clock) {
             Logger = Substitute.For<ILogger>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
             DualPic = new DualPic(Dispatcher, State, Logger, false);
             Speaker = new StubPitSpeaker();
-            EmulatedClock emulatedClock = new EmulatedClock(null, DateTimeOffset.UnixEpoch);
-            var emulationLoopScheduler = new DeviceScheduler(emulatedClock, Logger, "Emulation loop");
-            PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger, false);
+            DeviceScheduler emulationLoopScheduler = new(clock, Logger, "Emulation loop");
+            PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, clock, Logger, false);
         }
 
         public ILogger Logger { get; }

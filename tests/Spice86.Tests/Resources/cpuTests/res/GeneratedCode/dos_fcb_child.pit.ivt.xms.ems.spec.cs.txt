@@ -179,7 +179,6 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = true;
         // 016E:010F shr DX,4
         DX = 0x0051;
-        CarryFlag = true;
         ParityFlag = false;
         ZeroFlag = false;
         SignFlag = false;
@@ -189,7 +188,8 @@ public partial class CfgGeneratedOverrides {
         // 016E:0114 mov AH,0x4A
         AH = 0x4A;
         // 016E:0116 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x0118, 0x0051, ES);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, BX, CarryFlag) = Dos.ModifyMemory(ES, 0x0051);
         // 016E:0118 jb near 0x01B0
         if (!CarryFlag) {
             // 016E:011C mov AL,0x53
@@ -201,7 +201,8 @@ public partial class CfgGeneratedOverrides {
             // 016E:0124 mov AH,0x16
             AH = 0x16;
             // 016E:0126 int 0x21
-            Dos.FcbCreateFile(cs1, 0x0128, 0x01CB, DS);
+            Dos.RecordCallerStack(SS, SP);
+            AL = Dos.FcbCreateFile(DS, 0x01CB);
             // 016E:0128 cmp AL,0
             Alu8.Sub(AL, 0);
             // 016E:012A jne near 0x01B0
@@ -215,13 +216,15 @@ public partial class CfgGeneratedOverrides {
                 // 016E:0136 mov AH,0x1A
                 AH = 0x1A;
                 // 016E:0138 int 0x21
-                Dos.SetDiskTransferAddress(cs1, 0x013A, 0x01F0, DS);
+                Dos.RecordCallerStack(SS, SP);
+                Dos.SetDiskTransferAddress(DS, 0x01F0);
                 // 016E:013A mov DX,0x01CB
                 DX = 0x01CB;
                 // 016E:013D mov AH,0x15
                 AH = 0x15;
                 // 016E:013F int 0x21
-                Dos.FcbSequentialWrite(cs1, 0x0141, 0x01CB, DS);
+                Dos.RecordCallerStack(SS, SP);
+                AL = Dos.FcbSequentialWrite(DS, 0x01CB);
                 // 016E:0141 cmp AL,0
                 Alu8.Sub(AL, 0);
                 // 016E:0143 jne short 0x01B0
@@ -235,13 +238,15 @@ public partial class CfgGeneratedOverrides {
                     // 016E:014D mov AH,0x10
                     AH = 0x10;
                     // 016E:014F int 0x21
-                    Dos.FcbCloseFile(cs1, 0x0151, 0x01CB, DS);
+                    Dos.RecordCallerStack(SS, SP);
+                    AL = Dos.FcbCloseFile(DS, 0x01CB);
                     // 016E:0151 mov DX,0x01CB
                     DX = 0x01CB;
                     // 016E:0154 mov AH,0x0F
                     AH = 0x0F;
                     // 016E:0156 int 0x21
-                    Dos.FcbOpenFile(cs1, 0x0158, 0x01CB, DS);
+                    Dos.RecordCallerStack(SS, SP);
+                    AL = Dos.FcbOpenFile(DS, 0x01CB);
                     // 016E:0158 cmp AL,0
                     Alu8.Sub(AL, 0);
                     // 016E:015A jne short 0x01B0
@@ -272,13 +277,15 @@ public partial class CfgGeneratedOverrides {
                         // 016E:0176 mov AH,0x1A
                         AH = 0x1A;
                         // 016E:0178 int 0x21
-                        Dos.SetDiskTransferAddress(cs1, 0x017A, 0x026F, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        Dos.SetDiskTransferAddress(DS, 0x026F);
                         // 016E:017A mov DX,0x01CB
                         DX = 0x01CB;
                         // 016E:017D mov AH,0x14
                         AH = 0x14;
                         // 016E:017F int 0x21
-                        Dos.FcbSequentialRead(cs1, 0x0181, 0x01CB, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        AL = Dos.FcbSequentialRead(DS, 0x01CB);
                         // 016E:0181 cmp AL,0
                         Alu8.Sub(AL, 0);
                         // 016E:0183 jne short 0x01B0
@@ -312,13 +319,15 @@ public partial class CfgGeneratedOverrides {
                             // 016E:019A mov AH,0x10
                             AH = 0x10;
                             // 016E:019C int 0x21
-                            Dos.FcbCloseFile(cs1, 0x019E, 0x01CB, DS);
+                            Dos.RecordCallerStack(SS, SP);
+                            AL = Dos.FcbCloseFile(DS, 0x01CB);
                             // 016E:019E mov DX,0x01CB
                             DX = 0x01CB;
                             // 016E:01A1 mov AH,0x13
                             AH = 0x13;
                             // 016E:01A3 int 0x21
-                            Dos.FcbDeleteFile(cs1, 0x01A5, 0x01CB, DS);
+                            Dos.RecordCallerStack(SS, SP);
+                            AL = Dos.FcbDeleteFile(DS, 0x01CB);
                             // 016E:01A5 mov DX,0x00E9
                             DX = 0x00E9;
                             // 016E:01A8 mov AL,0x50
@@ -344,7 +353,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
-    /// <summary>Inputs: EAX, EBX, flags, DF. Outputs: EAX, BX. Changes: EAX, BX.</summary>
+    /// <summary>Inputs: EAX, EBX. Outputs: AL, BX. Changes: AX, BX.</summary>
     public virtual Action unknown_016E_01C0_018A0() {
         CheckExternalEvents(cs1, 0x01C0);
         // 016E:01C0 push AX
@@ -356,7 +365,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:01C4 mov BH,0
         BH = 0;
         // 016E:01C6 int 0x10
-        Video.WriteTextInTeletypeMode(cs1, 0x01C8, AL, BX);
+        Video.WriteTextInTeletypeMode(AL, BX);
         // 016E:01C8 pop BX
         BX = Stack.Pop16();
         // 016E:01C9 pop AX
@@ -381,7 +390,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         // F000:0000 callback 0x0010
@@ -536,7 +545,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         while (true) {
@@ -576,7 +585,7 @@ public partial class CfgGeneratedOverrides {
             // 01CD:0104 mov BH,0
             BH = 0;
             // 01CD:0106 int 0x10
-            Video.WriteTextInTeletypeMode(cs2, 0x0108, 0x58, BX);
+            Video.WriteTextInTeletypeMode(0x58, BX);
             // 01CD:0108 mov AX,0x4C00
             AX = 0x4C00;
             // 01CD:010B int 0x21

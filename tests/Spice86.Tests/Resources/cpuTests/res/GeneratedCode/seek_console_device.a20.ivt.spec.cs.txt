@@ -149,7 +149,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -159,11 +159,10 @@ public partial class CfgGeneratedOverrides {
         // 016D:0103 xor CX,CX
         CX = Alu16.Xor(CX, CX);
         // 016D:0105 mov DX,5
-        DX = 5;
         // 016D:0108 mov AX,0x4200
-        AX = 0x4200;
         // 016D:010B int 0x21
-        Dos.MoveFilePointerUsingHandle(cs1, 0x010D, 0, 0, 5, 1);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 5);
         // 016D:010D jb short 0x017A
         if (!CarryFlag) {
             // 016D:010F cmp DX,0
@@ -181,9 +180,9 @@ public partial class CfgGeneratedOverrides {
                     // 016D:011E xor DX,DX
                     DX = Alu16.Xor(DX, DX);
                     // 016D:0120 mov AX,0x4200
-                    AX = 0x4200;
                     // 016D:0123 int 0x21
-                    Dos.MoveFilePointerUsingHandle(cs1, 0x0125, 0, 0, 0, 1);
+                    Dos.RecordCallerStack(SS, SP);
+                    (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 0);
                     // 016D:0125 jb short 0x017A
                     if (!CarryFlag) {
                         // 016D:0127 cmp DX,0
@@ -207,7 +206,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:013A mov AH,0x40
                         // 016D:013C int 0x21
                         // DOS 40h write handle 1 "abc"
-                        Dos.WriteToFileOrDevice(cs1, 0x013E, 3, 0x0181, 1, DS);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, CarryFlag) = Dos.WriteFile(1, 3, DS, 0x0181);
                         // 016D:013E jb short 0x017A
                         if (CarryFlag) {
                             goto L_017A;
@@ -224,16 +224,15 @@ public partial class CfgGeneratedOverrides {
                         CX = 0;
                         // 016D:014A xor DX,DX
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:014C mov AX,0x4201
-                        AX = 0x4201;
                         // 016D:014F int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x0151, 1, 0, 0, 1);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, 1, 0, 0);
                         // 016D:0151 jb short 0x017A
                         if (CarryFlag) {
                             goto L_017A;
@@ -254,18 +253,16 @@ public partial class CfgGeneratedOverrides {
                         BX = 1;
                         // 016D:0160 xor CX,CX
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
                         // 016D:0162 mov DX,2
-                        DX = 2;
                         // 016D:0165 mov AX,0x4202
-                        AX = 0x4202;
                         // 016D:0168 int 0x21
-                        Dos.MoveFilePointerUsingHandle(cs1, 0x016A, 2, 0, 2, 1);
+                        Dos.RecordCallerStack(SS, SP);
+                        (AX, DX, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.End, 1, 0, 2);
                         // 016D:016A jb short 0x017A
                         if (CarryFlag) {
                             goto L_017A;

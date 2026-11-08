@@ -146,7 +146,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -154,7 +154,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AX,0x4310
         AX = 0x4310;
         // 016D:0103 int 0x2F
-        DosMultiplex.XmsServices(cs1, 0x0105, 0x10);
+        (AL, BX, ES, CarryFlag) = DosMultiplex.XmsServices(0x10, BX, ES);
         // 016D:0105 mov word ptr DS:[0x012B],BX
         ImageMinus0003Globals.Word012B = BX;
         // 016D:0109 mov word ptr DS:[0x012D],ES

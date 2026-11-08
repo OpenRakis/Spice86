@@ -147,10 +147,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort ds1 = 0;
+        ushort dx1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 push CS
         // 016D:0101 pop DS
@@ -170,7 +171,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0111 mov CX,0
         CX = 0;
         // 016D:0114 mov DX,0x2710
-        DX = 0x2710;
+        dx1 = 0x2710;
         // 016D:0117 mov BX,0x01A2
         BX = 0x01A2;
         // 016D:011A push CS
@@ -178,11 +179,11 @@ public partial class CfgGeneratedOverrides {
         // 016D:011B pop ES
         ES = Stack.Pop16();
         // 016D:011C int 0x15
-        SystemBios.WaitFunction(cs1, 0x011E, 0, 0, 0x2710, 0x01A2, ES);
+        (AH, CarryFlag) = SystemBios.WaitFunction(0, 0, 0x2710, ES, 0x01A2, 0x83);
         // 016D:011E jb short 0x019B
         if (!CarryFlag) {
             // 016D:0120 mov DX,0x0998
-            DX = 0x0998;
+            dx1 = 0x0998;
             // 016D:0123 mov AL,2
             // 016D:0125 out DX,AL
             Out8(0x0998, 2);
@@ -201,15 +202,14 @@ public partial class CfgGeneratedOverrides {
             // 016D:0132 jne short 0x019B
             if (AL == 1) {
                 // 016D:0134 mov DX,0x0998
-                DX = 0x0998;
+                dx1 = 0x0998;
                 // 016D:0137 mov AL,3
                 // 016D:0139 out DX,AL
                 Out8(0x0998, 3);
                 // 016D:013A mov AL,0x0B
                 // 016D:013C out 0x70,AL
-                RealTimeClockPorts.WriteAddress(0x0B);
                 // 016D:013E in AL,0x71
-                AL = RealTimeClockPorts.ReadData();
+                AL = Cmos.ReadRegister(0x0B);
                 // 016D:0140 test AL,0x40
                 Alu8.And(AL, 0x40);
                 // 016D:0142 je short 0x019B
@@ -226,13 +226,13 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0150 mov AX,word ptr DS:[0x009C]
                     AX = Segment0040Globals.Word009C;
                     // 016D:0153 mov DX,word ptr DS:[0x009E]
-                    DX = Segment0040Globals.Word009E;
+                    dx1 = Segment0040Globals.Word009E;
                     // 016D:0157 pop DS
                     ds1 = Stack.Pop16();
                     // 016D:0158 cmp DX,0
-                    Alu16.Sub(DX, 0);
+                    Alu16.Sub(dx1, 0);
                     // 016D:015B jne short 0x019B
-                    if (DX == 0) {
+                    if (dx1 == 0) {
                         // 016D:015D cmp AX,0x2710
                         Alu16.Sub(AX, 0x2710);
                         // 016D:0160 jne short 0x019B
@@ -240,7 +240,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_019B;
                         }
                         // 016D:0162 mov DX,0x0998
-                        DX = 0x0998;
+                        dx1 = 0x0998;
                         // 016D:0165 mov AL,5
                         AL = 5;
                         // 016D:0167 out DX,AL
@@ -250,13 +250,13 @@ public partial class CfgGeneratedOverrides {
                         // 016D:016A mov AL,1
                         AL = 1;
                         // 016D:016C int 0x15
-                        SystemBios.WaitFunction(cs1, 0x016E, 1, 0, 0x0998, 0x01A2, ES);
+                        (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, ES, 0x01A2, 0x83);
                         // 016D:016E jb short 0x019B
                         if (CarryFlag) {
                             goto L_019B;
                         }
                         // 016D:0170 mov DX,0x0998
-                        DX = 0x0998;
+                        dx1 = 0x0998;
                         // 016D:0173 mov AL,6
                         // 016D:0175 out DX,AL
                         Out8(0x0998, 6);
@@ -277,15 +277,14 @@ public partial class CfgGeneratedOverrides {
                             goto L_019B;
                         }
                         // 016D:0184 mov DX,0x0998
-                        DX = 0x0998;
+                        dx1 = 0x0998;
                         // 016D:0187 mov AL,7
                         // 016D:0189 out DX,AL
                         Out8(0x0998, 7);
                         // 016D:018A mov AL,0x0B
                         // 016D:018C out 0x70,AL
-                        RealTimeClockPorts.WriteAddress(0x0B);
                         // 016D:018E in AL,0x71
-                        AL = RealTimeClockPorts.ReadData();
+                        AL = Cmos.ReadRegister(0x0B);
                         // 016D:0190 test AL,0x40
                         Alu8.And(AL, 0x40);
                         // 016D:0192 jne short 0x019B

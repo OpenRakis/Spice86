@@ -152,7 +152,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -167,35 +167,36 @@ public partial class CfgGeneratedOverrides {
         // 016D:010A mov DX,0x0169
         DX = 0x0169;
         // 016D:010D mov AH,9
+        AH = 9;
         // 016D:010F int 0x21
-        Dos.PrintString(cs1, 0x0111, 0x0169, DS, "HELLO");
+        // DOS 09h print "HELLO$"
+        InterruptCall(cs1, 0x0111, 0x21);
         // 016D:0111 mov word ptr ES:[0x0040],AX
-        Segment2000Globals.Word0040 = AX;
+        Segment2000Globals.Word0040 = 0x0900;
         // 016D:0115 mov BX,1
         BX = 1;
         // 016D:0118 mov CX,4
         CX = 4;
         // 016D:011B mov DX,0x017A
-        DX = 0x017A;
         // 016D:011E mov AH,0x40
         // 016D:0120 int 0x21
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        Dos.WriteToFileOrDevice(cs1, 0x0122, 4, 0x017A, 1, DS);
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.WriteFile(1, 4, DS, 0x017A);
         // 016D:0122 mov word ptr ES:[0x0042],AX
         Segment2000Globals.Word0042 = AX;
         // 016D:0126 mov AX,0
         // 016D:0129 adc AX,0
-        AX = Alu16.Adc(0, 0);
+        AX = (ushort)(CarryFlag ? 1 : 0);
         // 016D:012C mov byte ptr ES:[0x0044],AL
         Segment2000Globals.Byte0044 = AL;
         // 016D:0130 mov DX,0x016F
-        DX = 0x016F;
         // 016D:0133 mov AL,0
         AL = 0;
         // 016D:0135 mov AH,0x3D
-        AH = 0x3D;
         // 016D:0137 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0139, 0, 0x016F, DS, "NOFILE.TXT");
+        Dos.RecordCallerStack(SS, SP);
+        (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT"));
         // 016D:0139 mov word ptr ES:[0x0045],AX
         Segment2000Globals.Word0045 = AX;
         // 016D:013D mov AX,0
@@ -212,8 +213,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:0156 mov DX,0x017E
         DX = 0x017E;
         // 016D:0159 mov AH,9
+        AH = 9;
         // 016D:015B int 0x21
-        Dos.PrintString(cs1, 0x015D, 0x017E, DS);
+        InterruptCall(cs1, 0x015D, 0x21);
         // 016D:015D mov word ptr ES:[0x0048],AX
         Segment2000Globals.Word0048 = AX;
         // 016D:0161 mov AL,byte ptr DS:[0x017B]

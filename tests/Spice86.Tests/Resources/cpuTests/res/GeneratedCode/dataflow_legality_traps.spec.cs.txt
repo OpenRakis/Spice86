@@ -152,15 +152,16 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort dx;
         ushort ax;
-        ushort cx1 = 0;
         ushort di;
+        ushort cx1 = 0;
         ushort ax1 = 0;
         ushort es;
+        ushort cx2 = 0;
         ushort ax2 = 0;
         ushort si1 = 0;
         ushort es1 = 0;
         ushort es2 = 0;
-        ushort cx2 = 0;
+        ushort cx3 = 0;
         byte al;
         ushort flagOperand_0091 = 0;
         ushort flagOperand_0246 = 0;
@@ -220,9 +221,9 @@ public partial class CfgGeneratedOverrides {
             // F000:0057 pushf
             Stack.Push16(FlagRegister16);
             // F000:0058 pop DI
-            DI = Stack.Pop16();
+            di = Stack.Pop16();
             // F000:0059 mov word ptr DS:[BX+0x18],DI
-            UInt16[DS, (ushort)(BX + 0x18)] = DI;
+            UInt16[DS, (ushort)(BX + 0x18)] = di;
             // F000:005C mov EDX,0
             EDX = 0;
             // F000:0062 mov AX,word ptr CS:[SI+0x0A]
@@ -241,9 +242,9 @@ public partial class CfgGeneratedOverrides {
             EDX = 0;
             // F000:007E mov DI,0x0074
             // F000:0081 mov DI,word ptr CS:[SI+0x1E]
-            di = UInt16[CS, (ushort)(SI + 0x1E)];
+            DI = UInt16[CS, (ushort)(SI + 0x1E)];
             // F000:0085 mov word ptr DS:[DI],DI
-            UInt16[DS, di] = di;
+            UInt16[DS, DI] = DI;
             // F000:0087 mov EDI,0
             EDI = 0;
             // F000:008D mov AX,word ptr CS:[SI+0x0C]
@@ -319,9 +320,9 @@ public partial class CfgGeneratedOverrides {
             // F000:00ED push ES
             Stack.Push16(es);
             // F000:00EE pop CX
-            CX = Stack.Pop16();
+            cx2 = Stack.Pop16();
             // F000:00EF mov word ptr DS:[BX+0x12],CX
-            UInt16[DS, (ushort)(BX + 0x12)] = CX;
+            UInt16[DS, (ushort)(BX + 0x12)] = cx2;
             // F000:00F2 mov CX,0x2000
             // F000:00F5 mov ES,CX
             ES = 0x2000;
@@ -450,13 +451,11 @@ public partial class CfgGeneratedOverrides {
             DsGlobals.Byte0E06 = 0;
             // F000:01BC mov AL,0x36
             // F000:01BE out 0x43,AL
-            PitPorts.WriteControlWord(0x36);
             // F000:01C0 mov AL,0x51
             // F000:01C2 out 0x40,AL
-            PitPorts.WriteChannel0Data(0x51);
             // F000:01C4 mov AL,0x22
             // F000:01C6 out 0x40,AL
-            PitPorts.WriteChannel0Data(0x22);
+            Pit.ProgramChannel(0, 0x36, 0x2251);
             // F000:01C8 mov AL,0xFE
             AL = 0xFE;
             // F000:01CA out 0x21,AL
@@ -550,11 +549,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0246 cmp word ptr DS:[BX+0x3A],7
             flagOperand_0246 = UInt16[DS, (ushort)(BX + 0x3A)];
             // F000:024A pop CX
-            cx2 = Stack.Pop16();
+            cx3 = Stack.Pop16();
             // F000:024B jne short 0x0250
             if (flagOperand_0246 == 7) {
                 // F000:024D mov word ptr DS:[BX+0x38],CX
-                UInt16[DS, (ushort)(BX + 0x38)] = cx2;
+                UInt16[DS, (ushort)(BX + 0x38)] = cx3;
             }
             // F000:0250 mov EAX,dword ptr CS:[0x0406]
             EAX = CsGlobals.Dword0406;
@@ -587,82 +586,82 @@ public partial class CfgGeneratedOverrides {
             // F000:0285 mov DX,0x03C4
             // F000:0288 mov AX,0x0F02
             // F000:028B out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0F02);
+            Vga.WriteSequencerRegister(2, 0x0F);
             // F000:028C mov AX,0x0604
             // F000:028F out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0604);
+            Vga.WriteSequencerRegister(4, 6);
             // F000:0290 mov DX,0x03CE
             // F000:0293 mov AX,6
             // F000:0296 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(6);
+            Vga.WriteGraphicsControllerRegister(6, 0);
             // F000:0297 mov AX,0xFF08
             // F000:029A out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0xFF08);
+            Vga.WriteGraphicsControllerRegister(8, 0xFF);
             // F000:029B mov AX,0xA000
             // F000:029E mov ES,AX
             ES = 0xA000;
             // F000:02A0 mov DX,0x03C4
             // F000:02A3 mov AX,0x0102
             // F000:02A6 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0102);
+            Vga.WriteSequencerRegister(2, 1);
             // F000:02A7 mov byte ptr ES:[0],0x11
             SegmentA000Globals.Byte0000 = 0x11;
             // F000:02AD mov AX,0x0202
             // F000:02B0 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0202);
+            Vga.WriteSequencerRegister(2, 2);
             // F000:02B1 mov byte ptr ES:[0],0x22
             SegmentA000Globals.Byte0000 = 0x22;
             // F000:02B7 mov AX,0x0402
             // F000:02BA out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0402);
+            Vga.WriteSequencerRegister(2, 4);
             // F000:02BB mov byte ptr ES:[0],0x44
             SegmentA000Globals.Byte0000 = 0x44;
             // F000:02C1 mov AX,0x0802
             // F000:02C4 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0802);
+            Vga.WriteSequencerRegister(2, 8);
             // F000:02C5 mov byte ptr ES:[0],0x88
             SegmentA000Globals.Byte0000 = 0x88;
             // F000:02CB mov AX,0x0F02
             // F000:02CE out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0F02);
+            Vga.WriteSequencerRegister(2, 0x0F);
             // F000:02CF mov DX,0x03CE
             // F000:02D2 mov AX,4
             AX = 4;
             // F000:02D5 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(4);
+            Vga.WriteGraphicsControllerRegister(4, 0);
             // F000:02D6 mov AL,byte ptr ES:[0]
-            AL = SegmentA000Globals.Byte0000;
+            al = SegmentA000Globals.Byte0000;
             // F000:02DA mov byte ptr DS:[BX+0x0D],AL
-            UInt8[DS, (ushort)(BX + 0x0D)] = AL;
+            UInt8[DS, (ushort)(BX + 0x0D)] = al;
             // F000:02DD mov DX,0x03C4
             // F000:02E0 mov AX,0x0102
             // F000:02E3 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0102);
+            Vga.WriteSequencerRegister(2, 1);
             // F000:02E4 mov byte ptr ES:[1],0x55
             SegmentA000Globals.Byte0001 = 0x55;
             // F000:02EA mov AX,0x0202
             // F000:02ED out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0202);
+            Vga.WriteSequencerRegister(2, 2);
             // F000:02EE mov byte ptr ES:[1],0x66
             SegmentA000Globals.Byte0001 = 0x66;
             // F000:02F4 mov AX,0x0402
             // F000:02F7 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0402);
+            Vga.WriteSequencerRegister(2, 4);
             // F000:02F8 mov byte ptr ES:[1],0x77
             SegmentA000Globals.Byte0001 = 0x77;
             // F000:02FE mov AX,0x0802
             // F000:0301 out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0802);
+            Vga.WriteSequencerRegister(2, 8);
             // F000:0302 mov byte ptr ES:[1],0xAA
             SegmentA000Globals.Byte0001 = 0xAA;
             // F000:0308 mov AX,0x0F02
             // F000:030B out DX,AX
-            VgaPorts.WriteSequencerIndexAndData(0x0F02);
+            Vga.WriteSequencerRegister(2, 0x0F);
             // F000:030C mov DX,0x03CE
             DX = 0x03CE;
             // F000:030F mov AX,0x0105
             // F000:0312 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0x0105);
+            Vga.WriteGraphicsControllerRegister(5, 1);
             // F000:0313 pop word ptr ES:[0]
             ushort popStackCheck_0313 = Stack.Peek16(0);
             ushort popDestinationCheck_0313 = SegmentA000Globals.Word0000;
@@ -674,11 +673,11 @@ public partial class CfgGeneratedOverrides {
             SegmentA000Globals.Byte0010 = 0;
             // F000:0321 mov AX,5
             // F000:0324 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(5);
+            Vga.WriteGraphicsControllerRegister(5, 0);
             // F000:0325 mov AX,4
             AX = 4;
             // F000:0328 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(4);
+            Vga.WriteGraphicsControllerRegister(4, 0);
             // F000:0329 mov AL,byte ptr ES:[0x0010]
             al = SegmentA000Globals.Byte0010;
             // F000:032D mov byte ptr DS:[BX+9],AL
@@ -686,7 +685,7 @@ public partial class CfgGeneratedOverrides {
             // F000:0330 mov AX,0x0104
             AX = 0x0104;
             // F000:0333 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0x0104);
+            Vga.WriteGraphicsControllerRegister(4, 1);
             // F000:0334 mov AL,byte ptr ES:[0x0010]
             al = SegmentA000Globals.Byte0010;
             // F000:0338 mov byte ptr DS:[BX+0x0B],AL
@@ -694,7 +693,7 @@ public partial class CfgGeneratedOverrides {
             // F000:033B mov AX,0x0204
             AX = 0x0204;
             // F000:033E out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0x0204);
+            Vga.WriteGraphicsControllerRegister(4, 2);
             // F000:033F mov AL,byte ptr ES:[0x0010]
             al = SegmentA000Globals.Byte0010;
             // F000:0343 mov byte ptr DS:[BX+0x17],AL
@@ -702,14 +701,14 @@ public partial class CfgGeneratedOverrides {
             // F000:0346 mov AX,0x0304
             AX = 0x0304;
             // F000:0349 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0x0304);
+            Vga.WriteGraphicsControllerRegister(4, 3);
             // F000:034A mov AL,byte ptr ES:[0x0010]
-            AL = SegmentA000Globals.Byte0010;
+            al = SegmentA000Globals.Byte0010;
             // F000:034E mov byte ptr DS:[BX+0x1C],AL
-            UInt8[DS, (ushort)(BX + 0x1C)] = AL;
+            UInt8[DS, (ushort)(BX + 0x1C)] = al;
             // F000:0351 mov AX,0x0E06
             // F000:0354 out DX,AX
-            VgaPorts.WriteGraphicsControllerIndexAndData(0x0E06);
+            Vga.WriteGraphicsControllerRegister(6, 0x0E);
             // F000:0355 pop ES
             ES = Stack.Pop16();
             // F000:0356 mov AX,word ptr CS:[SI+6]

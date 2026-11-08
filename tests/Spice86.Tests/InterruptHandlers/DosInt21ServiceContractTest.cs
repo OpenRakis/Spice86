@@ -1,7 +1,13 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using FluentAssertions;
+
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Xunit;
 
@@ -25,6 +31,17 @@ public class DosInt21ServiceContractTest {
             foreach (int selector in selectors) {
                 yield return new ServiceContractCase { Vector = 0x21, SelectorValue = selector };
             }
+            // Commit an open file without closing it, or reject an invalid DOS handle.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x68,
+                Setup = machine => {
+                    machine.Spice86.Machine.CpuState.BX = OpenFile(machine, "COMMIT.DAT", "DATA", 2);
+                }
+            };
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x68,
+                Setup = machine => machine.Spice86.Machine.CpuState.BX = 0xFFFF
+            };
             // DS:DX points at a "$"-terminated string.
             yield return new ServiceContractCase {
                 Vector = 0x21, SelectorValue = 0x09,
@@ -565,12 +582,12 @@ public class DosInt21ServiceContractTest {
     private static void CreateFile(ServiceContractMachine machine, string name, string content) {
         string path = Path.Join(machine.CDrivePath, name);
         File.WriteAllText(path, content);
-        // FCB fields and file date/time services expose the host timestamps; fix
-        // them so the two machines see identical values.
-        DateTime stamp = new(1993, 6, 1, 12, 0, 0, DateTimeKind.Utc);
-        File.SetCreationTimeUtc(path, stamp);
-        File.SetLastWriteTimeUtc(path, stamp);
-        File.SetLastAccessTimeUtc(path, stamp);
+        File.SetAttributes(path, FileAttributes.Normal);
+        // DOS exposes local file times. The baseline records 14:00 local on this date.
+        DateTime stamp = new(1993, 6, 1, 14, 0, 0, DateTimeKind.Local);
+        File.SetCreationTime(path, stamp);
+        File.SetLastWriteTime(path, stamp);
+        File.SetLastAccessTime(path, stamp);
     }
 
     private static void CreateDirectory(ServiceContractMachine machine, string name) {
@@ -600,5 +617,89 @@ public class DosInt21ServiceContractTest {
         machine.Spice86.Machine.CpuState.BX = 0x10;
         RunService(machine, 0x48);
         return machine.Spice86.Machine.CpuState.AX;
+    }
+
+    /// <summary>A duplicated DOS handle resolves through the system file table without the
+    /// core writing any register: register writes stay the interrupt dispatcher's job.</summary>
+    [Fact]
+    public void RawDosIoControlResolvesDuplicatedDosHandlesWithoutWritingRegisters() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        DosInt21Handler handler =
+            (DosInt21Handler)machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+        (ushort created, bool carryFlag) = handler.CreateFile("RAW.DAT", 0);
+        carryFlag.Should().BeFalse();
+        ushort originalHandle = created;
+        handler.ForceDuplicateHandle(originalHandle, 19).carryFlag.Should().BeFalse();
+        handler.CloseFile(originalHandle, 0).carryFlag.Should().BeFalse();
+        StateSnapshot before = new(machine.Spice86.Machine.CpuState);
+
+        // Act
+        (ushort ax, ushort dx, bool resultError) = handler.IoControl(0, 0, 0, 19, 0);
+        (ushort closed, _, bool closedError) = handler.IoControl(0, 0, 0, originalHandle, 0);
+
+        // Assert
+        resultError.Should().BeFalse();
+        ax.Should().Be(dx);
+        closedError.Should().BeTrue();
+        closed.Should().Be((ushort)DosErrorCode.InvalidHandle);
+        before.AssertUnchanged(machine.Spice86.Machine.CpuState);
+        handler.CloseFile(19, 0).carryFlag.Should().BeFalse();
+    }
+
+    /// <summary>An invalid get/set-attribute operation reports the error through the raw core
+    /// without touching CPU state; the interrupt dispatcher is where the CPU exception for an
+    /// unhandled operation lives.</summary>
+    [Fact]
+    public void InvalidAttributeOperationKeepsCpuExceptionsAtInterruptBoundary() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        DosInt21Handler handler =
+            (DosInt21Handler)machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+        File.WriteAllText(Path.Join(machine.CDrivePath, "ATTRIB.DAT"), "data");
+        State state = machine.Spice86.Machine.CpuState;
+        state.AX = 0x4302;
+        state.DS = 0x0800;
+        state.DX = 0x0100;
+        state.CarryFlag = true;
+        machine.Spice86.Machine.Memory.LoadData(0x8100, "C:\\ATTRIB.DAT\0"u8.ToArray());
+        StateSnapshot before = new(state);
+
+        // Act / Assert: a raw API reports the error without reading or writing CPU state.
+        (ushort ax, ushort cx, bool resultError) = handler.GetSetFileAttributes(2, "C:\\ATTRIB.DAT", 0);
+        resultError.Should().BeTrue();
+        ax.Should().Be((ushort)DosErrorCode.FunctionNumberInvalid);
+        cx.Should().Be(0);
+        before.AssertUnchanged(state);
+        Action interrupt = () => handler.GetSetFileAttributes(false);
+        interrupt.Should().Throw<UnhandledOperationException>();
+        state.CarryFlag.Should().BeFalse();
+        state.AX.Should().Be(0x4302);
+    }
+
+    private sealed class StateSnapshot {
+        private readonly uint _eax, _ebx, _ecx, _edx, _esi, _edi, _ebp, _esp;
+        private readonly ushort _ds, _es, _fs, _gs, _ss, _cs, _ip;
+        private readonly uint _flags;
+
+        public StateSnapshot(State state) {
+            _eax = state.EAX; _ebx = state.EBX; _ecx = state.ECX; _edx = state.EDX;
+            _esi = state.ESI; _edi = state.EDI; _ebp = state.EBP; _esp = state.ESP;
+            _ds = state.DS; _es = state.ES; _fs = state.FS; _gs = state.GS;
+            _ss = state.SS; _cs = state.CS; _ip = state.IP;
+            _flags = state.Flags.FlagRegister;
+        }
+
+        public void AssertUnchanged(State state) {
+            state.EAX.Should().Be(_eax); state.EBX.Should().Be(_ebx);
+            state.ECX.Should().Be(_ecx); state.EDX.Should().Be(_edx);
+            state.ESI.Should().Be(_esi); state.EDI.Should().Be(_edi);
+            state.EBP.Should().Be(_ebp); state.ESP.Should().Be(_esp);
+            state.DS.Should().Be(_ds); state.ES.Should().Be(_es);
+            state.FS.Should().Be(_fs); state.GS.Should().Be(_gs);
+            state.SS.Should().Be(_ss); state.CS.Should().Be(_cs);
+            state.IP.Should().Be(_ip);
+            state.Flags.FlagRegister.Should().Be(_flags);
+        }
     }
 }

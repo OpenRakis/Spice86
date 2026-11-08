@@ -11,6 +11,7 @@ using System.Linq;
 /// </summary>
 internal sealed record GeneratedCodeMetrics {
     public required string Fixture { get; init; }
+    public string SourceLocation { get; init; } = "";
     public required int Methods { get; init; }
     public required int Lines { get; init; }
     public required int Labels { get; init; }
@@ -47,7 +48,7 @@ internal sealed record GeneratedCodeMetrics {
     public required int MethodVariables { get; init; }
     /// <summary><c>+=</c>, <c>-=</c>, <c>&amp;=</c>, <c>|=</c>, <c>^=</c>, <c>&lt;&lt;=</c>, <c>&gt;&gt;=</c> assignments.</summary>
     public required int CompoundAssignments { get; init; }
-    /// <summary>Tuple deconstruction assignments (the <c>xchg</c> swap idiom).</summary>
+    /// <summary>Two-element tuple assignments that exchange the same two symbols.</summary>
     public required int TupleSwaps { get; init; }
     /// <summary>Element accesses on <c>UInt8</c>, <c>UInt16</c>, <c>UInt32</c>, <c>Int8</c>, <c>Int16</c> or <c>Int32</c> (the memory indexers), plus member accesses on a globals class (<c>DsGlobals.Word0004</c>, ...).</summary>
     public required int MemoryAccesses { get; init; }
@@ -66,10 +67,11 @@ internal sealed record GeneratedCodeMetrics {
     public required int InterruptCalls { get; init; }
     /// <summary>Invocations of <c>InterruptCallReturnedElsewhere</c>.</summary>
     public required int InterruptCallReturnedElsewhere { get; init; }
-    /// <summary>Invocations of <c>&lt;Group&gt;.&lt;Method&gt;</c> where <c>&lt;Group&gt;</c> is a
-    /// typed interrupt service group property (typed <c>int</c> sites).</summary>
-    public required int TypedServiceCalls { get; init; }
-    /// <summary>Typed service invocations whose last argument is a string literal.</summary>
+    /// <summary>Calls to service implementations, grouped by their handler receiver.</summary>
+    public required IReadOnlyDictionary<string, int> ServiceCallsByReceiver { get; init; }
+    /// <summary>Total service calls, excluding DOS caller-stack bookkeeping.</summary>
+    public int TypedServiceCalls => ServiceCallsByReceiver.Values.Sum();
+    /// <summary>Service calls containing a validated string literal argument.</summary>
     public required int StringServiceCalls { get; init; }
     /// <summary>Local declarations whose name is a register local (<c>ushort ax;</c>, <c>byte al;</c>,
     /// <c>ushort ds;</c>, <c>ushort ax1 = 0;</c>): the promoted register webs.</summary>
@@ -80,8 +82,22 @@ internal sealed record GeneratedCodeMetrics {
     /// <summary>How many of <see cref="RegisterLocals"/> declare a signed type (<c>short ax;</c>,
     /// <c>sbyte al;</c>, <c>int eax;</c>): the webs whose reads vote signed.</summary>
     public required int SignedLocals { get; init; }
-    /// <summary>Assignments of the form <c>AX = ax;</c> copying a register local back to its register.</summary>
+    /// <summary>Simple assignments of a local value, optionally cast, to a CPU register.</summary>
     public required int WriteBacks { get; init; }
+    public required IReadOnlyDictionary<string, int> DeviceCallsByReceiver { get; init; }
+    public required IReadOnlyDictionary<string, int> ServiceCallsByOperation { get; init; }
+    public required IReadOnlyDictionary<string, int> DeviceCallsByOperation { get; init; }
+    public required int PortWrapperCalls { get; init; }
+    public required int RawIoCalls { get; init; }
+    public required int RegisterReads { get; init; }
+    public required int RegisterWrites { get; init; }
+    public required int PlainRegisterAssignments { get; init; }
+    public required int LocalVariables { get; init; }
+    public required int LocalReads { get; init; }
+    public required int LocalWrites { get; init; }
+    public required int BookkeepingCalls { get; init; }
+    public required int Statements { get; init; }
+    public int DeviceCalls => DeviceCallsByReceiver.Values.Sum();
     /// <summary>How many of <see cref="MemoryAccesses"/> are frame property accesses (<c>frame.Arg0</c>, ...).</summary>
     public required int FrameAccesses { get; init; }
     /// <summary>Declarations of a save local (<c>ushort savedAx_0012 = 0;</c>): the
@@ -138,12 +154,29 @@ internal sealed record GeneratedCodeMetrics {
             ("regLocalsMulti", RegisterLocalsMulti.ToString()),
             ("signedLocals", SignedLocals.ToString()),
             ("writeBacks", WriteBacks.ToString()),
+            ("portWrapperCalls", PortWrapperCalls.ToString()),
+            ("rawIoCalls", RawIoCalls.ToString()),
+            ("registerReads", RegisterReads.ToString()),
+            ("registerWrites", RegisterWrites.ToString()),
+            ("plainRegisterAssignments", PlainRegisterAssignments.ToString()),
+            ("localVariables", LocalVariables.ToString()),
+            ("localReads", LocalReads.ToString()),
+            ("localWrites", LocalWrites.ToString()),
+            ("bookkeepingCalls", BookkeepingCalls.ToString()),
+            ("statements", Statements.ToString()),
             ("frames", FrameAccesses.ToString()),
             ("savedPairs", SavedPairs.ToString()),
             ("warnings", Warnings.ToString()),
             ("warningIds", warningIds)
         ];
-        return string.Concat(fields.Select((field, index) => Pad($"{field.Name}={field.Value}", WidthOf(index, fields.Length))));
+        IEnumerable<string> counts = ServiceCallsByReceiver.Select(pair => ($"serviceCalls.{pair.Key}", pair.Value))
+            .Concat(DeviceCallsByReceiver.Select(pair => ($"deviceCalls.{pair.Key}", pair.Value)))
+            .Concat(ServiceCallsByOperation.Select(pair => ($"serviceOperations.{pair.Key}", pair.Value)))
+            .Concat(DeviceCallsByOperation.Select(pair => ($"deviceOperations.{pair.Key}", pair.Value)))
+            .OrderBy(pair => pair.Item1, StringComparer.Ordinal)
+            .Select(pair => $"{pair.Item1}={pair.Value}");
+        return string.Concat(fields.Select((field, index) => Pad($"{field.Name}={field.Value}", WidthOf(index, fields.Length))))
+            + " " + string.Join(" ", counts);
     }
 
     private static int WidthOf(int index, int count) {
