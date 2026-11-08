@@ -49,6 +49,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosJobFileTable _jobFileTable;
     private readonly IEmulatedClock _emulatedClock;
     private uint _stdinReadyFlagLinearAddress;
+    private SegmentedAddress? _stdinWaitLoopAddress;
     private bool _isCtrlCFlag;
 
     private const ushort OffsetMask = 0x0F;
@@ -58,6 +59,7 @@ public class DosInt21Handler : InterruptHandler {
     private const ushort DefaultTotalClusters = 0x7FFD;
     private const ushort MaximumJobFileTableSize = 0xFF;
     private const ushort PspJobFileTableOffset = 0x18;
+    private const byte ClearInputBufferAndReadFunction = 0x0C;
     private const byte SetCurrentPspFunction = 0x50;
     private const byte GetCurrentPspFunction = 0x51;
     private const byte GetPspAddressFunction = 0x62;
@@ -123,6 +125,8 @@ public class DosInt21Handler : InterruptHandler {
     ///     Emits an INT 21h handler stub into guest RAM that dispatches all AH values to the
     ///     C# handler via <c>callback(Run)</c>. For AH=07h, 08h, and 0Ah the stub first
     ///     polls STDIN readiness with INT 28h idle calls before dispatching.
+    ///     AH=0Ch goes through L_DEFAULT: the C# handler flushes the input, then for AL=01h, 07h, 08h
+    ///     and 0Ah moves CS:IP to L_WAIT_FOR_STDIN, so that function waits for a key typed after the flush.
     ///     AH=01h is NOT polled here — it goes through L_DEFAULT to the C# handler which
     ///     reads via ConsoleDevice → INT 16h (which waits with interrupts enabled for IRQ 1).
     /// </summary>
@@ -156,7 +160,7 @@ public class DosInt21Handler : InterruptHandler {
     ///       JMP short L_WAIT_FOR_STDIN
     ///
     ///     L_DISPATCH:
-    ///       callback(Run)                    ; dispatch to C# handler for this AH value
+    ///       callback(DispatchStdinInput)     ; runs AH, or for AH=0Ch the input function in AL
     ///       IRET
     /// ]]></remarks>
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
@@ -198,6 +202,7 @@ public class DosInt21Handler : InterruptHandler {
         // INT 21h clears IF per x86 spec; without STI the polling loop would
         // spin forever because keyboard scancodes never reach BiosKeyboardBuffer.
         // This matches FreeDOS (INT 21h starts with STI) and DOSBox (idle uses STI+HLT).
+        _stdinWaitLoopAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.WriteSti();
         // callback(CheckStdinReady) — writes flag byte, 4 bytes
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21CheckStdinReady, CallbackCheckStdinReady);
@@ -214,11 +219,23 @@ public class DosInt21Handler : InterruptHandler {
         // JMP short back to STI: -(4+6+2+2+2+1) = -17
         memoryAsmWriter.WriteJumpShort(-17);
 
-        // L_DISPATCH: dispatch to C# handler for AH=07h/08h/0Ah
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21StdinInputDispatch, Run);
+        // L_DISPATCH: dispatch to C# handler for AH=07h/08h/0Ah, or for AH=0Ch the function in AL
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21StdinInputDispatch, DispatchStdinInput);
         memoryAsmWriter.WriteIret();
 
         return handlerAddress;
+    }
+
+    /// <summary>
+    /// Last step of the ASM stub's STDIN wait loop, once STDIN is ready: runs the function in AH, or for
+    /// AH=0Ch, whose flush already ran, the input function in AL.
+    /// </summary>
+    public void DispatchStdinInput() {
+        if (State.AH == ClearInputBufferAndReadFunction) {
+            RunFlushFollowUp();
+            return;
+        }
+        Run();
     }
 
     /// <summary>
@@ -847,19 +864,36 @@ public class DosInt21Handler : InterruptHandler {
     /// Clears the keyboard buffer, then calls the INT21H input function whose number is in AL.
     /// DOS only runs functions 01h, 06h, 07h, 08h and 0Ah here; any other AL, 00h included, only flushes.
     /// </summary>
-    [InterruptService(0x0C, Unknown = true)]
+    /// <remarks>
+    /// Functions 01h, 07h, 08h and 0Ah wait for input. When the ASM stub is installed, this method moves
+    /// CS:IP to the stub's STDIN wait loop instead of running them, so they wait for a key typed after the
+    /// flush; <see cref="DispatchStdinInput"/> runs them once STDIN is ready.
+    /// </remarks>
+    [InterruptService(ClearInputBufferAndReadFunction, Unknown = true)]
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
-        byte operation = State.AL;
         if (LoggerService.IsEnabled(LogLevel.Debug)) {
-            LoggerService.LogDebug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
+            LoggerService.LogDebug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", State.AL);
         }
         _keyboardInt16Handler.FlushKeyboardBuffer();
         // NANSI dosfn7: also clears all device-level stuffahead buffers.
         GetStandardFile(DosStandardHandle.Stdin)?.Flush();
+        if (_stdinWaitLoopAddress is SegmentedAddress stdinWaitLoop && FlushFollowUpWaitsForInput(State.AL)) {
+            State.IpSegmentedAddress = stdinWaitLoop;
+            return;
+        }
+        RunFlushFollowUp();
+    }
+
+    private void RunFlushFollowUp() {
+        byte operation = State.AL;
         if (operation is not 0x1 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
             return;
         }
         Run(operation);
+    }
+
+    private static bool FlushFollowUpWaitsForInput(byte operation) {
+        return operation is 0x1 or 0x7 or 0x8 or 0xA;
     }
 
     /// <summary>

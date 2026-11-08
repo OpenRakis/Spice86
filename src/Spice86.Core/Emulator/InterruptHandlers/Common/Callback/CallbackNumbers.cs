@@ -40,7 +40,7 @@ public static class CallbackNumbers {
     /// <summary>Callback of <c>DosInt21Handler.CallbackCheckStdinReady</c>.</summary>
     public const ushort DosInt21CheckStdinReady = 0x10A;
 
-    /// <summary>Callback of <c>DosInt21Handler.Run</c> for the stdin input dispatch.</summary>
+    /// <summary>Callback of <c>DosInt21Handler.DispatchStdinInput</c>.</summary>
     public const ushort DosInt21StdinInputDispatch = 0x10B;
 
     /// <summary>Callback of <c>MouseDriver.BeforeUserHandlerExecution</c>.</summary>
