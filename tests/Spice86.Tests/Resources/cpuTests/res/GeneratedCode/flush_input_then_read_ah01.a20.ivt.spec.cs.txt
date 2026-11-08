@@ -65,13 +65,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0085_iret = [0xCF];
     private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
     private static readonly byte?[] Signature_008A_iret = [0xCF];
-    private static readonly byte?[] Signature_00AA_sti = [0xFB];
-    private static readonly byte?[] Signature_00AB_callback = [0xFE, 0x38, 0x0A, 0x01];
-    private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
-    private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00A9_iret = [0xCF];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
-    private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
-    private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
     private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
     private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];
@@ -79,7 +74,6 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
-    private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
     private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
@@ -363,31 +357,31 @@ public partial class CfgGeneratedOverrides {
                 if (AH != 0x0A) {
                     // F000:00A5 callback 0x0021
                     // INT 21h: Dos services selected by AH
-                    Callback(biosSegment, 0x00A5, 0x0021);
-                    // F000:00A9 iret
-                    return InterruptRet();
+                    if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
+                        VerifySpeculativeEntryOrFail(biosSegment, 0x00A9, Signature_00A9_iret);
+                        // F000:00A9 iret
+                        return InterruptRet();
+                    }
+                    if (CS != biosSegment || IP != 0x00AA) {
+                        throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
+                    }
                 }
             }
         }
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         // F000:00AA sti
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_callback);
         // F000:00AB callback 0x010A
         // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
         Callback(biosSegment, 0x00AB, 0x010A);
-        VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
         // F000:00AF cmp byte ptr CS:[0x0095],0
         flagOperand_00AF = CsGlobals.Byte0095;
         Alu8.Sub(flagOperand_00AF, 0);
         // F000:00B5 jne short 0x00BB
         if (flagOperand_00AF != 0) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
             // F000:00BB callback 0x010B
-            // INT 21h: Dos services selected by AH
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
             Callback(biosSegment, 0x00BB, 0x010B);
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
             // F000:00BF iret
             return InterruptRet();
         }

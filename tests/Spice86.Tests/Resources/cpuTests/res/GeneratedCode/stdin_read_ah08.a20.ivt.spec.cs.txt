@@ -382,7 +382,7 @@ public partial class CfgGeneratedOverrides {
         // F000:00B5 jne short 0x00BB
         if (flagOperand_00AF != 0) {
             // F000:00BB callback 0x010B
-            // INT 21h: Dos services selected by AH
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
             Callback(biosSegment, 0x00BB, 0x010B);
             // F000:00BF iret
             return InterruptRet();

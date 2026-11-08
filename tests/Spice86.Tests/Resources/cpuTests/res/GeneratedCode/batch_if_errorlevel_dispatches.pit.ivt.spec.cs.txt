@@ -394,7 +394,7 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_00AF != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
             // F000:00BB callback 0x010B
-            // INT 21h: Dos services selected by AH
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
             Callback(biosSegment, 0x00BB, 0x010B);
             VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
             // F000:00BF iret

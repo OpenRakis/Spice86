@@ -88,6 +88,7 @@ internal static class Int21ScenarioCatalog {
         FlushInputClearsStuffahead(),
         Simple("flush_input_al00_returns.com"),
         FlushInputThenReadWithEcho(),
+        FlushInputThenWaitForKey(),
         DeviceStatusReportCursorPosition(),
         FindFirstWildcard(),
         FindFirstShortFilename(),
@@ -291,6 +292,14 @@ internal static class Int21ScenarioCatalog {
             "AH=0Ch AL=01h should run function 01h after the flush and return the redirected byte in AL"));
     }
 
+    /// <summary>The program calls INT 21h AH=0Ch with AL=01h while no key is pending on the console, so
+    /// function 01h must wait for the A key the run presses after the flush and return 'a'.</summary>
+    private static AsmScenario FlushInputThenWaitForKey() {
+        return ProgramScenario("flush_input_then_wait_key_ah01", "flush_input_then_wait_key_ah01.com",
+            KeyboardSetup(SimulateKeyA), testHandler => testHandler.Details.Should().Equal(new byte[] { (byte)'a' },
+                "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"));
+    }
+
     /// <summary>The program positions the cursor and reads the Device Status Report bytes back through
     /// standard input, which must be exactly ESC[5;10R plus carriage return.</summary>
     private static AsmScenario DeviceStatusReportCursorPosition() {
@@ -406,6 +415,11 @@ internal static class Int21ScenarioCatalog {
         gui.SimulateKeyPress(PhysicalKey.C);
         gui.SimulateKeyRelease(PhysicalKey.C);
         gui.SimulateKeyRelease(PhysicalKey.ControlLeft);
+    }
+
+    private static void SimulateKeyA(HeadlessGui gui) {
+        gui.SimulateKeyPress(PhysicalKey.A);
+        gui.SimulateKeyRelease(PhysicalKey.A);
     }
 
     private static void SimulateCtrlBreak(HeadlessGui gui) {
