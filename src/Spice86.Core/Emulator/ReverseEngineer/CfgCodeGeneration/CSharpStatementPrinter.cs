@@ -627,7 +627,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             ? GeneratedOverrideNames.EntryFieldNameOf(delegateName)
             : delegateName;
         writer.OpenBlock($"if (JumpDispatcher.Jump({target}, 0x{node.LoadOffset:X4}))");
-        if (!node.SingleEntry) {
+        if (expressions.NeedsEntryDispatch) {
             writer.Line("loadOffset = JumpDispatcher.NextEntryAddress;");
         }
         writer.Line("goto entrydispatcher;");

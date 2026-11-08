@@ -51,7 +51,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
-        bool singleEntry = targetPartition.Entries.Count == 1;
+        bool singleEntry = context.GetEntries(targetPartition).Count == 1;
         switch (transfer.Kind) {
             case CfgCodePartitionTransferKind.CrossPartitionFlow:
                 return PartitionReturn(methodName, loadOffset, singleEntry);
@@ -195,7 +195,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         CfgCodePartition targetPartition = context.GetPartition(targetEdge.Target);
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, targetEdge.Target);
-        return new MethodGroupNode(methodName, loadOffset, targetPartition.Entries.Count == 1);
+        return new MethodGroupNode(methodName, loadOffset, context.GetEntries(targetPartition).Count == 1);
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
-        return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset, targetPartition.Entries.Count == 1);
+        return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset, context.GetEntries(targetPartition).Count == 1);
     }
 
     private static IVisitableAstNode PartitionReturn(string methodName, int loadOffset, bool singleEntry) {
