@@ -17,8 +17,13 @@ public sealed class MachineLeakGuard : IDisposable {
         }
 
         int surviving = MachineLeakTracker.CountSurvivingAfterCollection();
+        string diagnostic = "";
+        if (surviving > 0) {
+            diagnostic = MachineLeakTracker.WriteDiagnosticFile();
+        }
         Assert.True(surviving == 0,
             $"{surviving} of {tracked} emulator instances created via Spice86Creator were still alive after " +
-            "disposal and garbage collection. This indicates a reference leak that keeps the entire Machine graph rooted.");
+            "disposal and garbage collection. This indicates a reference leak that keeps the entire Machine graph rooted." +
+            (diagnostic.Length > 0 ? $"\n{diagnostic}" : ""));
     }
 }
