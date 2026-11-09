@@ -98,6 +98,21 @@ instructions.
 | EP-8 | The merged expression stays under `MaxMergedNodes` nodes and the chain under `MaxChainLength` | `IrExpressionPropagation.CountNodes` | generated expressions grow without bound | readability | output-size limit only |
 | EP-9 | The reader does not partially define the merged register's value unless its target rewrites every byte the writer wrote: a partial write consumes the writer's version a second time through the previous-version link, which `Substitute` cannot rewrite | `IrExpressionPropagation.TryMerge` (`IrSsaValues.WriteBits` on the reader's effects) | the merged statement would keep bytes of a version whose write was deleted, so the register reads stale (zero) bytes at the next whole-register read | fixture `if_conversion` IC-a `setz dl` section; `IrExpressionPropagationTest.ReaderPartiallyDefiningTheRegisterRefuses` | mutation (the partial-definition check removed): oracle `[043] expected 0x12 actual 0x00`; the unit test fails ("the DX load stays a statement") |
 
+## IrConstantFolder constant chains (CC)
+
+Folds the constant chains expression propagation merges into one expression: additive chains
+(already covered by `FoldAdditiveTerms`) and same-operation shift chains. The merge only rewrites
+the expression it sees; the liveness, single-use, flag and move rules of the intermediate
+statements belong to `IrExpressionPropagation` (EP rows) - the fold never joins statements.
+
+| id | condition | code | if dropped | trapped by | evidence |
+|----|-----------|------|------------|------------|----------|
+| CC-1 | Only a chain of one shift operation (`<<` or `>>`) on one type combines: the node's type, the inner shift's type and both left operands' types are equal | `IrConstantFolder.FoldShiftTerms` | mixed `shl`/`shr`/`sar` or mixed widths would combine into a different result | fixture `dataflow_shift_chains` sections "mixed shl then shr", "mixed sar then shr", "different operand widths" | `IrConstantFolderTest.RefusedShiftChainsStayUnchanged`; mutation (the same-operator check dropped): the fixture's mixed sections fail the oracle |
+| CC-2 | Both counts are resolved constants; the combined count is the sum of the masked counts, the mask being 31 (the C# `int` count mask, used for every width up to 32) or 63 on 64-bit | `IrConstantFolder.FoldShiftTerms` (`ConstantEvaluation.Resolved`, `countMask`) | a raw sum would wrap a count of exactly 32/64 differently, and a variable count would fold on a stale value | fixture `dataflow_shift_chains` section "variable count first" for the constant requirement; `unit test only` for the count mask: ALU expansion masks constant counts before building plain shift nodes, so this fixture does not reach an unmasked constant | `IrConstantFolderTest.ShiftChain64FoldKeepsThePrintedSemantics` (the count-mask rows fail on a raw-sum mutation) |
+| CC-3 | A signed right shift's combined count saturates at `width - 1` | `IrConstantFolder.FoldShiftTerms` | saturating later would produce `x & 0` or a wrong count where the arithmetic result is the sign fill | fixture `dataflow_shift_chains` sections "sar counts saturating" and the 8-bit `sar` chain | `IrConstantFolderTest.ShiftChain64FoldKeepsThePrintedSemantics`; mutation (saturation bypassed): the fixture's `sar` sections fail the oracle |
+| CC-4 | A combined count at or above the operand width prints `operand & 0`, never a bare `0`: the operand's reads, calls and faults still evaluate | `IrConstantFolder.FoldShiftTerms` (`BITWISE_AND` zero) | a dropped operand would lose a memory read's side effect or a call | fixture `dataflow_shift_chains` sections "shl counts summing to the width", "32-bit shr to zero", "32-bit shl past the width" | `IrConstantFolderTest.OverflowingShiftChainKeepsTheOperandRead` (`unit test only`: effects equality and single occurrence of the operand) |
+| CC-5 | Only same-width conversions between the shifts unwrap; a width-changing cast refuses | `IrConstantFolder.SameWidthShiftOperand` | a `ushort -> uint` boundary inside the chain would combine shifts of different evaluated widths | `unit test only` | `IrConstantFolderTest.RefusedShiftChainsStayUnchanged`; the catalogue has no covered cast-broken shift chain |
+
 ## IrFlagPropagation (FP)
 
 Replaces a conditional branch's flag read by the relation of the single instruction setting
@@ -298,8 +313,8 @@ replaces it by one call on the device (`Cmos.ReadRegister` / `WriteRegister` for
 pair, `Pit.ProgramChannel` for a low/high control word plus its two channel data writes,
 `Vga.SetPaletteEntry` for the DAC write index plus its three data writes,
 `Vga.WriteSequencerRegister` / `Vga.WriteGraphicsControllerRegister` for the 0x3C4/5 and
-0x3CE/F pairs, `Opl.WriteRegister` for the OPL address/data pairs). Runs after the additive
-constant fold; when it combined at least one sequence the pipeline rebuilds the SSA
+0x3CE/F pairs, `Opl.WriteRegister` for the OPL address/data pairs). Runs after the constant
+chain fold; when it combined at least one sequence the pipeline rebuilds the SSA
 (`ssa build device operations`) and the webs before `DoublePrecision`.
 
 Precondition: the pass only treats an address as reaching a device when the snapshot of
@@ -348,7 +363,7 @@ Recognizes `add`/`adc`, `sub`/`sbb`, `neg`/`adc`/`neg`, `shl`/`rcl` and `shr`/`r
 pair (DX:AX style) and rewrites them to one declaration on the combined wide value plus two half
 writes. A pair's halves print joined when they already are one value: the byte registers of one
 16-bit register become that register (and the two half writes merge into one wide assignment).
-Memory operands keep their separate reads and conversions. Runs after `AdditiveConstantFold`; when
+Memory operands keep their separate reads and conversions. Runs after `ConstantChainFold`; when
 it rewrote at least one pair the pipeline rebuilds
 the SSA (`ssa build double precision`) and the webs before `SpeculativeGuardMerge`.
 

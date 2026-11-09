@@ -484,6 +484,7 @@ internal static class AsmScenarioCatalog {
                 AsmFixtureCatalog.DataflowDoublePrecision386),
             PartitionScenario("dataflow_idioms"),
             PartitionScenario("alu_dead_flags"),
+            PartitionScenario("dataflow_shift_chains"),
             PartitionScenario("dataflow_expression_propagation"),
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
