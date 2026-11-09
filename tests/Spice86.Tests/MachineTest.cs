@@ -70,6 +70,7 @@ public class MachineTest {
         ["dataflow_double_precision"],
         ["dataflow_idioms"],
         ["alu_dead_flags"],
+        ["dataflow_shift_chains"],
         ["dataflow_expression_propagation"],
         ["dataflow_interrupt_boundaries"],
         ["dataflow_rewrite_traps"],

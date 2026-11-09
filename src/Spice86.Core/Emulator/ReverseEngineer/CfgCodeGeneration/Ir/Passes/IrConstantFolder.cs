@@ -142,19 +142,19 @@ internal static class IrConstantFolder {
     private static BlockNode FoldBody(BlockNode body) =>
         (BlockNode)IrAstChildren.MapChildren(body, statement => Fold(statement, NoVariableConstants));
 
-    /// <summary>Folds the additive constant chains <see cref="IrExpressionPropagation"/> merging
-    /// creates in every statement and terminator expression of <paramref name="method"/>. Only
-    /// constant operands combine, so a rewritten statement reads and writes the same
-    /// <see cref="CpuValues"/> and <see cref="IrTokens"/>, cannot newly fault
+    /// <summary>Folds the constant chains <see cref="IrExpressionPropagation"/> merging creates in
+    /// every statement and terminator expression of <paramref name="method"/>: additive chains and
+    /// same-operation shift chains. Only constant operands combine, so a rewritten statement reads
+    /// and writes the same <see cref="CpuValues"/> and <see cref="IrTokens"/>, cannot newly fault
     /// (<see cref="IrEffects.MayFault"/>) or deliver interrupts
     /// (<see cref="IrEffects.DeliversInterrupts"/>), and the SSA versions it holds are the same
     /// (<see cref="IrSsa.SameVersions"/>): the statement is replaced through
     /// <see cref="IrSsa.Replace"/> so its site stays.</summary>
-    internal static void FoldAdditiveConstants(IrMethod method, IrSsa ssa) {
+    internal static void FoldConstantChains(IrMethod method, IrSsa ssa) {
         foreach (IrBlock block in method.Blocks) {
             for (int i = 0; i < block.Statements.Count; i++) {
                 IrStatement statement = block.Statements[i];
-                IVisitableAstNode node = FoldAdditiveTerms(statement.Node);
+                IVisitableAstNode node = FoldConstantTerms(statement.Node);
                 if (ReferenceEquals(node, statement.Node)) {
                     continue;
                 }
@@ -164,7 +164,7 @@ internal static class IrConstantFolder {
                     ssa.Replace(statement, replacement);
                 }
             }
-            IrTerminator terminator = FoldAdditiveTerminator(block.Terminator);
+            IrTerminator terminator = FoldConstantChainTerminator(block.Terminator);
             if (!ReferenceEquals(terminator, block.Terminator)) {
                 ssa.ReplaceTerminator(block.Terminator, terminator);
                 block.Terminator = terminator;
@@ -172,28 +172,30 @@ internal static class IrConstantFolder {
         }
     }
 
-    private static IrTerminator FoldAdditiveTerminator(IrTerminator terminator) => terminator switch {
-        IrBranch branch => FoldAdditiveTerms(branch.Condition) is ValueNode condition
+    private static IrTerminator FoldConstantChainTerminator(IrTerminator terminator) => terminator switch {
+        IrBranch branch => FoldConstantTerms(branch.Condition) is ValueNode condition
             && !ReferenceEquals(condition, branch.Condition)
             ? new IrBranch(branch.Origin, condition, branch.WhenTrue, branch.WhenFalse)
             : terminator,
-        IrSwitch @switch => FoldAdditiveTerms(@switch.Value) is ValueNode value
+        IrSwitch @switch => FoldConstantTerms(@switch.Value) is ValueNode value
             && !ReferenceEquals(value, @switch.Value)
             ? new IrSwitch(@switch.Origin, value, @switch.Cases, @switch.Default)
             : terminator,
-        IrExit exit => FoldAdditiveTerms(exit.Transfer) is { } transfer
+        IrExit exit => FoldConstantTerms(exit.Transfer) is { } transfer
             && !ReferenceEquals(transfer, exit.Transfer)
             ? new IrExit(exit.Origin, transfer)
             : terminator,
         _ => terminator
     };
 
-    /// <summary><paramref name="node"/> with every additive constant chain folded: a <c>+/-</c> of
+    /// <summary><paramref name="node"/> with every constant chain folded: a <c>+/-</c> of
     /// two constants to one constant, <c>(x +/- c1) +/- c2</c> to <c>x</c> plus or minus the
-    /// combined term, reduced modulo the node's width.</summary>
-    internal static IVisitableAstNode FoldAdditiveTerms(IVisitableAstNode node) {
-        IVisitableAstNode folded = node is BinaryOperationNode binary ? FoldAdditiveTerms(binary) : node;
-        return IrAstChildren.MapChildren(folded, FoldAdditiveTerms);
+    /// combined term, reduced modulo the node's width, and a <c>(x &lt;&lt; c1) &lt;&lt; c2</c> or
+    /// <c>(x &gt;&gt; c1) &gt;&gt; c2</c> chain to one shift with the combined count.</summary>
+    internal static IVisitableAstNode FoldConstantTerms(IVisitableAstNode node) {
+        IVisitableAstNode additive = node is BinaryOperationNode binary ? FoldAdditiveTerms(binary) : node;
+        IVisitableAstNode folded = IrAstChildren.MapChildren(additive, FoldConstantTerms);
+        return folded is BinaryOperationNode shift ? FoldShiftTerms(shift) : folded;
     }
 
     /// <summary>Folds a binary <c>+/-</c> of two constants into the constant of the node's width, and
@@ -242,6 +244,55 @@ internal static class IrConstantFolder {
                 new ConstantNode(constantType, remainder))
             : new BinaryOperationNode(node.DataType, inner.Left, BinaryOperation.MINUS,
                 new ConstantNode(constantType, negation));
+    }
+
+    /// <summary>Folds <c>(x &lt;&lt; c1) &lt;&lt; c2</c> and <c>(x &gt;&gt; c1) &gt;&gt; c2</c> to one
+    /// shift of <c>x</c> by the combined count. Only a chain of one operation on one type combines:
+    /// the printed C# promotes both operands to <c>int</c>/<c>long</c>, masks each count to 5 bits
+    /// (6 on 64-bit) and applies the node's own arithmetic/logical shift, so the combined count is
+    /// the sum of the masked counts; a different operator or a different operand type would change
+    /// the result and stays unfolded. A signed right shift saturates at <c>width - 1</c> (the
+    /// arithmetic result of shifting by more is the same as by <c>width - 1</c>); an unsigned or
+    /// left shift whose total reaches the width produces zero, printed as <c>x &amp; 0</c> so the
+    /// operand's reads, calls and faults still evaluate. Counts are the resolved constants' raw
+    /// values: the C# count mask makes the sign bit of a signed constant irrelevant. Same-width
+    /// signed/unsigned round-trip casts between the shifts lose no bits and are skipped; a
+    /// width-changing cast refuses the fold.</summary>
+    private static IVisitableAstNode FoldShiftTerms(BinaryOperationNode node) {
+        if (node.BinaryOperation is not (BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT)
+            || node.DataType.BitWidth is not (BitWidth.BYTE_8 or BitWidth.WORD_16 or BitWidth.DWORD_32 or BitWidth.QWORD_64)
+            || node.Left.DataType != node.DataType
+            || SameWidthShiftOperand(node.Left, node.DataType) is not BinaryOperationNode inner
+            || inner.BinaryOperation != node.BinaryOperation
+            || inner.DataType != node.DataType
+            || inner.Left.DataType != node.DataType
+            || ConstantEvaluation.Resolved(inner.Right) is not { } first
+            || ConstantEvaluation.Resolved(node.Right) is not { } second) {
+            return node;
+        }
+        int width = (int)node.DataType.BitWidth;
+        int countMask = width == 64 ? 63 : 31;
+        int count = (int)(first.Value & (ulong)countMask) + (int)(second.Value & (ulong)countMask);
+        if (node.BinaryOperation == BinaryOperation.RIGHT_SHIFT && node.DataType.Signed) {
+            count = Math.Min(count, width - 1);
+        } else if (count >= width) {
+            return new BinaryOperationNode(node.DataType, inner.Left, BinaryOperation.BITWISE_AND,
+                new ConstantNode(node.DataType, 0));
+        }
+        return new BinaryOperationNode(node.DataType, inner.Left, node.BinaryOperation,
+            new ConstantNode(DataType.INT32, (ulong)count));
+    }
+
+    /// <summary>The shift operand under any same-width conversions of <paramref name="node"/>: a
+    /// cast round trip between same-width signed and unsigned types changes no bit, so a shift
+    /// buried under it still combines; a conversion to another width stops the unwrap.</summary>
+    private static ValueNode SameWidthShiftOperand(ValueNode node, DataType type) {
+        while (node is TypeConversionNode conversion
+            && conversion.DataType.BitWidth == type.BitWidth
+            && conversion.Value.DataType.BitWidth == type.BitWidth) {
+            node = conversion.Value;
+        }
+        return node;
     }
 
     private static bool ContainsVariableReference(IVisitableAstNode node) =>

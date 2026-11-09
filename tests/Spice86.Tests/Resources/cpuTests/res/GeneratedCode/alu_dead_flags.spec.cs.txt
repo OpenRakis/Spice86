@@ -134,7 +134,7 @@ public partial class CfgGeneratedOverrides {
             // F000:0064 mov DX,word ptr CS:[SI]
             // F000:0067 shr DX,1
             // F000:0069 shr DX,1
-            dx = (ushort)(UInt16[CS, SI] >> 1 >> 1);
+            dx = (ushort)(UInt16[CS, SI] >> 2);
             // F000:006B mov word ptr DS:[BX+0x0E],DX
             UInt16[DS, (ushort)(BX + 0x0E)] = dx;
             // F000:006E cmp DI,DI

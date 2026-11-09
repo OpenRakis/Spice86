@@ -62,7 +62,7 @@ dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScen
 SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*'
 ```
 
-> **Generator audit tools**: the two commands above measure which generator paths no golden reaches and which generated statements never run. `tasks/phase3/14-generator-coverage-audit.md` ("Measurement runs") has the one-liners that turn their output into lists of uncovered lines and a per-construct table.
+> **Generator audit tools**: the two commands above measure which generator paths no golden reaches and which generated statements never run. `tasks/done/phase3/14-generator-coverage-audit.md` ("Measurement runs") has the one-liners that turn their output into lists of uncovered lines and a per-construct table.
 
 > **Test filter syntax rule**: the test project runs on xUnit v3 through Microsoft.Testing.Platform (`TestingPlatformDotnetTestSupport` in `tests/Directory.Build.props`). The VSTest-style `--filter 'FullyQualifiedName~...'` is **silently ignored** (warning `MTP0001`) and runs the whole suite, SingleStepTest included. Always pass filters after `--` using `--filter-class`, `--filter-not-class`, `--filter-method`, `--filter-not-method` with `*` wildcards.
 
@@ -314,7 +314,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ## Writing Task Files for an Implementer (e.g. a local LLM)
 
-Task files (for example under `tasks/phase2/`) are executed by an implementer that does not share the
+Task files (for example under `tasks/done/phase2/`) are executed by an implementer that does not share the
 author's context. Write them so the implementer executes, not researches or redesigns:
 
 - **Start with the intent**: one short paragraph on what the maintainer wants and why, before any detail.

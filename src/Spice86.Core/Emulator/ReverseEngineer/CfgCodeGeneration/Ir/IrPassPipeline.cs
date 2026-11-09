@@ -22,7 +22,7 @@ internal enum IrPass {
     StoreForwarding,
     DeadRegisterWrites,
     ExpressionPropagation,
-    AdditiveConstantFold,
+    ConstantChainFold,
     DeviceOperations,
     DoublePrecision,
     SpeculativeGuardMerge
@@ -215,8 +215,8 @@ internal static class IrPassPipeline {
         if (last == IrPass.ExpressionPropagation) {
             return Finish();
         }
-        timer.Measure(IrPass.AdditiveConstantFold.ToString(), () => IrConstantFolder.FoldAdditiveConstants(method, ssa2));
-        if (last == IrPass.AdditiveConstantFold) {
+        timer.Measure(IrPass.ConstantChainFold.ToString(), () => IrConstantFolder.FoldConstantChains(method, ssa2));
+        if (last == IrPass.ConstantChainFold) {
             return Finish();
         }
         int combinedSequences = timer.Measure(IrPass.DeviceOperations.ToString(),
