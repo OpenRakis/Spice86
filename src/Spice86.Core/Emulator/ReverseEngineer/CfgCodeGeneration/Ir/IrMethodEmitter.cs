@@ -126,7 +126,8 @@ internal sealed class IrMethodEmitter(
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask));
             BlockNode body = prepared.Body;
-            if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0) {
+            if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0
+                || registerLocals.Replacements.Count > 0) {
                 if (RegisterLocalPromotion.ApplyToBody(prepared.Body, registerLocals)
                         is { } rewrittenBody) {
                     body = rewrittenBody;

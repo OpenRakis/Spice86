@@ -186,7 +186,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte al1 = 0;
@@ -477,10 +477,9 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, EBX. Outputs: CX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: AX, CX, EDX, EBX. Outputs: CX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01F7_018C7() {
-        ushort bx1 = 0;
         CheckExternalEvents(cs1, 0x01F7);
         // 016D:01F7 push BX
         Stack.Push16(BX);
@@ -491,19 +490,18 @@ public partial class CfgGeneratedOverrides {
         // 016D:01FA xor CX,CX
         CX = 0;
         // 016D:01FC mov BX,0x000A
-        bx1 = 0x000A;
+        BX = 0x000A;
         do {
             CheckExternalEvents(cs1, 0x01FF);
             // 016D:01FF xor DX,DX
             DX = 0;
             // 016D:0201 div BX
-            (AX, DX) = Div16(divisor: bx1, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: 0x000A, dividend: (uint)AX);
             // 016D:0203 push DX
             Stack.Push16(DX);
             // 016D:0204 inc CX
             CX++;
             // 016D:0205 or AX,AX
-            AX |= AX;
             // 016D:0207 jne short 0x01FF
         } while (AX != 0);
         do {
@@ -515,7 +513,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:020C mov AH,0x0E
             AH = 0x0E;
             // 016D:020E mov BX,7
-            bx1 = 7;
+            BX = 7;
             // 016D:0211 int 0x10
             Video.WriteTextInTeletypeMode(AL, 7);
             // 016D:0213 loop 0x0209

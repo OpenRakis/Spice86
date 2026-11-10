@@ -107,8 +107,9 @@ public sealed class IrAluLoweringTest {
         Nodes(method).Should().NotContain(node => IsAluNode(node));
         IrBranch branch = method.Blocks.Select(block => block.Terminator).OfType<IrBranch>()
             .Single();
+        // Carry out of `ax + 1` is exactly `ax + 1 == 0`: the direct CF setter's relation.
         branch.Condition.Should().BeOfType<BinaryOperationNode>()
-            .Which.BinaryOperation.Should().Be(BinaryOperation.LESS_THAN);
+            .Which.BinaryOperation.Should().Be(BinaryOperation.EQUAL);
     }
 
     [Fact]

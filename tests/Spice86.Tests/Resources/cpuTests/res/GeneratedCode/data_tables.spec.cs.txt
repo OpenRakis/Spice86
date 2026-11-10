@@ -113,6 +113,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort es;
         ushort ax;
+        byte al;
         ushort bx;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
@@ -140,13 +141,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0025 mov byte ptr DS:[0x0040],AL
         Segment2000Globals.Byte0040 = 0x1E;
         // F000:0028 mov word ptr DS:[0x0064],0x1111
-        Segment2000Globals.Word0064 = 0x1111;
         // F000:002E mov word ptr DS:[0x0066],0x2222
-        Segment2000Globals.Word0066 = 0x2222;
+        Segment2000Globals.Dword0064 = 0x22221111;
         // F000:0034 mov word ptr DS:[0x0068],0x3333
-        Segment2000Globals.Word0068 = 0x3333;
         // F000:003A mov word ptr DS:[0x006A],0x4444
-        Segment2000Globals.Word006A = 0x4444;
+        Segment2000Globals.Dword0068 = 0x44443333;
         // F000:0040 mov BX,1
         // F000:0043 shl BX,1
         // F000:0045 mov AX,word ptr DS:[BX+0x64]
@@ -154,13 +153,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0048 mov word ptr DS:[0x0041],AX
         Segment2000Globals.Word0041 = 0x2222;
         // F000:004B mov word ptr DS:[0x0070],0x1234
-        Segment2000Globals.Word0070 = 0x1234;
         // F000:0051 mov word ptr DS:[0x0072],0x5678
-        Segment2000Globals.Word0072 = 0x5678;
+        Segment2000Globals.Dword0070 = 0x56781234;
         // F000:0057 mov word ptr DS:[0x0074],0x9ABC
-        Segment2000Globals.Word0074 = 0x9ABC;
         // F000:005D mov word ptr DS:[0x0076],0xDEF0
-        Segment2000Globals.Word0076 = 0xDEF0;
+        Segment2000Globals.Dword0074 = 0xDEF09ABCu;
         // F000:0063 xor BX,BX
         // F000:0065 les DI,word ptr DS:[BX+0x70]
         DI = Segment2000Globals.Word0070;
@@ -187,9 +184,9 @@ public partial class CfgGeneratedOverrides {
         // F000:008C mov BX,word ptr DS:[0x0088]
         BX = 2;
         // F000:0090 mov AL,byte ptr DS:[BX+0x0080]
-        AL = Segment2000Globals.Byte0082;
+        al = Segment2000Globals.Byte0082;
         // F000:0094 mov byte ptr DS:[0x0047],AL
-        Segment2000Globals.Byte0047 = AL;
+        Segment2000Globals.Byte0047 = al;
         // F000:0097 mov byte ptr DS:[0x0090],0
         Segment2000Globals.Byte0090 = 0;
         // F000:009C mov byte ptr DS:[0x0091],1
@@ -250,9 +247,8 @@ public partial class CfgGeneratedOverrides {
         // F000:010E mov ES,AX
         ES = 0;
         // F000:0110 mov word ptr ES:[0x0030],0x012C
-        Segment0000Globals.Word0030 = 0x012C;
         // F000:0117 mov word ptr ES:[0x0032],CS
-        Segment0000Globals.Word0032 = CS;
+        Segment0000Globals.Dword0030 = 0x0000012C | (uint)CS << 16;
         // F000:011C mov AX,0x2000
         AX = 0x2000;
         // F000:011F mov ES,AX
@@ -312,9 +308,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0030 { get => _memory.UInt16[Segment, 0x0030]; set => _memory.UInt16[Segment, 0x0030] = value; }
-
-    public ushort Word0032 { get => _memory.UInt16[Segment, 0x0032]; set => _memory.UInt16[Segment, 0x0032] = value; }
+    public uint Dword0030 { get => _memory.UInt32[Segment, 0x0030]; set => _memory.UInt32[Segment, 0x0030] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====
@@ -359,21 +353,17 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public byte Byte0063 { get => _memory.UInt8[Segment, 0x0063]; set => _memory.UInt8[Segment, 0x0063] = value; }
 
-    public ushort Word0064 { get => _memory.UInt16[Segment, 0x0064]; set => _memory.UInt16[Segment, 0x0064] = value; }
+    public uint Dword0064 { get => _memory.UInt32[Segment, 0x0064]; set => _memory.UInt32[Segment, 0x0064] = value; }
 
-    public ushort Word0066 { get => _memory.UInt16[Segment, 0x0066]; set => _memory.UInt16[Segment, 0x0066] = value; }
-
-    public ushort Word0068 { get => _memory.UInt16[Segment, 0x0068]; set => _memory.UInt16[Segment, 0x0068] = value; }
-
-    public ushort Word006A { get => _memory.UInt16[Segment, 0x006A]; set => _memory.UInt16[Segment, 0x006A] = value; }
+    public uint Dword0068 { get => _memory.UInt32[Segment, 0x0068]; set => _memory.UInt32[Segment, 0x0068] = value; }
 
     public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
 
+    public uint Dword0070 { get => _memory.UInt32[Segment, 0x0070]; set => _memory.UInt32[Segment, 0x0070] = value; }
+
     public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
 
-    public ushort Word0074 { get => _memory.UInt16[Segment, 0x0074]; set => _memory.UInt16[Segment, 0x0074] = value; }
-
-    public ushort Word0076 { get => _memory.UInt16[Segment, 0x0076]; set => _memory.UInt16[Segment, 0x0076] = value; }
+    public uint Dword0074 { get => _memory.UInt32[Segment, 0x0074]; set => _memory.UInt32[Segment, 0x0074] = value; }
 
     public byte Byte0080 { get => _memory.UInt8[Segment, 0x0080]; set => _memory.UInt8[Segment, 0x0080] = value; }
 

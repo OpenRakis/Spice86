@@ -64,6 +64,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, PF, AF, SF, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov SP,0x00C0
@@ -73,11 +75,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0006 mov AX,7
         // F000:0009 mov DX,0xFFFF
         // F000:000C mul BX
-        (AX, DX) = Mul16(7, 3);
+        (ax, dx) = Mul16(7, 3);
         // F000:000E mov word ptr DS:[0],AX
-        DsGlobals.Word0000 = AX;
+        DsGlobals.Word0000 = ax;
         // F000:0011 mov word ptr DS:[2],DX
-        DsGlobals.Word0002 = DX;
+        DsGlobals.Word0002 = dx;
         // F000:0015 pushf
         Stack.Push16(FlagRegister16);
         // F000:0016 mov DX,0xA320
@@ -94,11 +96,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0029 mov word ptr DS:[8],1
         DsGlobals.Word0008 = 1;
         // F000:002F mul word ptr DS:[8]
-        (AX, DX) = Mul16(0xFFFF, DsGlobals.Word0008);
+        (ax, dx) = Mul16(0xFFFF, DsGlobals.Word0008);
         // F000:0033 mov word ptr DS:[0x000A],AX
-        DsGlobals.Word000A = AX;
+        DsGlobals.Word000A = ax;
         // F000:0036 mov word ptr DS:[0x000C],DX
-        DsGlobals.Word000C = DX;
+        DsGlobals.Word000C = dx;
         // F000:003A pushf
         Stack.Push16(FlagRegister16);
         // F000:003B mov AX,0xFFFF
@@ -115,13 +117,13 @@ public partial class CfgGeneratedOverrides {
         // F000:0050 mov AX,0x46DB
         // F000:0053 mov BP,0
         // F000:0056 mul BP
-        (AX, DX) = Mul16(0x46DB, 0);
+        (ax, dx) = Mul16(0x46DB, 0);
         // F000:0058 mov word ptr DS:[0x0014],BP
         DsGlobals.Word0014 = 0;
         // F000:005C mov word ptr DS:[0x0016],AX
-        DsGlobals.Word0016 = AX;
+        DsGlobals.Word0016 = ax;
         // F000:005F mov word ptr DS:[0x0018],DX
-        DsGlobals.Word0018 = DX;
+        DsGlobals.Word0018 = dx;
         // F000:0063 pushf
         Stack.Push16(FlagRegister16);
         // F000:0064 mov AX,0x46DB
@@ -167,9 +169,9 @@ public partial class CfgGeneratedOverrides {
         // F000:009C mov byte ptr DS:[0x0028],1
         DsGlobals.Byte0028 = 1;
         // F000:00A1 mul byte ptr DS:[0x0028]
-        AX = Alu8.Mul(0xFF, DsGlobals.Byte0028);
+        ax = Alu8.Mul(0xFF, DsGlobals.Byte0028);
         // F000:00A5 mov word ptr DS:[0x0029],AX
-        DsGlobals.Word0029 = AX;
+        DsGlobals.Word0029 = ax;
         // F000:00A8 mov word ptr DS:[0x002B],DX
         DsGlobals.Word002B = 0xFFFF;
         // F000:00AC pushf
@@ -219,11 +221,11 @@ public partial class CfgGeneratedOverrides {
         // F000:00E6 mov AX,7
         // F000:00E9 mov DX,0xFFFF
         // F000:00EC imul BX
-        (AX, DX) = IMul16((short)7, (short)3);
+        (ax, dx) = IMul16((short)7, (short)3);
         // F000:00EE mov word ptr DS:[0x003C],AX
-        DsGlobals.Word003C = AX;
+        DsGlobals.Word003C = ax;
         // F000:00F1 mov word ptr DS:[0x003E],DX
-        DsGlobals.Word003E = DX;
+        DsGlobals.Word003E = dx;
         // F000:00F5 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F6 mov DX,0xA320
@@ -240,11 +242,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0109 mov word ptr DS:[0x0044],1
         DsGlobals.Word0044 = 1;
         // F000:010F imul word ptr DS:[0x0044]
-        (AX, DX) = IMul16((short)-1, (short)DsGlobals.Word0044);
+        (ax, dx) = IMul16((short)-1, (short)DsGlobals.Word0044);
         // F000:0113 mov word ptr DS:[0x0046],AX
-        DsGlobals.Word0046 = AX;
+        DsGlobals.Word0046 = ax;
         // F000:0116 mov word ptr DS:[0x0048],DX
-        DsGlobals.Word0048 = DX;
+        DsGlobals.Word0048 = dx;
         // F000:011A pushf
         Stack.Push16(FlagRegister16);
         // F000:011B mov AX,0xFFFF
@@ -262,13 +264,13 @@ public partial class CfgGeneratedOverrides {
         // F000:0133 mov BP,0
         BP = 0;
         // F000:0136 imul BP
-        (AX, DX) = IMul16((short)0x46DB, (short)0);
+        (ax, dx) = IMul16((short)0x46DB, (short)0);
         // F000:0138 mov word ptr DS:[0x0050],BP
         DsGlobals.Word0050 = 0;
         // F000:013C mov word ptr DS:[0x0052],AX
-        DsGlobals.Word0052 = AX;
+        DsGlobals.Word0052 = ax;
         // F000:013F mov word ptr DS:[0x0054],DX
-        DsGlobals.Word0054 = DX;
+        DsGlobals.Word0054 = dx;
         // F000:0143 pushf
         Stack.Push16(FlagRegister16);
         // F000:0144 mov AX,0x46DB
@@ -323,9 +325,9 @@ public partial class CfgGeneratedOverrides {
         // F000:017C mov byte ptr DS:[0x0064],1
         DsGlobals.Byte0064 = 1;
         // F000:0181 imul byte ptr DS:[0x0064]
-        AX = (ushort)Alu8.Imul(-1, (sbyte)DsGlobals.Byte0064);
+        ax = (ushort)Alu8.Imul(-1, (sbyte)DsGlobals.Byte0064);
         // F000:0185 mov word ptr DS:[0x0065],AX
-        DsGlobals.Word0065 = AX;
+        DsGlobals.Word0065 = ax;
         // F000:0188 mov word ptr DS:[0x0067],DX
         DsGlobals.Word0067 = 0xFFFF;
         // F000:018C pushf
@@ -380,8 +382,7 @@ public partial class CfgGeneratedOverrides {
         // F000:01C3 mov AX,0xFF00
         AX = 0xFF00;
         // F000:01C6 aad
-        AL = 0xF6;
-        AH = 0;
+        AX = 0x00F6;
         Alu8.UpdateFlags(0xF6);
         CarryFlag = false;
         AuxiliaryFlag = false;
@@ -393,8 +394,7 @@ public partial class CfgGeneratedOverrides {
         // F000:01CC mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:01CF aad
-        AL = 0xED;
-        AH = 0;
+        AX = 0x00ED;
         Alu8.UpdateFlags(0xED);
         CarryFlag = false;
         AuxiliaryFlag = false;
@@ -406,8 +406,7 @@ public partial class CfgGeneratedOverrides {
         // F000:01D5 mov AX,0x00FF
         AX = 0x00FF;
         // F000:01D8 aad
-        AL = 0xFF;
-        AH = 0;
+        AX = 0x00FF;
         Alu8.UpdateFlags(0xFF);
         CarryFlag = false;
         AuxiliaryFlag = false;
@@ -419,8 +418,7 @@ public partial class CfgGeneratedOverrides {
         // F000:01DE mov AX,0x532D
         AX = 0x532D;
         // F000:01E1 aad
-        AL = 0xA8;
-        AH = 0;
+        AX = 0x00A8;
         Alu8.UpdateFlags(0xA8);
         CarryFlag = false;
         AuxiliaryFlag = false;

@@ -69,7 +69,8 @@ internal static class FlagReadSubstitution {
                 or InstructionFieldNode or FlagRegisterNode:
                 return node;
             case TypeConversionNode or UnaryOperationNode or SegmentedPointerNode or AbsolutePointerNode
-                or MethodCallValueNode or BinaryOperationNode { BinaryOperation: not BinaryOperation.ASSIGN }:
+                or ConditionalValueNode or MethodCallValueNode
+                or BinaryOperationNode { BinaryOperation: not BinaryOperation.ASSIGN }:
                 return (ValueNode?)IrAstChildren.TryMapChildren(node, child => child is ValueNode value
                     ? SubstituteValue(value, relation)
                     : null);

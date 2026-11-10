@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Shared.Emulator.Memory;
 using System.Collections.Immutable;
 
 /// <summary>
@@ -478,15 +479,48 @@ internal static class GeneratedCodeMetricsCollector {
             if (_models[node.SyntaxTree].GetOperation(node) is ISimpleAssignmentOperation assignment
                 && assignment.Target is IPropertyReferenceOperation property && IsRegister(property.Property)) {
                 PlainRegisterAssignments++;
-                IOperation value = assignment.Value;
-                while (value is IConversionOperation conversion) {
-                    value = conversion.Operand;
-                }
-                if (value is ILocalReferenceOperation) {
+                if (IsLocalWriteBack(assignment.Value, property.Property.Type)) {
                     WriteBacks++;
                 }
             }
             base.VisitAssignmentExpression(node);
+        }
+
+        /// <summary>Recognizes a local value or its upper half copied to a CPU register.
+        /// Other shifts and arithmetic remain computations rather than write-backs.</summary>
+        private static bool IsLocalWriteBack(IOperation value, ITypeSymbol targetType) {
+            value = WithoutConversions(value, includeExplicit: true);
+            if (value is ILocalReferenceOperation) {
+                return true;
+            }
+            if (value is not IBinaryOperation {
+                    OperatorKind: BinaryOperatorKind.RightShift, OperatorMethod: null } shift
+                || WithoutConversions(shift.LeftOperand, includeExplicit: false)
+                    is not ILocalReferenceOperation local
+                || !shift.RightOperand.ConstantValue.HasValue
+                || shift.RightOperand.ConstantValue.Value is not int count) {
+                return false;
+            }
+            return (targetType.SpecialType, local.Local.Type.SpecialType, count) is
+                (SpecialType.System_Byte, SpecialType.System_UInt16 or SpecialType.System_Int16,
+                    (int)BitWidth.BYTE_8)
+                or (SpecialType.System_UInt16, SpecialType.System_UInt32 or SpecialType.System_Int32,
+                    (int)BitWidth.WORD_16)
+                or (SpecialType.System_UInt32, SpecialType.System_UInt64 or SpecialType.System_Int64,
+                    (int)BitWidth.DWORD_32);
+        }
+
+        private static IOperation WithoutConversions(IOperation value, bool includeExplicit) {
+            while (true) {
+                if (value is IConversionOperation conversion
+                    && (includeExplicit || conversion.IsImplicit || conversion.Conversion.IsIdentity)) {
+                    value = conversion.Operand;
+                } else if (value is IParenthesizedOperation parentheses) {
+                    value = parentheses.Operand;
+                } else {
+                    return value;
+                }
+            }
         }
 
         private bool IsTupleSwap(AssignmentExpressionSyntax node) {

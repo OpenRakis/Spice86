@@ -129,8 +129,7 @@ internal static class IrConstants {
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten = [];
         Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin = IrOrigins.ByOrigin(method);
         foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in statementsByOrigin) {
-            bool rewritable = IrOrigins.Rewritable(statements, origin)
-                && method.Shapes.GetValueOrDefault(origin) is not IrInstructionShape.Division;
+            bool rewritable = IrOrigins.Rewritable(statements, origin);
             bool repCompare = method.Shapes.GetValueOrDefault(origin)
                 is IrInstructionShape.RepCompare;
             Dictionary<string, ConstantNode> variableConstants = new();
@@ -290,11 +289,13 @@ internal static class IrConstants {
             case MultiplicationNode multiplication:
                 return RewriteMultiplication(multiplication, block, position, facts,
                     substituteRegisters);
-            // Children that are not reads: the result targets of a division, multiplication or
+            case DivisionNode division:
+                return RewriteDivision(division, block, position, facts, substituteRegisters);
+            // Children that are not reads: the result targets of a multiplication or
             // swap, the register of a write-back, and the verbatim children of an opaque or raw
             // instruction node. The children of a structured inside-statement construct are not
             // rewritten either, as they were not before.
-            case DivisionNode or TupleSwapNode or RegisterWriteBackNode or OpaqueNode
+            case TupleSwapNode or RegisterWriteBackNode or OpaqueNode
                 or InstructionNode or PreTestLoopNode or DoWhileNode or InfiniteLoopNode
                 or SwitchNode:
                 return node;
@@ -352,6 +353,24 @@ internal static class IrConstants {
         return ReferenceEquals(left, multiplication.Left)
             && ReferenceEquals(right, multiplication.Right) ? multiplication
             : multiplication with { Left = (ValueNode)left, Right = (ValueNode)right };
+    }
+
+    /// <summary>Rewrites the operand children of <paramref name="node"/>: its
+    /// <see cref="DivisionPattern.Low"/> / <see cref="DivisionPattern.High"/> are write targets.
+    /// The division itself is never evaluated.</summary>
+    private static IVisitableAstNode RewriteDivision(DivisionNode node, IrBlock block, int position,
+        IrConstantFacts facts, bool substituteRegisters) {
+        DivisionPattern division = node.Division;
+        IVisitableAstNode dividend = IrConstantFolder.Fold(
+            Rewrite(division.Dividend, block, position, facts, substituteRegisters),
+            IrConstantFolder.NoVariableConstants);
+        IVisitableAstNode divisor = IrConstantFolder.Fold(
+            Rewrite(division.Divisor, block, position, facts, substituteRegisters),
+            IrConstantFolder.NoVariableConstants);
+        if (ReferenceEquals(dividend, division.Dividend) && ReferenceEquals(divisor, division.Divisor)) {
+            return node;
+        }
+        return node with { Division = division with { Dividend = (ValueNode)dividend, Divisor = (ValueNode)divisor } };
     }
 
     private static void CountVariableReferences(IrTerminator terminator,

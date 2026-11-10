@@ -124,9 +124,8 @@ public partial class CfgGeneratedOverrides {
         // E342:FBF4 mov byte ptr DS:[BX+DI],0
         Segment1000Globals.Byte2503 = 0;
         // E342:FBF7 mov CH,4
-        CH = 4;
         // E342:FBF9 mov CL,CH
-        CL = 4;
+        CX = 0x0404;
         // E342:FBFB mov CH,0
         CH = 0;
         // E342:FBFD mov SI,CX

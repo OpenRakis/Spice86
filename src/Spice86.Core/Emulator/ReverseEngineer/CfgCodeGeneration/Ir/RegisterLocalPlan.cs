@@ -10,8 +10,11 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 /// <param name="WriteBacks">The write-backs to insert into the printed body.</param>
 /// <param name="Dropped">The definition statement nodes of dropped webs to remove from the
 /// printed body (by reference).</param>
+/// <param name="Replacements">The node instances to replace by another node before printing
+/// (by reference): a promoted pair's initial definitions.</param>
 internal sealed record RegisterLocalPlan(
     IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead> Reads,
     IReadOnlyList<LocalDeclarationNode> Declarations,
     IReadOnlyList<RegisterLocalWriteBack> WriteBacks,
-    IReadOnlySet<IVisitableAstNode> Dropped);
+    IReadOnlySet<IVisitableAstNode> Dropped,
+    IReadOnlyDictionary<IVisitableAstNode, IVisitableAstNode> Replacements);

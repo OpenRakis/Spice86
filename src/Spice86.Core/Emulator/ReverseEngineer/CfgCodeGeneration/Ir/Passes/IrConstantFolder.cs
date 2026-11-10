@@ -18,7 +18,7 @@ using System.Linq;
 /// <see cref="ConditionalValueNode"/> or <see cref="IfElseNode"/> resolved, and variable constants
 /// substituted from a name table. Passes that rebuild statements fold their output with it: the
 /// rewrite only touches operands, so a statement's effects are unchanged.</summary>
-internal static class IrConstantFolder {
+internal static partial class IrConstantFolder {
     internal static readonly IReadOnlyDictionary<string, ConstantNode> NoVariableConstants =
         new Dictionary<string, ConstantNode>();
 
@@ -122,7 +122,8 @@ internal static class IrConstantFolder {
                 leaf => LeafConstant(leaf, variableConstants), out ulong taken)) {
             return taken != 0 ? foldedConditional.WhenTrue : foldedConditional.WhenFalse;
         }
-        if (foldedConditional.WhenTrue.Equals(foldedConditional.WhenFalse)) {
+        if (foldedConditional.WhenTrue.Equals(foldedConditional.WhenFalse)
+            && IrVerifier.IsPureArm(foldedConditional.Condition)) {
             return foldedConditional.WhenTrue;
         }
         ConditionalValueNode candidate = foldedConditional;
@@ -149,12 +150,27 @@ internal static class IrConstantFolder {
     /// (<see cref="IrEffects.MayFault"/>) or deliver interrupts
     /// (<see cref="IrEffects.DeliversInterrupts"/>), and the SSA versions it holds are the same
     /// (<see cref="IrSsa.SameVersions"/>): the statement is replaced through
-    /// <see cref="IrSsa.Replace"/> so its site stays.</summary>
-    internal static void FoldConstantChains(IrMethod method, IrSsa ssa) {
+    /// <see cref="IrSsa.Replace"/> so its site stays. Returns whether a self-assignment
+    /// definition was removed: <see cref="IrSsa.Remove"/> does not rebind uses, so a still-live
+    /// version can lose its definition and the caller rebuilds the SSA before the next
+    /// SSA-consuming pass.</summary>
+    internal static bool FoldConstantChains(IrMethod method, IrSsa ssa) {
+        bool removed = false;
         foreach (IrBlock block in method.Blocks) {
             for (int i = 0; i < block.Statements.Count; i++) {
                 IrStatement statement = block.Statements[i];
                 IVisitableAstNode node = FoldConstantTerms(statement.Node);
+                // A self-assignment already in the input or left by the identity rules is dead:
+                // check before the unchanged fast path so `AX = AX` never survives.
+                if (IsDeadSelfAssign(node, statement)) {
+                    block.Statements.RemoveAt(i);
+                    if (ssa.HasSite(statement)) {
+                        ssa.Remove(statement);
+                    }
+                    i--;
+                    removed = true;
+                    continue;
+                }
                 if (ReferenceEquals(node, statement.Node)) {
                     continue;
                 }
@@ -170,7 +186,19 @@ internal static class IrConstantFolder {
                 block.Terminator = terminator;
             }
         }
+        return removed;
     }
+
+    /// <summary>Whether the folded statement is a plain <c>R = R</c> with no observable effect: the
+    /// identity rules can leave a self-assignment (e.g. <c>or ax,ax</c>), which reads and writes the
+    /// same register and can be removed outright.</summary>
+    private static bool IsDeadSelfAssign(IVisitableAstNode node, IrStatement statement) =>
+        node is BinaryOperationNode {
+            BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode left,
+            Right: RegisterNode right }
+        && left.Equals(right)
+        && !statement.Effects.MayFault && !statement.Effects.DeliversInterrupts
+        && (statement.Effects.TokenReads | statement.Effects.TokenWrites) == IrTokens.None;
 
     private static IrTerminator FoldConstantChainTerminator(IrTerminator terminator) => terminator switch {
         IrBranch branch => FoldConstantTerms(branch.Condition) is ValueNode condition
@@ -194,8 +222,16 @@ internal static class IrConstantFolder {
     /// <c>(x &gt;&gt; c1) &gt;&gt; c2</c> chain to one shift with the combined count.</summary>
     internal static IVisitableAstNode FoldConstantTerms(IVisitableAstNode node) {
         IVisitableAstNode additive = node is BinaryOperationNode binary ? FoldAdditiveTerms(binary) : node;
-        IVisitableAstNode folded = IrAstChildren.MapChildren(additive, FoldConstantTerms);
-        return folded is BinaryOperationNode shift ? FoldShiftTerms(shift) : folded;
+        // An assignment's left is a write target, never a value to simplify: only the right folds.
+        IVisitableAstNode folded = additive is BinaryOperationNode
+            { BinaryOperation: BinaryOperation.ASSIGN } assign
+            ? IrAstChildren.MapChildren(assign,
+                child => ReferenceEquals(child, assign.Right) ? FoldConstantTerms(child) : child)
+            : IrAstChildren.MapChildren(additive, FoldConstantTerms);
+        if (folded is BinaryOperationNode shift) {
+            folded = FoldShiftTerms(shift);
+        }
+        return folded is ValueNode value ? FoldAlgebra(value) : folded;
     }
 
     /// <summary>Folds a binary <c>+/-</c> of two constants into the constant of the node's width, and
@@ -328,14 +364,19 @@ internal static class IrConstantFolder {
 
     private static IVisitableAstNode FoldValue(IVisitableAstNode node,
         IReadOnlyDictionary<string, ConstantNode> variableConstants) {
-        if (node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN }
-            || WrapsVariableReference(node)
+        if (node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN }) {
+            return node;
+        }
+        if (node is ValueNode value) {
+            node = FoldAlgebra(value);
+        }
+        if (WrapsVariableReference(node)
             || !ConstantEvaluation.TryEvaluateReplacing(node,
-                leaf => LeafConstant(leaf, variableConstants), out ulong value)) {
+                leaf => LeafConstant(leaf, variableConstants), out ulong folded)) {
             return node;
         }
         DataType type = ((ValueNode)node).DataType;
-        return new ConstantNode(type, ConstantEvaluation.Bits(type, value));
+        return new ConstantNode(type, ConstantEvaluation.Bits(type, folded));
     }
 
     /// <summary>A conversion or unary wrapping a bare variable reference keeps it: a lowerer pattern

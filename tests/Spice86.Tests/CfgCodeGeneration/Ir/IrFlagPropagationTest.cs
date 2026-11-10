@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
@@ -223,7 +224,8 @@ public sealed class IrFlagPropagationTest {
 
     [Fact]
     public void ClcSetterIsNotAnAluCallAndKeepsTheFlagTest() {
-        // Arrange: clc; jc - the carry comes from a plain flag write, not an ALU call.
+        // Arrange: clc; jc - the jump reads a flag condition, not a carry, so the explicit CF
+        // write does not substitute (only carry readers take that path).
         TestInstructionHelper helper = new();
         CfgInstruction clc = Parse(helper, 0x0000, 0xF8);
         CfgInstruction jc = Parse(helper, 0x0001, 0x72, 0x02);
@@ -235,5 +237,25 @@ public sealed class IrFlagPropagationTest {
         // Assert
         BranchOf(method).Condition.Should().BeOfType<CpuFlagNode>()
             .Which.FlagMask.Should().Be(Flags.Carry);
+    }
+
+    [Fact]
+    public void NegSbbIncLeavesNoCarryRead() {
+        // Arrange: neg ax; sbb ax, ax; inc ax - the carry the sbb reads is the explicit
+        // `CF = AX != 0` the neg emits, so the sbb substitutes that relation.
+        TestInstructionHelper helper = new();
+        CfgInstruction neg = Parse(helper, 0x0000, 0xF7, 0xD8);
+        CfgInstruction sbb = Parse(helper, 0x0002, 0x19, 0xC0);
+        CfgInstruction inc = Parse(helper, 0x0004, 0x40);
+        CfgInstruction nop = Parse(helper, 0x0005, 0x90);
+        Chain(neg, sbb, inc, nop);
+        CfgBlock block = Block(1, neg, sbb, inc, nop);
+
+        // Act
+        IrMethod method = Propagated(block);
+
+        // Assert
+        Nodes(method).Should().NotContain(node => IsCarryRead(node),
+            "the sbb takes the neg's explicit carry relation");
     }
 }

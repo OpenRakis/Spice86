@@ -13,6 +13,8 @@ start:
     mov es, ax
     mov word [es:61h*4], store_ax_iret
     mov [es:61h*4+2], cs
+    mov word [es:62h*4], store_ax_iret_high
+    mov [es:62h*4+2], cs
     cld
     mov di, 40h
     mov si, inputs
@@ -157,10 +159,80 @@ start:
     shr cx, 1
     mov [di+2Ch], cx
 
+; N1: a mul's tuple halves promote to locals: 1111h * 3 = 00003333h. The partial write to AH after
+; the explicit uses starts a fresh web whose byte and full reads stay in register form.
+    mov ax, [cs:si]
+    mov bx, 3
+    mul bx
+    mov cx, ax
+    mov bx, dx
+    mov [di+30h], cx
+    mov [di+32h], bx
+    mov [di+4Ch], dx
+    mov [di+50h], ax
+    mov ah, 12h
+    mov [di+34h], ax
+    mov [di+36h], al
+
+; N2: a div's quotient and remainder print through the same tuple handling; the int call after the
+; quotient's explicit uses reads the promoted ax and stores it at 3Eh.
+    mov ax, [cs:si+12]
+    xor dx, dx
+    mov bx, 5
+    div bx
+    mov cx, ax
+    mov bx, dx
+    mov [di+38h], cx
+    mov [di+3Ah], bx
+    mov [di+3Ch], al
+    mov [di+4Eh], dx
+    int 62h
+
+; N3: signed imul halves stay unsigned locals: FFF0h * 3 = FFFF FFD0h, then idiv by 3 gives
+; FFF0h rem 0. The signed compares catch a local printed with the signed type.
+    movsx ax, byte [cs:si+18]
+    mov bx, 3
+    imul bx
+    mov cx, ax
+    mov bx, dx
+    mov [di+40h], cx
+    mov [di+42h], bx
+    cmp ax, -48
+    jl .imulLowBad
+    mov byte [di+44h], 1
+    jmp .imulLowDone
+.imulLowBad:
+    mov byte [di+44h], 0
+.imulLowDone:
+    cmp dx, -1
+    jl .imulHighBad
+    mov byte [di+45h], 1
+    jmp .imulHighDone
+.imulHighBad:
+    mov byte [di+45h], 0
+.imulHighDone:
+    mov bx, 3
+    idiv bx
+    mov cx, ax
+    mov bx, dx
+    mov [di+46h], cx
+    mov [di+48h], bx
+    cmp ax, -16
+    jl .idivBad
+    mov byte [di+4Ah], 1
+    jmp .idivDone
+.idivBad:
+    mov byte [di+4Ah], 0
+.idivDone:
+
     hlt
 
 store_ax_iret:
     mov [di+02h], ax
+    iret
+
+store_ax_iret_high:
+    mov [di+3Eh], ax
     iret
 
 inputs:

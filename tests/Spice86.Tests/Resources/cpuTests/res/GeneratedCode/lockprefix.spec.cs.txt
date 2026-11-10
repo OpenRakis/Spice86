@@ -152,13 +152,11 @@ public partial class CfgGeneratedOverrides {
         // F000:0006 mov SP,0x8000
         SP = 0x8000;
         // F000:0009 mov word ptr DS:[0x0018],0x005A
-        Segment0000Globals.Word0018 = 0x005A;
         // F000:000F mov word ptr DS:[0x001A],CS
-        Segment0000Globals.Word001A = CS;
+        Segment0000Globals.Dword0018 = 0x0000005A | (uint)CS << 16;
         // F000:0013 mov word ptr DS:[0],0
-        Segment0000Globals.Word0000 = 0;
         // F000:0019 mov word ptr DS:[2],0
-        Segment0000Globals.Word0002 = 0;
+        Segment0000Globals.Dword0000 = 0;
         // F000:001F mov word ptr DS:[0x0010],1
         Segment0000Globals.Word0010 = 1;
         // F000:0025 add word ptr DS:[0x0010],AX
@@ -168,9 +166,8 @@ public partial class CfgGeneratedOverrides {
         // F000:002F dec word ptr DS:[0x0010]
         Segment0000Globals.Word0010 = Alu16.Dec(Segment0000Globals.Word0010);
         // F000:0034 mov word ptr DS:[2],3
-        Segment0000Globals.Word0002 = 3;
         // F000:003A mov word ptr DS:[4],0x0045
-        Segment0000Globals.Word0004 = 0x0045;
+        Segment0000Globals.Dword0002 = 0x00450003;
         // F000:0040 invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction MOV at F000:0040: not in the LOCK-allowed instruction set");
@@ -223,15 +220,11 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+    public uint Dword0000 { get => _memory.UInt32[Segment, 0x0000]; set => _memory.UInt32[Segment, 0x0000] = value; }
 
-    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
-
-    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
+    public uint Dword0002 { get => _memory.UInt32[Segment, 0x0002]; set => _memory.UInt32[Segment, 0x0002] = value; }
 
     public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
 
-    public ushort Word0018 { get => _memory.UInt16[Segment, 0x0018]; set => _memory.UInt16[Segment, 0x0018] = value; }
-
-    public ushort Word001A { get => _memory.UInt16[Segment, 0x001A]; set => _memory.UInt16[Segment, 0x001A] = value; }
+    public uint Dword0018 { get => _memory.UInt32[Segment, 0x0018]; set => _memory.UInt32[Segment, 0x0018] = value; }
 }

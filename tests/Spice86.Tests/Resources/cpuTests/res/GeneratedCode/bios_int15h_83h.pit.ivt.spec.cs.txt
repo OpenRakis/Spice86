@@ -154,9 +154,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0105 out DX,AL
         Out8(0x0998, 1);
         // 016D:0106 mov AH,0x83
-        AH = 0x83;
         // 016D:0108 mov AL,0
-        AL = 0;
+        AX = 0x8300;
         // 016D:010A mov CX,0
         CX = 0;
         // 016D:010D mov DX,0x1000
@@ -177,9 +176,8 @@ public partial class CfgGeneratedOverrides {
             // 016D:011E out DX,AL
             Out8(0x0998, 2);
             // 016D:011F mov AH,0x83
-            AH = 0x83;
             // 016D:0121 mov AL,0
-            AL = 0;
+            AX = 0x8300;
             // 016D:0123 mov CX,0
             CX = 0;
             // 016D:0126 mov DX,0x1000
@@ -205,9 +203,8 @@ public partial class CfgGeneratedOverrides {
                     // 016D:013C out DX,AL
                     Out8(0x0998, 3);
                     // 016D:013D mov AH,0x83
-                    AH = 0x83;
                     // 016D:013F mov AL,1
-                    AL = 1;
+                    AX = 0x8301;
                     // 016D:0141 int 0x15
                     (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83);
                     // 016D:0143 jb short 0x0173
@@ -218,9 +215,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:014A out DX,AL
                         Out8(0x0998, 4);
                         // 016D:014B mov AH,0x83
-                        AH = 0x83;
                         // 016D:014D mov AL,0
-                        AL = 0;
+                        AX = 0x8300;
                         // 016D:014F mov CX,0
                         CX = 0;
                         // 016D:0152 mov DX,0x2000
@@ -244,9 +240,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0163 out DX,AL
                         Out8(0x0998, 5);
                         // 016D:0164 mov AH,0x83
-                        AH = 0x83;
                         // 016D:0166 mov AL,1
-                        AL = 1;
+                        AX = 0x8301;
                         // 016D:0168 int 0x15
                         (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83);
                         // 016D:016A jb short 0x0173

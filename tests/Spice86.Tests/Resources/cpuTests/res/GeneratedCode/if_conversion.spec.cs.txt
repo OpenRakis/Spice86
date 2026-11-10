@@ -240,9 +240,8 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0050 = 0;
         }
         // F000:008F mov word ptr DS:[DI+0x11],BX
-        Segment2000Globals.Word0051 = BX;
         // F000:0092 mov word ptr DS:[DI+0x13],AX
-        Segment2000Globals.Word0053 = AX;
+        Segment2000Globals.Dword0051 = (uint)BX | (uint)AX << 16;
         // F000:0095 mov BX,word ptr CS:[SI+4]
         BX = SegmentF000Globals.Word00BD;
         // F000:0099 cmpxchg BX,CX
@@ -262,9 +261,8 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0055 = 0;
         }
         // F000:00A0 mov word ptr DS:[DI+0x16],BX
-        Segment2000Globals.Word0056 = BX;
         // F000:00A3 mov word ptr DS:[DI+0x18],AX
-        Segment2000Globals.Word0058 = AX;
+        Segment2000Globals.Dword0056 = (uint)BX | (uint)AX << 16;
         // F000:00A6 mov AX,word ptr CS:[SI]
         AX = SegmentF000Globals.Word00B9;
         // F000:00A9 test AL,1
@@ -327,15 +325,11 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public byte Byte0050 { get => _memory.UInt8[Segment, 0x0050]; set => _memory.UInt8[Segment, 0x0050] = value; }
 
-    public ushort Word0051 { get => _memory.UInt16[Segment, 0x0051]; set => _memory.UInt16[Segment, 0x0051] = value; }
-
-    public ushort Word0053 { get => _memory.UInt16[Segment, 0x0053]; set => _memory.UInt16[Segment, 0x0053] = value; }
+    public uint Dword0051 { get => _memory.UInt32[Segment, 0x0051]; set => _memory.UInt32[Segment, 0x0051] = value; }
 
     public byte Byte0055 { get => _memory.UInt8[Segment, 0x0055]; set => _memory.UInt8[Segment, 0x0055] = value; }
 
-    public ushort Word0056 { get => _memory.UInt16[Segment, 0x0056]; set => _memory.UInt16[Segment, 0x0056] = value; }
-
-    public ushort Word0058 { get => _memory.UInt16[Segment, 0x0058]; set => _memory.UInt16[Segment, 0x0058] = value; }
+    public uint Dword0056 { get => _memory.UInt32[Segment, 0x0056]; set => _memory.UInt32[Segment, 0x0056] = value; }
 
     public ushort Word005A { get => _memory.UInt16[Segment, 0x005A]; set => _memory.UInt16[Segment, 0x005A] = value; }
 }

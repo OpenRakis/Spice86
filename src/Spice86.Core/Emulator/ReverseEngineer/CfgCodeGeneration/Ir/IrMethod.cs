@@ -65,6 +65,21 @@ internal sealed class IrMethod {
         return insideOnly;
     }
 
+    /// <summary>The predecessor edges of every block of the method: target block to the
+    /// (source block, edge) pairs that reach it, in terminator edge order.</summary>
+    internal Dictionary<IrBlock, List<(IrBlock Block, IrEdge Edge)>> PredecessorEdges() {
+        Dictionary<IrBlock, List<(IrBlock, IrEdge)>> predecessors = [];
+        foreach (IrBlock block in Blocks) {
+            foreach (IrEdge edge in block.Terminator.Edges) {
+                if (!predecessors.TryGetValue(edge.Target, out List<(IrBlock, IrEdge)>? list)) {
+                    predecessors[edge.Target] = list = [];
+                }
+                list.Add((block, edge));
+            }
+        }
+        return predecessors;
+    }
+
     /// <summary>
     /// The block graph of the method: successors from the terminators' edges, deduplicated and in edge
     /// order; every fallthrough <c>null</c>; stable order by block id; entry blocks in entry order,

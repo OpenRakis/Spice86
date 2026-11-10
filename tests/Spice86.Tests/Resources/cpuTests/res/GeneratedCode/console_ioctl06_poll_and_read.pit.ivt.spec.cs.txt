@@ -143,15 +143,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         do {
             CheckExternalEvents(cs1, 0x0100);
             // 016D:0100 mov AH,0x44
-            AH = 0x44;
             // 016D:0102 mov AL,6
-            AL = 6;
+            AX = 0x4406;
             // 016D:0104 xor BX,BX
             BX = 0;
             // 016D:0106 int 0x21

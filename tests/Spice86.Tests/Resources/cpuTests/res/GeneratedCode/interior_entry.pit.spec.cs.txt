@@ -216,21 +216,17 @@ public partial class CfgGeneratedOverrides {
         // F000:0029 mov byte ptr DS:[0x040D],0
         Segment0000Globals.Byte040D = 0;
         // F000:002E mov word ptr DS:[0x0404],0
-        Segment0000Globals.Word0404 = 0;
         // F000:0034 mov word ptr DS:[0x0406],0x7FFA
-        Segment0000Globals.Word0406 = 0x7FFA;
+        Segment0000Globals.Dword0404 = 0x7FFA0000;
         // F000:003A mov word ptr DS:[0x0408],0
-        Segment0000Globals.Word0408 = 0;
         // F000:0040 mov word ptr DS:[0x040A],0x7FFE
-        Segment0000Globals.Word040A = 0x7FFE;
+        Segment0000Globals.Dword0408 = 0x7FFE0000;
         // F000:0046 mov word ptr DS:[0x040E],0
-        Segment0000Globals.Word040E = 0;
         // F000:004C mov word ptr DS:[0x0410],0
-        Segment0000Globals.Word0410 = 0;
+        Segment0000Globals.Dword040E = 0;
         // F000:0052 mov word ptr DS:[0x0020],0x0200
-        Segment0000Globals.Word0020 = 0x0200;
         // F000:0058 mov word ptr DS:[0x0022],CS
-        Segment0000Globals.Word0022 = CS;
+        Segment0000Globals.Dword0020 = 0x00000200 | (uint)CS << 16;
         // F000:005C mov AL,0x30
         // F000:005E out 0x43,AL
         // F000:0060 mov AL,0xA9
@@ -285,9 +281,8 @@ public partial class CfgGeneratedOverrides {
         // F000:00A0 mov byte ptr DS:[0x0403],1
         Segment0000Globals.Byte0403 = 1;
         // F000:00A5 mov word ptr DS:[0x0404],0x1000
-        Segment0000Globals.Word0404 = 0x1000;
         // F000:00AB mov word ptr DS:[0x0406],0x9000
-        Segment0000Globals.Word0406 = 0x9000;
+        Segment0000Globals.Dword0404 = 0x90001000u;
         // F000:00B1 mov AL,0x30
         // F000:00B3 out 0x43,AL
         // F000:00B5 mov AL,0xA9
@@ -389,7 +384,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
 
-    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+    public uint Dword0020 { get => _memory.UInt32[Segment, 0x0020]; set => _memory.UInt32[Segment, 0x0020] = value; }
 
     public byte Byte0400 { get => _memory.UInt8[Segment, 0x0400]; set => _memory.UInt8[Segment, 0x0400] = value; }
 
@@ -401,17 +396,13 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public ushort Word0404 { get => _memory.UInt16[Segment, 0x0404]; set => _memory.UInt16[Segment, 0x0404] = value; }
 
-    public ushort Word0406 { get => _memory.UInt16[Segment, 0x0406]; set => _memory.UInt16[Segment, 0x0406] = value; }
+    public uint Dword0404 { get => _memory.UInt32[Segment, 0x0404]; set => _memory.UInt32[Segment, 0x0404] = value; }
 
-    public ushort Word0408 { get => _memory.UInt16[Segment, 0x0408]; set => _memory.UInt16[Segment, 0x0408] = value; }
-
-    public ushort Word040A { get => _memory.UInt16[Segment, 0x040A]; set => _memory.UInt16[Segment, 0x040A] = value; }
+    public uint Dword0408 { get => _memory.UInt32[Segment, 0x0408]; set => _memory.UInt32[Segment, 0x0408] = value; }
 
     public byte Byte040C { get => _memory.UInt8[Segment, 0x040C]; set => _memory.UInt8[Segment, 0x040C] = value; }
 
     public byte Byte040D { get => _memory.UInt8[Segment, 0x040D]; set => _memory.UInt8[Segment, 0x040D] = value; }
 
-    public ushort Word040E { get => _memory.UInt16[Segment, 0x040E]; set => _memory.UInt16[Segment, 0x040E] = value; }
-
-    public ushort Word0410 { get => _memory.UInt16[Segment, 0x0410]; set => _memory.UInt16[Segment, 0x0410] = value; }
+    public uint Dword040E { get => _memory.UInt32[Segment, 0x040E]; set => _memory.UInt32[Segment, 0x040E] = value; }
 }

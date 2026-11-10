@@ -185,9 +185,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0111 mov word ptr CS:[0x0169],AX
         CsGlobals.Word0169 = AX;
         // 016D:0115 mov word ptr ES:[0x0024],0x0159
-        Segment0000Globals.Word0024 = 0x0159;
         // 016D:011C mov word ptr ES:[0x0026],CS
-        Segment0000Globals.Word0026 = CS;
+        Segment0000Globals.Dword0024 = 0x00000159 | (uint)CS << 16;
         // 016D:0121 mov AL,0xD2
         AL = 0xD2;
         // 016D:0123 out 0x64,AL
@@ -219,9 +218,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0145 xor DI,DI
         DI = Alu16.Xor(DI, DI);
         // 016D:0147 mov AH,7
-        AH = 7;
         // 016D:0149 mov AL,BL
-        AL = BL;
+        AX = (ushort)(BL | 0x0700);
         // 016D:014B stos word ptr ES:[DI],AX
         SegmentB800Globals.Word0000 = AX;
         di = (ushort)(DirectionFlag ? -2 : 2);
@@ -642,6 +640,8 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
     }
 
     public ushort Word0024 { get => _memory.UInt16[Segment, 0x0024]; set => _memory.UInt16[Segment, 0x0024] = value; }
+
+    public uint Dword0024 { get => _memory.UInt32[Segment, 0x0024]; set => _memory.UInt32[Segment, 0x0024] = value; }
 
     public ushort Word0026 { get => _memory.UInt16[Segment, 0x0026]; set => _memory.UInt16[Segment, 0x0026] = value; }
 }

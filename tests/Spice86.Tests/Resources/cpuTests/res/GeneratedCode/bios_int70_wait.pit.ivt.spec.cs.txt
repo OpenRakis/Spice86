@@ -165,9 +165,8 @@ public partial class CfgGeneratedOverrides {
         DS = ds1;
         ImageMinus0003Globals.Byte01A2 = 0;
         // 016D:010D mov AH,0x83
-        AH = 0x83;
         // 016D:010F mov AL,0
-        AL = 0;
+        AX = 0x8300;
         // 016D:0111 mov CX,0
         CX = 0;
         // 016D:0114 mov DX,0x2710
@@ -246,9 +245,8 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0167 out DX,AL
                         Out8(0x0998, 5);
                         // 016D:0168 mov AH,0x83
-                        AH = 0x83;
                         // 016D:016A mov AL,1
-                        AL = 1;
+                        AX = 0x8301;
                         // 016D:016C int 0x15
                         (AH, CarryFlag) = SystemBios.WaitFunction(1, 0, 0x0998, ES, 0x01A2, 0x83);
                         // 016D:016E jb short 0x019B

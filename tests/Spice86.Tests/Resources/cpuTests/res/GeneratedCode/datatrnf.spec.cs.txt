@@ -68,35 +68,35 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP, DS, flags, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte ah;
         ushort ds;
         ushort bx;
         ushort di;
         ushort es;
         ushort si;
-        ushort dx;
         ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AH,0xED
         // F000:0002 sahf
-        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000ED);
+        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000ED;
         // F000:0003 lahf
-        AH = (byte)FlagRegister16;
+        ah = (byte)FlagRegister16;
         // F000:0004 mov byte ptr DS:[0],AH
-        DsGlobals.Byte0000 = AH;
+        DsGlobals.Byte0000 = ah;
         // F000:0008 mov AL,AH
         // F000:000A mov AX,0x00B7
         AX = 0x00B7;
         // F000:000D mov DX,AX
         DX = 0x00B7;
         // F000:000F mov AH,0xA5
-        AH = 0xA5;
         // F000:0011 mov AL,0xC7
-        AL = 0xC7;
+        AX = 0xA5C7;
         // F000:0013 mov word ptr DS:[2],AX
         DsGlobals.Word0002 = 0xA5C7;
         // F000:0016 sahf
-        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000A5);
+        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000A5;
         // F000:0017 lahf
         AH = (byte)FlagRegister16;
         // F000:0018 mov word ptr DS:[0x0020],AX
@@ -119,9 +119,8 @@ public partial class CfgGeneratedOverrides {
         // F000:002F mov DS,AX
         DS = 0;
         // F000:0031 mov word ptr DS:[4],BX
-        Segment0000Globals.Word0004 = bx;
         // F000:0035 mov word ptr DS:[6],SI
-        Segment0000Globals.Word0006 = SI;
+        Segment0000Globals.Dword0004 = (uint)bx | (uint)SI << 16;
         // F000:0039 mov DS,BX
         DS = bx;
         // F000:003B mov BX,0xFFFF
@@ -158,11 +157,10 @@ public partial class CfgGeneratedOverrides {
         // F000:0061 mov word ptr DS:[8],DI
         Segment0000Globals.Word0008 = di;
         // F000:0065 mov AX,ES
-        AX = es;
+        ax = es;
         // F000:0067 mov word ptr DS:[0x000A],AX
-        Segment0000Globals.Word000A = AX;
         // F000:006A mov word ptr DS:[0x000C],SI
-        Segment0000Globals.Word000C = si;
+        Segment0000Globals.Dword000A = (uint)ax | (uint)si << 16;
         // F000:006E mov AX,0x1000
         // F000:0071 mov DS,AX
         DS = 0x1000;
@@ -183,16 +181,15 @@ public partial class CfgGeneratedOverrides {
         // F000:007D mov DX,ES
         dx = es;
         // F000:007F mov AX,DS
-        ax = DS;
+        AX = DS;
         // F000:0081 mov CX,0
         // F000:0084 mov DS,CX
         DS = 0;
         // F000:0086 mov word ptr DS:[0x000E],DI
-        Segment0000Globals.Word000E = DI;
         // F000:008A mov word ptr DS:[0x0010],DX
-        Segment0000Globals.Word0010 = dx;
+        Segment0000Globals.Dword000E = (uint)DI | (uint)dx << 16;
         // F000:008E mov DS,AX
-        ds = ax;
+        ds = AX;
         // F000:0090 pop DX
         DX = Stack.Pop16();
         // F000:0091 push DX
@@ -203,16 +200,15 @@ public partial class CfgGeneratedOverrides {
         // F000:0094 xchg CX,BX
         (CX, BX) = (BX, CX);
         // F000:0096 mov AX,DS
-        AX = ds;
+        ax = ds;
         // F000:0098 mov DX,0
         // F000:009B mov DS,DX
         DS = 0;
         // F000:009D mov word ptr DS:[0x0012],BX
-        Segment0000Globals.Word0012 = BX;
         // F000:00A1 mov word ptr DS:[0x0014],CX
-        Segment0000Globals.Word0014 = CX;
+        Segment0000Globals.Dword0012 = (uint)BX | (uint)CX << 16;
         // F000:00A5 mov DS,AX
-        DS = AX;
+        DS = ax;
         // F000:00A7 mov word ptr DS:[BX+DI],ES
         UInt16[DS, (ushort)(BX + DI)] = es;
         // F000:00A9 mov BX,0xB800
@@ -289,23 +285,15 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
-
-    public ushort Word0006 { get => _memory.UInt16[Segment, 0x0006]; set => _memory.UInt16[Segment, 0x0006] = value; }
+    public uint Dword0004 { get => _memory.UInt32[Segment, 0x0004]; set => _memory.UInt32[Segment, 0x0004] = value; }
 
     public ushort Word0008 { get => _memory.UInt16[Segment, 0x0008]; set => _memory.UInt16[Segment, 0x0008] = value; }
 
-    public ushort Word000A { get => _memory.UInt16[Segment, 0x000A]; set => _memory.UInt16[Segment, 0x000A] = value; }
+    public uint Dword000A { get => _memory.UInt32[Segment, 0x000A]; set => _memory.UInt32[Segment, 0x000A] = value; }
 
-    public ushort Word000C { get => _memory.UInt16[Segment, 0x000C]; set => _memory.UInt16[Segment, 0x000C] = value; }
+    public uint Dword000E { get => _memory.UInt32[Segment, 0x000E]; set => _memory.UInt32[Segment, 0x000E] = value; }
 
-    public ushort Word000E { get => _memory.UInt16[Segment, 0x000E]; set => _memory.UInt16[Segment, 0x000E] = value; }
-
-    public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
-
-    public ushort Word0012 { get => _memory.UInt16[Segment, 0x0012]; set => _memory.UInt16[Segment, 0x0012] = value; }
-
-    public ushort Word0014 { get => _memory.UInt16[Segment, 0x0014]; set => _memory.UInt16[Segment, 0x0014] = value; }
+    public uint Dword0012 { get => _memory.UInt32[Segment, 0x0012]; set => _memory.UInt32[Segment, 0x0012] = value; }
 
     public ushort Word0016 { get => _memory.UInt16[Segment, 0x0016]; set => _memory.UInt16[Segment, 0x0016] = value; }
 

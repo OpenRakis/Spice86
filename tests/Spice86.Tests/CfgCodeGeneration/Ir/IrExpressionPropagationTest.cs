@@ -284,14 +284,16 @@ public sealed class IrExpressionPropagationTest {
 
     [Fact]
     public void MergeChainStopsAtTheChainLimit() {
-        // Arrange: nop / add bx,1 x4 - three merge into one statement, the fourth stays
+        // Arrange: nop / add bx,cx x4 - three merge into one statement, the fourth stays.
+        // Register operands do not constant-fold, so the merged expression keeps growing and
+        // the chain budget is what stops it.
         TestInstructionHelper helper = new();
         CfgBlock[] blocks = WithFlagConsumer(helper,
             Parse(helper, 0x0000, 0x90),
-            Parse(helper, 0x0001, 0x83, 0xC3, 0x01),
-            Parse(helper, 0x0004, 0x83, 0xC3, 0x01),
-            Parse(helper, 0x0007, 0x83, 0xC3, 0x01),
-            Parse(helper, 0x000A, 0x83, 0xC3, 0x01));
+            Parse(helper, 0x0001, 0x01, 0xCB),
+            Parse(helper, 0x0003, 0x01, 0xCB),
+            Parse(helper, 0x0005, 0x01, 0xCB),
+            Parse(helper, 0x0007, 0x01, 0xCB));
 
         // Act
         IrMethod method = Propagated(blocks);

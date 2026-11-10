@@ -162,9 +162,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0105 mov DI,0
         DI = 0;
         // 016D:0108 mov AL,0x47
-        AL = 0x47;
         // 016D:010A mov AH,7
-        AH = 7;
+        AX = 0x0747;
         // 016D:010C stos word ptr ES:[DI],AX
         SegmentB800Globals.Word0000 = 0x0747;
         DI = (ushort)(DirectionFlag ? -2 : 2);

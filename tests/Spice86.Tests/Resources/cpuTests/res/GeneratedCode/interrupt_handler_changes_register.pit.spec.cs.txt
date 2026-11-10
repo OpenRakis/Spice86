@@ -115,9 +115,8 @@ public partial class CfgGeneratedOverrides {
         // F000:000C mov ES,AX
         ES = 0;
         // F000:000E mov word ptr ES:[0x0020],0x0031
-        Segment0000Globals.Word0020 = 0x0031;
         // F000:0015 mov word ptr ES:[0x0022],CS
-        Segment0000Globals.Word0022 = CS;
+        Segment0000Globals.Dword0020 = 0x00000031 | (uint)CS << 16;
         // F000:001A mov AX,DS
         AX = DS;
         // F000:001C mov ES,AX
@@ -172,9 +171,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
-
-    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+    public uint Dword0020 { get => _memory.UInt32[Segment, 0x0020]; set => _memory.UInt32[Segment, 0x0020] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

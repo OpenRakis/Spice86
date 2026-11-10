@@ -99,7 +99,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x006A);
         // F000:006A div CX
         try {
-            (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: CX, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x006A, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x00FB), unknown_F000_00FB_F00FB)]);
@@ -329,17 +329,14 @@ public partial class CfgGeneratedOverrides {
         // F000:000C mov ES,AX
         ES = 0;
         // F000:000E mov word ptr ES:[0],0x00FB
-        Segment0000Globals.Word0000 = 0x00FB;
         // F000:0015 mov word ptr ES:[2],CS
-        Segment0000Globals.Word0002 = CS;
+        Segment0000Globals.Dword0000 = 0x000000FB | (uint)CS << 16;
         // F000:001A mov word ptr ES:[0x0020],0x010E
-        Segment0000Globals.Word0020 = 0x010E;
         // F000:0021 mov word ptr ES:[0x0022],CS
-        Segment0000Globals.Word0022 = CS;
+        Segment0000Globals.Dword0020 = 0x0000010E | (uint)CS << 16;
         // F000:0026 mov word ptr ES:[0x0180],0x011E
-        Segment0000Globals.Word0180 = 0x011E;
         // F000:002D mov word ptr ES:[0x0182],CS
-        Segment0000Globals.Word0182 = CS;
+        Segment0000Globals.Dword0180 = 0x0000011E | (uint)CS << 16;
         // F000:0032 mov AX,DS
         AX = DS;
         // F000:0034 mov ES,AX
@@ -471,17 +468,11 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+    public uint Dword0000 { get => _memory.UInt32[Segment, 0x0000]; set => _memory.UInt32[Segment, 0x0000] = value; }
 
-    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+    public uint Dword0020 { get => _memory.UInt32[Segment, 0x0020]; set => _memory.UInt32[Segment, 0x0020] = value; }
 
-    public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
-
-    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
-
-    public ushort Word0180 { get => _memory.UInt16[Segment, 0x0180]; set => _memory.UInt16[Segment, 0x0180] = value; }
-
-    public ushort Word0182 { get => _memory.UInt16[Segment, 0x0182]; set => _memory.UInt16[Segment, 0x0182] = value; }
+    public uint Dword0180 { get => _memory.UInt32[Segment, 0x0180]; set => _memory.UInt32[Segment, 0x0180] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

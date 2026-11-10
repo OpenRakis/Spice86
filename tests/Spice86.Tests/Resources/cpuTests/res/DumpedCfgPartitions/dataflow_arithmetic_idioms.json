@@ -1,0 +1,60 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        227
+      ],
+      "entries": [
+        {
+          "block": 227,
+          "address": "F000:0143",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        255,
+        231,
+        257,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 227,
+      "toBlock": 231,
+      "from": "F000:0146",
+      "target": "F000:0107"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 255,
+      "toBlock": 227,
+      "from": "F000:0105",
+      "target": "F000:0143",
+      "callContinuationBlock": 231,
+      "callContinuationAddress": "F000:0107"
+    }
+  ]
+}

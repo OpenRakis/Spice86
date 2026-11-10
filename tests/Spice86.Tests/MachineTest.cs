@@ -75,6 +75,11 @@ public class MachineTest {
         ["dataflow_interrupt_boundaries"],
         ["dataflow_rewrite_traps"],
         ["dataflow_alias_traps"],
+        ["dataflow_compiler_idioms"],
+        ["dataflow_arithmetic_idioms"],
+        ["dataflow_joined_memory"],
+        ["dataflow_wide_conditions"],
+        ["dataflow_wide_operations"],
         ["dataflow_legality_traps"],
         ["data_globals"],
         ["data_segment_values"],
@@ -765,6 +770,13 @@ public class MachineTest {
     public void TestDataflowDoublePrecision386(JitMode jitMode) {
         // Arrange / Act / Assert
         TestOneBin(AsmFixtureCatalog.DataflowDoublePrecision386(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDataflowJoinedMemory286(JitMode jitMode) {
+        // Arrange / Act / Assert
+        TestOneBin(AsmFixtureCatalog.DataflowJoinedMemory286(), jitMode);
     }
 
     [Fact]

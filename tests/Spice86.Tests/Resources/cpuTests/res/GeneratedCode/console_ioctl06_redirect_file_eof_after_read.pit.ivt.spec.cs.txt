@@ -166,9 +166,8 @@ public partial class CfgGeneratedOverrides {
         Dos.RecordCallerStack(SS, SP);
         (AX, CarryFlag) = Dos.ReadFile(0, 1, DS, 0x0125);
         // 016D:010D mov AH,0x44
-        AH = 0x44;
         // 016D:010F mov AL,6
-        AL = 6;
+        AX = 0x4406;
         // 016D:0111 xor BX,BX
         BX = 0;
         ParityFlag = true;

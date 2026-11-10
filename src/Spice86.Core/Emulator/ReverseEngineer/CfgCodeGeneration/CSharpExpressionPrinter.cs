@@ -453,6 +453,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
         CSharpFragment leftFragment = Expr(node.Left);
         CSharpFragment rightFragment = Expr(node.Right);
+        if (TryPrintRange(node) is { } range) {
+            return range;
+        }
         if (TrySimplifyBinaryOperation(node.BinaryOperation, node.DataType.BitWidth, leftFragment, rightFragment) is CSharpFragment simplified) {
             return simplified;
         }
@@ -499,8 +502,138 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
         DataType? resultType = node.DataType == DataType.BOOL ? DataType.BOOL : null;
+        // A 32/64-bit shift or a 32/64-bit bitwise operation whose operands already print at that
+        // type evaluates at it too, so the outer cast is redundant and the result type is known.
+        // A constant operand is allowed when it is representable in that type and the other side is
+        // nonconstant: C# promotes the fitting literal to the wide operand's type. All-constant
+        // trees stay excluded: their literal's CLR type can differ from the AST type.
+        if (resultType is null && node.DataType.BitWidth is BitWidth.DWORD_32 or BitWidth.QWORD_64) {
+            if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+                if (leftFragment.Type == node.DataType && leftFragment.Constant is null) {
+                    resultType = node.DataType;
+                }
+            } else if (node.BinaryOperation is BinaryOperation.BITWISE_AND
+                    or BinaryOperation.BITWISE_OR or BinaryOperation.BITWISE_XOR
+                && WideOperand(leftFragment, node.DataType)
+                && WideOperand(rightFragment, node.DataType)
+                && (leftFragment.Constant is null || rightFragment.Constant is null)) {
+                resultType = node.DataType;
+            }
+        }
         return new CSharpFragment($"{left} {op} {right}", resultType, precedence);
     }
+
+    /// <summary><paramref name="fragment"/> is an operand of a 32/64-bit bitwise operation that
+    /// evaluates at <paramref name="type"/>: it already prints at that type, and a constant it
+    /// carries is representable there so its literal promotes without a cast.</summary>
+    private static bool WideOperand(CSharpFragment fragment, DataType type) =>
+        fragment.Type == type
+        && (fragment.Constant is null || Fits(fragment.Constant, type));
+
+    /// <summary>A logical <c>&amp;&amp;</c>/<c>||</c> of two comparisons of the same pure
+    /// expression against constants prints as a C# range pattern: <c>x &gt;= lo &amp;&amp;
+    /// x &lt;= hi</c> (in either operand order or comparison direction) is
+    /// <c>x is &gt;= lo and &lt;= hi</c>, and <c>x &lt; lo || x &gt; hi</c> is
+    /// <c>x is &lt; lo or &gt; hi</c>. Equality comparisons and mixed operands are left to the
+    /// generic print.</summary>
+    private CSharpFragment? TryPrintRange(BinaryOperationNode node) {
+        if (RangeParts(node) is not { } range) {
+            return null;
+        }
+        // The is-pattern compares at the promoted width: an arithmetic source whose byte/word
+        // truncation the generic print drops (x + 1 stays int) keeps it via an explicit cast.
+        CSharpFragment expression = Expr(range.Expression);
+        string operand = TruncatedOperand(range.Expression, expression)
+            ?? Parenthesize(expression, RelationalPrecedence + 1);
+        string text = $"{operand}"
+            + $" is {RelationalText(range.LowRelation)} {ConstantLiteral(range.LowBound).Text}"
+            + $" {(range.And ? "and" : "or")} {RelationalText(range.HighRelation)}"
+            + $" {ConstantLiteral(range.HighBound).Text}";
+        return new CSharpFragment(text, DataType.BOOL, RelationalPrecedence);
+    }
+
+    /// <summary>Whether <paramref name="node"/> is a logical node <see cref="TryPrintRange"/>
+    /// renders as a C# range pattern: two comparisons of the same pure expression against
+    /// constants, in opposite ordered directions.</summary>
+    internal static bool CanPrintRange(BinaryOperationNode node) => RangeParts(node) is not null;
+
+    /// <summary>The ordered parts of a range-printable logical node - the shared expression, the
+    /// lower and upper bound relations and literals, and whether the operator is
+    /// <c>&amp;&amp;</c> - or null when the shape is not a relational range.</summary>
+    private static (ValueNode Expression, BinaryOperation LowRelation, ConstantNode LowBound,
+            BinaryOperation HighRelation, ConstantNode HighBound, bool And)? RangeParts(
+            BinaryOperationNode node) {
+        if (node.BinaryOperation is not (BinaryOperation.LOGICAL_AND or BinaryOperation.LOGICAL_OR)
+            || RangeBound(node.Left) is not { } first
+            || RangeBound(node.Right) is not { } second
+            || !first.Expression.Equals(second.Expression)
+            || !IrVerifier.IsPureArm(first.Expression)
+            || first.Constant.DataType != first.Expression.DataType
+            || second.Constant.DataType != first.Expression.DataType
+            || !Fits(first.Constant, first.Expression.DataType)
+            || !Fits(second.Constant, first.Expression.DataType)) {
+            return null;
+        }
+        bool and = node.BinaryOperation == BinaryOperation.LOGICAL_AND;
+        bool LowFirst(BinaryOperation relation) =>
+            and ? relation is BinaryOperation.GREATER_THAN
+                    or BinaryOperation.GREATER_THAN_OR_EQUAL
+                : relation is BinaryOperation.LESS_THAN
+                    or BinaryOperation.LESS_THAN_OR_EQUAL;
+        bool HighThen(BinaryOperation relation) =>
+            and ? relation is BinaryOperation.LESS_THAN
+                    or BinaryOperation.LESS_THAN_OR_EQUAL
+                : relation is BinaryOperation.GREATER_THAN
+                    or BinaryOperation.GREATER_THAN_OR_EQUAL;
+        (ValueNode, BinaryOperation, ConstantNode) low;
+        (ValueNode, BinaryOperation, ConstantNode) high;
+        if (LowFirst(first.Relation) && HighThen(second.Relation)) {
+            low = first;
+            high = second;
+        } else if (LowFirst(second.Relation) && HighThen(first.Relation)) {
+            low = second;
+            high = first;
+        } else {
+            return null;
+        }
+        return (low.Item1, low.Item2, low.Item3, high.Item2, high.Item3, and);
+    }
+
+    private static string RelationalText(BinaryOperation operation) => operation switch {
+        BinaryOperation.LESS_THAN => "<",
+        BinaryOperation.GREATER_THAN => ">",
+        BinaryOperation.LESS_THAN_OR_EQUAL => "<=",
+        BinaryOperation.GREATER_THAN_OR_EQUAL => ">=",
+        _ => "?"
+    };
+
+    /// <summary><paramref name="node"/> as <c>expression relation constant</c>, whichever side
+    /// the constant is on.</summary>
+    private static (ValueNode Expression, BinaryOperation Relation, ConstantNode Constant)?
+            RangeBound(ValueNode node) {
+        if (node is not BinaryOperationNode {
+                BinaryOperation: { } op, Left: { } left, Right: { } right }
+            || op is not (BinaryOperation.LESS_THAN or BinaryOperation.GREATER_THAN
+                or BinaryOperation.LESS_THAN_OR_EQUAL
+                or BinaryOperation.GREATER_THAN_OR_EQUAL)) {
+            return null;
+        }
+        if (right is ConstantNode rightConstant && left is not ConstantNode) {
+            return (left, op, rightConstant);
+        }
+        if (left is ConstantNode leftConstant && right is not ConstantNode) {
+            return (right, Mirror(op), leftConstant);
+        }
+        return null;
+    }
+
+    private static BinaryOperation Mirror(BinaryOperation operation) => operation switch {
+        BinaryOperation.LESS_THAN => BinaryOperation.GREATER_THAN,
+        BinaryOperation.GREATER_THAN => BinaryOperation.LESS_THAN,
+        BinaryOperation.LESS_THAN_OR_EQUAL => BinaryOperation.GREATER_THAN_OR_EQUAL,
+        BinaryOperation.GREATER_THAN_OR_EQUAL => BinaryOperation.LESS_THAN_OR_EQUAL,
+        _ => operation
+    };
 
     /// <summary>The operand text with a cast back to its own width, when the fragment lost its type to
     /// C# int promotion, the operand is an 8- or 16-bit integer and its value can actually be outside

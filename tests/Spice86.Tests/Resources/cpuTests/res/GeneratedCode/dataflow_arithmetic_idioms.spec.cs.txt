@@ -1,0 +1,324 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0143_F0143Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment0000Globals Segment0000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+
+        unknown_F000_0143_F0143Entry = _ => unknown_F000_0143_F0143();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0143, unknown_F000_0143_F0143Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, BX, DS. Outputs: CF, DF. Changes: flags, DF.</summary>
+    /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
+    public virtual Action unknown_F000_0143_F0143() {
+        CheckExternalEvents(biosSegment, 0x0143);
+        // F000:0143 mov word ptr DS:[BX+0x20],AX
+        UInt16[DS, (ushort)(BX + 0x20)] = AX;
+        // F000:0146 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax1 = 0;
+        ushort ax;
+        ushort dx;
+        ushort cx;
+        ushort dx1 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov ES,AX
+        // F000:0007 mov SS,AX
+        SS = 0x2000;
+        // F000:0009 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000C xor AX,AX
+        ax1 = 0;
+        // F000:000E mov ES,AX
+        ES = 0;
+        // F000:0010 mov word ptr ES:[0x0190],0x0143
+        // F000:0017 mov word ptr ES:[0x0192],CS
+        Segment0000Globals.Dword0190 = 0x00000143 | (uint)CS << 16;
+        // F000:001C cld
+        DirectionFlag = false;
+        // F000:001D xor BX,BX
+        BX = 0;
+        // F000:001F xor DI,DI
+        DI = 0;
+        // F000:0021 mov SI,0x0150
+        SI = 0x0150;
+        // F000:0024 mov BP,8
+        BP = 8;
+        do {
+            CheckExternalEvents(biosSegment, 0x0027);
+            // F000:0027 mov AX,word ptr CS:[SI]
+            ax = UInt16[CS, SI];
+            // F000:002A cmp AX,7
+            // F000:002D sbb DX,DX
+            dx = (ushort)(ax < 7 ? 0xFFFF : 0);
+            // F000:002F mov word ptr DS:[BX],DX
+            UInt16[DS, BX] = dx;
+            // F000:0031 cmp DI,DI
+            // F000:0033 mov AX,word ptr CS:[SI]
+            // F000:0036 neg AX
+            // F000:0038 sbb AX,AX
+            // F000:003A inc AX
+            AX = (ushort)(0 != UInt16[CS, SI] ? 0 : 1);
+            // F000:003B mov word ptr DS:[BX+2],AX
+            UInt16[DS, (ushort)(BX + 2)] = AX;
+            // F000:003E cmp DI,DI
+            // F000:0040 mov AX,word ptr CS:[SI]
+            // F000:0043 neg AX
+            // F000:0045 sbb AX,AX
+            // F000:0047 neg AX
+            ax = (ushort)(0 != UInt16[CS, SI] ? 1 : 0);
+            // F000:0049 mov word ptr DS:[BX+4],AX
+            UInt16[DS, (ushort)(BX + 4)] = ax;
+            // F000:004C cmp DI,DI
+            // F000:004E mov AX,word ptr CS:[SI]
+            // F000:0051 cwd
+            // F000:0052 sub AX,DX
+            // F000:0054 sar AX,1
+            AX = (ushort)((short)UInt16[CS, SI] / 2);
+            // F000:0056 mov word ptr DS:[BX+6],AX
+            UInt16[DS, (ushort)(BX + 6)] = AX;
+            // F000:0059 cmp DI,DI
+            // F000:005B mov AX,word ptr CS:[SI]
+            // F000:005E cwd
+            // F000:005F and DX,3
+            // F000:0062 add AX,DX
+            // F000:0064 sar AX,2
+            ax = (ushort)((short)UInt16[CS, SI] / 4);
+            // F000:0067 mov word ptr DS:[BX+8],AX
+            UInt16[DS, (ushort)(BX + 8)] = ax;
+            // F000:006A cmp DI,DI
+            // F000:006C mov AX,word ptr CS:[SI]
+            // F000:006F cwd
+            // F000:0070 and DX,7
+            // F000:0073 add AX,DX
+            // F000:0075 sar AX,3
+            AX = (ushort)((short)UInt16[CS, SI] / 8);
+            // F000:0078 mov word ptr DS:[BX+0x0A],AX
+            UInt16[DS, (ushort)(BX + 0x0A)] = AX;
+            // F000:007B cmp DI,DI
+            // F000:007D mov AX,word ptr CS:[SI]
+            ax = UInt16[CS, SI];
+            // F000:0080 mov DX,0xCCCD
+            // F000:0083 mul DX
+            // F000:0085 shr DX,3
+            DX = (ushort)(ax / 0x000A);
+            // F000:0088 mov word ptr DS:[BX+0x0C],DX
+            UInt16[DS, (ushort)(BX + 0x0C)] = DX;
+            // F000:008B cmp DI,DI
+            // F000:008D mov AX,word ptr CS:[SI]
+            // F000:0090 cwd
+            // F000:0091 xor AX,DX
+            // F000:0093 sub AX,DX
+            // F000:0095 and AX,3
+            // F000:0098 xor AX,DX
+            // F000:009A sub AX,DX
+            AX = (ushort)((short)UInt16[CS, SI] % 4);
+            // F000:009C mov word ptr DS:[BX+0x0E],AX
+            UInt16[DS, (ushort)(BX + 0x0E)] = AX;
+            // F000:009F cmp DI,DI
+            // F000:00A1 mov AX,word ptr CS:[SI]
+            ax = UInt16[CS, SI];
+            // F000:00A4 mov CX,AX
+            cx = ax;
+            // F000:00A6 shl AX,1
+            // F000:00A8 shl AX,1
+            // F000:00AA add AX,CX
+            // F000:00AC shl AX,1
+            AX = (ushort)(cx * 0x000A);
+            // F000:00AE mov word ptr DS:[BX+0x10],AX
+            UInt16[DS, (ushort)(BX + 0x10)] = AX;
+            // F000:00B1 cmp DI,DI
+            // F000:00B3 mov AX,word ptr CS:[SI]
+            // F000:00B6 shl AX,1
+            // F000:00B8 shl AX,1
+            // F000:00BA shl AX,1
+            // F000:00BC shl AX,1
+            // F000:00BE add AX,3
+            ax = (ushort)((ushort)(UInt16[CS, SI] * 0x0010) + 3);
+            // F000:00C1 mov word ptr DS:[BX+0x12],AX
+            UInt16[DS, (ushort)(BX + 0x12)] = ax;
+            // F000:00C4 cmp DI,DI
+            // F000:00C6 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:00C9 cwd
+            dx = (ushort)((short)AX >> 15);
+            // F000:00CA sub AX,DX
+            // F000:00CC sar AX,1
+            ax = (ushort)((short)(AX - dx) >> 1);
+            // F000:00CE mov word ptr DS:[BX+0x14],AX
+            UInt16[DS, (ushort)(BX + 0x14)] = ax;
+            // F000:00D1 mov word ptr DS:[BX+0x16],DX
+            UInt16[DS, (ushort)(BX + 0x16)] = dx;
+            // F000:00D4 cmp DI,DI
+            // F000:00D6 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:00D9 cwd
+            dx1 = (ushort)((short)AX >> 15);
+            // F000:00DA sub AX,DX
+            AX = Alu16.Sub(AX, dx1);
+            // F000:00DC sar AX,1
+            AX = Alu16.Sar(AX, 1);
+            // F000:00DE pushf
+            Stack.Push16(FlagRegister16);
+            // F000:00DF pop CX
+            CX = Stack.Pop16();
+            // F000:00E0 and CX,1
+            CX &= 1;
+            // F000:00E3 mov word ptr DS:[BX+0x18],AX
+            UInt16[DS, (ushort)(BX + 0x18)] = AX;
+            // F000:00E6 mov word ptr DS:[BX+0x1A],CX
+            UInt16[DS, (ushort)(BX + 0x1A)] = CX;
+            // F000:00E9 cmp DI,DI
+            // F000:00EB mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:00EE mov CX,AX
+            CX = AX;
+            // F000:00F0 shl AX,1
+            AX <<= 1;
+            // F000:00F2 mov word ptr DS:[BX+0x1C],AX
+            UInt16[DS, (ushort)(BX + 0x1C)] = AX;
+            // F000:00F5 shl AX,1
+            // F000:00F7 add AX,CX
+            // F000:00F9 shl AX,1
+            ax = (ushort)(AX * 4 + CX * 2);
+            // F000:00FB mov word ptr DS:[BX+0x1E],AX
+            UInt16[DS, (ushort)(BX + 0x1E)] = ax;
+            // F000:00FE cmp DI,DI
+            // F000:0100 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0103 neg AX
+            AX = Alu16.Sub(0, AX);
+            CarryFlag = AX != 0;
+            // F000:0105 int 0x64
+            InterruptCall(biosSegment, 0x0107, 0x64, biosSegment, 0x0143, unknown_F000_0143_F0143Entry);
+            // F000:0107 sbb AX,AX
+            AX = (ushort)(CarryFlag ? 0xFFFF : 0);
+            // F000:0109 inc AX
+            AX++;
+            // F000:010A mov word ptr DS:[BX+0x22],AX
+            UInt16[DS, (ushort)(BX + 0x22)] = AX;
+            // F000:010D cmp DI,DI
+            // F000:010F mov AX,word ptr CS:[SI]
+            ax = UInt16[CS, SI];
+            // F000:0112 mov DX,0xAAAB
+            // F000:0115 mul DX
+            // F000:0117 shr DX,1
+            dx = (ushort)(ax / 3);
+            // F000:0119 mov word ptr DS:[BX+0x24],DX
+            UInt16[DS, (ushort)(BX + 0x24)] = dx;
+            // F000:011C mov AX,0
+            // F000:011F cmp DI,DI
+            // F000:0121 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0124 cwd
+            DX = (ushort)((short)AX >> 15);
+            // F000:0125 sub AX,DX
+            // F000:0127 sar AX,1
+            ax1 = (ushort)((short)(AX - DX) >> 1);
+            // F000:0129 mov DL,7
+            DL = 7;
+            // F000:012B mov word ptr DS:[BX+0x26],AX
+            UInt16[DS, (ushort)(BX + 0x26)] = ax1;
+            // F000:012E mov word ptr DS:[BX+0x28],DX
+            UInt16[DS, (ushort)(BX + 0x28)] = DX;
+            // F000:0131 mov DX,0
+            DX = 0;
+            // F000:0134 cmp DI,DI
+            // F000:0136 add BX,0x0080
+            BX += 0x0080;
+            // F000:013A add SI,2
+            SI = Alu16.Add(SI, 2);
+            // F000:013D dec BP
+            BP = Alu16.Dec(BP);
+            // F000:013E jne near 0x0027
+        } while (BP != 0);
+        // F000:0142 hlt
+        AX = ax1;
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public uint Dword0190 { get => _memory.UInt32[Segment, 0x0190]; set => _memory.UInt32[Segment, 0x0190] = value; }
+}

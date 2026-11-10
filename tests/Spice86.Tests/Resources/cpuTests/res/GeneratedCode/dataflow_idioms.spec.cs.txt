@@ -149,13 +149,13 @@ public partial class CfgGeneratedOverrides {
             // F000:005F mov DS,AX
             DS = 0x2200;
             // F000:0061 mov DX,word ptr DS:[4]
-            dx = Segment2200Globals.Word0004;
+            DX = Segment2200Globals.Word0004;
             // F000:0065 mov AX,0x2000
             AX = 0x2000;
             // F000:0068 mov DS,AX
             DS = 0x2000;
             // F000:006A mov word ptr DS:[BX+0x10],DX
-            UInt16[DS, (ushort)(BX + 0x10)] = dx;
+            UInt16[DS, (ushort)(BX + 0x10)] = DX;
             // F000:006D mov CX,word ptr CS:[SI+2]
             CX = UInt16[CS, (ushort)(SI + 2)];
             // F000:0071 xor CX,CX
@@ -163,11 +163,10 @@ public partial class CfgGeneratedOverrides {
             // F000:0073 mov word ptr DS:[BX+0x12],CX
             UInt16[DS, (ushort)(BX + 0x12)] = 0;
             // F000:0076 mov DX,word ptr CS:[SI+2]
-            DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:007A and DX,DX
-            DX &= DX;
+            dx = UInt16[CS, (ushort)(SI + 2)];
             // F000:007C mov word ptr DS:[BX+0x14],DX
-            UInt16[DS, (ushort)(BX + 0x14)] = DX;
+            UInt16[DS, (ushort)(BX + 0x14)] = dx;
             // F000:007F sub DX,DX
             DX = 0;
             // F000:0081 mov word ptr DS:[BX+0x16],DX

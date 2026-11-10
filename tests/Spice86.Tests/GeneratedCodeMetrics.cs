@@ -82,7 +82,8 @@ internal sealed record GeneratedCodeMetrics {
     /// <summary>How many of <see cref="RegisterLocals"/> declare a signed type (<c>short ax;</c>,
     /// <c>sbyte al;</c>, <c>int eax;</c>): the webs whose reads vote signed.</summary>
     public required int SignedLocals { get; init; }
-    /// <summary>Simple assignments of a local value, optionally cast, to a CPU register.</summary>
+    /// <summary>Simple assignments of a local value or its upper half, optionally cast,
+    /// to a CPU register.</summary>
     public required int WriteBacks { get; init; }
     public required IReadOnlyDictionary<string, int> DeviceCallsByReceiver { get; init; }
     public required IReadOnlyDictionary<string, int> ServiceCallsByOperation { get; init; }

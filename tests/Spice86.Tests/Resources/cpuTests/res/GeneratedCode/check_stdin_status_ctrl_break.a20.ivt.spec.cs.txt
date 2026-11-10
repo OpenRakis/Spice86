@@ -143,9 +143,8 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x33
-        AH = 0x33;
         // 016D:0102 mov AL,1
-        AL = 1;
+        AX = 0x3301;
         // 016D:0104 mov DL,1
         DL = 1;
         // 016D:0106 int 0x21

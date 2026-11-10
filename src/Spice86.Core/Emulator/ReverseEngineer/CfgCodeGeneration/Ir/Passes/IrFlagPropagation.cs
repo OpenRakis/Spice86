@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -103,7 +104,7 @@ internal static class IrFlagPropagation {
             if (temp is not null) {
                 RegisterTemp(site, shape, temp);
             } else if (shape.Destination is null) {
-                _candidates.TryAdd(site.Statement, new Candidate(site, shape, null, null));
+                _candidates.TryAdd(site.Statement, new Candidate(site, null, null));
             }
         }
 
@@ -125,6 +126,20 @@ internal static class IrFlagPropagation {
             if (!LegalSite(site)) {
                 return;
             }
+            // An explicit `CF = <bool>` setter - the carry write a neg emits - is its own
+            // relation: substitute the pure BOOL right side when it reads the same versions
+            // at the reader as at the setter. It becomes a drop candidate: once every live
+            // flag use is rewritten the assignment is dead.
+            if (site.Statement.Node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: CpuFlagNode { FlagMask: { } mask }, Right: { } direct }
+                && mask == Flags.Carry && direct.DataType == DataType.BOOL
+                && IrVerifier.IsPureArm(direct)
+                && Available(direct, site, (block, index), false) is { } directRelation) {
+                if (RewriteReader(untyped, statement, block, index, directRelation)) {
+                    _candidates.TryAdd(site.Statement, new Candidate(site, null, null));
+                }
+                return;
+            }
             if (MatchSetter(site.Statement.Node) is not { } shape
                 || FlagSetter.Of(shape.Alu) is not { } setter) {
                 return;
@@ -140,22 +155,31 @@ internal static class IrFlagPropagation {
                 relation = withTemp;
                 temp = found;
             }
-            if (relation is null
-                || AluAssignmentRewrite.TryRewriteStatement(untyped, statement.Origin,
+            if (relation is null || !RewriteReader(untyped, statement, block, index, relation)) {
+                return;
+            }
+            if (temp is not null) {
+                RegisterTemp(site, shape, temp);
+            } else if (shape.Destination is null) {
+                _candidates.TryAdd(site.Statement, new Candidate(site, null, null));
+            }
+        }
+
+        /// <summary>The carry reader rewritten into plain assignments with <paramref name="relation"/>
+        /// substituted for the carry read; the edit list, rewritten set and consumers stay in sync.</summary>
+        private bool RewriteReader(IVisitableAstNode untyped, IrStatement statement,
+            IrBlock block, int index, ValueNode relation) {
+            if (AluAssignmentRewrite.TryRewriteStatement(untyped, statement.Origin,
                     IrFlagLiveness.LiveAfter(_ssa, block, index)) is not { } plain
                 || FlagReadSubstitution.SubstituteCarry(new BlockNode(plain.ToArray()), relation)
                     is not { } substituted) {
-                return;
+                return false;
             }
             _edits.Add((block, index,
                 substituted.Statements.Select(node => IrStatement.Create(node, statement.Origin)).ToList()));
             _rewritten.Add(statement);
             _consumers.Add(statement);
-            if (temp is not null) {
-                RegisterTemp(site, shape, temp);
-            } else if (shape.Destination is null) {
-                _candidates.TryAdd(site.Statement, new Candidate(site, shape, null, null));
-            }
+            return true;
         }
 
         /// <summary>Drops the setters whose flags only feed rewritten readers, then applies the edits
@@ -355,7 +379,7 @@ internal static class IrFlagPropagation {
                 BinaryOperation.ASSIGN, temp.Operand);
             IVisitableAstNode callStatement = CallWithOperand(shape, temp);
             if (shape.Destination is null) {
-                _candidates[site.Statement] = new Candidate(site, shape, assign, callStatement);
+                _candidates[site.Statement] = new Candidate(site, assign, callStatement);
             } else {
                 _edits.Add((site.Block, site.Index,
                     new[] { IrStatement.Create(assign, site.Statement.Origin),
@@ -448,7 +472,7 @@ internal static class IrFlagPropagation {
     private static bool ContainsReference(ValueNode node, VariableReferenceNode reference) => node switch {
         VariableReferenceNode r => r == reference,
         TypeConversionNode or UnaryOperationNode or BinaryOperationNode or SegmentedPointerNode
-            or AbsolutePointerNode or MethodCallValueNode =>
+            or AbsolutePointerNode or MethodCallValueNode or ConditionalValueNode =>
             IrAstChildren.ChildrenOf(node).OfType<ValueNode>()
                 .Any(child => ContainsReference(child, reference)),
         _ => false
@@ -478,7 +502,7 @@ internal static class IrFlagPropagation {
         RegisterNode? Destination);
 
     private sealed record Candidate((IrBlock Block, int Index, IrStatement Statement) Site,
-        SetterShape Shape, BinaryOperationNode? TempAssign, IVisitableAstNode? TempCall);
+        BinaryOperationNode? TempAssign, IVisitableAstNode? TempCall);
 
     private sealed record MemoryOperandTemp(MethodScopedVariableReferenceNode Reference, ValueNode Operand,
         int ArgumentIndex, FlagRelationOperands Operands);

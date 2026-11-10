@@ -7,5 +7,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 /// <summary>One pending write-back: the boundary of <see cref="Instruction"/> that holds
 /// <see cref="Anchor"/> takes <see cref="Node"/> after its <see cref="InstructionStartNode"/>.</summary>
+/// <remarks><see cref="Node"/> is a <see cref="RegisterWriteBackNode"/> for a scalar web and an
+/// ordinary <c>ASSIGN</c> of the pair slice for a promoted pair.</remarks>
 internal sealed record RegisterLocalWriteBack(ICfgNode Instruction, IVisitableAstNode Anchor,
-    RegisterWriteBackNode Node);
+    IVisitableAstNode Node);

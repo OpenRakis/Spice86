@@ -225,9 +225,7 @@ public partial class CfgGeneratedOverrides {
         SI = 4;
         // F000:0092 cmp SI,4
         // F000:0095 jb short 0x00E5
-        // F000:0097 cmp SI,8
-        // F000:009A ja short 0x00E5
-        if (SI >= 4 && SI <= 8) {
+        if (SI is >= 4 and <= 8) {
             // F000:009C jmp near word ptr ES:[SI+0x02F5]
             if (SegmentF000Globals.Word02F9 != 0x0241) {
                 throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:009C");
@@ -250,9 +248,7 @@ public partial class CfgGeneratedOverrides {
             SI = 6;
             // F000:00B4 cmp SI,4
             // F000:00B7 jb short 0x00E5
-            // F000:00B9 cmp SI,8
-            // F000:00BC ja short 0x00E5
-            if (SI >= 4 && SI <= 8) {
+            if (SI is >= 4 and <= 8) {
                 // F000:00BE jmp near word ptr ES:[SI+0x02F5]
                 if (SegmentF000Globals.Word02FB != 0x0243) {
                     throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:00BE");
@@ -275,22 +271,18 @@ public partial class CfgGeneratedOverrides {
                 SI = 8;
                 // F000:00D6 cmp SI,4
                 // F000:00D9 jb short 0x00E5
-                // F000:00DB cmp SI,8
-                // F000:00DE ja short 0x00E5
-                if (SI < 4 || SI > 8) {
-                    goto L_00E5;
+                if (SI is >= 4 and <= 8) {
+                    // F000:00E0 jmp near word ptr ES:[SI+0x02F5]
+                    if (SegmentF000Globals.Word02FD != 0x0245) {
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:00E0");
+                    }
+                    // F000:0245 jmp short 0x0259
+                    // F000:0259 mov word ptr DS:[0x0078],1
+                    Segment2000Globals.Word0078 = 1;
+                    // F000:025F jmp near 0x00E5
                 }
-                // F000:00E0 jmp near word ptr ES:[SI+0x02F5]
-                if (SegmentF000Globals.Word02FD != 0x0245) {
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:00E0");
-                }
-                // F000:0245 jmp short 0x0259
-                // F000:0259 mov word ptr DS:[0x0078],1
-                Segment2000Globals.Word0078 = 1;
-                // F000:025F jmp near 0x00E5
             }
         }
-    L_00E5:
         // F000:00E5 mov CX,4
         CX = 4;
         do {
@@ -377,9 +369,7 @@ public partial class CfgGeneratedOverrides {
         SI = 0x000A;
         // F000:013D cmp SI,8
         // F000:0140 jb short 0x014C
-        // F000:0142 cmp SI,0x000C
-        // F000:0145 ja short 0x014C
-        if (SI >= 8 && SI <= 0x000C) {
+        if (SI is >= 8 and <= 0x000C) {
             // F000:0147 jmp near word ptr ES:[SI+0x0347]
             if (SegmentF000Globals.Word0351 != 0x0294) {
                 throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x0347)]:X4} at F000:0147");
@@ -437,9 +427,8 @@ public partial class CfgGeneratedOverrides {
             CX--;
         } while (CX != 0);
         // F000:0188 mov word ptr DS:[0x0100],0x019A
-        Segment2000Globals.Word0100 = 0x019A;
         // F000:018E mov word ptr DS:[0x0102],0x01A2
-        Segment2000Globals.Word0102 = 0x01A2;
+        Segment2000Globals.Dword0100 = 0x01A2019A;
         // F000:0194 xor BX,BX
         BX = 0;
         do {
@@ -483,9 +472,8 @@ public partial class CfgGeneratedOverrides {
         // F000:01CE mov word ptr DS:[0x0050],2
         Segment2000Globals.Word0050 = 2;
         // F000:01D4 mov word ptr DS:[0x0106],0x02D7
-        Segment2000Globals.Word0106 = 0x02D7;
         // F000:01DA mov word ptr DS:[0x0108],0x02DE
-        Segment2000Globals.Word0108 = 0x02DE;
+        Segment2000Globals.Dword0106 = 0x02DE02D7;
         // F000:01E0 xor BX,BX
         BX = 0;
         CarryFlag = false;
@@ -630,13 +618,13 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public ushort Word0080 { get => _memory.UInt16[Segment, 0x0080]; set => _memory.UInt16[Segment, 0x0080] = value; }
 
-    public ushort Word0100 { get => _memory.UInt16[Segment, 0x0100]; set => _memory.UInt16[Segment, 0x0100] = value; }
-
-    public ushort Word0102 { get => _memory.UInt16[Segment, 0x0102]; set => _memory.UInt16[Segment, 0x0102] = value; }
+    public uint Dword0100 { get => _memory.UInt32[Segment, 0x0100]; set => _memory.UInt32[Segment, 0x0100] = value; }
 
     public ushort Word0104 { get => _memory.UInt16[Segment, 0x0104]; set => _memory.UInt16[Segment, 0x0104] = value; }
 
     public ushort Word0106 { get => _memory.UInt16[Segment, 0x0106]; set => _memory.UInt16[Segment, 0x0106] = value; }
+
+    public uint Dword0106 { get => _memory.UInt32[Segment, 0x0106]; set => _memory.UInt32[Segment, 0x0106] = value; }
 
     public ushort Word0108 { get => _memory.UInt16[Segment, 0x0108]; set => _memory.UInt16[Segment, 0x0108] = value; }
 }

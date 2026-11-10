@@ -150,8 +150,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort dx;
         ushort ax;
+        ushort dx;
         ushort di;
         ushort cx1 = 0;
         ushort ax1 = 0;
@@ -187,13 +187,11 @@ public partial class CfgGeneratedOverrides {
         // F000:001B mov ES,AX
         ES = 0;
         // F000:001D mov word ptr ES:[0x0184],0x0379
-        Segment0000Globals.Word0184 = 0x0379;
         // F000:0024 mov word ptr ES:[0x0186],CS
-        Segment0000Globals.Word0186 = CS;
+        Segment0000Globals.Dword0184 = 0x00000379 | (uint)CS << 16;
         // F000:0029 mov word ptr ES:[0x0020],0x037D
-        Segment0000Globals.Word0020 = 0x037D;
         // F000:0030 mov word ptr ES:[0x0022],CS
-        Segment0000Globals.Word0022 = CS;
+        Segment0000Globals.Dword0020 = 0x0000037D | (uint)CS << 16;
         // F000:0035 mov AX,0x2000
         AX = 0x2000;
         // F000:0038 mov ES,AX
@@ -201,21 +199,21 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x003A);
             // F000:003A mov AX,word ptr CS:[SI+2]
-            AX = UInt16[CS, (ushort)(SI + 2)];
+            ax = UInt16[CS, (ushort)(SI + 2)];
             // F000:003E mul word ptr CS:[SI+4]
-            (AX, DX) = Mul16(AX, UInt16[CS, (ushort)(SI + 4)]);
+            (AX, dx) = Mul16(ax, UInt16[CS, (ushort)(SI + 4)]);
             // F000:0042 mov word ptr DS:[BX],DX
-            UInt16[DS, BX] = DX;
+            UInt16[DS, BX] = dx;
             // F000:0044 mov CX,word ptr CS:[SI+0x20]
             CX = UInt16[CS, (ushort)(SI + 0x20)];
             // F000:0048 sub CX,word ptr CS:[SI+0x22]
             CX = Alu16.Sub(CX, UInt16[CS, (ushort)(SI + 0x22)]);
             // F000:004C mov DX,CX
-            dx = CX;
+            DX = CX;
             // F000:004E mov CX,word ptr CS:[SI+8]
             CX = UInt16[CS, (ushort)(SI + 8)];
             // F000:0052 mov AX,DX
-            ax = dx;
+            ax = DX;
             // F000:0054 mov word ptr DS:[BX+2],AX
             UInt16[DS, (ushort)(BX + 2)] = ax;
             // F000:0057 pushf
@@ -400,7 +398,7 @@ public partial class CfgGeneratedOverrides {
             // F000:0168 mov EDI,0
             EDI = 0;
             // F000:016E pushfd
-            Stack.Push32((uint)(FlagRegister & 0x0000FFFF));
+            Stack.Push32(FlagRegister & 0x0000FFFF);
             // F000:0170 popfd
             FlagRegister = Stack.Pop32();
             CheckExternalEvents(biosSegment, 0x0172);
@@ -830,11 +828,9 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
 
-    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+    public uint Dword0020 { get => _memory.UInt32[Segment, 0x0020]; set => _memory.UInt32[Segment, 0x0020] = value; }
 
-    public ushort Word0184 { get => _memory.UInt16[Segment, 0x0184]; set => _memory.UInt16[Segment, 0x0184] = value; }
-
-    public ushort Word0186 { get => _memory.UInt16[Segment, 0x0186]; set => _memory.UInt16[Segment, 0x0186] = value; }
+    public uint Dword0184 { get => _memory.UInt32[Segment, 0x0184]; set => _memory.UInt32[Segment, 0x0184] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

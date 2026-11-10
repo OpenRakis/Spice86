@@ -81,7 +81,7 @@ public partial class CfgGeneratedOverrides {
         BX = SegmentF000Globals.Word0102;
         // F000:0028 div BX
         try {
-            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: BX, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x0028, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0037), unknown_F000_0037_F0037)]);

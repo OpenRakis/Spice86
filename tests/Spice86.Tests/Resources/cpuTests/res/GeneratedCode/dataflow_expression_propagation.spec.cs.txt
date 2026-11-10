@@ -101,10 +101,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort ax1 = 0;
+        ushort dx;
         ushort ax;
         byte al;
         byte cl;
-        ushort dx;
         ushort cx;
         ushort cx1 = 0;
         ushort di1 = 0;
@@ -124,9 +124,8 @@ public partial class CfgGeneratedOverrides {
         // F000:000C mov ES,AX
         ES = 0;
         // F000:000E mov word ptr ES:[0x0184],0x015E
-        Segment0000Globals.Word0184 = 0x015E;
         // F000:0015 mov word ptr ES:[0x0186],CS
-        Segment0000Globals.Word0186 = CS;
+        Segment0000Globals.Dword0184 = 0x0000015E | (uint)CS << 16;
         // F000:001A mov AX,DS
         ax1 = DS;
         // F000:001C mov ES,AX
@@ -144,13 +143,13 @@ public partial class CfgGeneratedOverrides {
             // F000:002A mov DX,word ptr CS:[SI]
             // F000:002D add DX,1
             // F000:0030 shr DX,1
-            DX = (ushort)((ushort)(UInt16[CS, SI] + 1) >> 1);
+            dx = (ushort)((ushort)(UInt16[CS, SI] + 1) >> 1);
             // F000:0032 mov AX,DX
-            ax = DX;
+            ax = dx;
             // F000:0034 mov word ptr DS:[BX],AX
             UInt16[DS, BX] = ax;
             // F000:0036 mov word ptr DS:[BX+2],DX
-            UInt16[DS, (ushort)(BX + 2)] = DX;
+            UInt16[DS, (ushort)(BX + 2)] = dx;
             // F000:0039 mov DX,word ptr CS:[SI]
             // F000:003C add DX,1
             // F000:003F shr DX,1
@@ -281,9 +280,9 @@ public partial class CfgGeneratedOverrides {
             // F000:00EC mov ES,AX
             ES = 0x2200;
             // F000:00EE mov DX,word ptr CS:[SI]
-            DX = UInt16[CS, SI];
+            dx = UInt16[CS, SI];
             // F000:00F1 mov word ptr ES:[0],DX
-            Segment2200Globals.Word0000 = DX;
+            Segment2200Globals.Word0000 = dx;
             // F000:00F6 push DS
             Stack.Push16(DS);
             // F000:00F7 pop ES
@@ -380,9 +379,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0184 { get => _memory.UInt16[Segment, 0x0184]; set => _memory.UInt16[Segment, 0x0184] = value; }
-
-    public ushort Word0186 { get => _memory.UInt16[Segment, 0x0186]; set => _memory.UInt16[Segment, 0x0186] = value; }
+    public uint Dword0184 { get => _memory.UInt32[Segment, 0x0184]; set => _memory.UInt32[Segment, 0x0184] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

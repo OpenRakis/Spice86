@@ -121,7 +121,7 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[BP] = 4;
         // F000:0081 div word ptr DS:[0x0012]
         try {
-            (AX, DX) = Div16(divisor: DsGlobals.Word0012, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: DsGlobals.Word0012, dividend: (uint)DX << 16 | (uint)AX);
             throw FailAsUntested("Untested fallthrough after F000:0081");
         }
         catch (CpuException cpuException) {
@@ -150,7 +150,7 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[BP] = 2;
         // F000:009E div CX
         try {
-            (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: CX, dividend: (uint)DX << 16 | (uint)AX);
             throw FailAsUntested("Untested fallthrough after F000:009E");
         }
         catch (CpuException cpuException) {
@@ -160,7 +160,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_00A0_F00A0() {
-        ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0x00A0);
         // F000:00A0 add BP,2
         BP = Alu16.Add(BP, 2);
@@ -173,29 +173,26 @@ public partial class CfgGeneratedOverrides {
         // F000:00AE pushf
         Stack.Push16(FlagRegister16);
         // F000:00AF mov DX,0x25C9
-        DX = 0x25C9;
         // F000:00B2 mov AX,0xF110
-        AX = 0xF110;
         // F000:00B5 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:00BA div AX
-        (AX, DX) = Div16(divisor: AX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        (AX, dx) = Div16(divisor: 0xF110, dividend: 0x25C9F110);
         // F000:00BC add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00BF mov word ptr DS:[0x001E],AX
         DsGlobals.Word001E = AX;
         // F000:00C2 mov word ptr DS:[0x0020],DX
-        DsGlobals.Word0020 = DX;
+        DsGlobals.Word0020 = dx;
         // F000:00C6 pushf
         Stack.Push16(FlagRegister16);
         // F000:00C7 mov AX,0x0014
-        ax = 0x0014;
         // F000:00CA mov BX,5
         BX = 5;
         // F000:00CD mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:00D2 div BL
-        (AL, AH) = Div8(divisor: BL, dividend: ax);
+        (AL, AH) = Div8(divisor: 5, dividend: 0x0014);
         // F000:00D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00D7 mov word ptr DS:[0x0022],AX
@@ -203,19 +200,18 @@ public partial class CfgGeneratedOverrides {
         // F000:00DA mov word ptr DS:[0x0024],BX
         DsGlobals.Word0024 = 5;
         // F000:00DE mov word ptr DS:[0x0026],DX
-        DsGlobals.Word0026 = DX;
+        DsGlobals.Word0026 = dx;
         // F000:00E2 pushf
         Stack.Push16(FlagRegister16);
         // F000:00E3 mov DX,0xA320
         DX = 0xA320;
         // F000:00E6 mov AX,0xC3DA
-        ax = 0xC3DA;
         // F000:00E9 mov word ptr DS:[0x0028],0x00FF
         DsGlobals.Word0028 = 0x00FF;
         // F000:00EF mov word ptr SS:[BP],4
         SsUInt16[BP] = 4;
         // F000:00F4 div byte ptr DS:[0x0028]
-        (AL, AH) = Div8(divisor: DsGlobals.Byte0028, dividend: ax);
+        (AL, AH) = Div8(divisor: DsGlobals.Byte0028, dividend: 0xC3DA);
         // F000:00F8 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00FB mov word ptr DS:[0x002A],AX
@@ -270,6 +266,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_012C_F012C() {
         ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0x012C);
         // F000:012C add BP,2
         BP = Alu16.Add(BP, 2);
@@ -280,13 +277,12 @@ public partial class CfgGeneratedOverrides {
         // F000:0136 pushf
         Stack.Push16(FlagRegister16);
         // F000:0137 mov AX,0x008A
-        ax = 0x008A;
         // F000:013A mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:013D mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:0142 div CL
-        (AL, AH) = Div8(divisor: CL, dividend: ax);
+        (AL, AH) = Div8(divisor: 0x8E, dividend: 0x008A);
         // F000:0144 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0147 mov word ptr DS:[0x0038],AX
@@ -297,11 +293,10 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         // F000:014F mov DX,0x0669
         // F000:0152 mov AX,0x89F3
-        AX = 0x89F3;
         // F000:0155 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:015A div AL
-        (AL, AH) = Div8(divisor: AL, dividend: AX);
+        (AL, AH) = Div8(divisor: 0xF3, dividend: 0x89F3);
         // F000:015C add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:015F mov word ptr DS:[0x003C],AX
@@ -311,23 +306,21 @@ public partial class CfgGeneratedOverrides {
         // F000:0166 pushf
         Stack.Push16(FlagRegister16);
         // F000:0167 mov DX,0
-        DX = 0;
         // F000:016A mov AX,0x0014
-        AX = 0x0014;
         // F000:016D mov BX,0x00FA
         BX = 0x00FA;
         // F000:0170 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:0175 idiv BX
-        (AX, DX) = IDiv16(divisor: (short)BX, dividend: (int)((uint)DX << 16 | (uint)AX));
+        (ax, dx) = IDiv16(divisor: 0x00FA, dividend: 0x00000014);
         // F000:0177 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:017A mov word ptr DS:[0x0040],AX
-        DsGlobals.Word0040 = AX;
+        DsGlobals.Word0040 = ax;
         // F000:017D mov word ptr DS:[0x0042],BX
         DsGlobals.Word0042 = 0x00FA;
         // F000:0181 mov word ptr DS:[0x0044],DX
-        DsGlobals.Word0044 = DX;
+        DsGlobals.Word0044 = dx;
         // F000:0185 pushf
         Stack.Push16(FlagRegister16);
         // F000:0186 mov DX,0xA320
@@ -350,7 +343,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_019B_F019B() {
-        ushort cx;
+        ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0x019B);
         // F000:019B add BP,2
         BP = Alu16.Add(BP, 2);
@@ -361,15 +355,12 @@ public partial class CfgGeneratedOverrides {
         // F000:01A5 pushf
         Stack.Push16(FlagRegister16);
         // F000:01A6 mov DX,0xFFFF
-        DX = 0xFFFF;
         // F000:01A9 mov AX,0xFFFF
-        AX = 0xFFFF;
         // F000:01AC mov CX,1
-        cx = 1;
         // F000:01AF mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:01B4 idiv CX
-        (AX, DX) = IDiv16(divisor: (short)cx, dividend: (int)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = IDiv16(divisor: 1, dividend: -1);
         // F000:01B6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01B9 mov word ptr DS:[0x004C],AX
@@ -381,15 +372,13 @@ public partial class CfgGeneratedOverrides {
         // F000:01C4 pushf
         Stack.Push16(FlagRegister16);
         // F000:01C5 mov DX,0xFFFF
-        DX = 0xFFFF;
         // F000:01C8 mov AX,0xFFFF
-        AX = 0xFFFF;
         // F000:01CB mov word ptr DS:[0x0052],0xFFFF
         DsGlobals.Word0052 = 0xFFFF;
         // F000:01D1 mov word ptr SS:[BP],4
         SsUInt16[BP] = 4;
         // F000:01D6 idiv word ptr DS:[0x0052]
-        (AX, DX) = IDiv16(divisor: (short)DsGlobals.Word0052, dividend: (int)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = IDiv16(divisor: (short)DsGlobals.Word0052, dividend: -1);
         // F000:01DA add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01DD mov word ptr DS:[0x0054],AX
@@ -399,23 +388,21 @@ public partial class CfgGeneratedOverrides {
         // F000:01E4 pushf
         Stack.Push16(FlagRegister16);
         // F000:01E5 mov DX,0xFBB4
-        DX = 0xFBB4;
         // F000:01E8 mov AX,0xC3DA
-        AX = 0xC3DA;
         // F000:01EB mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:01EE mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:01F3 idiv CX
-        (AX, DX) = IDiv16(divisor: (short)CX, dividend: (int)((uint)DX << 16 | (uint)AX));
+        (ax, dx) = IDiv16(divisor: -0x5172, dividend: -0x044B3C26);
         // F000:01F5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01F8 mov word ptr DS:[0x0058],AX
-        DsGlobals.Word0058 = AX;
+        DsGlobals.Word0058 = ax;
         // F000:01FB mov word ptr DS:[0x005A],CX
         DsGlobals.Word005A = 0xAE8E;
         // F000:01FF mov word ptr DS:[0x005C],DX
-        DsGlobals.Word005C = DX;
+        DsGlobals.Word005C = dx;
         // F000:0203 pushf
         Stack.Push16(FlagRegister16);
         // F000:0204 mov DX,0x25C9
@@ -436,7 +423,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_0211_F0211() {
-        ushort ax;
         CheckExternalEvents(biosSegment, 0x0211);
         // F000:0211 add BP,2
         BP = Alu16.Add(BP, 2);
@@ -447,13 +433,12 @@ public partial class CfgGeneratedOverrides {
         // F000:021B pushf
         Stack.Push16(FlagRegister16);
         // F000:021C mov AX,0x0014
-        ax = 0x0014;
         // F000:021F mov BX,5
         BX = 5;
         // F000:0222 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:0227 idiv BL
-        (AL, AH) = IDiv8(divisor: (sbyte)BL, dividend: (short)ax);
+        (AL, AH) = IDiv8(divisor: 5, dividend: 0x0014);
         // F000:0229 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:022C mov word ptr DS:[0x0062],AX
@@ -484,7 +469,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_024D_F024D() {
-        ushort ax;
         CheckExternalEvents(biosSegment, 0x024D);
         // F000:024D add BP,2
         BP = Alu16.Add(BP, 2);
@@ -495,13 +479,12 @@ public partial class CfgGeneratedOverrides {
         // F000:0257 pushf
         Stack.Push16(FlagRegister16);
         // F000:0258 mov AX,0xFFFF
-        ax = 0xFFFF;
         // F000:025B mov DH,1
         DH = 1;
         // F000:025D mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:0262 idiv DH
-        (AL, AH) = IDiv8(divisor: (sbyte)DH, dividend: (short)ax);
+        (AL, AH) = IDiv8(divisor: 1, dividend: -1);
         // F000:0264 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0267 mov word ptr DS:[0x006E],AX
@@ -511,13 +494,12 @@ public partial class CfgGeneratedOverrides {
         // F000:026E pushf
         Stack.Push16(FlagRegister16);
         // F000:026F mov AX,0xFFFF
-        ax = 0xFFFF;
         // F000:0272 mov word ptr DS:[0x0072],0xFFFF
         DsGlobals.Word0072 = 0xFFFF;
         // F000:0278 mov word ptr SS:[BP],4
         SsUInt16[BP] = 4;
         // F000:027D idiv byte ptr DS:[0x0073]
-        (AL, AH) = IDiv8(divisor: (sbyte)DsGlobals.Byte0073, dividend: (short)ax);
+        (AL, AH) = IDiv8(divisor: (sbyte)DsGlobals.Byte0073, dividend: -1);
         // F000:0281 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0284 mov word ptr DS:[0x0074],AX
@@ -527,13 +509,12 @@ public partial class CfgGeneratedOverrides {
         // F000:028B pushf
         Stack.Push16(FlagRegister16);
         // F000:028C mov AX,0x008A
-        ax = 0x008A;
         // F000:028F mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:0292 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:0297 idiv CL
-        (AL, AH) = IDiv8(divisor: (sbyte)CL, dividend: (short)ax);
+        (AL, AH) = IDiv8(divisor: -0x72, dividend: 0x008A);
         // F000:0299 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:029C mov word ptr DS:[0x0078],AX
@@ -759,6 +740,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax;
+        ushort dx;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov SP,0x00D0
@@ -769,15 +752,13 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0002 = 0xF000;
         // F000:000F mov BP,0x00D0
         // F000:0012 mov DX,0
-        DX = 0;
         // F000:0015 mov AX,0x0014
-        AX = 0x0014;
         // F000:0018 mov BX,5
         BX = 5;
         // F000:001B mov word ptr SS:[BP],2
         SsUInt16[0x00D0] = 2;
         // F000:0020 div BX
-        (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = Div16(divisor: 5, dividend: 0x00000014);
         // F000:0022 add BP,2
         BP = 0x00D2;
         CarryFlag = false;
@@ -795,15 +776,13 @@ public partial class CfgGeneratedOverrides {
         // F000:0030 pushf
         Stack.Push16(FlagRegister16);
         // F000:0031 mov DX,0xA320
-        DX = 0xA320;
         // F000:0034 mov AX,0xC3DA
-        AX = 0xC3DA;
         // F000:0037 mov word ptr DS:[6],0xFFFF
         DsGlobals.Word0006 = 0xFFFF;
         // F000:003D mov word ptr SS:[BP],4
         SsUInt16[0x00D2] = 4;
         // F000:0042 div word ptr DS:[6]
-        (AX, DX) = Div16(divisor: DsGlobals.Word0006, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        (ax, dx) = Div16(divisor: DsGlobals.Word0006, dividend: 0xA320C3DAu);
         // F000:0046 add BP,2
         BP = 0x00D4;
         CarryFlag = false;
@@ -813,9 +792,9 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         // F000:0049 mov word ptr DS:[8],AX
-        DsGlobals.Word0008 = AX;
+        DsGlobals.Word0008 = ax;
         // F000:004C mov word ptr DS:[0x000A],DX
-        DsGlobals.Word000A = DX;
+        DsGlobals.Word000A = dx;
         // F000:0050 pushf
         Stack.Push16(FlagRegister16);
         // F000:0051 mov DX,0xFFFF
@@ -828,7 +807,7 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[0x00D4] = 2;
         // F000:005F div CX
         try {
-            (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: CX, dividend: (uint)DX << 16 | (uint)AX);
             throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {

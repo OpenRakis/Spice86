@@ -127,29 +127,33 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort di1 = 0;
+        ushort ax;
         ushort bx;
         ushort ax1 = 0;
         ushort cx1 = 0;
         ushort bx1 = 0;
+        ushort cx;
         ushort bp1 = 0;
         ushort dx1 = 0;
+        ushort bx2 = 0;
         ushort es;
         ushort di;
-        ushort cx;
-        ushort cx2 = 0;
         ushort ax2 = 0;
-        ushort bx2 = 0;
-        ushort ax3 = 0;
+        ushort cx2 = 0;
         ushort bx3 = 0;
-        ushort ax4 = 0;
+        ushort ax3 = 0;
         ushort bx4 = 0;
-        ushort ax5 = 0;
+        ushort ax4 = 0;
         ushort bx5 = 0;
-        ushort ax6 = 0;
+        ushort ax5 = 0;
         ushort bx6 = 0;
-        ushort ax7 = 0;
+        ushort ax6 = 0;
         ushort bx7 = 0;
+        ushort ax7 = 0;
+        ushort bx8 = 0;
         ushort ax8 = 0;
+        ushort bx9 = 0;
+        ushort ax9 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -169,12 +173,12 @@ public partial class CfgGeneratedOverrides {
         // F000:0014 push AX
         // F000:0015 mov CX,0x2222
         // F000:0018 pop AX
-        AX = 0x1111;
+        ax = 0x1111;
         // F000:0019 push BX
         // F000:001A pop BX
         bx = BX;
         // F000:001B mov word ptr DS:[DI],AX
-        Segment2000Globals.Word0040 = AX;
+        Segment2000Globals.Word0040 = ax;
         // F000:001D mov BP,SP
         BP = SP;
         // F000:001F mov AX,0x2222
@@ -207,9 +211,8 @@ public partial class CfgGeneratedOverrides {
         // F000:003D pop BX
         bx1 = Stack.Pop16();
         // F000:003E mov word ptr DS:[DI+4],BX
-        Segment2000Globals.Word0044 = bx1;
         // F000:0041 mov word ptr DS:[DI+6],AX
-        Segment2000Globals.Word0046 = ax1;
+        Segment2000Globals.Dword0044 = (uint)bx1 | (uint)ax1 << 16;
         // F000:0044 mov AX,0x4444
         AX = 0x4444;
         // F000:0047 push AX
@@ -240,14 +243,14 @@ public partial class CfgGeneratedOverrides {
         // F000:005D push AX
         Stack.Push16(0x6666);
         // F000:005E mov CX,word ptr DS:[0x0FFE]
-        CX = Segment2000Globals.Word0FFE;
+        cx = Segment2000Globals.Word0FFE;
         // F000:0062 pop AX
         AX = Stack.Pop16();
         // F000:0063 push BX
         // F000:0064 pop BX
         BX = bx;
         // F000:0065 mov word ptr DS:[DI+0x0C],CX
-        UInt16[DS, (ushort)(di1 + 0x0C)] = CX;
+        UInt16[DS, (ushort)(di1 + 0x0C)] = cx;
         // F000:0068 mov BP,SP
         bp1 = SP;
         // F000:006A mov AX,0x7777
@@ -263,12 +266,12 @@ public partial class CfgGeneratedOverrides {
         // F000:0077 mov AX,0x8888
         // F000:007A push AX
         // F000:007B pop BX
-        BX = 0x8888;
+        bx2 = 0x8888;
         // F000:007C push CX
         // F000:007D pop CX
         CX = 0x7777;
         // F000:007E mov word ptr DS:[DI+0x10],BX
-        UInt16[DS, (ushort)(di1 + 0x10)] = BX;
+        UInt16[DS, (ushort)(di1 + 0x10)] = bx2;
         // F000:0081 mov AX,0x1111
         // F000:0084 mov ES,AX
         es = 0x1111;
@@ -290,12 +293,12 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0052 = BP;
         // F000:0099 pushf
         // F000:009A pop AX
-        AX = FlagRegister16;
+        ax2 = FlagRegister16;
         // F000:009B push BX
         // F000:009C pop BX
         BX = 0x1000;
         // F000:009D mov word ptr DS:[DI+0x14],AX
-        Segment2000Globals.Word0054 = AX;
+        Segment2000Globals.Word0054 = ax2;
         // F000:00A0 mov AX,0x0200
         // F000:00A3 push AX
         Stack.Push16(0x0200);
@@ -311,30 +314,30 @@ public partial class CfgGeneratedOverrides {
         // F000:00AD push AX
         Stack.Push16(0x9999);
         // F000:00AE mov BX,SP
-        BX = SP;
+        bx = SP;
         // F000:00B0 pop CX
         cx2 = Stack.Pop16();
         // F000:00B1 push DX
         // F000:00B2 pop DX
         DX = dx1;
         // F000:00B3 mov word ptr DS:[DI+0x18],BX
-        Segment2000Globals.Word0058 = BX;
+        Segment2000Globals.Word0058 = bx;
         // F000:00B6 mov BX,SP
         // F000:00B8 sub BX,2
-        BX = (ushort)(SP - 2);
+        bx3 = (ushort)(SP - 2);
         // F000:00BB mov SI,0x1234
         // F000:00BE push SI
         Stack.Push16(0x1234);
         // F000:00BF cmp word ptr SS:[BX],0x1234
         // F000:00C4 je short 0x00CB
-        if (SsUInt16[BX] == 0x1234) {
+        if (SsUInt16[bx3] == 0x1234) {
             // F000:00CB mov AX,0x1357
-            ax2 = 0x1357;
+            ax3 = 0x1357;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x00C6, SpeculativeRun_00C6);
             // F000:00C6 mov AX,0xBAD0
-            ax2 = 0xBAD0;
+            ax3 = 0xBAD0;
             // F000:00C9 jmp short 0x00CE
         }
         // F000:00CE pop SI
@@ -343,10 +346,10 @@ public partial class CfgGeneratedOverrides {
         // F000:00D0 pop CX
         CX = cx2;
         // F000:00D1 mov word ptr DS:[DI+0x1A],AX
-        Segment2000Globals.Word005A = ax2;
+        Segment2000Globals.Word005A = ax3;
         // F000:00D4 mov BX,SP
         // F000:00D6 sub BX,2
-        bx2 = (ushort)(SP - 2);
+        bx4 = (ushort)(SP - 2);
         // F000:00D9 mov DX,0x2222
         // F000:00DC push DX
         Stack.Push16(0x2222);
@@ -356,26 +359,26 @@ public partial class CfgGeneratedOverrides {
         // F000:00E0 jmp short 0x00E2
         // F000:00E2 cmp word ptr SS:[BX],0x2222
         // F000:00E7 je short 0x00EE
-        if (SsUInt16[bx2] == 0x2222) {
+        if (SsUInt16[bx4] == 0x2222) {
             // F000:00EE mov AX,0x2468
-            ax3 = 0x2468;
+            ax4 = 0x2468;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x00E9, SpeculativeRun_00E9);
             // F000:00E9 mov AX,0xBAD1
-            ax3 = 0xBAD1;
+            ax4 = 0xBAD1;
             // F000:00EC jmp short 0x00F1
         }
         // F000:00F1 mov word ptr DS:[DI+0x1C],AX
-        Segment2000Globals.Word005C = ax3;
+        Segment2000Globals.Word005C = ax4;
         // F000:00F4 xor DX,DX
         DX = 0;
         // F000:00F6 push BX
         // F000:00F7 pop BX
-        BX = bx2;
+        BX = bx4;
         // F000:00F8 mov BX,SP
         // F000:00FA sub BX,2
-        bx3 = (ushort)(SP - 2);
+        bx5 = (ushort)(SP - 2);
         // F000:00FD mov DX,0x3333
         // F000:0100 push DX
         Stack.Push16(0x3333);
@@ -385,25 +388,25 @@ public partial class CfgGeneratedOverrides {
         // F000:0104 jmp short 0x0106
         // F000:0106 cmp word ptr SS:[BX],0x3333
         // F000:010B je short 0x0112
-        if (SsUInt16[bx3] == 0x3333) {
+        if (SsUInt16[bx5] == 0x3333) {
             // F000:0112 mov AX,0x3579
-            ax4 = 0x3579;
+            ax5 = 0x3579;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x010D, SpeculativeRun_010D);
             // F000:010D mov AX,0xBAD2
-            ax4 = 0xBAD2;
+            ax5 = 0xBAD2;
             // F000:0110 jmp short 0x0115
         }
         // F000:0115 mov word ptr DS:[DI+0x1E],AX
-        Segment2000Globals.Word005E = ax4;
+        Segment2000Globals.Word005E = ax5;
         // F000:0118 xor DX,DX
         // F000:011A push BX
         // F000:011B pop BX
-        BX = bx3;
+        BX = bx5;
         // F000:011C mov BX,SP
         // F000:011E sub BX,2
-        bx4 = (ushort)(SP - 2);
+        bx6 = (ushort)(SP - 2);
         // F000:0121 mov DX,0x4646
         // F000:0124 push DX
         Stack.Push16(0x4646);
@@ -415,25 +418,25 @@ public partial class CfgGeneratedOverrides {
         // F000:0128 jmp short 0x012A
         // F000:012A cmp word ptr SS:[BX],0x4646
         // F000:012F je short 0x0136
-        if (SsUInt16[bx4] == 0x4646) {
+        if (SsUInt16[bx6] == 0x4646) {
             // F000:0136 mov AX,0x9ABC
-            ax5 = 0x9ABC;
+            ax6 = 0x9ABC;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0131, SpeculativeRun_0131);
             // F000:0131 mov AX,0xBAD3
-            ax5 = 0xBAD3;
+            ax6 = 0xBAD3;
             // F000:0134 jmp short 0x0139
         }
         // F000:0139 mov word ptr DS:[DI+0x20],AX
-        Segment2000Globals.Word0060 = ax5;
+        Segment2000Globals.Word0060 = ax6;
         // F000:013C xor DX,DX
         // F000:013E push BX
         // F000:013F pop BX
-        BX = bx4;
+        BX = bx6;
         // F000:0140 mov BX,SP
         // F000:0142 sub BX,2
-        bx5 = (ushort)(SP - 2);
+        bx7 = (ushort)(SP - 2);
         // F000:0145 mov DX,0x5555
         // F000:0148 push DX
         Stack.Push16(0x5555);
@@ -442,26 +445,26 @@ public partial class CfgGeneratedOverrides {
         // F000:014A jmp short 0x014C
         // F000:014C cmp word ptr SS:[BX],0x5555
         // F000:0151 je short 0x0158
-        if (SsUInt16[bx5] == 0x5555) {
+        if (SsUInt16[bx7] == 0x5555) {
             // F000:0158 mov AX,0x5151
-            ax6 = 0x5151;
+            ax7 = 0x5151;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0153, SpeculativeRun_0153);
             // F000:0153 mov AX,0xBAD4
-            ax6 = 0xBAD4;
+            ax7 = 0xBAD4;
             // F000:0156 jmp short 0x015B
         }
         // F000:015B mov word ptr DS:[DI+0x22],AX
-        Segment2000Globals.Word0062 = ax6;
+        Segment2000Globals.Word0062 = ax7;
         // F000:015E xor DX,DX
         DX = 0;
         // F000:0160 push BX
         // F000:0161 pop BX
-        BX = bx5;
+        BX = bx7;
         // F000:0162 mov BX,SP
         // F000:0164 sub BX,2
-        bx6 = (ushort)(SP - 2);
+        bx8 = (ushort)(SP - 2);
         // F000:0167 mov DX,0x6666
         // F000:016A push DX
         Stack.Push16(0x6666);
@@ -470,25 +473,25 @@ public partial class CfgGeneratedOverrides {
         // F000:016C jmp short 0x016E
         // F000:016E cmp word ptr SS:[BX],0x6666
         // F000:0173 je short 0x017A
-        if (SsUInt16[bx6] == 0x6666) {
+        if (SsUInt16[bx8] == 0x6666) {
             // F000:017A mov AX,0x6262
-            ax7 = 0x6262;
+            ax8 = 0x6262;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0175, SpeculativeRun_0175);
             // F000:0175 mov AX,0xBAD5
-            ax7 = 0xBAD5;
+            ax8 = 0xBAD5;
             // F000:0178 jmp short 0x017D
         }
         // F000:017D mov word ptr DS:[DI+0x24],AX
-        Segment2000Globals.Word0064 = ax7;
+        Segment2000Globals.Word0064 = ax8;
         // F000:0180 xor DX,DX
         // F000:0182 push BX
         // F000:0183 pop BX
-        BX = bx6;
+        BX = bx8;
         // F000:0184 mov BX,SP
         // F000:0186 sub BX,2
-        bx7 = (ushort)(SP - 2);
+        bx9 = (ushort)(SP - 2);
         // F000:0189 mov DX,0x4646
         // F000:018C push DX
         Stack.Push16(0x4646);
@@ -498,18 +501,18 @@ public partial class CfgGeneratedOverrides {
         // F000:018E jmp short 0x0190
         // F000:0190 cmp word ptr SS:[BX],0x4646
         // F000:0195 je short 0x019C
-        if (SsUInt16[bx7] == 0x4646) {
+        if (SsUInt16[bx9] == 0x4646) {
             // F000:019C mov AX,0x7373
-            ax8 = 0x7373;
+            ax9 = 0x7373;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0197, SpeculativeRun_0197);
             // F000:0197 mov AX,0xBAD6
-            ax8 = 0xBAD6;
+            ax9 = 0xBAD6;
             // F000:019A jmp short 0x019F
         }
         // F000:019F mov word ptr DS:[DI+0x26],AX
-        Segment2000Globals.Word0066 = ax8;
+        Segment2000Globals.Word0066 = ax9;
         // F000:01A2 xor DX,DX
         DX = 0;
         CarryFlag = false;
@@ -519,11 +522,11 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         // F000:01A4 push BX
-        Stack.Push16(bx7);
+        Stack.Push16(bx9);
         // F000:01A5 pop BX
         BX = Stack.Pop16();
         // F000:01A6 hlt
-        AX = ax8;
+        AX = ax9;
         return Hlt();
     }
 
@@ -549,9 +552,7 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
 
-    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
-
-    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+    public uint Dword0044 { get => _memory.UInt32[Segment, 0x0044]; set => _memory.UInt32[Segment, 0x0044] = value; }
 
     public ushort Word0052 { get => _memory.UInt16[Segment, 0x0052]; set => _memory.UInt16[Segment, 0x0052] = value; }
 

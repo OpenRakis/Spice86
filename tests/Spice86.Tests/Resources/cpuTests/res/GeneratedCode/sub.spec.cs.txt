@@ -64,6 +64,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort bp;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov SP,0x00A0
@@ -206,10 +207,9 @@ public partial class CfgGeneratedOverrides {
         // F000:00AD pushf
         Stack.Push16(FlagRegister16);
         // F000:00AE mov AL,0xBC
-        AL = 0xBC;
         // F000:00B0 mov AH,0x8E
         // F000:00B2 sub AH,AL
-        AH = 0xD2;
+        AX = 0xD2BC;
         CarryFlag = true;
         ParityFlag = true;
         AuxiliaryFlag = false;
@@ -258,9 +258,9 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         // F000:00F6 mov BP,0x8000
         // F000:00F9 sbb BP,-1
-        BP = Alu16.Sbb(0x8000, 0xFFFF);
+        bp = Alu16.Sbb(0x8000, 0xFFFF);
         // F000:00FC mov word ptr DS:[0x0031],BP
-        DsGlobals.Word0031 = BP;
+        DsGlobals.Word0031 = bp;
         // F000:0100 pushf
         Stack.Push16(FlagRegister16);
         // F000:0101 mov SI,0x52C3
