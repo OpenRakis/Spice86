@@ -1021,6 +1021,87 @@ public class CSharpOverrideHelper {
     public void FarReturn() => FarReturn(0);
 
     /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, without a caller
+    /// clean-up: the no-<paramref name="cleanupBytes"/> form of
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order (first slot first); the helper
+    /// pushes the last word first.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackArguments<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> typedCall, params ushort[] arguments) =>
+        CallWithStackArguments(expectedReturnCs, expectedReturnIp, 0, typedCall, arguments);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call: pushes
+    /// <paramref name="arguments"/> in reverse argument order (the order the original
+    /// <c>push</c> instructions ran, so the memory writes are identical), then performs the same
+    /// near typed call as <see cref="NearCall{T}(ushort, ushort, Func{T})"/> and finally steps SP by
+    /// <paramref name="cleanupBytes"/> (the caller's <c>add sp,n</c> whose flags were dead).
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call; 0 when the callee's
+    /// <c>ret n</c> or no clean-up instruction consumes the arguments.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order (first slot first); the helper
+    /// pushes the last word first.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackArguments<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Func<T> typedCall, params ushort[] arguments) {
+        for (int index = arguments.Length - 1; index >= 0; index--) {
+            Stack.Push16(arguments[index]);
+        }
+        T result = ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        State.SP = (ushort)(State.SP + cleanupBytes);
+        return result;
+    }
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, for a callee that
+    /// returns no value and whose caller runs no clean-up: the no-cleanup form of
+    /// <see cref="CallWithStackArguments(ushort, ushort, int, Action, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackArguments(ushort expectedReturnCs, ushort expectedReturnIp,
+        Action typedCall, params ushort[] arguments) =>
+        CallWithStackArguments(expectedReturnCs, expectedReturnIp, 0, typedCall, arguments);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, for a callee that
+    /// returns no value: same stack contract as
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <param name="arguments">The argument words in callee slot order.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackArguments(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Action typedCall, params ushort[] arguments) {
+        for (int index = arguments.Length - 1; index >= 0; index--) {
+            Stack.Push16(arguments[index]);
+        }
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        State.SP = (ushort)(State.SP + cleanupBytes);
+    }
+
+    /// <summary>
     /// The no-op <see cref="Action"/> an entry wrapper returns after its typed method already performed
     /// the return (<see cref="NearReturn"/> / <see cref="FarReturn"/> popped the stacked return address and
     /// set CS:IP). Returning it is exact: the wrapper adds no frame and the action does nothing.

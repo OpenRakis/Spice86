@@ -17,20 +17,20 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: CX, BP.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_01A7_F01A7(ushort di, ushort ds) {
+    public virtual void unknown_F000_01A7_F01A7(ushort di, ushort ds, ushort arg0) {
         DI = di;
         DS = ds;
         unknown_F000_01A7_F01A7Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01A7);
         BP = SP;
-        CX = frame.Arg0;
+        CX = arg0;
         UInt16[ds, di + 8] = CX;
         NearReturn();
         return;
     }
 
     public virtual Action unknown_F000_01A7_F01A7_Asm() {
-        unknown_F000_01A7_F01A7(DI, DS);
+        unknown_F000_01A7_F01A7(DI, DS, new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
@@ -93,8 +93,7 @@ public partial class CfgGeneratedOverrides {
         }
         bx1 = Stack.Pop16();
         Segment2000Globals.Dword0044 = (uint)bx1 | (uint)ax1 << 16;
-        Stack.Push16(0x4444);
-        NearCall(biosSegment, 0x004B, () => unknown_F000_01A7_F01A7(DI, DS));
+        CallWithStackArguments(biosSegment, 0x004B, () => unknown_F000_01A7_F01A7(DI, DS, 0x4444), 0x4444);
         AX = Stack.Pop16();
         BX = bx1;
         Stack.Push16(0x5555);

@@ -182,6 +182,39 @@ start:
     mov [90h], si
     mov byte [63h], 0
 
+; F15: the caller stores through an SS alias onto the first pushed word between the
+; pushes and the call; a helper that evaluated the arguments before the pushes
+; would pass the pre-store value.
+; Catches: a store into the argument area between the pushes folded anyway.
+    mov bp, sp
+    push 0AAAAh
+    mov word [ss:bp-2], 0BBBBh
+    push 0CCCCh
+    call f15_callee
+    add sp, 4
+    mov [64h], ax
+
+; F16: f16_callee reads the word above its return address; its entry is also a
+; jump target of f16_outer (a tail call), so the slot is not a private call
+; argument. The normal call site keeps the memory form.
+; Catches: an entry reached another way than a call still taking parameters.
+    push 0BEEFh
+    call f16_outer
+    add sp, 2
+    mov [66h], ax
+    push 0F00Dh
+    call f16_callee
+    add sp, 2
+    mov [68h], ax
+
+; F17: f17 copies SS into DS and reads its parameter through DS: an SS value used
+; as a data segment keeps the memory form.
+; Catches: SS passed on as a data segment not refusing.
+    push 1357h
+    call f17_callee
+    add sp, 2
+    mov [6Ah], ax
+
     hlt
 
 f1_callee:
@@ -305,6 +338,39 @@ changed_bp_slot:
     mov sp, bp
     pop si
     dec sp
+    ret
+
+f15_callee:
+    push bp
+    mov bp, sp
+    mov ax, [bp+4]
+    add ax, [bp+6]
+    pop bp
+    ret
+
+f16_outer:
+    push bp
+    mov bp, sp
+    jmp f16_mid
+
+f16_callee:
+    push bp
+    mov bp, sp
+f16_mid:
+    mov ax, [bp+4]
+    pop bp
+    ret
+
+f17_callee:
+    push bp
+    mov bp, sp
+    push ds
+    mov ax, ss
+    mov ds, ax
+    mov bx, bp
+    mov ax, [bx+4]
+    pop ds
+    pop bp
     ret
 
 rb 65520-$

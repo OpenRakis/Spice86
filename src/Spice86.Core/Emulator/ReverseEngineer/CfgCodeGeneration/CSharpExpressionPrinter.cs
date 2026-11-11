@@ -115,6 +115,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// as <c>frame.&lt;Name&gt;</c>.</summary>
     internal Ir.Memory.FrameSlotPlan? FramePlan => _method?.Prepared.FramePlan;
 
+    /// <summary>The stack argument plan of the method being printed: reads of a private argument
+    /// slot print as the parameter name instead of <c>frame.Arg…</c>.</summary>
+    internal Ir.StackArguments.StackArgumentPlan? StackPlan => _method is null
+        ? null : _analysis?.StackArguments.PlanOf(_method.Prepared.Method.MethodName);
+
     /// <summary>The signature of the typed method being printed, <see langword="null"/> for
     /// untyped methods: its <c>ret</c> / <c>retf</c> returns print the return value.</summary>
     internal Ir.TypedSignature? TypedSignature => _method?.Signature;
@@ -162,6 +167,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     // ----------------------------------------------------------------------------------------------------
 
     public CSharpFragment VisitMethodCallNode(MethodCallNode node) {
+        if (node is StackArgumentCallNode stackCall
+            && TypedSignatures?.TypedCallOf(stackCall.Call) is { } stackSignature
+            && stackCall.Call.Arguments[^1] is MethodGroupNode stackGroup) {
+            return StackArgumentCall(stackCall, stackSignature, stackGroup.MethodName);
+        }
         if (node is PortWriteCallNode port) {
             return PortWrite(port);
         }
@@ -187,13 +197,48 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         string methodName) {
         string prefix = string.Join(", ", call.Arguments.Take(call.Arguments.Count - 1)
             .Select(argument => Expr(argument).Text));
-        string invocation = $"{call.MethodName}({prefix}, () => {methodName}({signature.ArgumentList}))";
-        return signature.Outputs.Count switch {
+        string argumentList = signature.ArgumentList;
+        if (_analysis?.StackArguments.MergeFor(call) is { } merge) {
+            string stackList = string.Join(", ", merge.Arguments
+                .Select(argument => Expr(argument).Text));
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        string invocation = $"{call.MethodName}({prefix}, () => {methodName}({argumentList}))";
+        return CallResult(signature, invocation);
+    }
+
+    /// <summary>The merged form of a typed call whose pushes folded into the helper:
+    /// <c>AX = CallWithStackArguments(retCs, retIp, cleanup, () => f(AX, 0x2222), 0x2222)</c>.</summary>
+    private CSharpFragment StackArgumentCall(StackArgumentCallNode node,
+        Ir.TypedSignature signature, string methodName) {
+        ProcedureCallHelperNode call = node.Call;
+        List<string> arguments = [.. call.Arguments.Take(call.Arguments.Count - 1)
+            .Select(argument => Expr(argument).Text)];
+        if (node.CleanupBytes > 0) {
+            arguments.Add($"0x{node.CleanupBytes:X}");
+        }
+        string argumentList = signature.ArgumentList;
+        string stackList = string.Join(", ", node.StackArguments
+            .Select(argument => Expr(argument).Text));
+        if (stackList.Length > 0) {
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        arguments.Add($"() => {methodName}({argumentList})");
+        if (stackList.Length > 0) {
+            arguments.Add(stackList);
+        }
+        string invocation = $"CallWithStackArguments({string.Join(", ", arguments)})";
+        return CallResult(signature, invocation);
+    }
+
+    private static CSharpFragment CallResult(Ir.TypedSignature signature, string invocation) =>
+        signature.Outputs.Count switch {
             0 => invocation,
             1 => $"{signature.Outputs[0].Register} = {invocation}",
             _ => $"({string.Join(", ", signature.Outputs.Select(output => output.Register))}) = {invocation}"
         };
-    }
 
     private static readonly
         Dictionary<(Type Type, string Name, int ArgumentCount), ParameterInfo[]?> ParametersByCall = [];
@@ -415,6 +460,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     public CSharpFragment VisitSegmentedPointer(SegmentedPointerNode node) {
+        if (StackPlan is { } stackPlan
+            && stackPlan.ArgumentReads.TryGetValue(node, out string? argument)) {
+            return Atomic(argument, node.DataType);
+        }
         if (FramePlan is { } framePlan
             && framePlan.Names.TryGetValue(node, out string? frameSlot)) {
             return Atomic($"{framePlan.VariableName}.{frameSlot}", node.DataType);

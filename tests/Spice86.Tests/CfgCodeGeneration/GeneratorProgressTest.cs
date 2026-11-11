@@ -48,13 +48,16 @@ public class GeneratorProgressTest {
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> analysisSteps =
             steps.Where(s => s.Phase == DumpPhase.CodeProgramAnalysis).ToList();
-        analysisSteps.Select(s => s.Item).Take(3).Should().Equal(
-            "segment summaries", "calling conventions", "calling conventions, round 1");
-        analysisSteps.Select(s => s.Item).TakeLast(2).Should().Equal(
-            "typed signatures", "globals classification");
-        analysisSteps.Should().OnlyContain(s => s.Total == 4);
+        analysisSteps.Select(s => s.Item).Take(5).Should().Equal(
+            "segment summaries", "calling conventions", "calling conventions, round 1",
+            "observed conventions", "observed conventions, round 1");
+        analysisSteps.Select(s => s.Item).TakeLast(3).Should().Equal(
+            "typed signatures", "globals classification", "stack arguments");
+        analysisSteps.Should().OnlyContain(s => s.Total == 6);
         analysisSteps.Where(s => s.Current == 2).Should()
             .OnlyContain(s => s.Item.StartsWith("calling conventions"));
+        analysisSteps.Where(s => s.Current == 3).Should()
+            .OnlyContain(s => s.Item.StartsWith("observed conventions"));
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> printingSteps =
             steps.Where(s => s.Phase == DumpPhase.CodePrinting).ToList();

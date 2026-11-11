@@ -19,8 +19,9 @@ using System.Linq;
 /// drives only the read sets and write-backs of the round-two exits.</param>
 internal sealed record ProgramAnalysis(IrSegmentSummaries SegmentSummaries, IrCallingConventions CallingConventions,
     IrCallingConventions ObservedConventions,
-    TypedSignatures TypedSignatures, GlobalAccessClassification GlobalClasses) {
-    private const int PartCount = 5;
+    TypedSignatures TypedSignatures, GlobalAccessClassification GlobalClasses,
+    StackArguments StackArguments) {
+    private const int PartCount = 6;
 
     /// <summary>Runs the program-wide analyses of <paramref name="methods"/> in dependency order:
     /// segment summaries, the code and observed conventions, typed signatures, then the globals
@@ -44,6 +45,10 @@ internal sealed record ProgramAnalysis(IrSegmentSummaries SegmentSummaries, IrCa
         GlobalAccessClassification classes = GlobalAccessClassification.Build(
             methods.Select(method => (method.IrMethod, summaries.ValuesFor(method.Method), method.Ssa)),
             images);
-        return new ProgramAnalysis(summaries, conventions, observed, signatures, classes);
+        progress.Step(6, PartCount, "stack arguments");
+        StackArguments stackArguments = StackArguments.Compute(methods, signatures, conventions,
+            context, effectBuilder, images);
+        return new ProgramAnalysis(summaries, conventions, observed, signatures, classes,
+            stackArguments);
     }
 }

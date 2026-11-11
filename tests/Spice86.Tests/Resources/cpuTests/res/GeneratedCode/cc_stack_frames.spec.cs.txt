@@ -17,23 +17,23 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0145_F0145() {
-        unknown_F000_0145_F0145Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0145);
+    public virtual ushort unknown_F000_017F_F017F(ushort arg0, ushort arg2) {
+        unknown_F000_017F_F017FFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x017F);
         Stack.Push16(BP);
-        AX = frame.Arg0;
-        AX = Alu16.Add(AX, frame.Arg2);
+        AX = arg0;
+        AX = Alu16.Add(AX, arg2);
         BP = Stack.Pop16();
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_0145_F0145_Asm() {
-        AX = unknown_F000_0145_F0145();
+    public virtual Action unknown_F000_017F_F017F_Asm() {
+        AX = unknown_F000_017F_F017F(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2), new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(4));
         return Returned;
     }
 
-    public readonly struct unknown_F000_0145_F0145Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_017F_F017FFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -46,23 +46,23 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0150_F0150() {
-        unknown_F000_0150_F0150Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0150);
+    public virtual ushort unknown_F000_018A_F018A(ushort arg0, ushort arg2) {
+        unknown_F000_018A_F018AFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x018A);
         Stack.Push16(BP);
-        AX = frame.Arg0;
-        AX = Alu16.Add(AX, frame.Arg2);
+        AX = arg0;
+        AX = Alu16.Add(AX, arg2);
         BP = Stack.Pop16();
         NearReturn(4);
         return AX;
     }
 
-    public virtual Action unknown_F000_0150_F0150_Asm() {
-        AX = unknown_F000_0150_F0150();
+    public virtual Action unknown_F000_018A_F018A_Asm() {
+        AX = unknown_F000_018A_F018A(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2), new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(4));
         return Returned;
     }
 
-    public readonly struct unknown_F000_0150_F0150Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_018A_F018AFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -75,9 +75,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_015D_F015D() {
-        unknown_F000_015D_F015DFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x015D);
+    public virtual ushort unknown_F000_0197_F0197() {
+        unknown_F000_0197_F0197Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0197);
         Stack.Push16(BP);
         AX = frame.Arg0;
         AX = Alu16.Add(AX, frame.Arg2);
@@ -86,12 +86,12 @@ public partial class CfgGeneratedOverrides {
         return AX;
     }
 
-    public virtual Action unknown_F000_015D_F015D_Asm() {
-        AX = unknown_F000_015D_F015D();
+    public virtual Action unknown_F000_0197_F0197_Asm() {
+        AX = unknown_F000_0197_F0197();
         return Returned;
     }
 
-    public readonly struct unknown_F000_015D_F015DFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_0197_F0197Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0004].</summary>
@@ -104,29 +104,29 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_016A_F016A() {
+    public virtual ushort unknown_F000_01A4_F01A4(ushort arg0) {
         ushort bp;
-        unknown_F000_016A_F016AFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x016A);
+        unknown_F000_01A4_F01A4Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01A4);
         Stack.Push16(BP);
         bp = SP;
         SP -= 4;
         frame.Local4 = 0x0010;
         frame.Local6 = 0x0020;
         AX = (ushort)(frame.Local4 + frame.Local6);
-        AX = Alu16.Add(AX, frame.Arg0);
+        AX = Alu16.Add(AX, arg0);
         SP = bp;
         BP = Stack.Pop16();
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_016A_F016A_Asm() {
-        AX = unknown_F000_016A_F016A();
+    public virtual Action unknown_F000_01A4_F01A4_Asm() {
+        AX = unknown_F000_01A4_F01A4(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
-    public readonly struct unknown_F000_016A_F016AFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01A4_F01A4Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP - 0x0006].</summary>
@@ -142,21 +142,21 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0187_F0187() {
-        unknown_F000_0187_F0187Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0187);
+    public virtual ushort unknown_F000_01C1_F01C1(ushort arg0) {
+        unknown_F000_01C1_F01C1Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01C1);
         BX = SP;
-        AX = frame.Arg0;
+        AX = arg0;
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_0187_F0187_Asm() {
-        AX = unknown_F000_0187_F0187();
+    public virtual Action unknown_F000_01C1_F01C1_Asm() {
+        AX = unknown_F000_01C1_F01C1(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
-    public readonly struct unknown_F000_0187_F0187Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01C1_F01C1Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -166,16 +166,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_018E_F018E() {
-        unknown_F000_018E_F018EFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x018E);
+    public virtual Action unknown_F000_01C8_F01C8() {
+        unknown_F000_01C8_F01C8Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01C8);
         Stack.Push16(BP);
         frame.Arg0 = 0x4321;
         BP = Stack.Pop16();
         return NearRet();
     }
 
-    public readonly struct unknown_F000_018E_F018EFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01C8_F01C8Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -185,31 +185,28 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: AX. Changes: AX, BP, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0198_F0198(ushort bp) {
+    public virtual ushort unknown_F000_01D2_F01D2(ushort bp, ushort arg0) {
         BP = bp;
-        ushort bp1 = 0;
-        unknown_F000_0198_F0198Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0198);
+        unknown_F000_01D2_F01D2Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01D2);
         Stack.Push16(bp);
-        bp1 = SP;
-        AX = (ushort)(frame.Arg0 + 5);
-        Stack.Push16(AX);
-        BP = bp1;
-        AX = NearCall(biosSegment, 0x01A5, () => unknown_F000_01AF_F01AF());
+        BP = SP;
+        AX = (ushort)(arg0 + 5);
+        AX = CallWithStackArguments(biosSegment, 0x01DF, () => unknown_F000_01E9_F01E9(AX), AX);
         SP += 2;
-        AX = Alu16.Add(AX, frame.Arg0);
-        SP = bp1;
+        AX = Alu16.Add(AX, arg0);
+        SP = BP;
         BP = Stack.Pop16();
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_0198_F0198_Asm() {
-        AX = unknown_F000_0198_F0198(BP);
+    public virtual Action unknown_F000_01D2_F01D2_Asm() {
+        AX = unknown_F000_01D2_F01D2(BP, new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
-    public readonly struct unknown_F000_0198_F0198Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01D2_F01D2Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -219,25 +216,25 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01AF_F01AF() {
+    public virtual ushort unknown_F000_01E9_F01E9(ushort arg0) {
         ushort bp;
-        unknown_F000_01AF_F01AFFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x01AF);
+        unknown_F000_01E9_F01E9Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01E9);
         Stack.Push16(BP);
         bp = SP;
-        AX = frame.Arg0;
+        AX = arg0;
         SP = bp;
         BP = Stack.Pop16();
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_01AF_F01AF_Asm() {
-        AX = unknown_F000_01AF_F01AF();
+    public virtual Action unknown_F000_01E9_F01E9_Asm() {
+        AX = unknown_F000_01E9_F01E9(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
-    public readonly struct unknown_F000_01AF_F01AFFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01E9_F01E9Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -247,21 +244,21 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01B9_F01B9() {
-        unknown_F000_01B9_F01B9Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x01B9);
+    public virtual ushort unknown_F000_01F3_F01F3(ushort arg0) {
+        unknown_F000_01F3_F01F3Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01F3);
         BX = SP;
-        AX = frame.Arg0;
+        AX = arg0;
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_01B9_F01B9_Asm() {
-        AX = unknown_F000_01B9_F01B9();
+    public virtual Action unknown_F000_01F3_F01F3_Asm() {
+        AX = unknown_F000_01F3_F01F3(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
         return Returned;
     }
 
-    public readonly struct unknown_F000_01B9_F01B9Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_01F3_F01F3Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0002].</summary>
@@ -271,8 +268,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: BP. Changes: BP, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_01C0_F01C0() {
-        CheckExternalEvents(biosSegment, 0x01C0);
+    public virtual Action unknown_F000_01FA_F01FA() {
+        CheckExternalEvents(biosSegment, 0x01FA);
         Stack.Push16(BP);
         BP = (ushort)(SP + 1);
         SP = BP;
@@ -283,8 +280,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: BP. Changes: AX, CX, BP, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_01CA_F01CA() {
-        CheckExternalEvents(biosSegment, 0x01CA);
+    public virtual Action unknown_F000_0204_F0204() {
+        CheckExternalEvents(biosSegment, 0x0204);
         Stack.Push16(BP);
         CX = SS;
         AX = 0x3000;
@@ -298,10 +295,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: BP. Changes: AX, BP.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01DD_F01DD(ushort bp) {
+    public virtual ushort unknown_F000_0217_F0217(ushort bp) {
         BP = bp;
-        unknown_F000_01DD_F01DDFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x01DD);
+        unknown_F000_0217_F0217Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0217);
         Stack.Push16(bp);
         BP = SP;
         AX = 0x7777;
@@ -312,12 +309,12 @@ public partial class CfgGeneratedOverrides {
         return BP;
     }
 
-    public virtual Action unknown_F000_01DD_F01DD_Asm() {
-        BP = unknown_F000_01DD_F01DD(BP);
+    public virtual Action unknown_F000_0217_F0217_Asm() {
+        BP = unknown_F000_0217_F0217(BP);
         return Returned;
     }
 
-    public readonly struct unknown_F000_01DD_F01DDFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_0217_F0217Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP - 0x0002].</summary>
@@ -327,10 +324,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: SI. Outputs: SI. Changes: SI.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01EA_F01EA(ushort si) {
+    public virtual ushort unknown_F000_0224_F0224(ushort si) {
         SI = si;
-        unknown_F000_01EA_F01EAFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x01EA);
+        unknown_F000_0224_F0224Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0224);
         Stack.Push16(BP);
         Stack.Push16(si);
         frame.Local4 = 0x7777;
@@ -340,12 +337,12 @@ public partial class CfgGeneratedOverrides {
         return SI;
     }
 
-    public virtual Action unknown_F000_01EA_F01EA_Asm() {
-        SI = unknown_F000_01EA_F01EA(SI);
+    public virtual Action unknown_F000_0224_F0224_Asm() {
+        SI = unknown_F000_0224_F0224(SI);
         return Returned;
     }
 
-    public readonly struct unknown_F000_01EA_F01EAFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_0224_F0224Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP - 0x0004].</summary>
@@ -355,8 +352,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: SI, DI. Outputs: SI. Changes: BP, SI, PF, AF, ZF, SF, OF.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_01F6_F01F6() {
-        CheckExternalEvents(biosSegment, 0x01F6);
+    public virtual Action unknown_F000_0230_F0230() {
+        CheckExternalEvents(biosSegment, 0x0230);
         Stack.Push16(SI);
         BP = SP;
         Stack.Push16(DI);
@@ -365,6 +362,80 @@ public partial class CfgGeneratedOverrides {
         SI = Stack.Pop16();
         SP = Alu16.Dec(SP);
         return NearRet();
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_023A_F023A() {
+        unknown_F000_023A_F023AFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x023A);
+        Stack.Push16(BP);
+        AX = frame.Arg0;
+        AX = Alu16.Add(AX, frame.Arg2);
+        BP = Stack.Pop16();
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_023A_F023A_Asm() {
+        AX = unknown_F000_023A_F023A();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_023A_F023AFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+
+        /// <summary>Word at SS:[entry SP + 0x0004].</summary>
+        public ushort Arg2 { get => _slots.GetWord(0x0004); set => _slots.SetWord(0x0004, value); }
+    }
+
+    /// <summary>Inputs: BP. Outputs: AX, BP. Changes: AX, BP.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_0245_F0245() {
+        CheckExternalEvents(biosSegment, 0x0245);
+        Stack.Push16(BP);
+        BP = SP;
+        return unknown_F000_024D_F024D();
+    }
+
+    /// <summary>Inputs: BP. Outputs: AX. Changes: AX, BP.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_024A_F024A() {
+        CheckExternalEvents(biosSegment, 0x024A);
+        Stack.Push16(BP);
+        BP = SP;
+        return unknown_F000_024D_F024D();
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, BX.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_0252_F0252() {
+        ushort bp;
+        ushort ax;
+        CheckExternalEvents(biosSegment, 0x0252);
+        Stack.Push16(BP);
+        bp = SP;
+        Stack.Push16(DS);
+        ax = SS;
+        DS = ax;
+        BX = bp;
+        AX = UInt16[DS, BX + 4];
+        DS = Stack.Pop16();
+        BP = Stack.Pop16();
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_0252_F0252_Asm() {
+        AX = unknown_F000_0252_F0252();
+        return Returned;
     }
 
     /// <summary>Inputs: BP, DI. Does not return.</summary>
@@ -377,72 +448,63 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         DirectionFlag = false;
         Segment2000Globals.Word0080 = 0x1234;
-        Stack.Push16(0x1111);
-        Stack.Push16(0x2222);
         AX = 0xFFFF;
-        AX = NearCall(biosSegment, 0x001F, () => unknown_F000_0145_F0145());
+        AX = CallWithStackArguments(biosSegment, 0x001F, () => unknown_F000_017F_F017F(0x2222, 0x1111), 0x2222, 0x1111);
         SP += 4;
         Segment2000Globals.Word0040 = AX;
         Stack.Push16(0x5A5A);
-        Stack.Push16(1);
         AX = 2;
-        Stack.Push16(2);
-        AX = NearCall(biosSegment, 0x0034, () => unknown_F000_0150_F0150());
+        AX = CallWithStackArguments(biosSegment, 0x0034, () => unknown_F000_018A_F018A(2, 1), 2, 1);
         Segment2000Globals.Word0044 = AX;
         ax = Stack.Pop16();
         Segment2000Globals.Word0042 = ax;
         Stack.Push16(0x0100);
         AX = 0x0020;
         Stack.Push16(0x0020);
-        AX = FarCall(biosSegment, 0x0048, biosSegment, () => unknown_F000_015D_F015D());
+        AX = FarCall(biosSegment, 0x0048, biosSegment, () => unknown_F000_0197_F0197());
         Segment2000Globals.Word0046 = AX;
         AX = 3;
-        Stack.Push16(3);
-        AX = NearCall(biosSegment, 0x0052, () => unknown_F000_016A_F016A());
+        AX = CallWithStackArguments(biosSegment, 0x0052, () => unknown_F000_01A4_F01A4(3), 3);
         SP += 2;
         Segment2000Globals.Word0048 = AX;
-        Stack.Push16(0x7777);
-        AX = NearCall(biosSegment, 0x005E, () => unknown_F000_0187_F0187());
+        AX = CallWithStackArguments(biosSegment, 0x005E, () => unknown_F000_01C1_F01C1(0x7777), 0x7777);
         SP += 2;
         Segment2000Globals.Word004A = AX;
         Stack.Push16(0x9999);
-        NearCall(biosSegment, 0x006B, unknown_F000_018E_F018EEntry);
+        NearCall(biosSegment, 0x006B, unknown_F000_01C8_F01C8Entry);
         BX = SP;
         ax = SsUInt16[BX];
         Segment2000Globals.Word004C = ax;
         SP += 2;
         AX = 7;
-        Stack.Push16(7);
-        AX = NearCall(biosSegment, 0x007D, () => unknown_F000_0198_F0198(BP));
+        AX = CallWithStackArguments(biosSegment, 0x007D, () => unknown_F000_01D2_F01D2(BP, 7), 7);
         SP += 2;
         Segment2000Globals.Word004E = AX;
         AX = 0x2000;
         DS = 0x2000;
-        Stack.Push16(0x1234);
-        AX = NearCall(biosSegment, 0x008E, () => unknown_F000_01B9_F01B9());
+        AX = CallWithStackArguments(biosSegment, 0x008E, () => unknown_F000_01F3_F01F3(0x1234), 0x1234);
         SP += 2;
         Segment2000Globals.Word0050 = AX;
         AX = 0x3000;
-        Stack.Push16(0x1234);
-        AX = NearCall(biosSegment, 0x009F, () => unknown_F000_01B9_F01B9());
-        SP = Alu16.Add(SP, 2);
+        AX = CallWithStackArguments(biosSegment, 0x009F, () => unknown_F000_01F3_F01F3(0x1234), 0x1234);
+        SP += 2;
         BX = 0x2000;
         DS = 0x2000;
         Segment2000Globals.Word0052 = AX;
         BP = 0x4321;
-        NearCall(biosSegment, 0x00B0, unknown_F000_01C0_F01C0Entry);
+        NearCall(biosSegment, 0x00B0, unknown_F000_01FA_F01FAEntry);
         Segment2000Globals.Word0054 = BP;
         BP = 0x4321;
-        NearCall(biosSegment, 0x00BA, unknown_F000_01CA_F01CAEntry);
+        NearCall(biosSegment, 0x00BA, unknown_F000_0204_F0204Entry);
         Segment2000Globals.Word0056 = BP;
         BP = 0x4321;
-        BP = NearCall(biosSegment, 0x00C4, () => unknown_F000_01DD_F01DD(BP));
+        BP = NearCall(biosSegment, 0x00C4, () => unknown_F000_0217_F0217(BP));
         Segment2000Globals.Word0058 = BP;
         si = Segment2000Globals.Word0080;
         Segment2000Globals.Dword0084 = (uint)si | (uint)si << 16;
         Segment2000Globals.Dword0088 = (uint)si | (uint)si << 16;
         SI = si;
-        SI = NearCall(biosSegment, 0x00DF, () => unknown_F000_01EA_F01EA(SI));
+        SI = NearCall(biosSegment, 0x00DF, () => unknown_F000_0224_F0224(SI));
         Segment2000Globals.Dword005A = (uint)SI | (uint)SI << 16;
         Segment2000Globals.Word008C = SI;
         SP = 4;
@@ -450,7 +512,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0084 = (uint)si | (uint)si << 16;
         Segment2000Globals.Dword0088 = (uint)si | (uint)si << 16;
         SI = si;
-        SI = NearCall(biosSegment, 0x0105, () => unknown_F000_01EA_F01EA(SI));
+        SI = NearCall(biosSegment, 0x0105, () => unknown_F000_0224_F0224(SI));
         SP = 0x1000;
         Segment2000Globals.Dword005E = (uint)SI | (uint)SI << 16;
         Segment2000Globals.Word008E = SI;
@@ -459,11 +521,38 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0084 = (uint)si | (uint)si << 16;
         Segment2000Globals.Dword0088 = (uint)si | (uint)si << 16;
         SI = si;
-        NearCall(biosSegment, 0x0137, unknown_F000_01F6_F01F6Entry);
+        NearCall(biosSegment, 0x0137, unknown_F000_0230_F0230Entry);
         Segment2000Globals.Word0062 = SI;
         Segment2000Globals.Word0090 = SI;
         Segment2000Globals.Byte0063 = 0;
+        BP = SP;
+        Stack.Push16(0xAAAA);
+        SsUInt16[BP - 2] = 0xBBBB;
+        Stack.Push16(0xCCCC);
+        AX = NearCall(biosSegment, 0x0154, () => unknown_F000_023A_F023A());
+        SP = Alu16.Add(SP, 4);
+        Segment2000Globals.Word0064 = AX;
+        Stack.Push16(0xBEEF);
+        NearCall(biosSegment, 0x0160, unknown_F000_0245_F0245Entry);
+        SP = Alu16.Add(SP, 2);
+        Segment2000Globals.Word0066 = AX;
+        Stack.Push16(0xF00D);
+        NearCall(biosSegment, 0x016C, unknown_F000_024A_F024AEntry);
+        SP += 2;
+        Segment2000Globals.Word0068 = AX;
+        Stack.Push16(0x1357);
+        AX = NearCall(biosSegment, 0x0178, () => unknown_F000_0252_F0252());
+        SP = Alu16.Add(SP, 2);
+        Segment2000Globals.Word006A = AX;
         return Hlt();
+    }
+
+    /// <summary>Inputs: BP. Outputs: AX, BP. Changes: AX, BP.</summary>
+    public virtual Action unknown_F000_024D_F024D() {
+        CheckExternalEvents(biosSegment, 0x024D);
+        AX = SsUInt16[BP + 4];
+        BP = Stack.Pop16();
+        return NearRet();
     }
 
 }
@@ -520,6 +609,14 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public byte Byte0063 { get => _memory.UInt8[Segment, 0x0063]; set => _memory.UInt8[Segment, 0x0063] = value; }
 
+    public ushort Word0064 { get => _memory.UInt16[Segment, 0x0064]; set => _memory.UInt16[Segment, 0x0064] = value; }
+
+    public ushort Word0066 { get => _memory.UInt16[Segment, 0x0066]; set => _memory.UInt16[Segment, 0x0066] = value; }
+
+    public ushort Word0068 { get => _memory.UInt16[Segment, 0x0068]; set => _memory.UInt16[Segment, 0x0068] = value; }
+
+    public ushort Word006A { get => _memory.UInt16[Segment, 0x006A]; set => _memory.UInt16[Segment, 0x006A] = value; }
+
     public ushort Word0080 { get => _memory.UInt16[Segment, 0x0080]; set => _memory.UInt16[Segment, 0x0080] = value; }
 
     public uint Dword0084 { get => _memory.UInt32[Segment, 0x0084]; set => _memory.UInt32[Segment, 0x0084] = value; }
@@ -549,21 +646,26 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0145_F0145_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0150_F0150_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_015D_F015D_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_016A_F016A_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0187_F0187_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_018E_F018EEntry;
-    private readonly Func<int, Action> unknown_F000_0198_F0198_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01AF_F01AF_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01B9_F01B9_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01C0_F01C0Entry;
-    private readonly Func<int, Action> unknown_F000_01CA_F01CAEntry;
-    private readonly Func<int, Action> unknown_F000_01DD_F01DD_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01EA_F01EA_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01F6_F01F6Entry;
+    private readonly Func<int, Action> unknown_F000_017F_F017F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_018A_F018A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0197_F0197_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01A4_F01A4_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01C1_F01C1_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01C8_F01C8Entry;
+    private readonly Func<int, Action> unknown_F000_01D2_F01D2_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01E9_F01E9_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01F3_F01F3_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01FA_F01FAEntry;
+    private readonly Func<int, Action> unknown_F000_0204_F0204Entry;
+    private readonly Func<int, Action> unknown_F000_0217_F0217_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0224_F0224_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0230_F0230Entry;
+    private readonly Func<int, Action> unknown_F000_023A_F023A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0245_F0245Entry;
+    private readonly Func<int, Action> unknown_F000_024A_F024AEntry;
+    private readonly Func<int, Action> unknown_F000_0252_F0252_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+    private readonly Func<int, Action> unknown_F000_024D_F024DEntry;
 
     protected readonly Segment2000Globals Segment2000Globals;
 
@@ -571,36 +673,46 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
 
-        unknown_F000_0145_F0145_AsmEntry = _ => unknown_F000_0145_F0145_Asm();
-        unknown_F000_0150_F0150_AsmEntry = _ => unknown_F000_0150_F0150_Asm();
-        unknown_F000_015D_F015D_AsmEntry = _ => unknown_F000_015D_F015D_Asm();
-        unknown_F000_016A_F016A_AsmEntry = _ => unknown_F000_016A_F016A_Asm();
-        unknown_F000_0187_F0187_AsmEntry = _ => unknown_F000_0187_F0187_Asm();
-        unknown_F000_018E_F018EEntry = _ => unknown_F000_018E_F018E();
-        unknown_F000_0198_F0198_AsmEntry = _ => unknown_F000_0198_F0198_Asm();
-        unknown_F000_01AF_F01AF_AsmEntry = _ => unknown_F000_01AF_F01AF_Asm();
-        unknown_F000_01B9_F01B9_AsmEntry = _ => unknown_F000_01B9_F01B9_Asm();
-        unknown_F000_01C0_F01C0Entry = _ => unknown_F000_01C0_F01C0();
-        unknown_F000_01CA_F01CAEntry = _ => unknown_F000_01CA_F01CA();
-        unknown_F000_01DD_F01DD_AsmEntry = _ => unknown_F000_01DD_F01DD_Asm();
-        unknown_F000_01EA_F01EA_AsmEntry = _ => unknown_F000_01EA_F01EA_Asm();
-        unknown_F000_01F6_F01F6Entry = _ => unknown_F000_01F6_F01F6();
+        unknown_F000_017F_F017F_AsmEntry = _ => unknown_F000_017F_F017F_Asm();
+        unknown_F000_018A_F018A_AsmEntry = _ => unknown_F000_018A_F018A_Asm();
+        unknown_F000_0197_F0197_AsmEntry = _ => unknown_F000_0197_F0197_Asm();
+        unknown_F000_01A4_F01A4_AsmEntry = _ => unknown_F000_01A4_F01A4_Asm();
+        unknown_F000_01C1_F01C1_AsmEntry = _ => unknown_F000_01C1_F01C1_Asm();
+        unknown_F000_01C8_F01C8Entry = _ => unknown_F000_01C8_F01C8();
+        unknown_F000_01D2_F01D2_AsmEntry = _ => unknown_F000_01D2_F01D2_Asm();
+        unknown_F000_01E9_F01E9_AsmEntry = _ => unknown_F000_01E9_F01E9_Asm();
+        unknown_F000_01F3_F01F3_AsmEntry = _ => unknown_F000_01F3_F01F3_Asm();
+        unknown_F000_01FA_F01FAEntry = _ => unknown_F000_01FA_F01FA();
+        unknown_F000_0204_F0204Entry = _ => unknown_F000_0204_F0204();
+        unknown_F000_0217_F0217_AsmEntry = _ => unknown_F000_0217_F0217_Asm();
+        unknown_F000_0224_F0224_AsmEntry = _ => unknown_F000_0224_F0224_Asm();
+        unknown_F000_0230_F0230Entry = _ => unknown_F000_0230_F0230();
+        unknown_F000_023A_F023A_AsmEntry = _ => unknown_F000_023A_F023A_Asm();
+        unknown_F000_0245_F0245Entry = _ => unknown_F000_0245_F0245();
+        unknown_F000_024A_F024AEntry = _ => unknown_F000_024A_F024A();
+        unknown_F000_0252_F0252_AsmEntry = _ => unknown_F000_0252_F0252_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0145, unknown_F000_0145_F0145_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0150, unknown_F000_0150_F0150_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x015D, unknown_F000_015D_F015D_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x016A, unknown_F000_016A_F016A_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0187, unknown_F000_0187_F0187_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x018E, unknown_F000_018E_F018EEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0198, unknown_F000_0198_F0198_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01AF, unknown_F000_01AF_F01AF_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01B9, unknown_F000_01B9_F01B9_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C0, unknown_F000_01C0_F01C0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01CA, unknown_F000_01CA_F01CAEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DD, unknown_F000_01DD_F01DD_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01EA, unknown_F000_01EA_F01EA_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F6, unknown_F000_01F6_F01F6Entry, "unknown");
+        unknown_F000_024D_F024DEntry = _ => unknown_F000_024D_F024D();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x017F, unknown_F000_017F_F017F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x018A, unknown_F000_018A_F018A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0197, unknown_F000_0197_F0197_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01A4, unknown_F000_01A4_F01A4_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C1, unknown_F000_01C1_F01C1_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C8, unknown_F000_01C8_F01C8Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D2, unknown_F000_01D2_F01D2_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01E9, unknown_F000_01E9_F01E9_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F3, unknown_F000_01F3_F01F3_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01FA, unknown_F000_01FA_F01FAEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0204, unknown_F000_0204_F0204Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0217, unknown_F000_0217_F0217_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0224, unknown_F000_0224_F0224_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0230, unknown_F000_0230_F0230Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x023A, unknown_F000_023A_F023A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0245, unknown_F000_0245_F0245Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x024A, unknown_F000_024A_F024AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0252, unknown_F000_0252_F0252_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x024D, unknown_F000_024D_F024DEntry, "unknown");
     }
 
 }

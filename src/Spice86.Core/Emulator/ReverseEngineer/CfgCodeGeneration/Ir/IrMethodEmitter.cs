@@ -138,10 +138,10 @@ internal sealed class IrMethodEmitter(
                 UnprintedNodes(prepared.FramePlan),
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask));
-            BlockNode body = prepared.Body;
+            BlockNode body = analysis.StackArguments.Apply(prepared.Body);
             if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0
                 || registerLocals.Replacements.Count > 0) {
-                if (RegisterLocalPromotion.ApplyToBody(prepared.Body, registerLocals)
+                if (RegisterLocalPromotion.ApplyToBody(body, registerLocals)
                         is { } rewrittenBody) {
                     body = rewrittenBody;
                 } else {
@@ -178,18 +178,28 @@ internal sealed class IrMethodEmitter(
         List<MethodInstructionLine>? instructionLines = null;
         timer.Measure("printing", () => {
             PrintHeader(writer, method.Prepared.Method, analysis);
-            writer.OpenBlock(SignatureText(method.Prepared.Method, method.Signature));
+            writer.OpenBlock(SignatureText(method.Prepared.Method, method.Signature,
+                analysis.StackArguments.PlanOf(method.Prepared.Method.MethodName)));
             instructionLines = PrintBody(writer, method, analysis);
-            PrintTail(writer, method.Prepared.Method, method.Signature, method.Prepared.FramePlan);
+            PrintTail(writer, method.Prepared.Method, method.Signature, method.Prepared.FramePlan,
+                analysis.StackArguments.PlanOf(method.Prepared.Method.MethodName));
         });
         return instructionLines ?? [];
     }
 
     /// <summary>The <c>public virtual</c> line that opens the method: typed signature, entry
     /// dispatch, or parameterless.</summary>
-    private static string SignatureText(MethodPlan method, TypedSignature? signature) {
+    private static string SignatureText(MethodPlan method, TypedSignature? signature,
+        StackArguments.StackArgumentPlan? stackPlan) {
         if (signature is not null) {
-            return $"public virtual {signature.ReturnType} {method.MethodName}({signature.ParameterList})";
+            string parameterList = signature.ParameterList;
+            if (stackPlan is { } plan) {
+                string stackList = string.Join(", ", plan.Parameters
+                    .Select(parameter => $"{parameter.Type} {parameter.Name}"));
+                parameterList = parameterList.Length == 0
+                    ? stackList : $"{parameterList}, {stackList}";
+            }
+            return $"public virtual {signature.ReturnType} {method.MethodName}({parameterList})";
         }
         if (method.NeedsEntryDispatch) {
             return $"public virtual Action {method.MethodName}(int loadOffset)";
@@ -265,9 +275,10 @@ internal sealed class IrMethodEmitter(
     /// <summary>What follows the method's closing brace: the <c>_Asm</c> wrapper of a typed method,
     /// the frame class, and the trailing blank line.</summary>
     private static void PrintTail(CSharpSourceWriter writer, MethodPlan method,
-        TypedSignature? signature, FrameSlotPlan? framePlan) {
+        TypedSignature? signature, FrameSlotPlan? framePlan,
+        StackArguments.StackArgumentPlan? stackPlan) {
         if (signature is not null) {
-            PrintAsmWrapper(writer, method, signature);
+            PrintAsmWrapper(writer, method, signature, stackPlan);
         }
         if (framePlan is not null) {
             writer.Line();
@@ -363,10 +374,18 @@ internal sealed class IrMethodEmitter(
     /// <summary>Writes the <c>Action</c> entry wrapper of a typed method right after it: it calls
     /// the typed method with the register arguments, stores the outputs back and returns
     /// <c>Returned</c>. Every delegate reference and partition return uses this name.</summary>
-    private static void PrintAsmWrapper(CSharpSourceWriter writer, MethodPlan method, TypedSignature signature) {
+    private static void PrintAsmWrapper(CSharpSourceWriter writer, MethodPlan method,
+        TypedSignature signature, StackArguments.StackArgumentPlan? stackPlan) {
         writer.Line();
         writer.OpenBlock($"public virtual Action {method.MethodName}_Asm()");
-        string invocation = $"{method.MethodName}({signature.ArgumentList});";
+        string argumentList = signature.ArgumentList;
+        if (stackPlan is { } plan) {
+            string stackList = string.Join(", ", plan.Parameters
+                .Select(parameter => parameter.WrapperRead));
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        string invocation = $"{method.MethodName}({argumentList});";
         writer.Line(signature.Outputs.Count switch {
             0 => invocation,
             1 => $"{signature.Outputs[0].Register} = {invocation}",
