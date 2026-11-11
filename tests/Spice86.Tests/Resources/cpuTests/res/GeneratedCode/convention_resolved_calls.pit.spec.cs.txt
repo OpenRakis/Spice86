@@ -138,7 +138,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual Action unknown_F000_010A_F010A() {
         CheckExternalEvents(biosSegment, 0x010A);
-        NearCall(biosSegment, 0x010D, unknown_F000_0103_F0103Entry);
+        NearCall(biosSegment, 0x010D, unknown_F000_0103_F0103Entry, [new(new(biosSegment, 0x0107), unknown_F000_0107_F0107Entry), new(new(biosSegment, 0x0109), unknown_F000_0109_F0109_AsmEntry)]);
         return NearRet();
     }
 
@@ -219,10 +219,10 @@ public partial class CfgGeneratedOverrides {
         DX = Alu16.Xor(DX, DX);
         AX = 5;
         CX = 0;
-        NearCall(biosSegment, 0x0078, unknown_F000_0103_F0103Entry);
+        NearCall(biosSegment, 0x0078, unknown_F000_0103_F0103Entry, [new(new(biosSegment, 0x0107), unknown_F000_0107_F0107Entry), new(new(biosSegment, 0x0109), unknown_F000_0109_F0109_AsmEntry)]);
         Segment2000Globals.Word0304 = CX;
         CX = 1;
-        NearCall(biosSegment, 0x0082, unknown_F000_0103_F0103Entry);
+        NearCall(biosSegment, 0x0082, unknown_F000_0103_F0103Entry, [new(new(biosSegment, 0x0107), unknown_F000_0107_F0107Entry), new(new(biosSegment, 0x0109), unknown_F000_0109_F0109_AsmEntry)]);
         NearCall(biosSegment, 0x0085, unknown_F000_010A_F010AEntry);
         BP = 0;
         SI = 0x5555;
@@ -232,13 +232,13 @@ public partial class CfgGeneratedOverrides {
         InterruptFlag = false;
         SI = 0;
         CX = 0;
-        NearCall(biosSegment, 0x0099, unknown_F000_00AE_F00AEEntry);
-        NearCall(biosSegment, 0x009C, unknown_F000_00B1_F00B1Entry);
-        NearCall(biosSegment, 0x009F, unknown_F000_00C2_F00C2Entry);
+        NearCall(biosSegment, 0x0099, unknown_F000_00AE_F00AEEntry, [new(new(biosSegment, 0x00B4), unknown_F000_00B4_F00B4_AsmEntry)]);
+        NearCall(biosSegment, 0x009C, unknown_F000_00B1_F00B1Entry, [new(new(biosSegment, 0x00B4), unknown_F000_00B4_F00B4_AsmEntry)]);
+        NearCall(biosSegment, 0x009F, unknown_F000_00C2_F00C2Entry, [new(new(biosSegment, 0x00E4), unknown_F000_00E4_F00E4_AsmEntry)]);
         Segment2000Globals.Byte0312 = 0;
-        NearCall(biosSegment, 0x00A7, unknown_F000_00C4_F00C4Entry);
-        NearCall(biosSegment, 0x00AA, unknown_F000_00EC_F00ECEntry);
-        NearCall(biosSegment, 0x00AD, unknown_F000_00F1_F00F1Entry);
+        NearCall(biosSegment, 0x00A7, unknown_F000_00C4_F00C4Entry, [new(new(biosSegment, 0x00E4), unknown_F000_00E4_F00E4_AsmEntry)]);
+        NearCall(biosSegment, 0x00AA, unknown_F000_00EC_F00ECEntry, [new(new(biosSegment, 0x00F6), unknown_F000_00F6_F00F6_AsmEntry)]);
+        NearCall(biosSegment, 0x00AD, unknown_F000_00F1_F00F1Entry, [new(new(biosSegment, 0x00F6), unknown_F000_00F6_F00F6_AsmEntry)]);
         return Hlt();
     }
 
@@ -502,6 +502,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

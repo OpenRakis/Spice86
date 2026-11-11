@@ -434,10 +434,10 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2000;
         ES = 0x2000;
         CX = 0;
-        NearCall(biosSegment, 0x0230, unknown_F000_0315_F0315Entry);
+        NearCall(biosSegment, 0x0230, unknown_F000_0315_F0315Entry, [new(new(biosSegment, 0x031E), unknown_F000_031E_F031E)]);
         DsGlobals.Byte005B = AL;
         CX = 1;
-        NearCall(biosSegment, 0x0239, unknown_F000_0317_F0317Entry);
+        NearCall(biosSegment, 0x0239, unknown_F000_0317_F0317Entry, [new(new(biosSegment, 0x0324), _ => unknown_F000_031E_F031E(0x0324))]);
         DsGlobals.Byte005C = AL;
         ES = 0;
         Segment0000Globals.Dword0020 = 0x000002BC | (uint)CS << 16;
@@ -899,6 +899,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

@@ -138,7 +138,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (TryResolveConstantTarget(node.Instruction, targetAddress) is not ResolvedCfgEdge targetEdge) {
             return UntestedMessages.Call(node.Instruction.Address);
         }
-        return Transfer.EmitCallHelperAndContinuation(CallDistance.Near, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), null);
+        return Transfer.EmitCallHelperAndContinuation(CallDistance.Near, node.CallBitWidth, node.Instruction, targetEdge, null);
     }
 
     public IVisitableAstNode VisitCallFarNode(CallFarNode node) {
@@ -154,7 +154,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (TryResolveConstantTarget(node.Instruction, targetAddress) is not ResolvedCfgEdge targetEdge) {
             return UntestedMessages.Call(node.Instruction.Address);
         }
-        return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
+        return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, targetEdge, targetSegment.Value);
     }
 
     /// <summary>
@@ -177,30 +177,39 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             ClassifyInterruptSite(node, continuation);
         if (kind == InterruptSiteKind.ProgramHandler
             && _effectBuilder.ProgramHandlerOf(node.Instruction) is { } handler) {
+            List<IVisitableAstNode> handlerArguments = [
+                new SegmentVariableNode(expectedReturn.Segment),
+                new OffsetLiteralNode(expectedReturn.Offset),
+                vector,
+                new SegmentVariableNode(handler.Entry.Address.Segment),
+                new OffsetLiteralNode(handler.Entry.Address.Offset),
+                new MethodGroupNode(Context.GetMethodName(handler.Partition),
+                    Context.GetEntryLoadOffset(handler.Partition, handler.Entry.Node),
+                    Context.GetEntries(handler.Partition).Count == 1)];
+            if (Transfer.LandingsList(handler.Partition, continuation) is { } handlerLandings) {
+                handlerArguments.Add(handlerLandings);
+            }
             return Sequence(
-                new ProgramInterruptCallHelperNode(
-                    [new SegmentVariableNode(expectedReturn.Segment),
-                        new OffsetLiteralNode(expectedReturn.Offset),
-                        vector,
-                        new SegmentVariableNode(handler.Entry.Address.Segment),
-                        new OffsetLiteralNode(handler.Entry.Address.Offset),
-                        new MethodGroupNode(Context.GetMethodName(handler.Partition),
-                            Context.GetEntryLoadOffset(handler.Partition, handler.Entry.Node),
-                            Context.GetEntries(handler.Partition).Count == 1)],
-                    handler.Effect, HardwareInterruptEffect),
+                new ProgramInterruptCallHelperNode(handlerArguments.ToArray(), handler.Effect, HardwareInterruptEffect),
                 Transfer.EmitPostCallContinuation(node.Instruction, continuation));
+        }
+        List<IVisitableAstNode> callArguments = [
+            new SegmentVariableNode(expectedReturn.Segment),
+            new OffsetLiteralNode(expectedReturn.Offset),
+            vector];
+        List<IVisitableAstNode> elsewhereArguments = [
+            new SegmentVariableNode(expectedReturn.Segment),
+            new OffsetLiteralNode(expectedReturn.Offset),
+            vector,
+            Transfer.RedirectedAddressList(continuation)];
+        if (Transfer.InterruptLandingsList(node.Instruction, continuation) is { } landings) {
+            callArguments.Add(landings);
+            elsewhereArguments.Add(landings);
         }
         return Sequence(
             Transfer.EmitCallWithRedirectedDispatch(node.Instruction, continuation,
-                new InterruptCallHelperNode(kind, service, null,
-                    new SegmentVariableNode(expectedReturn.Segment),
-                    new OffsetLiteralNode(expectedReturn.Offset),
-                    vector),
-                new InterruptCallReturnedElsewhereHelperNode(
-                    new SegmentVariableNode(expectedReturn.Segment),
-                    new OffsetLiteralNode(expectedReturn.Offset),
-                    vector,
-                    Transfer.RedirectedAddressList(continuation))),
+                new InterruptCallHelperNode(kind, service, null, callArguments.ToArray()),
+                new InterruptCallReturnedElsewhereHelperNode(elsewhereArguments.ToArray())),
             Transfer.EmitPostCallContinuation(node.Instruction, continuation));
     }
 
@@ -474,9 +483,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                     TransferEmitter.AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, only.Target.Address),
                     Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
                         Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                            Transfer.FunctionReference(only), only.Target.Address.Segment, true, continuation),
+                            Transfer.FunctionReference(only), only.Target.Address.Segment, true, continuation, Transfer.LandingsList(only, continuation)),
                         Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
-                            Transfer.FunctionReference(only), only.Target.Address.Segment, continuation))),
+                            Transfer.FunctionReference(only), only.Target.Address.Segment, continuation, Transfer.LandingsList(only, continuation)))),
                     Sequence(UntestedMessages.FarTarget("call", segmentDeclaration.Reference,
                         offsetDeclaration.Reference, instruction.Address))),
                 Transfer.EmitPostCallContinuation(instruction, continuation));
@@ -498,9 +507,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             sections.Add(Section(key,
                 Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
                     Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, false, continuation),
+                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, false, continuation, Transfer.LandingsList(edge, continuation)),
                     Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
-                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, continuation)))));
+                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, continuation, Transfer.LandingsList(edge, continuation))))));
         }
         SwitchNode dispatch = new(switchValue, sections,
             Sequence(UntestedMessages.FarTarget("call", segmentDeclaration.Reference, offsetDeclaration.Reference,
@@ -531,8 +540,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         CallDistance distance, BitWidth width, ResolvedCfgEdge edge) {
         return Sequence(
             Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
-                Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, false, continuation),
-                Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, continuation)),
+                Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, false, continuation, Transfer.LandingsList(edge, continuation)),
+                Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, continuation, Transfer.LandingsList(edge, continuation))),
             Transfer.EmitPostCallContinuation(instruction, continuation));
     }
 

@@ -113,6 +113,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     public IrEffects VisitMethodGroupNode(MethodGroupNode node) => IrEffects.None;
 
     public IrEffects VisitSegmentedAddressListNode(SegmentedAddressListNode node) => IrEffects.None;
+    public IrEffects VisitCallLandingListNode(CallLandingListNode node) => IrEffects.None;
 
     public IrEffects VisitSignatureFieldNode(SignatureFieldNode node) => IrEffects.None;
 

@@ -47,7 +47,7 @@ public partial class CfgGeneratedOverrides {
         DX = word2;
         AX = word2;
         AH = 0x26;
-        InterruptCall(cs1, 0x012A, 0x21);
+        InterruptCall(cs1, 0x012A, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A7, SpeculativeRun_01A7);
             AX = 0x4C03;
@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested return from call at 016D:019B");
         }
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0193, 0x21);
+        InterruptCall(cs1, 0x0193, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
         throw FailAsUntested("Untested return from call at 016D:0191");
     }
 
@@ -147,7 +147,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs2, 0x0100);
         DX = 0x0013;
         AX = 0x31AA;
-        InterruptCall(cs2, 0x0108, 0x21);
+        InterruptCall(cs2, 0x0108, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
         throw FailAsUntested("Untested return from call at 01AC:0106");
     }
 
@@ -305,6 +305,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

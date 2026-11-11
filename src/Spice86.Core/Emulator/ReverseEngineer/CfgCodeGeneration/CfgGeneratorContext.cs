@@ -188,4 +188,53 @@ internal sealed class CfgGeneratorContext {
         // whichever continuation partition the stack unwinds to. So no static continuation is recorded here.
         return new CallContinuation(expectedReturn, ObservedContinuationEdge: null, redirected);
     }
+
+    /// <summary>
+    /// The partition entries discovery observed the call's callee transferring control to while the call's
+    /// frame was still open: the targets of the callee partition's dynamic returns and same-activation
+    /// flows that land on an entry, over every partition reachable through transfers that keep the frame
+    /// open. A landing's own partition runs inside the same open frame, so its transfers are collected
+    /// too. Calls and CPU faults cross an activation boundary - the nested call dispatches its own
+    /// landings and a fault runs in its own execution context - so they are not traversed. The expected
+    /// return address is not a landing: the call's dispatch recognizes it before consulting this list.
+    /// </summary>
+    /// <param name="calleePartition">The partition the call site transfers to.</param>
+    /// <param name="expectedReturn">The address the call expects to return to.</param>
+    public IReadOnlyList<(CfgCodePartition Partition, CfgCodePartitionEntry Entry)> ResolveCallLandings(
+        CfgCodePartition calleePartition, SegmentedAddress expectedReturn) {
+        List<(CfgCodePartition, CfgCodePartitionEntry)> landings = [];
+        HashSet<SegmentedAddress> armed = [];
+        HashSet<CfgCodePartition> visited = [calleePartition];
+        Queue<CfgCodePartition> pending = new();
+        pending.Enqueue(calleePartition);
+        while (pending.Count > 0) {
+            CfgCodePartition partition = pending.Dequeue();
+            foreach (CfgCodePartitionTransfer transfer in Program.Transfers) {
+                if (!partition.Equals(transfer.FromPartition) || !KeepsCallFrameOpen(transfer.Kind)) {
+                    continue;
+                }
+                if (visited.Add(transfer.ToPartition)) {
+                    pending.Enqueue(transfer.ToPartition);
+                }
+                if (transfer.Target == expectedReturn || !armed.Add(transfer.Target)) {
+                    continue;
+                }
+                CfgCodePartitionEntry? entry = GetEntries(transfer.ToPartition)
+                    .Where(candidate => candidate.Address == transfer.Target)
+                    .Cast<CfgCodePartitionEntry?>()
+                    .FirstOrDefault();
+                if (entry is { } found) {
+                    landings.Add((transfer.ToPartition, found));
+                }
+            }
+        }
+        return landings
+            .OrderBy(landing => landing.Item2.Address.Linear)
+            .ToList();
+    }
+
+    private static bool KeepsCallFrameOpen(CfgCodePartitionTransferKind kind) =>
+        kind is CfgCodePartitionTransferKind.DynamicReturn
+            or CfgCodePartitionTransferKind.CrossPartitionFlow
+            or CfgCodePartitionTransferKind.CyclicCrossPartitionFlow;
 }

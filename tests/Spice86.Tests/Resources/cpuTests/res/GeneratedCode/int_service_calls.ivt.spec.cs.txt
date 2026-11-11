@@ -149,7 +149,7 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2521;
         InterruptCall(cs1, 0x0256, 0x21);
         AH = 0x30;
-        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
+        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
         EsGlobals.Word005C = AX;
         EsGlobals.Word005E = BX;
         AH = 0x30;
@@ -169,7 +169,7 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Word0096 = 0x1234;
         CsGlobals.Word041F = SP;
         AX = 0x30A5;
-        InterruptCall(cs1, 0x0292, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
+        InterruptCall(cs1, 0x0292, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
         Stack.Push16(FlagRegister16);
         AX = Stack.Pop16();
         AX &= 1;
@@ -202,7 +202,7 @@ public partial class CfgGeneratedOverrides {
         word1 = CsGlobals.Word0419;
         DS = word1;
         AX = 0x2521;
-        InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
+        InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
         Stack.Push16(CS);
         DS = Stack.Pop16();
         AH = 0x30;
@@ -237,10 +237,10 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2000;
         DS = 0x2000;
         CX = 0;
-        NearCall(cs1, 0x0383, unknown_016D_03E1_01AB1Entry);
+        NearCall(cs1, 0x0383, unknown_016D_03E1_01AB1Entry, [new(new(cs1, 0x03EA), unknown_016D_03EA_01ABA)]);
         EsGlobals.Byte0082 = AL;
         CX = 1;
-        NearCall(cs1, 0x038D, unknown_016D_03E3_01AB3Entry);
+        NearCall(cs1, 0x038D, unknown_016D_03E3_01AB3Entry, [new(new(cs1, 0x03F0), _ => unknown_016D_03EA_01ABA(0x03F0))]);
         EsGlobals.Byte0083 = AL;
         DS = 0x2000;
         DX = 0xBEEF;
@@ -254,7 +254,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_016D_03A7_01A77() {
         CheckExternalEvents(cs1, 0x03A7);
-        InterruptCall(cs1, 0x03A9, 0x21);
+        InterruptCall(cs1, 0x03A9, 0x21, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
         return NearRet();
     }
 
@@ -262,7 +262,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_03AA_01A7A() {
         CheckExternalEvents(cs1, 0x03AA);
         AH = 0x30;
-        InterruptCall(cs1, 0x03AE, 0x21);
+        InterruptCall(cs1, 0x03AE, 0x21, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
         return NearRet();
     }
 
@@ -775,6 +775,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

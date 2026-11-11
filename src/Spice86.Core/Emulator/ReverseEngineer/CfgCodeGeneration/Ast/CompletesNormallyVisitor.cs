@@ -210,6 +210,7 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     public bool VisitMethodGroupNode(MethodGroupNode node) => true;
 
     public bool VisitSegmentedAddressListNode(SegmentedAddressListNode node) => true;
+    public bool VisitCallLandingListNode(CallLandingListNode node) => true;
 
     public bool VisitSignatureFieldNode(SignatureFieldNode node) => true;
 

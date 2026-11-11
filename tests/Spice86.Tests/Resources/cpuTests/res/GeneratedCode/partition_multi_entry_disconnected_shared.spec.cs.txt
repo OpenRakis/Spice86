@@ -39,13 +39,13 @@ public partial class CfgGeneratedOverrides {
         BX = 0;
         CX = Alu16.Xor(CX, CX);
         AL = 0;
-        NearCall(biosSegment, 0x0011, unknown_F000_0021_F0021Entry);
+        NearCall(biosSegment, 0x0011, unknown_F000_0021_F0021Entry, [new(new(biosSegment, 0x002D), unknown_F000_002D_F002DEntry), new(new(biosSegment, 0x0033), unknown_F000_0033_F0033Entry), new(new(biosSegment, 0x0039), unknown_F000_0039_F0039_AsmEntry), new(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry)]);
         AL = 1;
-        NearCall(biosSegment, 0x0016, unknown_F000_0021_F0021Entry);
+        NearCall(biosSegment, 0x0016, unknown_F000_0021_F0021Entry, [new(new(biosSegment, 0x002D), unknown_F000_002D_F002DEntry), new(new(biosSegment, 0x0033), unknown_F000_0033_F0033Entry), new(new(biosSegment, 0x0039), unknown_F000_0039_F0039_AsmEntry), new(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry)]);
         AL = 0;
-        NearCall(biosSegment, 0x001B, unknown_F000_0027_F0027Entry);
+        NearCall(biosSegment, 0x001B, unknown_F000_0027_F0027Entry, [new(new(biosSegment, 0x002D), unknown_F000_002D_F002DEntry), new(new(biosSegment, 0x0033), unknown_F000_0033_F0033Entry), new(new(biosSegment, 0x0039), unknown_F000_0039_F0039_AsmEntry), new(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry)]);
         AL = 1;
-        NearCall(biosSegment, 0x0020, unknown_F000_0027_F0027Entry);
+        NearCall(biosSegment, 0x0020, unknown_F000_0027_F0027Entry, [new(new(biosSegment, 0x002D), unknown_F000_002D_F002DEntry), new(new(biosSegment, 0x0033), unknown_F000_0033_F0033Entry), new(new(biosSegment, 0x0039), unknown_F000_0039_F0039_AsmEntry), new(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry)]);
         return Hlt();
     }
 
@@ -145,6 +145,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

@@ -1125,6 +1125,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitSegmentedAddressListNode(SegmentedAddressListNode node) =>
         $"[{string.Join(", ", node.Addresses.Select(address => $"new({SegmentVariable(address.Segment)}, 0x{address.Offset:X4})"))}]";
 
+    public CSharpFragment VisitCallLandingListNode(CallLandingListNode node) =>
+        $"[{string.Join(", ", node.Arms.Select(arm => $"new(new({SegmentVariable(arm.Address.Segment)}, 0x{arm.Address.Offset:X4}), {Expr(arm.Entry).Text})"))}]";
+
     public CSharpFragment VisitMethodGroupNode(MethodGroupNode node) {
         if (node.SingleEntry) {
             string delegateName = TypedSignatures?.DelegateNameOf(node.MethodName) ?? node.MethodName;

@@ -286,6 +286,7 @@ internal sealed class CfgCSharpGenerator {
         EmitConstructor(wiringWriter, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
             analysis.TypedSignatures);
         EmitHardwareInterruptDispatch(wiringWriter, program, plan, analysis.TypedSignatures);
+        wiringWriter.Line("protected override bool ObservedCallLandingsOnly => true;");
         wiringWriter.CloseBlock();
         files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportWiringFileName, wiringWriter.ToString()));
 

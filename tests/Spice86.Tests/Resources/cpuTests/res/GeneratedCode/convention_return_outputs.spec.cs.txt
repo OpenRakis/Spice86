@@ -144,7 +144,7 @@ public partial class CfgGeneratedOverrides {
         DX = 9;
         Segment2000Globals.Word0206 = 9;
         NearCall(biosSegment, 0x003E, () => unknown_F000_0069_F0069(DS));
-        CX = NearCall(biosSegment, 0x0041, () => unknown_F000_0065_F0065());
+        NearCall(biosSegment, 0x0041, unknown_F000_0065_F0065_AsmEntry, [new(new(biosSegment, 0x0049), unknown_F000_0049_F0049Entry)]);
         Segment2000Globals.Word0208 = CX;
         Stack.Push16(0x0049);
         return unknown_F000_0065_F0065_Asm();
@@ -265,6 +265,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

@@ -92,12 +92,14 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// observed post-call continuation. The helper (NearCall / FarCall) preserves emulated stack behavior and
     /// validates the actual return target against the pushed return address.
     /// </summary>
-    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs) {
+    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, ResolvedCfgEdge calleeEdge, ushort? farCallTargetCs) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
+        MethodGroupNode function = FunctionReference(calleeEdge);
+        CallLandingListNode? landings = LandingsList(calleeEdge, continuation);
         return CodeGenerationAst.Sequence(
             EmitCallWithRedirectedDispatch(call, continuation,
-                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, true, continuation),
-                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation)),
+                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, true, continuation, landings),
+                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation, landings)),
             EmitPostCallContinuation(call, continuation));
     }
 
@@ -108,8 +110,8 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// omitted.
     /// </summary>
     public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs,
-        bool singleObservedTarget, CallContinuation continuation) =>
-        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs)) {
+        bool singleObservedTarget, CallContinuation continuation, CallLandingListNode? landings) =>
+        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs, landings)) {
             SingleObservedTarget = singleObservedTarget,
             ObservedContinuation = continuation.ObservedContinuationEdge is not null
         };
@@ -119,14 +121,61 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// redirected return addresses of <paramref name="continuation"/>, returning whether the call ended there.
     /// </summary>
     public MethodCallValueNode CallHelperReturnedElsewhere(CallDistance distance, BitWidth width,
-        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation) =>
-        new ProcedureCallReturnedElsewhereHelperNode(distance, width,
-            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)]);
+        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation, CallLandingListNode? landings) {
+        List<IVisitableAstNode> arguments =
+            [..CallHelperArguments(expectedReturn, function, targetCs, null), RedirectedAddressList(continuation)];
+        if (landings is not null) {
+            arguments.Add(landings);
+        }
+        return new ProcedureCallReturnedElsewhereHelperNode(distance, width, arguments.ToArray());
+    }
 
     /// <summary>The redirected return addresses of <paramref name="continuation"/> as a
     /// <c>SegmentedAddress[]</c> argument.</summary>
     public SegmentedAddressListNode RedirectedAddressList(CallContinuation continuation) =>
         new(continuation.RedirectedContinuationEdges.Select(edge => edge.Target.Address).ToArray());
+
+    /// <summary>
+    /// The mid-call landings discovery observed for a call into <paramref name="calleeEdge"/>'s partition as a
+    /// <c>CallLanding[]</c> argument, or <c>null</c> when the callee's activation transfers to no partition
+    /// entry while the call's frame is open and the argument is omitted.
+    /// </summary>
+    public CallLandingListNode? LandingsList(ResolvedCfgEdge calleeEdge, CallContinuation continuation) =>
+        LandingsList([context.GetPartition(calleeEdge.Target)], continuation);
+
+    /// <summary>The <see cref="LandingsList(ResolvedCfgEdge, CallContinuation)"/> argument for a call whose
+    /// callee is known as a partition rather than an edge (the program interrupt handler the vector was
+    /// observed to point to).</summary>
+    public CallLandingListNode? LandingsList(CfgCodePartition calleePartition, CallContinuation continuation) =>
+        LandingsList([calleePartition], continuation);
+
+    /// <summary>The <see cref="LandingsList(ResolvedCfgEdge, CallContinuation)"/> argument for an
+    /// <c>int</c> site: the union of the landings of every handler partition the site was observed to
+    /// invoke, because the vector is resolved at runtime.</summary>
+    public CallLandingListNode? InterruptLandingsList(CfgInstruction instruction, CallContinuation continuation) =>
+        LandingsList(context.GetSuccessorEdges(instruction, InstructionSuccessorType.Normal)
+            .Select(edge => context.GetPartition(edge.Target)), continuation);
+
+    private CallLandingListNode? LandingsList(IEnumerable<CfgCodePartition> calleePartitions, CallContinuation continuation) {
+        List<(SegmentedAddress Address, MethodGroupNode Entry)> arms = [];
+        HashSet<SegmentedAddress> seen = [];
+        foreach (CfgCodePartition calleePartition in calleePartitions) {
+            foreach ((CfgCodePartition partition, CfgCodePartitionEntry entry) in
+                context.ResolveCallLandings(calleePartition, continuation.ExpectedReturnAddress)) {
+                if (!seen.Add(entry.Address)) {
+                    continue;
+                }
+                arms.Add((entry.Address, new MethodGroupNode(
+                    context.GetMethodName(partition),
+                    context.GetEntryLoadOffset(partition, entry.Node),
+                    context.GetEntries(partition).Count == 1)));
+            }
+        }
+        if (arms.Count == 0) {
+            return null;
+        }
+        return new CallLandingListNode(arms.OrderBy(arm => arm.Address.Linear).ToList());
+    }
 
     /// <summary>
     /// The call statement to emit for a call that may return to a redirected target: when the call has
@@ -161,7 +210,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             BinaryOperation.LOGICAL_AND,
             new BinaryOperationNode(DataType.BOOL, offset, BinaryOperation.EQUAL, new OffsetLiteralNode(expected.Offset)));
 
-    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
+    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallLandingListNode? landings) {
         List<IVisitableAstNode> arguments = [
             new SegmentVariableNode(expectedReturn.Segment),
             new OffsetLiteralNode(expectedReturn.Offset)
@@ -170,6 +219,9 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             arguments.Add(new SegmentVariableNode(targetCs.Value));
         }
         arguments.Add(function);
+        if (landings is not null) {
+            arguments.Add(landings);
+        }
         return arguments.ToArray();
     }
 

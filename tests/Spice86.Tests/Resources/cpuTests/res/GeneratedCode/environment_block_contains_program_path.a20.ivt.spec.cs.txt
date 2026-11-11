@@ -69,7 +69,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_013C_0180C() {
         CheckExternalEvents(cs1, 0x013C);
-        NearCall(cs1, 0x013F, unknown_016D_012B_017FBEntry);
+        NearCall(cs1, 0x013F, unknown_016D_012B_017FBEntry, [new(new(cs1, 0x0124), unknown_016D_0124_017F4)]);
         DI = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0141);
@@ -237,6 +237,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

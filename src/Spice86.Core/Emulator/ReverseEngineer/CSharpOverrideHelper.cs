@@ -814,6 +814,17 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a near call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, CallLanding[] landings) {
+        NearCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, NoRedirectedReturns, landings);
+    }
+
+    /// <summary>
     /// Performs a near call and tells whether it returned to one of the addresses the call was observed
     /// to be redirected to instead of <paramref name="expectedReturnCs"/>:<paramref name="expectedReturnIp"/>.
     /// The return address pushed on the stack is still the expected one; a callee that rewrites it and
@@ -826,11 +837,26 @@ public class CSharpOverrideHelper {
     /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
     /// ended at the expected return address.</returns>
     public bool NearCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return NearCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, redirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="NearCallReturnedElsewhere(ushort, ushort, Func{int, Action}, SegmentedAddress[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool NearCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, landings);
     }
 
     /// <summary>
@@ -845,6 +871,17 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a 32-bit near call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    public void NearCall32(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, CallLanding[] landings) {
+        NearCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, NoRedirectedReturns, landings);
+    }
+
+    /// <summary>
     /// Performs a near call with a 32-bit operand size and tells whether it returned to one of the
     /// redirected return addresses in <paramref name="redirectedReturns"/> instead of the expected one.
     /// </summary>
@@ -855,11 +892,26 @@ public class CSharpOverrideHelper {
     /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
     /// ended at the expected return address.</returns>
     public bool NearCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return NearCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, redirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="NearCall32ReturnedElsewhere(ushort, ushort, Func{int, Action}, SegmentedAddress[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool NearCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
             Stack.Push32(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, landings);
     }
 
     /// <summary>
@@ -874,6 +926,18 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a far call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, CallLanding[] landings) {
+        FarCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns, landings);
+    }
+
+    /// <summary>
     /// Performs a far call and tells whether it returned to one of the redirected return addresses in
     /// <paramref name="redirectedReturns"/> instead of the expected one.
     /// </summary>
@@ -885,12 +949,28 @@ public class CSharpOverrideHelper {
     /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
     /// ended at the expected return address.</returns>
     public bool FarCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return FarCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, redirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="FarCallReturnedElsewhere(ushort, ushort, ushort, Func{int, Action}, SegmentedAddress[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool FarCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, landings);
     }
 
     /// <summary>
@@ -907,6 +987,18 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a 32-bit far call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, CallLanding[] landings) {
+        FarCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns, landings);
+    }
+
+    /// <summary>
     /// Performs a far call with a 32-bit operand size and tells whether it returned to one of the
     /// redirected return addresses in <paramref name="redirectedReturns"/> instead of the expected one.
     /// </summary>
@@ -918,11 +1010,27 @@ public class CSharpOverrideHelper {
     /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
     /// ended at the expected return address.</returns>
     public bool FarCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return FarCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, redirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="FarCall32ReturnedElsewhere(ushort, ushort, ushort, Func{int, Action}, SegmentedAddress[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool FarCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, landings);
     }
 
     /// <summary>
@@ -1205,7 +1313,19 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the interrupt handler, executed in for the duration of the call.</param>
     /// <param name="function">The function to execute as part of the interrupt call.</param>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
-        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns);
+        InterruptCall(expectedReturnCs, expectedReturnIp, targetCs, function, NoLandings);
+    }
+
+    /// <summary>
+    /// Performs an interrupt call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="targetCs">The CS value of the interrupt handler, executed in for the duration of the call.</param>
+    /// <param name="function">The function to execute as part of the interrupt call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, CallLanding[] landings) {
+        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns, landings);
     }
 
     /// <summary>
@@ -1224,16 +1344,32 @@ public class CSharpOverrideHelper {
     /// ended at the expected return address.</returns>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public bool InterruptCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber, SegmentedAddress[] redirectedReturns) {
+        return InterruptCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, vectorNumber, redirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="InterruptCallReturnedElsewhere(ushort, ushort, byte, SegmentedAddress[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
+    public bool InterruptCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");
         }
 
-        return ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, redirectedReturns);
+        return ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, redirectedReturns, landings);
     }
 
-    private bool ExecuteInterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+    private bool ExecuteInterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns, CallLanding[] landings) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(State.Flags.FlagRegister16);
             InterruptFlag = false;
@@ -1241,7 +1377,7 @@ public class CSharpOverrideHelper {
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, landings);
     }
 
     /// <summary>
@@ -1253,6 +1389,18 @@ public class CSharpOverrideHelper {
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
         InterruptCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, vectorNumber, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs an interrupt call whose mid-call landings are the entries <paramref name="landings"/> arms.
+    /// </summary>
+    /// <param name="expectedReturnCs">The excepted value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The excepted value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber, CallLanding[] landings) {
+        InterruptCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, vectorNumber, NoRedirectedReturns, landings);
     }
 
     /// <summary>
@@ -1368,7 +1516,28 @@ public class CSharpOverrideHelper {
         if (target.Segment != handlerCs || target.Offset != handlerIp) {
             throw FailAsUntested($"Interrupt vector 0x{vectorNumber:X2} points to {target}, not to the handler {handlerCs:X4}:{handlerIp:X4} the generated code calls");
         }
-        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, handlerCs, handler, NoRedirectedReturns);
+        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, handlerCs, handler, NoRedirectedReturns, NoLandings);
+    }
+
+    /// <summary>
+    /// The <paramref name="landings"/>-armed variant of
+    /// <see cref="InterruptCall(ushort, ushort, byte, ushort, ushort, Func{int, Action})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <param name="handlerCs">The CS of the handler entry the vector must point to.</param>
+    /// <param name="handlerIp">The IP of the handler entry the vector must point to.</param>
+    /// <param name="handler">The generated method of the handler, executed as part of the interrupt call.</param>
+    /// <param name="landings">Mid-call landings discovery observed for the call.</param>
+    /// <exception cref="UnrecoverableException">If the interrupt vector no longer points to the handler.</exception>
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber,
+        ushort handlerCs, ushort handlerIp, Func<int, Action> handler, CallLanding[] landings) {
+        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
+        if (target.Segment != handlerCs || target.Offset != handlerIp) {
+            throw FailAsUntested($"Interrupt vector 0x{vectorNumber:X2} points to {target}, not to the handler {handlerCs:X4}:{handlerIp:X4} the generated code calls");
+        }
+        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, handlerCs, handler, NoRedirectedReturns, landings);
     }
 
     /// <summary>
@@ -1422,6 +1591,16 @@ public class CSharpOverrideHelper {
     }
 
     private static readonly SegmentedAddress[] NoRedirectedReturns = [];
+    private static readonly CallLanding[] NoLandings = [];
+
+    /// <summary>
+    /// Whether a mid-call landing may only run an override discovery observed that call landing on
+    /// (<see langword="true"/>) or any override registered there (<see langword="false"/>). The base
+    /// implementation keeps the permissive chain for hand-written overrides; a generated program
+    /// overrides it so every one of its call sites dispatches over the landings it was generated
+    /// with and fails as untested on an unobserved landing.
+    /// </summary>
+    protected virtual bool ObservedCallLandingsOnly => false;
 
     /// <summary>
     /// Runs a call dispatch and its override chain, then tells whether the call ended at one of
@@ -1429,7 +1608,8 @@ public class CSharpOverrideHelper {
     /// (<c>false</c>).
     /// </summary>
     private bool ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
-        ushort targetCs, Func<int, Action> function, Action action, SegmentedAddress[] redirectedReturns) {
+        ushort targetCs, Func<int, Action> function, Action action, SegmentedAddress[] redirectedReturns,
+        CallLanding[] landings) {
         uint expectedStackAddress = State.StackPhysicalAddress;
         // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
         // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom) observe the right value.
@@ -1442,8 +1622,52 @@ public class CSharpOverrideHelper {
         SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
         ExecuteCallConsumingUnwindTo(function, action, expectedReturn, expectedStackAddress, redirectedReturns);
         CSharpCallChainCaller caller = new(this, expectedReturn, expectedStackAddress, redirectedReturns);
-        Machine.CfgCpu.FunctionHandlerInUse.RunOverrideChain(caller, null);
-        return caller.EndedAtRedirectedReturn;
+        if (!ObservedCallLandingsOnly) {
+            Machine.CfgCpu.FunctionHandlerInUse.RunOverrideChain(caller, null);
+            return caller.EndedAtRedirectedReturn;
+        }
+        return RunObservedLandingChain(caller, expectedReturn, landings);
+    }
+
+    /// <summary>
+    /// The generated calls' landing dispatch: where the override chain runs whatever override is
+    /// registered at a mid-call landing, this loop runs only the entries <paramref name="landings"/>
+    /// arms - the landings discovery observed for this call. Landing on an address another override
+    /// is registered at but the call never observed fails as untested; a landing with no override at
+    /// all unwinds exactly like the chain does.
+    /// </summary>
+    private bool RunObservedLandingChain(CSharpCallChainCaller caller, SegmentedAddress expectedReturn,
+        CallLanding[] landings) {
+        while (true) {
+            if (!State.IsRunning) {
+                caller.OnMachineStopped();
+                return caller.EndedAtRedirectedReturn;
+            }
+            SegmentedAddress landedAddress = State.IpSegmentedAddress;
+            if (landedAddress == expectedReturn
+                || caller.AcceptsRedirectedReturn(landedAddress, State.StackPhysicalAddress)) {
+                return caller.EndedAtRedirectedReturn;
+            }
+            CallLanding? landing = null;
+            foreach (CallLanding candidate in landings) {
+                if (candidate.Address == landedAddress) {
+                    landing = candidate;
+                    break;
+                }
+            }
+            if (landing is { } armed) {
+                caller.RunLanding(armed);
+                continue;
+            }
+            if (SearchFunctionOverride(landedAddress) is not null) {
+                throw FailAsUntested(
+                    $"The call expecting to return to {expectedReturn} landed at {landedAddress}, which discovery did not observe it landing on");
+            }
+            throw new CallStackUnwindException(landedAddress,
+                $"The call expecting to return to {expectedReturn} transferred control to {landedAddress} " +
+                $"but there is no C# override at {landedAddress} and it is not the call's expected return address. " +
+                "Refusing to fall back to the interpreter.");
+        }
     }
 
     /// <summary>
@@ -1712,7 +1936,7 @@ public class CSharpOverrideHelper {
         if (vectorNumber != null) {
             SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber.Value];
             Func<int, Action> function = HardwareInterruptFunction(vectorNumber.Value, target);
-            ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, NoRedirectedReturns);
+            ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, NoRedirectedReturns, NoLandings);
         }
     }
 
@@ -2053,6 +2277,28 @@ public class CSharpOverrideHelper {
             _helper.ExecuteCallConsumingUnwindTo(functionOverride,
                 () => functionOverride.Invoke(0).Invoke(), _expectedReturn, _expectedStackAddress, _redirectedReturns);
             return false;
+        }
+
+        /// <summary>Runs an armed landing inside the call, with the same nesting logging
+        /// <see cref="RunOverride"/> performs.</summary>
+        /// <param name="landing">The observed landing control reached.</param>
+        public void RunLanding(CallLanding landing) {
+            SegmentedAddress actualReturn = _helper.State.IpSegmentedAddress;
+            uint actualStackAddress = _helper.State.StackPhysicalAddress;
+            string? functionName = landing.Entry.Method.Name;
+            if (actualStackAddress < _expectedStackAddress) {
+                if (_helper._loggerService.IsEnabled(LogLevel.Debug)) {
+                    _helper._loggerService.LogDebug(
+                        "The call expecting to return to {ExpectedReturn} continued at {ActualReturn} while the callee's frame was still on the stack (stack {ActualStackAddress}, before the call {ExpectedStackAddress}). Running {FunctionName} inside the call.",
+                        _expectedReturn, actualReturn, actualStackAddress, _expectedStackAddress, functionName);
+                }
+            } else {
+                _helper.LogNestedOverrideCall(_expectedReturn, actualReturn, _expectedStackAddress,
+                    actualStackAddress, functionName);
+            }
+
+            _helper.ExecuteCallConsumingUnwindTo(landing.Entry,
+                () => landing.Entry.Invoke(0).Invoke(), _expectedReturn, _expectedStackAddress, _redirectedReturns);
         }
 
         /// <inheritdoc />

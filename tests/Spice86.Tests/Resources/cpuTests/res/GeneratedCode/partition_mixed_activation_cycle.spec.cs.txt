@@ -29,7 +29,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_001B_F001B() {
         CheckExternalEvents(biosSegment, 0x001B);
-        NearCall(biosSegment, 0x001E, unknown_F000_001F_F001FEntry);
+        NearCall(biosSegment, 0x001E, unknown_F000_001F_F001FEntry, [new(new(biosSegment, 0x0015), unknown_F000_0015_F0015Entry), new(new(biosSegment, 0x001B), unknown_F000_001B_F001BEntry)]);
         return NearRet();
     }
 
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
         CX = 1;
         NearCall(biosSegment, 0x000E, unknown_F000_001B_F001BEntry);
         CX = 2;
-        NearCall(biosSegment, 0x0014, unknown_F000_0015_F0015Entry);
+        NearCall(biosSegment, 0x0014, unknown_F000_0015_F0015Entry, [new(new(biosSegment, 0x001B), unknown_F000_001B_F001BEntry)]);
         return Hlt();
     }
 
@@ -97,6 +97,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
+    protected override bool ObservedCallLandingsOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
