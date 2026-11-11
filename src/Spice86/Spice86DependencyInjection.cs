@@ -794,9 +794,9 @@ public class Spice86DependencyInjection : IDisposable {
             try {
                 mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);
                 if (loggerService.IsEnabled(LogLevel.Information)) {
-                    loggerService.LogInformation("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
+                    loggerService.LogInformation("MCP HTTP transport started on port {Port}", mcpHttpTransport.Port);
                 }
-            } catch (InvalidOperationException ex) {
+            } catch (Exception ex) when (ex is InvalidOperationException or IOException) {
                 loggerService.LogWarning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
                 mcpHttpTransport.Stop();
                 mcpHttpTransport = null;

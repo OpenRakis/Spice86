@@ -24,8 +24,14 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Test with dotnet
+        if: matrix.os == 'ubuntu-latest'
         working-directory: ./src
         run: dotnet test --configuration Release
+
+      - name: Test with dotnet (without SingleStepTest)
+        if: matrix.os != 'ubuntu-latest'
+        working-directory: ./src
+        run: dotnet test --configuration Release -- --filter-not-class '*SingleStepTest*'
 
       - name: Package NuGet
         working-directory: ./src

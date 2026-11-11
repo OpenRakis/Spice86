@@ -11,7 +11,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -90,7 +89,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         return await CreateAsync(testProgramName, enableXms, enableEms, initializeDos, SbType.None, OplMode.None);
     }
 
-    public static async Task<McpIntegrationContext> CreateAsync(
+    public static Task<McpIntegrationContext> CreateAsync(
         string testProgramName,
         bool enableXms,
         bool enableEms,
@@ -147,18 +146,15 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         services.BiosKeyboardBuffer = spice86.McpServices.BiosKeyboardBuffer;
         services.Dos = spice86.McpServices.Dos;
 
-        int port = GetFreeTcpPort();
         McpHttpHost host = new(services.LoggerService);
-        host.Start(services, port);
+        host.Start(services, 0);
+        int port = host.Port;
 
         HttpClient httpClient = new();
-        Uri baseEndpoint = new($"http://localhost:{port}/");
-        Uri endpoint = new($"http://localhost:{port}/mcp");
+        Uri baseEndpoint = new($"http://127.0.0.1:{port}/");
+        Uri endpoint = new($"http://127.0.0.1:{port}/mcp");
 
-        McpIntegrationContext context = new(creator, spice86, services, host, httpClient, baseEndpoint, endpoint);
-
-        await WaitForPortAsync(port);
-        return context;
+        return Task.FromResult(new McpIntegrationContext(creator, spice86, services, host, httpClient, baseEndpoint, endpoint));
     }
 
     public async Task<JsonDocument> InitializeAsync() {
@@ -344,32 +340,5 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         }
 
         return jsonCandidates[jsonCandidates.Count - 1];
-    }
-
-    private static int GetFreeTcpPort() {
-        using TcpListener listener = new(System.Net.IPAddress.Loopback, 0);
-        listener.Start();
-        try {
-            System.Net.IPEndPoint localEndpoint = (System.Net.IPEndPoint)listener.LocalEndpoint;
-            return localEndpoint.Port;
-        } finally {
-            listener.Stop();
-        }
-    }
-
-    private static async Task WaitForPortAsync(int port) {
-        const int maxAttempts = 40;
-
-        for (int attempt = 0; attempt < maxAttempts; attempt++) {
-            using TcpClient client = new();
-            try {
-                await client.ConnectAsync("127.0.0.1", port);
-                return;
-            } catch (SocketException) {
-                await Task.Delay(10);
-            }
-        }
-
-        throw new InvalidOperationException($"MCP host did not open port {port} in time.");
     }
 }

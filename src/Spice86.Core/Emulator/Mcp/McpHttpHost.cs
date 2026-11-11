@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.Mcp;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,19 +13,19 @@ using Serilog.Core;
 
 using Spice86.Mcp;
 
+using System.Linq;
 using System.Reflection;
-using System.Threading;
 
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 internal sealed class McpHttpHost : IAsyncDisposable {
-    private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromSeconds(5);
     private WebApplication? _app;
-    private Thread? _serverThread;
     private readonly ILogger _loggerService;
     private Logger? _mcpFileLogger;
-    private readonly ManualResetEvent _shutdownRequested = new(false);
     private bool _disposed;
+
+    /// <summary>Gets the actual TCP port the server is listening on after startup.</summary>
+    public int Port { get; private set; }
 
     public McpHttpHost(ILogger loggerService) {
         _loggerService = loggerService;
@@ -72,7 +74,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             }
         }
 
-        builder.WebHost.UseUrls($"http://localhost:{port}");
+        builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
         _app = builder.Build();
         _app.MapGet("/health", () => Results.Json(new {
             status = "ok",
@@ -91,34 +93,25 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             await context.Response.Body.FlushAsync();
         });
 
-        _serverThread = new Thread(RunServerLoop) {
-            Name = "McpHttpHost",
-            IsBackground = true
-        };
-        _serverThread.Start();
-        _loggerService.LogInformation("MCP HTTP server started on http://localhost:{Port}/mcp", port);
-    }
-
-    private void RunServerLoop() {
-        if (_app == null) {
-            return;
-        }
-
         try {
             _app.StartAsync().GetAwaiter().GetResult();
-            _loggerService.LogInformation("MCP HTTP server is now listening");
-        } catch (ObjectDisposedException) {
-            // Host disposed while thread was exiting.
-            return;
-        } catch (Exception ex) {
-            _loggerService.LogError(ex, "MCP HTTP server crashed");
-            return;
+        } catch {
+            _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _app = null;
+            throw;
         }
 
-        // Keep this thread alive until the host is asked to stop. Using _app.Run()
-        // here caused premature shutdown on background threads because
-        // ConsoleLifetime has no console to watch on a non-main thread.
-        _shutdownRequested.WaitOne();
+        IServerAddressesFeature? addressesFeature = _app.Services
+            .GetService<IServer>()
+            ?.Features.Get<IServerAddressesFeature>();
+        string? boundAddress = addressesFeature?.Addresses.FirstOrDefault();
+        if (boundAddress is not null && Uri.TryCreate(boundAddress, UriKind.Absolute, out Uri? uri)) {
+            Port = uri.Port;
+        } else {
+            Port = port;
+        }
+
+        _loggerService.LogInformation("MCP HTTP server started on http://127.0.0.1:{Port}/mcp", Port);
     }
 
     public void Stop() {
@@ -126,14 +119,11 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             return;
         }
         _disposed = true;
-        _shutdownRequested.Set();
-        _app?.Lifetime.StopApplication();
-        if (_serverThread is { IsAlive: true }) {
-            _serverThread.Join(ShutdownJoinTimeout);
+        if (_app != null) {
+            _app.StopAsync().GetAwaiter().GetResult();
+            _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _app = null;
         }
-        _app = null;
-        _serverThread = null;
-        _shutdownRequested.Dispose();
         _mcpFileLogger?.Dispose();
         _mcpFileLogger = null;
     }
@@ -143,17 +133,11 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             return;
         }
         _disposed = true;
-        _shutdownRequested.Set();
         if (_app != null) {
-            _app.Lifetime.StopApplication();
-            if (_serverThread is { IsAlive: true }) {
-                _serverThread.Join(ShutdownJoinTimeout);
-            }
+            await _app.StopAsync();
             await _app.DisposeAsync();
             _app = null;
-            _serverThread = null;
         }
-        _shutdownRequested.Dispose();
         _mcpFileLogger?.Dispose();
         _mcpFileLogger = null;
         GC.SuppressFinalize(this);
