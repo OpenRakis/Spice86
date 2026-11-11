@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
+// ==== file: CfgGeneratedOverrides.016D.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -11,14 +11,52 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    public virtual Action unknown_016D_0100_017D0() {
+        CheckExternalEvents(cs1, 0x0100);
+        // 016D:0100 mov DX,0x0111
+        DX = 0x0111;
+        // 016D:0103 mov AH,0x25
+        // 016D:0105 mov AL,0x22
+        AX = 0x2522;
+        // 016D:0107 int 0x21
+        ServiceCall(cs1, 0x0109, Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
+        // 016D:0109 mov AX,0x3142
+        AX = 0x3142;
+        // 016D:010C mov DX,0x0010
+        DX = 0x0010;
+        // 016D:010F int 0x21
+        InterruptCall(cs1, 0x0111, 0x21);
+        throw FailAsUntested("Untested return from call at 016D:010F");
     }
+
 }
 
+// ==== file: CsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
-// ==== file: CfgGeneratedOverrides.cs ====
+namespace Spice86.Generated;
+
+public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex];
+
+    public CsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// CS:0x0095, whatever CS holds at the access.
+    public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -34,51 +72,6 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
     protected readonly ushort biosSegment;
-
-    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
-    private static readonly byte?[] Signature_000A_push = [0x1E];
-    private static readonly byte?[] Signature_000B_push = [0x50];
-    private static readonly byte?[] Signature_000C_push = [0x52];
-    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
-    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
-    private static readonly byte?[] Signature_0013_pop = [0x5A];
-    private static readonly byte?[] Signature_0014_pop = [0x58];
-    private static readonly byte?[] Signature_0015_pop = [0x1F];
-    private static readonly byte?[] Signature_0016_iret = [0xCF];
-    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
-    private static readonly byte?[] Signature_001B_iret = [0xCF];
-    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
-    private static readonly byte?[] Signature_0061_iret = [0xCF];
-    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xF0];
-    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
-    private static readonly byte?[] Signature_006C_iret = [0xCF];
-    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
-    private static readonly byte?[] Signature_0071_iret = [0xCF];
-    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
-    private static readonly byte?[] Signature_0076_iret = [0xCF];
-    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
-    private static readonly byte?[] Signature_007B_iret = [0xCF];
-    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
-    private static readonly byte?[] Signature_0080_iret = [0xCF];
-    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
-    private static readonly byte?[] Signature_0085_iret = [0xCF];
-    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
-    private static readonly byte?[] Signature_008A_iret = [0xCF];
-    private static readonly byte?[] Signature_00AA_sti = [0xFB];
-    private static readonly byte?[] Signature_00AB_callback = [0xFE, 0x38, 0x0A, 0x01];
-    private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
-    private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
-    private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
-    private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
-    private static readonly byte?[] Signature_00BF_iret = [0xCF];
-    private static readonly byte?[] Signature_00E8_ret = [0xCB];
-    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
-    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];
-    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
-    private static readonly byte?[] Signature_00F6_ret = [0xCB];
-
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
-    private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
     private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
@@ -134,7 +127,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -147,30 +140,55 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
-        CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov DX,0x0111
-        DX = 0x0111;
-        // 016D:0103 mov AH,0x25
-        // 016D:0105 mov AL,0x22
-        AX = 0x2522;
-        // 016D:0107 int 0x21
-        ServiceCall(cs1, 0x0109, Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
-        // 016D:0109 mov AX,0x3142
-        AX = 0x3142;
-        // 016D:010C mov DX,0x0010
-        DX = 0x0010;
-        // 016D:010F int 0x21
-        InterruptCall(cs1, 0x0111, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:010F");
-    }
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_push = [0x1E];
+    private static readonly byte?[] Signature_000B_push = [0x50];
+    private static readonly byte?[] Signature_000C_push = [0x52];
+    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
+    private static readonly byte?[] Signature_0013_pop = [0x5A];
+    private static readonly byte?[] Signature_0014_pop = [0x58];
+    private static readonly byte?[] Signature_0015_pop = [0x1F];
+    private static readonly byte?[] Signature_0016_iret = [0xCF];
+    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_001B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_0061_iret = [0xCF];
+    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_006C_iret = [0xCF];
+    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0071_iret = [0xCF];
+    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0076_iret = [0xCF];
+    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007B_iret = [0xCF];
+    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_0080_iret = [0xCF];
+    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0085_iret = [0xCF];
+    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
+    private static readonly byte?[] Signature_008A_iret = [0xCF];
+    private static readonly byte?[] Signature_00AA_sti = [0xFB];
+    private static readonly byte?[] Signature_00AB_callback = [0xFE, 0x38, 0x0A, 0x01];
+    private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
+    private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00BF_iret = [0xCF];
+    private static readonly byte?[] Signature_00E8_ret = [0xCB];
+    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
+    private static readonly byte?[] Signature_00F6_ret = [0xCB];
+
+    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
+    private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Stubs.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -411,24 +429,22 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-// ==== file: CsGlobals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
-    private readonly IMemory _memory;
-    private readonly SegmentRegisters _segmentRegisters;
-
-    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex];
-
-    public CsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
-        _memory = memory;
-        _segmentRegisters = segmentRegisters;
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
     }
-
-    /// CS:0x0095, whatever CS holds at the access.
-    public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
+

@@ -1,95 +1,3 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-
-
-// ==== file: CfgGeneratedOverrides.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort biosSegment;
-
-    private readonly Func<int, Action> unknown_F000_0145_F0145_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0150_F0150_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_015D_F015D_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_016A_F016A_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0187_F0187_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_018E_F018EEntry;
-    private readonly Func<int, Action> unknown_F000_0198_F0198_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01AF_F01AF_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01B9_F01B9_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01C0_F01C0Entry;
-    private readonly Func<int, Action> unknown_F000_01CA_F01CAEntry;
-    private readonly Func<int, Action> unknown_F000_01DD_F01DD_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01EA_F01EA_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_01F6_F01F6Entry;
-    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
-
-    protected readonly Segment2000Globals Segment2000Globals;
-
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        biosSegment = 0xF000;
-        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
-
-        unknown_F000_0145_F0145_AsmEntry = _ => unknown_F000_0145_F0145_Asm();
-        unknown_F000_0150_F0150_AsmEntry = _ => unknown_F000_0150_F0150_Asm();
-        unknown_F000_015D_F015D_AsmEntry = _ => unknown_F000_015D_F015D_Asm();
-        unknown_F000_016A_F016A_AsmEntry = _ => unknown_F000_016A_F016A_Asm();
-        unknown_F000_0187_F0187_AsmEntry = _ => unknown_F000_0187_F0187_Asm();
-        unknown_F000_018E_F018EEntry = _ => unknown_F000_018E_F018E();
-        unknown_F000_0198_F0198_AsmEntry = _ => unknown_F000_0198_F0198_Asm();
-        unknown_F000_01AF_F01AF_AsmEntry = _ => unknown_F000_01AF_F01AF_Asm();
-        unknown_F000_01B9_F01B9_AsmEntry = _ => unknown_F000_01B9_F01B9_Asm();
-        unknown_F000_01C0_F01C0Entry = _ => unknown_F000_01C0_F01C0();
-        unknown_F000_01CA_F01CAEntry = _ => unknown_F000_01CA_F01CA();
-        unknown_F000_01DD_F01DD_AsmEntry = _ => unknown_F000_01DD_F01DD_Asm();
-        unknown_F000_01EA_F01EA_AsmEntry = _ => unknown_F000_01EA_F01EA_Asm();
-        unknown_F000_01F6_F01F6Entry = _ => unknown_F000_01F6_F01F6();
-        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0145, unknown_F000_0145_F0145_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0150, unknown_F000_0150_F0150_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x015D, unknown_F000_015D_F015D_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x016A, unknown_F000_016A_F016A_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0187, unknown_F000_0187_F0187_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x018E, unknown_F000_018E_F018EEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0198, unknown_F000_0198_F0198_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01AF, unknown_F000_01AF_F01AF_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01B9, unknown_F000_01B9_F01B9_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C0, unknown_F000_01C0_F01C0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01CA, unknown_F000_01CA_F01CAEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DD, unknown_F000_01DD_F01DD_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01EA, unknown_F000_01EA_F01EA_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F6, unknown_F000_01F6_F01F6Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
-    }
-
-}
-
 // ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -847,3 +755,111 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public ushort Word0090 { get => _memory.UInt16[Segment, 0x0090]; set => _memory.UInt16[Segment, 0x0090] = value; }
 }
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0145_F0145_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0150_F0150_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_015D_F015D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_016A_F016A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0187_F0187_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_018E_F018EEntry;
+    private readonly Func<int, Action> unknown_F000_0198_F0198_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01AF_F01AF_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01B9_F01B9_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01C0_F01C0Entry;
+    private readonly Func<int, Action> unknown_F000_01CA_F01CAEntry;
+    private readonly Func<int, Action> unknown_F000_01DD_F01DD_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01EA_F01EA_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01F6_F01F6Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_0145_F0145_AsmEntry = _ => unknown_F000_0145_F0145_Asm();
+        unknown_F000_0150_F0150_AsmEntry = _ => unknown_F000_0150_F0150_Asm();
+        unknown_F000_015D_F015D_AsmEntry = _ => unknown_F000_015D_F015D_Asm();
+        unknown_F000_016A_F016A_AsmEntry = _ => unknown_F000_016A_F016A_Asm();
+        unknown_F000_0187_F0187_AsmEntry = _ => unknown_F000_0187_F0187_Asm();
+        unknown_F000_018E_F018EEntry = _ => unknown_F000_018E_F018E();
+        unknown_F000_0198_F0198_AsmEntry = _ => unknown_F000_0198_F0198_Asm();
+        unknown_F000_01AF_F01AF_AsmEntry = _ => unknown_F000_01AF_F01AF_Asm();
+        unknown_F000_01B9_F01B9_AsmEntry = _ => unknown_F000_01B9_F01B9_Asm();
+        unknown_F000_01C0_F01C0Entry = _ => unknown_F000_01C0_F01C0();
+        unknown_F000_01CA_F01CAEntry = _ => unknown_F000_01CA_F01CA();
+        unknown_F000_01DD_F01DD_AsmEntry = _ => unknown_F000_01DD_F01DD_Asm();
+        unknown_F000_01EA_F01EA_AsmEntry = _ => unknown_F000_01EA_F01EA_Asm();
+        unknown_F000_01F6_F01F6Entry = _ => unknown_F000_01F6_F01F6();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0145, unknown_F000_0145_F0145_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0150, unknown_F000_0150_F0150_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x015D, unknown_F000_015D_F015D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x016A, unknown_F000_016A_F016A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0187, unknown_F000_0187_F0187_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x018E, unknown_F000_018E_F018EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0198, unknown_F000_0198_F0198_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01AF, unknown_F000_01AF_F01AF_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01B9, unknown_F000_01B9_F01B9_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C0, unknown_F000_01C0_F01C0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01CA, unknown_F000_01CA_F01CAEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DD, unknown_F000_01DD_F01DD_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01EA, unknown_F000_01EA_F01EA_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F6, unknown_F000_01F6_F01F6Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

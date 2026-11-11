@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -9,7 +10,15 @@ using Spice86.Shared.Emulator.Memory;
 /// Writes x86 ASM instructions to Memory bus
 /// </summary>
 public class MemoryAsmWriter : MemoryWriter {
+    /// <summary>The image name under which this writer's emitted code ranges are registered.</summary>
+    public const string RoutineImageName = "emulator routines";
+
     private readonly CallbackHandler? _callbackHandler;
+
+    /// <summary>The loaded-image registry the written code ranges are recorded into, or
+    /// <see langword="null"/> when the writer targets a byte array instead of emulated memory
+    /// (batch COM images, dump post-processing, tests).</summary>
+    public LoadedImageRegistry? ImageRegistry { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryAsmWriter"/> class with the specified memory as a data sink, beginningAddress and callbackHandler to register callbacks.
@@ -51,6 +60,12 @@ public class MemoryAsmWriter : MemoryWriter {
         Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
+    }
+
+    /// <inheritdoc />
+    protected override void TrackWrittenRange(SegmentedAddress start, uint length) {
+        ImageRegistry?.RegisterOrExtendContiguous(new LoadedImage(LoadedImageKind.EmulatorRoutines,
+            RoutineImageName, start.Segment, start.Linear, length));
     }
 
     private void WriteCallback(ushort callbackNumber) {

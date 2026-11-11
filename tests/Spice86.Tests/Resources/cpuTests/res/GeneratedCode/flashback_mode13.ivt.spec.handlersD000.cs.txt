@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
+// ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -11,14 +11,65 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort di1 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp near 0x4000
+        // F000:4000 cli
+        InterruptFlag = false;
+        // F000:4001 mov AX,0x1000
+        // F000:4004 mov SS,AX
+        SS = 0x1000;
+        // F000:4006 mov SP,0xFFFE
+        SP = 0xFFFE;
+        // F000:4009 mov AX,0x0013
+        AX = 0x0013;
+        // F000:400C int 0x10
+        AL = ServiceCall(biosSegment, 0x400E, Video, () => Video.SetVideoMode(0x13));
+        // F000:400E cli
+        InterruptFlag = false;
+        // F000:400F mov AX,0xA000
+        AX = 0xA000;
+        // F000:4012 mov ES,AX
+        ES = 0xA000;
+        // F000:4014 xor DI,DI
+        di1 = 0;
+        // F000:4016 xor BX,BX
+        BX = 0;
+        // F000:4018 cld
+        DirectionFlag = false;
+        do {
+            CheckExternalEvents(biosSegment, 0x4019);
+            // F000:4019 mov CX,0x0140
+            CX = 0x0140;
+            // F000:401C mov AX,BX
+            AX = BX;
+            do {
+                CheckExternalEvents(biosSegment, 0x401E);
+                // F000:401E stos byte ptr ES:[DI],AL
+                UInt8[ES, di1] = AL;
+                di1++;
+                // F000:401F inc AL
+                AL++;
+                // F000:4021 loop 0x401E
+                CX--;
+            } while (CX != 0);
+            // F000:4023 inc BX
+            BX++;
+            // F000:4024 cmp BX,0x00C8
+            Alu16.Sub(BX, 0x00C8);
+            // F000:4028 jb short 0x4019
+        } while (BX < 0x00C8);
+        // F000:402A hlt
+        DI = di1;
+        return Hlt();
     }
+
 }
 
-
-// ==== file: CfgGeneratedOverrides.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -34,43 +85,6 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
     protected readonly ushort biosSegment;
-
-    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
-    private static readonly byte?[] Signature_000A_push = [0x1E];
-    private static readonly byte?[] Signature_000B_push = [0x50];
-    private static readonly byte?[] Signature_000C_push = [0x52];
-    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
-    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
-    private static readonly byte?[] Signature_0013_pop = [0x5A];
-    private static readonly byte?[] Signature_0014_pop = [0x58];
-    private static readonly byte?[] Signature_0015_pop = [0x1F];
-    private static readonly byte?[] Signature_0016_iret = [0xCF];
-    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
-    private static readonly byte?[] Signature_001B_iret = [0xCF];
-    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
-    private static readonly byte?[] Signature_0061_iret = [0xCF];
-    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xD0];
-    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
-    private static readonly byte?[] Signature_006C_iret = [0xCF];
-    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
-    private static readonly byte?[] Signature_0071_iret = [0xCF];
-    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
-    private static readonly byte?[] Signature_0076_iret = [0xCF];
-    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
-    private static readonly byte?[] Signature_007B_iret = [0xCF];
-    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
-    private static readonly byte?[] Signature_0080_iret = [0xCF];
-    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
-    private static readonly byte?[] Signature_0085_iret = [0xCF];
-    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
-    private static readonly byte?[] Signature_008A_iret = [0xCF];
-    private static readonly byte?[] Signature_00E8_ret = [0xCB];
-    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
-    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xD0];
-    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
-    private static readonly byte?[] Signature_00F6_ret = [0xCB];
-
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
 
     private readonly Func<int, Action> unknown_D000_0000_D0000Entry;
     private readonly Func<int, Action> unknown_D000_0006_D0006Entry;
@@ -123,7 +137,60 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.D000.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_push = [0x1E];
+    private static readonly byte?[] Signature_000B_push = [0x50];
+    private static readonly byte?[] Signature_000C_push = [0x52];
+    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
+    private static readonly byte?[] Signature_0013_pop = [0x5A];
+    private static readonly byte?[] Signature_0014_pop = [0x58];
+    private static readonly byte?[] Signature_0015_pop = [0x1F];
+    private static readonly byte?[] Signature_0016_iret = [0xCF];
+    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_001B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_0061_iret = [0xCF];
+    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xD0];
+    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_006C_iret = [0xCF];
+    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0071_iret = [0xCF];
+    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0076_iret = [0xCF];
+    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007B_iret = [0xCF];
+    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_0080_iret = [0xCF];
+    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0085_iret = [0xCF];
+    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
+    private static readonly byte?[] Signature_008A_iret = [0xCF];
+    private static readonly byte?[] Signature_00E8_ret = [0xCB];
+    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xD0];
+    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
+    private static readonly byte?[] Signature_00F6_ret = [0xCB];
+
+    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
+
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Stubs.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -321,7 +388,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -334,60 +401,9 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort di1 = 0;
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp near 0x4000
-        // F000:4000 cli
-        InterruptFlag = false;
-        // F000:4001 mov AX,0x1000
-        // F000:4004 mov SS,AX
-        SS = 0x1000;
-        // F000:4006 mov SP,0xFFFE
-        SP = 0xFFFE;
-        // F000:4009 mov AX,0x0013
-        AX = 0x0013;
-        // F000:400C int 0x10
-        AL = ServiceCall(biosSegment, 0x400E, Video, () => Video.SetVideoMode(0x13));
-        // F000:400E cli
-        InterruptFlag = false;
-        // F000:400F mov AX,0xA000
-        AX = 0xA000;
-        // F000:4012 mov ES,AX
-        ES = 0xA000;
-        // F000:4014 xor DI,DI
-        di1 = 0;
-        // F000:4016 xor BX,BX
-        BX = 0;
-        // F000:4018 cld
-        DirectionFlag = false;
-        do {
-            CheckExternalEvents(biosSegment, 0x4019);
-            // F000:4019 mov CX,0x0140
-            CX = 0x0140;
-            // F000:401C mov AX,BX
-            AX = BX;
-            do {
-                CheckExternalEvents(biosSegment, 0x401E);
-                // F000:401E stos byte ptr ES:[DI],AL
-                UInt8[ES, di1] = AL;
-                di1++;
-                // F000:401F inc AL
-                AL++;
-                // F000:4021 loop 0x401E
-                CX--;
-            } while (CX != 0);
-            // F000:4023 inc BX
-            BX++;
-            // F000:4024 cmp BX,0x00C8
-            Alu16.Sub(BX, 0x00C8);
-            // F000:4028 jb short 0x4019
-        } while (BX < 0x00C8);
-        // F000:402A hlt
-        DI = di1;
-        return Hlt();
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
     }
-
 }
+

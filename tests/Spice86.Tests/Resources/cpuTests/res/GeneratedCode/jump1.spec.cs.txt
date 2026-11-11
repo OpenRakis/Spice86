@@ -1,72 +1,3 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-
-
-// ==== file: CfgGeneratedOverrides.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort biosSegment;
-
-    private static readonly byte?[] Signature_000E_jmp = [0xEB, 0xE2];
-    private static readonly byte?[] Signature_0016_jmp = [0xEB, 0xDA];
-    private static readonly byte?[] Signature_001E_jmp = [0xEB, 0xD2];
-    private static readonly byte?[] Signature_0025_jmp = [0xEB, 0xCB];
-    private static readonly byte?[] Signature_002D_jmp = [0xEB, 0xC3];
-    private static readonly byte?[] Signature_0037_jmp = [0xEB, 0xB9];
-    private static readonly byte?[] Signature_0047_jmp = [0xEB, 0xA9];
-    private static readonly byte?[] Signature_0054_jmp = [0xEB, 0x9C];
-    private static readonly byte?[] Signature_005F_jmp = [0xEB, 0x91];
-    private static readonly byte?[] Signature_0069_jmp = [0xEB, 0x87];
-    private static readonly byte?[] Signature_0074_jmp = [0xE9, 0x7B, 0xFF];
-    private static readonly byte?[] Signature_0085_jmp = [0xE9, 0x6A, 0xFF];
-    private static readonly byte?[] Signature_0093_jmp = [0xE9, 0x5C, 0xFF];
-    private static readonly byte?[] Signature_00A1_jmp = [0xE9, 0x4E, 0xFF];
-    private static readonly byte?[] Signature_00AD_jmp = [0xE9, 0x42, 0xFF];
-    private static readonly byte?[] Signature_00B9_jmp = [0xE9, 0x36, 0xFF];
-    private static readonly byte?[] Signature_00C5_jmp = [0xE9, 0x2A, 0xFF];
-    private static readonly byte?[] Signature_FFF2_hlt = [0xF4];
-
-    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
-
-    protected readonly DsGlobals DsGlobals;
-
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        biosSegment = 0xF000;
-        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
-
-        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
-    }
-
-}
-
 // ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -466,3 +397,88 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
     /// DS:0x0000, whatever DS holds at the access.
     public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 }
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_000E_jmp = [0xEB, 0xE2];
+    private static readonly byte?[] Signature_0016_jmp = [0xEB, 0xDA];
+    private static readonly byte?[] Signature_001E_jmp = [0xEB, 0xD2];
+    private static readonly byte?[] Signature_0025_jmp = [0xEB, 0xCB];
+    private static readonly byte?[] Signature_002D_jmp = [0xEB, 0xC3];
+    private static readonly byte?[] Signature_0037_jmp = [0xEB, 0xB9];
+    private static readonly byte?[] Signature_0047_jmp = [0xEB, 0xA9];
+    private static readonly byte?[] Signature_0054_jmp = [0xEB, 0x9C];
+    private static readonly byte?[] Signature_005F_jmp = [0xEB, 0x91];
+    private static readonly byte?[] Signature_0069_jmp = [0xEB, 0x87];
+    private static readonly byte?[] Signature_0074_jmp = [0xE9, 0x7B, 0xFF];
+    private static readonly byte?[] Signature_0085_jmp = [0xE9, 0x6A, 0xFF];
+    private static readonly byte?[] Signature_0093_jmp = [0xE9, 0x5C, 0xFF];
+    private static readonly byte?[] Signature_00A1_jmp = [0xE9, 0x4E, 0xFF];
+    private static readonly byte?[] Signature_00AD_jmp = [0xE9, 0x42, 0xFF];
+    private static readonly byte?[] Signature_00B9_jmp = [0xE9, 0x36, 0xFF];
+    private static readonly byte?[] Signature_00C5_jmp = [0xE9, 0x2A, 0xFF];
+    private static readonly byte?[] Signature_FFF2_hlt = [0xF4];
+
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

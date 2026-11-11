@@ -27,7 +27,7 @@ internal sealed record GeneratorInputs(
             CallbackDescriptions = new Dictionary<ushort, string>(),
             MouseUserSubroutineRegistered = false
         },
-        new ProgramImages(0, []),
+        new ProgramImages(0, [], []),
         new ChangedMemorySnapshot { WatchedAreas = [], ChangedRanges = [] },
         [],
         new Dictionary<ushort, Type>(),

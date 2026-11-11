@@ -130,7 +130,8 @@ internal sealed class CfgCSharpGenerator {
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePrinting);
-        List<(ushort Segment, string Text, bool HasFrame)> methodTexts = new(plan.Methods.Count);
+        List<(ushort Segment, string Text, bool HasFrame, bool Support, uint EntryLinear)> methodTexts =
+            new(plan.Methods.Count);
         for (int i = 0; i < prepared.Count; i++) {
             PreparedMethod preparedMethod = prepared[i];
             progress.Step(i + 1, prepared.Count, preparedMethod.Method.MethodName);
@@ -139,8 +140,13 @@ internal sealed class CfgCSharpGenerator {
             methodWriter.Indent();
             AnalyzedMethod analyzed = methodEmitter.Analyze(preparedMethod, analysis, timer);
             methodEmitter.Print(methodWriter, analyzed, analysis, timer);
+            bool support = program.Inputs.ProgramImages.IsSupportCode(preparedMethod.Method.Nodes
+                .OfType<CfgInstruction>()
+                .Select(instruction => instruction.Address.Linear)
+                .ToList());
             methodTexts.Add((preparedMethod.Method.PrimaryEntry.Address.Segment, methodWriter.ToString(),
-                preparedMethod.FramePlan is not null));
+                preparedMethod.FramePlan is not null, support,
+                preparedMethod.Method.PrimaryEntry.Address.Linear));
             MethodCensus methodCensus = preparedMethod.Emission.Census;
             census.Merge(methodCensus.Gotos);
             if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
@@ -150,23 +156,37 @@ internal sealed class CfgCSharpGenerator {
                     methodCensus.LiftedBlocks, methodCensus.LiftedStatements, timer));
             }
         }
-        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupplierFileName, supplierWriter.ToString()));
-
-        CSharpSourceWriter mainWriter = new();
-        EmitFilePreamble(mainWriter, false);
-        mainWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
-        EmitSegmentFields(mainWriter, plan);
-        EmitSignatureFields(mainWriter, plan.SignatureFields);
-        EmitSpeculativeRunFields(mainWriter, speculativeRunFields);
-        EmitEntryFields(mainWriter, plan, analysis.TypedSignatures);
-        EmitGlobalsFields(mainWriter, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses);
-        EmitConstructor(mainWriter, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
-            analysis.TypedSignatures);
-        mainWriter.CloseBlock();
-        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.DumpFileSuffix, mainWriter.ToString()));
-        files.AddRange(BuildSegmentFiles(methodTexts));
+        files.AddRange(BuildSegmentFiles(methodTexts
+            .Where(method => !method.Support)
+            .Select(method => (method.Segment, method.Text, method.HasFrame))
+            .ToList()));
         files.AddRange(EmitGlobalsFiles(analysis.GlobalClasses));
         files.AddRange(EmitTableFiles(analysis.GlobalClasses));
+
+        CSharpSourceWriter wiringWriter = new();
+        EmitFilePreamble(wiringWriter, false);
+        wiringWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
+        EmitSegmentFields(wiringWriter, plan);
+        EmitEntryFields(wiringWriter, plan, analysis.TypedSignatures);
+        EmitGlobalsFields(wiringWriter, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses);
+        EmitConstructor(wiringWriter, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
+            analysis.TypedSignatures);
+        wiringWriter.CloseBlock();
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportWiringFileName, wiringWriter.ToString()));
+
+        CSharpSourceWriter guardsWriter = new();
+        EmitFilePreamble(guardsWriter, false);
+        guardsWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
+        EmitSignatureFields(guardsWriter, plan.SignatureFields);
+        EmitSpeculativeRunFields(guardsWriter, speculativeRunFields);
+        guardsWriter.CloseBlock();
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportGuardsFileName, guardsWriter.ToString()));
+
+        files.AddRange(BuildSupportStubFiles(methodTexts
+            .Where(method => method.Support)
+            .Select(method => (method.Text, method.HasFrame, method.EntryLinear))
+            .ToList()));
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupplierFileName, supplierWriter.ToString()));
         progress.EndPhase();
 
         return new GeneratedCSharpProgram {
@@ -318,7 +338,42 @@ internal sealed class CfgCSharpGenerator {
         return files;
     }
 
+    /// <summary>
+    /// Builds the support-stub files: every method the emulator wrote itself, in entry-address
+    /// order, split at method boundaries on the same line limit as the segment files.
+    /// </summary>
+    private List<GeneratedSourceFile> BuildSupportStubFiles(
+        List<(string Text, bool HasFrame, uint EntryLinear)> methodTexts) {
+        List<(string Text, bool HasFrame)> chunks = methodTexts
+            .OrderBy(method => method.EntryLinear)
+            .Select(method => (method.Text, method.HasFrame)).ToList();
+        if (chunks.Count == 0) {
+            return [];
+        }
+        List<List<(string Text, bool HasFrame)>> parts = SplitChunks(chunks);
+        List<GeneratedSourceFile> files = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++) {
+            files.Add(new GeneratedSourceFile(
+                GeneratedOverrideNames.SupportStubsFileName(i + 1, parts.Count),
+                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
+                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
+        }
+        return files;
+    }
+
     private List<GeneratedSourceFile> BuildSegmentPartFiles(ushort segment,
+        List<(string Text, bool HasFrame)> chunks) {
+        List<List<(string Text, bool HasFrame)>> parts = SplitChunks(chunks);
+        List<GeneratedSourceFile> files = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++) {
+            files.Add(new GeneratedSourceFile(SegmentFileName(segment, i + 1, parts.Count),
+                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
+                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
+        }
+        return files;
+    }
+
+    private List<List<(string Text, bool HasFrame)>> SplitChunks(
         List<(string Text, bool HasFrame)> chunks) {
         int overhead = CountLines(SegmentFilePrefix(true)) + 1;
         List<List<(string Text, bool HasFrame)>> parts = [[]];
@@ -332,13 +387,7 @@ internal sealed class CfgCSharpGenerator {
             parts[^1].Add(chunk);
             lines += chunkLines;
         }
-        List<GeneratedSourceFile> files = new(parts.Count);
-        for (int i = 0; i < parts.Count; i++) {
-            files.Add(new GeneratedSourceFile(SegmentFileName(segment, i + 1, parts.Count),
-                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
-                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
-        }
-        return files;
+        return parts;
     }
 
     private static string SegmentFilePrefix(bool frameTypes) {

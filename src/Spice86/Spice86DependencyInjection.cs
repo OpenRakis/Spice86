@@ -414,10 +414,13 @@ public class Spice86DependencyInjection : IDisposable {
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
         // same address (Bios Segment F000)
+        LoadedImageRegistry loadedImageRegistry = new();
         MemoryAsmWriter memoryAsmWriter = new(memory,
             new SegmentedAddress(
                 configuration.ProvidedAsmHandlersSegment, 0),
-            callbackHandler);
+            callbackHandler) {
+            ImageRegistry = loadedImageRegistry
+        };
 
         SharedMouseData sharedMouseData = new();
         SharedMouseData = sharedMouseData;
@@ -480,7 +483,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         InstalledInterruptHandlers installedInterruptHandlers =
             new(dualPic.EnumerateHardwareInterruptVectorNumbers());
-        LoadedImageRegistry loadedImageRegistry = new();
         ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
             functionCatalogue, loggerState, installedInterruptHandlers);

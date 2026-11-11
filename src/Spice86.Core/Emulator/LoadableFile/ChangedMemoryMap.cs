@@ -68,6 +68,11 @@ public sealed class ChangedMemoryMap {
         address < CoveredSize && _watched.Get((int)address) && !_changed.Get((int)address);
 
     private void OnImageLoaded(object? sender, LoadedImage image) {
+        if (image.Kind == LoadedImageKind.EmulatorRoutines) {
+            // Emulator-written routines are not watched: the writer registers while it is still
+            // writing, so arming the range would mark its own next bytes as changed.
+            return;
+        }
         Watch(image.StartAddress, image.SizeInBytes);
     }
 

@@ -16,6 +16,23 @@ internal static class GeneratedOverrideNames {
     /// <summary>The file (without directory) holding the generated override supplier class.</summary>
     public const string SupplierFileName = SupplierClassName + ".cs";
 
+    /// <summary>The support file (without directory) holding the class declaration, segment
+    /// fields, entry delegates and constructor registrations of the override class.</summary>
+    public const string SupportWiringFileName = OverrideClassName + ".Support.Wiring.cs";
+
+    /// <summary>The support file (without directory) holding the <c>Signature_*</c> and
+    /// <c>SpeculativeRun_*</c> guard arrays of the override class.</summary>
+    public const string SupportGuardsFileName = OverrideClassName + ".Support.Guards.cs";
+
+    /// <summary>The file (without directory) holding every support method - routines the
+    /// emulator wrote itself, ordered by address and split on the line limit.</summary>
+    public static string SupportStubsFileName(int part, int partCount) {
+        if (partCount == 1) {
+            return OverrideClassName + ".Support.Stubs.cs";
+        }
+        return $"{OverrideClassName}.Support.Stubs.{part}.cs";
+    }
+
     /// <summary>The instance field holding the <c>Func&lt;int, Action&gt;</c> a single-entry
     /// delegate is converted to once in the generated constructor, so every site (registrations,
     /// call helpers, jump dispatch) shares the same delegate identity.</summary>
