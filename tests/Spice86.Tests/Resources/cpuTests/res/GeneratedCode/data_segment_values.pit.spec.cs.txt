@@ -893,6 +893,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0324, _ => unknown_F000_031E_F031E(0x0324), "unknown_entry");
     }
 
+    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
+        (vectorNumber, target.Segment, target.Offset) switch {
+            (0x08, 0xF000, 0x02BC) => unknown_F000_02BC_F02BCEntry,
+            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
+        };
+
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

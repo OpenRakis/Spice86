@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -44,9 +45,10 @@ internal sealed class GeneratorInputsCollector {
     }
 
     /// <summary>Reads every machine input a snapshot partitioning needs.</summary>
-    public GeneratorInputs Capture() => new(
+    public GeneratorInputs Capture(ExecutionContextManager executionContextManager) => new(
         HardwareInterruptSetup.Capture(_installedInterruptHandlers, _interruptVectorTable,
-            _callbackHandler, _sharedMouseData.UserSubroutineEverRegistered),
+            _callbackHandler, _sharedMouseData.UserSubroutineEverRegistered,
+            executionContextManager.HardwareInterruptDeliveries),
         ProgramImages.Create(_programEntryPointSegment, _loadedImageRegistry.Images),
         _changedMemoryMap.Snapshot(),
         _memory.ReadRam(),

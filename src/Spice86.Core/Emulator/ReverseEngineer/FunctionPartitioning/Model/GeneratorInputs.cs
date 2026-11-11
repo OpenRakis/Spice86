@@ -22,6 +22,7 @@ internal sealed record GeneratorInputs(
             HardwareVectorNumbers = new HashSet<byte>(),
             InstalledInterruptHandlerAddresses = [],
             HardwareVectorTargets = new Dictionary<byte, SegmentedAddress>(),
+            HardwareInterruptDeliveries = [],
             ChainedVectorTargets = new Dictionary<byte, SegmentedAddress>(),
             ServiceVectors = new Dictionary<byte, InterruptServiceVector>(),
             CallbackDescriptions = new Dictionary<ushort, string>(),

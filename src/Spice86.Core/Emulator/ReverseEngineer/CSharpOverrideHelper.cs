@@ -1710,8 +1710,25 @@ public class CSharpOverrideHelper {
         }
         byte? vectorNumber = _dualPic.ComputeVectorNumber();
         if (vectorNumber != null) {
-            InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
+            SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber.Value];
+            Func<int, Action> function = HardwareInterruptFunction(vectorNumber.Value, target);
+            ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, NoRedirectedReturns);
         }
+    }
+
+    /// <summary>
+    /// Resolves the function a hardware interrupt on <paramref name="vectorNumber"/> invokes when its IVT
+    /// entry points at <paramref name="target"/>. The base implementation accepts any override registered
+    /// at <paramref name="target"/>; a generated program overrides it with a switch over the (vector,
+    /// handler) pairs discovery observed, so a delivery to a handler the run never observed fails as
+    /// untested.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector the PIC raised.</param>
+    /// <param name="target">The address the vector's IVT entry holds.</param>
+    /// <exception cref="UnrecoverableException">No override is registered at <paramref name="target"/>.</exception>
+    protected virtual Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) {
+        return SearchFunctionOverride(target)
+            ?? throw FailAsUntested($"Could not find an override at address {target}");
     }
 
     /// <summary>

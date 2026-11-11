@@ -136,13 +136,13 @@ public class CfgGraphReloadTest {
         using (Spice86DependencyInjection di = creator.Create()) {
             di.ProgramExecutor.Run();
             original = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager, null,
-                di.GeneratorInputsCollector.Capture().ChangedMemory);
+                di.GeneratorInputsCollector.Capture(di.Machine.CfgCpu.ExecutionContextManager).ChangedMemory);
         }
 
         using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: true))
         using (Spice86DependencyInjection di = creator.Create()) {
             CfgReloadDump reExported = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager,
-                null, di.GeneratorInputsCollector.Capture().ChangedMemory);
+                null, di.GeneratorInputsCollector.Capture(di.Machine.CfgCpu.ExecutionContextManager).ChangedMemory);
             // Records compare structurally, but the array members are reference-typed, so compare
             // the canonical (sorted) JSON the exporter already produces deterministically.
             Assert.Equal(SerializeDump(original), SerializeDump(reExported));
@@ -395,7 +395,7 @@ public class CfgGraphReloadTest {
         using Spice86DependencyInjection di = creator.Create();
         di.ProgramExecutor.Run();
         Machine machine = di.Machine;
-        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null, di.GeneratorInputsCollector.Capture().ChangedMemory);
+        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null, di.GeneratorInputsCollector.Capture(machine.CfgCpu.ExecutionContextManager).ChangedMemory);
         return (dump, machine.Memory.ReadRam());
     }
 

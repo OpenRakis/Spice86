@@ -24,6 +24,11 @@ internal sealed record HardwareInterruptSetup {
     /// <summary>The IVT target of each hardware vector, read from memory when the snapshot is taken.</summary>
     public required IReadOnlyDictionary<byte, SegmentedAddress> HardwareVectorTargets { get; init; }
 
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
+    /// a program can re-hook a vector, so its delivery targets are not recoverable from the
+    /// snapshot IVT alone.</summary>
+    public required IReadOnlyList<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; init; }
+
     /// <summary>The IVT target of each vector an installed hardware handler raises itself (the
     /// int 1Ch user hook of the int 8 stub), read from memory when the snapshot is taken.</summary>
     public required IReadOnlyDictionary<byte, SegmentedAddress> ChainedVectorTargets { get; init; }
@@ -43,7 +48,8 @@ internal sealed record HardwareInterruptSetup {
     /// the run.</summary>
     public static HardwareInterruptSetup Capture(InstalledInterruptHandlers installed,
         InterruptVectorTable interruptVectorTable, CallbackHandler callbackHandler,
-        bool mouseUserSubroutineRegistered) {
+        bool mouseUserSubroutineRegistered,
+        IEnumerable<(byte Vector, SegmentedAddress Target)> hardwareInterruptDeliveries) {
         Dictionary<byte, SegmentedAddress> targets = new();
         foreach (byte vector in installed.HardwareVectorNumbers) {
             targets[vector] = interruptVectorTable[vector];
@@ -56,6 +62,7 @@ internal sealed record HardwareInterruptSetup {
             HardwareVectorNumbers = new HashSet<byte>(installed.HardwareVectorNumbers),
             InstalledInterruptHandlerAddresses = [.. installed.Addresses],
             HardwareVectorTargets = targets,
+            HardwareInterruptDeliveries = [.. hardwareInterruptDeliveries],
             ChainedVectorTargets = chainedTargets,
             ServiceVectors = CaptureServiceVectors(installed),
             CallbackDescriptions = Emulator.InterruptHandlers.Common.Callback.CallbackDescriptions.Describe(callbackHandler),

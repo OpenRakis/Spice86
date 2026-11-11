@@ -517,7 +517,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();
 
-        GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector.Capture();
+        GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector
+            .Capture(run.Machine.CfgCpu.ExecutionContextManager);
         CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph,
             machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
         AsmFinalState finalState = AsmFinalState.Capture(run, scope.Fixture.Settings);

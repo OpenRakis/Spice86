@@ -15,7 +15,9 @@ using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Microsoft.Extensions.Logging;
 
@@ -209,6 +211,40 @@ public sealed class GeneratedCodeMachineTest {
         program.ConstantMemoryAccesses.Entries.Should().NotBeEmpty();
     }
 
+    /// <summary>
+    /// G11.4: discovery observed the IRQ0 handler at F000:0031, so the generated
+    /// <c>HardwareInterruptFunction</c> switch arms vector 0x08 only for that address. Pointing the
+    /// vector at F000:003C, another generated method the interrupt never delivered to, must fail as
+    /// untested at the delivery instead of silently running it.
+    /// </summary>
+    [Fact]
+    public void UnobservedHardwareHandlerDeliveryFailsAsUntested() {
+        AsmFixture fixture = AsmFixtureCatalog.InterruptHandlerChangesRegister();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // The observed handler runs: the program hooks int 8 to F000:0031 itself.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // Once the program's own int 8 hook has run, retarget the vector to F000:003C, the generated
+        // method of another function discovery never saw an IRQ delivered to. The generated program
+        // constant-folds its vector write, so a cycle breakpoint inside the wait loop does it.
+        AsmRunSettings retargetedSettings = fixture.Settings with {
+            ConfigureMachine = machine => machine.EmulatorBreakpointsManager.ToggleBreakPoint(
+                new AddressBreakPoint(BreakPointType.CPU_CYCLES, 1000,
+                    (_, _) => machine.InterruptVectorTable[0x08] = new SegmentedAddress(0xF000, 0x003C), true),
+                true)
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(retargetedSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Hardware interrupt 0x08 targets F000:003C*");
+    }
+
     /// <summary>The hardware effect keeps incoming bytes read after partial writes or a branch join.</summary>
     [Fact]
     public void HardwareInterruptSummaryKeepsPartialRegisterInputs() {
@@ -282,7 +318,7 @@ public sealed class GeneratedCodeMachineTest {
             CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(
                 interpreted.CfgCpu.ExecutionContextManager, null).Graph;
             GeneratorInputs inputs = interpretedRun.DependencyInjection
-                .GeneratorInputsCollector.Capture();
+                .GeneratorInputsCollector.Capture(interpreted.CfgCpu.ExecutionContextManager);
             partitioned = new CfgFunctionPartitioner().Partition(graph,
                 interpreted.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
         }

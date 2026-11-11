@@ -398,6 +398,8 @@ The two flags that decide this are precomputed per node in `GenerationPlanBuilde
 
 Generated code never emits `State.InterruptShadowing`: the interpreter sets it so delivery waits one instruction after `sti`, but the generated `CheckExternalEvents` never reads it, so the lifter drops the assignment. Known deviation: a pending interrupt is then delivered at the check right after `sti` / `popf` / `popfd`, one instruction earlier than a real CPU would deliver it.
 
+At the check, `CheckExternalEvents` resolves the pending vector's handler through the virtual `HardwareInterruptFunction` hook. The base implementation accepts any override registered at the IVT target (`SearchFunctionOverride`), which keeps hand-written overrides working. A generated program overrides it with a switch over the (vector, handler) pairs `CfgCpu` recorded as hardware-interrupt deliveries during the run — the union across the whole run, so a vector the program re-hooks arms every target it ever delivered to — each arm returning the entry delegate registered at that address. A delivery to a (vector, handler) pair discovery never observed hits the default arm and fails as untested naming both, instead of silently running whatever generated method happens to sit at the target; a program with no observed delivery emits only the default arm. The frame is unchanged: `ExecuteInterruptCall` still pushes FLAGS/CS/IP before the handler runs.
+
 ### Helpers used by generated code
 
 The generated class derives from `CSharpOverrideHelper`, which provides:

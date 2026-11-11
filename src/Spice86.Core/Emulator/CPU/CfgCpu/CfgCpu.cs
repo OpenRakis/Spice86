@@ -228,6 +228,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         }
         (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
 
+        _executionContextManager.HardwareInterruptDeliveries.Add((externalInterruptVectorNumber.Value, target));
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
     }

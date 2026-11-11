@@ -285,6 +285,7 @@ internal sealed class CfgCSharpGenerator {
         EmitGlobalsFields(wiringWriter, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses);
         EmitConstructor(wiringWriter, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
             analysis.TypedSignatures);
+        EmitHardwareInterruptDispatch(wiringWriter, program, plan, analysis.TypedSignatures);
         wiringWriter.CloseBlock();
         files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportWiringFileName, wiringWriter.ToString()));
 
@@ -1361,17 +1362,67 @@ internal sealed class CfgCSharpGenerator {
             writer.Line($"{GeneratedOverrideNames.EntryFieldNameOf(delegateName)} = _ => {delegateName}();");
         }
         foreach (OverrideRegistration registration in plan.OverrideRegistrations) {
-            if (registration.SingleEntry) {
-                string delegateName = typedSignatures.DelegateNameOf(registration.MethodName);
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {GeneratedOverrideNames.EntryFieldNameOf(delegateName)}, \"{registration.BaseName}\");");
-            } else if (registration.LoadOffset == 0) {
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {registration.MethodName}, \"{registration.BaseName}\");");
-            } else {
-                string entryName = BuildSecondaryEntryName(registration.BaseName);
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, _ => {registration.MethodName}(0x{registration.LoadOffset:X4}), \"{entryName}\");");
-            }
+            string symbolName = registration.SingleEntry || registration.LoadOffset == 0
+                ? registration.BaseName
+                : BuildSecondaryEntryName(registration.BaseName);
+            writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {DelegateExpressionOf(registration, typedSignatures)}, \"{symbolName}\");");
         }
         writer.CloseBlock();
+        writer.Line();
+    }
+
+    /// <summary>The <c>Func&lt;int, Action&gt;</c> expression a registration installs at its address:
+    /// the cached entry delegate of a single-entry method, the method itself for a primary entry, or a
+    /// <c>loadOffset</c>-passing lambda for a secondary entry.</summary>
+    private static string DelegateExpressionOf(OverrideRegistration registration,
+        TypedSignatures typedSignatures) {
+        if (registration.SingleEntry) {
+            return GeneratedOverrideNames.EntryFieldNameOf(typedSignatures.DelegateNameOf(registration.MethodName));
+        }
+        if (registration.LoadOffset == 0) {
+            return registration.MethodName;
+        }
+        return $"_ => {registration.MethodName}(0x{registration.LoadOffset:X4})";
+    }
+
+    /// <summary>
+    /// Emits the generated <c>HardwareInterruptFunction</c>: a switch over the (vector, handler) pairs
+    /// discovery observed as hardware-interrupt deliveries, so a delivery to a handler the run never
+    /// observed fails as untested instead of silently running whatever override happens to be registered
+    /// there. The observed pairs are the deliveries <see cref="CfgCpu"/> recorded during the run
+    /// (<see cref="HardwareInterruptSetup.HardwareInterruptDeliveries"/>) restricted to targets that got a
+    /// generated entry; each arm returns the same entry delegate the constructor registers at that address.
+    /// A program with no observed delivery emits only the failing default arm.
+    /// </summary>
+    private static void EmitHardwareInterruptDispatch(CSharpSourceWriter writer, CfgPartitionedProgram program,
+        GenerationPlan plan, TypedSignatures typedSignatures) {
+        HardwareInterruptSetup setup = program.Inputs.HardwareInterrupts;
+        HashSet<SegmentedAddress> delivered = program.Partitions
+            .SelectMany(partition => partition.Entries)
+            .Where(entry => entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry
+                && !entry.Address.Equals(program.Inputs.ProgramEntryPoint))
+            .Select(entry => entry.Address)
+            .ToHashSet();
+        Dictionary<SegmentedAddress, string> functionByAddress = plan.OverrideRegistrations
+            .ToDictionary(registration => registration.Address,
+                registration => DelegateExpressionOf(registration, typedSignatures));
+        writer.Line("protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>");
+        writer.Indent();
+        writer.Line("(vectorNumber, target.Segment, target.Offset) switch {");
+        writer.Indent();
+        foreach ((byte vector, SegmentedAddress target) in setup.HardwareInterruptDeliveries
+            .OrderBy(delivery => delivery.Vector)
+            .ThenBy(delivery => delivery.Target.Linear)
+            .Distinct()) {
+            if (delivered.Contains(target)
+                && functionByAddress.TryGetValue(target, out string? function)) {
+                writer.Line($"(0x{vector:X2}, 0x{target.Segment:X4}, 0x{target.Offset:X4}) => {function},");
+            }
+        }
+        writer.Line("_ => throw FailAsUntested($\"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector\")");
+        writer.Dedent();
+        writer.Line("};");
+        writer.Dedent();
         writer.Line();
     }
 

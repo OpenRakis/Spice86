@@ -61,6 +61,11 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     /// </summary>
     public Dictionary<SegmentedAddress, ISet<CfgInstruction>> ExecutionContextEntryPoints { get; } = new();
 
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
+    /// a program can re-hook a vector, so a vector's delivery targets are not recoverable from the
+    /// final IVT alone.</summary>
+    public HashSet<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; } = new();
+
     public ExecutionContext CurrentExecutionContext { get; private set; }
 
     /// <summary>
@@ -201,6 +206,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _executionContextReturns.Clear();
         _functionCatalogue.Clear();
         ExecutionContextEntryPoints.Clear();
+        HardwareInterruptDeliveries.Clear();
         CurrentDepth = 0;
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
         ExecutingNode = null;

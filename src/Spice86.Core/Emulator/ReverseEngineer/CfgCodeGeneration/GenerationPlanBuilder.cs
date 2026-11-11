@@ -57,6 +57,7 @@ internal static class GenerationPlanBuilder {
             foreach (CfgCodePartitionEntry entry in method.Entries) {
                 int loadOffset = context.GetEntryLoadOffset(method.Partition, entry.Node);
                 registrations.Add(new OverrideRegistration(
+                    entry.Address,
                     context.GetSegmentVariable(entry.Address.Segment),
                     entry.Address.Offset,
                     method.MethodName,
