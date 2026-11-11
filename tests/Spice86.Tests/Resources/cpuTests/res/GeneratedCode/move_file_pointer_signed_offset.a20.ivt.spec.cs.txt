@@ -16,8 +16,8 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
+        ushort fileHandle = 0;
         ushort word2 = 0;
-        ushort word3 = 0;
         byte flagOperand_0157 = 0;
         CheckExternalEvents(cs1, 0x0100);
         word1 = 0x017A;
@@ -28,17 +28,17 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             ImageMinus0003Globals.Word0177 = AX;
-            word2 = ImageMinus0003Globals.Word0177;
+            fileHandle = ImageMinus0003Globals.Word0177;
             CX = Alu16.Xor(CX, CX);
-            (word3, word1, CarryFlag) = ServiceCall(cs1, 0x011B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, word2, 0, 0x0200), r => CarryOnInterruptStack(r.carryFlag));
+            (word2, word1, CarryFlag) = ServiceCall(cs1, 0x011B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 0x0200), r => CarryOnInterruptStack(r.carryFlag));
             if (!CarryFlag) {
                 Alu16.Sub(word1, 0);
                 if (word1 == 0) {
-                    Alu16.Sub(word3, 0x0200);
-                    if (word3 == 0x0200) {
-                        word2 = ImageMinus0003Globals.Word0177;
+                    Alu16.Sub(word2, 0x0200);
+                    if (word2 == 0x0200) {
+                        fileHandle = ImageMinus0003Globals.Word0177;
                         CX = 0xFFFF;
-                        (word3, word1, CarryFlag) = ServiceCall(cs1, 0x0136, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word2, 0xFFFF, 0xFFFF), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word1, CarryFlag) = ServiceCall(cs1, 0x0136, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0xFFFF, 0xFFFF), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_0162;
                         }
@@ -46,19 +46,19 @@ public partial class CfgGeneratedOverrides {
                         if (word1 != 0) {
                             goto L_0162;
                         }
-                        Alu16.Sub(word3, 0x01FF);
-                        if (word3 != 0x01FF) {
+                        Alu16.Sub(word2, 0x01FF);
+                        if (word2 != 0x01FF) {
                             goto L_0162;
                         }
-                        word2 = ImageMinus0003Globals.Word0177;
+                        fileHandle = ImageMinus0003Globals.Word0177;
                         CX = 1;
                         word1 = 0x0179;
-                        (word3, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.ReadFile(word2, 1, DS, 0x0179), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.ReadFile(fileHandle, 1, DS, 0x0179), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_0162;
                         }
-                        Alu16.Sub(word3, 1);
-                        if (word3 != 1) {
+                        Alu16.Sub(word2, 1);
+                        if (word2 != 1) {
                             goto L_0162;
                         }
                         flagOperand_0157 = ImageMinus0003Globals.Byte0179;
@@ -66,7 +66,7 @@ public partial class CfgGeneratedOverrides {
                         if (flagOperand_0157 != 0xFF) {
                             goto L_0162;
                         }
-                        AX = word3;
+                        AX = word2;
                         AL = 0;
                         goto L_0164;
                     }
@@ -74,7 +74,7 @@ public partial class CfgGeneratedOverrides {
             }
         L_0162:
             VerifySpeculativeEntryOrFail(cs1, 0x0162, Signature_0162_mov);
-            AX = word3;
+            AX = word2;
             AL = 0xFF;
         L_0164:
             Stack.Push16(AX);

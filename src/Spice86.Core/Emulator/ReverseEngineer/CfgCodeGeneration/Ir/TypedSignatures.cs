@@ -73,7 +73,90 @@ internal sealed class TypedSignatures {
             .Where(pair => pair.Signature is not null)
             .ToDictionary(pair => pair.MethodName,
                 pair => pair.Signature ?? throw new InvalidOperationException("SignatureOf gave no signature."));
-        return new TypedSignatures(byName);
+        TypedSignatures signatures = new(byName);
+        signatures.AssignNames(methods);
+        return signatures;
+    }
+
+    /// <summary>The G4.2 names of every typed signature, iterated to a fixed point because a
+    /// callee parameter's name is a sink a caller's name is read from (the spec's backwards
+    /// propagation). Each round recomputes every name from the current names, so convergence is
+    /// monotonic over a finite name set; a round cap of 8 turns an oscillation into a bug's
+    /// failure instead of a hang.</summary>
+    private void AssignNames(IReadOnlyList<PreparedMethod> methods) {
+        for (int round = 0; ; round++) {
+            bool changed = false;
+            foreach (PreparedMethod prepared in methods) {
+                if (_byMethodName.TryGetValue(prepared.Method.MethodName, out TypedSignature? signature)) {
+                    changed |= AssignNames(prepared, signature);
+                }
+            }
+            if (!changed) {
+                return;
+            }
+            if (round >= 7) {
+                throw new InvalidOperationException("Typed signature naming did not converge.");
+            }
+        }
+    }
+
+    private bool AssignNames(PreparedMethod prepared, TypedSignature signature) {
+        HashSet<string> taken = IrMethodEmitter.ReservedLocalNames(prepared.IrMethod, null,
+            prepared.FramePlan);
+        bool changed = false;
+        List<TypedParameter> parameters = (List<TypedParameter>)signature.Parameters;
+        for (int index = 0; index < parameters.Count; index++) {
+            string? hint = ValueOf(parameters[index].Mask) is { } value
+                ? ParameterHint(prepared, signature, parameters[index], value)
+                : null;
+            string name = hint is not null && RoleNames.IsIdentifier(hint)
+                ? RoleNames.Next(hint, taken)
+                : GenericValueNames.Next(GenericValueNames.Prefix(parameters[index].Type), taken);
+            taken.Add(name);
+            if (parameters[index].Name != name) {
+                parameters[index] = parameters[index] with { Name = name };
+                changed = true;
+            }
+        }
+        List<TypedParameter> outputs = (List<TypedParameter>)signature.Outputs;
+        for (int index = 0; index < outputs.Count; index++) {
+            string name = RoleNames.Next("result", taken);
+            taken.Add(name);
+            if (outputs[index].Name != name) {
+                outputs[index] = outputs[index] with { Name = name };
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>The semantic name of one typed parameter: the single sink name when the
+    /// entry-version value is passed to exactly one kind of named contract or callee parameter,
+    /// else a role name, or <see langword="null"/> for the G4.1 generic name.</summary>
+    private string? ParameterHint(PreparedMethod prepared, TypedSignature signature,
+        TypedParameter parameter, IrSsaValue value) {
+        int entryVersion = prepared.Ssa.VersionBefore(signature.EntryBlock, 0, value);
+        List<IVisitableAstNode> roots = [];
+        List<CfgInstruction> origins = [];
+        foreach (IrBlock block in prepared.IrMethod.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (prepared.Ssa.VersionUsed(statement, value) != entryVersion) {
+                    continue;
+                }
+                roots.Add(statement.Node);
+                if (statement.Origin is CfgInstruction instruction) {
+                    origins.Add(instruction);
+                }
+            }
+        }
+        HashSet<string> sinks = RoleNames.SinkNames(roots, value, null, null, this);
+        if (RoleNames.UniqueName(sinks) is { } sink) {
+            return sink;
+        }
+        bool isSegment = (parameter.Mask
+                & (CpuValues.Es | CpuValues.Cs | CpuValues.Ss | CpuValues.Ds
+                    | CpuValues.Fs | CpuValues.Gs)) != CpuValues.None;
+        return RoleNames.RoleName(roots, value, null, isSegment, origins);
     }
 
     private static TypedSignature? SignatureOf(PreparedMethod source,
@@ -383,7 +466,7 @@ internal sealed class TypedSignatures {
 
     /// <summary>The <see cref="IrSsaValue"/> a read of <paramref name="node"/> belongs to:
     /// <c>null</c> for a node that is not a register or single flag read.</summary>
-    private static IrSsaValue? ValueOf(IVisitableAstNode node) => node switch {
+    internal static IrSsaValue? ValueOf(IVisitableAstNode node) => node switch {
         SegmentRegisterNode segment => (IrSsaValue)((int)IrSsaValue.Es + segment.RegisterIndex),
         RegisterNode register => (IrSsaValue)(
             System.Numerics.BitOperations.TrailingZeroCount((ulong)IrValueSets.Of(register)) / 4),
@@ -391,7 +474,7 @@ internal sealed class TypedSignatures {
         _ => null
     };
 
-    private static IrSsaValue? ValueOf(CpuValues mask) {
+    internal static IrSsaValue? ValueOf(CpuValues mask) {
         ulong bits = (ulong)mask;
         int trailing = System.Numerics.BitOperations.TrailingZeroCount(bits);
         if (trailing < 32) {

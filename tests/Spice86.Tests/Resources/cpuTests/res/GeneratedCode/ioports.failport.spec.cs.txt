@@ -18,10 +18,10 @@ public partial class CfgGeneratedOverrides {
         ushort word1;
         ushort word2 = 0;
         uint dword1;
-        ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5 = 0;
-        ushort word6 = 0;
+        ushort index = 0;
+        ushort count = 0;
+        ushort index2 = 0;
+        ushort count2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
         SS = 0;
@@ -59,10 +59,10 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Dword0014 = In32(0x00E0);
         DI = 0x0018;
         Out8(0x00E0, 0xEE);
-        word3 = 0x0018;
-        for (word4 = 4; word4 != 0; word4--) {
-            UInt8[ES, word3] = In8(word2);
-            word3++;
+        index = 0x0018;
+        for (count = 4; count != 0; count--) {
+            UInt8[ES, index] = In8(word2);
+            index++;
         }
         Segment0000Globals.Byte0080 = 0x9A;
         Out8(0x00E0, 0x9A);
@@ -82,17 +82,17 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Byte0088 = 1;
         Segment0000Globals.Byte0089 = 2;
         Segment0000Globals.Byte008A = 3;
-        word5 = 0x0088;
-        for (word6 = 3; word6 != 0; word6--) {
-            Out8(word2, UInt8[DS, word5]);
-            word5++;
+        index2 = 0x0088;
+        for (count2 = 3; count2 != 0; count2--) {
+            Out8(word2, UInt8[DS, index2]);
+            index2++;
         }
         AL = In8(0x00E0);
         Segment0000Globals.Byte0024 = AL;
         DX = word2;
-        DI = word3;
-        SI = word5;
-        CX = word6;
+        DI = index;
+        SI = index2;
+        CX = count2;
         return Hlt();
     }
 

@@ -16,10 +16,10 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, ES, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_0137_F0137() {
-        ushort word1 = 0;
+        ushort index = 0;
         byte byte1 = 0;
-        ushort word2 = 0;
-        ushort word3;
+        ushort count = 0;
+        ushort word1;
         CheckExternalEvents(biosSegment, 0x0137);
         try {
             AX = UInt16[DS, BX];
@@ -28,11 +28,11 @@ public partial class CfgGeneratedOverrides {
             return DispatchCpuFault(cpuException, biosSegment, 0x0137, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0184), unknown_F000_0184_F0184)]);
         }
         DsGlobals.Word00DA = AX;
-        word1 = 0x00DC;
+        index = 0x00DC;
         byte1 = 0x5A;
-        for (word2 = 4; word2 != 0; word2--) {
-            UInt8[ES, word1] = byte1;
-            word1 += (ushort)(DirectionFlag ? -1 : 1);
+        for (count = 4; count != 0; count--) {
+            UInt8[ES, index] = byte1;
+            index += (ushort)(DirectionFlag ? -1 : 1);
         }
         AX = 0;
         CarryFlag = true;
@@ -41,8 +41,8 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = true;
-        word3 = FlagRegister16;
-        DsGlobals.Word00E0 = word3;
+        word1 = FlagRegister16;
+        DsGlobals.Word00E0 = word1;
         AX = 1;
         CarryFlag = true;
         ParityFlag = false;
@@ -55,8 +55,8 @@ public partial class CfgGeneratedOverrides {
         DX = Alu16.Xor(DX, DX);
         CarryFlag = true;
         BX = Alu16.Shl(0x1234, 0);
-        word3 = FlagRegister16;
-        DsGlobals.Word00E4 = word3;
+        word1 = FlagRegister16;
+        DsGlobals.Word00E4 = word1;
         BX = 0;
         CarryFlag = false;
         ParityFlag = true;
@@ -66,8 +66,8 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         DX = Stack.Pop16();
         DsGlobals.Word00E6 = DX;
-        DI = word1;
-        CX = word2;
+        DI = index;
+        CX = count;
         return Hlt();
     }
 
@@ -105,11 +105,11 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Outputs: EAX, EDX, EBX, ESI, EDI, ES, DS, PF, AF, ZF, SF, OF, DF. Changes: EAX, EDX, EBX, ESI, EDI, ES, DS, PF, AF, ZF, SF, OF, DF.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort word1 = 0;
-        ushort word2;
-        ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5;
+        ushort index = 0;
+        ushort word1;
+        ushort word2 = 0;
+        ushort offset = 0;
+        ushort segment;
         byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
@@ -131,19 +131,19 @@ public partial class CfgGeneratedOverrides {
             Segment3300Globals.Word0001 = 0xB2B2;
             Segment3300Globals.Word0013 = 0xD4D4;
             ES = 0x2300;
-            word1 = UInt16[CS, SI];
-            word2 = UInt16[ES, word1 + 3];
-            UInt16[DS, BX] = word2;
+            index = UInt16[CS, SI];
+            word1 = UInt16[ES, index + 3];
+            UInt16[DS, BX] = word1;
             AX = Segment2300Globals.Word0001;
             UInt16[DS, BX + 0x0C] = AX;
             Stack.Push16(DS);
             ES = Stack.Pop16();
-            word2 = Segment2000Globals.Word96B4;
-            UInt16[DS, BX + 0x0E] = word2;
+            word1 = Segment2000Globals.Word96B4;
+            UInt16[DS, BX + 0x0E] = word1;
             AX = Segment2000Globals.WordFFFE;
             UInt16[DS, BX + 0x10] = AX;
-            word3 = (ushort)(UInt16[CS, SI + 2] - 1);
-            UInt16[DS, BX + 2] = word3;
+            word2 = (ushort)(UInt16[CS, SI + 2] - 1);
+            UInt16[DS, BX + 2] = word2;
             AX = UInt16[CS, SI + 2];
             UInt8[DS, BX + 4] = 1;
             if ((sbyte)AL >= -0x10) {
@@ -153,21 +153,21 @@ public partial class CfgGeneratedOverrides {
             if (AL >= 0xF0) {
                 UInt8[DS, BX + 5] = 2;
             }
-            word4 = UInt16[CS, SI + 2];
+            offset = UInt16[CS, SI + 2];
             UInt8[DS, BX + 6] = 1;
-            if ((short)word4 <= -2) {
+            if ((short)offset <= -2) {
                 UInt8[DS, BX + 6] = 2;
             }
             UInt8[DS, BX + 7] = 1;
-            if (word4 <= 0xFFFE) {
+            if (offset <= 0xFFFE) {
                 UInt8[DS, BX + 7] = 2;
             }
             Segment2000Globals.Dword0E3D = 0x24681357;
             DI = UInt16[CS, SI + 4];
             DX = UInt16[DS, DI + 0x3D];
-            word5 = UInt16[DS, DI + 0x003F];
+            segment = UInt16[DS, DI + 0x003F];
             UInt16[DS, BX + 8] = DX;
-            UInt16[DS, BX + 0x0A] = word5;
+            UInt16[DS, BX + 0x0A] = segment;
             Stack.Push16(DS);
             ES = Stack.Pop16();
             BX += 0x0040;

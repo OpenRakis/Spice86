@@ -18,9 +18,9 @@ public partial class CfgGeneratedOverrides {
         byte byte1;
         byte byte2;
         ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5 = 0;
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -90,12 +90,12 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0070 = 0x2222;
         word2 = DS;
         ES = word2;
-        word3 = 0x0070;
-        word4 = 6;
-        for (word5 = 2; word5 != 0; word5--) {
-            UInt8[ES, word4] = UInt8[DS, word3];
-            word3++;
-            word4++;
+        index = 0x0070;
+        index2 = 6;
+        for (count = 2; count != 0; count--) {
+            UInt8[ES, index2] = UInt8[DS, index];
+            index++;
+            index2++;
         }
         CX = Segment2000Globals.Word0006;
         Segment2000Globals.Word004A = CX;
@@ -113,8 +113,8 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
-        SI = word3;
-        DI = word4;
+        SI = index;
+        DI = index2;
         return Hlt();
     }
 

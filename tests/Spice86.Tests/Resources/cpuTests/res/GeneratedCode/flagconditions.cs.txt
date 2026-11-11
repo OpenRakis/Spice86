@@ -14,7 +14,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS. Outputs: AX, CX, BX, BP, SI, ES, DS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort word8, ushort word9, ushort word10, ushort word11, ushort word12, ushort word13, ushort word14, bool flag1) unknown_F000_02F5_F02F5(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, bool result8) unknown_F000_02F5_F02F5(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7) {
         AX = word1;
         CX = word2;
         BX = word3;
@@ -35,7 +35,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS, CF. Outputs: AX, CX, BX, BP, SI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort word8, ushort word9, ushort word10, ushort word11, ushort word12, ushort word13, ushort word14) unknown_F000_02F8_F02F8(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7, bool flag1) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_F000_02F8_F02F8(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7, bool flag1) {
         AX = word1;
         CX = word2;
         BX = word3;
@@ -64,15 +64,15 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
-        ushort word5 = 0;
-        ushort word6 = 0;
-        ushort word7 = 0;
-        ushort word8 = 0;
-        ushort word9 = 0;
-        ushort word10 = 0;
-        ushort word11 = 0;
-        ushort word12 = 0;
-        ushort word13;
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort count = 0;
+        ushort index3 = 0;
+        ushort count2 = 0;
+        ushort index4 = 0;
+        ushort index5 = 0;
+        ushort count3 = 0;
+        ushort word5;
         byte byte2;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
@@ -299,14 +299,14 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CX);
             Stack.Push16(SI);
             UInt8[DS, BX + 0x2B] = 1;
-            word5 = 0x0104;
-            word6 = 0x0106;
-            word7 = 2;
-            while (word7 != 0) {
-                Alu8.Sub(UInt8[DS, word5], UInt8[ES, word6]);
-                word5++;
-                word6++;
-                word7--;
+            index = 0x0104;
+            index2 = 0x0106;
+            count = 2;
+            while (count != 0) {
+                Alu8.Sub(UInt8[DS, index], UInt8[ES, index2]);
+                index++;
+                index2++;
+                count--;
                 if (!ZeroFlag) {
                     break;
                 }
@@ -315,47 +315,47 @@ public partial class CfgGeneratedOverrides {
                 UInt8[DS, BX + 0x2B] = 2;
             }
             UInt8[DS, BX + 0x2D] = 1;
-            word8 = 0x0106;
-            word9 = 2;
-            while (word9 != 0) {
-                Alu8.Sub(AL, UInt8[ES, word8]);
-                word8++;
-                word9--;
+            index3 = 0x0106;
+            count2 = 2;
+            while (count2 != 0) {
+                Alu8.Sub(AL, UInt8[ES, index3]);
+                index3++;
+                count2--;
                 if (ZeroFlag) {
                     break;
                 }
             }
-            CX = word9;
+            CX = count2;
             UInt8[DS, BX + 0x2C] = CL;
             if (!ZeroFlag) {
                 UInt8[DS, BX + 0x2D] = 2;
             }
-            word10 = 0x0104;
-            word11 = 0x0106;
-            word12 = 2;
-            while (word12 != 0) {
-                bool equal_028A = UInt8[DS, word10] == UInt8[ES, word11];
-                word10++;
-                word11++;
-                word12--;
+            index4 = 0x0104;
+            index5 = 0x0106;
+            count3 = 2;
+            while (count3 != 0) {
+                bool equal_028A = UInt8[DS, index4] == UInt8[ES, index5];
+                index4++;
+                index5++;
+                count3--;
                 if (!equal_028A) {
                     break;
                 }
             }
-            CX = word12;
+            CX = count3;
             UInt8[DS, BX + 0x2A] = CL;
             SI = Stack.Pop16();
             CX = Stack.Pop16();
-            word13 = (ushort)(AX + CX);
-            UInt16[DS, BX + 0x2E] = word13;
+            word5 = (ushort)(AX + CX);
+            UInt16[DS, BX + 0x2E] = word5;
             DX = (ushort)(AX - CX);
             UInt16[DS, BX + 0x30] = DX;
-            word13 = (ushort)(AX + 1);
-            UInt16[DS, BX + 0x32] = word13;
+            word5 = (ushort)(AX + 1);
+            UInt16[DS, BX + 0x32] = word5;
             DX = (ushort)(CX - 1);
             UInt16[DS, BX + 0x34] = DX;
-            word13 = (ushort)-AX;
-            UInt16[DS, BX + 0x36] = word13;
+            word5 = (ushort)-AX;
+            UInt16[DS, BX + 0x36] = word5;
             DX = (ushort)(AX | CX);
             UInt16[DS, BX + 0x38] = DX;
             UInt8[DS, BX + 0x3A] = AL;

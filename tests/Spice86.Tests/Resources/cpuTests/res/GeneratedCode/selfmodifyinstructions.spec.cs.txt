@@ -14,12 +14,12 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort word1 = 0;
+        ushort index = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
         SS = 0;
         SP = 6;
-        word1 = 0x0800;
+        index = 0x0800;
         while (true) {
             CheckExternalEvents(biosSegment, 0x000B);
             AX = 0xF000;
@@ -28,8 +28,8 @@ public partial class CfgGeneratedOverrides {
             DI = 0x1400;
             CX = 0x03E8;
             while (CX != 0) {
-                UInt16[ES, DI] = UInt16[DS, word1];
-                word1 += (ushort)(DirectionFlag ? -2 : 2);
+                UInt16[ES, DI] = UInt16[DS, index];
+                index += (ushort)(DirectionFlag ? -2 : 2);
                 DI += (ushort)(DirectionFlag ? -2 : 2);
                 CX--;
             }
@@ -48,13 +48,13 @@ public partial class CfgGeneratedOverrides {
         L_1400_26:
             AX = 1;
             Stack.Push16(1);
-            word1 = 0x0C00;
+            index = 0x0C00;
             continue;
         L_1400_36:
             BX = 2;
             CarryFlag = false;
             Stack.Push16(2);
-            word1 = 0x1000;
+            index = 0x1000;
         }
         CX = 3;
         ParityFlag = true;
@@ -63,7 +63,7 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         Stack.Push16(3);
-        SI = word1;
+        SI = index;
         return Hlt();
     }
 

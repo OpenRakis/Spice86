@@ -477,9 +477,35 @@ prints as a C# local instead of the register property: `word1 = ...; ... CX = wo
    handlers may write the register ends it too;
 5. the local name is free: a web whose live range overlaps an already promoted same-name web, or
    whose name is reserved (a typed-signature parameter, `frame`, any method temporary), is not
-   promoted. A promoted web takes a generic width-prefixed name numbered per prefix by the
-   address of its first definition (`byte1`, `word2`, `dword1`, signed views keep the width
-   prefix: `short word3`), independent of which register the web holds.
+   promoted. A promoted web takes a semantic name when one rule gives a single answer, else the
+   generic width-prefixed name numbered per prefix by the address of its first definition
+   (`byte1`, `word2`, `dword1`, signed views keep the width prefix: `short word3`), independent
+   of which register the web holds.
+
+### Value names (G4.1, G4.2)
+
+Locals and typed-signature parameters or outputs are named by the first rule that yields one
+name (`RoleNames`, `TypedSignatures.AssignNames`):
+
+1. **sink** - the web or entry-version parameter is passed to one kind of named parameter: a
+   declared interrupt-service or device-operation argument (`fileHandle`, `requestedSize`), or
+   a typed callee's parameter, propagated backwards through the call graph to a fixed point
+   (names only, cap 8 rounds). A value reaching two differently named sinks gets no name; a
+   parameter still named after its register or a generic `wordN` is not a name, and a `string`
+   service parameter names nothing - a register inside its `DS:DX` argument is a pointer half,
+   not the string;
+2. **source** - the definition is a typed or service call's named output tuple element, or a
+   read of a proved frame slot (`arg0`, `local4`, `returnIp`);
+3. **role** - `index` for the register term of a memory or table offset, `count` for a `loop` /
+   `rep` counter, `segment` and `offset` for the halves of a far pointer loaded by `lds` /
+   `les`, `result` for a returned output element;
+4. **generic** - the G4.1 fallback (`byte1`, `word2`, `dword1`, `flag3`).
+
+Semantic duplicates get a numeric suffix (`count`, `count2`) ordered by first definition
+address; a name must be a valid identifier, no keyword and free in the method scope, otherwise
+the generic name applies. Names are printing only: lifetimes, effects and required CPU-state
+writes do not change, and they are derived from addresses and program facts, so a change in one
+method renames only that method.
 
 An implicit use needs the register to hold the value again: a `RegisterWriteBackNode` (`AX = word1;`)
 is inserted at the top of the boundary of the first implicit use's instruction - including the

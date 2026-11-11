@@ -17,9 +17,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, BP, ESI. Changes: EAX, ECX, EDX, EBX, BP, ESI, DI, flags.</summary>
     public virtual Action unknown_017D_0010_017E0() {
         ushort word1;
+        ushort index = 0;
         ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word6;
+        ushort word5;
         uint dword1 = 0;
         CheckExternalEvents(cs1, 0x0010);
         Stack.Push16(AX);
@@ -31,27 +31,27 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(SI);
         Stack.Push16(DI);
         Stack.Push16(BP);
-        word2 = SP;
+        index = SP;
         Stack.Push16(word1);
-        word3 = DX;
+        word2 = DX;
         dword1 = 0;
         BX = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0028);
-            Alu16.Sub(BX, word3);
-            if (BX >= word3) {
+            Alu16.Sub(BX, word2);
+            if (BX >= word2) {
                 break;
             }
             SI = (ushort)((BX & 3) << 1);
-            SI += SsUInt16[word2 - 2];
+            SI += SsUInt16[index - 2];
             CX = UInt16[DS, SI];
             SI = 0;
             uint dxAx_003A = dword1 << 1;
-            word6 = (ushort)(dxAx_003A >> 16);
-            dword1 = (uint)(((uint)(ushort)((ushort)dword1 << 1) | (uint)word6 << 16) + (uint)CX);
+            word5 = (ushort)(dxAx_003A >> 16);
+            dword1 = (uint)(((uint)(ushort)((ushort)dword1 << 1) | (uint)word5 << 16) + (uint)CX);
             BX++;
         }
-        SP = word2;
+        SP = index;
         BP = Stack.Pop16();
         DI = Stack.Pop16();
         SI = Stack.Pop16();
@@ -401,17 +401,17 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_017D_0235_01A05() {
-        ushort word1;
+        ushort index;
         unknown_017D_0235_01A05Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x0235);
         Stack.Push16(BX);
         Stack.Push16(DX);
         Stack.Push16(BP);
-        word1 = SP;
-        BX = (ushort)(word1 + 0x0A);
+        index = SP;
+        BX = (ushort)(index + 0x0A);
         DX = frame.Arg0;
         AX = 0x01EE;
-        BP = word1;
+        BP = index;
         NearCall(cs1, 0x0246, unknown_017D_050D_01CDDEntry);
         BP = Stack.Pop16();
         DX = Stack.Pop16();
@@ -434,18 +434,18 @@ public partial class CfgGeneratedOverrides {
         ushort word3 = 0;
         ushort word4;
         ushort word5;
-        ushort word6 = 0;
+        ushort index = 0;
         byte byte1 = 0;
-        ushort word7 = 0;
-        ushort word8 = 0;
+        ushort index2 = 0;
+        ushort index3 = 0;
+        ushort word6 = 0;
+        ushort index4 = 0;
+        ushort count = 0;
         ushort word9 = 0;
-        ushort word10 = 0;
-        ushort word11 = 0;
-        ushort word16 = 0;
-        ushort word12 = 0;
-        ushort word13 = 0;
-        ushort word14 = 0;
-        ushort word15;
+        ushort index5 = 0;
+        ushort count2 = 0;
+        ushort word7 = 0;
+        ushort word8;
         ushort flagOperand_0354 = 0;
         byte flagOperand_035B = 0;
         byte flagOperand_0385 = 0;
@@ -491,38 +491,38 @@ public partial class CfgGeneratedOverrides {
         }
         word5 = DS;
         ES = word5;
-        word6 = 0x0081;
+        index = 0x0081;
         CL = ImageMinus0003Globals.Byte0080;
         CH = 0;
         ZeroFlag = true;
         DirectionFlag = false;
         byte1 = 0x20;
         while (CX != 0) {
-            Alu8.Sub(byte1, UInt8[ES, word6]);
-            word6++;
+            Alu8.Sub(byte1, UInt8[ES, index]);
+            index++;
             CX--;
             if (!ZeroFlag) {
                 break;
             }
         }
-        word7 = (ushort)(word6 - 1);
+        index2 = (ushort)(index - 1);
         DX = 0x03A8;
         ES = 0x03A8;
-        word8 = Segment03A8Globals.Word01BE;
-        Segment03A8Globals.Dword01D7 = (uint)word8 | (uint)ES << 16;
+        index3 = Segment03A8Globals.Word01BE;
+        Segment03A8Globals.Dword01D7 = (uint)index3 | (uint)ES << 16;
         if (!ZeroFlag) {
             CX++;
             while (CX != 0) {
-                UInt8[ES, word8] = UInt8[DS, word7];
-                word7++;
-                word8++;
+                UInt8[ES, index3] = UInt8[DS, index2];
+                index2++;
+                index3++;
                 CX--;
             }
         }
         AL = 0;
         CarryFlag = false;
-        UInt8[ES, word8] = 0;
-        word5 = (ushort)(word8 + 1);
+        UInt8[ES, index3] = 0;
+        word5 = (ushort)(index3 + 1);
         UInt8[ES, word5] = 0;
         DI = (ushort)(word5 + 1);
         DI = Alu16.Dec(DI);
@@ -530,7 +530,7 @@ public partial class CfgGeneratedOverrides {
         (AX, CX, BX) = ServiceCall(cs1, 0x0332, Dos, () => Dos.ReadDosVersion());
         Segment03A8Globals.Byte01BA = AL;
         Segment03A8Globals.Byte01BB = AH;
-        word9 = DI;
+        word6 = DI;
         if (AL >= 3) {
             DS = ImageMinus0003Globals.Word002C;
             SI = 0;
@@ -581,17 +581,17 @@ public partial class CfgGeneratedOverrides {
                 } while (flagOperand_0385 != 0);
             } while (UInt8[DS, SI] != 0);
             AL = UInt8[DS, SI];
-            word7 = (ushort)(SI + 3);
+            index2 = (ushort)(SI + 3);
             do {
                 CheckExternalEvents(cs1, 0x0393);
-                flagOperand_0393 = UInt8[DS, word7];
-                UInt8[ES, DI] = UInt8[DS, word7];
-                word7++;
+                flagOperand_0393 = UInt8[DS, index2];
+                UInt8[ES, DI] = UInt8[DS, index2];
+                index2++;
                 DI++;
             } while (flagOperand_0393 != 0);
         }
         DS = 0x03A8;
-        SI = word9;
+        SI = word6;
         Segment03A8Globals.Dword01DB = (uint)SI | (uint)ES << 16;
         BX = SP;
         AX = BP;
@@ -599,13 +599,13 @@ public partial class CfgGeneratedOverrides {
         Segment03A8Globals.Byte02F8 &= AH;
         Segment03A8Globals.Word01BE = DI;
         CX = 0x0494;
-        word10 = 0x0376;
-        word11 = 0x011E;
+        index4 = 0x0376;
+        count = 0x011E;
         AL = 0;
-        while (word11 != 0) {
-            UInt8[ES, word10] = AL;
-            word10++;
-            word11--;
+        while (count != 0) {
+            UInt8[ES, index4] = AL;
+            index4++;
+            count--;
         }
         if (Segment03A8Globals.Word01C7 == 0) {
             AX = 0x04E0;
@@ -617,8 +617,8 @@ public partial class CfgGeneratedOverrides {
         AX = 0x04DF;
         Segment03A8Globals.Dword01D3 = 0x000004DF | (uint)CS << 16;
         AX = 0x00FF;
-        DI = word10;
-        CX = word11;
+        DI = index4;
+        CX = count;
         NearCall(cs1, 0x03F1, unknown_017D_05E4_01DB4Entry);
         Stack.Push16(DX);
         DX = DsGlobals.Word0386;
@@ -640,19 +640,19 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near call target 0x{DsGlobals.Word02FE:X4} at 017D:166C");
         }
         NearCall(cs1, 0x1670, unknown_017D_1658_02E28Entry);
-        word16 = BX;
-        Stack.Push16(word16);
+        word9 = BX;
+        Stack.Push16(word9);
         DX = 0x03A8;
         DS = 0x03A8;
         DirectionFlag = false;
-        word12 = 0;
+        index5 = 0;
         ES = 0x03A8;
-        word13 = 0x0010;
-        word14 = 0x0101;
-        while (word13 != 0) {
-            Alu16.Sub(word14, UInt16[ES, word12]);
-            word12 += 2;
-            word13--;
+        count2 = 0x0010;
+        word7 = 0x0101;
+        while (count2 != 0) {
+            Alu16.Sub(word7, UInt16[ES, index5]);
+            index5 += 2;
+            count2--;
             if (!ZeroFlag) {
                 break;
             }
@@ -666,8 +666,8 @@ public partial class CfgGeneratedOverrides {
             SignFlag = false;
             OverflowFlag = false;
             DX = 0x000F;
-            DI = word12;
-            CX = word13;
+            DI = index5;
+            CX = count2;
             NearCall(cs1, 0x044C, unknown_017D_063B_01E0BEntry);
             AX = Stack.Pop16();
             AH = 0x4C;
@@ -677,19 +677,19 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeRunOrFail(cs1, 0x040B, SpeculativeRun_040B);
         BX = Stack.Pop16();
         AX = 0x024E;
-        word15 = CS;
+        word8 = CS;
         SP = 0x0514;
         Stack.Push16(BX);
         VerifySpeculativeEntryOrFail(cs1, 0x0415, Signature_0415_push);
         Stack.Push16(0x024E);
         VerifySpeculativeEntryOrFail(cs1, 0x0416, Signature_0416_push);
-        Stack.Push16(word15);
+        Stack.Push16(word8);
         VerifySpeculativeRunOrFail(cs1, 0x0417, SpeculativeRun_0417);
         DI = CS;
         DS = DI;
         DX = 0x027D;
         AX = 0x3D01;
-        CX = word13;
+        CX = count2;
         InterruptCall(cs1, 0x0423, 0x21);
         throw FailAsUntested("Untested return from call at 017D:0421");
     }
@@ -854,8 +854,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BX, BP, DS. Outputs: none. Changes: AX, DX, BX, BP, flags.</summary>
     public virtual Action unknown_017D_05CA_01D9A() {
+        ushort index = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x05CA);
         VerifySpeculativeEntryOrFail(cs1, 0x05CA, Signature_05CA_push);
         Stack.Push16(BX);
@@ -865,15 +865,15 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(BP);
         VerifySpeculativeRunOrFail(cs1, 0x05CD, SpeculativeRun_05CD);
         BP = SP;
-        word1 = AX;
-        AX = UInt16[DS, word1 + 2];
-        word2 = UInt16[DS, word1];
+        index = AX;
+        AX = UInt16[DS, index + 2];
+        word1 = UInt16[DS, index];
         if (AX == 0) {
             VerifySpeculativeRunOrFail(cs1, 0x05DA, SpeculativeRun_05DA);
-            Alu16.And(word2, word2);
-            BX = word1;
-            DX = word2;
-            if (word2 == 0) {
+            Alu16.And(word1, word1);
+            BX = index;
+            DX = word1;
+            if (word1 == 0) {
                 return unknown_017D_05BE_01D8E();
             }
         }
@@ -887,7 +887,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x03A8, DS = 0x03A8.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017D_05E4_01DB4() {
-        ushort word1 = 0;
+        ushort index = 0;
         byte byte1 = 0;
         byte flagOperand_061F = 0;
         CheckExternalEvents(cs1, 0x05E4);
@@ -906,7 +906,7 @@ public partial class CfgGeneratedOverrides {
         while (true) {
             CheckExternalEvents(cs1, 0x05F7);
             BX = 0x0352;
-            word1 = DI;
+            index = DI;
             byte1 = CL;
             while (true) {
                 CheckExternalEvents(cs1, 0x05FE);
@@ -914,27 +914,27 @@ public partial class CfgGeneratedOverrides {
                     break;
                 }
                 if (UInt8[DS, BX] != 2 && byte1 >= UInt8[DS, BX + 1]) {
-                    word1 = BX;
+                    index = BX;
                     byte1 = UInt8[DS, BX + 1];
                 }
                 BX += 6;
             }
-            Alu16.Sub(word1, DI);
-            if (word1 == DI) {
+            Alu16.Sub(index, DI);
+            if (index == DI) {
                 goto L_0631;
             }
-            AX = (ushort)(word1 + 2);
-            flagOperand_061F = UInt8[DS, word1];
+            AX = (ushort)(index + 2);
+            flagOperand_061F = UInt8[DS, index];
             Alu8.Sub(flagOperand_061F, 0);
             if (flagOperand_061F != 0) {
                 break;
             }
-            SI = word1;
+            SI = index;
             NearCall(cs1, 0x0627, unknown_017D_05B2_01D82Entry);
             UInt8[DS, SI] = 2;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x062C, Signature_062C_call);
-        SI = word1;
+        SI = index;
         NearCall(cs1, 0x062F, unknown_017D_05CA_01D9AEntry);
         throw FailAsUntested("Untested return from call at 017D:062C");
     L_0631:
@@ -1013,8 +1013,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, EBX, BP, ESI, EDI, DS. Outputs: AX, DX, EBX, BP, ESI, EDI. Changes: EAX, ECX, DX, EBX, BP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_069B_01E6B() {
+        ushort index = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
         ushort flagOperand_06CF = 0;
         ushort flagOperand_071D = 0;
         byte flagOperand_0723 = 0;
@@ -1027,12 +1027,12 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(SI);
         Stack.Push16(DI);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         SP -= 4;
         Stack.Push16(AX);
         SI = DX;
         frame.Local8 = CX;
-        word2 = BX;
+        word1 = BX;
         CX = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x06AD);
@@ -1136,17 +1136,17 @@ public partial class CfgGeneratedOverrides {
                 VerifySpeculativeRunOrFail(cs1, 0x0744, SpeculativeRun_0744);
                 SI++;
             L_0730:
-                if (word2 != 0) {
+                if (word1 != 0) {
                     AH = UInt8[DS, SI];
                     UInt8[DS, BX] = AH;
                     BX++;
                 }
                 SI++;
             }
-            if (word2 == 0) {
+            if (word1 == 0) {
                 goto L_0747;
             }
-            DI = (ushort)((CX << 1) + word2);
+            DI = (ushort)((CX << 1) + word1);
             AX = frame.Local10;
             UInt16[DS, DI] = AX;
             AL = UInt8[DS, SI];
@@ -1180,11 +1180,11 @@ public partial class CfgGeneratedOverrides {
         BX = frame.Local8;
         AX = CX;
         UInt16[DS, BX] = SI;
-        SP = word1;
+        SP = index;
         BP = Stack.Pop16();
         DI = Stack.Pop16();
         SI = Stack.Pop16();
-        DX = word2;
+        DX = word1;
         return NearRet();
     }
 
@@ -1203,14 +1203,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: AX, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_0776_01F46() {
+        ushort index;
         ushort word1;
+        ushort index2;
         ushort word2;
-        ushort word3;
-        ushort word4;
         unknown_017D_0776_01F46Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x0776);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         Stack.Push16(SI);
         Stack.Push16(DI);
         SP -= 8;
@@ -1218,17 +1218,17 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DX);
         DI = BX;
         frame.Local12 = CX;
-        CX = (ushort)(word1 - 0x0C);
+        CX = (ushort)(index - 0x0C);
         DX = DI;
         BX = 0;
-        BP = word1;
+        BP = index;
         NearCall(cs1, 0x078F, unknown_017D_069B_01E6BEntry);
         CX = (ushort)(SsUInt16[BP - 0x0C] - DI);
         BX = CX;
         CX += 2;
-        word2 = (ushort)((AX + 1 << 1) + 2);
+        word1 = (ushort)((AX + 1 << 1) + 2);
         CL &= 0xFE;
-        AX = (ushort)(word2 + CX + 1);
+        AX = (ushort)(word1 + CX + 1);
         AL &= 0xFE;
         NearCall(cs1, 0x07AA, unknown_017D_1684_02E54Entry);
         SI = AX;
@@ -1241,14 +1241,14 @@ public partial class CfgGeneratedOverrides {
             DX = DI;
             AX = SI;
             (CX, ESI, EDI) = NearCall(cs1, 0x07D9, () => unknown_017D_173D_02F0D(AX, CX, DX, BX, ESI, EDI, DS, DirectionFlag));
-            word2 = SsUInt16[BP - 0x10];
+            word1 = SsUInt16[BP - 0x10];
             DX = SI;
-            word3 = (ushort)(SI + CX);
+            index2 = (ushort)(SI + CX);
             CX = (ushort)(BP - 0x0C);
-            SsUInt16[BP - 6] = word3;
-            UInt16[DS, word3] = word2;
+            SsUInt16[BP - 6] = index2;
+            UInt16[DS, index2] = word1;
             AX = SsUInt16[BP - 0x0E];
-            BX = word3;
+            BX = index2;
             BX += 2;
             NearCall(cs1, 0x07F3, unknown_017D_069B_01E6BEntry);
             AX++;
@@ -1256,12 +1256,12 @@ public partial class CfgGeneratedOverrides {
             BX = Alu16.Add(BX, SsUInt16[BP - 6]);
             UInt16[DS, BX] = 0;
         }
-        word3 = SsUInt16[BP - 0x0A];
-        word4 = SsUInt16[BP - 6];
-        UInt16[DS, word3] = AX;
+        index2 = SsUInt16[BP - 0x0A];
+        word2 = SsUInt16[BP - 6];
+        UInt16[DS, index2] = AX;
         BX = SsUInt16[BP + 4];
         AX = SsUInt16[BP - 8];
-        UInt16[DS, BX] = word4;
+        UInt16[DS, BX] = word2;
         SP = (ushort)(BP - 4);
         DI = Stack.Pop16();
         SI = Stack.Pop16();
@@ -1341,7 +1341,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: BP. Changes: all.</summary>
     public virtual Action unknown_017D_0859_02029() {
         ushort word1 = 0;
-        ushort word2;
+        ushort index;
         CheckExternalEvents(cs1, 0x0859);
         Stack.Push16(BX);
         Stack.Push16(DX);
@@ -1363,13 +1363,13 @@ public partial class CfgGeneratedOverrides {
             if (AX == 0) {
                 goto L_08AD;
             }
-            word2 = AX;
+            index = AX;
             AX = DsGlobals.Word037E;
-            UInt16[DS, word2 + 2] = SI;
-            UInt16[DS, word2] = AX;
-            UInt16[DS, SI + 4] = word2;
-            UInt16[DS, word2 + 4] = 0;
-            DsGlobals.Word037E = word2;
+            UInt16[DS, index + 2] = SI;
+            UInt16[DS, index] = AX;
+            UInt16[DS, SI + 4] = index;
+            UInt16[DS, index + 4] = 0;
+            DsGlobals.Word037E = index;
             DI = UInt16[DS, SI + 4];
             UInt8[DS, DI + 0x0A] = 0;
             DI = UInt16[DS, SI + 4];
@@ -1393,8 +1393,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CX, EDX, EBX, BP, ESI, DI, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_08C4_02094() {
         ushort word1;
+        ushort index = 0;
         ushort word2 = 0;
-        ushort word3 = 0;
         unknown_017D_08C4_02094Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x08C4);
         Stack.Push16(BX);
@@ -1407,7 +1407,7 @@ public partial class CfgGeneratedOverrides {
         SP -= 2;
         AX <<= 1;
         word1 = AX;
-        word2 = DsGlobals.Word037E;
+        index = DsGlobals.Word037E;
         AX = (ushort)((AX << 3) - word1);
         SI = 0;
         DX = (ushort)(0x01E0 + AX);
@@ -1415,11 +1415,11 @@ public partial class CfgGeneratedOverrides {
         frame.Local14 = DX;
         while (true) {
             CheckExternalEvents(cs1, 0x08E9);
-            if (word2 == 0) {
+            if (index == 0) {
                 break;
             }
-            DI = UInt16[DS, word2];
-            BX = UInt16[DS, word2 + 2];
+            DI = UInt16[DS, index];
+            BX = UInt16[DS, index + 2];
             AL = UInt8[DS, BX + 7];
             DX = 1;
             if ((AL & 0x40) == 0 && (AL & 8) == 0) {
@@ -1435,17 +1435,17 @@ public partial class CfgGeneratedOverrides {
             CX++;
             SI |= AX;
         L_0904:
-            word2 = DI;
+            index = DI;
         }
         Alu16.And(SI, SI);
         if (SI == 0) {
-            word3 = CX;
+            word2 = CX;
         }
         else {
             VerifySpeculativeEntryOrFail(cs1, 0x091F, Signature_091F_mov);
-            word3 = 0xFFFF;
+            word2 = 0xFFFF;
         }
-        AX = word3;
+        AX = word2;
         SP = BP;
         BP = Stack.Pop16();
         DI = Stack.Pop16();
@@ -1465,23 +1465,23 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_0936_02106() {
-        ushort word1 = 0;
-        ushort word2;
+        ushort index = 0;
+        ushort word1;
         CheckExternalEvents(cs1, 0x0936);
         AX = 0;
         NearCall(cs1, 0x093B, unknown_017D_08C4_02094Entry);
         Stack.Push16(BX);
         while (true) {
             CheckExternalEvents(cs1, 0x1903);
-            word1 = DsGlobals.Word0380;
-            Alu16.And(word1, word1);
-            if (word1 == 0) {
+            index = DsGlobals.Word0380;
+            Alu16.And(index, index);
+            if (index == 0) {
                 break;
             }
-            word2 = UInt16[DS, word1];
-            DsGlobals.Word0380 = word2;
-            AX = word1;
-            BX = word1;
+            word1 = UInt16[DS, index];
+            DsGlobals.Word0380 = word1;
+            AX = index;
+            BX = index;
             NearCall(cs1, 0x1917, unknown_017D_175A_02F2AEntry);
         }
         BX = Stack.Pop16();
@@ -1587,8 +1587,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_09E4_021B4() {
-        ushort word1;
-        ushort word2 = 0;
+        ushort index;
+        ushort index2 = 0;
         CheckExternalEvents(cs1, 0x09E4);
         Stack.Push16(BX);
         Stack.Push16(SI);
@@ -1615,10 +1615,10 @@ public partial class CfgGeneratedOverrides {
         }
         AX = UInt16[DS, BX + 0x0A];
         NearCall(cs1, 0x0A03, unknown_017D_1684_02E54Entry);
-        word1 = UInt16[DS, BX + 4];
-        UInt16[DS, word1 + 4] = AX;
-        word2 = UInt16[DS, BX + 4];
-        if (UInt16[DS, word2 + 4] != 0) {
+        index = UInt16[DS, BX + 4];
+        UInt16[DS, index + 4] = AX;
+        index2 = UInt16[DS, BX + 4];
+        if (UInt16[DS, index2 + 4] != 0) {
             UInt8[DS, BX + 6] = Alu8.Or(UInt8[DS, BX + 6], 8);
         }
         else {
@@ -1626,15 +1626,15 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, BX + 7] &= 0xF8;
             VerifySpeculativeRunOrFail(cs1, 0x0A16, SpeculativeRun_0A16);
             AX = (ushort)(BX + 0x0C);
-            word2 = UInt16[DS, BX + 4];
+            index2 = UInt16[DS, BX + 4];
             UInt8[DS, BX + 7] = Alu8.Or(UInt8[DS, BX + 7], 4);
             VerifySpeculativeEntryOrFail(cs1, 0x0A20, Signature_0A20_mov);
-            UInt16[DS, word2 + 4] = AX;
+            UInt16[DS, index2 + 4] = AX;
             VerifySpeculativeEntryOrFail(cs1, 0x0A23, Signature_0A23_mov);
             UInt16[DS, BX + 0x0A] = 1;
         }
-        word1 = UInt16[DS, BX + 4];
-        AX = UInt16[DS, word1 + 4];
+        index = UInt16[DS, BX + 4];
+        AX = UInt16[DS, index + 4];
         UInt16[DS, BX + 2] = 0;
         UInt16[DS, BX] = AX;
         SI = Stack.Pop16();
@@ -1644,20 +1644,20 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BX, SI, DS. Outputs: AX, BX. Changes: EAX, BX, ESI, flags.</summary>
     public virtual Action unknown_017D_0A50_02220() {
-        ushort word1 = 0;
+        ushort index = 0;
         byte flagOperand_0A84 = 0;
         CheckExternalEvents(cs1, 0x0A50);
         Stack.Push16(BX);
         Stack.Push16(SI);
         SI = AX;
-        word1 = DX;
-        UInt16[DS, word1 + 2] = 0;
+        index = DX;
+        UInt16[DS, index + 2] = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0A5B);
             AL = UInt8[DS, SI];
             if (AL == 0x2D) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0A6C, Signature_0A6C_or);
-                UInt8[DS, word1 + 2] |= 8;
+                UInt8[DS, index + 2] |= 8;
                 VerifySpeculativeEntryOrFail(cs1, 0x0A70, Signature_0A70_jmp);
             }
             else {
@@ -1669,31 +1669,31 @@ public partial class CfgGeneratedOverrides {
                                 break;
                             }
                             VerifySpeculativeEntryOrFail(cs1, 0x0A94, Signature_0A94_mov);
-                            UInt8[DS, word1 + 0x19] = AL;
+                            UInt8[DS, index + 0x19] = AL;
                             VerifySpeculativeEntryOrFail(cs1, 0x0A97, Signature_0A97_jmp);
                         }
                         else {
                             VerifySpeculativeRunOrFail(cs1, 0x0A84, SpeculativeRun_0A84);
-                            flagOperand_0A84 = UInt8[DS, word1 + 2];
+                            flagOperand_0A84 = UInt8[DS, index + 2];
                             if ((flagOperand_0A84 & 4) != 0) {
                                 goto L_0A69;
                             }
                             VerifySpeculativeEntryOrFail(cs1, 0x0A8A, Signature_0A8A_or);
-                            UInt8[DS, word1 + 2] |= 2;
+                            UInt8[DS, index + 2] |= 2;
                             VerifySpeculativeEntryOrFail(cs1, 0x0A8E, Signature_0A8E_jmp);
                         }
                     }
                     else {
                         VerifySpeculativeEntryOrFail(cs1, 0x0A76, Signature_0A76_or);
-                        UInt8[DS, word1 + 2] |= 4;
+                        UInt8[DS, index + 2] |= 4;
                         VerifySpeculativeEntryOrFail(cs1, 0x0A7A, Signature_0A7A_and);
-                        UInt8[DS, word1 + 2] &= 0xFD;
+                        UInt8[DS, index + 2] &= 0xFD;
                         VerifySpeculativeEntryOrFail(cs1, 0x0A7E, Signature_0A7E_jmp);
                     }
                 }
                 else {
                     VerifySpeculativeEntryOrFail(cs1, 0x0A65, Signature_0A65_or);
-                    UInt8[DS, word1 + 2] |= 1;
+                    UInt8[DS, index + 2] |= 1;
                 }
             }
         L_0A69:
@@ -1709,12 +1709,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS. Outputs: AX, SI, DI. Changes: EAX, CX, EDX, BX, ESI, DI, flags.</summary>
     public virtual Action unknown_017D_0A9E_0226E() {
         ushort word1 = 0;
-        ushort word2 = 0;
-        ushort word3;
+        ushort index = 0;
+        ushort word2;
         byte byte1;
-        ushort word4;
+        ushort index2;
         byte byte2 = 0;
-        ushort word5 = 0;
+        ushort word3 = 0;
         byte flagOperand_0B00 = 0;
         byte flagOperand_0B53 = 0;
         byte flagOperand_0B59 = 0;
@@ -1728,10 +1728,10 @@ public partial class CfgGeneratedOverrides {
         DX = BX;
         UInt8[DS, BX + 0x19] = 0x20;
         NearCall(cs1, 0x0AAE, unknown_017D_0A50_02220Entry);
-        word2 = AX;
+        index = AX;
         UInt16[DS, BX + 6] = 0;
         SI = AX;
-        if (UInt8[DS, word2] == 0x2A) {
+        if (UInt8[DS, index] == 0x2A) {
             goto L_0ADE;
         }
         while (true) {
@@ -1741,8 +1741,8 @@ public partial class CfgGeneratedOverrides {
                 goto L_0AF0;
             }
             VerifySpeculativeRunOrFail(cs1, 0x0AC6, SpeculativeRun_0AC6);
-            word3 = UInt16[DS, BX + 6];
-            (AX, DX) = IMul16((short)word3, (short)0x000A);
+            word2 = UInt16[DS, BX + 6];
+            (AX, DX) = IMul16((short)word2, (short)0x000A);
             DX = AX;
             byte1 = UInt8[DS, SI];
             AX = (ushort)(short)(sbyte)byte1;
@@ -1754,11 +1754,11 @@ public partial class CfgGeneratedOverrides {
         }
     L_0ADE:
         VerifySpeculativeRunOrFail(cs1, 0x0ADE, SpeculativeRun_0ADE);
-        word4 = word1;
-        UInt16[DS, word4] += 2;
+        index2 = word1;
+        UInt16[DS, index2] += 2;
         VerifySpeculativeRunOrFail(cs1, 0x0AE3, SpeculativeRun_0AE3);
-        word2 = UInt16[DS, word4];
-        AX = UInt16[DS, word2 - 2];
+        index = UInt16[DS, index2];
+        AX = UInt16[DS, index - 2];
         UInt16[DS, BX + 6] = AX;
         VerifySpeculativeRunOrFail(cs1, 0x0AEB, SpeculativeRun_0AEB);
         if ((short)AX < 0) {
@@ -1794,8 +1794,8 @@ public partial class CfgGeneratedOverrides {
                     goto L_0B42;
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x0B0F, SpeculativeRun_0B0F);
-                word3 = UInt16[DS, BX + 8];
-                (AX, DX) = IMul16((short)word3, (short)0x000A);
+                word2 = UInt16[DS, BX + 8];
+                (AX, DX) = IMul16((short)word2, (short)0x000A);
                 DX = AX;
                 byte1 = UInt8[DS, SI];
                 AX = (ushort)(short)(sbyte)byte1;
@@ -1807,11 +1807,11 @@ public partial class CfgGeneratedOverrides {
             }
         L_0B30:
             VerifySpeculativeRunOrFail(cs1, 0x0B30, SpeculativeRun_0B30);
-            word4 = word1;
-            UInt16[DS, word4] += 2;
+            index2 = word1;
+            UInt16[DS, index2] += 2;
             VerifySpeculativeRunOrFail(cs1, 0x0B35, SpeculativeRun_0B35);
-            word2 = UInt16[DS, word4];
-            AX = UInt16[DS, word2 - 2];
+            index = UInt16[DS, index2];
+            AX = UInt16[DS, index - 2];
             UInt16[DS, BX + 8] = AX;
             VerifySpeculativeRunOrFail(cs1, 0x0B3D, SpeculativeRun_0B3D);
             if ((short)AX < 0) {
@@ -1824,7 +1824,7 @@ public partial class CfgGeneratedOverrides {
         }
     L_0B42:
         byte2 = UInt8[DS, SI];
-        word5 = (ushort)(SI + 1);
+        word3 = (ushort)(SI + 1);
         if (byte2 >= 0x68) {
             goto L_0B69;
         }
@@ -1861,7 +1861,7 @@ public partial class CfgGeneratedOverrides {
     L_0BA6:
         if (byte2 <= 0x4C) {
             VerifySpeculativeRunOrFail(cs1, 0x0BDE, SpeculativeRun_0BDE);
-            SI = word5;
+            SI = word3;
             UInt8[DS, BX + 3] = Alu8.Or(UInt8[DS, BX + 3], 1);
             VerifySpeculativeEntryOrFail(cs1, 0x0BE4, Signature_0BE4_jmp);
         }
@@ -1872,7 +1872,7 @@ public partial class CfgGeneratedOverrides {
             Alu8.Sub(byte2, 0x4E);
             if (byte2 == 0x4E) {
                 VerifySpeculativeRunOrFail(cs1, 0x0BBC, SpeculativeRun_0BBC);
-                SI = word5;
+                SI = word3;
                 UInt8[DS, BX + 3] = Alu8.Or(UInt8[DS, BX + 3], 2);
                 VerifySpeculativeEntryOrFail(cs1, 0x0BC2, Signature_0BC2_jmp);
             }
@@ -1885,7 +1885,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0BCF, Signature_0BCF_jmp);
         goto L_0B8F;
     L_0B69:
-        word2 = (ushort)(SI + 2);
+        index = (ushort)(SI + 2);
         if (byte2 > 0x68) {
             Alu8.Sub(byte2, 0x74);
             if (byte2 >= 0x74) {
@@ -1898,14 +1898,14 @@ public partial class CfgGeneratedOverrides {
                     goto L_0B8F;
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x0BAE, SpeculativeRun_0BAE);
-                SI = word5;
+                SI = word3;
             }
             else {
                 if (byte2 != UInt8[DS, SI + 1]) {
                     goto L_0B9F;
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x0B89, Signature_0B89_mov);
-                SI = word2;
+                SI = index;
             }
             goto L_0B8B;
         L_0B95:
@@ -1937,13 +1937,13 @@ public partial class CfgGeneratedOverrides {
             if (flagOperand_0B6E != 0x68) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0BC4, Signature_0BC4_jmp);
                 VerifySpeculativeRunOrFail(cs1, 0x0BD1, SpeculativeRun_0BD1);
-                SI = word5;
+                SI = word3;
                 UInt8[DS, BX + 2] = Alu8.Or(UInt8[DS, BX + 2], 0x20);
                 VerifySpeculativeEntryOrFail(cs1, 0x0BD7, Signature_0BD7_jmp);
             }
             else {
                 VerifySpeculativeRunOrFail(cs1, 0x0B74, SpeculativeRun_0B74);
-                SI = word2;
+                SI = index;
                 UInt8[DS, BX + 2] = Alu8.Or(UInt8[DS, BX + 2], 0x10);
                 VerifySpeculativeEntryOrFail(cs1, 0x0B7A, Signature_0B7A_jmp);
             }
@@ -1957,7 +1957,7 @@ public partial class CfgGeneratedOverrides {
         DI = Stack.Pop16();
         SI = Stack.Pop16();
         CX = Stack.Pop16();
-        DX = word5;
+        DX = word3;
         return NearRet();
     }
 
@@ -2000,30 +2000,30 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         BX = word2;
         DS = word3;
-        ushort word4 = 0;
+        ushort index = 0;
         byte flagOperand_0DA7 = 0;
         byte flagOperand_0DAD = 0;
         CheckExternalEvents(cs1, 0x0DA4);
         Stack.Push16(word2);
-        word4 = word1;
-        flagOperand_0DA7 = UInt8[word3, word4 + 2];
+        index = word1;
+        flagOperand_0DA7 = UInt8[word3, index + 2];
         Alu8.And(flagOperand_0DA7, 8);
         if ((flagOperand_0DA7 & 8) == 0) {
-            flagOperand_0DAD = UInt8[word3, word4 + 0x19];
+            flagOperand_0DAD = UInt8[word3, index + 0x19];
             Alu8.Sub(flagOperand_0DAD, 0x30);
             if (flagOperand_0DAD == 0x30) {
                 VerifySpeculativeRunOrFail(cs1, 0x0DB3, SpeculativeRun_0DB3);
-                AX = UInt16[word3, word4 + 6];
-                AX -= UInt16[word3, word4 + 0x0C];
-                AX -= UInt16[word3, word4 + 0x0E];
-                AX -= UInt16[word3, word4 + 0x10];
-                AX -= UInt16[word3, word4 + 0x12];
-                AX -= UInt16[word3, word4 + 0x14];
-                AX -= UInt16[word3, word4 + 0x16];
+                AX = UInt16[word3, index + 6];
+                AX -= UInt16[word3, index + 0x0C];
+                AX -= UInt16[word3, index + 0x0E];
+                AX -= UInt16[word3, index + 0x10];
+                AX -= UInt16[word3, index + 0x12];
+                AX -= UInt16[word3, index + 0x14];
+                AX -= UInt16[word3, index + 0x16];
                 Alu16.And(AX, AX);
                 if ((short)AX > 0) {
                     VerifySpeculativeEntryOrFail(cs1, 0x0DCC, Signature_0DCC_add);
-                    UInt16[word3, word4 + 0x0E] = Alu16.Add(UInt16[word3, word4 + 0x0E], AX);
+                    UInt16[word3, index + 0x0E] = Alu16.Add(UInt16[word3, index + 0x0E], AX);
                 }
             }
         }
@@ -2039,7 +2039,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: BP, SI, DI, flags.</summary>
     public virtual Action unknown_017D_0DD1_025A1() {
-        ushort word1 = 0;
+        ushort index = 0;
         ushort flagOperand_0DE1 = 0;
         unknown_017D_0DD1_025A1Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x0DD1);
@@ -2050,7 +2050,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0DD3, Signature_0DD3_push);
         Stack.Push16(BP);
         VerifySpeculativeRunOrFail(cs1, 0x0DD4, SpeculativeRun_0DD4);
-        word1 = SP;
+        index = SP;
         SP -= 6;
         DI = AX;
         frame.Local8 = DX;
@@ -2059,15 +2059,15 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeRunOrFail(cs1, 0x0DE1, SpeculativeRun_0DE1);
         flagOperand_0DE1 = UInt16[DS, BX + 0x10];
         Alu16.Sub(flagOperand_0DE1, 0);
-        BP = word1;
+        BP = index;
         if ((short)flagOperand_0DE1 <= 0) {
             return unknown_017D_0D9A_0256A();
         }
         VerifySpeculativeRunOrFail(cs1, 0x0DE7, SpeculativeRun_0DE7);
         ES = frame.Local8;
-        AX = (ushort)(word1 - 6);
+        AX = (ushort)(index - 6);
         DX = UInt16[ES, DI];
-        BP = word1;
+        BP = index;
         NearCall(cs1, 0x0DF3, unknown_017D_1942_03112_AsmEntry);
         throw FailAsUntested("Untested return from call at 017D:0DF0");
     }
@@ -2087,7 +2087,7 @@ public partial class CfgGeneratedOverrides {
         ushort word1;
         byte byte2 = 0;
         byte byte1 = 0;
-        byte byte4;
+        byte local10Byte;
         byte byte3 = 0;
         ushort flagOperand_0FE0 = 0;
         ushort flagOperand_11A7 = 0;
@@ -2224,8 +2224,8 @@ public partial class CfgGeneratedOverrides {
                         goto L_0FD2;
                     }
                     VerifySpeculativeRunOrFail(cs1, 0x102D, SpeculativeRun_102D);
-                    byte4 = frame.Local10Byte;
-                    AX = (ushort)(short)(sbyte)byte4;
+                    local10Byte = frame.Local10Byte;
+                    AX = (ushort)(short)(sbyte)local10Byte;
                 }
                 else {
                     VerifySpeculativeEntryOrFail(cs1, 0x0FC8, Signature_0FC8_mov);
@@ -2547,7 +2547,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_136B_02B3B() {
         byte byte1 = 0;
         ushort word1;
-        ushort word2;
+        ushort index;
         byte byte2 = 0;
         byte byte3;
         byte flagOperand_14C2 = 0;
@@ -2622,9 +2622,9 @@ public partial class CfgGeneratedOverrides {
                 VerifySpeculativeEntryOrFail(cs1, 0x13D1, Signature_13D1_add);
                 SsUInt16[BP - 0x6C] += 4;
                 VerifySpeculativeRunOrFail(cs1, 0x13D5, SpeculativeRun_13D5);
-                word2 = SsUInt16[BP - 0x6C];
+                index = SsUInt16[BP - 0x6C];
                 SI = SsUInt16[BP - 0x6C];
-                BX = UInt16[DS, word2 - 4];
+                BX = UInt16[DS, index - 4];
                 ES = UInt16[DS, SI - 2];
             }
             VerifySpeculativeRunOrFail(cs1, 0x13E1, SpeculativeRun_13E1);
@@ -2849,8 +2849,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CL, EBX, BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_156F_02D3F() {
+        ushort index = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
         ushort flagOperand_158D = 0;
         byte flagOperand_1597 = 0;
         ushort flagOperand_15DB = 0;
@@ -2951,20 +2951,20 @@ public partial class CfgGeneratedOverrides {
             }
         }
     L_15CE:
-        word1 = UInt16[DS, SI + 4];
-        word2 = UInt16[DS, word1 + 4];
+        index = UInt16[DS, SI + 4];
+        word1 = UInt16[DS, index + 4];
         UInt16[DS, SI + 2] = 0;
-        UInt16[DS, SI] = word2;
+        UInt16[DS, SI] = word1;
         flagOperand_15DB = SsUInt16[BP - 2];
         Alu16.Sub(flagOperand_15DB, 0);
         if (flagOperand_15DB == 0) {
-            word1 = UInt16[DS, SI + 4];
-            flagOperand_15E4 = UInt8[DS, word1 + 8];
+            index = UInt16[DS, SI + 4];
+            flagOperand_15E4 = UInt8[DS, index + 8];
             Alu8.And(flagOperand_15E4, 1);
             if ((flagOperand_15E4 & 1) != 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x1648, SpeculativeRun_1648);
                 AX = UInt16[DS, SI + 8];
-                BX = word1;
+                BX = index;
                 NearCall(cs1, 0x164E, unknown_017D_1C48_03418Entry);
                 throw FailAsUntested("Untested return from call at 017D:164B");
             }
@@ -3113,46 +3113,46 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, CX, DX, BX, ESI, EDI, DS, DF. Outputs: CX, ESI, EDI. Changes: AX, ECX, ESI, EDI, ES, flags.</summary>
-    public virtual (ushort word6, uint dword3, uint dword4) unknown_017D_173D_02F0D(ushort word1, ushort word2, ushort word3, ushort word4, uint dword1, uint dword2, ushort word5, bool flag1) {
+    public virtual (ushort result, uint result2, uint result3) unknown_017D_173D_02F0D(ushort word1, ushort word2, ushort word3, ushort word4, uint dword1, uint dword2, ushort count, bool count2) {
         AX = word1;
         CX = word2;
         DX = word3;
         BX = word4;
         ESI = dword1;
         EDI = dword2;
-        DS = word5;
-        DirectionFlag = flag1;
-        ushort word6 = 0;
-        ushort word7 = 0;
-        ushort word8 = 0;
-        ushort word9;
+        DS = count;
+        DirectionFlag = count2;
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort word5 = 0;
+        ushort word6;
         CheckExternalEvents(cs1, 0x173D);
         Stack.Push16(word2);
         Stack.Push16((ushort)dword1);
         Stack.Push16((ushort)dword2);
         CX = word4;
-        word6 = word3;
-        word7 = word1;
-        Stack.Push16(word7);
-        word8 = word5;
-        ES = word8;
+        index = word3;
+        index2 = word1;
+        Stack.Push16(index2);
+        word5 = count;
+        ES = word5;
         CarryFlag = (CX & 1) != 0;
         CX >>= 1;
         while (CX != 0) {
-            UInt16[ES, word7] = UInt16[word5, word6];
-            word6 += (ushort)(flag1 ? -2 : 2);
-            word7 += (ushort)(flag1 ? -2 : 2);
+            UInt16[ES, index2] = UInt16[count, index];
+            index += (ushort)(count2 ? -2 : 2);
+            index2 += (ushort)(count2 ? -2 : 2);
             CX--;
         }
         CX = Alu16.Adc(CX, CX);
         while (CX != 0) {
-            UInt8[ES, word7] = UInt8[word5, word6];
-            word6 += (ushort)(flag1 ? -1 : 1);
-            word7 += (ushort)(flag1 ? -1 : 1);
+            UInt8[ES, index2] = UInt8[count, index];
+            index += (ushort)(count2 ? -1 : 1);
+            index2 += (ushort)(count2 ? -1 : 1);
             CX--;
         }
-        word9 = Stack.Pop16();
-        AX = word9;
+        word6 = Stack.Pop16();
+        AX = word6;
         DI = Stack.Pop16();
         SI = Stack.Pop16();
         CX = Stack.Pop16();
@@ -3409,16 +3409,16 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, EBX, SI, DS. Outputs: EBX, SI. Changes: AX, EBX, ESI, flags.</summary>
     public virtual Action unknown_017D_18DE_030AE() {
-        ushort word1 = 0;
-        ushort word2;
+        ushort index = 0;
+        ushort word1;
         ushort flagOperand_18E9 = 0;
         CheckExternalEvents(cs1, 0x18DE);
         Stack.Push16(BX);
         Stack.Push16(SI);
-        word1 = 0x037E;
+        index = 0x037E;
         while (true) {
             CheckExternalEvents(cs1, 0x18E3);
-            BX = UInt16[DS, word1];
+            BX = UInt16[DS, index];
             Alu16.And(BX, BX);
             if (BX == 0) {
                 goto L_18FF;
@@ -3429,10 +3429,10 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
             VerifySpeculativeRunOrFail(cs1, 0x18EE, SpeculativeRun_18EE);
-            word1 = BX;
+            index = BX;
         }
-        word2 = UInt16[DS, BX];
-        UInt16[DS, word1] = word2;
+        word1 = UInt16[DS, BX];
+        UInt16[DS, index] = word1;
         AX = DsGlobals.Word0380;
         DsGlobals.Word0380 = BX;
         UInt16[DS, BX] = AX;
@@ -3477,12 +3477,12 @@ public partial class CfgGeneratedOverrides {
         DX = word2;
         BX = word3;
         DS = word4;
-        ushort word5 = 0;
+        ushort index = 0;
         CheckExternalEvents(cs1, 0x1942);
         VerifySpeculativeEntryOrFail(cs1, 0x1942, Signature_1942_push);
         Stack.Push16(word3);
         VerifySpeculativeRunOrFail(cs1, 0x1943, SpeculativeRun_1943);
-        word5 = word1;
+        index = word1;
         Alu16.And(word1, word1);
         if (word1 != 0) {
             VerifySpeculativeRunOrFail(cs1, 0x1949, SpeculativeRun_1949);
@@ -3490,17 +3490,17 @@ public partial class CfgGeneratedOverrides {
             if ((byte)(word2 >> 8) == 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x1958, SpeculativeRun_1958);
                 AX = 1;
-                UInt8[word4, word5] = (byte)word2;
+                UInt8[word4, index] = (byte)word2;
                 VerifySpeculativeRunOrFail(cs1, 0x195D, SpeculativeRun_195D);
                 BX = Stack.Pop16();
                 NearReturn();
                 return;
             }
             VerifySpeculativeEntryOrFail(cs1, 0x194E, Signature_194E_mov);
-            UInt8[word4, word5] = (byte)(word2 >> 8);
+            UInt8[word4, index] = (byte)(word2 >> 8);
             VerifySpeculativeRunOrFail(cs1, 0x1950, SpeculativeRun_1950);
             AX = 2;
-            UInt8[word4, word5 + 1] = (byte)word2;
+            UInt8[word4, index + 1] = (byte)word2;
         }
         VerifySpeculativeRunOrFail(cs1, 0x1956, SpeculativeRun_1956);
         BX = Stack.Pop16();
@@ -3515,18 +3515,18 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_19FB_031CB() {
+        ushort index = 0;
+        ushort arg0;
+        ushort local10 = 0;
+        ushort index2 = 0;
         ushort word1 = 0;
-        ushort word2;
-        ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5 = 0;
+        ushort word2 = 0;
+        ushort word3;
         ushort word6 = 0;
-        ushort word7;
-        ushort word10 = 0;
-        ushort word11 = 0;
-        ushort word8;
-        ushort word9 = 0;
-        ushort word12;
+        ushort word7 = 0;
+        ushort word4;
+        ushort word5 = 0;
+        ushort local12;
         ushort flagOperand_1A2C = 0;
         ushort flagOperand_1A59 = 0;
         ushort flagOperand_1A6D = 0;
@@ -3539,100 +3539,100 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x19FD, Signature_19FD_push);
         Stack.Push16(BP);
         VerifySpeculativeRunOrFail(cs1, 0x19FE, SpeculativeRun_19FE);
-        word1 = SP;
+        index = SP;
         SP -= 0x0048;
         Stack.Push16(BX);
         VerifySpeculativeRunOrFail(cs1, 0x1A04, SpeculativeRun_1A04);
-        word2 = frame.Arg0;
-        frame.Local10 = word2;
+        arg0 = frame.Arg0;
+        frame.Local10 = arg0;
         VerifySpeculativeRunOrFail(cs1, 0x1A0A, SpeculativeRun_1A0A);
-        word3 = (ushort)(word1 - 0x47);
+        local10 = (ushort)(index - 0x47);
         frame.Local78Byte = 0;
         VerifySpeculativeEntryOrFail(cs1, 0x1A11, Signature_1A11_mov);
-        frame.Local8 = word3;
+        frame.Local8 = local10;
         while (true) {
             CheckExternalEvents(cs1, 0x1A14);
             VerifySpeculativeRunOrFail(cs1, 0x1A14, SpeculativeRun_1A14);
-            word2 = frame.Arg2;
+            arg0 = frame.Arg2;
             BX = frame.Local80;
-            frame.Local12 = word2;
+            frame.Local12 = arg0;
             VerifySpeculativeRunOrFail(cs1, 0x1A1D, SpeculativeRun_1A1D);
-            word4 = (ushort)(word1 - 6);
-            word5 = DX;
+            index2 = (ushort)(index - 6);
+            word1 = DX;
             if (AX == 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x1A4D, SpeculativeRun_1A4D);
                 if (BX == 0) {
                     VerifySpeculativeRunOrFail(cs1, 0x1A65, SpeculativeRun_1A65);
-                    word11 = CX;
-                    AX = word5;
+                    word7 = CX;
+                    AX = word1;
                     CX = 0;
                     DI = 0;
-                    flagOperand_1A6D = UInt16[DS, word4];
-                    if (word11 < flagOperand_1A6D) {
+                    flagOperand_1A6D = UInt16[DS, index2];
+                    if (word7 < flagOperand_1A6D) {
                         goto L_1A3F;
                     }
                     VerifySpeculativeRunOrFail(cs1, 0x1A71, SpeculativeRun_1A71);
-                    word5 = AX;
-                    AX = word11;
-                    word10 = 0;
+                    word1 = AX;
+                    AX = word7;
+                    word6 = 0;
                 }
                 else {
                     VerifySpeculativeRunOrFail(cs1, 0x1A51, SpeculativeRun_1A51);
-                    word10 = BX;
+                    word6 = BX;
                     AX = CX;
                     BX = 0;
                     CX = 0;
-                    flagOperand_1A59 = UInt16[DS, word4];
-                    if (word10 < flagOperand_1A59) {
+                    flagOperand_1A59 = UInt16[DS, index2];
+                    if (word6 < flagOperand_1A59) {
                         goto L_1A3C;
                     }
                     VerifySpeculativeRunOrFail(cs1, 0x1A5D, SpeculativeRun_1A5D);
                     CX = AX;
-                    AX = word10;
-                    word6 = 0;
+                    AX = word6;
+                    word2 = 0;
                     goto L_1A39;
                 }
                 goto L_1A3C;
             }
             else {
                 VerifySpeculativeRunOrFail(cs1, 0x1A26, SpeculativeRun_1A26);
-                word6 = AX;
+                word2 = AX;
                 AX = BX;
                 BX = 0;
-                flagOperand_1A2C = UInt16[DS, word4];
-                if (word6 >= flagOperand_1A2C) {
+                flagOperand_1A2C = UInt16[DS, index2];
+                if (word2 >= flagOperand_1A2C) {
                     VerifySpeculativeRunOrFail(cs1, 0x1A30, SpeculativeRun_1A30);
                     BX = AX;
-                    word7 = word6;
-                    (AX, word6) = Div16(divisor: UInt16[DS, word4], dividend: (uint)word7);
+                    word3 = word2;
+                    (AX, word2) = Div16(divisor: UInt16[DS, index2], dividend: (uint)word3);
                     (BX, AX) = (AX, BX);
                 }
             }
         L_1A39:
             VerifySpeculativeRunOrFail(cs1, 0x1A39, SpeculativeRun_1A39);
-            (AX, word10) = Div16(divisor: UInt16[DS, word4], dividend: (uint)word6 << 16 | (uint)AX);
+            (AX, word6) = Div16(divisor: UInt16[DS, index2], dividend: (uint)word2 << 16 | (uint)AX);
             (CX, AX) = (AX, CX);
         L_1A3C:
             VerifySpeculativeRunOrFail(cs1, 0x1A3C, SpeculativeRun_1A3C);
-            (AX, word11) = Div16(divisor: UInt16[DS, word4], dividend: (uint)word10 << 16 | (uint)AX);
-            DI = word5;
+            (AX, word7) = Div16(divisor: UInt16[DS, index2], dividend: (uint)word6 << 16 | (uint)AX);
+            DI = word1;
             (DI, AX) = (AX, DI);
         L_1A3F:
             VerifySpeculativeRunOrFail(cs1, 0x1A3F, SpeculativeRun_1A3F);
-            (word7, word8) = Div16(divisor: UInt16[DS, word4], dividend: (uint)word11 << 16 | (uint)AX);
-            UInt16[DS, word4] = word8;
+            (word3, word4) = Div16(divisor: UInt16[DS, index2], dividend: (uint)word7 << 16 | (uint)AX);
+            UInt16[DS, index2] = word4;
             VerifySpeculativeRunOrFail(cs1, 0x1A43, SpeculativeRun_1A43);
-            DX = word7;
+            DX = word3;
             AX = BX;
-            word9 = CX;
+            word5 = CX;
             CX = DI;
             VerifySpeculativeRunOrFail(cs1, 0x1A79, SpeculativeRun_1A79);
-            word12 = frame.Local12;
-            word3 = word9;
-            frame.Local80 = word9;
+            local12 = frame.Local12;
+            local10 = word5;
+            frame.Local80 = word5;
             VerifySpeculativeRunOrFail(cs1, 0x1A81, SpeculativeRun_1A81);
-            BX = word9;
-            BL = UInt8[DS, word12 + 0x018E];
+            BX = word5;
+            BL = UInt8[DS, local12 + 0x018E];
             DI = frame.Local8;
             frame.Local8 += 1;
             VerifySpeculativeEntryOrFail(cs1, 0x1A8B, Signature_1A8B_mov);
@@ -3642,7 +3642,7 @@ public partial class CfgGeneratedOverrides {
                 continue;
             }
             VerifySpeculativeRunOrFail(cs1, 0x1A91, SpeculativeRun_1A91);
-            if (word3 == 0) {
+            if (local10 == 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x1A98, SpeculativeRun_1A98);
                 if (CX == 0) {
                     VerifySpeculativeRunOrFail(cs1, 0x1A9C, SpeculativeRun_1A9C);
@@ -3658,18 +3658,18 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(cs1, 0x1AA0, Signature_1AA0_dec);
             frame.Local8 -= 1;
             VerifySpeculativeRunOrFail(cs1, 0x1AA3, SpeculativeRun_1AA3);
-            word2 = frame.Local8;
-            AL = UInt8[DS, word2];
-            word3 = frame.Local10;
+            arg0 = frame.Local8;
+            AL = UInt8[DS, arg0];
+            local10 = frame.Local10;
             frame.Local10 += 1;
             VerifySpeculativeEntryOrFail(cs1, 0x1AAE, Signature_1AAE_mov);
-            UInt8[DS, word3] = AL;
+            UInt8[DS, local10] = AL;
             VerifySpeculativeRunOrFail(cs1, 0x1AB0, SpeculativeRun_1AB0);
             Alu8.And(AL, AL);
         } while (AL != 0);
         VerifySpeculativeRunOrFail(cs1, 0x1AB4, SpeculativeRun_1AB4);
         AX = frame.Arg0;
-        SP = word1;
+        SP = index;
         BP = Stack.Pop16();
         DI = Stack.Pop16();
         SI = Stack.Pop16();
@@ -3742,37 +3742,37 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DX, BX, BP, SI, DI. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_1B32_03302() {
-        ushort word1 = 0;
-        ushort word2;
-        ushort word3 = 0;
-        ushort word4;
+        ushort index = 0;
+        ushort local46;
+        ushort index2 = 0;
+        ushort word1;
         unknown_017D_1B32_03302Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1B32);
         Stack.Push16(SI);
         Stack.Push16(DI);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         SP -= 0x0024;
         Stack.Push16(BX);
         Stack.Push16(CX);
         frame.Local42Byte = 0;
-        SI = (ushort)(word1 - 0x23);
+        SI = (ushort)(index - 0x23);
         DI = BX;
         do {
             CheckExternalEvents(cs1, 0x1B45);
-            word2 = frame.Local46;
-            frame.Local8 = word2;
-            word3 = (ushort)(word1 - 2);
+            local46 = frame.Local46;
+            frame.Local8 = local46;
+            index2 = (ushort)(index - 2);
             CX = 0;
-            if (DX >= UInt16[DS, word3]) {
+            if (DX >= UInt16[DS, index2]) {
                 VerifySpeculativeRunOrFail(cs1, 0x1B54, SpeculativeRun_1B54);
                 (DX, AX) = (AX, DX);
                 (DX, CX) = (CX, DX);
-                (AX, DX) = Div16(divisor: UInt16[DS, word3], dividend: (uint)DX << 16 | (uint)AX);
+                (AX, DX) = Div16(divisor: UInt16[DS, index2], dividend: (uint)DX << 16 | (uint)AX);
                 (CX, AX) = (AX, CX);
             }
-            (AX, word4) = Div16(divisor: UInt16[DS, word3], dividend: (uint)DX << 16 | (uint)AX);
-            UInt16[DS, word3] = word4;
+            (AX, word1) = Div16(divisor: UInt16[DS, index2], dividend: (uint)DX << 16 | (uint)AX);
+            UInt16[DS, index2] = word1;
             DX = CX;
             BX = frame.Local8;
             BL = UInt8[DS, BX + 0x018E];
@@ -3788,7 +3788,7 @@ public partial class CfgGeneratedOverrides {
             Alu8.And(AL, AL);
         } while (AL != 0);
         AX = frame.Local44;
-        SP = word1;
+        SP = index;
         BP = Stack.Pop16();
         DI = Stack.Pop16();
         SI = Stack.Pop16();
@@ -3884,48 +3884,48 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CX, BP, SI, DI. Changes: EAX, CX, DX, BX, BP, SI, DI, flags.</summary>
     public virtual Action unknown_017D_1BF2_033C2() {
+        ushort index = 0;
         ushort word1 = 0;
+        ushort offset = 0;
         ushort word2 = 0;
         ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5 = 0;
         unknown_017D_1BF2_033C2Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1BF2);
         Stack.Push16(CX);
         Stack.Push16(SI);
         Stack.Push16(DI);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         SP -= 2;
         SI = AX;
         frame.Local10 = DX;
-        word2 = BX;
+        word1 = BX;
         AX = NearCall(cs1, 0x1C05, () => unknown_017D_2194_03964(AX, DS));
         Alu8.And(AL, 0x80);
         if ((AL & 0x80) == 0) {
-            word3 = frame.Local10;
-            CX = word2;
+            offset = frame.Local10;
+            CX = word1;
             BX = SI;
-            (word4, CarryFlag) = ServiceCall(cs1, 0x1C28, Dos, () => Dos.WriteFile(BX, CX, DS, word3), r => CarryOnInterruptStack(r.carryFlag));
-            word5 = (ushort)(CarryFlag ? 0xFFFF : 0);
-            Alu16.And(word5, word5);
-            if ((short)word5 < 0) {
+            (word2, CarryFlag) = ServiceCall(cs1, 0x1C28, Dos, () => Dos.WriteFile(BX, CX, DS, offset), r => CarryOnInterruptStack(r.carryFlag));
+            word3 = (ushort)(CarryFlag ? 0xFFFF : 0);
+            Alu16.And(word3, word3);
+            if ((short)word3 < 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1C43, Signature_1C43_call);
-                BP = word1;
-                DI = word2;
-                AX = word4;
-                DX = word5;
+                BP = index;
+                DI = word1;
+                AX = word2;
+                DX = word3;
                 NearCall(cs1, 0x1C46, unknown_017D_213B_0390B_AsmEntry);
                 throw FailAsUntested("Untested return from call at 017D:1C43");
             }
-            DX = word4;
-            Alu16.Sub(word4, word2);
-            if (word4 != word2) {
+            DX = word2;
+            Alu16.Sub(word2, word1);
+            if (word2 != word1) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1C34, Signature_1C34_mov);
                 DsGlobals.Word038E = 0x000C;
             }
             AX = DX;
-            SP = word1;
+            SP = index;
             BP = Stack.Pop16();
             DI = Stack.Pop16();
             SI = Stack.Pop16();
@@ -3938,8 +3938,8 @@ public partial class CfgGeneratedOverrides {
         DX = 0;
         CX = Alu16.Xor(CX, CX);
         AH = 0x42;
-        BP = word1;
-        DI = word2;
+        BP = index;
+        DI = word1;
         InterruptCall(cs1, 0x1C15, 0x21);
         throw FailAsUntested("Untested return from call at 017D:1C13");
     }
@@ -3985,11 +3985,11 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, DX, EBX, BP, SI, DI, DS. Outputs: EAX, ECX, EBX, BP, SI, DI, DS. Changes: EAX, ECX, DX, EBX, BP, SI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_1C50_03420() {
+        ushort index = 0;
+        ushort index2 = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word4;
-        ushort word5 = 0;
+        ushort index3;
+        ushort local12 = 0;
         unknown_017D_1C50_03420Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1C50);
         Stack.Push16(CX);
@@ -3997,9 +3997,9 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DI);
         Stack.Push16(DS);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         SP -= 2;
-        word2 = BX;
+        index2 = BX;
         frame.Local12 = 0;
         Alu16.And(AX, AX);
         if (AX != 0) {
@@ -4007,7 +4007,7 @@ public partial class CfgGeneratedOverrides {
             Alu16.Sub(DI, AX);
             if (DI >= AX) {
                 DS = DX;
-                AX = UInt16[DS, word2 + 0x0A];
+                AX = UInt16[DS, index2 + 0x0A];
                 if (DI < 6) {
                     VerifySpeculativeEntryOrFail(cs1, 0x1C7E, Signature_1C7E_mov);
                     DI = 6;
@@ -4015,53 +4015,53 @@ public partial class CfgGeneratedOverrides {
                 Alu16.Sub(DI, AX);
                 if (DI <= AX) {
                     DS = DX;
-                    CX = UInt16[DS, word2 + 8];
-                    BX = UInt16[DS, word2 + 6];
+                    CX = UInt16[DS, index2 + 8];
+                    BX = UInt16[DS, index2 + 6];
                     if (DI <= CX) {
                         VerifySpeculativeRunOrFail(cs1, 0x1CE1, SpeculativeRun_1CE1);
-                        BX = UInt16[DS, word2 + 0x14];
+                        BX = UInt16[DS, index2 + 0x14];
                         CX = 0;
                     }
                     do {
                         CheckExternalEvents(cs1, 0x1C91);
                         DS = DX;
-                        word3 = UInt16[DS, BX];
-                        if (DI <= word3) {
+                        word1 = UInt16[DS, BX];
+                        if (DI <= word1) {
                             goto L_1C99;
                         }
-                        if (CX < word3) {
+                        if (CX < word1) {
                             VerifySpeculativeEntryOrFail(cs1, 0x1CEC, Signature_1CEC_mov);
-                            CX = word3;
+                            CX = word1;
                         }
                         DS = DX;
-                        AX = (ushort)(word2 + 0x0010);
+                        AX = (ushort)(index2 + 0x0010);
                         BX = UInt16[DS, BX + 4];
                         Alu16.Sub(BX, AX);
                     } while (BX != AX);
                     goto L_1CFC;
                 L_1C99:
-                    UInt16[DS, word2 + 8] = CX;
-                    AX = word3;
+                    UInt16[DS, index2 + 8] = CX;
+                    AX = word1;
                     AX -= DI;
-                    UInt16[DS, word2 + 0x0C] += 1;
+                    UInt16[DS, index2 + 0x0C] += 1;
                     if (AX < 6) {
                         VerifySpeculativeEntryOrFail(cs1, 0x1D04, Signature_1D04_dec);
-                        UInt16[DS, word2 + 0x0E] -= 1;
+                        UInt16[DS, index2 + 0x0E] -= 1;
                         VerifySpeculativeRunOrFail(cs1, 0x1D07, SpeculativeRun_1D07);
                         DI = UInt16[DS, BX + 2];
-                        UInt16[DS, word2 + 6] = DI;
+                        UInt16[DS, index2 + 6] = DI;
                         VerifySpeculativeRunOrFail(cs1, 0x1D0D, SpeculativeRun_1D0D);
-                        word2 = UInt16[DS, BX + 4];
-                        UInt16[DS, DI + 4] = word2;
+                        index2 = UInt16[DS, BX + 4];
+                        UInt16[DS, DI + 4] = index2;
                         VerifySpeculativeEntryOrFail(cs1, 0x1D13, Signature_1D13_mov);
-                        UInt16[DS, word2 + 2] = DI;
+                        UInt16[DS, index2 + 2] = DI;
                         VerifySpeculativeEntryOrFail(cs1, 0x1D16, Signature_1D16_jmp);
                     }
                     else {
                         CX = (ushort)(BX + DI);
-                        UInt16[DS, word2 + 6] = CX;
-                        word4 = CX;
-                        UInt16[DS, word4] = AX;
+                        UInt16[DS, index2 + 6] = CX;
+                        index3 = CX;
+                        UInt16[DS, index3] = AX;
                         UInt16[DS, BX] = DI;
                         DI = CX;
                         SI = UInt16[DS, BX + 2];
@@ -4069,8 +4069,8 @@ public partial class CfgGeneratedOverrides {
                         AX = UInt16[DS, BX + 4];
                         UInt16[DS, DI + 4] = AX;
                         UInt16[DS, SI + 4] = CX;
-                        word2 = AX;
-                        UInt16[DS, word2 + 2] = CX;
+                        index2 = AX;
+                        UInt16[DS, index2 + 2] = CX;
                     }
                     DS = DX;
                     UInt8[DS, BX] |= 1;
@@ -4079,8 +4079,8 @@ public partial class CfgGeneratedOverrides {
                     goto L_1CD4;
                 L_1CFC:
                     VerifySpeculativeRunOrFail(cs1, 0x1CFC, SpeculativeRun_1CFC);
-                    word5 = frame.Local12;
-                    UInt16[DS, word2 + 0x0A] = CX;
+                    local12 = frame.Local12;
+                    UInt16[DS, index2 + 0x0A] = CX;
                     VerifySpeculativeEntryOrFail(cs1, 0x1D02, Signature_1D02_jmp);
                     goto L_1CD7;
                 }
@@ -4090,16 +4090,16 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(cs1, 0x1C65, Signature_1C65_jmp);
         }
     L_1CD4:
-        word5 = frame.Local12;
+        local12 = frame.Local12;
     L_1CD7:
-        AX = word5;
-        SP = word1;
+        AX = local12;
+        SP = index;
         BP = Stack.Pop16();
         DS = Stack.Pop16();
         DI = Stack.Pop16();
         SI = Stack.Pop16();
         CX = Stack.Pop16();
-        DX = word5;
+        DX = local12;
         return NearRet();
     }
 
@@ -4112,14 +4112,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, CX, EDX, EBX, BP, SI, DI, DS. Outputs: EAX, CX, EDX, EBX, BP, SI, DI, DS. Changes: EAX, CX, EDX, EBX, BP, SI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_1D18_034E8() {
+        ushort index = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word6;
-        ushort word8;
-        ushort word4 = 0;
-        ushort word5;
-        ushort word7 = 0;
+        ushort index2 = 0;
+        ushort index4;
+        ushort word2;
+        ushort local12 = 0;
+        ushort index3;
+        ushort local122 = 0;
         byte flagOperand_1D35 = 0;
         ushort flagOperand_1E16 = 0;
         byte flagOperand_1E61 = 0;
@@ -4131,9 +4131,9 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DI);
         Stack.Push16(DS);
         Stack.Push16(BP);
-        word1 = SP;
+        index = SP;
         SP -= 6;
-        word2 = DX;
+        word1 = DX;
         frame.Local12 = BX;
         Alu16.And(AX, AX);
         if (AX != 0) {
@@ -4146,26 +4146,26 @@ public partial class CfgGeneratedOverrides {
             }
             AX = UInt16[DS, SI];
             AL &= 0xFE;
-            word3 = (ushort)(SI + AX);
-            if ((UInt8[DS, word3] & 1) == 0) {
-                AX += UInt16[DS, word3];
-                word4 = frame.Local12;
+            index2 = (ushort)(SI + AX);
+            if ((UInt8[DS, index2] & 1) == 0) {
+                AX += UInt16[DS, index2];
+                local12 = frame.Local12;
                 UInt16[DS, SI] = AX;
-                if (word3 == UInt16[DS, word4 + 6]) {
-                    UInt16[DS, word4 + 6] = SI;
+                if (index2 == UInt16[DS, local12 + 6]) {
+                    UInt16[DS, local12 + 6] = SI;
                 }
-                DS = word2;
-                word5 = UInt16[DS, word3 + 2];
-                BX = UInt16[DS, word3 + 4];
-                UInt16[DS, word5 + 4] = BX;
-                UInt16[DS, BX + 2] = word5;
+                DS = word1;
+                index3 = UInt16[DS, index2 + 2];
+                BX = UInt16[DS, index2 + 4];
+                UInt16[DS, index3 + 4] = BX;
+                UInt16[DS, BX + 2] = index3;
                 DI = frame.Local12;
                 UInt16[DS, DI + 0x0E] -= 1;
             }
             else {
-                word6 = frame.Local12;
+                index4 = frame.Local12;
                 UInt16[DS, SI] = AX;
-                BX = UInt16[DS, word6 + 6];
+                BX = UInt16[DS, index4 + 6];
                 if (SI < BX) {
                     goto L_1DD7;
                 }
@@ -4183,8 +4183,8 @@ public partial class CfgGeneratedOverrides {
             L_1DD7:
                 if (SI <= UInt16[DS, BX + 2]) {
                     VerifySpeculativeRunOrFail(cs1, 0x1DDC, SpeculativeRun_1DDC);
-                    word6 = frame.Local12;
-                    BX = UInt16[DS, word6 + 0x14];
+                    index4 = frame.Local12;
+                    BX = UInt16[DS, index4 + 0x14];
                     if (SI >= BX) {
                         goto L_1DE6;
                     }
@@ -4192,16 +4192,16 @@ public partial class CfgGeneratedOverrides {
                 goto L_1D6D;
             L_1DE6:
                 VerifySpeculativeRunOrFail(cs1, 0x1DE6, SpeculativeRun_1DE6);
-                word6 = frame.Local12;
-                DS = word2;
-                BX = UInt16[DS, word6 + 0x0E];
+                index4 = frame.Local12;
+                DS = word1;
+                BX = UInt16[DS, index4 + 0x0E];
                 AX = BX;
                 DI = frame.Local12;
                 AX++;
                 frame.Local16 = AX;
                 VerifySpeculativeRunOrFail(cs1, 0x1DF9, SpeculativeRun_1DF9);
-                word8 = UInt16[DS, DI + 0x0C];
-                (AX, DX) = Div16(divisor: frame.Local16, dividend: (uint)word8);
+                word2 = UInt16[DS, DI + 0x0C];
+                (AX, DX) = Div16(divisor: frame.Local16, dividend: (uint)word2);
                 if (AX < BX) {
                     VerifySpeculativeRunOrFail(cs1, 0x1E03, SpeculativeRun_1E03);
                     DX = UInt16[DS, DI + 0x0C];
@@ -4212,9 +4212,9 @@ public partial class CfgGeneratedOverrides {
                         AX = 0xFFFF;
                     }
                     VerifySpeculativeRunOrFail(cs1, 0x1E0E, SpeculativeRun_1E0E);
-                    DS = word2;
+                    DS = word1;
                     BX = UInt16[DS, SI];
-                    DS = word2;
+                    DS = word1;
                     BX += SI;
                     while (true) {
                         CheckExternalEvents(cs1, 0x1E16);
@@ -4240,16 +4240,16 @@ public partial class CfgGeneratedOverrides {
                     }
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x1E1B, SpeculativeRun_1E1B);
-                word6 = frame.Local12;
-                DS = word2;
-                BX = UInt16[DS, word6 + 6];
+                index4 = frame.Local12;
+                DS = word1;
+                BX = UInt16[DS, index4 + 6];
                 if (SI < BX) {
                     VerifySpeculativeRunOrFail(cs1, 0x1E72, SpeculativeRun_1E72);
-                    word6 = frame.Local12;
-                    BX = UInt16[DS, word6 + 0x14];
+                    index4 = frame.Local12;
+                    BX = UInt16[DS, index4 + 0x14];
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x1E27, Signature_1E27_mov);
-                DS = word2;
+                DS = word1;
                 while (true) {
                     CheckExternalEvents(cs1, 0x1E29);
                     VerifySpeculativeRunOrFail(cs1, 0x1E29, SpeculativeRun_1E29);
@@ -4273,14 +4273,14 @@ public partial class CfgGeneratedOverrides {
                 VerifySpeculativeEntryOrFail(cs1, 0x1E2D, Signature_1E2D_jmp);
             }
         L_1D6D:
-            DS = word2;
+            DS = word1;
             DI = UInt16[DS, BX + 2];
             AX = UInt16[DS, SI];
             DX = (ushort)(DI + UInt16[DS, DI]);
             frame.Local14 = DI;
             if (SI != DX) {
-                word5 = frame.Local12;
-                UInt16[DS, word5 + 0x0E] += 1;
+                index3 = frame.Local12;
+                UInt16[DS, index3 + 0x0E] += 1;
                 DI = frame.Local14;
                 UInt16[DS, SI + 4] = BX;
                 UInt16[DS, SI + 2] = DI;
@@ -4288,30 +4288,30 @@ public partial class CfgGeneratedOverrides {
                 UInt16[DS, BX + 2] = SI;
             }
             else {
-                word6 = DI;
-                AX += UInt16[DS, word6];
-                UInt16[DS, word6] = AX;
+                index4 = DI;
+                AX += UInt16[DS, index4];
+                UInt16[DS, index4] = AX;
                 BX = frame.Local12;
                 if (DX == UInt16[DS, BX + 6]) {
                     UInt16[DS, BX + 6] = DI;
                 }
                 SI = frame.Local14;
             }
-            word7 = frame.Local12;
-            DS = word2;
-            UInt16[DS, word7 + 0x0C] -= 1;
-            if (SI < UInt16[DS, word7 + 6] && AX > UInt16[DS, word7 + 8]) {
-                UInt16[DS, word7 + 8] = AX;
+            local122 = frame.Local12;
+            DS = word1;
+            UInt16[DS, local122 + 0x0C] -= 1;
+            if (SI < UInt16[DS, local122 + 6] && AX > UInt16[DS, local122 + 8]) {
+                UInt16[DS, local122 + 8] = AX;
             }
             BX = frame.Local12;
-            DS = word2;
+            DS = word1;
             flagOperand_1DAD = UInt16[DS, BX + 0x0A];
             Alu16.Sub(AX, flagOperand_1DAD);
             if (AX > flagOperand_1DAD) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1DBD, Signature_1DBD_mov);
                 UInt16[DS, BX + 0x0A] = AX;
                 VerifySpeculativeRunOrFail(cs1, 0x1DC0, SpeculativeRun_1DC0);
-                SP = word1;
+                SP = index;
                 BP = Stack.Pop16();
                 DS = Stack.Pop16();
                 DI = Stack.Pop16();
@@ -4324,7 +4324,7 @@ public partial class CfgGeneratedOverrides {
     L_1D2B:
         VerifySpeculativeEntryOrFail(cs1, 0x1D2B, Signature_1D2B_jmp);
     L_1DB2:
-        SP = word1;
+        SP = index;
         BP = Stack.Pop16();
         DS = Stack.Pop16();
         DI = Stack.Pop16();
@@ -4363,57 +4363,57 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, BX, SI, DI, DS. Outputs: AX, EBX, SI. Changes: AX, EBX, SI, EDI, flags.</summary>
     public virtual Action unknown_017D_1E95_03665() {
-        ushort word1 = 0;
-        ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word4;
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort index3 = 0;
+        ushort word1;
         CheckExternalEvents(cs1, 0x1E95);
         Stack.Push16(BX);
         Stack.Push16(SI);
         Stack.Push16(DI);
-        word1 = AX;
-        word2 = DsGlobals.Word0300;
-        word3 = 0;
+        index = AX;
+        index2 = DsGlobals.Word0300;
+        index3 = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x1EA0);
-            if (word2 == 0) {
+            if (index2 == 0) {
                 goto L_1EB2;
             }
             VerifySpeculativeRunOrFail(cs1, 0x1EA4, SpeculativeRun_1EA4);
-            if (word1 < word2) {
+            if (index < index2) {
                 break;
             }
             VerifySpeculativeRunOrFail(cs1, 0x1EA8, SpeculativeRun_1EA8);
-            word3 = word2;
-            word2 = UInt16[DS, word2 + 4];
+            index3 = index2;
+            index2 = UInt16[DS, index2 + 4];
         }
         VerifySpeculativeEntryOrFail(cs1, 0x1EAF, Signature_1EAF_mov);
-        UInt16[DS, word2 + 2] = word1;
+        UInt16[DS, index2 + 2] = index;
     L_1EB2:
-        UInt16[DS, word1 + 2] = word3;
-        UInt16[DS, word1 + 4] = word2;
-        if (word3 == 0) {
-            DsGlobals.Word0300 = word1;
+        UInt16[DS, index + 2] = index3;
+        UInt16[DS, index + 4] = index2;
+        if (index3 == 0) {
+            DsGlobals.Word0300 = index;
         }
         else {
             VerifySpeculativeEntryOrFail(cs1, 0x1EBC, Signature_1EBC_mov);
-            UInt16[DS, word3 + 4] = word1;
+            UInt16[DS, index3 + 4] = index;
         }
-        UInt16[DS, word1 + 0x10] = 0;
-        UInt16[DS, word1 + 8] = 0;
-        UInt16[DS, word1 + 0x0C] = 0;
-        word4 = (ushort)(word1 + 0x10);
-        UInt16[DS, word1 + 0x0E] = 0;
-        UInt16[DS, word1 + 0x12] = word4;
-        BX = UInt16[DS, word1];
-        UInt16[DS, word1 + 0x14] = word4;
+        UInt16[DS, index + 0x10] = 0;
+        UInt16[DS, index + 8] = 0;
+        UInt16[DS, index + 0x0C] = 0;
+        word1 = (ushort)(index + 0x10);
+        UInt16[DS, index + 0x0E] = 0;
+        UInt16[DS, index + 0x12] = word1;
+        BX = UInt16[DS, index];
+        UInt16[DS, index + 0x14] = word1;
         BX -= 0x0016;
-        UInt16[DS, word1 + 6] = word4;
-        UInt16[DS, word1 + 0x16] = BX;
-        BX = Alu16.Add(BX, word1);
-        AX = (ushort)(word1 + 0x16);
-        SI = word1;
-        DI = word3;
+        UInt16[DS, index + 6] = word1;
+        UInt16[DS, index + 0x16] = BX;
+        BX = Alu16.Add(BX, index);
+        AX = (ushort)(index + 0x16);
+        SI = index;
+        DI = index3;
         UInt16[DS, BX + 0x16] = 0xFFFF;
         return unknown_017D_1EF1_036C1();
     }
@@ -4422,7 +4422,7 @@ public partial class CfgGeneratedOverrides {
     public virtual ushort unknown_017D_1EFB_036CB(ushort word1) {
         DS = word1;
         ushort word2 = 0;
-        ushort word3;
+        ushort index;
         ushort flagOperand_1F0F = 0;
         CheckExternalEvents(cs1, 0x1EFB);
         Stack.Push16(BX);
@@ -4430,8 +4430,8 @@ public partial class CfgGeneratedOverrides {
         Alu16.And(word2, word2);
         if (word2 != 0) {
             VerifySpeculativeRunOrFail(cs1, 0x1F03, SpeculativeRun_1F03);
-            word3 = word2;
-            BX = UInt16[word1, word3 + 0x12];
+            index = word2;
+            BX = UInt16[word1, index + 0x12];
             AX = UInt16[word1, BX];
             AX += BX;
             AX += 2;
@@ -4460,18 +4460,18 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_1F1D_036ED() {
+        ushort index = 0;
         ushort word1 = 0;
-        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x1F1D);
         Stack.Push16(BX);
         Stack.Push16(DX);
-        word1 = AX;
-        word2 = UInt16[DS, word1];
-        DX = (ushort)(word2 + 3);
+        index = AX;
+        word1 = UInt16[DS, index];
+        DX = (ushort)(word1 + 3);
         DL &= 0xFE;
-        if (DX >= word2) {
-            BX = word1;
-            AX = word2;
+        if (DX >= word1) {
+            BX = index;
+            AX = word1;
             AX = NearCall(cs1, 0x1F37, () => unknown_017D_1EFB_036CB(DS));
             if (AX < DX) {
                 DX -= AX;
@@ -4480,15 +4480,15 @@ public partial class CfgGeneratedOverrides {
                 VerifySpeculativeEntryOrFail(cs1, 0x1F3B, Signature_1F3B_xor);
                 DX = 0;
             }
-            word2 = DX;
+            word1 = DX;
             DX += 0x001E;
-            if (DX >= word2) {
-                word2 = DsGlobals.Word034C;
-                if (DX < word2) {
-                    DX = word2;
+            if (DX >= word1) {
+                word1 = DsGlobals.Word034C;
+                if (DX < word1) {
+                    DX = word1;
                     DL &= 0xFE;
                 }
-                UInt16[DS, word1] = DX;
+                UInt16[DS, index] = DX;
                 Alu16.And(DX, DX);
                 if (DX != 0) {
                     AX = 1;
@@ -4499,7 +4499,7 @@ public partial class CfgGeneratedOverrides {
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x1F2F, SpeculativeRun_1F2F);
-        AX = word2;
+        AX = word1;
         AX = Alu16.Xor(AX, AX);
         DX = Stack.Pop16();
         BX = Stack.Pop16();
@@ -4508,8 +4508,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, CX, EDX, EBX, BP, ESI, DI, DS, DF. Outputs: AX, BP, ESI, DI, ES, DS. Changes: EAX, CX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_1F62_03732() {
-        ushort word1 = 0;
-        ushort word2;
+        ushort local10 = 0;
+        ushort local102;
         ushort flagOperand_1FC5 = 0;
         unknown_017D_1F62_03732Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1F62);
@@ -4527,13 +4527,13 @@ public partial class CfgGeneratedOverrides {
                 NearCall(cs1, 0x1F85, unknown_017D_1F1D_036EDEntry);
                 Alu16.And(AX, AX);
                 if (AX != 0) {
-                    word1 = (ushort)(frame.Local10 + DsGlobals.Word01B6);
-                    if (word1 < DsGlobals.Word01B6) {
+                    local10 = (ushort)(frame.Local10 + DsGlobals.Word01B6);
+                    if (local10 < DsGlobals.Word01B6) {
                         VerifySpeculativeEntryOrFail(cs1, 0x1F96, Signature_1F96_mov);
-                        word1 = 0xFFFE;
+                        local10 = 0xFFFE;
                     }
-                    AX = word1;
-                    BX = word1;
+                    AX = local10;
+                    BX = local10;
                     NearCall(cs1, 0x1F9E, unknown_017D_21E5_039B5Entry);
                     SI = AX;
                     if (AX != 0xFFFF) {
@@ -4587,8 +4587,8 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeEntryOrFail(cs1, 0x1FDA, Signature_1FDA_add);
                         frame.Local10 += 2;
                         VerifySpeculativeRunOrFail(cs1, 0x1FDE, SpeculativeRun_1FDE);
-                        word2 = frame.Local10;
-                        UInt16[DS, BX] += word2;
+                        local102 = frame.Local10;
+                        UInt16[DS, BX] += local102;
                         VerifySpeculativeRunOrFail(cs1, 0x1FE3, SpeculativeRun_1FE3);
                         AX = frame.Local10;
                         SI = AX;
@@ -4717,23 +4717,23 @@ public partial class CfgGeneratedOverrides {
         DI = word6;
         DS = word7;
         DirectionFlag = flag1;
-        ushort word8 = 0;
+        ushort index = 0;
         ushort flagOperand_20A5 = 0;
         CheckExternalEvents(cs1, 0x209C);
         Stack.Push16(word4);
         Stack.Push16(word2);
         Stack.Push16(word5);
-        word8 = word1;
+        index = word1;
         CX = word3;
         ES = word3;
-        flagOperand_20A5 = UInt16[ES, word8];
+        flagOperand_20A5 = UInt16[ES, index];
         Alu16.Sub(flagOperand_20A5, 0);
         if (flagOperand_20A5 != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x20AB, Signature_20AB_mov);
             DsGlobals.Word0350 = 1;
             VerifySpeculativeRunOrFail(cs1, 0x20B1, SpeculativeRun_20B1);
             ES = CX;
-            AX = UInt16[ES, word8];
+            AX = UInt16[ES, index];
             Alu16.And(AX, AX);
             if (AX != 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x20BA, SpeculativeRun_20BA);
@@ -4746,7 +4746,7 @@ public partial class CfgGeneratedOverrides {
                 AX = Alu16.Add(AX, 0x0390);
                 BX++;
                 AX++;
-                SI = word8;
+                SI = index;
                 SI++;
                 SI = Alu16.Inc(SI);
                 NearCall(cs1, 0x20D1, unknown_017D_223C_03A0C_AsmEntry);
@@ -4930,36 +4930,36 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, CX, DL, BX, DI, DS, DF. Outputs: AX, CX, DI. Changes: AX, ECX, EDI, ES, flags.</summary>
-    public virtual (ushort word6, ushort word7, ushort word8) unknown_017D_223C_03A0C(ushort word1, ushort word2, byte byte1, ushort word3, ushort word4, ushort word5, bool flag1) {
+    public virtual (ushort result, ushort result2, ushort result3) unknown_017D_223C_03A0C(ushort word1, ushort word2, byte byte1, ushort word3, ushort word4, ushort word5, bool count) {
         AX = word1;
         CX = word2;
         DL = byte1;
         BX = word3;
         DI = word4;
         DS = word5;
-        DirectionFlag = flag1;
-        ushort word6 = 0;
+        DirectionFlag = count;
+        ushort index = 0;
         CheckExternalEvents(cs1, 0x223C);
         Stack.Push16(word2);
         Stack.Push16(word4);
-        word6 = word1;
+        index = word1;
         CX = word3;
         AL = byte1;
-        Stack.Push16(word6);
+        Stack.Push16(index);
         Stack.Push16(word5);
         ES = Stack.Pop16();
         AH = AL;
         CarryFlag = (CX & 1) != 0;
         CX >>= 1;
         while (CX != 0) {
-            UInt16[ES, word6] = AX;
-            word6 += (ushort)(flag1 ? -2 : 2);
+            UInt16[ES, index] = AX;
+            index += (ushort)(count ? -2 : 2);
             CX--;
         }
         CX = Alu16.Adc(CX, CX);
         while (CX != 0) {
-            UInt8[ES, word6] = AL;
-            word6 += (ushort)(flag1 ? -1 : 1);
+            UInt8[ES, index] = AL;
+            index += (ushort)(count ? -1 : 1);
             CX--;
         }
         DI = Stack.Pop16();
@@ -4977,10 +4977,10 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, BX, BP, ESI, DI, DS, DF. Outputs: EAX, CX, DX, BX, BP, SI, DI, DS. Changes: EAX, CX, DX, BX, BP, ESI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_2257_03A27() {
-        ushort word1;
-        ushort word2 = 0;
+        ushort previousDs;
+        ushort previousDs2 = 0;
         byte byte1 = 0;
-        ushort word3 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(cs1, 0x2257);
         Stack.Push16(BX);
         Stack.Push16(CX);
@@ -4989,24 +4989,24 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(BP);
         Stack.Push16(DS);
         AX = Alu16.Xor(AX, AX);
-        word1 = 0;
+        previousDs = 0;
         AH = 0x63;
-        (byte1, SI, word2, CarryFlag) = ServiceCall(cs1, 0x2265, Dos, () => Dos.ReadLeadByteTable(0, SI, word1, CarryFlag), r => CarryOnInterruptStack(r.carryFlag));
-        word3 = word2;
+        (byte1, SI, previousDs2, CarryFlag) = ServiceCall(cs1, 0x2265, Dos, () => Dos.ReadLeadByteTable(0, SI, previousDs, CarryFlag), r => CarryOnInterruptStack(r.carryFlag));
+        word1 = previousDs2;
         if (!CarryFlag && byte1 == 0) {
-            Alu16.And(word3, word3);
-            if (word3 != 0) {
+            Alu16.And(word1, word1);
+            if (word1 != 0) {
                 goto L_2275;
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x2271, SpeculativeRun_2271);
-        word3 = 0;
+        word1 = 0;
         SI = Alu16.Xor(SI, SI);
     L_2275:
         DS = Stack.Pop16();
         BP = Stack.Pop16();
         AX = SI;
-        DX = word3;
+        DX = word1;
         DI = Stack.Pop16();
         SI = Stack.Pop16();
         CX = Stack.Pop16();

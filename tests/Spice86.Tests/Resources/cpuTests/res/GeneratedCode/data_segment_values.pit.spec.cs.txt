@@ -43,7 +43,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: BP, DS. Outputs: BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (ushort word3, ushort word4) unknown_F000_02B9_F02B9(ushort word1, ushort word2) {
+    public virtual (ushort result, ushort result2) unknown_F000_02B9_F02B9(ushort word1, ushort word2) {
         BP = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x02B9);
@@ -70,13 +70,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_02C9_F02C9() {
-        ushort word1;
+        ushort index;
         unknown_F000_02C9_F02C9Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x02C9);
-        word1 = SP;
+        index = SP;
         frame.ReturnIp = Alu16.Add(frame.ReturnIp, 3);
         DsGlobals.Byte0084 = 0x0C;
-        BP = word1;
+        BP = index;
         return InterruptRet();
     }
 
@@ -89,7 +89,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, FS, GS. Outputs: EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (uint dword5, uint dword6, uint dword7, uint dword8, ushort word3, ushort word4, ushort word5) unknown_F000_02E1_F02E1(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2) {
+    public virtual (uint result, uint result2, uint result3, uint result4, ushort result5, ushort result6, ushort result7) unknown_F000_02E1_F02E1(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2) {
         EBX = dword1;
         EBP = dword2;
         ESI = dword3;
@@ -110,7 +110,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02E7_F02E7(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02E7_F02E7(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
         EBX = dword1;
         EBP = dword2;
         ESI = dword3;
@@ -132,7 +132,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02EB_F02EB(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02EB_F02EB(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
         EBX = dword1;
         EBP = dword2;
         ESI = dword3;
@@ -153,7 +153,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AH, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02EF_F02EF(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02EF_F02EF(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
         EBX = dword1;
         EBP = dword2;
         ESI = dword3;
@@ -198,7 +198,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint dword6, uint dword7, uint dword8, uint dword9, uint dword10, ushort word5, ushort word6, ushort word7) unknown_F000_030C_F030C(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, ushort word1, ushort word2, ushort word3, ushort word4) {
+    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_030C_F030C(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, ushort word1, ushort word2, ushort word3, ushort word4) {
         EAX = dword1;
         EBX = dword2;
         EBP = dword3;

@@ -16,7 +16,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
-        ushort word2 = 0;
+        ushort previousAx = 0;
         byte byte1 = 0;
         ushort flagOperand_011A = 0;
         ushort flagOperand_0126 = 0;
@@ -32,31 +32,31 @@ public partial class CfgGeneratedOverrides {
         ImageMinus0003Globals.Word0188 = AX;
         AH = 0x67;
         BX = 0x001E;
-        (word2, CarryFlag) = ServiceCall(cs1, 0x0118, Dos, () => Dos.ResizeHandleTable(0x001E, AX), r => CarryOnInterruptStack(r.carryFlag));
+        (previousAx, CarryFlag) = ServiceCall(cs1, 0x0118, Dos, () => Dos.ResizeHandleTable(0x001E, AX), r => CarryOnInterruptStack(r.carryFlag));
         if (!CarryFlag) {
             flagOperand_011A = EsGlobals.Word0032;
             Alu16.Sub(flagOperand_011A, 0x001E);
             if (flagOperand_011A == 0x001E) {
-                word2 = EsGlobals.Word0036;
+                previousAx = EsGlobals.Word0036;
                 flagOperand_0126 = ImageMinus0003Globals.Word0186;
-                Alu16.Sub(word2, flagOperand_0126);
-                if (word2 != flagOperand_0126) {
+                Alu16.Sub(previousAx, flagOperand_0126);
+                if (previousAx != flagOperand_0126) {
                     ImageMinus0003Globals.Word018A = 5;
                     do {
                         CheckExternalEvents(cs1, 0x0132);
                         DX = 0x018C;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x013A, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x013A, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_017F;
                         }
-                        Stack.Push16(word2);
+                        Stack.Push16(previousAx);
                         DX = 0x0998;
-                        AX = word2;
+                        AX = previousAx;
                         Out8(0x0998, AL);
-                        word2 = Stack.Pop16();
+                        previousAx = Stack.Pop16();
                         flagOperand_0142 = ImageMinus0003Globals.Word018A;
-                        Alu16.Sub(word2, flagOperand_0142);
-                        if (word2 != flagOperand_0142) {
+                        Alu16.Sub(previousAx, flagOperand_0142);
+                        if (previousAx != flagOperand_0142) {
                             goto L_017F;
                         }
                         ImageMinus0003Globals.Word018A += 1;
@@ -64,29 +64,29 @@ public partial class CfgGeneratedOverrides {
                         Alu16.Sub(flagOperand_014C, 0x001E);
                     } while (flagOperand_014C != 0x001E);
                     DX = 0x018C;
-                    (word2, CarryFlag) = ServiceCall(cs1, 0x015B, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+                    (previousAx, CarryFlag) = ServiceCall(cs1, 0x015B, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
                     if (CarryFlag) {
-                        Alu16.Sub(word2, 4);
-                        if (word2 != 4) {
+                        Alu16.Sub(previousAx, 4);
+                        if (previousAx != 4) {
                             goto L_017F;
                         }
-                        word2 = EsGlobals.Word002C;
+                        previousAx = EsGlobals.Word002C;
                         flagOperand_0166 = ImageMinus0003Globals.Word0188;
-                        Alu16.Sub(word2, flagOperand_0166);
-                        if (word2 != flagOperand_0166) {
+                        Alu16.Sub(previousAx, flagOperand_0166);
+                        if (previousAx != flagOperand_0166) {
                             goto L_017F;
                         }
                         BX = 5;
                         do {
                             CheckExternalEvents(cs1, 0x016F);
-                            (word2, CarryFlag) = ServiceCall(cs1, 0x0173, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                            (previousAx, CarryFlag) = ServiceCall(cs1, 0x0173, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                             if (CarryFlag) {
                                 goto L_017F;
                             }
                             BX++;
                             Alu16.Sub(BX, 0x001E);
                         } while (BX != 0x001E);
-                        AX = word2;
+                        AX = previousAx;
                         byte1 = 0;
                         goto L_0181;
                     }
@@ -95,7 +95,7 @@ public partial class CfgGeneratedOverrides {
         }
     L_017F:
         VerifySpeculativeEntryOrFail(cs1, 0x017F, Signature_017F_mov);
-        AX = word2;
+        AX = previousAx;
         byte1 = 0xFF;
     L_0181:
         DX = 0x0999;

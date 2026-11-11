@@ -16,7 +16,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1;
-        ushort word2;
+        ushort index;
         CheckExternalEvents(cs1, 0x0100);
         InterruptFlag = false;
         AX = Alu16.Xor(AX, AX);
@@ -43,10 +43,10 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Xor(DI, DI);
         AX = (ushort)(BL | 0x0700);
         SegmentB800Globals.Word0000 = AX;
-        word2 = (ushort)(DirectionFlag ? -2 : 2);
+        index = (ushort)(DirectionFlag ? -2 : 2);
         AL = BH;
-        UInt16[ES, word2] = AX;
-        DI = (ushort)(word2 + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[ES, index] = AX;
+        DI = (ushort)(index + (ushort)(DirectionFlag ? -2 : 2));
         AL = CsGlobals.Byte0166;
         UInt16[ES, DI] = AX;
         DI += (ushort)(DirectionFlag ? -2 : 2);
@@ -521,7 +521,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint dword8, uint dword9, uint dword10, uint dword11, uint dword12, uint dword13, uint dword14, ushort word5, ushort word6, ushort word7, ushort word8) unknown_F000_00E8_F00E8(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, uint dword6, uint dword7, ushort word1, ushort word2, ushort word3, ushort word4) {
+    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, uint result6, uint result7, ushort result8, ushort result9, ushort result10, ushort result11) unknown_F000_00E8_F00E8(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, uint dword6, uint dword7, ushort word1, ushort word2, ushort word3, ushort word4) {
         EAX = dword1;
         ECX = dword2;
         EDX = dword3;

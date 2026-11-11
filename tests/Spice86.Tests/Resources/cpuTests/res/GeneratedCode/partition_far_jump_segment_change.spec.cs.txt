@@ -72,13 +72,13 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, DS. Outputs: none. Changes: AX.</summary>
     /// Segment values at entry, from every call site: ES = 0xF100, DS = 0x2000.
-    public virtual void unknown_F100_004F_F104F(ushort word1, ushort word2) {
-        BX = word1;
-        DS = word2;
+    public virtual void unknown_F100_004F_F104F(ushort index, ushort word1) {
+        BX = index;
+        DS = word1;
         CheckExternalEvents(cs1, 0x004F);
         Stack.Push16(CS);
         AX = Stack.Pop16();
-        UInt16[word2, word1 + 0x0C] = AX;
+        UInt16[word1, index + 0x0C] = AX;
         NearReturn();
         return;
     }

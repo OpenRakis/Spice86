@@ -17,11 +17,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort index;
         ushort word1;
-        ushort word2;
+        ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
-        ushort word5 = 0;
         byte byte1;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x2000;
@@ -80,17 +80,17 @@ public partial class CfgGeneratedOverrides {
         AH = 2;
         DL = 0x23;
         InterruptCall(cs1, 0x018C, 0x21);
-        word1 = SP;
-        word2 = SsUInt16[word1 - 6];
-        EsGlobals.Word0052 = word2;
-        AX = SsUInt16[word1 - 4];
+        index = SP;
+        word1 = SsUInt16[index - 6];
+        EsGlobals.Word0052 = word1;
+        AX = SsUInt16[index - 4];
         EsGlobals.Word0054 = AX;
-        AX = SsUInt16[word1 - 2];
+        AX = SsUInt16[index - 2];
         EsGlobals.Word0056 = AX;
         BX = 0x1111;
         CX = 0x2222;
         AH = 0x30;
-        BP = word1;
+        BP = index;
         InterruptCall(cs1, 0x01AD, 0x21);
         BX++;
         EsGlobals.Word0068 = BX;
@@ -140,9 +140,9 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Word005A = AX;
         AX = 0x3521;
         InterruptCall(cs1, 0x023D, 0x21);
-        word2 = ES;
+        word1 = ES;
         CsGlobals.Word0417 = BX;
-        CsGlobals.Word0419 = word2;
+        CsGlobals.Word0419 = word1;
         AX = 0x2000;
         ES = 0x2000;
         DX = 0x03AF;
@@ -177,30 +177,30 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Word008A = BX;
         EsGlobals.Word008C = DI;
         EsGlobals.Word0090 = 0;
-        word3 = CsGlobals.Word041B;
-        if (word3 == 0x0292) {
+        word2 = CsGlobals.Word041B;
+        if (word2 == 0x0292) {
             EsGlobals.Word0090 = 1;
         }
         EsGlobals.Word0092 = 0;
-        word4 = CsGlobals.Word041D;
+        word3 = CsGlobals.Word041D;
         BX = CS;
-        if (word4 == BX) {
+        if (word3 == BX) {
             EsGlobals.Word0092 = 1;
         }
         EsGlobals.Word0094 = 0;
         if (SP == CsGlobals.Word041F) {
             EsGlobals.Word0094 = 1;
         }
-        word5 = SI;
+        word4 = SI;
         Alu16.Sub(SI, 0x1234);
         if (SI != 0x1234) {
             VerifySpeculativeEntryOrFail(cs1, 0x02F1, Signature_02F1_mov);
-            word5 = 0xDEAD;
+            word4 = 0xDEAD;
         }
-        EsGlobals.Word0096 = word5;
+        EsGlobals.Word0096 = word4;
         DX = CsGlobals.Word0417;
-        word2 = CsGlobals.Word0419;
-        DS = word2;
+        word1 = CsGlobals.Word0419;
+        DS = word1;
         AX = 0x2521;
         InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
         Stack.Push16(CS);
@@ -268,13 +268,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_016D_03AF_01A7F() {
-        ushort word1;
+        ushort returnIp;
         unknown_016D_03AF_01A7FFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x03AF);
         if (AX == 0x30A5) {
             Stack.Push16(BP);
-            word1 = frame.ReturnIp;
-            ImageMinus0003Globals.Word041B = word1;
+            returnIp = frame.ReturnIp;
+            ImageMinus0003Globals.Word041B = returnIp;
             AX = frame.ReturnCs;
             ImageMinus0003Globals.Word041D = AX;
             frame.SavedFlags = Alu16.Or(frame.SavedFlags, 1);

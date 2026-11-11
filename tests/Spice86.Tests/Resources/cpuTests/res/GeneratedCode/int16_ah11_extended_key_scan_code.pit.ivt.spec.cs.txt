@@ -15,16 +15,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort word1 = 0;
-        ushort word2;
+        ushort previousAx = 0;
+        ushort word1;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x11;
-        (word1, ZeroFlag) = ServiceCall(cs1, 0x0104, Keyboard, () => Keyboard.ReadKeystrokeStatus(AX, ZeroFlag), r => ZeroOnInterruptStack(r.zeroFlag));
-        word2 = (ushort)((byte)(word1 >> 8) | 0x0700);
+        (previousAx, ZeroFlag) = ServiceCall(cs1, 0x0104, Keyboard, () => Keyboard.ReadKeystrokeStatus(AX, ZeroFlag), r => ZeroOnInterruptStack(r.zeroFlag));
+        word1 = (ushort)((byte)(previousAx >> 8) | 0x0700);
         BX = 0xB800;
         ES = 0xB800;
         DI = 0;
-        SegmentB800Globals.Word0000 = word2;
+        SegmentB800Globals.Word0000 = word1;
         DI = (ushort)(DirectionFlag ? -2 : 2);
         AX = 0x4C00;
         InterruptCall(cs1, 0x0116, 0x21);

@@ -99,7 +99,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL. Outputs: flags. Changes: flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_016D_0199_01869(byte byte1) {
+    public virtual (bool result, bool result2, bool result3, bool result4, bool result5, bool result6) unknown_016D_0199_01869(byte byte1) {
         AL = byte1;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0199);

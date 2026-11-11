@@ -15,7 +15,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
-    public virtual (ushort word5, ushort word6, ushort word7, ushort word8) unknown_F000_0196_F0196(ushort word1, ushort word2, ushort word3, ushort word4) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_F000_0196_F0196(ushort word1, ushort word2, ushort word3, ushort word4) {
         AX = word1;
         DX = word2;
         BP = word3;
@@ -31,7 +31,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
-    public virtual (ushort word5, ushort word6, ushort word7, ushort word8) unknown_F000_0197_F0197(ushort word1, ushort word2, ushort word3, ushort word4) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_F000_0197_F0197(ushort word1, ushort word2, ushort word3, ushort word4) {
         AX = word1;
         DX = word2;
         BP = word3;
@@ -98,16 +98,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, BP, DI, ES, DS. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort word8, ushort word9, ushort word10, ushort word11) unknown_F000_01D8_F01D8(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_F000_01D8_F01D8(ushort word1, ushort word2, ushort word3, ushort word4, ushort index, ushort word5, ushort word6) {
         AX = word1;
         DX = word2;
         BX = word3;
         BP = word4;
-        DI = word5;
-        ES = word6;
-        DS = word7;
+        DI = index;
+        ES = word5;
+        DS = word6;
         CheckExternalEvents(biosSegment, 0x01D8);
-        UInt16[word7, word5 + 8] = word3;
+        UInt16[word6, index + 8] = word3;
         NearReturn();
         return (AX, DX, BP, ES);
     }
@@ -118,12 +118,12 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: BX, DI, DS. Outputs: none. Changes: AX, DX, BP, ES.</summary>
-    public virtual void unknown_F000_01DC_F01DC(ushort word1, ushort word2, ushort word3) {
+    public virtual void unknown_F000_01DC_F01DC(ushort word1, ushort index, ushort word2) {
         BX = word1;
-        DI = word2;
-        DS = word3;
+        DI = index;
+        DS = word2;
         CheckExternalEvents(biosSegment, 0x01DC);
-        UInt16[word3, word2 + 0x50] = word1;
+        UInt16[word2, index + 0x50] = word1;
         NearReturn();
         return;
     }
@@ -134,7 +134,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BX, BP, ES. Changes: AX, DX, BX, BP, ES.</summary>
-    public virtual (ushort word5, ushort word6, ushort word7, ushort word8, ushort word9) unknown_F000_01E6_F01E6(ushort word1, ushort word2, ushort word3, ushort word4) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_F000_01E6_F01E6(ushort word1, ushort word2, ushort word3, ushort word4) {
         AX = word1;
         DX = word2;
         BP = word3;
@@ -154,12 +154,12 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_01EA_F01EA() {
-        ushort word1;
+        ushort index;
         unknown_F000_01EA_F01EAFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01EA);
-        word1 = SP;
+        index = SP;
         frame.ReturnIp = Alu16.Add(frame.ReturnIp, 1);
-        BP = word1;
+        BP = index;
         return NearRet();
     }
 
@@ -197,8 +197,8 @@ public partial class CfgGeneratedOverrides {
         ushort word8;
         ushort word9;
         ushort word10;
-        ushort word11 = 0;
-        ushort word12 = 0;
+        ushort index = 0;
+        ushort count = 0;
         byte flagOperand_0094 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -361,13 +361,13 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x0187, unknown_F000_019A_F019AEntry);
         UInt16[DS, DI + 0x26] = BX;
         AX = 0x5555;
-        word11 = 0x0058;
-        for (word12 = 5; word12 != 0; word12--) {
-            UInt16[ES, word11] = AX;
-            word11 += (ushort)(DirectionFlag ? -2 : 2);
+        index = 0x0058;
+        for (count = 5; count != 0; count--) {
+            UInt16[ES, index] = AX;
+            index += (ushort)(DirectionFlag ? -2 : 2);
         }
-        DI = word11;
-        CX = word12;
+        DI = index;
+        CX = count;
         return Hlt();
     }
 

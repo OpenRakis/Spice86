@@ -88,11 +88,11 @@ public partial class CfgGeneratedOverrides {
         ushort word4 = 0;
         ushort word5 = 0;
         ushort word6;
+        ushort index;
         ushort word7;
-        ushort word8;
+        ushort word8 = 0;
         ushort word9 = 0;
         ushort word10 = 0;
-        ushort word11 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -124,11 +124,11 @@ public partial class CfgGeneratedOverrides {
             word1 = UInt16[CS, SI + 6];
             Stack.Push16(word1);
             Stack.Push16(BP);
-            word7 = SP;
-            word8 = SsUInt16[word7 + 2];
+            index = SP;
+            word7 = SsUInt16[index + 2];
             BP = Stack.Pop16();
             AX = Stack.Pop16();
-            UInt16[DS, BX + 0x0A] = word8;
+            UInt16[DS, BX + 0x0A] = word7;
             Stack.Push16(AX);
             CX = SP;
             AX = Stack.Pop16();
@@ -144,23 +144,23 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Word0FFE = 0x6B6B;
             DX = Stack.Pop16();
             UInt16[DS, BX + 0x10] = DX;
-            word9 = UInt16[CS, SI + 0x0A];
+            word8 = UInt16[CS, SI + 0x0A];
             CX = UInt16[CS, SI + 0x0C];
-            word10 = 0;
+            word9 = 0;
             DI = 0;
-            Stack.Push16(word9);
+            Stack.Push16(word8);
             if (CX == 0) {
                 DI = Stack.Pop16();
             }
             else {
-                word10 = Stack.Pop16();
+                word9 = Stack.Pop16();
             }
-            UInt16[DS, BX + 0x12] = word10;
+            UInt16[DS, BX + 0x12] = word9;
             UInt16[DS, BX + 0x14] = DI;
             Stack.Push16(word4);
-            word11 = UInt16[CS, SI + 0x0E];
-            ES = word11;
-            DX = word10;
+            word10 = UInt16[CS, SI + 0x0E];
+            ES = word10;
+            DX = word9;
             DX = NearCall(biosSegment, 0x00A0, () => unknown_F000_00C8_F00C8(ES));
             ES = Stack.Pop16();
             UInt16[DS, BX + 0x16] = DX;

@@ -203,7 +203,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, ESI, EDI, DS. Outputs: EAX, ECX, ESI, EDI, flags. Changes: EAX, ECX, BX, ESI, EDI, ES, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (uint dword5, uint dword6, uint dword7, uint dword8, bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_016D_0246_01916(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1) {
+    public virtual (uint result, uint result2, uint result3, uint result4, bool result5, bool result6, bool result7, bool result8, bool result9, bool result10) unknown_016D_0246_01916(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1) {
         EAX = dword1;
         ECX = dword2;
         ESI = dword3;

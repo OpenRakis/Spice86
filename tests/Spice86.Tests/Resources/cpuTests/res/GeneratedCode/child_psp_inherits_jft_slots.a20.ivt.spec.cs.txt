@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort word1 = 0;
+        ushort segment = 0;
         byte byte1 = 0;
         byte flagOperand_0150 = 0;
         byte flagOperand_0170 = 0;
@@ -92,9 +92,9 @@ public partial class CfgGeneratedOverrides {
                             BX++;
                             Alu16.Sub(BX, 8);
                         } while (BX != 8);
-                        word1 = ImageMinus0003Globals.Word01CE;
+                        segment = ImageMinus0003Globals.Word01CE;
                         AH = 0x50;
-                        ServiceCall(cs1, 0x01A1, Dos, () => Dos.SetCurrentPsp(word1));
+                        ServiceCall(cs1, 0x01A1, Dos, () => Dos.SetCurrentPsp(segment));
                         BX = 5;
                         do {
                             CheckExternalEvents(cs1, 0x01A4);

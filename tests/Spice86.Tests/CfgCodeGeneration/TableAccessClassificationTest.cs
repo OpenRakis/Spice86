@@ -102,7 +102,7 @@ public class TableAccessClassificationTest {
             (0x0004, [0xC3]));                // ret
 
         // Assert
-        program.SourceText.Should().Contain("UInt8[word2, word1 + 0x0120]");
+        program.SourceText.Should().Contain("UInt8[word1, index + 0x0120]");
         program.SourceText.Should().NotContain("Tables");
         AssertCompiles(program);
     }

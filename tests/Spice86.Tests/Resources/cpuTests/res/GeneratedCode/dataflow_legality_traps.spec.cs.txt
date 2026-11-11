@@ -65,13 +65,13 @@ public partial class CfgGeneratedOverrides {
         ushort word4 = 0;
         ushort word5 = 0;
         ushort word6 = 0;
-        ushort word7;
+        ushort segment;
+        ushort word7 = 0;
         ushort word8 = 0;
+        ushort index = 0;
         ushort word9 = 0;
         ushort word10 = 0;
         ushort word11 = 0;
-        ushort word12 = 0;
-        ushort word13 = 0;
         byte byte1;
         ushort flagOperand_0091 = 0;
         ushort flagOperand_0246 = 0;
@@ -151,15 +151,15 @@ public partial class CfgGeneratedOverrides {
             ushort lxsValue_00EB = Segment2000Globals.Word0F60;
             ushort lxsSegment_00EB = Segment2000Globals.Word0F62;
             DI = lxsValue_00EB;
-            word7 = lxsSegment_00EB;
-            Stack.Push16(word7);
-            word8 = Stack.Pop16();
-            UInt16[DS, BX + 0x12] = word8;
+            segment = lxsSegment_00EB;
+            Stack.Push16(segment);
+            word7 = Stack.Pop16();
+            UInt16[DS, BX + 0x12] = word7;
             ES = 0x2000;
-            word9 = UInt16[CS, SI + 0x18];
+            word8 = UInt16[CS, SI + 0x18];
             BP = UInt16[CS, SI + 0x1A];
             DX = UInt16[CS, SI];
-            if ((DL & 8) == 0 && word9 != 1 || BP != 2) {
+            if ((DL & 8) == 0 && word8 != 1 || BP != 2) {
                 goto L_0118;
             }
             UInt16[DS, BX + 0x14] = 1;
@@ -233,7 +233,7 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0E70 = Segment2000Globals.Byte0E60;
             SI = 0x0E5F;
             DI = 0x0E6F;
-            word10 = Stack.Pop16();
+            index = Stack.Pop16();
             DirectionFlag = false;
             UInt16[DS, BX + 0x2A] = 0x0E6F;
             DL = Segment2000Globals.Byte0E70;
@@ -246,7 +246,7 @@ public partial class CfgGeneratedOverrides {
             AX = 0;
             ES = 0;
             Segment0000Globals.Word0020 = 0x038A;
-            word11 = Stack.Pop16();
+            word9 = Stack.Pop16();
             AL = 0xFE;
             PicPorts.WritePrimaryData(0xFE);
             EBP = 0x00001234;
@@ -258,16 +258,16 @@ public partial class CfgGeneratedOverrides {
             InterruptFlag = false;
             UInt16[DS, BX + 0x2E] = Segment2000Globals.Word0E08;
             PicPorts.WritePrimaryData(0xFF);
-            Stack.Push16(word11);
+            Stack.Push16(word9);
             ES = 0;
             Segment0000Globals.Word0020 = 0x037D;
-            word12 = Stack.Pop16();
+            word10 = Stack.Pop16();
             UInt16[DS, BX + 0x3A] = 7;
             Stack.Push16(0x1234);
             flagOperand_0246 = UInt16[DS, BX + 0x3A];
-            word13 = Stack.Pop16();
+            word11 = Stack.Pop16();
             if (flagOperand_0246 == 7) {
-                UInt16[DS, BX + 0x38] = word13;
+                UInt16[DS, BX + 0x38] = word11;
             }
             EAX = SegmentF000Globals.Dword0406;
             CX = 2;
@@ -283,7 +283,7 @@ public partial class CfgGeneratedOverrides {
             DX = SegmentF000Globals.Word040A;
             UInt32[DS, BX + 0x30] = EDX;
             EDX = 0;
-            Stack.Push16(word12);
+            Stack.Push16(word10);
             Vga.WriteSequencerRegister(2, 0x0F);
             Vga.WriteSequencerRegister(4, 6);
             Vga.WriteGraphicsControllerRegister(6, 0);
@@ -338,14 +338,14 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, BX + 0x1C] = byte1;
             Vga.WriteGraphicsControllerRegister(6, 0x0E);
             ES = Stack.Pop16();
-            AX = UInt16[CS, word10 + 6];
+            AX = UInt16[CS, index + 6];
             AX = 0;
             UInt16[DS, BX + 0x20] = 0;
-            CX = UInt16[CS, word10 + 6];
+            CX = UInt16[CS, index + 6];
             CX = 0;
             UInt16[DS, BX + 0x24] = 0;
             BX += 0x0040;
-            SI = word10;
+            SI = index;
             SI = Alu16.Add(SI, 0x0036);
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);

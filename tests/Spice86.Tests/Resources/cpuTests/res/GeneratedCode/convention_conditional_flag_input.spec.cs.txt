@@ -14,7 +14,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CL, CF. Outputs: AX, DL. Changes: AX, DL, CF, PF, ZF, SF, OF.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
-    public virtual (ushort word2, byte byte2) unknown_F000_0039_F0039(ushort word1, byte byte1, bool flag1) {
+    public virtual (ushort result, byte result2) unknown_F000_0039_F0039(ushort word1, byte byte1, bool flag1) {
         AX = word1;
         CL = byte1;
         CarryFlag = flag1;

@@ -17,7 +17,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX, DX. Changes: AX, DX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort word1, ushort word2) unknown_F000_00C9_F00C9() {
+    public virtual (ushort result, ushort result2) unknown_F000_00C9_F00C9() {
         CheckExternalEvents(biosSegment, 0x00C9);
         AX = 0x1111;
         DX = 0x2222;
@@ -33,7 +33,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, BX. Outputs: AX, BX. Changes: AX, BX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort word4, ushort word5) unknown_F000_00D0_F00D0(ushort word1, ushort word2, ushort word3) {
+    public virtual (ushort result, ushort result2) unknown_F000_00D0_F00D0(ushort word1, ushort word2, ushort word3) {
         AX = word1;
         CX = word2;
         BX = word3;

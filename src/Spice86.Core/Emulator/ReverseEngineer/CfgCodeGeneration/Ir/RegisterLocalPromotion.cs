@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
@@ -55,7 +56,7 @@ internal static partial class RegisterLocalPromotion {
 
     public static RegisterLocalPlan Plan(IrMethod method, IrSsa ssa, IReadOnlySet<string> reservedNames,
         IReadOnlySet<IVisitableAstNode> unprinted,
-        Func<IrStatement, CpuValues, bool> callPreserves) {
+        Func<IrStatement, CpuValues, bool> callPreserves, RoleNames.RoleNameContext roles) {
         Dictionary<IVisitableAstNode, SubstitutedRead> reads = new(ReferenceEqualityComparer.Instance);
         List<LocalDeclarationNode> declarations = [];
         HashSet<string> declared = new(StringComparer.Ordinal);
@@ -122,9 +123,10 @@ internal static partial class RegisterLocalPromotion {
             }
             promotable.Add((candidate, legacyName));
         }
-        // The printed name is the width prefix numbered by the first definition address (G4.1);
-        // the legacy register name above only decides which webs promote, as before. Webs that
-        // shared one local keep sharing it: they had one legacy name.
+        // The printed name is the G4.2 semantic name when one rule gives a single answer, else
+        // the width prefix numbered by the first definition address (G4.1); the legacy register
+        // name above only decides which webs promote, as before. Webs that shared one local keep
+        // sharing it: they had one legacy name.
         HashSet<string> taken = new(reservedNames, StringComparer.Ordinal);
         Dictionary<string, string> names = new(StringComparer.Ordinal);
         foreach ((Candidate candidate, string legacyName) in promotable
@@ -135,8 +137,11 @@ internal static partial class RegisterLocalPromotion {
             if (names.ContainsKey(legacyName)) {
                 continue;
             }
-            string name = GenericValueNames.Next(
-                GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken);
+            string? hint = CandidateHint(candidate, occurrences, roles);
+            string name = hint is null || !RoleNames.IsIdentifier(hint)
+                ? GenericValueNames.Next(
+                    GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken)
+                : RoleNames.Next(hint, taken);
             taken.Add(name);
             names[legacyName] = name;
         }
@@ -458,7 +463,8 @@ internal static partial class RegisterLocalPromotion {
             ?? first.Block.EntryOrigin.Address;
         return new Candidate(touched.First(), singleBlock, firstBlockOrder, firstIndex, defIndex,
             end, webRegister, baseName, collected.DefTargets, collected.Sites,
-            classification.WebReads, writeBackUses, signedVotes, unsignedVotes, firstAddress);
+            classification.WebReads, writeBackUses, signedVotes, unsignedVotes, firstAddress,
+            classification);
     }
 
     /// <summary>The definition sites of the web's versions, or <c>null</c> when one disqualifies
@@ -990,6 +996,62 @@ internal static partial class RegisterLocalPromotion {
         return false;
     }
 
+    /// <summary>The G4.2 semantic name <paramref name="candidate"/>'s sites imply: the single
+    /// sink name (a contract or callee parameter the web is passed to), the single source name (a
+    /// callee output or frame slot it is defined from), a role name, or <see langword="null"/>
+    /// for the generic fallback.</summary>
+    private static string? CandidateHint(Candidate candidate,
+        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
+        RoleNames.RoleNameContext roles) {
+        IrSsaValue? maybeValue = TypedSignatures.ValueOf(candidate.Register);
+        if (maybeValue is not { } value) {
+            return null;
+        }
+        List<IVisitableAstNode> roots = [];
+        List<IVisitableAstNode> definitions = [];
+        List<CfgInstruction> origins = [];
+        HashSet<IVisitableAstNode> readNodes = new(ReferenceEqualityComparer.Instance);
+        foreach ((IVisitableAstNode node, IVisitableAstNode? _) in candidate.Reads) {
+            readNodes.Add(node);
+            if (occurrences.TryGetValue(node, out List<IVisitableAstNode>? readRoots)) {
+                roots.AddRange(readRoots);
+            }
+        }
+        foreach (Use use in candidate.Uses.ImplicitUses.Concat(candidate.Uses.KillingUses)) {
+            if (use.Site.Statement is { } statement) {
+                roots.Add(statement.Node);
+            }
+            if (use.Site.Terminator is { } terminator) {
+                roots.AddRange(IrAstChildren.TerminatorNodes(terminator));
+            }
+            if (use.Origin is CfgInstruction instruction) {
+                origins.Add(instruction);
+            }
+        }
+        foreach (Definition site in candidate.Sites) {
+            if (site.Statement is not { } definition) {
+                continue;
+            }
+            roots.Add(definition.Node);
+            definitions.Add(definition.Node);
+            if (definition.Origin is CfgInstruction instruction) {
+                origins.Add(instruction);
+            }
+        }
+        HashSet<string> sinks = RoleNames.SinkNames(roots, value, candidate.Register, readNodes,
+            roles.Signatures);
+        if (RoleNames.UniqueName(sinks) is { } sink) {
+            return sink;
+        }
+        HashSet<string> sources = RoleNames.SourceNames(definitions, value, candidate.Register,
+            roles.Signatures, roles.FramePlan);
+        if (RoleNames.UniqueName(sources) is { } source) {
+            return source;
+        }
+        return RoleNames.RoleName(roots, value, candidate.Register,
+            candidate.Register is SegmentRegisterNode, origins);
+    }
+
     /// <summary>Every root (statement node or terminator root) each register node instance occurs
     /// in, per occurrence: a node the parser shares between two positions lists every position's
     /// root, so instance-level substitution can be checked against them.</summary>
@@ -1159,5 +1221,5 @@ internal static partial class RegisterLocalPromotion {
         IReadOnlyList<RegisterNode> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
         IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes,
-        SegmentedAddress FirstAddress);
+        SegmentedAddress FirstAddress, WebUses Uses);
 }

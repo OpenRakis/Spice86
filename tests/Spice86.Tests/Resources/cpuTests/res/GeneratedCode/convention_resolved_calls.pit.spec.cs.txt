@@ -243,7 +243,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AL, CX, DS, CF. Outputs: AL, CX. Changes: AL, CX.</summary>
-    public virtual (byte byte2, ushort word3) unknown_F000_00B4_F00B4(byte byte1, ushort word1, ushort word2, bool flag1) {
+    public virtual (byte result, ushort result2) unknown_F000_00B4_F00B4(byte byte1, ushort word1, ushort word2, bool flag1) {
         AL = byte1;
         CX = word1;
         DS = word2;
@@ -265,7 +265,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AL, CX, DS. Outputs: AL, CX, flags. Changes: AL, CX, flags.</summary>
-    public virtual (byte byte2, ushort word3, bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_F000_00E4_F00E4(byte byte1, ushort word1, ushort word2) {
+    public virtual (byte result, ushort result2, bool result3, bool result4, bool result5, bool result6, bool result7, bool result8) unknown_F000_00E4_F00E4(byte byte1, ushort word1, ushort word2) {
         AL = byte1;
         CX = word1;
         DS = word2;
@@ -282,7 +282,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AL, CX, DX, DS. Outputs: AL, CX. Changes: AL, CX.</summary>
-    public virtual (byte byte2, ushort word4) unknown_F000_00F6_F00F6(byte byte1, ushort word1, ushort word2, ushort word3) {
+    public virtual (byte result, ushort result2) unknown_F000_00F6_F00F6(byte byte1, ushort word1, ushort word2, ushort word3) {
         AL = byte1;
         CX = word1;
         DX = word2;
@@ -299,7 +299,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AL, CX. Outputs: AL, CX. Changes: AL, CX.</summary>
-    public virtual (byte byte2, ushort word2) unknown_F000_0109_F0109(byte byte1, ushort word1) {
+    public virtual (byte result, ushort result2) unknown_F000_0109_F0109(byte byte1, ushort word1) {
         AL = byte1;
         CX = word1;
         CheckExternalEvents(biosSegment, 0x0109);

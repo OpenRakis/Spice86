@@ -68,7 +68,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: BX. Outputs: BX, flags. Changes: BX, flags.</summary>
-    public virtual (ushort word2, bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_F000_0039_F0039(ushort word1) {
+    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_F000_0039_F0039(ushort word1) {
         BX = word1;
         CheckExternalEvents(biosSegment, 0x0039);
         BX = Alu16.Add(BX, 1);
@@ -82,7 +82,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: CX. Outputs: CX, flags. Changes: CX, flags.</summary>
-    public virtual (ushort word2, bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_F000_003D_F003D(ushort word1) {
+    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_F000_003D_F003D(ushort word1) {
         CX = word1;
         CheckExternalEvents(biosSegment, 0x003D);
         CX = Alu16.Add(CX, 0x0010);

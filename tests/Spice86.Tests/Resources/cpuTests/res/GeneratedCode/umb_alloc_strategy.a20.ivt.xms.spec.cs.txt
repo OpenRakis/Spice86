@@ -15,84 +15,84 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort blockSegment = 0;
         ushort word1 = 0;
         ushort word2 = 0;
-        ushort word3 = 0;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
-        word1 = Stack.Pop16();
-        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x010A, Dos, () => Dos.ModifyMemory(word1, 0x1000), r => CarryOnInterruptStack(r.carryFlag));
+        blockSegment = Stack.Pop16();
+        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x010A, Dos, () => Dos.ModifyMemory(blockSegment, 0x1000), r => CarryOnInterruptStack(r.carryFlag));
         if (!CarryFlag) {
-            word3 = 0x0040;
-            (word2, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040), r => CarryOnInterruptStack(r.carryFlag));
+            word2 = 0x0040;
+            (word1, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040), r => CarryOnInterruptStack(r.carryFlag));
             if (!CarryFlag) {
-                (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
+                (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
                 if (CarryFlag) {
-                    Alu16.Sub(word3, 0x1FFF);
-                    if (word3 == 0x1FFF) {
-                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0134, Dos, () => Dos.AllocateMemory(0x1FFF), r => CarryOnInterruptStack(r.carryFlag));
+                    Alu16.Sub(word2, 0x1FFF);
+                    if (word2 == 0x1FFF) {
+                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0134, Dos, () => Dos.AllocateMemory(0x1FFF), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        Alu16.Sub(word2, 0xD001);
-                        if (word2 != 0xD001) {
+                        Alu16.Sub(word1, 0xD001);
+                        if (word1 != 0xD001) {
                             goto L_01AA;
                         }
-                        ImageMinus0003Globals.Word01B1 = word2;
-                        word3 = 0x0080;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x0146, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080), r => CarryOnInterruptStack(r.carryFlag));
+                        ImageMinus0003Globals.Word01B1 = word1;
+                        word2 = 0x0080;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x0146, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        Alu16.Sub(word2, 0xA000);
-                        if (word2 >= 0xA000) {
+                        Alu16.Sub(word1, 0xA000);
+                        if (word1 >= 0xA000) {
                             goto L_01AA;
                         }
-                        ImageMinus0003Globals.Word01B3 = word2;
-                        word3 = 0x00C3;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x0162, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3), r => CarryOnInterruptStack(r.carryFlag));
+                        ImageMinus0003Globals.Word01B3 = word1;
+                        word2 = 0x00C3;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x0162, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3), r => CarryOnInterruptStack(r.carryFlag));
                         if (!CarryFlag) {
                             goto L_01AA;
                         }
-                        Alu16.Sub(word2, 1);
-                        if (word2 != 1) {
+                        Alu16.Sub(word1, 1);
+                        if (word1 != 1) {
                             goto L_01AA;
                         }
-                        word3 = 0x00C0;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x0171, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0), r => CarryOnInterruptStack(r.carryFlag));
+                        word2 = 0x00C0;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x0171, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x017B, Dos, () => Dos.AllocateMemory(0x0100), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x017B, Dos, () => Dos.AllocateMemory(0x0100), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        Alu16.Sub(word2, 0xA000);
-                        if (word2 >= 0xA000) {
+                        Alu16.Sub(word1, 0xA000);
+                        if (word1 >= 0xA000) {
                             goto L_01AA;
                         }
-                        ImageMinus0003Globals.Word01B5 = word2;
-                        word1 = ImageMinus0003Globals.Word01B5;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x018E, Dos, () => Dos.FreeMemory(word1, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        ImageMinus0003Globals.Word01B5 = word1;
+                        blockSegment = ImageMinus0003Globals.Word01B5;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x018E, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        word1 = ImageMinus0003Globals.Word01B3;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x0199, Dos, () => Dos.FreeMemory(word1, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        blockSegment = ImageMinus0003Globals.Word01B3;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x0199, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        word1 = ImageMinus0003Globals.Word01B1;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x01A4, Dos, () => Dos.FreeMemory(word1, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        blockSegment = ImageMinus0003Globals.Word01B1;
+                        (word1, CarryFlag) = ServiceCall(cs1, 0x01A4, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        AX = word2;
+                        AX = word1;
                         byte1 = 0;
                         goto L_01AC;
                     }
@@ -101,13 +101,13 @@ public partial class CfgGeneratedOverrides {
         }
     L_01AA:
         VerifySpeculativeEntryOrFail(cs1, 0x01AA, Signature_01AA_mov);
-        AX = word2;
+        AX = word1;
         byte1 = 0xFF;
     L_01AC:
         DX = 0x0999;
         Out8(0x0999, byte1);
-        ES = word1;
-        BX = word3;
+        ES = blockSegment;
+        BX = word2;
         AL = byte1;
         return Hlt();
     }

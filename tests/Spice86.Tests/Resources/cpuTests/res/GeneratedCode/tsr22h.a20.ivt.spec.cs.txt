@@ -18,10 +18,10 @@ public partial class CfgGeneratedOverrides {
         ushort word1;
         ushort word2 = 0;
         ushort word3 = 0;
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort count = 0;
         ushort word4 = 0;
-        ushort word5 = 0;
-        ushort word6 = 0;
-        ushort word7 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         word1 = Stack.Pop16();
@@ -59,19 +59,19 @@ public partial class CfgGeneratedOverrides {
         ES = word3;
         DS = Stack.Pop16();
         DirectionFlag = false;
-        word4 = 0x02AC;
-        word5 = 0x0100;
-        for (word6 = 0x0028; word6 != 0; word6--) {
-            UInt8[ES, word5] = UInt8[DS, word4];
-            word4++;
-            word5++;
+        index = 0x02AC;
+        index2 = 0x0100;
+        for (count = 0x0028; count != 0; count--) {
+            UInt8[ES, index2] = UInt8[DS, index];
+            index++;
+            index2++;
         }
         word1 = ImageMinus0003Globals.Word03D4;
         ES = word1;
         EsGlobals.Word000A = 0x016A;
         Stack.Push16(CS);
-        word7 = Stack.Pop16();
-        EsGlobals.Word000C = word7;
+        word4 = Stack.Pop16();
+        EsGlobals.Word000C = word4;
         BX = ImageMinus0003Globals.Word03D4;
         ServiceCall(cs1, 0x0159, Dos, () => Dos.SetCurrentPsp(BX));
         word1 = ImageMinus0003Globals.Word03D4;
@@ -81,9 +81,9 @@ public partial class CfgGeneratedOverrides {
         SP = 0x0128;
         Stack.Push16(word1);
         Stack.Push16(0x0100);
-        SI = word4;
-        DI = word5;
-        CX = word6;
+        SI = index;
+        DI = index2;
+        CX = count;
         AX = word1;
         return FarRet();
     }

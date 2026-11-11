@@ -137,7 +137,8 @@ internal sealed class IrMethodEmitter(
                 ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan),
                 UnprintedNodes(prepared.FramePlan),
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
-                    statement, mask));
+                    statement, mask),
+                new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan));
             BlockNode body = analysis.StackArguments.Apply(prepared.Body);
             if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0
                 || registerLocals.Replacements.Count > 0) {
@@ -302,7 +303,7 @@ internal sealed class IrMethodEmitter(
     /// <summary>Every local name a register local may not take in <paramref name="irMethod"/>: the
     /// typed signature's parameters, the frame variable, the method variables and every temporary or
     /// declared name appearing in the method.</summary>
-    private static HashSet<string> ReservedLocalNames(IrMethod irMethod, TypedSignature? signature,
+    internal static HashSet<string> ReservedLocalNames(IrMethod irMethod, TypedSignature? signature,
         FrameSlotPlan? framePlan) {
         HashSet<string> names = new(StringComparer.Ordinal);
         foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {

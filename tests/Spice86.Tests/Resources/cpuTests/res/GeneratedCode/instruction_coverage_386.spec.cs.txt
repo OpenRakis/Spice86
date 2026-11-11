@@ -19,8 +19,8 @@ public partial class CfgGeneratedOverrides {
         ushort word3 = 0;
         ushort word4 = 0;
         ushort word5;
+        ushort index;
         ushort word6;
-        ushort word7;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         ES = 0x2000;
@@ -112,9 +112,9 @@ public partial class CfgGeneratedOverrides {
         EDX = 0xFFFFFFFFu;
         Segment2000Globals.Dword0032 = 0xFFFFFFFFu;
         Stack.PushAll16(1, 2, 3, 0, SP, 5, SI, 7);
-        word6 = SP;
-        word7 = SsUInt16[word6 + 6];
-        Segment2000Globals.Word003C = word7;
+        index = SP;
+        word6 = SsUInt16[index + 6];
+        Segment2000Globals.Word003C = word6;
         Stack.PopAll16();
         UInt16[DS, BX + 0x36] = AX;
         UInt16[DS, BX + 0x38] = CX;

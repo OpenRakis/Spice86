@@ -65,29 +65,29 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
+        ushort offset = 0;
         ushort word5 = 0;
         ushort word6 = 0;
         ushort word7 = 0;
+        ushort offset2 = 0;
+        ushort segment;
         ushort word8 = 0;
         ushort word9 = 0;
-        ushort word10;
+        ushort word10 = 0;
         ushort word11 = 0;
+        ushort offset3 = 0;
+        ushort segment2;
         ushort word12 = 0;
         ushort word13 = 0;
         ushort word14 = 0;
         ushort word15 = 0;
-        ushort word16;
+        ushort offset4 = 0;
+        ushort word16 = 0;
         ushort word17 = 0;
         ushort word18 = 0;
+        ushort offset5 = 0;
         ushort word19 = 0;
-        ushort word20 = 0;
-        ushort word21 = 0;
-        ushort word22 = 0;
-        ushort word23 = 0;
-        ushort word24 = 0;
-        ushort word25 = 0;
-        ushort word26 = 0;
-        uint dword5 = 0;
+        uint offset6 = 0;
         byte flagOperand_0754 = 0;
         ushort flagOperand_0835 = 0;
         uint flagOperand_092D = 0;
@@ -1166,13 +1166,13 @@ public partial class CfgGeneratedOverrides {
         word3 = SS;
         word4 = ES;
         Segment6300Globals.Dword0000 = 0xABCD1234u;
-        word5 = Segment6300Globals.Word0000;
+        offset = Segment6300Globals.Word0000;
         SS = Segment6300Globals.Word0002;
-        word6 = SS;
-        if (word6 != 0xABCD) {
+        word5 = SS;
+        if (word5 != 0xABCD) {
             return unknown_F000_15C7_F15C7();
         }
-        if (word5 != 0x1234) {
+        if (offset != 0x1234) {
             return unknown_F000_15C7_F15C7();
         }
         ES = word4;
@@ -1180,8 +1180,8 @@ public partial class CfgGeneratedOverrides {
         Segment6300Globals.Word0004 = 0xBCDE;
         EBX = Segment6300Globals.Dword0000;
         SS = Segment6300Globals.Word0004;
-        word7 = SS;
-        if (word7 != 0xBCDE) {
+        word6 = SS;
+        if (word6 != 0xBCDE) {
             return unknown_F000_15C7_F15C7();
         }
         if (EBX != 0x12345678) {
@@ -1190,104 +1190,104 @@ public partial class CfgGeneratedOverrides {
         ES = word4;
         SS = word3;
         CX = word2;
-        word8 = ES;
+        word7 = ES;
         Segment6300Globals.Dword0000 = 0xABCD1234u;
-        word9 = Segment6300Globals.Word0000;
-        word10 = Segment6300Globals.Word0002;
-        word11 = word10;
-        if (word11 != 0xABCD) {
+        offset2 = Segment6300Globals.Word0000;
+        segment = Segment6300Globals.Word0002;
+        word8 = segment;
+        if (word8 != 0xABCD) {
             return unknown_F000_15C7_F15C7();
         }
-        if (word9 != 0x1234) {
+        if (offset2 != 0x1234) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word8;
+        ES = word7;
         Segment6300Globals.Dword0000 = 0x12345678;
         Segment6300Globals.Word0004 = 0xBCDE;
         EBX = Segment6300Globals.Dword0000;
-        word10 = Segment6300Globals.Word0004;
-        word12 = word10;
-        if (word12 != 0xBCDE) {
+        segment = Segment6300Globals.Word0004;
+        word9 = segment;
+        if (word9 != 0xBCDE) {
             return unknown_F000_15C7_F15C7();
         }
         if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word8;
-        word13 = ES;
-        word14 = ES;
+        ES = word7;
+        word10 = ES;
+        word11 = ES;
         Segment6300Globals.Dword0000 = 0xABCD1234u;
-        word15 = Segment6300Globals.Word0000;
-        word16 = Segment6300Globals.Word0002;
-        word17 = word16;
-        if (word17 != 0xABCD) {
+        offset3 = Segment6300Globals.Word0000;
+        segment2 = Segment6300Globals.Word0002;
+        word12 = segment2;
+        if (word12 != 0xABCD) {
             return unknown_F000_15C7_F15C7();
         }
-        if (word15 != 0x1234) {
+        if (offset3 != 0x1234) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word14;
+        ES = word11;
         Segment6300Globals.Dword0000 = 0x12345678;
         Segment6300Globals.Word0004 = 0xBCDE;
         EBX = Segment6300Globals.Dword0000;
-        word16 = Segment6300Globals.Word0004;
-        word18 = word16;
-        if (word18 != 0xBCDE) {
+        segment2 = Segment6300Globals.Word0004;
+        word13 = segment2;
+        if (word13 != 0xBCDE) {
             return unknown_F000_15C7_F15C7();
         }
         if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word13;
-        word19 = FS;
-        word20 = ES;
+        ES = word10;
+        word14 = FS;
+        word15 = ES;
         Segment6300Globals.Dword0000 = 0xABCD1234u;
-        word21 = Segment6300Globals.Word0000;
+        offset4 = Segment6300Globals.Word0000;
         FS = Segment6300Globals.Word0002;
-        word22 = FS;
-        if (word22 != 0xABCD) {
+        word16 = FS;
+        if (word16 != 0xABCD) {
             return unknown_F000_15C7_F15C7();
         }
-        if (word21 != 0x1234) {
+        if (offset4 != 0x1234) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word20;
+        ES = word15;
         Segment6300Globals.Dword0000 = 0x12345678;
         Segment6300Globals.Word0004 = 0xBCDE;
         EBX = Segment6300Globals.Dword0000;
         FS = Segment6300Globals.Word0004;
-        word23 = FS;
-        if (word23 != 0xBCDE) {
+        word17 = FS;
+        if (word17 != 0xBCDE) {
             return unknown_F000_15C7_F15C7();
         }
         if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word20;
-        FS = word19;
+        ES = word15;
+        FS = word14;
         CX = GS;
-        word24 = ES;
+        word18 = ES;
         Segment6300Globals.Dword0000 = 0xABCD1234u;
-        word25 = Segment6300Globals.Word0000;
+        offset5 = Segment6300Globals.Word0000;
         GS = Segment6300Globals.Word0002;
-        word26 = GS;
-        if (word26 != 0xABCD) {
+        word19 = GS;
+        if (word19 != 0xABCD) {
             return unknown_F000_15C7_F15C7();
         }
-        if (word25 != 0x1234) {
+        if (offset5 != 0x1234) {
             return unknown_F000_15C7_F15C7();
         }
-        ES = word24;
+        ES = word18;
         Segment6300Globals.Dword0000 = 0x12345678;
         Segment6300Globals.Word0004 = 0xBCDE;
-        dword5 = Segment6300Globals.Dword0000;
+        offset6 = Segment6300Globals.Dword0000;
         GS = Segment6300Globals.Word0004;
         AX = GS;
         if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7();
         }
-        Alu32.Sub(dword5, 0x12345678);
-        if (dword5 != 0x12345678) {
+        Alu32.Sub(offset6, 0x12345678);
+        if (offset6 != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
         GS = CX;
@@ -1297,7 +1297,7 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0999;
         Out8(0x0999, 0xFF);
         InterruptFlag = false;
-        EBX = dword5;
+        EBX = offset6;
         return Hlt();
     }
 

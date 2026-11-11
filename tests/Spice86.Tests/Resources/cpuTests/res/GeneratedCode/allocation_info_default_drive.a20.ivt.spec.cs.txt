@@ -15,32 +15,32 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort word2 = 0;
-        ushort word3 = 0;
-        ushort word1 = 0;
+        ushort previousCx = 0;
+        ushort previousDx = 0;
+        ushort previousBx = 0;
         byte byte1 = 0;
         byte flagOperand_0126 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1C;
         DL = 0;
-        (AX, word2, word3, word1, DS) = ServiceCall(cs1, 0x0106, Dos, () => Dos.ReadAllocationInfo(0, 0x1C, CX, DX, BX, DS));
+        (AX, previousCx, previousDx, previousBx, DS) = ServiceCall(cs1, 0x0106, Dos, () => Dos.ReadAllocationInfo(0, 0x1C, CX, DX, BX, DS));
         Alu8.Sub(AL, 0xFF);
         if (AL != 0xFF) {
             Alu8.Sub(AH, 0x1C);
             if (AH == 0x1C) {
                 Alu8.Sub(AL, 0x20);
                 if (AL == 0x20) {
-                    Alu16.Sub(word2, 0x0200);
-                    if (word2 == 0x0200) {
-                        Alu16.Sub(word3, 0x7FFD);
-                        if (word3 != 0x7FFD) {
+                    Alu16.Sub(previousCx, 0x0200);
+                    if (previousCx == 0x0200) {
+                        Alu16.Sub(previousDx, 0x7FFD);
+                        if (previousDx != 0x7FFD) {
                             goto L_012F;
                         }
-                        Alu16.Sub(word1, 0x0029);
-                        if (word1 != 0x0029) {
+                        Alu16.Sub(previousBx, 0x0029);
+                        if (previousBx != 0x0029) {
                             goto L_012F;
                         }
-                        SI = word1;
+                        SI = previousBx;
                         flagOperand_0126 = UInt8[DS, SI];
                         Alu8.Sub(flagOperand_0126, 0xF8);
                         if (flagOperand_0126 != 0xF8) {
@@ -58,8 +58,8 @@ public partial class CfgGeneratedOverrides {
     L_0131:
         DX = 0x0999;
         Out8(0x0999, byte1);
-        CX = word2;
-        BX = word1;
+        CX = previousCx;
+        BX = previousBx;
         AL = byte1;
         return Hlt();
     }
