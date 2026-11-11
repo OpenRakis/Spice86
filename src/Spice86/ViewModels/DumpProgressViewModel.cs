@@ -17,7 +17,7 @@ public partial class DumpProgressViewModel : ObservableObject {
     /// <summary>Current progress value while steps are being reported.</summary>
     [ObservableProperty] private double _progressValue;
 
-    /// <summary>Total step count of the phase currently reporting steps.</summary>
+    /// <summary>Maximum of the progress bar: always 1, steps map to a fraction of it.</summary>
     [ObservableProperty] private double _progressMaximum = 1;
 
     /// <summary>True while no step has been reported yet in the current phase.</summary>
@@ -41,16 +41,18 @@ public partial class DumpProgressViewModel : ObservableObject {
     /// <summary>Reports step <paramref name="current"/> of <paramref name="total"/> in <paramref name="phase"/>, naming <paramref name="item"/>.</summary>
     public void ReportStep(DumpPhase phase, int current, int total, string item) {
         IsIndeterminate = false;
-        ProgressMaximum = total;
-        ProgressValue = current;
+        ProgressValue = DumpProgressReporter.ProgressFraction(phase, current, total);
         PhaseText = DumpProgressReporter.StepText(phase, current, total, item);
     }
 
-    /// <summary>Resets the progress bar to indeterminate when a new phase begins.</summary>
-    public void BeginPhase() {
+    /// <summary>Resets the progress bar to indeterminate when a new phase begins, unless the phase
+    /// continues the shared code-generation bar.</summary>
+    public void BeginPhase(DumpPhase phase) {
+        if (DumpProgressReporter.ContinuesProgress(phase)) {
+            return;
+        }
         IsIndeterminate = true;
         ProgressValue = 0;
-        ProgressMaximum = 1;
     }
 
     /// <summary>Marks the dump as finished; the window may then close.</summary>

@@ -35,14 +35,23 @@ public enum DumpPhase {
     /// <summary>Writing the execution flow JSON dump.</summary>
     ExecutionFlow,
 
-    /// <summary>Code generation: program analysis.</summary>
+    /// <summary>Code generation: building the analysis context.</summary>
     CodeAnalysis,
 
     /// <summary>Code generation: planning and emitter setup.</summary>
     CodePlan,
 
-    /// <summary>Code generation: per-method emission; progress is reported through steps.</summary>
+    /// <summary>Code generation: per-method preparation (lifting and passes); progress is reported
+    /// through steps.</summary>
     CodeMethods,
+
+    /// <summary>Code generation: program-wide analyses (segment summaries, calling conventions,
+    /// typed signatures, globals) over the prepared methods.</summary>
+    CodeProgramAnalysis,
+
+    /// <summary>Code generation: per-method analysis and printing; progress is reported through
+    /// steps.</summary>
+    CodePrinting,
 
     /// <summary>Writing the generated C# source file.</summary>
     CodeSource,
@@ -73,9 +82,11 @@ public sealed class DumpProgressReporter {
             [DumpPhase.CfgPartitions] = "CFG partitions",
             [DumpPhase.CfgReload] = "CFG reload dump",
             [DumpPhase.ExecutionFlow] = "Execution flow",
-            [DumpPhase.CodeAnalysis] = "Code generation: analysis",
-            [DumpPhase.CodePlan] = "Code generation: planning",
-            [DumpPhase.CodeMethods] = "Code generation: methods",
+            [DumpPhase.CodeAnalysis] = "Code generation (1/5): analysis",
+            [DumpPhase.CodePlan] = "Code generation (2/5): planning",
+            [DumpPhase.CodeMethods] = "Code generation (3/5): preparing methods",
+            [DumpPhase.CodeProgramAnalysis] = "Code generation (4/5): program analysis",
+            [DumpPhase.CodePrinting] = "Code generation (5/5): printing methods",
             [DumpPhase.CodeSource] = "Generated C# source",
             [DumpPhase.CodeProject] = "Generated project",
             [DumpPhase.Symbols] = "Ghidra symbols",
@@ -84,7 +95,17 @@ public sealed class DumpProgressReporter {
 
     private static readonly IReadOnlyDictionary<DumpPhase, string> StepLabels =
         new Dictionary<DumpPhase, string> {
-            [DumpPhase.CodeMethods] = "Code generation: method"
+            [DumpPhase.CodeMethods] = "Code generation (3/5): preparing method",
+            [DumpPhase.CodeProgramAnalysis] = "Code generation (4/5): program analysis step",
+            [DumpPhase.CodePrinting] = "Code generation (5/5): printing method"
+        };
+
+    // The code-generation phases share one progress bar: each owns a fixed slice of it.
+    private static readonly IReadOnlyDictionary<DumpPhase, (double Start, double Share)> CodeGenerationShares =
+        new Dictionary<DumpPhase, (double Start, double Share)> {
+            [DumpPhase.CodeMethods] = (0.0, 0.4),
+            [DumpPhase.CodeProgramAnalysis] = (0.4, 0.5),
+            [DumpPhase.CodePrinting] = (0.9, 0.1)
         };
 
     private readonly ITimeProvider _timeProvider;
@@ -129,6 +150,21 @@ public sealed class DumpProgressReporter {
     /// <summary>The one step text, logged by <see cref="Step"/> and shown by the progress window.</summary>
     internal static string StepText(DumpPhase phase, int current, int total, string item) =>
         $"{StepLabelFor(phase)} {current} / {total} ({current * 100 / total}%): {item}";
+
+    /// <summary>The fraction of the progress bar step <paramref name="current"/> of
+    /// <paramref name="total"/> in <paramref name="phase"/> reaches. Code-generation phases map their
+    /// steps into their fixed slice of the shared bar; other phases span the whole bar.</summary>
+    internal static double ProgressFraction(DumpPhase phase, int current, int total) {
+        if (CodeGenerationShares.TryGetValue(phase, out (double Start, double Share) share)) {
+            return share.Start + share.Share * current / total;
+        }
+        return (double)current / total;
+    }
+
+    /// <summary>Whether <paramref name="phase"/> continues the shared code-generation progress bar
+    /// instead of resetting it.</summary>
+    internal static bool ContinuesProgress(DumpPhase phase) =>
+        CodeGenerationShares.TryGetValue(phase, out (double Start, double Share) share) && share.Start > 0;
 
     /// <summary>Starts a dump into <paramref name="directory"/>.</summary>
     public void BeginDump(string directory) {

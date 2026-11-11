@@ -28,9 +28,9 @@ public class DumpProgressViewModelTest {
         viewModel.ReportStep(DumpPhase.CodeMethods, 2, 5, "test_F000_0000_F0000");
 
         viewModel.IsIndeterminate.Should().BeFalse();
-        viewModel.ProgressValue.Should().Be(2);
-        viewModel.ProgressMaximum.Should().Be(5);
-        viewModel.PhaseText.Should().Be("Code generation: method 2 / 5 (40%): test_F000_0000_F0000");
+        viewModel.ProgressValue.Should().BeApproximately(0.16, 1e-9);
+        viewModel.ProgressMaximum.Should().Be(1);
+        viewModel.PhaseText.Should().Be("Code generation (3/5): preparing method 2 / 5 (40%): test_F000_0000_F0000");
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class DumpProgressViewModelTest {
         viewModel.AddMessage("slow line");
 
         // Assert
-        viewModel.PhaseText.Should().Be("Code generation: method 2 / 5 (40%): test_F000_0000_F0000");
+        viewModel.PhaseText.Should().Be("Code generation (3/5): preparing method 2 / 5 (40%): test_F000_0000_F0000");
         viewModel.Messages.Last().Should().Be("slow line");
     }
 
@@ -52,7 +52,7 @@ public class DumpProgressViewModelTest {
         // Arrange
         DumpProgressViewModel viewModel = new();
         viewModel.ReportStep(DumpPhase.CodeMethods, 2, 5, "test_F000_0000_F0000");
-        viewModel.BeginPhase();
+        viewModel.BeginPhase(DumpPhase.CodeSource);
 
         // Act
         viewModel.AddMessage("x");
@@ -66,11 +66,33 @@ public class DumpProgressViewModelTest {
         DumpProgressViewModel viewModel = new();
         viewModel.ReportStep(DumpPhase.CodeMethods, 2, 5, "method_a");
 
-        viewModel.BeginPhase();
+        viewModel.BeginPhase(DumpPhase.CodeSource);
 
         viewModel.IsIndeterminate.Should().BeTrue();
         viewModel.ProgressValue.Should().Be(0);
         viewModel.ProgressMaximum.Should().Be(1);
+    }
+
+    [Fact]
+    public void CodeGenerationPhasesShareOneProgressBar() {
+        DumpProgressViewModel viewModel = new();
+        viewModel.ReportStep(DumpPhase.CodeMethods, 5, 5, "m");
+
+        viewModel.BeginPhase(DumpPhase.CodeProgramAnalysis);
+
+        viewModel.IsIndeterminate.Should().BeFalse();
+        viewModel.ProgressValue.Should().BeApproximately(0.4, 1e-9);
+
+        viewModel.ReportStep(DumpPhase.CodeProgramAnalysis, 2, 4, "calling conventions, round 3");
+
+        viewModel.ProgressValue.Should().BeApproximately(0.65, 1e-9);
+        viewModel.PhaseText.Should().Be(
+            "Code generation (4/5): program analysis step 2 / 4 (50%): calling conventions, round 3");
+
+        viewModel.BeginPhase(DumpPhase.CodePrinting);
+        viewModel.ReportStep(DumpPhase.CodePrinting, 1, 1, "m");
+
+        viewModel.ProgressValue.Should().BeApproximately(1.0, 1e-9);
     }
 
     [Fact]
