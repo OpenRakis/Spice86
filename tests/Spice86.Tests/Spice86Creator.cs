@@ -52,9 +52,13 @@ public sealed class Spice86Creator : IDisposable {
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, null) {
+            settings.EnableSpeculativeCfgExploration, TestClockStartTime) {
         EnableUmb = settings.EnableUmb;
     }
+
+    /// <summary>The fixed emulated start time of fixture runs: every machine reports the same DOS
+    /// date and time, so timestamps written to emulated RAM are reproducible between runs.</summary>
+    private static readonly DateTimeOffset TestClockStartTime = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
         bool failOnUnhandledPort, bool enableA20Gate, bool enableXms, bool enableEms,

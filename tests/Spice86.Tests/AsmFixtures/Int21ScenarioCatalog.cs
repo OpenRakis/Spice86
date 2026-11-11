@@ -187,6 +187,7 @@ internal static class Int21ScenarioCatalog {
                 CreateHostFiles = directory => {
                     byte[] testData = Enumerable.Range(0, 0x400).Select(i => (byte)i).ToArray();
                     File.WriteAllBytes(Path.Join(directory, "SEEKTEST.BIN"), testData);
+                    DosTestFiles.SetFixedTimes(Path.Join(directory, "SEEKTEST.BIN"));
                 }
             }, NoDetailAssertions);
     }
@@ -195,7 +196,11 @@ internal static class Int21ScenarioCatalog {
     /// denied, so every run needs the same read-only content file.</summary>
     private static AsmScenario WriteReadOnlyHandle() {
         return ProgramScenario("write_read_only_handle", "write_read_only_handle.com", new Int21RunSetup {
-            CreateHostFiles = directory => File.WriteAllText(Path.Join(directory, "RO.TXT"), "data")
+            CreateHostFiles = directory => {
+                string path = Path.Join(directory, "RO.TXT");
+                File.WriteAllText(path, "data");
+                DosTestFiles.SetFixedTimes(path);
+            }
         }, NoDetailAssertions);
     }
 
@@ -207,6 +212,7 @@ internal static class Int21ScenarioCatalog {
             CreateHostFiles = directory => {
                 string testFilePath = Path.Join(directory, "TESTATTR.TXT");
                 File.WriteAllText(testFilePath, "test");
+                DosTestFiles.SetFixedTimes(testFilePath);
                 File.SetAttributes(testFilePath, FileAttributes.ReadOnly | FileAttributes.Archive);
             }
         }, testHandler => {
@@ -226,6 +232,7 @@ internal static class Int21ScenarioCatalog {
                 CreateHostFiles = directory => {
                     string testFilePath = Path.Join(directory, "SETATR.TXT");
                     File.WriteAllText(testFilePath, "test");
+                    DosTestFiles.SetFixedTimes(testFilePath);
                     File.SetAttributes(testFilePath, FileAttributes.Archive);
                 }
             }, NoDetailAssertions);
@@ -245,14 +252,16 @@ internal static class Int21ScenarioCatalog {
     /// the headless GUI while the program runs, and the program must detect it and invoke INT 23h.</summary>
     private static AsmScenario StdinStatusDetectsCtrlC() {
         return ProgramScenario("check_stdin_status_ctrl_c", "check_stdin_status_ctrl_break.com",
-            KeyboardSetup(SimulateCtrlC), NoDetailAssertions);
+            KeyboardSetup(SimulateCtrlC), NoDetailAssertions)
+            .WithoutGeneratedExecution("Ctrl-C is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>Same program as <see cref="StdinStatusDetectsCtrlC"/>, but the run presses Ctrl-Break, so it
     /// is a distinct scenario with its own identity and goldens.</summary>
     private static AsmScenario StdinStatusDetectsCtrlBreak() {
         return ProgramScenario("check_stdin_status_ctrl_break", "check_stdin_status_ctrl_break.com",
-            KeyboardSetup(SimulateCtrlBreak), NoDetailAssertions);
+            KeyboardSetup(SimulateCtrlBreak), NoDetailAssertions)
+            .WithoutGeneratedExecution("Ctrl-Break is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program reads a single character through its standard input handle, which the run
@@ -309,7 +318,8 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario FlushInputThenWaitForKey() {
         return ProgramScenario("flush_input_then_wait_key_ah01", "flush_input_then_wait_key_ah01.com",
             KeyboardSetup(SimulateKeyA), testHandler => testHandler.Details.Should().Equal(new byte[] { (byte)'a' },
-                "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"));
+                "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"))
+            .WithoutGeneratedExecution("the key is injected asynchronously while the program waits, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program positions the cursor and reads the Device Status Report bytes back through
@@ -455,7 +465,9 @@ internal static class Int21ScenarioCatalog {
     private static void CreateIsoImageFile(string directory) {
         string sourcePath = Path.Join(directory, "iso-source");
         Directory.CreateDirectory(sourcePath);
+        DosTestFiles.SetFixedDirectoryTimes(sourcePath);
         File.WriteAllText(Path.Join(sourcePath, "README.TXT"), "SPICE86!");
+        DosTestFiles.SetFixedTimes(Path.Join(sourcePath, "README.TXT"));
         using VirtualIsoImage image = new(sourcePath, "SPICE86");
         byte[] isoBytes = new byte[image.TotalSectors * 2048];
         for (int lba = 0; lba < image.TotalSectors; lba++) {
@@ -466,6 +478,7 @@ internal static class Int21ScenarioCatalog {
             }
         }
         File.WriteAllBytes(Path.Join(directory, "disc.iso"), isoBytes);
+        DosTestFiles.SetFixedTimes(Path.Join(directory, "disc.iso"));
     }
 
     private static void CreateFloppyImageFile(string directory) {
@@ -473,17 +486,21 @@ internal static class Int21ScenarioCatalog {
             .WithFile("SUBDIR\\HELLO.TXT", Encoding.ASCII.GetBytes("FLOPPY!"))
             .Build();
         File.WriteAllBytes(Path.Join(directory, "disk.img"), image);
+        DosTestFiles.SetFixedTimes(Path.Join(directory, "disk.img"));
     }
 
     private static void WriteTestFiles(string directory, IEnumerable<string> fileNames) {
         foreach (string fileName in fileNames) {
-            File.WriteAllText(Path.Join(directory, fileName), "test");
+            string path = Path.Join(directory, fileName);
+            File.WriteAllText(path, "test");
+            DosTestFiles.SetFixedTimes(path);
         }
     }
 
     private static void CreateHandleTestFiles(string directory) {
         foreach (string name in new[] { "A", "B", "C", "D" }) {
             File.WriteAllText(Path.Join(directory, $"{name}.TXT"), name);
+            DosTestFiles.SetFixedTimes(Path.Join(directory, $"{name}.TXT"));
         }
     }
 
@@ -495,6 +512,7 @@ internal static class Int21ScenarioCatalog {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", ResourceSubDirectory, resourceFileName);
         string target = Path.Join(targetDirectory, targetFileName);
         File.Copy(source, target, overwrite: true);
+        DosTestFiles.SetFixedTimes(target);
         return target;
     }
 

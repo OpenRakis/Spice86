@@ -42,13 +42,28 @@ internal sealed class AsmScenario {
     /// that program to another file name. Empty when the started program is the resource itself.</summary>
     public string PrimaryResourceFileName { get; init; } = "";
 
+    /// <summary>Why this scenario does not run in generated mode, or <see langword="null"/> when it
+    /// does. Generation, compilation and the generated-source golden still run; only the generated
+    /// execution and its final-state gate are skipped.</summary>
+    public string? GeneratedExecutionSkipReason { get; private set; }
+
+    /// <summary>Returns the same scenario marked as not run in generated mode.</summary>
+    /// <param name="reason">Why the generated run is skipped.</param>
+    /// <returns>The scenario, with the skip reason recorded.</returns>
+    public AsmScenario WithoutGeneratedExecution(string reason) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        GeneratedExecutionSkipReason = reason;
+        return this;
+    }
+
     /// <summary>Creates a scenario with the same identity, resources and preparation, but another oracle.
     /// Used by discrimination tests that prove a wrong expectation fails in both execution modes.</summary>
     /// <param name="rewriteOracle">Rewrites the fixture the preparation produced.</param>
     /// <returns>The scenario with the rewritten oracle.</returns>
     public AsmScenario WithOracle(Func<AsmFixture, AsmFixture> rewriteOracle) {
         return new AsmScenario(Identity, scope => rewriteOracle(_prepareFixture(scope)), ResourceDependencies) {
-            PrimaryResourceFileName = PrimaryResourceFileName
+            PrimaryResourceFileName = PrimaryResourceFileName,
+            GeneratedExecutionSkipReason = GeneratedExecutionSkipReason
         };
     }
 

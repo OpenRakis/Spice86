@@ -43,11 +43,22 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmFixture discovery, IReadOnlyList<AsmFixture> executions) {
         using AsmRunScope discoveryScope = new(discovery);
+        AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
+        foreach (AsmFixture execution in executions) {
+            if (!IsEquivalentScenarioVariant(discoverySettings, execution.Settings)) {
+                using AsmRunScope scope = new(execution);
+                using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly);
+                interpretedStates.Add((execution.Settings, AsmFinalState.Capture(run, execution.Settings)));
+            }
+        }
         using OwnedRunScopes executionScopes = new();
         foreach (AsmFixture execution in executions) {
             executionScopes.Add(new AsmRunScope(execution));
         }
-        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+        return TestGeneratedCodeCore(discoveryScope,
+            executionScopes.Scopes.Select<AsmRunScope, (AsmRunScope? Scope, string? SkipReason)>(
+                scope => (scope, null)).ToList(), interpretedStates);
     }
 
     /// <summary>
@@ -78,19 +89,27 @@ internal sealed class GeneratedCodeMachineTestRunner {
     public GeneratedCSharpProgram TestGeneratedCode(AsmScenario discovery, IReadOnlyList<AsmScenario> executions) {
         using AsmRunScope discoveryScope = discovery.Prepare();
         AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
         foreach (AsmScenario execution in executions) {
             if (!IsSameVariantAsDiscovery(execution, discoverySettings)) {
-                RunEmulatedAndCheckMachineGoldens(execution, JitMode.InterpretedOnly);
+                interpretedStates.Add(RunEmulatedAndCheckMachineGoldens(execution, JitMode.InterpretedOnly));
             }
             if (TestJitSettings.CompiledRun) {
                 RunEmulatedAndCheckMachineGoldens(execution, JitMode.CompiledOnly);
             }
         }
         using OwnedRunScopes executionScopes = new();
+        List<(AsmRunScope? Scope, string? SkipReason)> executionEntries = new();
         foreach (AsmScenario execution in executions) {
-            executionScopes.Add(execution.Prepare());
+            string? skipReason = execution.GeneratedExecutionSkipReason;
+            AsmRunScope? scope = null;
+            if (skipReason is null) {
+                scope = execution.Prepare();
+                executionScopes.Add(scope);
+            }
+            executionEntries.Add((scope, skipReason));
         }
-        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+        return TestGeneratedCodeCore(discoveryScope, executionEntries, interpretedStates);
     }
 
     /// <summary>Whether an execution scenario is another run of the same scenario variant as the
@@ -103,12 +122,15 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <summary>Runs one scenario emulated and checks its oracle, engine assertions and machine goldens:
     /// the interpreted run of every non-discovery variant, and the compiled-JIT run of every variant
     /// when <see cref="TestJitSettings.CompiledRun"/> opts in.</summary>
-    private static void RunEmulatedAndCheckMachineGoldens(AsmScenario scenario, JitMode jitMode) {
+    /// <returns>The settings and interpreted final state of the run, the strict gate's baseline.</returns>
+    private static (AsmRunSettings Settings, AsmFinalState State) RunEmulatedAndCheckMachineGoldens(
+        AsmScenario scenario, JitMode jitMode) {
         using AsmRunScope scope = scenario.Prepare();
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
         string goldenKey = MachineGoldens.GoldenKey(scope.Fixture);
         MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
         MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
+        return (scope.Fixture.Settings, AsmFinalState.Capture(run, scope.Fixture.Settings));
     }
 
     /// <summary>
@@ -121,12 +143,26 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <returns>The generated program.</returns>
     /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
-        return TestGeneratedCodeCore(discovery, executions);
+        AsmRunSettings discoverySettings = discovery.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
+        foreach (AsmRunScope execution in executions) {
+            if (!IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
+                using AsmRunScope scope = new(execution.Fixture);
+                using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly);
+                interpretedStates.Add((execution.Fixture.Settings,
+                    AsmFinalState.Capture(run, execution.Fixture.Settings)));
+            }
+        }
+        return TestGeneratedCodeCore(discovery,
+            executions.Select<AsmRunScope, (AsmRunScope? Scope, string? SkipReason)>(
+                scope => (scope, null)).ToList(), interpretedStates);
     }
 
-    private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+    private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery,
+        IReadOnlyList<(AsmRunScope? Scope, string? SkipReason)> executions,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
         string goldenKey = GoldenKey(discovery.Fixture.Settings);
-        GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions);
+        GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions, interpretedStates);
         // Compared last: a behavioural regression (memory dump or caller assertion) is the more
         // important failure and must be the one xunit reports when both a behavioural and a golden
         // mismatch occur on the same run.
@@ -135,10 +171,13 @@ internal sealed class GeneratedCodeMachineTestRunner {
         return generatedProgram;
     }
 
-    private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+    private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery,
+        IReadOnlyList<(AsmRunScope? Scope, string? SkipReason)> executions,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
         AsmRunSettings discoverySettings = discovery.Fixture.Settings;
         string goldenKey = GoldenKey(discoverySettings);
-        foreach (string executionKey in executions.Select(execution => GoldenKey(execution.Fixture.Settings))) {
+        foreach (string executionKey in executions.Select(execution =>
+                execution.Scope is null ? goldenKey : GoldenKey(execution.Scope.Fixture.Settings))) {
             if (executionKey != goldenKey) {
                 throw new ArgumentException(
                     $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
@@ -150,28 +189,59 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
         string? probeReportPath = GeneratedCodeProbes.ReportPath;
         if (probeReportPath is null) {
-            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey,
+                discoveryFinalState, interpretedStates);
             return generatedProgram;
         }
 
         InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram);
         using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Sources);
-        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey,
+            discoveryFinalState, interpretedStates);
         GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
             GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
         return generatedProgram;
     }
 
-    /// <summary>Runs every execution with <paramref name="supplier"/> and records a differential for each run of the
-    /// discovery's scenario variant.</summary>
-    private static void RunExecutions(IReadOnlyList<AsmRunScope> executions, IOverrideSupplier supplier,
-        AsmRunSettings discoverySettings, string goldenKey, AsmFinalState discoveryFinalState) {
-        foreach (AsmRunScope execution in executions) {
+    /// <summary>Runs every execution with <paramref name="supplier"/> and gates its final state on the
+    /// interpreted final state of its own scenario variant: the discovery variant uses the discovery
+    /// run's state, every other variant the state its interpreted run captured. Scenarios marked not
+    /// run in generated mode only record their skip reason.</summary>
+    private static void RunExecutions(
+        IReadOnlyList<(AsmRunScope? Scope, string? SkipReason)> executions,
+        IOverrideSupplier supplier, AsmRunSettings discoverySettings, string goldenKey,
+        AsmFinalState discoveryFinalState,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
+        foreach ((AsmRunScope? scope, string? skipReason) in executions) {
+            if (skipReason is not null) {
+                GeneratedCodeDifferentialReport.AppendSkipped(goldenKey, skipReason);
+                continue;
+            }
+            AsmRunScope execution = scope ?? throw new InvalidOperationException(
+                "An execution marked not run in generated mode has no reason.");
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
-            if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
-                GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
+            AsmFinalState baseline = InterpretedBaseline(execution.Fixture.Settings, discoverySettings,
+                discoveryFinalState, interpretedStates);
+            GeneratedCodeDifferentialReport.Check(goldenKey, baseline,
+                AsmFinalState.Capture(run, execution.Fixture.Settings));
+        }
+    }
+
+    /// <summary>The interpreted final state of <paramref name="execution"/>'s own scenario variant.</summary>
+    private static AsmFinalState InterpretedBaseline(AsmRunSettings execution,
+        AsmRunSettings discoverySettings, AsmFinalState discoveryFinalState,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
+        if (IsEquivalentScenarioVariant(discoverySettings, execution)) {
+            return discoveryFinalState;
+        }
+        foreach ((AsmRunSettings settings, AsmFinalState state) in interpretedStates) {
+            if (IsEquivalentScenarioVariant(settings, execution)) {
+                return state;
             }
         }
+        throw new InvalidOperationException(
+            $"No interpreted final state for execution variant " +
+            $"{execution.ScenarioIdentity}/{execution.VariantName}.");
     }
 
     /// <summary>
@@ -408,7 +478,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector.Capture();
         CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph,
             machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
-        AsmFinalState finalState = AsmFinalState.Capture(run.Result);
+        AsmFinalState finalState = AsmFinalState.Capture(run, scope.Fixture.Settings);
         return (program, finalState);
     }
 

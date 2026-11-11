@@ -357,6 +357,7 @@ public sealed class GeneratedCodeMachineTest {
         string directory = scope.CreateWorkingDirectory("service_call_frame");
         string comPath = Path.Join(directory, "frame.com");
         File.WriteAllBytes(comPath, program);
+        AsmFixtures.DosTestFiles.SetFixedTimes(comPath);
         scope.AttachFixture(new AsmFixture(new AsmRunSettings {
             BinName = comPath,
             MaxCycles = 100000,

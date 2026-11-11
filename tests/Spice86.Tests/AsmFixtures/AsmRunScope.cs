@@ -62,6 +62,7 @@ internal sealed class AsmRunScope : IDisposable {
     public string CreateWorkingDirectory(string prefix) {
         string directory = Path.Join(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
+        DosTestFiles.SetFixedDirectoryTimes(directory);
         _ownedDirectories.Add(directory);
         return directory;
     }

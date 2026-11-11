@@ -400,7 +400,8 @@ internal static class DosBatchScenarioCatalog {
                 "imgmount a \"C:\\DISK.IMG\" -t floppy\r\n" +
                 "if errorlevel 1 echo FAIL > C:\\RESULT.TXT\r\n" +
                 "if not errorlevel 1 echo OK > C:\\RESULT.TXT\r\n",
-                _ => run.HostFileExists("SHADOW.TXT").Should().BeFalse()));
+                _ => run.HostFileExists("SHADOW.TXT").Should().BeFalse()))
+            .WithoutGeneratedExecution("IMGMOUNT echoes the resolved host path of the run's unique temporary directory to the screen, so the compared RAM differs between runs");
     }
 
     /// <summary>GOTO jumps over the commands between it and the label.</summary>
@@ -1752,7 +1753,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario TimeHostSyncProducesTimeOutput() {
         return Scenario("batch_time_host_sync", run => run
             .StartBatch("TIME /H\r\nTIME /T > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")));
+                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")))
+            .WithoutGeneratedExecution("TIME /H synchronizes from the host clock, so the printed time differs between runs");
     }
 
     /// <summary>VER prints a version string.</summary>
@@ -1786,7 +1788,7 @@ internal static class DosBatchScenarioCatalog {
                     output.Should().Contain("VOLUME IN DRIVE D IS MYDISC",
                         "VOL on a mounted CD drive should print the mounted media label, not the default drive placeholder label");
                 });
-        });
+        }).WithoutGeneratedExecution("MOUNT echoes the run's unique host temporary directory to the screen, so the compared RAM differs between runs");
     }
 
     /// <summary>DATE /? prints its usage text.</summary>

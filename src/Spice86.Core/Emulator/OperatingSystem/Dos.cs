@@ -248,7 +248,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosCodePageState dosCodePageState = DosCodePageState.CreateForCurrentCulture();
         DosStringDecoder dosStringDecoder = new(memory, state, dosCodePageState);
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, Devices);
+            _loggerService, Devices, emulatedClock);
 
         // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
         ushort initialPspSegment = (ushort)(options.ProgramEntryPointSegment - 0x10);

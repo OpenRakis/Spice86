@@ -292,10 +292,18 @@ internal sealed partial class DosBatchExecutionEngine {
         }
     }
 
-    private static string BuildTemporaryPipeFilePath(int index) {
-        string suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
-        string fileName = $"P{index % 10}{suffix}.TMP";
-        return $"C:\\{fileName}";
+    private int _temporaryPipeFileCounter;
+
+    private string BuildTemporaryPipeFilePath(int index) {
+        while (true) {
+            string fileName = $"P{index % 10}{_temporaryPipeFileCounter:X6}.TMP";
+            _temporaryPipeFileCounter++;
+            string dosPath = $"C:\\{fileName}";
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(dosPath);
+            if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+                return dosPath;
+            }
+        }
     }
 
     private void WriteToStandardOutput(string text) {

@@ -226,6 +226,7 @@ internal static class AsmScenarioCatalog {
             CopyResourceFile("DosConsoleProgramTests", "video_writer_z_0.com", "WRITER.COM", directory);
             string startBatch = Path.Join(directory, "START.BAT");
             File.WriteAllText(startBatch, "TSR_BASIC.COM\r\nWRITER.COM\r\n");
+            DosTestFiles.SetFixedTimes(startBatch);
             AsmRunSettings settings = new() {
                 BinName = startBatch,
                 ScenarioName = identity,
@@ -276,7 +277,7 @@ internal static class AsmScenarioCatalog {
         }, [
             "DosFcbTests/fcb_process_isolation.com",
             "DosFcbTests/fcbchild.com"
-        ]);
+        ]).WithoutGeneratedExecution("FCB writes stamp the cycle-based emulated clock, and generated execution consumes different cycles than the interpreter, so the DOS timestamps in memory differ");
     }
 
     private static AsmRunSettings ExecSettings(string scenarioName, string cDrive, string programName) {
@@ -397,6 +398,7 @@ internal static class AsmScenarioCatalog {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", resourceSubDirectory, sourceFileName);
         string target = Path.Join(targetDirectory, targetFileName);
         File.Copy(source, target, overwrite: true);
+        DosTestFiles.SetFixedTimes(target);
         return target;
     }
 
@@ -477,11 +479,13 @@ internal static class AsmScenarioCatalog {
             // callee reads the caller's CF through shl's conditional write (G1.6).
             AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
-            AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
+            AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt)
+                .WithoutGeneratedExecution("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing point is timing-dependent"),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
             AsmScenario.FromFixture("ioports", AsmFixtureCatalog.IoPorts),
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
-            AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry),
+            AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry)
+                .WithoutGeneratedExecution("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
             AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister),
             AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
                 .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
@@ -592,7 +596,8 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_wide_operations"),
             PartitionScenario("dataflow_legality_traps"),
             PartitionScenario("data_globals"),
-            PartitionScenario("data_segment_values"),
+            PartitionScenario("data_segment_values")
+                .WithoutGeneratedExecution("the program installs an IRQ0 handler and its asynchronous landing point is timing-dependent"),
             PartitionScenario("data_tables"),
             PartitionScenario("data_strings"),
             PartitionScenario("data_segments"),
@@ -602,7 +607,8 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("data_jump_tables_segments"),
             AsmScenario.FromFixture("data_jump_tables", AsmFixtureCatalog.DataJumpTablesPatched),
             PartitionScenario("register_locals"),
-            PartitionScenario("register_locals_across"),
+            PartitionScenario("register_locals_across")
+                .WithoutGeneratedExecution("the program installs an IRQ0 handler to fire mid-call, so its landing point is timing-dependent"),
             PartitionScenario("save_restore_pairs"),
             PartitionScenario("if_conversion"),
             PartitionScenario("int_service_calls"),

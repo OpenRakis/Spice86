@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -81,6 +82,7 @@ public class DosFileManager {
     private readonly uint[] _characterDevicePositions = new uint[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
+    private readonly IEmulatedClock _emulatedClock;
 
     /// <summary>
     /// Initializes a new instance.
@@ -90,14 +92,17 @@ public class DosFileManager {
     /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    /// <param name="emulatedClock">The emulated clock stamped on files the DOS creates.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILogger loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, ILogger loggerService, IList<IVirtualDevice> dosVirtualDevices,
+        IEmulatedClock emulatedClock) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
         _driveManager = dosDriveManager;
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        _emulatedClock = emulatedClock;
     }
 
     /// <summary>
@@ -240,6 +245,7 @@ public class DosFileManager {
 
             testFileStream = File.Create(newHostFilePath);
             File.SetAttributes(newHostFilePath, (FileAttributes)fileAttribute);
+            SetFileTimesToEmulatedClock(newHostFilePath);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogLevel.Warning)) {
                 _loggerService.LogWarning(e, "Error while creating a file using a handle with {FileName} and {FileAttribute}",
@@ -251,6 +257,15 @@ public class DosFileManager {
         }
 
         return OpenFileInternal(fileName, newHostFilePath, FileAccessMode.ReadWrite);
+    }
+
+    /// <summary>Stamps a host file the DOS just created with the emulated DOS clock, so DOS-visible
+    /// file date and time follow the emulated time like a real DOS file timestamp.</summary>
+    /// <param name="hostFilePath">Path of the host file to stamp.</param>
+    private void SetFileTimesToEmulatedClock(string hostFilePath) {
+        DateTime dosNow = _emulatedClock.CurrentDateTime.UtcDateTime;
+        File.SetCreationTimeUtc(hostFilePath, dosNow);
+        File.SetLastWriteTimeUtc(hostFilePath, dosNow);
     }
 
     /// <summary>
@@ -1222,8 +1237,12 @@ public class DosFileManager {
                         break;
                     }
                 case FileAccessMode.WriteOnly:
+                    bool created = !File.Exists(hostFileName);
                     randomAccessFile = File.Open(hostFileName, FileMode.OpenOrCreate,
                         FileAccess.Write, FileShare.ReadWrite);
+                    if (created) {
+                        SetFileTimesToEmulatedClock(hostFileName);
+                    }
                     break;
                 case FileAccessMode.ReadWrite: {
                         if (File.Exists(hostFileName)) {
@@ -1478,6 +1497,9 @@ public class DosFileManager {
 
         try {
             Directory.CreateDirectory(prefixedDosDirectory);
+            DateTime dosNow = _emulatedClock.CurrentDateTime.UtcDateTime;
+            Directory.SetCreationTimeUtc(prefixedDosDirectory, dosNow);
+            Directory.SetLastWriteTimeUtc(prefixedDosDirectory, dosNow);
             if (_loggerService.IsEnabled(LogLevel.Information)) {
                 _loggerService.LogInformation("Created dir: {CreatedDirPath}", prefixedDosDirectory);
             }
