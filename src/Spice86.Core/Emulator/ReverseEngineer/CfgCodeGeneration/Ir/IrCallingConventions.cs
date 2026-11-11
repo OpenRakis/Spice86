@@ -137,6 +137,49 @@ internal sealed class IrCallingConventions {
             ? LandingInputs(site)
             : Reportable;
 
+    /// <summary>Whether <paramref name="exit"/> of <paramref name="methodName"/> transfers to
+    /// another generated partition whose targets are all resolved.</summary>
+    internal bool IsResolvedTransferExit(string methodName, IrExit exit) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.ExitByTerminator.TryGetValue(exit, out ExitSite? site)
+        && site.Kind == ExitKind.TransferResolved;
+
+    /// <summary>The bytes the transfer <paramref name="exit"/> of <paramref name="methodName"/>
+    /// must deliver - see <see cref="TransferExitReads"/>: the targets' entry inputs plus the
+    /// landings of the targets' own returns, minus the bytes each target changes. Every
+    /// reportable value when the exit is not a modelled resolved transfer.</summary>
+    internal CpuValues TransferInputsOf(string methodName, IrExit exit) {
+        if (!_methodByName.TryGetValue(methodName, out MethodData? data)
+                || !data.ExitByTerminator.TryGetValue(exit, out ExitSite? site)
+                || site.Kind != ExitKind.TransferResolved) {
+            return Reportable;
+        }
+        return TransferExitReads(site);
+    }
+
+    /// <summary>The bytes a resolved transfer exit must deliver: the union of its targets' entry
+    /// inputs plus, per target, the inputs of the entries the target's own returns can land on,
+    /// minus the bytes that target changes - a pushed-return continuation such as
+    /// <c>push 0x0049; jmp f</c> keeps reading the caller's state through the callee, so a byte
+    /// the callee does not touch must still arrive at the landing. <see cref="LandingInputs"/>
+    /// already widens an unmodelled landing to every reportable value.</summary>
+    private CpuValues TransferExitReads(ExitSite site) {
+        CpuValues inputs = CpuValues.None;
+        foreach (CfgCodePartitionEntry target in site.Targets) {
+            inputs |= _states[target].Inputs;
+            if (!_methodByEntry.TryGetValue(target, out MethodData? targetData)) {
+                continue;
+            }
+            CpuValues targetChanges = _states[target].Changes;
+            foreach (ExitSite targetExit in targetData.Exits) {
+                if (targetExit.Kind == ExitKind.Return) {
+                    inputs |= LandingInputs(targetExit) & ~targetChanges;
+                }
+            }
+        }
+        return inputs;
+    }
+
 
     /// <summary>Whether the method of <paramref name="entry"/> has a return exit or a resolved
     /// exit to another partition.</summary>
@@ -545,7 +588,7 @@ internal sealed class IrCallingConventions {
             };
         }
         List<CfgCodePartitionEntry> targets = [];
-        (bool foundTransfer, bool resolved) = CollectTransferNodes(exit.Transfer, targets, ExitTargetOf);
+        (bool foundTransfer, bool resolved) = CollectTransferNodes(exit.Transfer, targets, TransferTargetOf);
         if (foundTransfer) {
             return new ExitSite {
                 Exit = exit, Block = block, Iret = false,
@@ -608,6 +651,16 @@ internal sealed class IrCallingConventions {
                 case CyclicJumpNode cyclic: {
                     foundTransfer = true;
                     if (resolver(cyclic.MethodName, cyclic.LoadOffset,
+                            out CfgCodePartitionEntry? entry)) {
+                        targets.Add(entry);
+                    } else {
+                        resolved = false;
+                    }
+                    break;
+                }
+                case MethodGroupNode group: {
+                    foundTransfer = true;
+                    if (resolver(group.MethodName, group.LoadOffset,
                             out CfgCodePartitionEntry? entry)) {
                         targets.Add(entry);
                     } else {
@@ -971,13 +1024,8 @@ internal sealed class IrCallingConventions {
                     return (AbortReads(exit.Transfer) | Reportable) & mask;
                 }
                 return AbortReads(exit.Transfer) & mask;
-            case ExitKind.TransferResolved: {
-                CpuValues inputs = CpuValues.None;
-                foreach (CfgCodePartitionEntry target in method.ExitByTerminator[exit].Targets) {
-                    inputs |= _states[target].Inputs;
-                }
-                return inputs & mask;
-            }
+            case ExitKind.TransferResolved:
+                return TransferExitReads(method.ExitByTerminator[exit]) & mask;
             default:
                 return mask;
         }

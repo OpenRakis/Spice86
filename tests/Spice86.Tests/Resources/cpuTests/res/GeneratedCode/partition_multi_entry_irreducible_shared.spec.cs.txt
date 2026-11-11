@@ -130,7 +130,7 @@ public partial class CfgGeneratedOverrides {
         }
         Alu16.Sub(DX, 0);
         if (DX != 0) {
-            DX = Alu16.Dec(DX);
+            DX--;
             if (JumpDispatcher.Jump(unknown_F000_0069_F0069Entry, 0x0000)) {
                 loadOffset = JumpDispatcher.NextEntryAddress;
                 goto entrydispatcher;
@@ -146,7 +146,7 @@ public partial class CfgGeneratedOverrides {
         }
         Alu16.Sub(DX, 0);
         if (DX != 0) {
-            DX = Alu16.Dec(DX);
+            DX--;
             if (JumpDispatcher.Jump(unknown_F000_0069_F0069Entry, 0x0000)) {
                 loadOffset = JumpDispatcher.NextEntryAddress;
                 goto entrydispatcher;

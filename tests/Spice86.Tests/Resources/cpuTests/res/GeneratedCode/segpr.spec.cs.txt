@@ -28,13 +28,13 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at F000:0074");
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, EDI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_1100_F1100() {
         unknown_F000_1100_F1100Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x1100);
         SI = frame.ReturnIp;
         DsGlobals.Word000E = SI;
-        SI += 6;
+        SI = Alu16.Add(SI, 6);
         DI = SP;
         frame.ReturnIp = SI;
         return InterruptRet();

@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, BP, ESI. Changes: EAX, ECX, EDX, EBX, BP, ESI, DI, flags.</summary>
     public virtual Action unknown_017D_0010_017E0() {
         ushort ax;
         ushort bp1 = 0;
@@ -62,7 +62,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_004E_0181E() {
         ushort dx;
         CheckExternalEvents(cs1, 0x004E);
@@ -81,6 +81,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_017D_005E_0182E() {
         ushort ax1 = 0;
+        ushort di1 = 0;
         ushort ax2 = 0;
         ushort ax3 = 0;
         CheckExternalEvents(cs1, 0x005E);
@@ -112,7 +113,7 @@ public partial class CfgGeneratedOverrides {
             DX = AX;
             AX = 0x0084;
             NearCall(cs1, 0x0095, unknown_017D_0010_017E0Entry);
-            DI = AX;
+            di1 = AX;
             SI = DX;
             if (BX != 0) {
                 if (BX > 9) {
@@ -135,9 +136,10 @@ public partial class CfgGeneratedOverrides {
             }
             Stack.Push16(ax3);
             AX = (ushort)-CX;
+            DI = di1;
             NearCall(cs1, 0x00BE, unknown_017D_004E_0181EEntry);
             Stack.Push16(AX);
-            AX = DI;
+            AX = di1;
             DX = SI;
             BX = 0x000A;
             CX = 0;
@@ -145,7 +147,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(DX);
             Stack.Push16(AX);
             Stack.Push16(SI);
-            Stack.Push16(DI);
+            Stack.Push16(di1);
             AX = 0x0022;
             Stack.Push16(0x0022);
             NearCall(cs1, 0x00D6, unknown_017D_0235_01A05Entry);
@@ -177,11 +179,10 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: DX, BX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_00E5_018B5() {
         ushort flagOperand_00ED = 0;
         CheckExternalEvents(cs1, 0x00E5);
-        Alu16.Sub(AX, SP);
         if (AX < SP) {
             AX = (ushort)-(AX - SP);
             flagOperand_00ED = DsGlobals.Word01BE;
@@ -425,10 +426,9 @@ public partial class CfgGeneratedOverrides {
         public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: AX, CX, DX, BX, ES. Changes: AX, CX, DX, BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_017D_024A_01A1A() {
-        ushort cx1 = 0;
         ushort dx1 = 0;
         ushort ax1 = 0;
         ushort ax2 = 0;
@@ -438,12 +438,12 @@ public partial class CfgGeneratedOverrides {
         byte al1 = 0;
         ushort si1 = 0;
         ushort di2 = 0;
-        ushort cx2 = 0;
+        ushort cx1 = 0;
         ushort di3 = 0;
-        ushort cx3 = 0;
+        ushort cx2 = 0;
         ushort ax3 = 0;
         ushort di4 = 0;
-        ushort cx4 = 0;
+        ushort cx3 = 0;
         ushort ax4 = 0;
         ushort dx;
         ushort flagOperand_0354 = 0;
@@ -453,7 +453,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x024A);
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0284);
-        cx1 = 0x03A8;
+        CX = 0x03A8;
         ES = 0x03A8;
         BX = 0x04A3;
         Segment03A8Globals.Word01BE = 0x04A0;
@@ -466,14 +466,12 @@ public partial class CfgGeneratedOverrides {
         dx1 = (ushort)(BX >> 4);
         if (Segment03A8Globals.Byte01BC == 0) {
             ax1 = ES;
-            cx1 = (ushort)(ImageMinus0003Globals.Word0002 - ax1);
-            Alu16.Sub(dx1, cx1);
-            if (dx1 >= cx1) {
+            CX = (ushort)(ImageMinus0003Globals.Word0002 - ax1);
+            if (dx1 >= CX) {
                 VerifySpeculativeRunOrFail(cs1, 0x02CB, SpeculativeRun_02CB);
                 BX = 1;
                 AX = 0x026B;
                 DX = CS;
-                CX = cx1;
                 return unknown_017D_04E5_01CB5();
             }
             ax2 = ES;
@@ -494,7 +492,6 @@ public partial class CfgGeneratedOverrides {
         di = DS;
         ES = di;
         di1 = 0x0081;
-        CX = cx1;
         CL = ImageMinus0003Globals.Byte0080;
         CH = 0;
         ZeroFlag = true;
@@ -533,7 +530,7 @@ public partial class CfgGeneratedOverrides {
         (AX, CX, BX) = ServiceCall(cs1, 0x0332, Dos, () => Dos.ReadDosVersion());
         Segment03A8Globals.Byte01BA = AL;
         Segment03A8Globals.Byte01BB = AH;
-        cx2 = DI;
+        cx1 = DI;
         if (AL >= 3) {
             DS = ImageMinus0003Globals.Word002C;
             SI = 0;
@@ -594,7 +591,7 @@ public partial class CfgGeneratedOverrides {
             } while (flagOperand_0393 != 0);
         }
         DS = 0x03A8;
-        SI = cx2;
+        SI = cx1;
         Segment03A8Globals.Dword01DB = (uint)SI | (uint)ES << 16;
         BX = SP;
         AX = BP;
@@ -603,12 +600,12 @@ public partial class CfgGeneratedOverrides {
         Segment03A8Globals.Word01BE = DI;
         CX = 0x0494;
         di3 = 0x0376;
-        cx3 = 0x011E;
+        cx2 = 0x011E;
         AL = 0;
-        while (cx3 != 0) {
+        while (cx2 != 0) {
             UInt8[ES, di3] = AL;
             di3++;
-            cx3--;
+            cx2--;
         }
         if (Segment03A8Globals.Word01C7 == 0) {
             AX = 0x04E0;
@@ -621,7 +618,7 @@ public partial class CfgGeneratedOverrides {
         Segment03A8Globals.Dword01D3 = 0x000004DF | (uint)CS << 16;
         AX = 0x00FF;
         DI = di3;
-        CX = cx3;
+        CX = cx2;
         NearCall(cs1, 0x03F1, unknown_017D_05E4_01DB4Entry);
         Stack.Push16(DX);
         DX = DsGlobals.Word0386;
@@ -650,12 +647,12 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         di4 = 0;
         ES = 0x03A8;
-        cx4 = 0x0010;
+        cx3 = 0x0010;
         ax4 = 0x0101;
-        while (cx4 != 0) {
+        while (cx3 != 0) {
             Alu16.Sub(ax4, UInt16[ES, di4]);
             di4 += 2;
-            cx4--;
+            cx3--;
             if (!ZeroFlag) {
                 break;
             }
@@ -670,7 +667,7 @@ public partial class CfgGeneratedOverrides {
             OverflowFlag = false;
             DX = 0x000F;
             DI = di4;
-            CX = cx4;
+            CX = cx3;
             NearCall(cs1, 0x044C, unknown_017D_063B_01E0BEntry);
             AX = Stack.Pop16();
             AH = 0x4C;
@@ -692,7 +689,7 @@ public partial class CfgGeneratedOverrides {
         DS = DI;
         DX = 0x027D;
         AX = 0x3D01;
-        CX = cx4;
+        CX = cx3;
         InterruptCall(cs1, 0x0423, 0x21);
         throw FailAsUntested("Untested return from call at 017D:0421");
     }
@@ -731,7 +728,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_050D_01CDD() {
         ushort ax1 = 0;
         ushort ax;
-        byte flagOperand_0554 = 0;
         unknown_017D_050D_01CDDFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x050D);
         Stack.Push16(CX);
@@ -768,15 +764,13 @@ public partial class CfgGeneratedOverrides {
             NearCall(cs1, 0x054F, unknown_017D_09E4_021B4Entry);
         }
         SsUInt16[BP - 2] = 0;
-        flagOperand_0554 = UInt8[DS, SI + 7];
-        Alu8.And(flagOperand_0554, 4);
-        if ((flagOperand_0554 & 4) != 0) {
+        if ((UInt8[DS, SI + 7] & 4) != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x055A, Signature_055A_and);
             UInt8[DS, SI + 7] &= 0xFA;
             VerifySpeculativeEntryOrFail(cs1, 0x055E, Signature_055E_mov);
             SsUInt16[BP - 2] = 1;
             VerifySpeculativeEntryOrFail(cs1, 0x0563, Signature_0563_or);
-            UInt8[DS, SI + 7] = Alu8.Or(UInt8[DS, SI + 7], 1);
+            UInt8[DS, SI + 7] |= 1;
         }
         CX = 0x04FC;
         BX = DX;
@@ -817,7 +811,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: SI, DS. Changes: all.</summary>
     public virtual Action unknown_017D_05B2_01D82() {
         ushort flagOperand_05B9 = 0;
         CheckExternalEvents(cs1, 0x05B2);
@@ -858,7 +852,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_017D_05BE_01D8E();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, DX, BX, BP, DS. Outputs: none. Changes: AX, DX, BX, BP, flags.</summary>
     public virtual Action unknown_017D_05CA_01D9A() {
         ushort bx1 = 0;
         ushort dx1 = 0;
@@ -1017,7 +1011,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, ECX, DX, EBX, BP, ESI, EDI, DS. Outputs: AX, ECX, DX, EBX, BP, ESI, EDI. Changes: EAX, ECX, DX, EBX, BP, ESI, EDI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, EBX, BP, ESI, EDI, DS. Outputs: AX, DX, EBX, BP, ESI, EDI. Changes: EAX, ECX, DX, EBX, BP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_069B_01E6B() {
         ushort bp1 = 0;
         ushort dx1 = 0;
@@ -1207,7 +1201,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: AX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: AX, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_0776_01F46() {
         ushort bp;
         ushort ax;
@@ -1246,7 +1240,7 @@ public partial class CfgGeneratedOverrides {
         if (SI != 0) {
             DX = DI;
             AX = SI;
-            (ECX, ESI, EDI, ES) = NearCall(cs1, 0x07D9, () => unknown_017D_173D_02F0D(AX, CX, DX, BX, ESI, EDI, DS, DirectionFlag));
+            (CX, ESI, EDI) = NearCall(cs1, 0x07D9, () => unknown_017D_173D_02F0D(AX, CX, DX, BX, ESI, EDI, DS, DirectionFlag));
             ax = SsUInt16[BP - 0x10];
             DX = SI;
             bx = (ushort)(SI + CX);
@@ -1282,7 +1276,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: CX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_0801_01FD1() {
         ushort ax;
         CheckExternalEvents(cs1, 0x0801);
@@ -1308,7 +1302,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, BP, ESI, DI, DS. Outputs: BP. Changes: EAX, CX, EDX, EBX, BP, ESI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_0832_02002() {
         ushort ax1 = 0;
         CheckExternalEvents(cs1, 0x0832);
@@ -1344,7 +1338,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: BP. Changes: all.</summary>
     public virtual Action unknown_017D_0859_02029() {
         ushort ax1 = 0;
         ushort di;
@@ -1396,7 +1390,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 017D:08B0");
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CX, EDX, EBX, BP, ESI, DI, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_08C4_02094() {
         ushort dx;
         ushort bx1 = 0;
@@ -1469,7 +1463,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local14 { get => _slots.GetWord(-0x000E); set => _slots.SetWord(-0x000E, value); }
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_0936_02106() {
         ushort bx1 = 0;
         ushort ax;
@@ -1591,7 +1585,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_09E4_021B4() {
         ushort si;
         ushort si1 = 0;
@@ -1648,7 +1642,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, DX, BX, ESI, DS. Outputs: EAX, BX, ESI. Changes: EAX, BX, ESI, flags.</summary>
+    /// <summary>Inputs: AX, DX, BX, SI, DS. Outputs: AX, BX. Changes: EAX, BX, ESI, flags.</summary>
     public virtual Action unknown_017D_0A50_02220() {
         ushort bx1 = 0;
         byte flagOperand_0A84 = 0;
@@ -1712,7 +1706,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, CX, EDX, BX, ESI, DI, DS. Outputs: EAX, CX, EDX, ESI, DI. Changes: EAX, CX, EDX, BX, ESI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS. Outputs: AX, SI, DI. Changes: EAX, CX, EDX, BX, ESI, DI, flags.</summary>
     public virtual Action unknown_017D_0A9E_0226E() {
         ushort cx1 = 0;
         ushort di1 = 0;
@@ -1967,7 +1961,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, DX, EBX, ESI, DI. Outputs: EAX, EBX, ESI, DI, ES. Changes: EAX, DX, EBX, ESI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, DX, BX, SI, DI. Outputs: AX, BX, SI. Changes: EAX, DX, EBX, ESI, DI, ES, flags.</summary>
     public virtual Action unknown_017D_0BE9_023B9() {
         ushort di1 = 0;
         ushort dx1 = 0;
@@ -2001,8 +1995,8 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, BX, DS. Outputs: BX, flags. Changes: AX, BX, flags.</summary>
-    public virtual (ushort bx, bool carryFlag, bool parityFlag, bool auxiliaryFlag, bool zeroFlag, bool signFlag, bool overflowFlag) unknown_017D_0DA4_02574(ushort ax, ushort bx, ushort ds) {
+    /// <summary>Inputs: AX, BX, DS. Outputs: none. Changes: AX, BX, flags.</summary>
+    public virtual void unknown_017D_0DA4_02574(ushort ax, ushort bx, ushort ds) {
         AX = ax;
         BX = bx;
         DS = ds;
@@ -2035,15 +2029,15 @@ public partial class CfgGeneratedOverrides {
         }
         BX = Stack.Pop16();
         NearReturn();
-        return (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return;
     }
 
     public virtual Action unknown_017D_0DA4_02574_Asm() {
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017D_0DA4_02574(AX, BX, DS);
+        unknown_017D_0DA4_02574(AX, BX, DS);
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: BP, SI, DI, flags.</summary>
     public virtual Action unknown_017D_0DD1_025A1() {
         ushort bp1 = 0;
         ushort flagOperand_0DE1 = 0;
@@ -2088,7 +2082,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, ECX, EDX, EBX, BP, ESI, EDI, ES. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, flags.</summary>
     public virtual Action unknown_017D_0E94_02664() {
         ushort ax;
         byte al1 = 0;
@@ -2510,7 +2504,7 @@ public partial class CfgGeneratedOverrides {
     L_10B3:
         AX = SI;
         DX = SsUInt16[BP - 6];
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x10BB, () => unknown_017D_0DA4_02574(AX, BX, DS));
+        NearCall(cs1, 0x10BB, () => unknown_017D_0DA4_02574(AX, BX, DS));
         AX = SsUInt16[BP - 8];
         return unknown_017D_0D9A_0256A();
     }
@@ -2549,7 +2543,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_017D_136B_02B3B() {
         byte al1 = 0;
         ushort ax;
@@ -2609,7 +2603,6 @@ public partial class CfgGeneratedOverrides {
             if (al1 == 0) {
                 goto L_13F0;
             }
-            Alu8.Sub(al1, 0x6E);
             if (al1 != 0x6E) {
                 goto L_1426;
             }
@@ -3000,7 +2993,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, DF. Outputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_1684_02E54() {
         ushort flagOperand_16DC = 0;
         byte flagOperand_1714 = 0;
@@ -3119,8 +3112,8 @@ public partial class CfgGeneratedOverrides {
         public byte Local14Byte { get => _slots.GetByte(-0x000E); set => _slots.SetByte(-0x000E, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, ESI, EDI, DS, DF. Outputs: ECX, ESI, EDI, ES. Changes: AX, ECX, ESI, EDI, ES, flags.</summary>
-    public virtual (uint ecx, uint esi, uint edi, ushort es) unknown_017D_173D_02F0D(ushort ax, ushort cx, ushort dx, ushort bx, uint esi, uint edi, ushort ds, bool directionFlag) {
+    /// <summary>Inputs: AX, CX, DX, BX, ESI, EDI, DS, DF. Outputs: CX, ESI, EDI. Changes: AX, ECX, ESI, EDI, ES, flags.</summary>
+    public virtual (ushort cx, uint esi, uint edi) unknown_017D_173D_02F0D(ushort ax, ushort cx, ushort dx, ushort bx, uint esi, uint edi, ushort ds, bool directionFlag) {
         AX = ax;
         CX = cx;
         DX = dx;
@@ -3164,11 +3157,11 @@ public partial class CfgGeneratedOverrides {
         SI = Stack.Pop16();
         CX = Stack.Pop16();
         NearReturn();
-        return (ECX, ESI, EDI, ES);
+        return (CX, ESI, EDI);
     }
 
     public virtual Action unknown_017D_173D_02F0D_Asm() {
-        (ECX, ESI, EDI, ES) = unknown_017D_173D_02F0D(AX, CX, DX, BX, ESI, EDI, DS, DirectionFlag);
+        (CX, ESI, EDI) = unknown_017D_173D_02F0D(AX, CX, DX, BX, ESI, EDI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -3747,7 +3740,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, ECX, DX, BX, BP, SI, DI, DS. Outputs: EAX, ECX, EDX, EBX, BP, ESI, EDI. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DX, BX, BP, SI, DI. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_1B32_03302() {
         ushort bp1 = 0;
         ushort bx;
@@ -3818,7 +3811,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: EAX, CX, EDX, EBX, BP, ESI, EDI, DS, DF. Outputs: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, flags. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, EDX, EBX, BP, ESI, DI, DS, DF. Outputs: BP. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_1BB5_03385() {
         CheckExternalEvents(cs1, 0x1BB5);
         AX = 0;
@@ -3857,7 +3850,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_2136;
             }
         }
-        (CX, BX, SI, ES) = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, CX, DX, BX, SI, EDI, DS, DirectionFlag));
+        BX = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, CX, DX, BX, SI, DI, DS, DirectionFlag));
         NearCall(cs1, 0x2133, unknown_017D_2280_03A50Entry);
         DsGlobals.Word030A = AX;
     L_2136:
@@ -4368,7 +4361,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, BX, SI, DI, DS. Outputs: AX, EBX, SI. Changes: AX, EBX, SI, EDI, flags.</summary>
     public virtual Action unknown_017D_1E95_03665() {
         ushort si1 = 0;
         ushort bx1 = 0;
@@ -4465,7 +4458,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX, BX. Changes: AX, DX, BX, flags.</summary>
+    /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_1F1D_036ED() {
         ushort bx1 = 0;
         ushort ax1 = 0;
@@ -4513,7 +4506,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, BP, ESI, DI, DS, DF. Outputs: AX, BP, ESI, DI, ES, DS. Changes: EAX, CX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_1F62_03732() {
         ushort bx1 = 0;
         ushort ax;
@@ -4606,7 +4599,6 @@ public partial class CfgGeneratedOverrides {
                         goto L_1FF0;
                     L_201D:
                         AX = frame.Local10;
-                        Alu16.Sub(AX, 0x001C);
                         if (AX >= 0x001C) {
                             goto L_2028;
                         }
@@ -4699,7 +4691,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: CX, DX, BX, EDI, DS, DF. Outputs: AX, ECX, DX, BX, EDI, ES. Changes: AX, ECX, DX, BX, EDI, ES, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, DI, DS, DF. Outputs: AX, CX, DX, BX, DI. Changes: AX, ECX, DX, BX, EDI, ES, flags.</summary>
     public virtual Action unknown_017D_2084_03854() {
         CheckExternalEvents(cs1, 0x2084);
         Stack.Push16(BX);
@@ -4709,20 +4701,20 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0350 = 0;
         DsGlobals.Word030A = 0;
         AX = 0x0390;
-        (AX, ECX, EDI, ES) = NearCall(cs1, 0x2099, () => unknown_017D_223C_03A0C(AX, CX, DL, BX, EDI, DS, DirectionFlag));
+        (AX, CX, DI) = NearCall(cs1, 0x2099, () => unknown_017D_223C_03A0C(AX, CX, DL, BX, DI, DS, DirectionFlag));
         DX = Stack.Pop16();
         BX = Stack.Pop16();
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, SI, EDI, DS, DF. Outputs: CX, BX, SI, ES. Changes: AX, CX, BX, SI, ES, flags.</summary>
-    public virtual (ushort cx, ushort bx, ushort si, ushort es) unknown_017D_209C_0386C(ushort ax, ushort cx, ushort dx, ushort bx, ushort si, uint edi, ushort ds, bool directionFlag) {
+    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: BX. Changes: AX, CX, BX, SI, ES, flags.</summary>
+    public virtual ushort unknown_017D_209C_0386C(ushort ax, ushort cx, ushort dx, ushort bx, ushort si, ushort di, ushort ds, bool directionFlag) {
         AX = ax;
         CX = cx;
         DX = dx;
         BX = bx;
         SI = si;
-        EDI = edi;
+        DI = di;
         DS = ds;
         DirectionFlag = directionFlag;
         ushort si1 = 0;
@@ -4765,11 +4757,11 @@ public partial class CfgGeneratedOverrides {
         CX = Stack.Pop16();
         BX = Stack.Pop16();
         NearReturn();
-        return (CX, BX, SI, ES);
+        return BX;
     }
 
     public virtual Action unknown_017D_209C_0386C_Asm() {
-        (CX, BX, SI, ES) = unknown_017D_209C_0386C(AX, CX, DX, BX, SI, EDI, DS, DirectionFlag);
+        BX = unknown_017D_209C_0386C(AX, CX, DX, BX, SI, DI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -4885,7 +4877,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, CX, DX, EBX, ES, DS, DF. Outputs: EAX, CX, DX, EBX, ES. Changes: EAX, CX, DX, EBX, ES, flags.</summary>
+    /// <summary>Inputs: EAX, CX, DX, EBX, DS, DF. Outputs: EAX, CX, DX, BX. Changes: EAX, CX, DX, EBX, ES, flags.</summary>
     public virtual Action unknown_017D_21E5_039B5() {
         ushort dx1 = 0;
         ushort ax1 = 0;
@@ -4937,20 +4929,19 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, EDI, DS, DF. Outputs: AX, ECX, EDI, ES. Changes: AX, ECX, EDI, ES, flags.</summary>
-    public virtual (ushort ax, uint ecx, uint edi, ushort es) unknown_017D_223C_03A0C(ushort ax, ushort cx, byte dl, ushort bx, uint edi, ushort ds, bool directionFlag) {
+    /// <summary>Inputs: AX, CX, DL, BX, DI, DS, DF. Outputs: AX, CX, DI. Changes: AX, ECX, EDI, ES, flags.</summary>
+    public virtual (ushort ax, ushort cx, ushort di) unknown_017D_223C_03A0C(ushort ax, ushort cx, byte dl, ushort bx, ushort di, ushort ds, bool directionFlag) {
         AX = ax;
         CX = cx;
         DL = dl;
         BX = bx;
-        EDI = edi;
+        DI = di;
         DS = ds;
         DirectionFlag = directionFlag;
         ushort di1 = 0;
-        ushort di;
         CheckExternalEvents(cs1, 0x223C);
         Stack.Push16(cx);
-        Stack.Push16((ushort)edi);
+        Stack.Push16(di);
         di1 = ax;
         CX = bx;
         AL = dl;
@@ -4971,20 +4962,20 @@ public partial class CfgGeneratedOverrides {
             di1 += (ushort)(directionFlag ? -1 : 1);
             CX--;
         }
-        di = Stack.Pop16();
-        AX = di;
+        DI = Stack.Pop16();
+        AX = DI;
         DI = Stack.Pop16();
         CX = Stack.Pop16();
         NearReturn();
-        return (AX, ECX, EDI, ES);
+        return (AX, CX, DI);
     }
 
     public virtual Action unknown_017D_223C_03A0C_Asm() {
-        (AX, ECX, EDI, ES) = unknown_017D_223C_03A0C(AX, CX, DL, BX, EDI, DS, DirectionFlag);
+        (AX, CX, DI) = unknown_017D_223C_03A0C(AX, CX, DL, BX, DI, DS, DirectionFlag);
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, BX, BP, ESI, DI, DS, DF. Outputs: EAX, CX, DX, BX, BP, ESI, DI, DS. Changes: EAX, CX, DX, BX, BP, ESI, DI, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, BX, BP, ESI, DI, DS, DF. Outputs: EAX, CX, DX, BX, BP, SI, DI, DS. Changes: EAX, CX, DX, BX, BP, ESI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_2257_03A27() {
         ushort ds;
         ushort ds1 = 0;
@@ -5023,7 +5014,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, EDX, EBX, DF. Outputs: AX, EDX, EBX. Changes: EAX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX, DF. Outputs: AX. Changes: EAX, EDX, EBX, flags.</summary>
     public virtual Action unknown_017D_2280_03A50() {
         CheckExternalEvents(cs1, 0x2280);
         Stack.Push16(BX);
@@ -7142,7 +7133,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, ESI, DS, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, SI, DS, CF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

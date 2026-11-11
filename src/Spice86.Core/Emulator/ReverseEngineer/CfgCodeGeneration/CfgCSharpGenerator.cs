@@ -153,7 +153,7 @@ internal sealed class CfgCSharpGenerator {
         List<IReadOnlyDictionary<ICfgNode, IrEffects>> callEffectsByMethod = new(prepared.Count);
         for (int i = 0; i < prepared.Count; i++) {
             IReadOnlyDictionary<ICfgNode, CpuValues> exitReads =
-                ReturnExitReadsOf(prepared[i], analysis.ObservedConventions);
+                ExitReadsOf(prepared[i], analysis.ObservedConventions);
             IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects = ExitEffectsFromReads(exitReads);
             IReadOnlyDictionary<ICfgNode, IrEffects> callEffects =
                 CallEffectsOf(prepared[i], analysis.ObservedConventions,
@@ -333,19 +333,22 @@ internal sealed class CfgCSharpGenerator {
         public Dictionary<ICfgNode, IrEffects> CallSummaries { get; } = new();
     }
 
-    /// <summary>The reads every return exit of <paramref name="prepared"/> demands under
-    /// <paramref name="conventions"/>: the union of its method entries' observed
-    /// <see cref="IrCallingConventions.OutputsOf"/> plus every value the conventions do not
-    /// describe plus the landing inputs the method changed. Includes exits that still demand
-    /// every value - the fixed point needs the full demand to detect growth back to it.</summary>
-    private static IReadOnlyDictionary<ICfgNode, CpuValues> ReturnExitReadsOf(
+    /// <summary>The reads every return or resolved-transfer exit of <paramref name="prepared"/>
+    /// demands under <paramref name="conventions"/>. A return exit reads the union of its method
+    /// entries' observed <see cref="IrCallingConventions.OutputsOf"/> plus every value the
+    /// conventions do not describe plus the landing inputs the method changed; a resolved
+    /// transfer reads the union of its targets' observed inputs plus the non-reportable values.
+    /// Includes exits that still demand every value - the fixed point needs the full demand to
+    /// detect growth back to it.</summary>
+    private static IReadOnlyDictionary<ICfgNode, CpuValues> ExitReadsOf(
         PreparedMethod prepared, IrCallingConventions conventions) {
         string methodName = prepared.Method.MethodName;
-        List<IrExit> returnExits = prepared.IrMethod.Blocks
+        List<IrExit> exits = prepared.IrMethod.Blocks
             .Where(block => block.HasTerminator && block.Terminator is IrExit exit
-                && conventions.IsReturnExit(methodName, exit))
+                && (conventions.IsReturnExit(methodName, exit)
+                    || conventions.IsResolvedTransferExit(methodName, exit)))
             .Select(block => (IrExit)block.Terminator).ToList();
-        if (returnExits.Count == 0) {
+        if (exits.Count == 0) {
             return new Dictionary<ICfgNode, CpuValues>();
         }
         CpuValues outputs = CpuValues.None;
@@ -356,25 +359,29 @@ internal sealed class CfgCSharpGenerator {
         }
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
         Dictionary<ICfgNode, CpuValues> reads = new();
-        foreach (IrExit exit in returnExits) {
-            reads[exit.Origin] = outputs | nonReportable
-                | (conventions.LandingInputsOf(methodName, exit) & changes);
+        foreach (IrExit exit in exits) {
+            CpuValues demand = conventions.IsResolvedTransferExit(methodName, exit)
+                ? conventions.TransferInputsOf(methodName, exit) | nonReportable
+                : outputs | nonReportable
+                    | (conventions.LandingInputsOf(methodName, exit) & changes);
+            reads[exit.Origin] = reads.GetValueOrDefault(exit.Origin) | demand;
         }
         return reads;
     }
 
-    /// <summary>The effects to give return exits in a prepare round: both tokens read, nothing
-    /// written, no fault. Exits whose demand is every value keep
-    /// <see cref="IrEffects.ExitUse"/>.</summary>
+    /// <summary>The effects to give return and resolved-transfer exits in a prepare round: both
+    /// tokens read, nothing written, no fault. Exits whose demand is every value get
+    /// <see cref="IrEffects.ExitUse"/> explicitly - the flattener's own default for an
+    /// <see cref="InterruptReturnNode"/> or <see cref="FailAsUntestedNode"/> transfer is the
+    /// transfer's partial effect set, which is below the demand.</summary>
     private static IReadOnlyDictionary<ICfgNode, IrEffects> ExitEffectsFromReads(
         IReadOnlyDictionary<ICfgNode, CpuValues> readsByExit) {
         Dictionary<ICfgNode, IrEffects> effects = new();
         foreach ((ICfgNode origin, CpuValues reads) in readsByExit) {
-            if (reads == CpuValues.All) {
-                continue;
-            }
-            effects[origin] = new IrEffects(reads, CpuValues.None, CpuValues.None,
-                IrTokens.All, IrTokens.None, false, false);
+            effects[origin] = reads == CpuValues.All
+                ? IrEffects.ExitUse
+                : new IrEffects(reads, CpuValues.None, CpuValues.None,
+                    IrTokens.All, IrTokens.None, false, false);
         }
         return effects.Count == 0 ? IrLifter.NoEffects : effects;
     }
@@ -407,7 +414,7 @@ internal sealed class CfgCSharpGenerator {
             }
             List<string> reasons = new();
             foreach ((ICfgNode origin, CpuValues demand) in
-                     ReturnExitReadsOf(prepared[i], conventions)) {
+                     ExitReadsOf(prepared[i], conventions)) {
                 CpuValues was = facts.ExitReads.GetValueOrDefault(origin, CpuValues.All);
                 CpuValues grew = demand & ~was;
                 if (grew != CpuValues.None) {
@@ -509,14 +516,14 @@ internal sealed class CfgCSharpGenerator {
         }
     }
 
-    /// <summary>Verify mode: every return exit's reads cover the promotable part of its observed
-    /// demand - the observed outputs, the non-reportable values and the landing inputs the method
-    /// changed. A register of that demand held in a promoted local then has an implicit use at the
-    /// exit, which the write-back planning either serves (<c>AX = ax;</c> before the ret) or
-    /// refuses the promotion for; a read set below the demand would let the promotion through
-    /// without the write-back and the final machine state would lose the register. Only the
-    /// promotable bytes are checked: the rest of the demand lives in the machine registers, which
-    /// are never locals.</summary>
+    /// <summary>Verify mode: every return or resolved-transfer exit's reads cover the promotable
+    /// part of its observed demand - the observed outputs, the non-reportable values and the
+    /// landing or transfer-target inputs the exit must deliver. A register of that demand held in
+    /// a promoted local then has an implicit use at the exit, which the write-back planning either
+    /// serves (<c>AX = ax;</c> before the ret) or refuses the promotion for; a read set below the
+    /// demand would let the promotion through without the write-back and the target or the final
+    /// machine state would lose the register. Only the promotable bytes are checked: the rest of
+    /// the demand lives in the machine registers, which are never locals.</summary>
     private static void VerifyObservedExitReads(List<PreparedMethod> prepared,
         IrCallingConventions conventions) {
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
@@ -529,16 +536,23 @@ internal sealed class CfgCSharpGenerator {
                 changes |= conventions.EffectOf(entry).Writes;
             }
             foreach (IrBlock block in method.IrMethod.Blocks) {
-                if (!block.HasTerminator || block.Terminator is not IrExit exit
-                        || !conventions.IsReturnExit(methodName, exit)) {
+                if (!block.HasTerminator || block.Terminator is not IrExit exit) {
                     continue;
                 }
-                CpuValues required = (outputs | nonReportable
-                    | (conventions.LandingInputsOf(methodName, exit) & changes))
-                    & RegisterLocalPromotion.PromotableMask;
+                CpuValues required;
+                if (conventions.IsResolvedTransferExit(methodName, exit)) {
+                    required = (conventions.TransferInputsOf(methodName, exit) | nonReportable)
+                        & RegisterLocalPromotion.PromotableMask;
+                } else if (conventions.IsReturnExit(methodName, exit)) {
+                    required = (outputs | nonReportable
+                        | (conventions.LandingInputsOf(methodName, exit) & changes))
+                        & RegisterLocalPromotion.PromotableMask;
+                } else {
+                    continue;
+                }
                 if ((required & ~exit.Effects.Reads) != CpuValues.None) {
                     throw new InvalidOperationException(
-                        $"Return exit of {methodName} reads {exit.Effects.Reads}," +
+                        $"Exit of {methodName} reads {exit.Effects.Reads}," +
                         $" below its observed demand {required}: a promoted local could lose" +
                         " its write-back to the machine state.");
                 }

@@ -277,7 +277,7 @@ public partial class CfgGeneratedOverrides {
             ImageMinus0003Globals.Word041B = ax;
             AX = frame.ReturnCs;
             ImageMinus0003Globals.Word041D = AX;
-            frame.SavedFlags |= 1;
+            frame.SavedFlags = Alu16.Or(frame.SavedFlags, 1);
             BP = Stack.Pop16();
             BX = SI;
             DI = 0xBEEF;

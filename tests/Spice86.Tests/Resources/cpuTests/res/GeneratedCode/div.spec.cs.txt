@@ -398,10 +398,9 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, EDI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, DI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_1000_F1000() {
         ushort ax;
-        ushort di;
         CheckExternalEvents(biosSegment, 0x1000);
         Stack.Push16(AX);
         Stack.Push16(DI);
@@ -409,8 +408,9 @@ public partial class CfgGeneratedOverrides {
         SI = UInt16[DS, SP + 4];
         SsUInt16[BP] = SI;
         SI += ax;
-        di = (ushort)(SP + 4);
-        UInt16[DS, di] = SI;
+        DI = SP;
+        DI = Alu16.Add(DI, 4);
+        UInt16[DS, DI] = SI;
         DI = Stack.Pop16();
         AX = Stack.Pop16();
         return InterruptRet();

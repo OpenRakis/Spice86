@@ -166,7 +166,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, EDI, FS, GS. Does not return.</summary>
+    /// <summary>Inputs: EBP, FS, GS. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -185,7 +185,7 @@ public partial class CfgGeneratedOverrides {
         PicPorts.WritePrimaryData(0);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x004D);
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
         SI = 0x0125;
         Segment2000Globals.Word0F00 = 2;
         return unknown_F000_0058_F0058();
@@ -196,10 +196,9 @@ public partial class CfgGeneratedOverrides {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0058);
         DsGlobals.Word0E00 = 0;
-        AX = UInt16[CS, SI];
         CX = UInt16[CS, SI + 2];
         DX = 0;
-        AX = Alu16.Add(AX, 1);
+        AX = (ushort)(UInt16[CS, SI] + 1);
         if (JumpDispatcher.Jump(unknown_F000_006A_F006AEntry, 0x0000)) {
             goto entrydispatcher;
         }

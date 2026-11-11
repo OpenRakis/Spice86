@@ -123,20 +123,13 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
     public virtual Action unknown_016D_01AA_0187A() {
-        byte flagOperand_01B9 = 0;
         CheckExternalEvents(cs1, 0x01AA);
-        Alu8.Sub(AH, 0x3E);
-        if (AH == 0x3E) {
-            Alu16.Sub(BX, 8);
-            if (BX == 8) {
-                ImageMinus0003Globals.Byte01D2 += 1;
-                flagOperand_01B9 = ImageMinus0003Globals.Byte01D2;
-                Alu8.Sub(flagOperand_01B9, 0x13);
-                if ((sbyte)flagOperand_01B9 >= 0x13) {
-                    ImageMinus0003Globals.Byte01D3 = 0x90;
-                }
+        if (AH == 0x3E && BX == 8) {
+            ImageMinus0003Globals.Byte01D2 += 1;
+            if ((sbyte)ImageMinus0003Globals.Byte01D2 >= 0x13) {
+                ImageMinus0003Globals.Byte01D3 = 0x90;
             }
         }
         ushort targetSegment_01C7 = ImageMinus0003Globals.Word01D0;

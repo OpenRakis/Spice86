@@ -31,7 +31,7 @@
       "Casts": 8,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 24,
-      "LocalReads": 19,
+      "LocalReads": 20,
       "LocalVariables": 10,
       "LocalWrites": 16,
       "PlainRegisterAssignments": 90,

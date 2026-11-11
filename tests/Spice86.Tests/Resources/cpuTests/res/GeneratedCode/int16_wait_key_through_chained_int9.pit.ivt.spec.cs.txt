@@ -55,7 +55,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0157");
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_016D_0159_01829() {
         byte al;
         CheckExternalEvents(cs1, 0x0159);

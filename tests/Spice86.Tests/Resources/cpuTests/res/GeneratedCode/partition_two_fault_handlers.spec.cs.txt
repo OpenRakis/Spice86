@@ -66,16 +66,15 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: DX, BX. Outputs: AX, BX, SI, DS, flags. Changes: AX, BX, SI, DS, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: BX, SI, DS. Changes: BX, SI, DS.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
         SP = 0x0100;
-        AX = 0;
         DS = 0;
         Segment0000Globals.Dword0000 = 0x00000022 | (uint)CS << 16;
         SI = 0;
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
         return unknown_F000_001A_F001A();
     }
 

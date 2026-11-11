@@ -18,6 +18,7 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0001 = 1;
         Stack.Push16(FlagRegister16);
         AX = Stack.Pop16();
+        CarryFlag = false;
         return InterruptRet();
     }
 

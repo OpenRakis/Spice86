@@ -10,6 +10,9 @@
 ;    handler's CX write reaches the caller.
 ; 5: s5_spin loops until the timer fires; the int 8 handler reads SI, so the SI
 ;    write before the call survives through the contract reads.
+; 6: a transfer to s6_cfreader that reads CF keeps the stc before the jmp.
+; 7: a transfer to s7_target that overwrites the flags lets the cmp fold into the jne.
+; 8: a transfer to s8_target that reads DX keeps the mov dx before the jmp.
 use16
 start:
     cli                     ; no interrupt may fire before the vectors and the PIT are set
@@ -75,7 +78,64 @@ start:
     cli
     mov si, 0
     mov cx, 0               ; the loop counter's rest is timing-dependent
+
+    ; 6
+    call s6_again             ; the clc path stores 0
+    call s6_brancher          ; the stc path stores 1 through the transfer
+    ; 7
+    call s7_again
+    mov byte [0312h], 0
+    call s7_brancher          ; the jne arm transfers to the shared target
+    ; 8
+    call s8_again             ; stores 1111h
+    call s8_brancher          ; stores 0ABCDh through the transfer
     hlt
+
+s6_again:
+    clc
+    jmp s6_cfreader
+
+s6_brancher:
+    stc
+    jmp s6_cfreader
+
+s6_cfreader:
+    jc .set
+    mov byte [030Ch], 0
+    ret
+.set:
+    mov byte [030Ch], 1
+    ret
+
+s7_again:
+    jmp s7_target
+
+s7_brancher:
+    mov word [0310h], 1
+    cmp word [0310h], 1
+    jne s7_target             ; not taken: the continuation overwrites the flags
+    mov word [0312h], 2
+    cmp word [0312h], 1
+    jne s7_target             ; taken: the target overwrites the flags, so both cmps fold
+    mov byte [0311h], 9       ; unreachable: 2 != 1
+    ret
+
+s7_target:
+    test al, al               ; overwrites the flags, so the callers' cmp flags die at the transfer
+    mov byte [0312h], 7
+    ret
+
+s8_again:
+    mov dx, 1111h
+    jmp s8_target
+
+s8_brancher:
+    mov dx, 0ABCDh
+    jmp s8_target
+
+s8_target:
+    mov [0314h], dx
+    ret
 
 s1_reads_bx:
     mov [0300h], bx

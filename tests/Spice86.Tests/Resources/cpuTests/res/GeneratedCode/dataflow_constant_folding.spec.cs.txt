@@ -103,7 +103,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: none. Outputs: EAX, EDX, EBX, ESI, EDI, ES, DS, flags, DF. Changes: EAX, EDX, EBX, ESI, EDI, ES, DS, flags, DF.</summary>
+    /// <summary>Inputs: none. Outputs: EAX, EDX, EBX, ESI, EDI, ES, DS, PF, AF, ZF, SF, OF, DF. Changes: EAX, EDX, EBX, ESI, EDI, ES, DS, PF, AF, ZF, SF, OF, DF.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort di1 = 0;
         ushort ax;
@@ -174,7 +174,6 @@ public partial class CfgGeneratedOverrides {
             SI += 6;
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
-        DX = 0x0021;
         PicPorts.WritePrimaryData(0x5C);
         al = PicPorts.ReadPrimaryData();
         Segment2000Globals.Byte00D2 = al;
@@ -188,10 +187,8 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0200 = 0xABCD;
         Segment2000Globals.Word00D8 = 0xABCD;
         Segment2000Globals.Word0120 = 0x9999;
-        AX = Alu16.Xor(0xABCD, 0xABCD);
         DS = 0;
         Segment0000Globals.Dword0034 = 0x00000184 | (uint)CS << 16;
-        AX = 0x2000;
         DS = 0x2000;
         BX = 0xFFFF;
         return unknown_F000_0137_F0137();

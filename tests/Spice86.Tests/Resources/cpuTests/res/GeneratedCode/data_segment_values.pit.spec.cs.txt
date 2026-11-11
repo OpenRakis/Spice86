@@ -58,7 +58,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_02BC_F02BC() {
         CheckExternalEvents(biosSegment, 0x02BC);
         BP = 0x0064;
@@ -68,13 +68,13 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_02C9_F02C9() {
         ushort bp;
         unknown_F000_02C9_F02C9Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x02C9);
         bp = SP;
-        frame.ReturnIp += 3;
+        frame.ReturnIp = Alu16.Add(frame.ReturnIp, 3);
         DsGlobals.Byte0084 = 0x0C;
         BP = bp;
         return InterruptRet();
@@ -176,7 +176,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, CF, DF. Outputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_02FC_F02FC() {

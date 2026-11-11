@@ -1123,6 +1123,13 @@ internal static class AsmFixtureCatalog {
                 "the faulting callee keeps the call Unknown, so the divide-error handler's CX write reaches the caller");
             result.Memory.UInt16[0x2000, 0x0308].Should().Be(0x5555,
                 "the timer handler reads SI through the callee's event checks, so the caller's SI write survives");
+            result.Memory.UInt8[0x2000, 0x030C].Should().Be(1,
+                "the transfer target reads CF, so the caller's stc survives the partition exit");
+            result.Memory.UInt8[0x2000, 0x0312].Should().Be(7,
+                "the transfer target overwrites the flags, so the jne arm is the stored result");
+            result.Memory.UInt8[0x2000, 0x0311].Should().Be(0, "the untaken jne arm never runs");
+            result.Memory.UInt16[0x2000, 0x0314].Should().Be(0xABCD,
+                "the transfer target reads DX, so the write before the jmp survives the partition exit");
         });
     }
 
