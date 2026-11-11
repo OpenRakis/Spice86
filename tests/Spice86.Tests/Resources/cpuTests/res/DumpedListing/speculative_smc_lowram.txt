@@ -1,0 +1,17 @@
+016E:0100 mov AX,0
+016E:0103 mov DS,AX
+016E:0105 mov byte ptr DS:[0x0400],1
+016E:010A mov AL,byte ptr DS:[0x0500]
+016E:010D test AL,AL
+016E:010F jne short 0x0118
+016E:0111 mov byte ptr DS:[0x0401],0xDD
+016E:0116 jmp short 0x0129
+016E:0118 mov AX,0x016E
+016E:011B mov DS,AX
+016E:011D mov byte ptr DS:[0x0123],0xEE
+016E:0122 mov byte ptr DS:[0x0401],0
+016E:0127 jmp short 0x0129
+016E:0129 mov AX,0
+016E:012C mov DS,AX
+016E:012E mov byte ptr DS:[0x0402],0xAA
+016E:0133 hlt

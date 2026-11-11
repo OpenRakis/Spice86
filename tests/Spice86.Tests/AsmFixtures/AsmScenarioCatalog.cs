@@ -544,6 +544,7 @@ internal static class AsmScenarioCatalog {
             // time instead of throwing while it generates the whole program.
             AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData),
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
+            AsmScenario.FromFixture("speculative_smc_lowram", AsmFixtureCatalog.SpeculativeSmcLowRam),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
             AsmScenario.FromFixture("speculative_a20_smc_guard", AsmFixtureCatalog.SpeculativeA20SmcGuard),
             AsmScenario.FromFixture("callstackunwind",

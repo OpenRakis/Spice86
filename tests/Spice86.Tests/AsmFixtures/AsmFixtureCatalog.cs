@@ -469,6 +469,17 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs speculative_smc_lowram on its observed arm: the .com code lives in low RAM, the
+    /// self-modifying store's segment is a proven constant, and only disjointness keeps the two
+    /// guards around it unmerged.</summary>
+    public static AsmFixture SpeculativeSmcLowRam() {
+        AsmRunSettings settings = new() {
+            BinName = Path.GetFullPath("Resources/cpuTests/speculative_smc_lowram.com"),
+            MaxCycles = 1000
+        };
+        return MemoryFixture(settings, SpeculativeMemory(0x01, 0xDD, 0xAA));
+    }
+
     /// <summary>Runs speculative_discard on its observed arm: the run completes without divergence.</summary>
     public static AsmFixture SpeculativeDiscard() {
         return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
