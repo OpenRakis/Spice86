@@ -218,13 +218,16 @@ public class CSharpOverrideHelperTest {
 
         CpuDivisionErrorException exception = new("Division by zero");
 
-        // Act
-        Action returnedAction = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        // Act - the handler is entered at 0x3456:0x0078, so that is the observed resume target
+        Action returnedAction = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x3456, 0x0078)]);
 
-        // Assert
-        returnedAction.Should().BeSameAs(markerAction);
+        // Assert - the returned action wraps the handler's action with the resume check
         invocationCounter.Should().Be(1, "only the first matching delegate should run");
         executionCounter.Should().Be(0, "the returned action should not be executed");
+        returnedAction();
+        executionCounter.Should().Be(1, "the returned action runs the handler's action");
+        helper.State.IpSegmentedAddress.Should().Be(new SegmentedAddress(0x3456, 0x0078));
     }
 
     [Theory]
@@ -272,7 +275,7 @@ public class CSharpOverrideHelperTest {
         CpuDivisionErrorException exception = new("Division by zero");
 
         // Act & Assert
-        Action act = () => helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        Action act = () => helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets, []);
         act.Should().Throw<UnrecoverableException>()
             .WithMessage("*Untested CPU fault target*")
             .WithMessage("*3456:0078*")
@@ -324,9 +327,10 @@ public class CSharpOverrideHelperTest {
 
         CpuDivisionErrorException exception = new("Division by zero");
 
-        // Act 1 - IVT points to first handler
+        // Act 1 - IVT points to first handler, entered at 0x3456:0x0078
         machine.InterruptVectorTable[0] = new SegmentedAddress(0x3456, 0x0078);
-        Action returnedAction1 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x3456, 0x0078)])();
 
         // Reset CPU state for second call
         machine.CpuState.SP = 0x0100;
@@ -334,13 +338,12 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.IP = 0x0042;
         machine.CpuState.InterruptFlag = true;
 
-        // Act 2 - IVT points to second handler
+        // Act 2 - IVT points to second handler, entered at 0x4567:0x0089
         machine.InterruptVectorTable[0] = new SegmentedAddress(0x4567, 0x0089);
-        Action returnedAction2 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x4567, 0x0089)])();
 
-        // Assert
-        returnedAction1.Should().BeSameAs(markerAction1);
-        returnedAction2.Should().BeSameAs(markerAction2);
+        // Assert - the IVT lookup ran per dispatch, each action running its handler's action
         invocationCounter1.Should().Be(1);
         invocationCounter2.Should().Be(1);
     }

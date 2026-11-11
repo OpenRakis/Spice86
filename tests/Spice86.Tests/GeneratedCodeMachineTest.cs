@@ -296,6 +296,49 @@ public sealed class GeneratedCodeMachineTest {
             .WithMessage("*F000:0043*");
     }
 
+    /// <summary>A CPU fault whose handler irets to an address discovery did not observe that fault
+    /// resuming at fails as untested instead of running the generated entry there.</summary>
+    [Fact]
+    public void UnobservedFaultResumeFailsAsUntested() {
+        AsmFixture fixture = AsmFixtureCatalog.DivFaultLoop();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // The observed resume runs: the int 0 handler rewrites the stacked return IP to 0x001D.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // A read breakpoint on the fault frame's return-IP slot (SS=0, so the linear address is
+        // the offset; the frame sits at 0x1FA with SP=0x200) rewrites the handler's 0x001D to
+        // 0xFFF0 the moment the iret reads it back, so the fault resumes at the generated entry
+        // discovery never observed it resuming on.
+        AsmRunSettings retargetedSettings = fixture.Settings with {
+            ConfigureMachine = machine => {
+                bool patching = false;
+                machine.EmulatorBreakpointsManager.ToggleBreakPoint(
+                    new AddressBreakPoint(BreakPointType.MEMORY_READ, 0x1FA,
+                        (_, address) => {
+                            if (patching) {
+                                return;
+                            }
+                            patching = true;
+                            if (machine.Memory.UInt16[(uint)address] == 0x001D) {
+                                machine.Memory.UInt16[(uint)address] = 0xFFF0;
+                            }
+                            patching = false;
+                        }, false),
+                    true);
+            }
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(retargetedSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*F000:FFF0*");
+    }
+
     /// <summary>The hardware effect keeps incoming bytes read after partial writes or a branch join.</summary>
     [Fact]
     public void HardwareInterruptSummaryKeepsPartialRegisterInputs() {

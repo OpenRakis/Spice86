@@ -15,15 +15,15 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, DS. Does not return.</summary>
-    public virtual Action unknown_F000_0020_F0020() {
-        CheckExternalEvents(biosSegment, 0x0020);
-        AX = 0x000A;
-        BX = SegmentF000Globals.Word0102;
+    public virtual Action unknown_F000_001D_F001D() {
+        CheckExternalEvents(biosSegment, 0x001D);
+        BP = 0x5678;
+        EAX = 0x0000000A;
         try {
-            (AX, DX) = Div16(divisor: BX, dividend: (uint)DX << 16 | (uint)AX);
+            (AX, DX) = Div16(divisor: SegmentF000Globals.Word0102, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0028, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0037), unknown_F000_0037_F0037)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0029, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003B), unknown_F000_003B_F003B)], [new SegmentedAddress(biosSegment, 0x001D)]);
         }
         BX = SegmentF000Globals.Word0100;
         DsGlobals.Word0000 = BX;
@@ -31,42 +31,41 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: BX, BP, DF. Outputs: BX, BP, flags, DF. Changes: BX, BP, flags, DF.</summary>
-    public virtual Action unknown_F000_0037_F0037() {
-        ushort word1 = 0;
-        unknown_F000_0037_F0037Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0037);
+    /// <summary>Inputs: BP, DS, DF. Outputs: BP, flags, DF. Changes: BP, flags, DF.</summary>
+    public virtual Action unknown_F000_003B_F003B() {
+        ushort flagOperand_0047 = 0;
+        unknown_F000_003B_F003BFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x003B);
+        DsGlobals.Word0008 = BP;
         Stack.Push16(BP);
-        Stack.Push16(BX);
-        word1 = (ushort)(SegmentF000Globals.Word0100 + 1);
-        SegmentF000Globals.Word0100 = word1;
-        Alu16.Sub(word1, 3);
-        if (word1 == 3) {
+        SegmentF000Globals.Word0100 += 1;
+        flagOperand_0047 = SegmentF000Globals.Word0100;
+        Alu16.Sub(flagOperand_0047, 3);
+        if (flagOperand_0047 == 3) {
             SegmentF000Globals.Word0102 = 5;
         }
-        frame.ReturnIp = 0x0020;
-        BX = Stack.Pop16();
+        frame.ReturnIp = 0x001D;
         BP = Stack.Pop16();
         return InterruptRet();
     }
 
-    public readonly struct unknown_F000_0037_F0037Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_003B_F003BFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0000].</summary>
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: DX, DS. Outputs: BX, BP. Changes: BX, BP.</summary>
+    /// <summary>Inputs: AX, DX, DS. Outputs: BP. Changes: BP.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        SS = 0;
+        SS = AX;
         SP = 0x0200;
-        DsGlobals.Word0000 = 0x0037;
+        DsGlobals.Word0000 = 0x003B;
         DsGlobals.Word0002 = CS;
         SegmentF000Globals.Word0100 = 0;
         SegmentF000Globals.Word0102 = 0;
-        return unknown_F000_0020_F0020();
+        return unknown_F000_001D_F001D();
     }
 
 }
@@ -94,6 +93,9 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
 
     /// DS:0x0002, whatever DS holds at the access.
     public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    /// DS:0x0008, whatever DS holds at the access.
+    public ushort Word0008 { get => _memory.UInt16[Segment, 0x0008]; set => _memory.UInt16[Segment, 0x0008] = value; }
 }
 
 // ==== file: SegmentF000Globals.cs ====
@@ -133,8 +135,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0020_F0020Entry;
-    private readonly Func<int, Action> unknown_F000_0037_F0037Entry;
+    private readonly Func<int, Action> unknown_F000_001D_F001DEntry;
+    private readonly Func<int, Action> unknown_F000_003B_F003BEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -145,11 +147,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_0020_F0020Entry = _ => unknown_F000_0020_F0020();
-        unknown_F000_0037_F0037Entry = _ => unknown_F000_0037_F0037();
+        unknown_F000_001D_F001DEntry = _ => unknown_F000_001D_F001D();
+        unknown_F000_003B_F003BEntry = _ => unknown_F000_003B_F003B();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0020, unknown_F000_0020_F0020Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0037, unknown_F000_0037_F0037Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001D, unknown_F000_001D_F001DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x003B, unknown_F000_003B_F003BEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

@@ -120,6 +120,11 @@ internal sealed class IrCallingConventions {
     public CpuValues OutputsOf(CfgCodePartitionEntry entry) =>
         _states.TryGetValue(entry, out EntryState? state) ? state.Outputs : Reportable;
 
+    /// <summary>The bytes <paramref name="entry"/> may read before writing them, under this
+    /// conventions instance's demand; every reportable value when the entry is not modelled.</summary>
+    internal CpuValues InputsOf(CfgCodePartitionEntry entry) =>
+        _states.TryGetValue(entry, out EntryState? state) ? state.Inputs : Reportable;
+
     /// <summary>Whether <paramref name="exit"/> of <paramref name="methodName"/> is a method
     /// return - not an abort and not a transfer to another partition.</summary>
     internal bool IsReturnExit(string methodName, IrExit exit) =>

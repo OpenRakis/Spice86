@@ -24,6 +24,7 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -160,7 +161,9 @@ internal sealed class CfgCSharpGenerator {
                     lowerer.HardwareInterruptEffect, callSkips);
             callEffectsByMethod.Add(callEffects);
             summarizedCalls += callEffects.Count;
-            if (exitEffects.Count == 0 && callEffects.Count == 0) {
+            IReadOnlyDictionary<ICfgNode, CpuValues> faultReads =
+                FaultReadsOf(prepared[i], analysis.ObservedConventions, context);
+            if (exitEffects.Count == 0 && callEffects.Count == 0 && faultReads.Count == 0) {
                 continue;
             }
             UsedFacts facts = new();
@@ -172,12 +175,15 @@ internal sealed class CfgCSharpGenerator {
                 facts.CallReads[origin] = summary.Reads;
                 facts.CallMayWrite[origin] = summary.MayWrite;
             }
+            foreach ((ICfgNode origin, CpuValues reads) in faultReads) {
+                facts.FaultReads[origin] = reads;
+            }
             used[i] = facts;
             reprepared++;
             GenerationStepTimer timer = timers[i];
             MethodPlan methodPlan = plan.Methods[i];
             prepared[i] = timer.Measure("round 2 prepare",
-                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects));
+                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects, faultReads));
         }
         progress.Detail($"Resolved calls summarized: {summarizedCalls}; kept Unknown: "
             + string.Join(", ", callSkips
@@ -198,7 +204,7 @@ internal sealed class CfgCSharpGenerator {
             rounds = 2;
             while (true) {
                 List<(int Index, string Reason)> violated = ConsumeViolations(prepared, used,
-                    current.ObservedConventions, lowerer.HardwareInterruptEffect);
+                    current.ObservedConventions, lowerer.HardwareInterruptEffect, context);
                 if (violated.Count == 0) {
                     analysis = current;
                     break;
@@ -220,7 +226,7 @@ internal sealed class CfgCSharpGenerator {
                     GenerationStepTimer timer = timers[index];
                     prepared[index] = timer.Measure($"round {rounds} prepare",
                         () => methodEmitter.Prepare(plan.Methods[index], timer,
-                            exitEffects, callEffects));
+                            exitEffects, callEffects, facts.FaultReads));
                 }
                 progress.Detail($"Preparation round {rounds}");
                 current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
@@ -229,6 +235,7 @@ internal sealed class CfgCSharpGenerator {
             if (_verify) {
                 VerifyObservedExitReads(prepared, analysis.ObservedConventions);
                 VerifyObservedCallReads(prepared, callEffectsByMethod, analysis.ObservedConventions);
+                VerifyObservedFaultReads(prepared, used, analysis.ObservedConventions, context);
             }
             progress.Detail($"Round-two conventions computed over {reprepared} re-prepared methods in {rounds} rounds");
         }
@@ -333,6 +340,7 @@ internal sealed class CfgCSharpGenerator {
         public Dictionary<ICfgNode, CpuValues> CallReads { get; } = new();
         public Dictionary<ICfgNode, CpuValues> CallMayWrite { get; } = new();
         public Dictionary<ICfgNode, IrEffects> CallSummaries { get; } = new();
+        public Dictionary<ICfgNode, CpuValues> FaultReads { get; } = new();
     }
 
     /// <summary>The reads every return or resolved-transfer exit of <paramref name="prepared"/>
@@ -407,7 +415,7 @@ internal sealed class CfgCSharpGenerator {
     /// widened in place with the new demands.</summary>
     private static List<(int Index, string Reason)> ConsumeViolations(
         List<PreparedMethod> prepared, UsedFacts?[] used,
-        IrCallingConventions conventions, CallEffect contract) {
+        IrCallingConventions conventions, CallEffect contract, CfgGeneratorContext context) {
         List<(int Index, string Reason)> violated = new();
         for (int i = 0; i < prepared.Count; i++) {
             UsedFacts? facts = used[i];
@@ -456,6 +464,22 @@ internal sealed class CfgCSharpGenerator {
                     }
                 }
             }
+            IReadOnlyDictionary<ICfgNode, CpuValues> faultDemand =
+                FaultReadsOf(prepared[i], conventions, context);
+            foreach (ICfgNode origin in facts.FaultReads.Keys.ToList()) {
+                if (!faultDemand.ContainsKey(origin)) {
+                    facts.FaultReads.Remove(origin);
+                    reasons.Add($"fault {origin.Address} is no longer resolved (reads every value)");
+                }
+            }
+            foreach ((ICfgNode origin, CpuValues demand) in faultDemand) {
+                CpuValues was = facts.FaultReads.GetValueOrDefault(origin, CpuValues.All);
+                CpuValues grew = demand & ~was;
+                if (grew != CpuValues.None) {
+                    facts.FaultReads[origin] = was | demand;
+                    reasons.Add($"fault {origin.Address} reads grew by {grew}");
+                }
+            }
             if (reasons.Count > 0) {
                 violated.Add((i, string.Join("; ", reasons)));
             }
@@ -487,6 +511,85 @@ internal sealed class CfgCSharpGenerator {
             }
         }
         return effects.Count == 0 ? IrLifter.NoEffects : effects;
+    }
+
+    /// <summary>The fault-path read set of every faulting statement whose observed handlers and
+    /// resume targets all resolved: the union of the handlers' and resume entries' observed inputs,
+    /// the fault frame's reads (the pushed FLAGS, CS and the stack machinery) and every value outside
+    /// the convention model. A site with an unresolved handler or resume target keeps reading every
+    /// value. Keyed by instruction origin - every statement of a faulting instruction gets the set.</summary>
+    private static IReadOnlyDictionary<ICfgNode, CpuValues> FaultReadsOf(
+        PreparedMethod prepared, IrCallingConventions conventions, CfgGeneratorContext context) {
+        Dictionary<ICfgNode, CpuValues> reads = new();
+        HashSet<ICfgNode> unresolved = [];
+        foreach (IrBlock block in prepared.IrMethod.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (!statement.Effects.MayFault || statement.Origin is not CfgInstruction instruction
+                    || reads.ContainsKey(instruction) || !unresolved.Add(instruction)) {
+                    continue;
+                }
+                if (FaultReadsOfSite(instruction, conventions, context) is { } set) {
+                    reads[instruction] = set;
+                }
+            }
+        }
+        return reads.Count == 0 ? IrLifter.NoFaultReads : reads;
+    }
+
+    /// <summary>The fault-path read set of one faulting instruction, or <see langword="null"/> when
+    /// a fault handler or a resume target of it is unresolved.</summary>
+    private static CpuValues? FaultReadsOfSite(CfgInstruction instruction,
+        IrCallingConventions conventions, CfgGeneratorContext context) {
+        CpuValues reads = CpuValues.StatusFlags | CpuValues.Direction
+            | CpuValues.Cs | CpuValues.Ss | CpuValues.Sp
+            | (CpuValues.All & ~IrCallingConventions.Reportable);
+        foreach (ResolvedCfgEdge edge in
+                 context.GetSuccessorEdges(instruction, InstructionSuccessorType.CpuFault)) {
+            CfgCodePartition handlerPartition = context.GetPartition(edge.Target);
+            CfgCodePartitionEntry? handlerEntry = context.GetEntries(handlerPartition)
+                .Where(entry => entry.Address == edge.Target.Address)
+                .Cast<CfgCodePartitionEntry?>()
+                .FirstOrDefault();
+            if (handlerEntry is null) {
+                return null;
+            }
+            reads |= conventions.InputsOf(handlerEntry);
+            CfgGeneratorContext.LandingResolution resolution =
+                context.ResolveFaultResumeTargets(handlerPartition);
+            if (resolution.UnresolvedTargets.Count > 0) {
+                return null;
+            }
+            foreach ((CfgCodePartition _, CfgCodePartitionEntry resumeEntry) in resolution.Entries) {
+                reads |= conventions.InputsOf(resumeEntry);
+            }
+        }
+        return reads;
+    }
+
+    /// <summary>Verify mode: every faulting statement's <see cref="IrEffects.FaultReads"/> covers
+    /// the fault-path demand the final conventions compute for it - a byte the set missed could
+    /// sit in a promoted local whose write-back the statement then never emits before the fault.</summary>
+    private static void VerifyObservedFaultReads(List<PreparedMethod> prepared,
+        UsedFacts?[] used, IrCallingConventions conventions, CfgGeneratorContext context) {
+        for (int i = 0; i < prepared.Count; i++) {
+            if (used[i] is not { } facts || facts.FaultReads.Count == 0) {
+                continue;
+            }
+            IReadOnlyDictionary<ICfgNode, CpuValues> demand =
+                FaultReadsOf(prepared[i], conventions, context);
+            foreach (IrBlock block in prepared[i].IrMethod.Blocks) {
+                foreach (IrStatement statement in block.Statements) {
+                    if (!demand.TryGetValue(statement.Origin, out CpuValues required)
+                        || statement.Effects.FaultReads is not { } given
+                        || (required & ~given) == CpuValues.None) {
+                        continue;
+                    }
+                    throw new InvalidOperationException(
+                        $"Faulting statement of {prepared[i].Method.MethodName} reads {given} on" +
+                        $" its fault path, below the observed demand {required}.");
+                }
+            }
+        }
     }
 
     /// <summary>Verify mode: every summarized call statement's reads cover the observed inputs of

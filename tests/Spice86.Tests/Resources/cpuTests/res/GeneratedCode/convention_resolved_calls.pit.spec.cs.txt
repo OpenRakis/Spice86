@@ -130,7 +130,7 @@ public partial class CfgGeneratedOverrides {
             return unknown_F000_0109_F0109_Asm();
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0107, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x011B), unknown_F000_011B_F011B)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0107, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x011B), unknown_F000_011B_F011B)], [new SegmentedAddress(biosSegment, 0x0107), new SegmentedAddress(biosSegment, 0x0109)]);
         }
     }
 

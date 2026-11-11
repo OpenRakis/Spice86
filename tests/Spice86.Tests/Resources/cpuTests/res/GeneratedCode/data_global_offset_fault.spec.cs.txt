@@ -23,7 +23,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested fallthrough after F000:002D");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x002D, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003D), unknown_F000_003D_F003D)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x002D, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003D), unknown_F000_003D_F003D)], [new SegmentedAddress(biosSegment, 0x002A), new SegmentedAddress(biosSegment, 0x0033)]);
         }
     }
 
@@ -76,7 +76,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested fallthrough after F000:0024");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0024, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003D), unknown_F000_003D_F003D)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0024, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003D), unknown_F000_003D_F003D)], [new SegmentedAddress(biosSegment, 0x002A), new SegmentedAddress(biosSegment, 0x0033)]);
         }
     }
 

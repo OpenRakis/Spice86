@@ -677,7 +677,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         items.Add((Action)(() => writer.OpenBlock("catch (CpuException cpuException)")));
         items.Add((Action)(() => {
             string resumeSegment = expressions.SegmentVariable(node.FaultingInstruction.Segment);
-            writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}]);");
+            writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}], [{ResumeTargets(node.ResumeTargets)}]);");
         }));
         items.Add((Action)(() => writer.CloseBlock()));
         PushItems(pending, items);
@@ -685,6 +685,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private string FaultHandlers(IReadOnlyList<CpuFaultHandler> handlers) =>
         string.Join(", ", handlers.Select(FaultHandler));
+
+    private string ResumeTargets(IReadOnlyList<SegmentedAddress> targets) =>
+        string.Join(", ", targets.Select(target =>
+            $"new SegmentedAddress({expressions.SegmentVariable(target.Segment)}, 0x{target.Offset:X4})"));
 
     private string FaultHandler(CpuFaultHandler handler) {
         string handlerSegment = expressions.SegmentVariable(handler.Handler.Segment);

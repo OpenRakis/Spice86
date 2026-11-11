@@ -1016,7 +1016,7 @@ public class MethodStructurizerTest {
             UntestedMessagePart.Hole(new RegisterNode(DataType.UINT16, 0), "X4")])),
         "tryCatch" => new CpuFaultTryCatchNode(
             new BlockNode(BackEdgeIf(Zero, toHeaderWhenTrue: true, new GotoNode(Target(_exit)))),
-            new SegmentedAddress(0x1000, 0x0010), []),
+            new SegmentedAddress(0x1000, 0x0010), [], []),
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown terminator.")
     };
 

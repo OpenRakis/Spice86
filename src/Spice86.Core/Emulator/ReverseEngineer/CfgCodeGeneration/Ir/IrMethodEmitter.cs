@@ -51,17 +51,21 @@ internal sealed class IrMethodEmitter(
     /// program before any method is printed.</summary>
     /// <returns>The prepared method to hand to <see cref="Print"/>.</returns>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) =>
-        Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects);
+        Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads);
 
     /// <inheritdoc cref="Prepare(MethodPlan, GenerationStepTimer)" />
     /// <param name="exitEffects">Return-exit effects to apply at lift time, from the first
     /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
     /// <param name="callEffects">Resolved-call summaries to apply at lift time, from the first
     /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    /// <param name="faultReads">Fault-path read sets to apply at lift time, from the first
+    /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer,
         IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
-        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects) {
-        IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method, exitEffects, callEffects));
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
+        IrMethod irMethod = timer.Measure("lift",
+            () => _lifter.Lift(method, exitEffects, callEffects, faultReads));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,

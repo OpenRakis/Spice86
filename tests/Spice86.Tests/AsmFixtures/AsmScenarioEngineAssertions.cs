@@ -270,17 +270,17 @@ internal static class AsmScenarioEngineAssertions {
         CurrentInstructions currentInstructions =
             machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
 
-        // div bx at F000:0028
-        CfgInstruction? div = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0028));
-        // handler entry (push bp) at F000:0037
-        CfgInstruction? handlerEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0037));
-        // handler iret at F000:0059
-        CfgInstruction? handlerIret = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0059));
-        // divblock entry (mov ax,10) at F000:0020 — the handler rewrites the return
+        // div word[cs:0x102] at F000:0029
+        CfgInstruction? div = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0029));
+        // handler entry (mov [0x08],bp) at F000:003B
+        CfgInstruction? handlerEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x003B));
+        // handler iret at F000:005C
+        CfgInstruction? handlerIret = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x005C));
+        // divblock entry (mov bp,05678h) at F000:001D — the handler rewrites the return
         // address so iret returns here instead of to the faulting div.
-        CfgInstruction? divblockEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0020));
-        // post-fault instruction: mov bx,[cs:0x100] at F000:002A
-        CfgInstruction? postDiv = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x002A));
+        CfgInstruction? divblockEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x001D));
+        // post-fault instruction: mov bx,[cs:0x100] at F000:002E
+        CfgInstruction? postDiv = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x002E));
 
         Assert.NotNull(div);
         Assert.NotNull(handlerEntry);

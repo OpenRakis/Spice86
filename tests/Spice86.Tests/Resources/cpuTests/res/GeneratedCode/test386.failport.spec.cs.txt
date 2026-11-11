@@ -50,7 +50,7 @@ public partial class CfgGeneratedOverrides {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x06A1, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x06A8), unknown_F000_06A8_F06A8)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x06A1, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x06A8), unknown_F000_06A8_F06A8)], [new SegmentedAddress(biosSegment, 0x15C7)]);
         }
     }
 
@@ -1933,7 +1933,7 @@ public partial class CfgGeneratedOverrides {
                             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
                         }
                         catch (CpuException cpuException) {
-                            return DispatchCpuFault(cpuException, biosSegment, 0x062E, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0633), unknown_F000_0633_F0633)]);
+                            return DispatchCpuFault(cpuException, biosSegment, 0x062E, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0633), unknown_F000_0633_F0633)], [new SegmentedAddress(biosSegment, 0x15C7)]);
                         }
                     }
                     VerifySpeculativeEntryOrFail(biosSegment, 0x037A, Signature_037A_hlt);

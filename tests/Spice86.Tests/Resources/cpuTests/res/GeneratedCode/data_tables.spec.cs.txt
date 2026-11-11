@@ -108,7 +108,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested fallthrough after F000:0124");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0124, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x012C), unknown_F000_012C_F012C)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0124, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x012C), unknown_F000_012C_F012C)], [new SegmentedAddress(biosSegment, 0x012B)]);
         }
     }
 

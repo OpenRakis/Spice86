@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -31,16 +32,22 @@ internal sealed class IrLifter(
     public static readonly IReadOnlyDictionary<ICfgNode, IrEffects> NoEffects =
         new Dictionary<ICfgNode, IrEffects>();
 
+    /// <summary>No fault-path read overrides: every faulting statement uses every value.</summary>
+    public static readonly IReadOnlyDictionary<ICfgNode, CpuValues> NoFaultReads =
+        new Dictionary<ICfgNode, CpuValues>();
+
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order.</summary>
-    public IrMethod Lift(MethodPlan method) => Lift(method, NoEffects, NoEffects);
+    public IrMethod Lift(MethodPlan method) => Lift(method, NoEffects, NoEffects, NoFaultReads);
 
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order; an exit
     /// whose origin is a key of <paramref name="exitEffects"/> gets that entry's effect instead of
     /// the transfer's own, and the call statement of an origin in <paramref name="callEffects"/>
-    /// gets that summary instead of <see cref="IrEffects.Unknown"/>.</summary>
+    /// gets that summary instead of <see cref="IrEffects.Unknown"/>. A statement of an origin in
+    /// <paramref name="faultReads"/> faults reading that set instead of every value.</summary>
     public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
-        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects) {
-        IrFlattener flattener = new(false, exitEffects, callEffects);
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
+        IrFlattener flattener = new(false, exitEffects, callEffects, faultReads);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, IrBlock> startBlocks = [];
         Dictionary<ICfgNode, IrInstructionShape> shapes = [];

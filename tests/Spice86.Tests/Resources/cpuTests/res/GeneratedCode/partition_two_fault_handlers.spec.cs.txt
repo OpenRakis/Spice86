@@ -23,7 +23,7 @@ public partial class CfgGeneratedOverrides {
             (AX, DX) = Div16(divisor: BX, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x001F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0022), unknown_F000_0022_F0022), new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0035), unknown_F000_0035_F0035)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x001F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0022), unknown_F000_0022_F0022), new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0035), unknown_F000_0035_F0035)], [new SegmentedAddress(biosSegment, 0x001A)]);
         }
         return Hlt();
     }

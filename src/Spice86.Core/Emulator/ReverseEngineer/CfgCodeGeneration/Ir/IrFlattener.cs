@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using System.Linq;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
@@ -21,6 +22,7 @@ internal sealed class IrFlattener {
     private readonly bool _raw;
     private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _exitEffects;
     private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _callEffects;
+    private readonly IReadOnlyDictionary<ICfgNode, CpuValues> _faultReads;
     private readonly List<IrBlock> _blocks = [];
     private readonly Stack<Func<IrBlock>> _breakTargets = new();
     private readonly List<PendingJump> _pendingJumps = [];
@@ -33,11 +35,15 @@ internal sealed class IrFlattener {
     /// <param name="exitEffects">Return-exit effect overrides by instruction origin.</param>
     /// <param name="callEffects">Resolved-call effect summaries by instruction origin, applied to
     /// the statement that carries the call.</param>
+    /// <param name="faultReads">Fault-path read sets by instruction origin, applied to the
+    /// statements of every instruction whose handlers and resume targets resolved.</param>
     public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
-        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects) {
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
         _raw = raw;
         _exitEffects = exitEffects;
         _callEffects = callEffects;
+        _faultReads = faultReads;
     }
 
     private IrEffects? ExitEffectsOf(ICfgNode origin) =>
@@ -48,7 +54,11 @@ internal sealed class IrFlattener {
         if (_callEffects.TryGetValue(origin, out IrEffects effects)) {
             typed = AttachSummary(typed, effects);
         }
-        return IrStatement.Create(typed, origin);
+        IrEffects statementEffects = IrEffectsVisitor.Of(typed, IrStatement.MayFault(typed, origin));
+        if (_faultReads.TryGetValue(origin, out CpuValues faultReads)) {
+            statementEffects = statementEffects with { FaultReads = faultReads };
+        }
+        return new IrStatement(typed, origin, statementEffects);
     }
 
     private static IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>

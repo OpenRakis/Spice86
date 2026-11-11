@@ -25,7 +25,7 @@ public partial class CfgGeneratedOverrides {
             AX = UInt16[DS, BX];
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0137, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0184), unknown_F000_0184_F0184)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0137, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0184), unknown_F000_0184_F0184)], [new SegmentedAddress(biosSegment, 0x0137)]);
         }
         DsGlobals.Word00DA = AX;
         index = 0x00DC;
@@ -189,6 +189,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0120 = 0x9999;
         DS = 0;
         Segment0000Globals.Dword0034 = 0x00000184 | (uint)CS << 16;
+        AX = 0x2000;
         DS = 0x2000;
         BX = 0xFFFF;
         return unknown_F000_0137_F0137();

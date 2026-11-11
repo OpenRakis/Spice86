@@ -1563,17 +1563,37 @@ public class CSharpOverrideHelper {
     /// <param name="faultCs">The CS of the faulting instruction.</param>
     /// <param name="faultIp">The IP of the faulting instruction.</param>
     /// <param name="targets">The list of fault handler targets to match against the live IVT.</param>
+    /// <param name="resumeTargets">The addresses discovery observed this fault resuming at; the
+    /// return action fails as untested when the handler leaves control anywhere else.</param>
     /// <returns>The return action from the matching handler partition.</returns>
     /// <exception cref="UnrecoverableException">Thrown when no target matches the live IVT handler.</exception>
-    public Action DispatchCpuFault(CpuException exception, ushort faultCs, ushort faultIp, IReadOnlyList<CpuFaultTarget> targets) {
+    public Action DispatchCpuFault(CpuException exception, ushort faultCs, ushort faultIp,
+        IReadOnlyList<CpuFaultTarget> targets, SegmentedAddress[] resumeTargets) {
         SegmentedAddress handler = _interruptVectorTable[exception.InterruptVector];
         foreach (CpuFaultTarget target in targets) {
             if (target.Handler == handler) {
                 EnterCpuFaultHandler(faultCs, faultIp, handler);
-                return target.Invoke();
+                Action resume = target.Invoke();
+                return () => {
+                    resume();
+                    VerifyObservedFaultResume(faultCs, faultIp, handler, resumeTargets);
+                };
             }
         }
         throw FailAsUntested($"Untested CPU fault target {handler} at {faultCs:X4}:{faultIp:X4}");
+    }
+
+    /// <summary>Fails as untested when the fault handler's return left control at an address
+    /// discovery did not observe the fault resuming at.</summary>
+    private void VerifyObservedFaultResume(ushort faultCs, ushort faultIp, SegmentedAddress handler,
+        SegmentedAddress[] resumeTargets) {
+        SegmentedAddress landedAddress = State.IpSegmentedAddress;
+        foreach (SegmentedAddress target in resumeTargets) {
+            if (target == landedAddress) {
+                return;
+            }
+        }
+        throw FailAsUntested($"The fault at {faultCs:X4}:{faultIp:X4} through {handler} resumed at {landedAddress}, which discovery did not observe it resuming on");
     }
 
     /// <summary>

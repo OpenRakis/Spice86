@@ -110,7 +110,8 @@ internal static class IrVerifier {
         foreach (IrBlock block in method.Blocks) {
             foreach (IrStatement statement in block.Statements) {
                 IrEffects expected = IrEffectsVisitor.Of(statement.Node,
-                    IrStatement.MayFault(statement.Node, statement.Origin));
+                    IrStatement.MayFault(statement.Node, statement.Origin))
+                    with { FaultReads = statement.Effects.FaultReads };
                 if (!statement.Effects.Equals(expected)) {
                     Fail(method, block, statement.Origin, "stored effects differ from the computed effects (stored effects)");
                 }

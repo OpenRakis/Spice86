@@ -406,7 +406,7 @@ A generated call carries the same closed-world rule for mid-call landings. While
 
 The generated class derives from `CSharpOverrideHelper`, which provides:
 
-- `DispatchCpuFault(cpuException, cs, ip, [new CpuFaultTarget(...)])` in the `catch` of a faulting instruction;
+- `DispatchCpuFault(cpuException, cs, ip, [new CpuFaultTarget(...)], [new SegmentedAddress(...)])` in the `catch` of a faulting instruction;
 - `Div8` / `Div16` / `Div32` / `IDiv8` / `IDiv16` / `IDiv32`, each returning `(Quotient, Remainder)`, for example `(AX, DX) = Div16(divisor: CX, dividend: ...);`;
 - `In8` / `In16` / `In32` and `Out8` / `Out16` / `Out32` for port I/O;
 - `SelectorSignatureMatches`, `VerifySpeculativeEntryOrFail` and `VerifySpeculativeRunOrFail`, which read the `Signature_...` fields;
@@ -442,7 +442,9 @@ A far call whose target was observed is dispatched on the remembered segment/off
 
 ### CPU fault handling
 
-Instructions that triggered a hardware exception (e.g. divide by zero) during discovery get wrapped in `try/catch(CpuException)`. The `catch` calls `DispatchCpuFault(cpuException, cs, ip, [new CpuFaultTarget(...)])`, which reads the live IVT, matches the handler, performs the fault entry sequence (push flags, push return address, clear interrupts, set CS/IP) and invokes the handler partition.
+Instructions that triggered a hardware exception (e.g. divide by zero) during discovery get wrapped in `try/catch(CpuException)`. The `catch` calls `DispatchCpuFault(cpuException, cs, ip, [new CpuFaultTarget(...)], [new SegmentedAddress(...)])`: the first list is the observed handler arms (the fault instruction's `CpuFault` CFG successors), the second the observed resume targets (every address the handler activation was seen transferring to while the fault frame was open). The helper reads the live IVT, fails as untested when no arm matches, performs the fault entry sequence (push flags, push return address, clear interrupts, set CS/IP) and invokes the handler partition; the returned action then checks the address control actually resumed at against the resume list and fails as untested anywhere else — a handler rewriting the stacked return IP to an address discovery never saw is untested, not executed.
+
+The fault path also narrows the SSA: a faulting statement used to count as reading every value, which kept every earlier register write alive. When the instruction's observed handlers and resume targets all resolve to partition entries, the statement's `FaultReads` is instead the union of their observed entry inputs plus the frame's reads (FLAGS, CS, SS, SP) and the values the convention model never reports — so a register write nothing on either path reads can be removed, and an unresolved site stays conservative. The set is a consumed fact of the round-two fixed point like the exit and call reads.
 
 ### Self-modifying code
 

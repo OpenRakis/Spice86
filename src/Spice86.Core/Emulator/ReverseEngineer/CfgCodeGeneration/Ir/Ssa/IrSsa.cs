@@ -362,7 +362,9 @@ internal sealed class IrSsa {
     internal static uint UsedBits(IrEffects effects) {
         uint reads = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads);
         if (effects.MayFault) {
-            reads |= IrSsaValues.All;
+            reads |= effects.FaultReads is { } faultReads
+                ? IrSsaValues.ValueBits(faultReads)
+                : IrSsaValues.All;
         }
         (uint _, uint partial) = IrSsaValues.WriteBits(effects);
         return reads | partial;
@@ -374,7 +376,9 @@ internal sealed class IrSsa {
     internal static uint ReadBits(IrEffects effects) {
         uint reads = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads);
         if (effects.MayFault) {
-            reads |= IrSsaValues.All;
+            reads |= effects.FaultReads is { } faultReads
+                ? IrSsaValues.ValueBits(faultReads)
+                : IrSsaValues.All;
         }
         return reads;
     }

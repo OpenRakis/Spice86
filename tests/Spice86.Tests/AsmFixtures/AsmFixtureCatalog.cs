@@ -377,11 +377,13 @@ internal static class AsmFixtureCatalog {
 
     /// <summary>Runs divfaultloop: the fault handler retried once and the division produced 2.</summary>
     public static AsmFixture DivFaultLoop() {
-        byte[] expectedMemory = new byte[4];
+        byte[] expectedMemory = new byte[10];
         expectedMemory[0x00] = 0x03; // retrycount low
         expectedMemory[0x01] = 0x00; // retrycount high
         expectedMemory[0x02] = 0x02; // quotient low (10 / 5 = 2)
         expectedMemory[0x03] = 0x00; // quotient high
+        expectedMemory[0x08] = 0x78; // BP low the handler observed and stored
+        expectedMemory[0x09] = 0x56; // BP high
         return MemoryFixture(new AsmRunSettings { BinName = "divfaultloop" }, expectedMemory);
     }
 

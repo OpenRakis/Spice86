@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction ADD at F000:004B: no memory destination operand");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x004B, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x004B, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
@@ -34,7 +34,7 @@ public partial class CfgGeneratedOverrides {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction INC at F000:0054: no memory destination operand");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0054, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0054, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
@@ -81,7 +81,7 @@ public partial class CfgGeneratedOverrides {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction MOV at F000:0040: not in the LOCK-allowed instruction set");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0040, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0040, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
