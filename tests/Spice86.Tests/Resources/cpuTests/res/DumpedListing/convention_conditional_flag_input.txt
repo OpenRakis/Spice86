@@ -1,0 +1,27 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A stc
+F000:000B mov CL,0
+F000:000D call near 0x0039
+F000:0010 mov byte ptr DS:[0x0200],DL
+F000:0014 clc
+F000:0015 mov CL,0
+F000:0017 call near 0x0039
+F000:001A mov byte ptr DS:[0x0201],DL
+F000:001E clc
+F000:001F mov CL,1
+F000:0021 mov AX,0x8000
+F000:0024 call near 0x0039
+F000:0027 mov byte ptr DS:[0x0202],DL
+F000:002B clc
+F000:002C mov CL,1
+F000:002E mov AX,1
+F000:0031 call near 0x0039
+F000:0034 mov byte ptr DS:[0x0203],DL
+F000:0038 hlt
+F000:0039 shl AX,CL
+F000:003B setb DL
+F000:003E ret near
+F000:FFF0 jmp short 0

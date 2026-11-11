@@ -680,7 +680,7 @@ internal sealed class IrCallingConventions {
             return NeededPush(method, value, statement, pushed, visiting);
         }
         if (use.ConditionalNewVersion >= 0) {
-            CpuValues written = (statement.Effects.MustWrite | statement.Effects.MayWrite) & mask;
+            CpuValues written = statement.Effects.MustWrite & mask;
             return Needed(method, value, use.ConditionalNewVersion, visiting) & ~written;
         }
         return statement.Effects.Reads & mask;

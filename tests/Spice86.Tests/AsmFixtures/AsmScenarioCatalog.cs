@@ -473,6 +473,9 @@ internal static class AsmScenarioCatalog {
             // stack_esp_high_bits proves the 32-bit stack helpers write only the low 16 bits of
             // ESP: the mov esp write of the high half must survive push/pop/leave in both modes.
             AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits),
+            // convention_conditional_flag_input proves a may-write does not kill demand: the
+            // callee reads the caller's CF through shl's conditional write (G1.6).
+            AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),

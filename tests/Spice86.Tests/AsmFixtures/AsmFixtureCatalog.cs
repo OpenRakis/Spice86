@@ -1080,6 +1080,17 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs convention_conditional_flag_input: the four stored DL bytes prove the callee's
+    /// <c>setc</c> sees the caller's CF when <c>shl ax,cl</c> leaves it unchanged (CL=0).</summary>
+    public static AsmFixture ConventionConditionalFlagInput() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_conditional_flag_input", MaxCycles = 1000 }, result => {
+            result.Memory.UInt8[0x2000, 0x0200].Should().Be(1, "cl=0: shl keeps CF, setc reads the caller's stc");
+            result.Memory.UInt8[0x2000, 0x0201].Should().Be(0, "cl=0: shl keeps CF, setc reads the caller's clc");
+            result.Memory.UInt8[0x2000, 0x0202].Should().Be(1, "cl=1: shl shifts out the top bit of 8000h");
+            result.Memory.UInt8[0x2000, 0x0203].Should().Be(0, "cl=1: shl shifts out the top bit of 1");
+        });
+    }
+
     /// <summary>Runs stack_esp_high_bits: the dword stored at 2000:0200 keeps the ESP high half
     /// <c>mov esp</c> set, with the low half back at 1000h after balanced 32-bit stack ops.</summary>
     public static AsmFixture StackEspHighBits() {

@@ -1,0 +1,166 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0039_F0039_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_0039_F0039_AsmEntry = _ => unknown_F000_0039_F0039_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0039, unknown_F000_0039_F0039_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, CL, CF. Outputs: AX, DL. Changes: AX, DL, CF, PF, ZF, SF, OF.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    public virtual (ushort ax, byte dl) unknown_F000_0039_F0039(ushort ax, byte cl, bool carryFlag) {
+        AX = ax;
+        CL = cl;
+        CarryFlag = carryFlag;
+        CheckExternalEvents(biosSegment, 0x0039);
+        // F000:0039 shl AX,CL
+        AX = Alu16.Shl(AX, (int)cl);
+        // F000:003B setb DL
+        DL = (byte)(CarryFlag ? 1 : 0);
+        // F000:003E ret near
+        NearReturn();
+        return (AX, DL);
+    }
+
+    public virtual Action unknown_F000_0039_F0039_Asm() {
+        (AX, DL) = unknown_F000_0039_F0039(AX, CL, CarryFlag);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A stc
+        CarryFlag = true;
+        // F000:000B mov CL,0
+        CL = 0;
+        // F000:000D call near 0x0039
+        (AX, DL) = NearCall(biosSegment, 0x0010, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
+        // F000:0010 mov byte ptr DS:[0x0200],DL
+        Segment2000Globals.Byte0200 = DL;
+        // F000:0014 clc
+        CarryFlag = false;
+        // F000:0015 mov CL,0
+        CL = 0;
+        // F000:0017 call near 0x0039
+        (AX, DL) = NearCall(biosSegment, 0x001A, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
+        // F000:001A mov byte ptr DS:[0x0201],DL
+        Segment2000Globals.Byte0201 = DL;
+        // F000:001E clc
+        CarryFlag = false;
+        // F000:001F mov CL,1
+        CL = 1;
+        // F000:0021 mov AX,0x8000
+        AX = 0x8000;
+        // F000:0024 call near 0x0039
+        (AX, DL) = NearCall(biosSegment, 0x0027, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
+        // F000:0027 mov byte ptr DS:[0x0202],DL
+        Segment2000Globals.Byte0202 = DL;
+        // F000:002B clc
+        CarryFlag = false;
+        // F000:002C mov CL,1
+        CL = 1;
+        // F000:002E mov AX,1
+        AX = 1;
+        // F000:0031 call near 0x0039
+        (AX, DL) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
+        // F000:0034 mov byte ptr DS:[0x0203],DL
+        Segment2000Globals.Byte0203 = DL;
+        // F000:0038 hlt
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public byte Byte0200 { get => _memory.UInt8[Segment, 0x0200]; set => _memory.UInt8[Segment, 0x0200] = value; }
+
+    public byte Byte0201 { get => _memory.UInt8[Segment, 0x0201]; set => _memory.UInt8[Segment, 0x0201] = value; }
+
+    public byte Byte0202 { get => _memory.UInt8[Segment, 0x0202]; set => _memory.UInt8[Segment, 0x0202] = value; }
+
+    public byte Byte0203 { get => _memory.UInt8[Segment, 0x0203]; set => _memory.UInt8[Segment, 0x0203] = value; }
+}
