@@ -372,7 +372,6 @@ public partial class CfgGeneratedOverrides {
         // F000:00F1 mov word ptr DS:[DI+0x1C],AX
         Segment2000Globals.Word005C = ax4;
         // F000:00F4 xor DX,DX
-        DX = 0;
         // F000:00F6 push BX
         // F000:00F7 pop BX
         BX = bx4;
@@ -458,7 +457,6 @@ public partial class CfgGeneratedOverrides {
         // F000:015B mov word ptr DS:[DI+0x22],AX
         Segment2000Globals.Word0062 = ax7;
         // F000:015E xor DX,DX
-        DX = 0;
         // F000:0160 push BX
         // F000:0161 pop BX
         BX = bx7;

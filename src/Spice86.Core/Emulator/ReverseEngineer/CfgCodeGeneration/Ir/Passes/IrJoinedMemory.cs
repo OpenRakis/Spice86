@@ -34,29 +34,33 @@ using System.Linq;
 internal static class IrJoinedMemory {
     /// <summary>Applies both forms over <paramref name="method"/>; returns the number of joined
     /// statements. The SSA must be rebuilt by the caller when the result is not zero.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
-        IrMemoryAliasAnalysis alias = new(ssa);
+    public static int Apply(IrMethod method, IrEditor editor) {
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
         int joined = 0;
         foreach (IrBlock block in method.Blocks) {
-            joined += JoinBlock(block, alias, ssa, pinnedOrigins);
+            if (editor.Ssa.IsStale) {
+                editor.Rebind(method, "ssa rebind joined memory");
+            }
+            joined += JoinBlock(block, editor.Ssa, method, editor, pinnedOrigins);
         }
         return joined;
     }
 
-    private static int JoinBlock(IrBlock block, IrMemoryAliasAnalysis alias, IrSsa ssa,
-            HashSet<ICfgNode> pinnedOrigins) {
-        List<IrStatement> statements = block.Statements;
+    private static int JoinBlock(IrBlock block, IrSsa ssa, IrMethod method,
+            IrEditor editor, HashSet<ICfgNode> pinnedOrigins) {
+        IReadOnlyList<IrStatement> statements = block.Statements;
+        IrMemoryAliasAnalysis alias = new(ssa);
         int joined = 0;
         for (int i = 0; i < statements.Count; i++) {
+            if (ssa.IsStale) {
+                ssa = editor.Rebind(method, "ssa rebind joined memory");
+                alias = new IrMemoryAliasAnalysis(ssa);
+            }
             IrStatement statement = statements[i];
             IVisitableAstNode node = RewriteReads(statement.Node, statement, alias);
             if (!ReferenceEquals(node, statement.Node)) {
                 IrStatement rewritten = IrStatement.Create(node, statement.Origin);
-                statements[i] = rewritten;
-                if (ssa.HasSite(statement)) {
-                    ssa.Replace(statement, rewritten);
-                }
+                editor.Replace(block, i, rewritten);
                 joined++;
             }
             if (!IsWordStore(statements[i])) {
@@ -67,8 +71,7 @@ internal static class IrJoinedMemory {
                 || IrInstructionIdioms.CrossesPinnedOrigin(statements, i, second, pinnedOrigins)) {
                 continue;
             }
-            if (JoinStore(block, i, second, alias, ssa)) {
-                statements.RemoveAt(i);
+            if (JoinStore(block, i, second, alias, ssa, editor)) {
                 i--;
                 joined++;
             }
@@ -242,7 +245,7 @@ internal static class IrJoinedMemory {
     /// the second position, so every register and token it or the merged address reads must hold
     /// the same version at both positions.</summary>
     private static bool JoinStore(IrBlock block, int first, int second,
-            IrMemoryAliasAnalysis alias, IrSsa ssa) {
+            IrMemoryAliasAnalysis alias, IrSsa ssa, IrEditor editor) {
         IrStatement firstStatement = block.Statements[first];
         IrStatement secondStatement = block.Statements[second];
         BinaryOperationNode firstAssign = (BinaryOperationNode)firstStatement.Node;
@@ -278,13 +281,8 @@ internal static class IrJoinedMemory {
         IrStatement wideStore = IrStatement.Create(
             new BinaryOperationNode(DataType.UINT32, wide, BinaryOperation.ASSIGN, joined),
             secondStatement.Origin);
-        block.Statements[second] = wideStore;
-        if (ssa.HasSite(secondStatement)) {
-            ssa.Replace(secondStatement, wideStore);
-        }
-        if (ssa.HasSite(firstStatement)) {
-            ssa.Remove(firstStatement);
-        }
+        editor.Replace(block, second, wideStore);
+        editor.Remove(block, first);
         return true;
     }
 }

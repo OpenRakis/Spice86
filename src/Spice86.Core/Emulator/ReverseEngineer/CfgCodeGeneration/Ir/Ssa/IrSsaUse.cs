@@ -1,14 +1,12 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 /// <summary>
-/// One use of an SSA version: either a statement of <see cref="Block"/> at <see cref="Index"/>, the
-/// terminator of <see cref="Block"/> (<see cref="Index"/> equals the block's statement count and
-/// <see cref="Terminator"/> is set), or an operand of <see cref="Phi"/> reached through
-/// <see cref="OperandPredecessor"/> (the phi's own block for a method entry operand).
+/// One use of an SSA version: either a statement of <see cref="Block"/>, the terminator of
+/// <see cref="Block"/> (<see cref="Terminator"/> is set), or an operand of <see cref="Phi"/> reached
+/// through <see cref="OperandPredecessor"/> (the phi's own block for a method entry operand).
 /// </summary>
 internal sealed record IrSsaUse(
     IrBlock Block,
-    int Index,
     IrStatement? Statement,
     IrTerminator? Terminator,
     IrSsaPhi? Phi,

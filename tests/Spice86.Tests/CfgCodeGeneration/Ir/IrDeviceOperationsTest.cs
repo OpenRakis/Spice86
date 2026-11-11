@@ -82,10 +82,10 @@ public sealed class IrDeviceOperationsTest {
         for (int i = 0; i < nodes.Length; i++) {
             ICfgNode origin = origins[i] ?? fallback;
             instructions.Add(origin);
-            block.Statements.Add(IrStatement.Create(nodes[i], origin));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(nodes[i], origin));
         }
         CfgInstruction entry = instructions.OfType<CfgInstruction>().FirstOrDefault() ?? fallback;
-        block.Terminator = new IrExit(entry, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(entry, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = new("M", [block], [new IrEntry(entry, block)], instructions,
             new Dictionary<ICfgNode, IrInstructionShape>());
         return (method, block);
@@ -149,7 +149,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the event check may run an interrupt handler mid-sequence");
         block.Statements.Should().HaveCount(3);
@@ -164,7 +164,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the guard's memory read may observe device state");
         block.Statements.Should().HaveCount(3);
@@ -179,7 +179,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "a call between the select and the read may do anything");
         block.Statements.Should().HaveCount(3);
@@ -199,7 +199,7 @@ public sealed class IrDeviceOperationsTest {
                 ReadAssign(CmosPorts.Data)]);
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the mid-sequence fault edge must keep the single-port calls");
         block.Statements.Should().HaveCount(3);
@@ -216,7 +216,7 @@ public sealed class IrDeviceOperationsTest {
                 ReadAssign(CmosPorts.Data)]);
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the read's fault edge must keep the earlier select untouched");
         block.Statements.Should().HaveCount(2);
@@ -232,7 +232,7 @@ public sealed class IrDeviceOperationsTest {
                 Write(CmosPorts.Data, new ConstantNode(DataType.UINT8, 0x55))]);
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the write's fault edge must keep the earlier select untouched");
         block.Statements.Should().HaveCount(2);
@@ -250,7 +250,7 @@ public sealed class IrDeviceOperationsTest {
                     new RegisterNode(DataType.UINT8, 0), new ConstantNode(DataType.UINT8, 1))));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the ALU argument changes flags and cannot move to the merge");
         block.Statements.Should().HaveCount(2);
@@ -266,7 +266,7 @@ public sealed class IrDeviceOperationsTest {
                 new AbsolutePointerNode(DataType.UINT16, new ConstantNode(DataType.UINT32, 0x500))));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the memory read cannot be duplicated by the merge");
         block.Statements.Should().HaveCount(1);
@@ -283,7 +283,7 @@ public sealed class IrDeviceOperationsTest {
                     new RegisterNode(DataType.UINT16, 0), new ConstantNode(DataType.UINT16, 1))));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the flag-writing value cannot be duplicated by the merge");
         block.Statements.Should().HaveCount(1);
@@ -299,7 +299,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, new Dictionary<ushort, Type>());
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), new Dictionary<ushort, Type>());
 
         combined.Should().Be(0, "an unmapped port never reaches the CMOS device");
         block.Statements.Should().HaveCount(2);
@@ -316,7 +316,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, ports);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), ports);
 
         combined.Should().Be(0, "a port owned by another device keeps its single-port calls");
         block.Statements.Should().HaveCount(2);
@@ -334,7 +334,7 @@ public sealed class IrDeviceOperationsTest {
             Write(0x38A, new ConstantNode(DataType.UINT8, 0xF1)));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, ports);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), ports);
 
         combined.Should().Be(0, "an odd start port is the data half of a pair, never an address");
         block.Statements.Should().HaveCount(2);
@@ -352,7 +352,7 @@ public sealed class IrDeviceOperationsTest {
             Write((ushort)Ports.SequencerData, new ConstantNode(DataType.UINT8, 0x0F)));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the narrowed 0xC4 is not the sequencer index port");
         block.Statements.Should().HaveCount(2);
@@ -369,7 +369,7 @@ public sealed class IrDeviceOperationsTest {
             ReadAssign(CmosPorts.Data));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the select's AL version no longer holds at the read");
         block.Statements.Should().HaveCount(3);
@@ -388,7 +388,7 @@ public sealed class IrDeviceOperationsTest {
             Write(CmosPorts.Data, new ConstantNode(DataType.UINT8, 0x55)));
         IrSsa ssa = IrSsa.Build(method);
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the select's temporary was rewritten before the data write");
         block.Statements.Should().HaveCount(4);
@@ -450,7 +450,7 @@ public sealed class IrDeviceOperationsTest {
         IrSsa ssa = IrSsa.Build(method);
         IVisitableAstNode[] original = [.. block.Statements.Select(statement => statement.Node)];
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "a partial palette sequence is no device operation");
         block.Statements.Should().HaveCount(3);
@@ -469,7 +469,7 @@ public sealed class IrDeviceOperationsTest {
         IrSsa ssa = IrSsa.Build(method);
         IVisitableAstNode[] original = [.. block.Statements.Select(statement => statement.Node)];
 
-        int combined = IrDeviceOperations.Apply(method, ssa, DevicePorts);
+        int combined = IrDeviceOperations.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), DevicePorts);
 
         combined.Should().Be(0, "the word write is not the declared byte data access");
         block.Statements.Should().HaveCount(2);

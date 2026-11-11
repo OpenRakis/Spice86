@@ -154,9 +154,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax;
         ushort es;
         ushort es1 = 0;
-        ushort ax;
         ushort cx;
         ushort bp;
         ushort dx;
@@ -184,13 +184,13 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x0018);
             // F000:0018 mov AX,word ptr CS:[SI]
-            AX = UInt16[CS, SI];
+            ax = UInt16[CS, SI];
             // F000:001B mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:001F mov ES,DX
             es = DX;
             // F000:0021 push AX
-            Stack.Push16(AX);
+            Stack.Push16(ax);
             // F000:0022 push ES
             Stack.Push16(es);
             // F000:0023 mov AX,1
@@ -203,9 +203,9 @@ public partial class CfgGeneratedOverrides {
             // F000:002C pop ES
             es1 = Stack.Pop16();
             // F000:002D pop AX
-            ax = Stack.Pop16();
+            AX = Stack.Pop16();
             // F000:002E mov word ptr DS:[BX],AX
-            UInt16[DS, BX] = ax;
+            UInt16[DS, BX] = AX;
             // F000:0030 mov word ptr DS:[BX+2],ES
             UInt16[DS, (ushort)(BX + 2)] = es1;
             // F000:0033 mov word ptr DS:[BX+4],CX

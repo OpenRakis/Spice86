@@ -210,7 +210,6 @@ public partial class CfgGeneratedOverrides {
         AX = ax;
         Segment2000Globals.Byte0054 = AL;
         // F000:0077 xor DX,DX
-        DX = 0;
         // F000:0079 div CX
         (AX, DX) = Div16(divisor: cx, dividend: (uint)ax);
         // F000:007B mov word ptr DS:[DI+9],AX

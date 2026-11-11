@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
@@ -32,7 +33,7 @@ public sealed class IrBranchSimplificationTest {
         CfgInstruction instruction = Instruction(0);
         (IrBlock entry, IrBlock taken, IrBlock dead) = Diamond(instruction,
             AxEquals(5));
-        entry.Statements.Add(AssignAx(instruction, Const(5)));
+        IrEditor.WithoutSsa.Append(entry, AssignAx(instruction, Const(5)));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, taken, dead);
 
@@ -135,12 +136,12 @@ public sealed class IrBranchSimplificationTest {
         IrBlock deadHead = Block(2);
         IrBlock deadInner = Block(3);
         IrBlock deadTail = Block(4);
-        entry.Terminator = new IrBranch(instruction, Const(1),
-            new IrEdge(taken, false), new IrEdge(deadHead, false));
-        taken.Terminator = new IrExit(instruction, ReturnValue());
-        deadHead.Terminator = new IrJump(instruction, new IrEdge(deadInner, false));
-        deadInner.Terminator = new IrJump(instruction, new IrEdge(deadTail, false));
-        deadTail.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, Const(1),
+            new IrEdge(taken, false), new IrEdge(deadHead, false)));
+        IrEditor.WithoutSsa.SetTerminator(taken, new IrExit(instruction, ReturnValue()));
+        IrEditor.WithoutSsa.SetTerminator(deadHead, new IrJump(instruction, new IrEdge(deadInner, false)));
+        IrEditor.WithoutSsa.SetTerminator(deadInner, new IrJump(instruction, new IrEdge(deadTail, false)));
+        IrEditor.WithoutSsa.SetTerminator(deadTail, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, taken, deadHead, deadInner, deadTail);
         // Act
@@ -156,10 +157,10 @@ public sealed class IrBranchSimplificationTest {
         IrBlock entry = Block(0);
         IrBlock taken = Block(1);
         IrBlock dead = Block(2);
-        entry.Terminator = new IrBranch(instruction, condition,
-            new IrEdge(taken, true), new IrEdge(dead, false));
-        taken.Terminator = new IrExit(instruction, ReturnValue());
-        dead.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, condition,
+            new IrEdge(taken, true), new IrEdge(dead, false)));
+        IrEditor.WithoutSsa.SetTerminator(taken, new IrExit(instruction, ReturnValue()));
+        IrEditor.WithoutSsa.SetTerminator(dead, new IrExit(instruction, ReturnValue()));
         return (entry, taken, dead);
     }
 
@@ -180,8 +181,9 @@ public sealed class IrBranchSimplificationTest {
 
     private static (int BranchesRemoved, int BlocksRemoved) Run(IrMethod method) {
         IrSsa ssa = IrSsa.Build(method);
-        IrConstantFacts facts = IrConstants.Apply(method, ssa, method.ToStructuringGraph());
-        return IrBranchSimplification.Apply(method, facts);
+        IrEditor editor = new(ssa, new GenerationStepTimer());
+        IrConstantFacts facts = IrConstants.Apply(method, editor, method.ToStructuringGraph());
+        return IrBranchSimplification.Apply(method, editor, facts);
     }
 
     private static BinaryOperationNode AxEquals(ulong value) =>

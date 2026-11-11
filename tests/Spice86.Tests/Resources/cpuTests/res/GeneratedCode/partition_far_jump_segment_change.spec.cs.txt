@@ -91,16 +91,16 @@ public partial class CfgGeneratedOverrides {
         // F100:0000 mov word ptr CS:[0x8000],0xAAAA
         CsGlobals.Word8000 = 0xAAAA;
         // F100:0007 mov AX,word ptr CS:[0x8000]
-        AX = CsGlobals.Word8000;
+        ax = CsGlobals.Word8000;
         // F100:000B mov word ptr DS:[BX],AX
-        Segment2000Globals.Word0000 = AX;
+        Segment2000Globals.Word0000 = ax;
         // F100:000D mov AX,0xF100
         // F100:0010 mov ES,AX
         ES = 0xF100;
         // F100:0012 mov AX,word ptr ES:[0x8000]
-        ax = SegmentF100Globals.Word8000;
+        AX = SegmentF100Globals.Word8000;
         // F100:0016 mov word ptr DS:[BX+2],AX
-        Segment2000Globals.Word0002 = ax;
+        Segment2000Globals.Word0002 = AX;
         // F100:0019 push CS
         Stack.Push16(CS);
         // F100:001A pop AX
@@ -119,16 +119,16 @@ public partial class CfgGeneratedOverrides {
         // F100:0023 mov word ptr CS:[0x8002],0xBBBB
         CsGlobals.Word8002 = 0xBBBB;
         // F100:002A mov AX,word ptr CS:[0x8002]
-        AX = CsGlobals.Word8002;
+        ax = CsGlobals.Word8002;
         // F100:002E mov word ptr DS:[BX+6],AX
-        Segment2000Globals.Word0006 = AX;
+        Segment2000Globals.Word0006 = ax;
         // F100:0031 mov AX,0xF100
         // F100:0034 mov ES,AX
         ES = 0xF100;
         // F100:0036 mov AX,word ptr ES:[0x8002]
-        ax = SegmentF100Globals.Word8002;
+        AX = SegmentF100Globals.Word8002;
         // F100:003A mov word ptr DS:[BX+8],AX
-        Segment2000Globals.Word0008 = ax;
+        Segment2000Globals.Word0008 = AX;
         // F100:003D push CS
         Stack.Push16(CS);
         // F100:003E pop AX

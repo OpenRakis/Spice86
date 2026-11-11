@@ -43,10 +43,12 @@ using System.Linq;
 /// </summary>
 internal static class IrPlainTemporaryPropagation {
     /// <summary>Propagates the temporaries inside every block of <paramref name="method"/>.</summary>
-    public static void Apply(IrMethod method) {
+    public static void Apply(IrMethod method, IrEditor editor) {
         IrTemporaries temporaries = IrTemporaries.Build(method);
         foreach (IrBlock block in method.Blocks) {
-            SimplifyStatements(block.Statements, block, temporaries);
+            List<IrStatement> statements = [.. block.Statements];
+            SimplifyStatements(statements, block, temporaries, editor);
+            editor.ReplaceAll(block, statements, block.Terminator);
         }
     }
 
@@ -54,7 +56,7 @@ internal static class IrPlainTemporaryPropagation {
     /// <see cref="Apply"/> uses on a block: own reader table, no terminator.</summary>
     internal static List<IrStatement> Simplify(IReadOnlyList<IrStatement> statements) {
         List<IrStatement> list = [.. statements];
-        SimplifyStatements(list, null, null);
+        SimplifyStatements(list, null, null, IrEditor.WithoutSsa);
         return list;
     }
 
@@ -62,11 +64,11 @@ internal static class IrPlainTemporaryPropagation {
     /// changes. <paramref name="block"/> and <paramref name="temporaries"/> are set when the list is
     /// a method block: the terminator can read a temp and a read in another block refuses.</summary>
     private static void SimplifyStatements(List<IrStatement> statements, IrBlock? block,
-        IrTemporaries? temporaries) {
+        IrTemporaries? temporaries, IrEditor editor) {
         ReuseCopies(statements);
         for (int i = 0; i < statements.Count; i++) {
             if (statements[i].Node is VariableDeclarationNode declaration
-                && Propagated(statements, block, temporaries, i, declaration)) {
+                && Propagated(statements, block, temporaries, editor, i, declaration)) {
                 statements.RemoveAt(i);
                 i--;
             }
@@ -110,7 +112,7 @@ internal static class IrPlainTemporaryPropagation {
     }
 
     private static bool Propagated(List<IrStatement> statements, IrBlock? block,
-        IrTemporaries? temporaries, int index, VariableDeclarationNode declaration) {
+        IrTemporaries? temporaries, IrEditor editor, int index, VariableDeclarationNode declaration) {
         string name = declaration.VariableName;
         ICfgNode origin = statements[index].Origin;
         List<int> readers = [];
@@ -166,7 +168,7 @@ internal static class IrPlainTemporaryPropagation {
         if (tokenRead && readers.Any(reader => ReadsTokenBefore(statements[reader].Node, name))) {
             return false;
         }
-        return SubstituteReaders(statements, block, readers, terminatorReads, index, declaration,
+        return SubstituteReaders(statements, block, editor, readers, terminatorReads, index, declaration,
             initializer);
     }
 
@@ -236,8 +238,8 @@ internal static class IrPlainTemporaryPropagation {
         };
 
     private static bool SubstituteReaders(List<IrStatement> statements, IrBlock? block,
-        List<int> readers, bool terminatorReads, int index, VariableDeclarationNode declaration,
-        ValueNode initializer) {
+        IrEditor editor, List<int> readers, bool terminatorReads, int index,
+        VariableDeclarationNode declaration, ValueNode initializer) {
         ValueNode typed = WithType(initializer, declaration.DataType);
         Dictionary<int, IVisitableAstNode> rewritten = new();
         foreach (int reader in readers) {
@@ -258,7 +260,7 @@ internal static class IrPlainTemporaryPropagation {
             statements[reader] = IrStatement.Create(node, statements[reader].Origin);
         }
         if (rewrittenTerminator is not null && block is { HasTerminator: true }) {
-            block.Terminator = rewrittenTerminator;
+            editor.SetTerminator(block, rewrittenTerminator);
         }
         return true;
     }

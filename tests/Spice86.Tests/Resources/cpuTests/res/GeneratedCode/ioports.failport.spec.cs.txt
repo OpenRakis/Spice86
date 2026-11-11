@@ -64,11 +64,12 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte al;
         ushort ax;
         ushort dx1 = 0;
+        uint eax;
         ushort di1 = 0;
         ushort cx1 = 0;
-        byte al;
         ushort si1 = 0;
         ushort cx2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -90,9 +91,9 @@ public partial class CfgGeneratedOverrides {
         Out8((ushort)0xE0, 0x5A);
         // F000:0011 mov AL,0
         // F000:0013 in AL,0xE0
-        AL = In8((ushort)0xE0);
+        al = In8((ushort)0xE0);
         // F000:0015 mov byte ptr DS:[0],AL
-        Segment0000Globals.Byte0000 = AL;
+        Segment0000Globals.Byte0000 = al;
         // F000:0018 mov AX,0xA55A
         // F000:001B out 0xE0,AX
         Out16((ushort)0xE0, 0xA55A);
@@ -116,9 +117,9 @@ public partial class CfgGeneratedOverrides {
         Out8(0x00E0, 0xC3);
         // F000:0041 mov AL,0
         // F000:0043 in AL,DX
-        AL = In8(0x00E0);
+        al = In8(0x00E0);
         // F000:0044 mov byte ptr DS:[8],AL
-        Segment0000Globals.Byte0008 = AL;
+        Segment0000Globals.Byte0008 = al;
         // F000:0047 mov AX,0x3CC3
         // F000:004A out DX,AX
         Out16(0x00E0, 0x3CC3);
@@ -132,9 +133,9 @@ public partial class CfgGeneratedOverrides {
         Out32(0x00E0, 0x87654321u);
         // F000:005A mov EAX,0
         // F000:0060 in EAX,DX
-        EAX = In32(0x00E0);
+        eax = In32(0x00E0);
         // F000:0062 mov dword ptr DS:[0x000C],EAX
-        Segment0000Globals.Dword000C = EAX;
+        Segment0000Globals.Dword000C = eax;
         // F000:0066 mov AL,0x11
         // F000:0068 out DX,AL
         Out8(0x00E0, 0x11);

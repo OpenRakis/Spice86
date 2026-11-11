@@ -62,10 +62,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DI. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort dx;
         uint edx;
+        byte dl;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -92,16 +93,16 @@ public partial class CfgGeneratedOverrides {
             // F000:001B shr DX,1
             // F000:001D shr DX,1
             // F000:001F shr DX,1
-            DX = (ushort)(UInt16[CS, SI] >> 3);
+            dx = (ushort)(UInt16[CS, SI] >> 3);
             // F000:0021 mov word ptr DS:[BX],DX
-            UInt16[DS, BX] = DX;
+            UInt16[DS, BX] = dx;
             // F000:0023 cmp DI,DI
             // F000:0025 mov DX,word ptr CS:[SI]
             // F000:0028 shl DX,7
             // F000:002B shl DX,9
-            dx = (ushort)(UInt16[CS, SI] & 0);
+            DX = (ushort)(UInt16[CS, SI] & 0);
             // F000:002E mov word ptr DS:[BX+2],DX
-            UInt16[DS, (ushort)(BX + 2)] = dx;
+            UInt16[DS, (ushort)(BX + 2)] = DX;
             // F000:0031 cmp DI,DI
             // F000:0033 mov EDX,dword ptr CS:[SI]
             // F000:0037 shr EDX,0x10
@@ -134,9 +135,9 @@ public partial class CfgGeneratedOverrides {
             // F000:0077 mov DX,word ptr CS:[SI]
             // F000:007A shr DX,0x21
             // F000:007D shr DX,1
-            DX = (ushort)(UInt16[CS, SI] >> 2);
+            dx = (ushort)(UInt16[CS, SI] >> 2);
             // F000:007F mov word ptr DS:[BX+0x12],DX
-            UInt16[DS, (ushort)(BX + 0x12)] = DX;
+            UInt16[DS, (ushort)(BX + 0x12)] = dx;
             // F000:0082 cmp DI,DI
             // F000:0084 mov DX,word ptr CS:[SI]
             // F000:0087 shl DX,1
@@ -199,9 +200,9 @@ public partial class CfgGeneratedOverrides {
             // F000:00D9 mov DL,byte ptr CS:[SI]
             // F000:00DC shr DL,4
             // F000:00DF shr DL,4
-            DL = (byte)(UInt8[CS, SI] & 0);
+            dl = (byte)(UInt8[CS, SI] & 0);
             // F000:00E2 mov byte ptr DS:[BX+0x26],DL
-            UInt8[DS, (ushort)(BX + 0x26)] = DL;
+            UInt8[DS, (ushort)(BX + 0x26)] = dl;
             // F000:00E5 cmp DI,DI
             // F000:00E7 mov DL,byte ptr CS:[SI]
             // F000:00EA sar DL,4

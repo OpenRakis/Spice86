@@ -137,7 +137,6 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte0063 = 0x28;
         // F000:001F mov BX,2
         // F000:0022 mov AL,byte ptr DS:[BX+0x60]
-        AL = 0x1E;
         // F000:0025 mov byte ptr DS:[0x0040],AL
         Segment2000Globals.Byte0040 = 0x1E;
         // F000:0028 mov word ptr DS:[0x0064],0x1111
@@ -149,7 +148,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0040 mov BX,1
         // F000:0043 shl BX,1
         // F000:0045 mov AX,word ptr DS:[BX+0x64]
-        AX = 0x2222;
         // F000:0048 mov word ptr DS:[0x0041],AX
         Segment2000Globals.Word0041 = 0x2222;
         // F000:004B mov word ptr DS:[0x0070],0x1234
@@ -182,7 +180,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0086 mov word ptr DS:[0x0088],2
         Segment2000Globals.Word0088 = 2;
         // F000:008C mov BX,word ptr DS:[0x0088]
-        BX = 2;
         // F000:0090 mov AL,byte ptr DS:[BX+0x0080]
         al = Segment2000Globals.Byte0082;
         // F000:0094 mov byte ptr DS:[0x0047],AL
@@ -217,7 +214,6 @@ public partial class CfgGeneratedOverrides {
         AX = 7;
         // F000:00DC mov BX,AX
         // F000:00DE mov AL,byte ptr DS:[BX+0x0090]
-        AL = 0x0D;
         // F000:00E2 mov byte ptr DS:[0x0048],AL
         Segment2000Globals.Byte0048 = 0x0D;
         // F000:00E5 mov byte ptr DS:[0x0050],0x5C

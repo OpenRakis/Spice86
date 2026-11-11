@@ -66,7 +66,7 @@ internal sealed class IrFlattener {
         }
         IrBlock next = NewBlock(false);
         if (!_current.HasTerminator) {
-            _current.Terminator = new IrJump(previousOrigin ?? node, new IrEdge(next, false));
+            _editor.SetTerminator(_current, new IrJump(previousOrigin ?? node, new IrEdge(next, false)));
         }
         _current = next;
         return _current;
@@ -77,7 +77,7 @@ internal sealed class IrFlattener {
         if (_current == null || _current.HasTerminator) {
             throw new InvalidOperationException($"Statement added after the block of {origin.Address} was closed.");
         }
-        _current.Statements.Add(IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+        _editor.Append(_current, IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
     }
 
     /// <summary>Flattens the statements of <paramref name="node"/> into blocks starting at the current one.</summary>
@@ -148,7 +148,7 @@ internal sealed class IrFlattener {
                 or CallbackNode:
                 throw new NotSupportedException($"Lowered node {statement.GetType().Name} cannot appear inside an instruction at {origin.Address}.");
             default:
-                _current.Statements.Add(IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+                _editor.Append(_current, IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
                 break;
         }
     }
@@ -164,7 +164,7 @@ internal sealed class IrFlattener {
         yield return AstTrampoline.Call(FlattenArmIt(node.TrueCase, origin, localSuffix, isLocalFallthrough, Join, whenTrue));
         AstResult<IrBlock> whenFalse = new();
         yield return AstTrampoline.Call(FlattenArmIt(node.FalseCase, origin, localSuffix, isLocalFallthrough, Join, whenFalse));
-        from.Terminator = new IrBranch(origin, condition, new IrEdge(whenTrue.Value!, true), new IrEdge(whenFalse.Value!, true));
+        _editor.SetTerminator(from, new IrBranch(origin, condition, new IrEdge(whenTrue.Value!, true), new IrEdge(whenFalse.Value!, true)));
         _current = join;
     }
 
@@ -182,7 +182,7 @@ internal sealed class IrFlattener {
         _current = start;
         yield return AstTrampoline.Call(FlattenIt(arm, origin, localSuffix, isLocalFallthrough));
         if (_current is { HasTerminator: false } tail) {
-            tail.Terminator = new IrJump(origin, new IrEdge(join(), true));
+            _editor.SetTerminator(tail, new IrJump(origin, new IrEdge(join(), true)));
         }
         result.Value = start;
     }
@@ -198,9 +198,9 @@ internal sealed class IrFlattener {
         IrBlock header = NewBlock(true);
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
-        from.Terminator = new IrJump(origin, new IrEdge(header, true));
-        header.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
-            new IrEdge(body, true), new IrEdge(exit, true));
+        _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
+        _editor.SetTerminator(header, new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
+            new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
             _current = body;
@@ -212,8 +212,8 @@ internal sealed class IrFlattener {
             throw new NotSupportedException(
                 $"WhileWithExitNode at {origin.Address} ends its body in a transfer; the exit condition has no block.");
         }
-        tail.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.ExitCondition, localSuffix),
-            new IrEdge(exit, true), new IrEdge(header, true));
+        _editor.SetTerminator(tail, new IrBranch(origin, IrNodeTyper.TypeValue(node.ExitCondition, localSuffix),
+            new IrEdge(exit, true), new IrEdge(header, true)));
         _current = exit;
     }
 
@@ -224,9 +224,9 @@ internal sealed class IrFlattener {
         IrBlock header = NewBlock(true);
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
-        from.Terminator = new IrJump(origin, new IrEdge(header, true));
-        header.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
-            new IrEdge(body, true), new IrEdge(exit, true));
+        _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
+        _editor.SetTerminator(header, new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
+            new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
             _current = body;
@@ -235,7 +235,7 @@ internal sealed class IrFlattener {
             _breakTargets.Pop();
         }
         if (_current is { HasTerminator: false } tail) {
-            tail.Terminator = new IrJump(origin, new IrEdge(header, true));
+            _editor.SetTerminator(tail, new IrJump(origin, new IrEdge(header, true)));
         }
         _current = exit;
     }
@@ -259,15 +259,17 @@ internal sealed class IrFlattener {
         } finally {
             _breakTargets.Pop();
         }
-        from.Terminator = new IrSwitch(origin, IrNodeTyper.TypeValue(node.Value, localSuffix), cases,
-            new IrEdge(defaultBlock.Value!, true));
+        _editor.SetTerminator(from, new IrSwitch(origin, IrNodeTyper.TypeValue(node.Value, localSuffix), cases,
+            new IrEdge(defaultBlock.Value!, true)));
         _current = join;
     }
 
     private void EndBlock(IrBlock block, IrTerminator terminator) {
-        block.Terminator = terminator;
+        _editor.SetTerminator(block, terminator);
         _current = null;
     }
+
+    private readonly IrEditor _editor = IrEditor.WithoutSsa;
 
     private readonly HashSet<IrBlock> _inner = [];
 

@@ -118,16 +118,21 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte dl1 = 0;
         ushort dx1 = 0;
+        byte dl1 = 0;
+        ushort dx2 = 0;
+        ushort dx3 = 0;
+        ushort dx4 = 0;
         ushort si1 = 0;
         ushort di1 = 0;
         ushort cx1 = 0;
         ushort di2 = 0;
         ushort cx2 = 0;
         ushort si2 = 0;
+        ushort di3 = 0;
         ushort cx3 = 0;
         ushort dx;
+        byte dl;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
@@ -271,10 +276,10 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, (ushort)(BX + 0x0D)] = 1;
             // F000:00CC mov DX,AX
             // F000:00CE dec DX
-            DX = (ushort)(AX - 1);
+            dx1 = (ushort)(AX - 1);
             // F000:00CF test DX,DX
             // F000:00D1 jne short 0x00D7
-            if (DX == 0) {
+            if (dx1 == 0) {
                 // F000:00D3 mov byte ptr DS:[BX+0x0D],2
                 UInt8[DS, (ushort)(BX + 0x0D)] = 2;
             }
@@ -383,7 +388,6 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, (ushort)(BX + 0x19)] = 1;
             // F000:016E cmp AX,CX
             // F000:0170 inc DX
-            DX++;
             // F000:0171 jb short 0x0177
             if (AX >= CX) {
                 // F000:0173 mov byte ptr DS:[BX+0x19],2
@@ -448,9 +452,9 @@ public partial class CfgGeneratedOverrides {
             // F000:01C3 mov byte ptr DS:[BX+0x20],1
             UInt8[DS, (ushort)(BX + 0x20)] = 1;
             // F000:01C7 mov DX,AX
-            DX = AX;
+            dx2 = AX;
             // F000:01C9 cmp DX,CX
-            Alu16.Sub(DX, CX);
+            Alu16.Sub(dx2, CX);
             // F000:01CB mov DL,0x55
             // F000:01CD jb short 0x01D3
             if (!CarryFlag) {
@@ -460,9 +464,9 @@ public partial class CfgGeneratedOverrides {
             // F000:01D3 mov byte ptr DS:[BX+0x21],1
             UInt8[DS, (ushort)(BX + 0x21)] = 1;
             // F000:01D7 mov DX,AX
-            DX = AX;
+            dx3 = AX;
             // F000:01D9 cmp DX,CX
-            Alu16.Sub(DX, CX);
+            Alu16.Sub(dx3, CX);
             // F000:01DB mov DH,0
             // F000:01DD jb short 0x01E3
             if (!CarryFlag) {
@@ -495,11 +499,11 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, (ushort)(BX + 0x24)] = 1;
             // F000:0205 mov DX,AX
             // F000:0207 add DX,0x00FF
-            dx1 = (ushort)(AX + 0x00FF);
+            dx4 = (ushort)(AX + 0x00FF);
             // F000:020B cmp SP,DX
-            Alu16.Sub(SP, dx1);
+            Alu16.Sub(SP, dx4);
             // F000:020D push DX
-            Stack.Push16(dx1);
+            Stack.Push16(dx4);
             // F000:020E je short 0x0214
             if (!ZeroFlag) {
                 // F000:0210 mov byte ptr DS:[BX+0x24],2
@@ -616,14 +620,14 @@ public partial class CfgGeneratedOverrides {
             // F000:0281 mov SI,0x0104
             si2 = 0x0104;
             // F000:0284 mov DI,0x0106
-            DI = 0x0106;
+            di3 = 0x0106;
             // F000:0287 mov CX,2
             cx3 = 2;
             // F000:028A repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
             while (cx3 != 0) {
-                bool equal_028A = UInt8[DS, si2] == UInt8[ES, DI];
+                bool equal_028A = UInt8[DS, si2] == UInt8[ES, di3];
                 si2 += (ushort)(DirectionFlag ? -1 : 1);
-                DI += (ushort)(DirectionFlag ? -1 : 1);
+                di3 += (ushort)(DirectionFlag ? -1 : 1);
                 cx3--;
                 if (!equal_028A) {
                     break;
@@ -638,9 +642,9 @@ public partial class CfgGeneratedOverrides {
             CX = Stack.Pop16();
             // F000:0291 mov DX,AX
             // F000:0293 add DX,CX
-            DX = (ushort)(AX + CX);
+            dx = (ushort)(AX + CX);
             // F000:0295 mov word ptr DS:[BX+0x2E],DX
-            UInt16[DS, (ushort)(BX + 0x2E)] = DX;
+            UInt16[DS, (ushort)(BX + 0x2E)] = dx;
             // F000:0298 mov DX,AX
             // F000:029A sub DX,CX
             DX = (ushort)(AX - CX);
@@ -648,9 +652,9 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, (ushort)(BX + 0x30)] = DX;
             // F000:029F mov DX,AX
             // F000:02A1 inc DX
-            DX = (ushort)(AX + 1);
+            dx = (ushort)(AX + 1);
             // F000:02A2 mov word ptr DS:[BX+0x32],DX
-            UInt16[DS, (ushort)(BX + 0x32)] = DX;
+            UInt16[DS, (ushort)(BX + 0x32)] = dx;
             // F000:02A5 mov DX,CX
             // F000:02A7 dec DX
             DX = (ushort)(CX - 1);
@@ -658,14 +662,14 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, (ushort)(BX + 0x34)] = DX;
             // F000:02AB mov DX,AX
             // F000:02AD neg DX
-            DX = (ushort)-AX;
+            dx = (ushort)-AX;
             // F000:02AF mov word ptr DS:[BX+0x36],DX
-            UInt16[DS, (ushort)(BX + 0x36)] = DX;
+            UInt16[DS, (ushort)(BX + 0x36)] = dx;
             // F000:02B2 mov DX,AX
             // F000:02B4 or DX,CX
-            dx = (ushort)(AX | CX);
+            DX = (ushort)(AX | CX);
             // F000:02B6 mov word ptr DS:[BX+0x38],DX
-            UInt16[DS, (ushort)(BX + 0x38)] = dx;
+            UInt16[DS, (ushort)(BX + 0x38)] = DX;
             // F000:02B9 mov byte ptr DS:[BX+0x3A],AL
             UInt8[DS, (ushort)(BX + 0x3A)] = AL;
             // F000:02BC add byte ptr DS:[BX+0x3A],5
@@ -676,9 +680,9 @@ public partial class CfgGeneratedOverrides {
             // F000:02C4 mov DX,0
             DX = 0;
             // F000:02C7 adc DL,0
-            DL = (byte)(DI < AX ? 1 : 0);
+            dl = (byte)(DI < AX ? 1 : 0);
             // F000:02CA mov byte ptr DS:[BX+0x3B],DL
-            UInt8[DS, (ushort)(BX + 0x3B)] = DL;
+            UInt8[DS, (ushort)(BX + 0x3B)] = dl;
             // F000:02CD mov DX,AX
             // F000:02CF inc DX
             // F000:02D0 inc DX

@@ -45,23 +45,31 @@ using System.Linq;
 internal static class IrSpeculativeGuardMerge {
     /// <summary>Merges the speculative guards of every block of <paramref name="method"/>.
     /// Runs on the final statements: it must run last so no other pass sees a merged guard.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
-        IrMemoryAliasAnalysis alias = new(ssa);
+    public static void Apply(IrMethod method, IrEditor editor) {
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements = [];
+        List<(IrBlock Block, int Index)> removals = [];
         foreach (IrBlock block in method.Blocks) {
-            MergeBlock(block, alias);
+            CollectBlock(block, new IrMemoryAliasAnalysis(editor.Ssa), replacements, removals);
+        }
+        foreach ((IrBlock block, int index, IrStatement merged) in replacements) {
+            editor.Replace(block, index, merged);
+        }
+        foreach ((IrBlock block, int index) in removals.OrderByDescending(pair => pair.Index)) {
+            editor.Remove(block, index);
         }
     }
 
     private sealed class GuardRun {
-        public required int KeptIndex { get; init; }
+        public required int Index { get; init; }
         public required CfgInstruction FirstInstruction { get; init; }
         public required List<string> Fields { get; init; }
         public required int RunEnd { get; set; }
     }
 
-    private static void MergeBlock(IrBlock block, IrMemoryAliasAnalysis alias) {
+    private static void CollectBlock(IrBlock block, IrMemoryAliasAnalysis alias,
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements,
+        List<(IrBlock Block, int Index)> removals) {
         Dictionary<ushort, int> blockCodeEndBySegment = BlockCodeEndBySegment(block);
-        List<IrStatement> kept = new(block.Statements.Count);
         GuardRun? run = null;
         for (int index = 0; index < block.Statements.Count; index++) {
             IrStatement statement = block.Statements[index];
@@ -71,36 +79,34 @@ internal static class IrSpeculativeGuardMerge {
                     && guard.Address.Offset == run.RunEnd) {
                     run.Fields.AddRange(guard.SignatureFields);
                     run.RunEnd = instruction.Address.Offset + instruction.Length;
+                    removals.Add((block, index));
                     continue;
                 }
-                Close(run, kept);
+                Close(block, run, replacements);
                 run = new GuardRun {
-                    KeptIndex = kept.Count,
+                    Index = index,
                     FirstInstruction = instruction,
                     Fields = [.. guard.SignatureFields],
                     RunEnd = instruction.Address.Offset + instruction.Length
                 };
-                kept.Add(statement);
                 continue;
             }
             if (run is not null && IsBarrier(block, index, alias, run, blockCodeEndBySegment)) {
-                Close(run, kept);
+                Close(block, run, replacements);
                 run = null;
             }
-            kept.Add(statement);
         }
-        Close(run, kept);
-        block.Statements.Clear();
-        block.Statements.AddRange(kept);
+        Close(block, run, replacements);
     }
 
-    private static void Close(GuardRun? run, List<IrStatement> kept) {
+    private static void Close(IrBlock block, GuardRun? run,
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements) {
         if (run is null || run.Fields.Count == 1) {
             return;
         }
-        SegmentedAddress address = run.FirstInstruction.Address;
-        kept[run.KeptIndex] = IrStatement.Create(
-            new SpeculativeGuardNode(address, run.Fields), run.FirstInstruction);
+        replacements.Add((block, run.Index, IrStatement.Create(
+            new SpeculativeGuardNode(run.FirstInstruction.Address, run.Fields),
+            run.FirstInstruction)));
     }
 
     /// <summary>The largest <c>offset + Length</c> of the block's <see cref="CfgInstruction"/>

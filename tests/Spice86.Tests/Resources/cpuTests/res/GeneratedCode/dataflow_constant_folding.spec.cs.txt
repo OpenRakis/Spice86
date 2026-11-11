@@ -84,6 +84,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, ES, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_0137_F0137() {
         ushort di1 = 0;
+        byte al1 = 0;
         ushort cx1 = 0;
         ushort dx;
         CheckExternalEvents(biosSegment, 0x0137);
@@ -99,11 +100,11 @@ public partial class CfgGeneratedOverrides {
         // F000:013C mov DI,0x00DC
         di1 = 0x00DC;
         // F000:013F mov AL,0x5A
-        AL = 0x5A;
+        al1 = 0x5A;
         // F000:0141 mov CX,4
         // F000:0144 rep stos byte ptr ES:[DI],AL
         for (cx1 = 4; cx1 != 0; cx1--) {
-            UInt8[ES, di1] = AL;
+            UInt8[ES, di1] = al1;
             di1 += (ushort)(DirectionFlag ? -1 : 1);
         }
         // F000:0146 mov AX,0x8000
@@ -121,7 +122,6 @@ public partial class CfgGeneratedOverrides {
         // F000:014E mov word ptr DS:[0x00E0],DX
         DsGlobals.Word00E0 = dx;
         // F000:0152 stc
-        CarryFlag = true;
         // F000:0153 mov AX,0xFFFF
         // F000:0156 adc AX,1
         AX = 1;

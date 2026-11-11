@@ -40,7 +40,7 @@ internal static class IrIfConversion {
     internal const int MaxArmNodes = 3;
 
     /// <summary>Converts every value-choice branch of <paramref name="method"/>; returns how many.</summary>
-    public static int Apply(IrMethod method) {
+    public static int Apply(IrMethod method, IrEditor editor) {
         Dictionary<IrBlock, int> incoming = IncomingEdgeCounts(method);
         HashSet<IrBlock> pinned = PinnedBlocks(method);
         HashSet<IrBlock> removed = [];
@@ -53,12 +53,15 @@ internal static class IrIfConversion {
                 || TryConversion(branch, shape) is not { } conversion) {
                 continue;
             }
-            block.Statements.Add(conversion);
-            block.Terminator = new IrJump(branch.Origin, new IrEdge(shape.Join, true));
+            editor.Append(block, conversion);
+            editor.SetTerminator(block, new IrJump(branch.Origin, new IrEdge(shape.Join, true)));
             removed.UnionWith(shape.ArmBlocks);
             converted++;
         }
         method.Blocks.RemoveAll(removed.Contains);
+        if (removed.Count != 0) {
+            editor.Ssa.MarkStale("if-conversion removed arm blocks");
+        }
         return converted;
     }
 

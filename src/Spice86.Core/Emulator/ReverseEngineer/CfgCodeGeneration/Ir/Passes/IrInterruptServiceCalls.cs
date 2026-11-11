@@ -71,9 +71,9 @@ internal static class IrInterruptServiceCalls {
     /// a stale site even when no statement became typed.</summary>
     /// <param name="hasOnlyBuiltInTargets">Whether every <c>int</c> site of the program on a
     /// vector observed only the installed stub.</param>
-    public static int Apply(IrMethod method, IrSsa ssa, IrConstantFacts facts,
+    public static int Apply(IrMethod method, IrEditor editor, IrConstantFacts facts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets) {
-        int changed = 0;
+        List<(IrBlock Block, int Index, IrStatement Replacement)> typed = [];
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
                 IrStatement statement = block.Statements[index];
@@ -87,15 +87,13 @@ internal static class IrInterruptServiceCalls {
                 if (ReferenceEquals(replacement, call)) {
                     continue;
                 }
-                IrStatement typedStatement = IrStatement.Create(replacement, statement.Origin);
-                block.Statements[index] = typedStatement;
-                if (ssa.HasSite(statement)) {
-                    ssa.Replace(statement, typedStatement);
-                }
-                changed++;
+                typed.Add((block, index, IrStatement.Create(replacement, statement.Origin)));
             }
         }
-        return changed;
+        foreach ((IrBlock block, int index, IrStatement replacement) in typed) {
+            editor.Replace(block, index, replacement);
+        }
+        return typed.Count;
     }
 
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,

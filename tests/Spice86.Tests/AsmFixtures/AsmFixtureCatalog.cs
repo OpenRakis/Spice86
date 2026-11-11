@@ -777,6 +777,15 @@ internal static class AsmFixtureCatalog {
                     (0x54, 2, 0x7FFF), (0x56, 2, 0x7777), (0x58, 2, 0x1111), (0x5A, 2, 0x2222), (0x5C, 2, 0x80FD),
                     (0x5E, 2, 0x80FD), (0x60, 2, 0x0005), (0x62, 2, 0x0001), (0x64, 2, 0x7FFF), (0x66, 2, 0x2200),
                     (0x68, 1, 1), (0x6A, 2, 0x007F), (0x6C, 2, 0x8001), (0x6E, 2, 0x0005), (0x70, 2, 0x0001)));
+            case "dataflow_forwarded_register_read":
+                // The input lives in RAM the oracle seeds, so the generator cannot fold it: EAX is
+                // stored, the store is forwarded into the EBX reload and the result still must hold
+                // the input after both registers are overwritten.
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    ConfigureMachine = machine =>
+                        machine.Memory.UInt32[0x2000, 0x0800] = 0x12345678
+                }, ResultRegion(0x104, (0x100, 4, 0x12345678)));
             case "dataflow_interrupt_boundaries":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0xFFFFFFF, EnablePit = true }, ResultRegion(0x80,
                     (0x00, 2, 0x0010), (0x02, 2, 0x0004), (0x04, 2, 0x0007), (0x06, 2, 0x0064), (0x08, 2, 0x0E16),

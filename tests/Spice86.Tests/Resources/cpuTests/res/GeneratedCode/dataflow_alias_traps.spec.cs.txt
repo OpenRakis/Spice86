@@ -93,7 +93,6 @@ public partial class CfgGeneratedOverrides {
         // F000:000B xor BX,BX
         BX = 0;
         // F000:000D xor SI,SI
-        SI = 0;
         // F000:000F mov byte ptr DS:[0],0x55
         Segment2000Globals.Byte0000 = 0x55;
         // F000:0014 mov byte ptr DS:[1],0
@@ -231,7 +230,6 @@ public partial class CfgGeneratedOverrides {
         // F000:00F9 mov word ptr DS:[8],AX
         Segment2000Globals.Word0008 = 0x3333;
         // F000:00FC mov DX,word ptr DS:[8]
-        DX = 0x3333;
         // F000:0100 mov word ptr DS:[BX+0x4C],DX
         Segment2000Globals.Word004C = 0x3333;
         // F000:0103 mov word ptr DS:[6],0x1111

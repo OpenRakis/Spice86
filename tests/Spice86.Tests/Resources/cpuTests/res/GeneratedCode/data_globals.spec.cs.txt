@@ -119,7 +119,6 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
-        AX = 0x2000;
         // F000:0003 mov DS,AX
         DS = 0x2000;
         // F000:0005 mov SS,AX
@@ -135,11 +134,9 @@ public partial class CfgGeneratedOverrides {
         // F000:0016 mov dword ptr DS:[0x0024],0xAABBCCDD
         Segment2000Globals.Dword0024 = 0xAABBCCDDu;
         // F000:001F mov AL,byte ptr DS:[0x0020]
-        AL = 0x42;
         // F000:0022 mov byte ptr DS:[0x0040],AL
         Segment2000Globals.Byte0040 = 0x42;
         // F000:0025 mov AX,word ptr DS:[0x0022]
-        AX = 0x1234;
         // F000:0028 mov word ptr DS:[0x0041],AX
         Segment2000Globals.Word0041 = 0x1234;
         // F000:002B mov EAX,dword ptr DS:[0x0024]
@@ -153,7 +150,6 @@ public partial class CfgGeneratedOverrides {
         // F000:003C mov byte ptr DS:[0x0047],AL
         Segment2000Globals.Byte0047 = al;
         // F000:003F mov AX,word ptr DS:[0x0028]
-        AX = 0xBEEF;
         // F000:0042 mov word ptr DS:[0x0048],AX
         Segment2000Globals.Word0048 = 0xBEEF;
         // F000:0045 mov byte ptr DS:[0x0010],0x11

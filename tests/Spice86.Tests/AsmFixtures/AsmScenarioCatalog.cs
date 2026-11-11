@@ -573,6 +573,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("alu_dead_flags"),
             PartitionScenario("dataflow_shift_chains"),
             PartitionScenario("dataflow_expression_propagation"),
+            PartitionScenario("dataflow_forwarded_register_read"),
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
             PartitionScenario("dataflow_alias_traps"),

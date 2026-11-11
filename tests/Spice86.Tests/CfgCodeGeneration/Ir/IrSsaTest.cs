@@ -42,9 +42,9 @@ public sealed class IrSsaTest {
         IrStatement mov = Writes(instruction, Eax);
         IrStatement add = new(new CommentNode("add"), instruction,
             new IrEffects(Ax | CpuValues.Bx, Ax, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
-        block.Statements.Add(mov);
-        block.Statements.Add(add);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.Append(block, add);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -65,9 +65,9 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement movEax = Writes(instruction, Eax);
         IrStatement movAl = Writes(instruction, CpuValues.Al);
-        block.Statements.Add(movEax);
-        block.Statements.Add(movAl);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, movEax);
+        IrEditor.WithoutSsa.Append(block, movAl);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -90,13 +90,13 @@ public sealed class IrSsaTest {
         IrBlock join = Block(3);
         IrStatement trueWrite = Writes(instruction, Eax);
         IrStatement falseWrite = Writes(instruction, Eax);
-        trueArm.Statements.Add(trueWrite);
-        falseArm.Statements.Add(falseWrite);
-        entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(trueArm, trueWrite);
+        IrEditor.WithoutSsa.Append(falseArm, falseWrite);
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -122,12 +122,12 @@ public sealed class IrSsaTest {
         IrStatement init = Writes(instruction, Ecx);
         IrStatement decrement = new(new CommentNode("dec"), instruction,
             new IrEffects(Ecx, CpuValues.None, Ecx, IrTokens.None, IrTokens.None, false, false));
-        entry.Statements.Add(init);
-        header.Statements.Add(decrement);
-        entry.Terminator = new IrJump(instruction, new IrEdge(header, false));
-        header.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Zero),
-            new IrEdge(exit, false), new IrEdge(header, true));
-        exit.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(entry, init);
+        IrEditor.WithoutSsa.Append(header, decrement);
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(instruction, new IrEdge(header, false)));
+        IrEditor.WithoutSsa.SetTerminator(header, new IrBranch(instruction, new CpuFlagNode(Flags.Zero),
+            new IrEdge(exit, false), new IrEdge(header, true)));
+        IrEditor.WithoutSsa.SetTerminator(exit, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction], entry, header, exit);
 
         // Act
@@ -151,11 +151,11 @@ public sealed class IrSsaTest {
         IrStatement body = new(new CommentNode("movsb"), instruction,
             new IrEffects(Ecx | Esi | Edi | Ds | Es, CpuValues.None, Ecx | Esi | Edi,
                 IrTokens.Memory, IrTokens.Memory, false, false));
-        header.Statements.Add(body);
-        entry.Terminator = new IrJump(instruction, new IrEdge(header, true));
-        header.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Zero),
-            new IrEdge(header, true), new IrEdge(exit, false));
-        exit.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(header, body);
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(instruction, new IrEdge(header, true)));
+        IrEditor.WithoutSsa.SetTerminator(header, new IrBranch(instruction, new CpuFlagNode(Flags.Zero),
+            new IrEdge(header, true), new IrEdge(exit, false)));
+        IrEditor.WithoutSsa.SetTerminator(exit, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction], entry, header, exit);
 
         // Act
@@ -176,10 +176,10 @@ public sealed class IrSsaTest {
         IrStatement store = new(new CommentNode("store"), instruction,
             new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Memory, false, false));
         IrStatement secondLoad = Reads(instruction, IrTokens.Memory);
-        block.Statements.Add(firstLoad);
-        block.Statements.Add(store);
-        block.Statements.Add(secondLoad);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, firstLoad);
+        IrEditor.WithoutSsa.Append(block, store);
+        IrEditor.WithoutSsa.Append(block, secondLoad);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -202,10 +202,10 @@ public sealed class IrSsaTest {
         IrStatement ioOut = new(new CommentNode("out"), instruction,
             new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Io, false, false));
         IrStatement secondIn = Reads(instruction, IrTokens.Io);
-        block.Statements.Add(firstIn);
-        block.Statements.Add(ioOut);
-        block.Statements.Add(secondIn);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, firstIn);
+        IrEditor.WithoutSsa.Append(block, ioOut);
+        IrEditor.WithoutSsa.Append(block, secondIn);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -222,8 +222,8 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement check = new(new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction,
             new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.Memory, IrTokens.Memory, false, true));
-        block.Statements.Add(check);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, check);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -242,8 +242,8 @@ public sealed class IrSsaTest {
         IrStatement divide = new(new CommentNode("div"), instruction,
             new IrEffects(Eax | CpuValues.Edx, CpuValues.None, Eax | CpuValues.Edx,
                 IrTokens.None, IrTokens.None, true, false));
-        block.Statements.Add(divide);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, divide);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -264,7 +264,7 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrExit exit = new(instruction, ReturnValue());
-        block.Terminator = exit;
+        IrEditor.WithoutSsa.SetTerminator(block, exit);
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -291,9 +291,9 @@ public sealed class IrSsaTest {
         IrStatement shift = new(new CommentNode("shl"), instruction,
             new IrEffects(Ecx, CpuValues.None, CpuValues.StatusFlags, IrTokens.None, IrTokens.None,
                 false, false));
-        block.Statements.Add(setFlag);
-        block.Statements.Add(shift);
-        block.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(block, setFlag);
+        IrEditor.WithoutSsa.Append(block, shift);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -311,8 +311,8 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement setFlag = Writes(instruction, Carry);
-        block.Statements.Add(setFlag);
-        block.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(block, setFlag);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -328,8 +328,8 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement setFlag = Writes(instruction, Carry);
-        block.Statements.Add(setFlag);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, setFlag);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -347,9 +347,9 @@ public sealed class IrSsaTest {
         IrBlock firstBlock = Block(0);
         IrBlock secondBlock = Block(1);
         IrStatement write = Writes(first, Eax);
-        firstBlock.Statements.Add(write);
-        firstBlock.Terminator = new IrJump(first, new IrEdge(secondBlock, false));
-        secondBlock.Terminator = new IrExit(second, ReturnValue());
+        IrEditor.WithoutSsa.Append(firstBlock, write);
+        IrEditor.WithoutSsa.SetTerminator(firstBlock, new IrJump(first, new IrEdge(secondBlock, false)));
+        IrEditor.WithoutSsa.SetTerminator(secondBlock, new IrExit(second, ReturnValue()));
         IrMethod method = Method([Entry(first, firstBlock), Entry(second, secondBlock)],
             [first, second], firstBlock, secondBlock);
 
@@ -378,9 +378,9 @@ public sealed class IrSsaTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(Writes(instruction, Eax));
-        block.Statements.Add(new IrStatement(new CommentNode("s"), instruction, IrEffects.None));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.Append(block, new IrStatement(new CommentNode("s"), instruction, IrEffects.None));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
 
@@ -398,11 +398,11 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock writer = Block(0);
         IrBlock reader = Block(1);
-        writer.Statements.Add(Writes(instruction, Eax));
-        writer.Terminator = new IrJump(instruction, new IrEdge(reader, false));
+        IrEditor.WithoutSsa.Append(writer, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(writer, new IrJump(instruction, new IrEdge(reader, false)));
         IrStatement use = Reads(instruction, Ax);
-        reader.Statements.Add(use);
-        reader.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(reader, use);
+        IrEditor.WithoutSsa.SetTerminator(reader, new IrExit(instruction, ReturnValue()));
         IrMethod whole = Method([Entry(instruction, writer)], [instruction], writer, reader);
         IrSsa ssa = IrSsa.Build(whole);
         IrMethod withSecondEntry = Method([Entry(instruction, writer), Entry(instruction, reader)],
@@ -426,10 +426,10 @@ public sealed class IrSsaTest {
             instruction, IrEffects.None);
         IrStatement read = new(new VariableReferenceNode(DataType.UINT16, "tmp"),
             instruction, IrEffects.None);
-        block.Statements.Add(declaration);
-        block.Terminator = new IrJump(instruction, new IrEdge(other, false));
-        other.Statements.Add(read);
-        other.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, declaration);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(instruction, new IrEdge(other, false)));
+        IrEditor.WithoutSsa.Append(other, read);
+        IrEditor.WithoutSsa.SetTerminator(other, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block, other);
 
         // Act
@@ -447,17 +447,16 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
-        block.Statements.Add(mov);
-        block.Statements.Add(Reads(instruction, Ax));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.Append(block, Reads(instruction, Ax));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         int version = ssa.Definitions(mov).Single().Version;
         IrStatement replacement = Writes(instruction, Eax);
 
         // Act
-        ssa.Replace(mov, replacement);
-        block.Statements[0] = replacement;
+        new IrEditor(ssa, new GenerationStepTimer()).Replace(block, 0, replacement);
 
         // Assert
         ssa.Definitions(replacement).Single().Version.Should().Be(version);
@@ -470,21 +469,18 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
-        block.Statements.Add(mov);
-        block.Statements.Add(Reads(instruction, Ax));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.Append(block, Reads(instruction, Ax));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         int old = ssa.VersionBefore(block, 0, IrSsaValue.Eax);
         int version = ssa.Definitions(mov).Single().Version;
         IrStatement nonWriter = new(new CommentNode("n"), instruction, IrEffects.None);
         IrStatement writer = Writes(instruction, Eax);
-        block.Statements.RemoveAt(0);
-        block.Statements.Insert(0, nonWriter);
-        block.Statements.Insert(1, writer);
 
         // Act
-        ssa.Replace(mov, [nonWriter, writer]);
+        new IrEditor(ssa, new GenerationStepTimer()).Replace(block, 0, [nonWriter, writer]);
 
         // Assert
         ssa.VersionBefore(block, 1, IrSsaValue.Eax).Should().Be(old);
@@ -500,9 +496,9 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrBlock target = Block(1);
-        block.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(target, false), new IrEdge(target, false));
-        target.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(target, false), new IrEdge(target, false)));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block, target);
         IrSsa ssa = IrSsa.Build(method);
         int carryVersion = ssa.VersionUsed(block.Terminator, IrSsaValue.Carry);
@@ -510,8 +506,7 @@ public sealed class IrSsaTest {
             new IrEdge(target, false), new IrEdge(target, false));
 
         // Act
-        ssa.ReplaceTerminator(block.Terminator, replacement);
-        block.Terminator = replacement;
+        new IrEditor(ssa, new GenerationStepTimer()).SetTerminator(block, replacement);
 
         // Assert
         ssa.VersionUsed(replacement, IrSsaValue.Carry).Should().Be(carryVersion);
@@ -519,87 +514,82 @@ public sealed class IrSsaTest {
     }
 
     [Fact]
-    public void ReplaceTerminator_ThrowsWhenTheOriginalHasNoSite() {
+    public void VersionUsed_IgnoresASiteTheSsaDidNotRecord() {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         IrExit notInMethod = new(instruction, ReturnValue());
 
-        // Act
-        Action act = () => ssa.ReplaceTerminator(notInMethod,
-            new IrExit(instruction, ReturnValue()));
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>();
+        // Act / Assert
+        ssa.VersionUsed(notInMethod, IrSsaValue.Eax).Should().Be(-1);
+        ssa.UsesBySite.ContainsKey(notInMethod).Should().BeFalse();
     }
 
     [Fact]
-    public void Replace_ThrowsWhenTheReplacementDefinesAValueTheOriginalDidNot() {
+    public void Replace_MarksTheSsaStaleWhenTheReplacementDefinesAValueTheOriginalDidNot() {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
-        block.Statements.Add(mov);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        Action act = () => ssa.Replace(mov, Writes(instruction, Ebx));
+        new IrEditor(ssa, new GenerationStepTimer()).Replace(block, 0, Writes(instruction, Ebx));
 
         // Assert
+        ssa.IsStale.Should().BeTrue();
+        Action act = () => ssa.VersionBefore(block, 0, IrSsaValue.Eax);
         act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
-    public void VerifySsa_FailsWhenAReplacementReadsAValueTheOriginalDidNot() {
-        // Arrange: the replacement keeps the original's recorded uses, which cannot cover a read
-        // the original did not make.
+    public void Replace_RecordsTheReplacementReadsDerivedFromItsEffects() {
+        // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
-        block.Statements.Add(mov);
-        block.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         IrStatement reader = new(new CommentNode("r"), instruction,
             new IrEffects(Ebx, Eax, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
-        block.Statements[0] = reader;
-        ssa.Replace(mov, reader);
 
         // Act
-        Action act = () => IrVerifier.VerifySsa(method, ssa);
+        new IrEditor(ssa, new GenerationStepTimer()).Replace(block, 0, reader);
 
         // Assert
-        act.Should().Throw<InvalidOperationException>().WithMessage("*use record*");
+        IrVerifier.VerifySsa(method, ssa);
+        IrVerifier.VerifySsaMatchesFreshBuild(method, ssa);
+        ssa.UsesBySite[reader].Should().Contain(use => use.Value == IrSsaValue.Ebx);
     }
 
     [Fact]
-    public void VerifySsaAfterPasses_AcceptsADeadDefinitionParkedOnANonDefiningReplacement() {
-        // Arrange: a definition no replacement writes is parked on the last one; the version is
-        // dead, so only the strict check may reject it.
+    public void Replace_DropsADeadDefinitionNoReplacementWrites() {
+        // Arrange: a definition no replacement writes is dropped when the version has no use left.
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
-        block.Statements.Add(mov);
-        block.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(block, mov);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         IrStatement plain = new(new CommentNode("n"), instruction, IrEffects.None);
-        block.Statements[0] = plain;
-        ssa.Replace(mov, plain);
 
         // Act
-        Action strict = () => IrVerifier.VerifySsa(method, ssa);
-        Action afterPasses = () => IrVerifier.VerifySsaAfterPasses(method, ssa);
+        new IrEditor(ssa, new GenerationStepTimer()).Replace(block, 0, plain);
 
         // Assert
-        strict.Should().Throw<InvalidOperationException>()
-            .WithMessage("*version of Eax changes where the effects define nothing*");
-        afterPasses.Should().NotThrow();
+        ssa.IsStale.Should().BeFalse();
+        IrVerifier.VerifySsa(method, ssa);
+        IrVerifier.VerifySsaMatchesFreshBuild(method, ssa);
+        ssa.Definitions(plain).Should().BeEmpty();
     }
 
     [Fact]
@@ -607,11 +597,11 @@ public sealed class IrSsaTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(Writes(instruction, Eax));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
-        block.Statements.Add(Writes(instruction, Eax));
+        new IrEditor(ssa, new GenerationStepTimer()).Append(block, Writes(instruction, Eax));
 
         // Act
         Action act = () => ssa.VersionBefore(block, 2, IrSsaValue.Eax);

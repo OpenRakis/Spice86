@@ -94,7 +94,7 @@ internal sealed class IrSsaWebs {
     public IrSsaValue ValueOf(int web) => _valueOfWeb[web];
 
     /// <summary>The effects of the site defining each version, found through the sites so a statement a
-    /// pass moved with <see cref="IrSsa.Replace(IrStatement, IrStatement)"/> still maps to its versions.</summary>
+    /// pass rewrote through <see cref="IrEditor"/> still maps to its versions.</summary>
     private static Dictionary<int, IrEffects> DefiningEffects(IrSsa ssa) {
         Dictionary<int, IrEffects> effects = [];
         HashSet<IrBlock> blocks = [];

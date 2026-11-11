@@ -491,12 +491,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushSi, cmp, je),
             Block(2, incAx), Block(3, popSi, pushCx, subDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock pushBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0005 }));
@@ -538,12 +538,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushSi, cmp, je),
             Block(2, incAx), Block(3, popSi, pushCx, subDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
 
         // Act
@@ -579,18 +579,18 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, movCx, popEs, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode
                 { Left: SegmentRegisterNode }
                 && statement.Origin is CfgInstruction { Address.Offset: 0x0008 }));
-        int popIndex = popBlock.Statements.FindIndex(statement =>
+        int popIndex = popBlock.IndexOfStatement(statement =>
             statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
             && statement.Origin is CfgInstruction { Address.Offset: 0x0008 });
 
@@ -636,12 +636,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, movCx, popf, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0008 }));
@@ -685,12 +685,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popDx, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode
@@ -734,17 +734,17 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popEs, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
                 && statement.Origin is CfgInstruction { Address.Offset: 0x0006 }));
-        int popIndex = popBlock.Statements.FindIndex(statement =>
+        int popIndex = popBlock.IndexOfStatement(statement =>
             statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
             && statement.Origin is CfgInstruction { Address.Offset: 0x0006 });
 
@@ -789,12 +789,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popf, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0006 }));

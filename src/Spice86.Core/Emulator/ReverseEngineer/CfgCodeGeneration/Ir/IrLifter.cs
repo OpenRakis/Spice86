@@ -50,7 +50,7 @@ internal sealed class IrLifter(
             }
         }
         foreach (IrFlattener.PendingJump jump in flattener.PendingJumps) {
-            jump.From.Terminator = new IrJump(jump.Origin, new IrEdge(startBlocks[jump.Target], false));
+            IrEditor.WithoutSsa.SetTerminator(jump.From, new IrJump(jump.Origin, new IrEdge(startBlocks[jump.Target], false)));
         }
         List<IrEntry> entries = method.Entries
             .Select(entry => new IrEntry(entry.Node, startBlocks[entry.Node]))
@@ -75,7 +75,7 @@ internal sealed class IrLifter(
                     : lifted.StructuralSuccessors[block] = []).Add(target);
             }
         }
-        IrJumpThreading.Apply(lifted);
+        IrJumpThreading.Apply(lifted, IrEditor.WithoutSsa);
         MoveInstructionExitTailsLast(lifted);
         return lifted;
     }

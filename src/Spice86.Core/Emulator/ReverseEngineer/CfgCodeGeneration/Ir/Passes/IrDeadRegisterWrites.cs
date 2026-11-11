@@ -22,7 +22,8 @@ using System.Linq;
 /// </summary>
 internal static class IrDeadRegisterWrites {
     /// <summary>Removes the dead plain register writes of <paramref name="method"/>.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, List<IrOrigins.Located>> byOrigin = IrOrigins.ByOrigin(method);
         HashSet<IrBlock> observed = ObservingBlocks(method);
@@ -40,8 +41,7 @@ internal static class IrDeadRegisterWrites {
             }
         }
         foreach ((IrBlock block, int index) in removals.OrderByDescending(removal => removal.Index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+            editor.Remove(block, index);
         }
     }
 

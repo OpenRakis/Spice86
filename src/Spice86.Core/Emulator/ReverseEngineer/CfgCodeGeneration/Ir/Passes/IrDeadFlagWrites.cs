@@ -19,7 +19,8 @@ using System.Linq;
 /// </summary>
 internal static class IrDeadFlagWrites {
     /// <summary>Removes the dead plain flag writes of every rewritable instruction.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         List<(IrBlock Block, int Index)> removals = [];
         foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in IrOrigins.ByOrigin(method)) {
             if (!IrOrigins.Rewritable(statements, origin)) {
@@ -31,8 +32,7 @@ internal static class IrDeadFlagWrites {
             }
         }
         foreach ((IrBlock block, int index) in removals.OrderByDescending(removal => removal.Index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+            editor.Remove(block, index);
         }
     }
 

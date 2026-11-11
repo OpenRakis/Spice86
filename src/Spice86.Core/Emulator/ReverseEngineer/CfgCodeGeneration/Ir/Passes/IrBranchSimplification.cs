@@ -19,24 +19,31 @@ using System.Linq;
 internal static class IrBranchSimplification {
     /// <summary>Simplifies the branch conditions of <paramref name="method"/> and deletes the blocks
     /// left unreachable; returns how many branches folded to jumps and how many blocks were removed.</summary>
-    public static (int BranchesRemoved, int BlocksRemoved) Apply(IrMethod method, IrConstantFacts facts) {
+    public static (int BranchesRemoved, int BlocksRemoved) Apply(IrMethod method, IrEditor editor, IrConstantFacts facts) {
         int branches = 0;
+        List<(IrBlock Block, IrTerminator Terminator)> edits = [];
         foreach (IrBlock block in method.Blocks) {
             if (block.Terminator is not IrBranch branch) {
                 continue;
             }
             ValueNode condition = Simplify(branch.Condition, block, facts);
             if (facts.TryEvaluate(condition, block, block.Statements.Count, out ulong constant)) {
-                block.Terminator = new IrJump(branch.Origin,
-                    constant != 0 ? branch.WhenTrue : branch.WhenFalse);
+                edits.Add((block, new IrJump(branch.Origin,
+                    constant != 0 ? branch.WhenTrue : branch.WhenFalse)));
                 branches++;
             } else if (!ReferenceEquals(condition, branch.Condition)) {
-                block.Terminator = new IrBranch(branch.Origin, condition,
-                    branch.WhenTrue, branch.WhenFalse);
+                edits.Add((block, new IrBranch(branch.Origin, condition,
+                    branch.WhenTrue, branch.WhenFalse)));
             }
+        }
+        foreach ((IrBlock block, IrTerminator terminator) in edits) {
+            editor.SetTerminator(block, terminator);
         }
         HashSet<IrBlock> reachable = ReachableBlocks(method);
         int removed = method.Blocks.RemoveAll(block => !reachable.Contains(block));
+        if (removed != 0) {
+            editor.Ssa.MarkStale("branch simplification removed unreachable blocks");
+        }
         return (branches, removed);
     }
 

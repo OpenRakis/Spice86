@@ -37,35 +37,44 @@ internal static class IrExpressionPropagation {
     private const uint RegisterValues = (1u << (int)IrSsaValue.Gs + 1) - 1;
 
     /// <summary>Merges the single-use register writes of <paramref name="method"/> into their readers.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
-        IrMemoryAliasAnalysis alias = new(ssa);
         foreach (IrBlock block in method.Blocks) {
-            MergeBlock(block, entryNodes, ssa, alias);
+            if (editor.Ssa.IsStale) {
+                editor.Rebind(method, "ssa rebind expression propagation");
+            }
+            MergeBlock(block, method, entryNodes, editor.Ssa, editor,
+                new IrMemoryAliasAnalysis(editor.Ssa));
         }
     }
 
-    private static void MergeBlock(IrBlock block, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+    private static void MergeBlock(IrBlock block, IrMethod method, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa, IrEditor editor, IrMemoryAliasAnalysis alias) {
+        if (ssa.IsLivenessStale) {
+            ssa.RecomputeLiveness();
+        }
         int[] covered = new int[block.Statements.Count];
         Array.Fill(covered, 1);
         List<int> removed = [];
         for (int i = 0; i < block.Statements.Count; i++) {
+            if (ssa.IsStale) {
+                ssa = editor.Rebind(method, "ssa rebind expression propagation");
+                alias = new IrMemoryAliasAnalysis(ssa);
+            }
             if (covered[i] > 0
-                && TryMerge(block, i, entryNodes, ssa, covered, alias) is not null) {
+                && TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {
                 removed.Add(i);
             }
         }
         foreach (int index in removed.OrderByDescending(index => index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+            editor.Remove(block, index);
         }
     }
 
     /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
     /// its register when every condition holds; returns the reader's index.</summary>
     private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        int[] covered, IrMemoryAliasAnalysis alias) {
+        IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
         IrStatement writer = block.Statements[i];
         if (entryNodes.Contains(writer.Origin)
             || writer.Node is not BinaryOperationNode {
@@ -165,8 +174,10 @@ internal static class IrExpressionPropagation {
             return null;
         }
         IrStatement replacement = IrStatement.Create(assign with { Right = merged }, reader.Origin);
-        ssa.Replace(reader, replacement);
-        block.Statements[j] = replacement;
+        editor.Replace(block, j, replacement);
+        if (!ssa.IsStale) {
+            ssa.RecomputeLiveness();
+        }
         covered[j] += covered[i];
         covered[i] = 0;
         return j;

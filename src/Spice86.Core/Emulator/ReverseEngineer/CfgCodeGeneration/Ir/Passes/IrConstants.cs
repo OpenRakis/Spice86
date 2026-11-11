@@ -57,12 +57,13 @@ internal static class IrConstants {
     /// known, and returns the facts.</summary>
     /// <param name="graph">The structuring graph of <paramref name="method"/>, built once for its
     /// current block structure.</param>
-    public static IrConstantFacts Apply(IrMethod method, IrSsa ssa,
+    public static IrConstantFacts Apply(IrMethod method, IrEditor editor,
         BlockGraph<IrBlock> graph) {
+        IrSsa ssa = editor.Ssa;
         IrConstantFacts facts = new(ssa);
         ComputeClean(facts, graph);
         new IrSccpSolver(method, ssa, facts).Compute();
-        Substitute(method, ssa, facts);
+        Substitute(method, editor, ssa, facts);
         return facts;
     }
 
@@ -124,7 +125,7 @@ internal static class IrConstants {
         (CpuValues)((1UL << (IrConstantFacts.ByteCount * 8)) - 1);
 
     // Substitution: reads of known versions, in the substitutable places only.
-    private static void Substitute(IrMethod method, IrSsa ssa, IrConstantFacts facts) {
+    private static void Substitute(IrMethod method, IrEditor editor, IrSsa ssa, IrConstantFacts facts) {
         HashSet<IrBlock> loopBlocks = LoopBlocks(method);
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten = [];
         Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin = IrOrigins.ByOrigin(method);
@@ -154,8 +155,8 @@ internal static class IrConstants {
                 }
             }
         }
-        ApplySubstitutions(method, ssa, rewritten);
-        SubstituteTerminators(method, ssa, loopBlocks, statementsByOrigin, facts);
+        ApplySubstitutions(method, editor, rewritten);
+        SubstituteTerminators(method, editor, ssa, loopBlocks, statementsByOrigin, facts);
     }
 
     /// <summary>Substitutes the reads a terminator makes: the condition of an <see cref="IrBranch"/>
@@ -164,7 +165,7 @@ internal static class IrConstants {
     /// rewritability - a jump cannot fault, but an edge inside a faulting instruction's body can
     /// still land here through its origin - and inside-instruction loop blocks keep the same
     /// flags-only rule their statements follow.</summary>
-    private static void SubstituteTerminators(IrMethod method, IrSsa ssa,
+    private static void SubstituteTerminators(IrMethod method, IrEditor editor, IrSsa ssa,
         HashSet<IrBlock> loopBlocks,
         Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin, IrConstantFacts facts) {
         foreach (IrBlock block in method.Blocks) {
@@ -191,10 +192,7 @@ internal static class IrConstants {
                 _ => null
             };
             if (replacement is not null) {
-                if (ssa.HasSite(block.Terminator)) {
-                    ssa.ReplaceTerminator(block.Terminator, replacement);
-                }
-                block.Terminator = replacement;
+                editor.SetTerminator(block, replacement);
             }
         }
     }
@@ -203,7 +201,7 @@ internal static class IrConstants {
     /// rewritten statement has no side effect; every other changed statement replaces its site. A
     /// method variable can be declared by one instruction's statements and read by another's, so the
     /// reference census covers the whole method.</summary>
-    private static void ApplySubstitutions(IrMethod method, IrSsa ssa,
+    private static void ApplySubstitutions(IrMethod method, IrEditor editor,
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten) {
         Dictionary<string, int> references = new();
         foreach ((_, _, _, IVisitableAstNode node) in rewritten) {
@@ -227,16 +225,11 @@ internal static class IrConstants {
         }
         foreach ((IrBlock block, int index, IrStatement? replacement)
             in edits.OrderByDescending(edit => edit.Index)) {
-            IrStatement old = block.Statements[index];
-            block.Statements.RemoveAt(index);
             if (replacement is null) {
-                ssa.Remove(old);
+                editor.Remove(block, index);
                 continue;
             }
-            block.Statements.Insert(index, replacement);
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+            editor.Replace(block, index, replacement);
         }
     }
 

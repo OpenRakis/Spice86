@@ -366,7 +366,6 @@ public partial class CfgGeneratedOverrides {
         // F000:079D mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:07A3 mov AL,0x78
-        AL = 0x78;
         // F000:07A5 mov byte ptr ES:[EBX],AL
         Segment6100Globals.ByteFFFF = 0x78;
         // F000:07A9 xor EAX,EAX
@@ -695,7 +694,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0A6D mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0A73 mov AL,0x78
-        AL = 0x78;
         // F000:0A75 mov byte ptr ES:[EBX],AL
         Segment6100Globals.Byte0000 = 0x78;
         // F000:0A79 xor EAX,EAX
@@ -2553,7 +2551,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0045 cli
         InterruptFlag = false;
         // F000:0046 mov AL,0
-        AL = 0;
         // F000:0048 mov DX,0x0999
         DX = 0x0999;
         // F000:004B out DX,AL
@@ -3317,7 +3314,6 @@ public partial class CfgGeneratedOverrides {
                             return unknown_F000_15C7_F15C7();
                         }
                         // F000:04BF mov AL,3
-                        AL = 3;
                         // F000:04C1 mov DX,0x0999
                         // F000:04C4 out DX,AL
                         Out8(0x0999, 3);
@@ -3326,7 +3322,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:04C8 mov SS,DX
                         SS = 0x2000;
                         // F000:04CA xor AX,AX
-                        AX = 0;
                         // F000:04CC mov AX,SS
                         ax1 = SS;
                         // F000:04CE cmp AX,DX
@@ -3359,7 +3354,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:04F5 mov CX,DS
                         CX = DS;
                         // F000:04F7 xor AX,AX
-                        AX = 0;
                         // F000:04F9 mov SS,AX
                         // F000:04FB mov SS,word ptr DS:[0]
                         SS = DsGlobals.Word0000;
@@ -3377,7 +3371,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:050A mov DS,DX
                         DS = 0x2000;
                         // F000:050C xor AX,AX
-                        AX = 0;
                         // F000:050E mov AX,DS
                         ax3 = DS;
                         // F000:0510 cmp AX,DX
@@ -3410,7 +3403,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:0537 mov CX,DS
                         CX = DS;
                         // F000:0539 xor AX,AX
-                        AX = 0;
                         // F000:053B mov DS,AX
                         // F000:053D mov ES,CX
                         ES = CX;
@@ -3430,7 +3422,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:054F mov ES,DX
                         ES = 0x2000;
                         // F000:0551 xor AX,AX
-                        AX = 0;
                         // F000:0553 mov AX,ES
                         ax5 = ES;
                         // F000:0555 cmp AX,DX
@@ -3463,7 +3454,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:057C mov CX,DS
                         CX = DS;
                         // F000:057E xor AX,AX
-                        AX = 0;
                         // F000:0580 mov ES,AX
                         // F000:0582 mov ES,word ptr DS:[0]
                         ES = DsGlobals.Word0000;
@@ -3481,7 +3471,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:0591 mov FS,DX
                         FS = 0x2000;
                         // F000:0593 xor AX,AX
-                        AX = 0;
                         // F000:0595 mov AX,FS
                         ax7 = FS;
                         // F000:0597 cmp AX,DX
@@ -3514,7 +3503,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:05BE mov CX,DS
                         CX = DS;
                         // F000:05C0 xor AX,AX
-                        AX = 0;
                         // F000:05C2 mov FS,AX
                         // F000:05C4 mov FS,word ptr DS:[0]
                         FS = DsGlobals.Word0000;
@@ -3532,7 +3520,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:05D3 mov GS,DX
                         GS = 0x2000;
                         // F000:05D5 xor AX,AX
-                        AX = 0;
                         // F000:05D7 mov AX,GS
                         ax9 = GS;
                         // F000:05D9 cmp AX,DX
@@ -3565,7 +3552,6 @@ public partial class CfgGeneratedOverrides {
                         // F000:0600 mov CX,DS
                         CX = DS;
                         // F000:0602 xor AX,AX
-                        AX = 0;
                         // F000:0604 mov GS,AX
                         // F000:0606 mov GS,word ptr DS:[0]
                         GS = DsGlobals.Word0000;

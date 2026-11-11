@@ -35,16 +35,16 @@ public sealed class IrSsaWebsTest {
         IrBlock trueArm = Block(1);
         IrBlock falseArm = Block(2);
         IrBlock join = Block(3);
-        entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
         IrStatement defineTrue = Writes(instruction, Eax);
         IrStatement defineFalse = Writes(instruction, Eax);
-        trueArm.Statements.Add(defineTrue);
-        falseArm.Statements.Add(defineFalse);
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        join.Statements.Add(Reads(instruction, Eax));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(trueArm, defineTrue);
+        IrEditor.WithoutSsa.Append(falseArm, defineFalse);
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.Append(join, Reads(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -69,9 +69,9 @@ public sealed class IrSsaWebsTest {
             new IrEffects(Eax, CpuValues.Al, Eax, IrTokens.None, IrTokens.None, false, false));
         IrStatement lowWord = new(new CommentNode("ax"), instruction,
             new IrEffects(Eax, Ax, Eax & ~Ax, IrTokens.None, IrTokens.None, false, false));
-        block.Statements.Add(partial);
-        block.Statements.Add(lowWord);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, partial);
+        IrEditor.WithoutSsa.Append(block, lowWord);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -96,9 +96,9 @@ public sealed class IrSsaWebsTest {
         IrStatement lowByte = new(new CommentNode("al"), instruction,
             new IrEffects(Eax, CpuValues.Al, Eax, IrTokens.None, IrTokens.None,
                 false, false));
-        block.Statements.Add(partial);
-        block.Statements.Add(lowByte);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, partial);
+        IrEditor.WithoutSsa.Append(block, lowByte);
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -116,9 +116,9 @@ public sealed class IrSsaWebsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(Writes(instruction, Eax));
-        block.Statements.Add(Writes(instruction, IrSsaValues.MaskOf(IrSsaValue.Ecx)));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.Append(block, Writes(instruction, IrSsaValues.MaskOf(IrSsaValue.Ecx)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act

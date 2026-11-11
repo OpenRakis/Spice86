@@ -215,12 +215,13 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_016A_F016A() {
+        ushort bp;
         unknown_F000_016A_F016AFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x016A);
         // F000:016A push BP
         Stack.Push16(BP);
         // F000:016B mov BP,SP
-        BP = SP;
+        bp = SP;
         // F000:016D sub SP,4
         SP -= 4;
         // F000:0170 mov word ptr SS:[BP-2],0x0010
@@ -233,7 +234,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0180 add AX,word ptr SS:[BP+4]
         AX = Alu16.Add(AX, frame.Arg0);
         // F000:0183 mov SP,BP
-        SP = BP;
+        SP = bp;
         // F000:0185 pop BP
         BP = Stack.Pop16();
         // F000:0186 ret near
@@ -599,9 +600,9 @@ public partial class CfgGeneratedOverrides {
         // F000:0034 mov word ptr DS:[0x0044],AX
         Segment2000Globals.Word0044 = AX;
         // F000:0037 pop AX
-        AX = Stack.Pop16();
+        ax = Stack.Pop16();
         // F000:0038 mov word ptr DS:[0x0042],AX
-        Segment2000Globals.Word0042 = AX;
+        Segment2000Globals.Word0042 = ax;
         // F000:003B mov AX,0x0100
         // F000:003E push AX
         Stack.Push16(0x0100);

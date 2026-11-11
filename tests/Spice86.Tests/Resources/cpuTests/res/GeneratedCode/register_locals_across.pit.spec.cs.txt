@@ -411,7 +411,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0063 mov word ptr DS:[DI+0x0C],BX
         UInt16[DS, (ushort)(DI + 0x0C)] = BX;
         // F000:0066 xor AX,AX
-        AX = 0;
         // F000:0068 mov ES,AX
         ES = 0;
         // F000:006A mov word ptr ES:[0x0020],0x01F1

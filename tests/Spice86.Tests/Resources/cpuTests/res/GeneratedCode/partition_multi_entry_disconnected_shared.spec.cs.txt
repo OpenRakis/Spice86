@@ -103,7 +103,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0033_F0033();
     }
 
-    /// <summary>Inputs: EAX, CX, EDX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0

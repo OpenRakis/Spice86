@@ -258,8 +258,8 @@ internal sealed class IrFrames {
     }
 
     private IrFrame? DetectFrame(IrEntry entry, List<IrFrameEpilogue> epilogues) {
-        List<IrStatement> statements = entry.Block.Statements;
-        int pushIndex = statements.FindIndex(IsPushBp);
+        IReadOnlyList<IrStatement> statements = entry.Block.Statements;
+        int pushIndex = entry.Block.IndexOfStatement(IsPushBp);
         if (pushIndex < 0 || !EntryDelta(statements[pushIndex], 0)) {
             return null;
         }
@@ -312,7 +312,7 @@ internal sealed class IrFrames {
         return delta;
     }
 
-    private int LocalBytes(List<IrStatement> statements, int setBpIndex) {
+    private int LocalBytes(IReadOnlyList<IrStatement> statements, int setBpIndex) {
         for (int index = setBpIndex + 1; index < statements.Count; index++) {
             IrStatement statement = statements[index];
             if (!TouchesFrameRegister(statement)) {
@@ -334,7 +334,7 @@ internal sealed class IrFrames {
             .Select(block => new IrFrameEpilogue((IrExit)block.Terminator, EpilogueKind(block)))];
 
     private IrFrameEpilogueKind EpilogueKind(IrBlock block) {
-        List<IrStatement> stackStatements = [.. block.Statements.Where(TouchesFrameRegister)];
+        IReadOnlyList<IrStatement> stackStatements = [.. block.Statements.Where(TouchesFrameRegister)];
         if (stackStatements.Count == 0) {
             return IrFrameEpilogueKind.Other;
         }

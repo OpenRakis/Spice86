@@ -87,72 +87,72 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_001E_F001E(ushort dx) {
+    /// <summary>Inputs: DX. Outputs: none. Changes: DX, flags.</summary>
+    public virtual void unknown_F000_001E_F001E(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x001E);
         // F000:001E add DX,1
         DX = Alu16.Add(DX, 1);
         // F000:0021 ret far
         FarReturn();
-        return DX;
+        return;
     }
 
     public virtual Action unknown_F000_001E_F001E_Asm() {
-        DX = unknown_F000_001E_F001E(DX);
+        unknown_F000_001E_F001E(DX);
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_0022_F0022(ushort dx) {
+    /// <summary>Inputs: DX. Outputs: none. Changes: DX, flags.</summary>
+    public virtual void unknown_F000_0022_F0022(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x0022);
         // F000:0022 add DX,0x0010
         DX = Alu16.Add(DX, 0x0010);
         // F000:0025 ret far
         FarReturn();
-        return DX;
+        return;
     }
 
     public virtual Action unknown_F000_0022_F0022_Asm() {
-        DX = unknown_F000_0022_F0022(DX);
+        unknown_F000_0022_F0022(DX);
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_0026_F0026(ushort dx) {
+    /// <summary>Inputs: DX. Outputs: none. Changes: DX, flags.</summary>
+    public virtual void unknown_F000_0026_F0026(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x0026);
         // F000:0026 add DX,0x0100
         DX = Alu16.Add(DX, 0x0100);
         // F000:002A ret far
         FarReturn();
-        return DX;
+        return;
     }
 
     public virtual Action unknown_F000_0026_F0026_Asm() {
-        DX = unknown_F000_0026_F0026(DX);
+        unknown_F000_0026_F0026(DX);
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_002B_F002B(ushort dx) {
+    /// <summary>Inputs: DX. Outputs: none. Changes: DX, flags.</summary>
+    public virtual void unknown_F000_002B_F002B(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x002B);
         // F000:002B add DX,0x1000
         DX = Alu16.Add(DX, 0x1000);
         // F000:002F ret far
         FarReturn();
-        return DX;
+        return;
     }
 
     public virtual Action unknown_F000_002B_F002B_Asm() {
-        DX = unknown_F000_002B_F002B(DX);
+        unknown_F000_002B_F002B(DX);
         return Returned;
     }
 
-    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
-    public virtual ushort unknown_F000_0030_F0030(ushort di, ushort ds) {
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    public virtual void unknown_F000_0030_F0030(ushort di, ushort ds) {
         DI = di;
         DS = ds;
         CheckExternalEvents(biosSegment, 0x0030);
@@ -168,16 +168,16 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Add(DI, 4);
         // F000:003C ret far
         FarReturn();
-        return DI;
+        return;
     }
 
     public virtual Action unknown_F000_0030_F0030_Asm() {
-        DI = unknown_F000_0030_F0030(DI, DS);
+        unknown_F000_0030_F0030(DI, DS);
         return Returned;
     }
 
-    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
-    public virtual ushort unknown_F000_013D_F013D(ushort di, ushort ds) {
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    public virtual void unknown_F000_013D_F013D(ushort di, ushort ds) {
         DI = di;
         DS = ds;
         CheckExternalEvents(biosSegment, 0x013D);
@@ -193,11 +193,11 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Add(DI, 4);
         // F000:0149 ret far
         FarReturn();
-        return DI;
+        return;
     }
 
     public virtual Action unknown_F000_013D_F013D_Asm() {
-        DI = unknown_F000_013D_F013D(DI, DS);
+        unknown_F000_013D_F013D(DI, DS);
         return Returned;
     }
 
@@ -281,8 +281,8 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
-    public virtual ushort unknown_F001_012D_F013D(ushort di, ushort ds) {
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    public virtual void unknown_F001_012D_F013D(ushort di, ushort ds) {
         DI = di;
         DS = ds;
         CheckExternalEvents(cs1, 0x012D);
@@ -298,11 +298,11 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Add(DI, 4);
         // F001:0139 ret far
         FarReturn();
-        return DI;
+        return;
     }
 
     public virtual Action unknown_F001_012D_F013D_Asm() {
-        DI = unknown_F001_012D_F013D(DI, DS);
+        unknown_F001_012D_F013D(DI, DS);
         return Returned;
     }
 
@@ -322,8 +322,8 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
-    public virtual ushort unknown_F010_0030_F0130(ushort di, ushort ds) {
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    public virtual void unknown_F010_0030_F0130(ushort di, ushort ds) {
         DI = di;
         DS = ds;
         CheckExternalEvents(cs2, 0x0030);
@@ -339,11 +339,11 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Add(DI, 4);
         // F010:003C ret far
         FarReturn();
-        return DI;
+        return;
     }
 
     public virtual Action unknown_F010_0030_F0130_Asm() {
-        DI = unknown_F010_0030_F0130(DI, DS);
+        unknown_F010_0030_F0130(DI, DS);
         return Returned;
     }
 

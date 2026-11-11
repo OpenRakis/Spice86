@@ -184,7 +184,8 @@ public class CfgCSharpGeneratorLocationsTest {
         IrStatement second = reads[1].Block.Statements[reads[1].Index];
         IVisitableAstNode Rewrite(IVisitableAstNode node) =>
             ReferenceEquals(node, reads[1].Pointer) ? shared : IrAstChildren.MapChildren(node, Rewrite);
-        reads[1].Block.Statements[reads[1].Index] = IrStatement.Create(Rewrite(second.Node), second.Origin);
+        IrEditor.WithoutSsa.Replace(reads[1].Block, reads[1].Index,
+            IrStatement.Create(Rewrite(second.Node), second.Origin));
         IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());
 
         // Act
@@ -228,8 +229,8 @@ public class CfgCSharpGeneratorLocationsTest {
         InterruptServiceCallNode callNode = new(0x33, ServiceSelector.Ax, entry, "Mouse") {
             Results = [new RegisterNode(DataType.UINT16, 0)]
         };
-        block.Statements[callIndex] = IrStatement.Create(callNode,
-            block.Statements[callIndex].Origin);
+        IrEditor.WithoutSsa.Replace(block, callIndex, IrStatement.Create(callNode,
+            block.Statements[callIndex].Origin));
         IrSsa ssa = IrSsa.Build(method);
         IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
         IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());

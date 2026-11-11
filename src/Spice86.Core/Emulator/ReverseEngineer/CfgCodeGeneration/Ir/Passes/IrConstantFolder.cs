@@ -150,11 +150,11 @@ internal static partial class IrConstantFolder {
     /// (<see cref="IrEffects.MayFault"/>) or deliver interrupts
     /// (<see cref="IrEffects.DeliversInterrupts"/>), and the SSA versions it holds are the same
     /// (<see cref="IrSsa.SameVersions"/>): the statement is replaced through
-    /// <see cref="IrSsa.Replace"/> so its site stays. Returns whether a self-assignment
-    /// definition was removed: <see cref="IrSsa.Remove"/> does not rebind uses, so a still-live
-    /// version can lose its definition and the caller rebuilds the SSA before the next
+    /// <see cref="IrEditor.Replace(IrBlock, int, IrStatement)"/> so its site stays. Returns whether a
+    /// self-assignment definition was removed: the removal leaves a still-live version without a
+    /// definition and marks the SSA stale, so the caller rebuilds the SSA before the next
     /// SSA-consuming pass.</summary>
-    internal static bool FoldConstantChains(IrMethod method, IrSsa ssa) {
+    internal static bool FoldConstantChains(IrMethod method, IrEditor editor) {
         bool removed = false;
         foreach (IrBlock block in method.Blocks) {
             for (int i = 0; i < block.Statements.Count; i++) {
@@ -163,10 +163,7 @@ internal static partial class IrConstantFolder {
                 // A self-assignment already in the input or left by the identity rules is dead:
                 // check before the unchanged fast path so `AX = AX` never survives.
                 if (IsDeadSelfAssign(node, statement)) {
-                    block.Statements.RemoveAt(i);
-                    if (ssa.HasSite(statement)) {
-                        ssa.Remove(statement);
-                    }
+                    editor.Remove(block, i);
                     i--;
                     removed = true;
                     continue;
@@ -175,15 +172,11 @@ internal static partial class IrConstantFolder {
                     continue;
                 }
                 IrStatement replacement = IrStatement.Create(node, statement.Origin);
-                block.Statements[i] = replacement;
-                if (ssa.HasSite(statement)) {
-                    ssa.Replace(statement, replacement);
-                }
+                editor.Replace(block, i, replacement);
             }
             IrTerminator terminator = FoldConstantChainTerminator(block.Terminator);
             if (!ReferenceEquals(terminator, block.Terminator)) {
-                ssa.ReplaceTerminator(block.Terminator, terminator);
-                block.Terminator = terminator;
+                editor.SetTerminator(block, terminator);
             }
         }
         return removed;

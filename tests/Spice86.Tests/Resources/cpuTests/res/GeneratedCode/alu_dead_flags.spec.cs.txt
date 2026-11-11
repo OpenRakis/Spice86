@@ -65,7 +65,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort dx;
+        byte cl;
         ushort ax;
+        byte dl;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -90,9 +92,9 @@ public partial class CfgGeneratedOverrides {
             CheckExternalEvents(biosSegment, 0x0018);
             // F000:0018 mov DX,word ptr CS:[SI]
             // F000:001B shl DX,1
-            DX = (ushort)(UInt16[CS, SI] << 1);
+            dx = (ushort)(UInt16[CS, SI] << 1);
             // F000:001D mov word ptr DS:[BX],DX
-            UInt16[DS, BX] = DX;
+            UInt16[DS, BX] = dx;
             // F000:001F cmp DI,DI
             // F000:0021 mov DX,word ptr CS:[SI]
             // F000:0024 shr DX,1
@@ -102,9 +104,9 @@ public partial class CfgGeneratedOverrides {
             // F000:0029 cmp DI,DI
             // F000:002B mov DX,word ptr CS:[SI]
             // F000:002E sar DX,1
-            DX = (ushort)((short)UInt16[CS, SI] >> 1);
+            dx = (ushort)((short)UInt16[CS, SI] >> 1);
             // F000:0030 mov word ptr DS:[BX+4],DX
-            UInt16[DS, (ushort)(BX + 4)] = DX;
+            UInt16[DS, (ushort)(BX + 4)] = dx;
             // F000:0033 cmp DI,DI
             // F000:0035 mov DX,word ptr CS:[SI]
             // F000:0038 shl DX,4
@@ -114,9 +116,9 @@ public partial class CfgGeneratedOverrides {
             // F000:003E cmp DI,DI
             // F000:0040 mov DX,word ptr CS:[SI]
             // F000:0043 shr DX,0x10
-            DX = (ushort)(UInt16[CS, SI] >> 16);
+            dx = (ushort)(UInt16[CS, SI] >> 16);
             // F000:0046 mov word ptr DS:[BX+8],DX
-            UInt16[DS, (ushort)(BX + 8)] = DX;
+            UInt16[DS, (ushort)(BX + 8)] = dx;
             // F000:0049 cmp DI,DI
             // F000:004B mov DX,word ptr CS:[SI]
             // F000:004E sar DX,0x11
@@ -125,19 +127,19 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, (ushort)(BX + 0x0A)] = DX;
             // F000:0054 cmp DI,DI
             // F000:0056 mov CL,byte ptr CS:[SI+2]
-            CL = UInt8[CS, (ushort)(SI + 2)];
+            cl = UInt8[CS, (ushort)(SI + 2)];
             // F000:005A mov DX,word ptr CS:[SI]
             // F000:005D shr DX,CL
-            DX = (ushort)(UInt16[CS, SI] >> (CL & 0x1F));
+            dx = (ushort)(UInt16[CS, SI] >> (cl & 0x1F));
             // F000:005F mov word ptr DS:[BX+0x0C],DX
-            UInt16[DS, (ushort)(BX + 0x0C)] = DX;
+            UInt16[DS, (ushort)(BX + 0x0C)] = dx;
             // F000:0062 cmp DI,DI
             // F000:0064 mov DX,word ptr CS:[SI]
             // F000:0067 shr DX,1
             // F000:0069 shr DX,1
-            dx = (ushort)(UInt16[CS, SI] >> 2);
+            DX = (ushort)(UInt16[CS, SI] >> 2);
             // F000:006B mov word ptr DS:[BX+0x0E],DX
-            UInt16[DS, (ushort)(BX + 0x0E)] = dx;
+            UInt16[DS, (ushort)(BX + 0x0E)] = DX;
             // F000:006E cmp DI,DI
             // F000:0070 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
@@ -230,9 +232,9 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, (ushort)(BX + 0x24)] = DX;
             // F000:00F1 cmp DI,DI
             // F000:00F3 imul DX,word ptr CS:[SI],7
-            DX = (ushort)(7 * (int)(short)UInt16[CS, SI]);
+            dx = (ushort)(7 * (int)(short)UInt16[CS, SI]);
             // F000:00F7 mov word ptr DS:[BX+0x26],DX
-            UInt16[DS, (ushort)(BX + 0x26)] = DX;
+            UInt16[DS, (ushort)(BX + 0x26)] = dx;
             // F000:00FA cmp DI,DI
             // F000:00FC mov DX,word ptr CS:[SI]
             // F000:00FF neg DX
@@ -242,9 +244,9 @@ public partial class CfgGeneratedOverrides {
             // F000:0104 cmp DI,DI
             // F000:0106 mov DL,byte ptr CS:[SI]
             // F000:0109 shl DL,1
-            DL = (byte)(UInt8[CS, SI] << 1);
+            dl = (byte)(UInt8[CS, SI] << 1);
             // F000:010B mov byte ptr DS:[BX+0x2A],DL
-            UInt8[DS, (ushort)(BX + 0x2A)] = DL;
+            UInt8[DS, (ushort)(BX + 0x2A)] = dl;
             // F000:010E cmp DI,DI
             // F000:0110 mov DL,byte ptr CS:[SI]
             // F000:0113 sar DL,7

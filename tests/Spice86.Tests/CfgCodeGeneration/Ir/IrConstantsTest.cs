@@ -41,9 +41,9 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(AssignAx(instruction, Const(0x1234)));
-        block.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, Const(0x1234)));
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -58,11 +58,11 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(AssignAx(instruction, Const(0x1234)));
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, Const(0x1234)));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction));
-        block.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -77,14 +77,14 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(AssignAx(instruction, Const(0x1234)));
-        block.Statements.Add(new IrStatement(new CommentNode("opaque"), instruction,
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, Const(0x1234)));
+        IrEditor.WithoutSsa.Append(block, new IrStatement(new CommentNode("opaque"), instruction,
             new IrEffects(CpuValues.None, CpuValues.None,
                 CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx | CpuValues.Esp
                     | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi,
                 IrTokens.None, IrTokens.None, false, false)));
-        block.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -99,10 +99,10 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(AssignAx(instruction, Const(0x1234)));
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, Const(0x1234)));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new MethodCallNode("Memory", "set_UInt16", Ax(), Const(0)), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -117,11 +117,11 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(AssignDx(instruction, Const(0x3F8)));
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, AssignDx(instruction, Const(0x3F8)));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new PortWriteCallNode(BitWidth.WORD_16, Dx(), Ax()),
             instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -141,14 +141,14 @@ public sealed class IrConstantsTest {
         IrBlock trueArm = Block(1);
         IrBlock falseArm = Block(2);
         IrBlock join = Block(3);
-        entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Statements.Add(AssignAx(instruction, Const(5)));
-        falseArm.Statements.Add(AssignAx(instruction, Const(5)));
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        join.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
+        IrEditor.WithoutSsa.Append(trueArm, AssignAx(instruction, Const(5)));
+        IrEditor.WithoutSsa.Append(falseArm, AssignAx(instruction, Const(5)));
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.Append(join, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -167,14 +167,14 @@ public sealed class IrConstantsTest {
         IrBlock trueArm = Block(1);
         IrBlock falseArm = Block(2);
         IrBlock join = Block(3);
-        entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Statements.Add(AssignAx(instruction, Const(5)));
-        falseArm.Statements.Add(AssignAx(instruction, Const(7)));
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        join.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
+        IrEditor.WithoutSsa.Append(trueArm, AssignAx(instruction, Const(5)));
+        IrEditor.WithoutSsa.Append(falseArm, AssignAx(instruction, Const(7)));
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.Append(join, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -194,15 +194,15 @@ public sealed class IrConstantsTest {
         IrBlock trueArm = Block(1);
         IrBlock falseArm = Block(2);
         IrBlock join = Block(3);
-        entry.Terminator = new IrBranch(instruction,
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction,
             new BinaryOperationNode(DataType.BOOL, Const(5), BinaryOperation.EQUAL, Const(4)),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Statements.Add(AssignAx(instruction, Const(7)));
-        falseArm.Statements.Add(AssignAx(instruction, Const(9)));
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        join.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
+        IrEditor.WithoutSsa.Append(trueArm, AssignAx(instruction, Const(7)));
+        IrEditor.WithoutSsa.Append(falseArm, AssignAx(instruction, Const(9)));
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.Append(join, AssignAx(instruction, AluAdd(Ax(), Const(1))));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -339,13 +339,13 @@ public sealed class IrConstantsTest {
         // direction stays known (unlike the general registers).
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new BinaryOperationNode(DataType.BOOL, new CpuFlagNode(Flags.Direction),
                 BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1)), instruction));
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction));
-        block.Statements.Add(AssignAx(instruction, DirectionStep16()));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, DirectionStep16()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -361,11 +361,11 @@ public sealed class IrConstantsTest {
         // Arrange: FlagRegister16 = 0x0400 (DF set); AX = (DirectionFlag ? -2 : 2).
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new BinaryOperationNode(DataType.UINT16, new FlagRegisterNode(DataType.UINT16),
                 BinaryOperation.ASSIGN, Const(Flags.Direction)), instruction));
-        block.Statements.Add(AssignAx(instruction, DirectionStep16()));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, DirectionStep16()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -381,11 +381,11 @@ public sealed class IrConstantsTest {
         // Arrange: DirectionFlag = AX (unknown); the step stays a select.
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new BinaryOperationNode(DataType.BOOL, new CpuFlagNode(Flags.Direction),
                 BinaryOperation.ASSIGN, Ax()), instruction));
-        block.Statements.Add(AssignAx(instruction, DirectionStep16()));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, DirectionStep16()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -457,7 +457,7 @@ public sealed class IrConstantsTest {
 
     private static IrConstantFacts RunConstants(IrMethod method) {
         IrSsa ssa = IrSsa.Build(method);
-        return IrConstants.Apply(method, ssa, method.ToStructuringGraph());
+        return IrConstants.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), method.ToStructuringGraph());
     }
 
     private static IVisitableAstNode AluArgument(IrBlock block, int argumentIndex) =>
@@ -496,11 +496,11 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new VariableDeclarationNode(DataType.UINT16, "tmp",
                 new StackCallValueNode(StackOperation.Pop, BitWidth.WORD_16)),
             instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -516,10 +516,10 @@ public sealed class IrConstantsTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new VariableDeclarationNode(DataType.UINT16, "tmp", Const(7)), instruction));
-        block.Statements.Add(AssignAx(instruction, Const(1)));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, AssignAx(instruction, Const(1)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act

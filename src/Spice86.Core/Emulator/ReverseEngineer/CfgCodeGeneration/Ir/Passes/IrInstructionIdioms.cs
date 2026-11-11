@@ -33,8 +33,9 @@ using System.Linq;
 /// </summary>
 internal static partial class IrInstructionIdioms {
     /// <summary>Rewrites the recognized idioms inside every block of <paramref name="method"/>.</summary>
-    public static void Apply(IrMethod method) {
-        foreach (List<IrStatement> statements in method.Blocks.Select(block => block.Statements)) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        foreach (IrBlock block in method.Blocks) {
+            List<IrStatement> statements = [.. block.Statements];
             for (int i = 0; i < statements.Count; i++) {
                 if (ShapeOf(method, statements, i, 3) == IrInstructionShape.Exchange
                     && TupleSwap(statements, i) is { } swap) {
@@ -61,6 +62,7 @@ internal static partial class IrInstructionIdioms {
                     statements.RemoveRange(i + 1, 1);
                 }
             }
+            editor.ReplaceAll(block, statements, block.Terminator);
         }
     }
 
@@ -268,13 +270,52 @@ internal static partial class IrInstructionIdioms {
     /// there would skip the earlier write.
     /// </para>
     /// </summary>
-    public static int ApplyValueSequences(IrMethod method, IrSsa ssa) {
+    public static int ApplyValueSequences(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         HashSet<ICfgNode> pinnedOrigins = PinnedOriginsOf(method);
-        int combined = 0;
+        List<(IrBlock Block, List<SequenceRewrite> Rewrites)> plan = [];
         foreach (IrBlock block in method.Blocks) {
-            combined += ApplyBlock(block, ssa, pinnedOrigins);
+            List<SequenceRewrite> rewrites = CollectBlock(block, ssa, pinnedOrigins);
+            if (rewrites.Count > 0) {
+                plan.Add((block, rewrites));
+            }
+        }
+        int combined = 0;
+        foreach ((IrBlock block, List<SequenceRewrite> rewrites) in plan) {
+            combined += rewrites.Count;
+            ApplyBlock(block, rewrites, editor);
         }
         return combined;
+    }
+
+    private static List<SequenceRewrite> CollectBlock(IrBlock block, IrSsa ssa,
+            HashSet<ICfgNode> pinnedOrigins) {
+        IReadOnlyList<IrStatement> statements = block.Statements;
+        List<SequenceRewrite> rewrites = [];
+        for (int i = 0; i < statements.Count; i++) {
+            SequenceRewrite? rewrite = ArithmeticSequence(block, i, ssa)
+                ?? XorSwap(statements, i)
+                ?? PartialPair(block, i, ssa);
+            if (rewrite is null || CrossesPinnedOrigin(statements, i, rewrite.LastIndex,
+                    pinnedOrigins)) {
+                continue;
+            }
+            rewrites.Add(rewrite);
+            i = rewrite.LastIndex;
+        }
+        return rewrites;
+    }
+
+    private static void ApplyBlock(IrBlock block, List<SequenceRewrite> rewrites,
+            IrEditor editor) {
+        foreach (SequenceRewrite rewrite in rewrites) {
+            editor.Replace(block, rewrite.LastIndex,
+                IrStatement.Create(rewrite.Node, block.Statements[rewrite.LastIndex].Origin));
+        }
+        foreach (int index in rewrites.SelectMany(rewrite => rewrite.RemovedIndices)
+                .OrderByDescending(index => index)) {
+            editor.Remove(block, index);
+        }
     }
 
     /// <summary>The instruction nodes a statement merge must not span: the node of a method entry
@@ -301,34 +342,6 @@ internal static partial class IrInstructionIdioms {
             }
         }
         return false;
-    }
-
-    private static int ApplyBlock(IrBlock block, IrSsa ssa, HashSet<ICfgNode> pinnedOrigins) {
-        List<IrStatement> statements = block.Statements;
-        List<SequenceRewrite> rewrites = [];
-        for (int i = 0; i < statements.Count; i++) {
-            SequenceRewrite? rewrite = ArithmeticSequence(block, i, ssa)
-                ?? XorSwap(statements, i)
-                ?? PartialPair(block, i, ssa);
-            if (rewrite is null || CrossesPinnedOrigin(statements, i, rewrite.LastIndex,
-                    pinnedOrigins)) {
-                continue;
-            }
-            rewrites.Add(rewrite);
-            i = rewrite.LastIndex;
-        }
-        if (rewrites.Count == 0) {
-            return 0;
-        }
-        foreach (SequenceRewrite rewrite in rewrites) {
-            statements[rewrite.LastIndex] =
-                IrStatement.Create(rewrite.Node, statements[rewrite.LastIndex].Origin);
-        }
-        foreach (int index in rewrites.SelectMany(rewrite => rewrite.RemovedIndices)
-                .OrderByDescending(index => index)) {
-            statements.RemoveAt(index);
-        }
-        return rewrites.Count;
     }
 
     /// <summary>Whether <paramref name="statement"/> carries a printed instruction or only a
@@ -442,7 +455,7 @@ internal static partial class IrInstructionIdioms {
     /// <summary>The byte writes of two consecutive effective statements fill the two halves of one
     /// 16-bit register: the whole-register assignment at the second write's origin.</summary>
     private static SequenceRewrite? PartialPair(IrBlock block, int index, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         int second = NextEffective(statements, index + 1);
         if (second < 0
             || !ByteAssign(statements[index], out RegisterNode? first, out ValueNode? firstValue)

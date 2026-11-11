@@ -85,7 +85,6 @@ public partial class CfgGeneratedOverrides {
         // F000:000C cld
         DirectionFlag = false;
         // F000:000D xor BX,BX
-        BX = 0;
         // F000:000F mov DX,0x00F0
         // F000:0012 bt DX,4
         CarryFlag = (0x00F0 & 1 << 4 % 0x0010) != 0;
@@ -254,7 +253,6 @@ public partial class CfgGeneratedOverrides {
         // F000:010C mov word ptr DS:[BX+0x3C],AX
         Segment2000Globals.Word003C = ax;
         // F000:010F xor AX,AX
-        AX = 0;
         // F000:0111 xor CX,CX
         // F000:0113 xor DX,DX
         // F000:0115 popa

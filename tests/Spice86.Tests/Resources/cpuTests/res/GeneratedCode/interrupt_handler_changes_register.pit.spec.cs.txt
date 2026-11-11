@@ -102,6 +102,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -118,9 +119,9 @@ public partial class CfgGeneratedOverrides {
         // F000:0015 mov word ptr ES:[0x0022],CS
         Segment0000Globals.Dword0020 = 0x00000031 | (uint)CS << 16;
         // F000:001A mov AX,DS
-        AX = DS;
+        ax1 = DS;
         // F000:001C mov ES,AX
-        ES = AX;
+        ES = ax1;
         // F000:001E cld
         DirectionFlag = false;
         // F000:001F mov AL,0x36
@@ -131,7 +132,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0029 out 0x40,AL
         Pit.ProgramChannel(0, 0x36, 0x2251);
         // F000:002B mov AL,0
-        AL = 0;
         // F000:002D out 0x21,AL
         PicPorts.WritePrimaryData(0);
         // F000:002F jmp short 0x003E

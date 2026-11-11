@@ -1,5 +1,5 @@
 {
-  "sourceSha256": "14d76f34a06c05302b8a6879a75665114a1363cb6effe9046c26b91ccb46437b",
+  "sourceSha256": "deef33384b9eaface11c0f3c79b9ae4cf9535ae6533fada084e2527018d5f3ba",
   "minimum": {
     "StringServiceCalls": 0,
     "deviceCalls.Cmos": 0,
@@ -36,7 +36,7 @@
     "PlainRegisterAssignments": 90,
     "PortWrapperCalls": 0,
     "RawIoCalls": 0,
-    "RegisterReads": 110,
+    "RegisterReads": 112,
     "RegisterWrites": 113,
     "Statements": 452,
     "WriteBacks": 6

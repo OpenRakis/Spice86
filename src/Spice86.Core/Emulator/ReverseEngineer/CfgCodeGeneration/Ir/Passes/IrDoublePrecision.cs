@@ -30,7 +30,8 @@ internal static class IrDoublePrecision {
     private static readonly RegisterRenderer Registers = new(AsmRenderingConfig.CreateSpice86Style());
 
     /// <summary>Rewrites every register-pair operation of <paramref name="method"/>; returns how many.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
+    public static int Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         // Counted loops are planned first so later SSA queries still see the original method:
         // their body is the pair shift the per-block matcher would otherwise consume before the
         // loop shape can be proven.
@@ -67,9 +68,7 @@ internal static class IrDoublePrecision {
         }
         int rewritten = loopPlans.Count;
         foreach (CountedLoopPlan plan in loopPlans) {
-            plan.Block.Statements.Clear();
-            plan.Block.Statements.AddRange(plan.Statements);
-            plan.Block.Terminator = plan.Terminator;
+            editor.ReplaceAll(plan.Block, plan.Statements, plan.Terminator);
         }
         if (found.Count == 0) {
             return rewritten;
@@ -78,7 +77,7 @@ internal static class IrDoublePrecision {
             // Rewrite from the last pair to the first: the positions were collected on the original
             // statement list and an earlier rewrite shifts every later one.
             for (int i = matches.Count - 1; i >= 0; i--) {
-                Rewrite(method, block, matches[i]);
+                Rewrite(method, block, matches[i], editor);
             }
             rewritten += matches.Count;
         }
@@ -549,7 +548,7 @@ internal static class IrDoublePrecision {
         return null;
     }
 
-    private static void Rewrite(IrMethod method, IrBlock block, Match match) {
+    private static void Rewrite(IrMethod method, IrBlock block, Match match, IrEditor editor) {
         DataType half = match.Half;
         DataType wide = WideType(half);
         int width = Width(half);
@@ -561,7 +560,7 @@ internal static class IrDoublePrecision {
                     match.BLo ?? match.ALo, match.BHi ?? match.AHi),
                 IrConstantFolder.NoVariableConstants)));
         VariableReferenceNode pair = declaration.Reference;
-        List<IrStatement> statements = block.Statements;
+        List<IrStatement> statements = [.. block.Statements];
         statements[last] = IrStatement.Create(declaration, match.LastOrigin);
         // The first instruction's half write may be absent from the pattern (its shifted value was
         // forwarded into its readers and the register write removed). Emitting it anyway would
@@ -600,6 +599,7 @@ internal static class IrDoublePrecision {
         for (int i = match.Indices.Count - 2; i >= 0; i--) {
             statements.RemoveAt(match.Indices[i]);
         }
+        editor.ReplaceAll(block, statements, block.Terminator);
     }
 
     /// <summary>The pair temporary's name: the high register's name lowercased followed by the low
@@ -646,7 +646,7 @@ internal static class IrDoublePrecision {
         if (first.BodyIndices.Count != 1) {
             return null;
         }
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         int lowIndex = first.BodyIndices[0];
         if (Assign(statements[lowIndex].Node) is not (RegisterNode low, { } lowRight)
             || low is SegmentRegisterNode || low.DataType != DataType.UINT16
@@ -774,15 +774,15 @@ internal static class IrDoublePrecision {
     /// outLo = savedHigh; outLo *= otherLow; outHi += outLo; outLo = savedProduct</c> becomes
     /// one wide multiply declaration and the two half writes. Runs before expression propagation
     /// flattens the copies; returns how many sequences were rewritten.</summary>
-    public static int ApplyProducts(IrMethod method, IrSsa ssa) {
+    public static int ApplyProducts(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
-        int rewritten = 0;
+        // Match on the original statements and SSA, then rewrite in reverse order: a rewrite
+        // shifts the positions a later match was proven against.
+        List<(IrBlock Block, ProductMatch Match)> matches = [];
         foreach (IrBlock block in method.Blocks) {
-            // Match on the original statements and SSA, then rewrite in reverse order: a rewrite
-            // shifts the positions a later match was proven against.
-            List<ProductMatch> matches = [];
             List<(int From, int To)> claimed = [];
-            List<IrStatement> statements = block.Statements;
+            IReadOnlyList<IrStatement> statements = block.Statements;
             for (int i = 0; i < statements.Count; i++) {
                 if (statements[i].Node is not MultiplicationNode {
                         Width: BitWidth.WORD_16, Signed: false }) {
@@ -798,14 +798,13 @@ internal static class IrDoublePrecision {
                     continue;
                 }
                 claimed.Add((window.First, window.Last));
-                matches.Add(window);
-            }
-            for (int m = matches.Count - 1; m >= 0; m--) {
-                RewriteProduct(method, block, matches[m]);
-                rewritten++;
+                matches.Add((block, window));
             }
         }
-        return rewritten;
+        for (int m = matches.Count - 1; m >= 0; m--) {
+            RewriteProduct(method, matches[m].Block, matches[m].Match, editor);
+        }
+        return matches.Count;
     }
 
     /// <summary>The bound roles of a product window.</summary>
@@ -814,7 +813,7 @@ internal static class IrDoublePrecision {
         int First, int Last, int[] Consumed);
 
     private static ProductMatch? ProductWindow(IrBlock block, int multIndex, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         MultiplicationNode multiply = (MultiplicationNode)statements[multIndex].Node;
         int s0 = PreviousEffective(statements, PreviousEffective(statements, multIndex));
         int s1 = PreviousEffective(statements, multIndex);
@@ -997,7 +996,7 @@ internal static class IrDoublePrecision {
         return -1;
     }
 
-    private static void RewriteProduct(IrMethod method, IrBlock block, ProductMatch window) {
+    private static void RewriteProduct(IrMethod method, IrBlock block, ProductMatch window, IrEditor editor) {
         DataType half = DataType.UINT16;
         DataType wide = WideType(half);
         int width = Width(half);
@@ -1010,7 +1009,7 @@ internal static class IrDoublePrecision {
                 IrConstantFolder.NoVariableConstants)));
         VariableReferenceNode pair = declaration.Reference;
         ICfgNode origin = block.Statements[last].Origin;
-        List<IrStatement> statements = block.Statements;
+        List<IrStatement> statements = [.. block.Statements];
         statements[last] = IrStatement.Create(declaration, origin);
         statements.Insert(last + 1, IrStatement.Create(new BinaryOperationNode(half,
             new RegisterNode(half, window.OutputLow.RegisterIndex), BinaryOperation.ASSIGN,
@@ -1023,6 +1022,7 @@ internal static class IrDoublePrecision {
         for (int i = window.Consumed.Length - 2; i >= 0; i--) {
             statements.RemoveAt(window.Consumed[i]);
         }
+        editor.ReplaceAll(block, statements, block.Terminator);
     }
 
     // ------------------------------------------------------------------

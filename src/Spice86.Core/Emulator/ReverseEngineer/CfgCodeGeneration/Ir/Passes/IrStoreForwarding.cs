@@ -29,15 +29,15 @@ using System.Linq;
 /// </summary>
 internal static class IrStoreForwarding {
     /// <summary>Forwards provably equal stores into their readers, block by block.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
-        IrMemoryAliasAnalysis alias = new(ssa);
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         foreach (IrBlock block in method.Blocks) {
-            ForwardBlock(block, method, ssa, alias);
+            ForwardBlock(block, method, ssa, editor, new IrMemoryAliasAnalysis(ssa));
         }
     }
 
     private static void ForwardBlock(IrBlock block, IrMethod method, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+        IrEditor editor, IrMemoryAliasAnalysis alias) {
         for (int s = 0; s < block.Statements.Count; s++) {
             if (block.Statements[s].Node is not BinaryOperationNode {
                     BinaryOperation: BinaryOperation.ASSIGN,
@@ -54,7 +54,7 @@ internal static class IrStoreForwarding {
                         != IrInstructionShape.None) {
                     continue;
                 }
-                while (TryForward(block, s, l, target, storeAccess, storedEffects, ssa, alias)) {
+                while (TryForward(block, s, l, target, storedEffects, ssa, editor, alias)) {
                     // Rescan until no more reads of the stored value fold in.
                 }
             }
@@ -65,9 +65,12 @@ internal static class IrStoreForwarding {
     /// statement at <paramref name="l"/> it is proved equal to; returns whether a read was
     /// replaced so the caller can rescan the rewritten statement.</summary>
     private static bool TryForward(IrBlock block, int s, int l, ValueNode target,
-        IrMemoryAccess storeAccess, IrEffects storedEffects, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+        IrEffects storedEffects, IrSsa ssa,
+        IrEditor editor, IrMemoryAliasAnalysis alias) {
         IrStatement reader = block.Statements[l];
+        if (alias.Writes(block, s) is not [IrMemoryAccess storeAccess]) {
+            return false;
+        }
         foreach (ValueNode pointer in ReadPointersOf(reader)) {
             IrMemoryAccess read = alias.OfPointer(pointer, reader);
             IrAliasRelation relation = alias.Relation(storeAccess, read);
@@ -91,8 +94,7 @@ internal static class IrStoreForwarding {
                 continue;
             }
             IrStatement replacement = IrStatement.Create(candidate, reader.Origin);
-            ssa.Replace(reader, replacement);
-            block.Statements[l] = replacement;
+            editor.Replace(block, l, replacement);
             return true;
         }
         return false;

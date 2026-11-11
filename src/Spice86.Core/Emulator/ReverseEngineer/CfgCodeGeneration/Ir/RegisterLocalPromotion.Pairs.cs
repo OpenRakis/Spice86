@@ -163,7 +163,7 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>Whether only markers sit between the two definitions: they are the first and
     /// second halves of one definition site.</summary>
     private static bool EffectivelyAdjacent(Definition first, Definition second) {
-        List<IrStatement> statements = first.Block.Statements;
+        IReadOnlyList<IrStatement> statements = first.Block.Statements;
         for (int i = first.Index + 1; i < second.Index; i++) {
             if (!IrInstructionIdioms.IsMarker(statements[i])) {
                 return false;
@@ -217,7 +217,7 @@ internal static partial class RegisterLocalPromotion {
         if (name is null) {
             return null;
         }
-        List<IrStatement> statements = definition.Block.Statements;
+        IReadOnlyList<IrStatement> statements = definition.Block.Statements;
         int index = low ? definition.Index - 1 : definition.Index - 2;
         if (index < 0) {
             return null;

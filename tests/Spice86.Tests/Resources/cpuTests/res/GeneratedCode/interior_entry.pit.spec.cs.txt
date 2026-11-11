@@ -135,6 +135,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, DS. Outputs: EAX, BX, flags, DF. Changes: EAX, BX, flags, DF.</summary>
     public virtual Action unknown_F000_0300_F0300() {
         ushort ax1 = 0;
+        byte al;
         CheckExternalEvents(biosSegment, 0x0300);
         // F000:0300 mov word ptr DS:[0x040E],SS
         DsGlobals.Word040E = SS;
@@ -164,9 +165,9 @@ public partial class CfgGeneratedOverrides {
         // F000:032D and AL,AH
         // F000:032F or AL,BL
         // F000:0331 xor AL,1
-        AL = (byte)((AL & AH | BL) ^ 1);
+        al = (byte)((AL & AH | BL) ^ 1);
         // F000:0333 or byte ptr DS:[0x040D],AL
-        DsGlobals.Byte040D |= AL;
+        DsGlobals.Byte040D |= al;
         // F000:0337 inc byte ptr DS:[0x040C]
         DsGlobals.Byte040C += 1;
         // F000:033B mov AL,0xFF

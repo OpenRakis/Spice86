@@ -122,12 +122,10 @@ public partial class CfgGeneratedOverrides {
         // F000:000B mov word ptr DS:[0x0080],0
         Segment2000Globals.Word0080 = 0;
         // F000:0011 mov BX,word ptr DS:[0x0080]
-        BX = 0;
         // F000:0015 mov AX,0xF000
         // F000:0018 mov ES,AX
         ES = 0xF000;
         // F000:001A mov SI,BX
-        SI = 0;
         // F000:001C shl SI,1
         SI = 0;
         // F000:001E cmp SI,6
@@ -145,12 +143,10 @@ public partial class CfgGeneratedOverrides {
         // F000:0028 mov word ptr DS:[0x0080],1
         Segment2000Globals.Word0080 = 1;
         // F000:002E mov BX,word ptr DS:[0x0080]
-        BX = 1;
         // F000:0032 mov AX,0xF000
         // F000:0035 mov ES,AX
         ES = 0xF000;
         // F000:0037 mov SI,BX
-        SI = 1;
         // F000:0039 shl SI,1
         SI = 2;
         // F000:003B cmp SI,6
@@ -168,12 +164,10 @@ public partial class CfgGeneratedOverrides {
         // F000:0045 mov word ptr DS:[0x0080],2
         Segment2000Globals.Word0080 = 2;
         // F000:004B mov BX,word ptr DS:[0x0080]
-        BX = 2;
         // F000:004F mov AX,0xF000
         // F000:0052 mov ES,AX
         ES = 0xF000;
         // F000:0054 mov SI,BX
-        SI = 2;
         // F000:0056 shl SI,1
         SI = 4;
         // F000:0058 cmp SI,6
@@ -191,12 +185,10 @@ public partial class CfgGeneratedOverrides {
         // F000:0062 mov word ptr DS:[0x0080],3
         Segment2000Globals.Word0080 = 3;
         // F000:0068 mov BX,word ptr DS:[0x0080]
-        BX = 3;
         // F000:006C mov AX,0xF000
         // F000:006F mov ES,AX
         ES = 0xF000;
         // F000:0071 mov SI,BX
-        SI = 3;
         // F000:0073 shl SI,1
         SI = 6;
         // F000:0075 cmp SI,6
@@ -220,7 +212,6 @@ public partial class CfgGeneratedOverrides {
         // F000:008C mov ES,AX
         ES = 0xF000;
         // F000:008E mov SI,BX
-        SI = 2;
         // F000:0090 shl SI,1
         SI = 4;
         // F000:0092 cmp SI,4
@@ -243,7 +234,6 @@ public partial class CfgGeneratedOverrides {
             // F000:00AE mov ES,AX
             ES = 0xF000;
             // F000:00B0 mov SI,BX
-            SI = 3;
             // F000:00B2 shl SI,1
             SI = 6;
             // F000:00B4 cmp SI,4
@@ -266,7 +256,6 @@ public partial class CfgGeneratedOverrides {
                 // F000:00D0 mov ES,AX
                 ES = 0xF000;
                 // F000:00D2 mov SI,BX
-                SI = 4;
                 // F000:00D4 shl SI,1
                 SI = 8;
                 // F000:00D6 cmp SI,4
@@ -335,12 +324,10 @@ public partial class CfgGeneratedOverrides {
         // F000:010D mov word ptr DS:[0x0080],1
         Segment2000Globals.Word0080 = 1;
         // F000:0113 mov BX,word ptr DS:[0x0080]
-        BX = 1;
         // F000:0117 mov AX,0xF000
         // F000:011A mov ES,AX
         ES = 0xF000;
         // F000:011C mov SI,BX
-        SI = 1;
         // F000:011E shl SI,1
         SI = 2;
         // F000:0120 cmp SI,4
@@ -358,13 +345,11 @@ public partial class CfgGeneratedOverrides {
         // F000:012A mov word ptr DS:[0x0080],5
         Segment2000Globals.Word0080 = 5;
         // F000:0130 mov BX,word ptr DS:[0x0080]
-        BX = 5;
         // F000:0134 mov AX,0xF000
         AX = 0xF000;
         // F000:0137 mov ES,AX
         ES = 0xF000;
         // F000:0139 mov SI,BX
-        SI = 5;
         // F000:013B shl SI,1
         SI = 0x000A;
         // F000:013D cmp SI,8

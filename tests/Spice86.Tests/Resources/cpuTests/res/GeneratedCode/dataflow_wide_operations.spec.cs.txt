@@ -77,7 +77,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
+    /// <summary>Inputs: BP. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort ax1 = 0;
         ushort bx;
@@ -129,6 +129,7 @@ public partial class CfgGeneratedOverrides {
             cx = UInt16[CS, (ushort)(SI + 6)];
             // F000:0036 and AX,BX
             // F000:0038 inc BP
+            BP++;
             // F000:0039 and DX,CX
             uint dxAx_0036 = ((uint)UInt16[CS, SI] | (uint)UInt16[CS, (ushort)(SI + 2)] << 16) & ((uint)bx | (uint)cx << 16);
             ax = (ushort)dxAx_0036;

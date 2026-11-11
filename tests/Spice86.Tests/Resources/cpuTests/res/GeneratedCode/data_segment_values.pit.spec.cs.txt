@@ -483,13 +483,11 @@ public partial class CfgGeneratedOverrides {
         // F000:00A7 mov word ptr ES:[0x0060],0x1111
         Segment2000Globals.Word0060 = 0x1111;
         // F000:00AE mov AX,word ptr DS:[0x0060]
-        AX = 0x1111;
         // F000:00B1 mov word ptr DS:[0x0040],AX
         Segment2000Globals.Word0040 = 0x1111;
         // F000:00B4 mov AX,DS
-        ax = DS;
+        AX = DS;
         // F000:00B6 mov ES,AX
-        ES = ax;
         // F000:00B8 mov AX,0x2001
         // F000:00BB mov DS,AX
         // F000:00BD mov AX,word ptr ES:[0x0060]

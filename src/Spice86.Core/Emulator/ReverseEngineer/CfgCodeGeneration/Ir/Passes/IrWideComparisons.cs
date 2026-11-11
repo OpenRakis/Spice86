@@ -34,7 +34,8 @@ using System.Linq;
 internal static class IrWideComparisons {
     /// <summary>Folds the wide comparisons of <paramref name="method"/>'s branches; returns the
     /// number of rewritten roots. The caller rebuilds the SSA and webs when it is not zero.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
+    public static int Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         Dictionary<IrBlock, List<(IrBlock Block, IrEdge Edge)>> predecessors =
             method.PredecessorEdges();
         HashSet<ICfgNode> pinned = IrInstructionIdioms.PinnedOriginsOf(method);
@@ -78,26 +79,17 @@ internal static class IrWideComparisons {
             }
         }
         foreach ((IrBlock block, IrBranch terminator) in branchEdits) {
-            if (ssa.HasSite(block.Terminator)) {
-                ssa.ReplaceTerminator(block.Terminator, terminator);
-            }
-            block.Terminator = terminator;
+            editor.SetTerminator(block, terminator);
         }
         foreach ((IrBlock block, int index, IrStatement replacement) in replacedStatements) {
-            IrStatement old = block.Statements[index];
-            block.Statements[index] = replacement;
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+            editor.Replace(block, index, replacement);
         }
-        foreach ((IrBlock block, int index) in removedStatements) {
-            IrStatement old = block.Statements[index];
-            block.Statements.RemoveAt(index);
-            if (ssa.HasSite(old)) {
-                ssa.Remove(old);
-            }
+        foreach ((IrBlock block, int index) in removedStatements.OrderByDescending(edit => edit.Index)) {
+            editor.Remove(block, index);
         }
-        method.Blocks.RemoveAll(removedBlocks.Contains);
+        if (method.Blocks.RemoveAll(removedBlocks.Contains) != 0) {
+            editor.Ssa.MarkStale("wide comparisons removed test blocks");
+        }
         return branchEdits.Count;
     }
 

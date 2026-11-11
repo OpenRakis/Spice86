@@ -768,7 +768,7 @@ internal static partial class RegisterLocalPromotion {
         if (site.Statement is not { } owner) {
             return site.Block.Statements.Count;
         }
-        return site.Block.Statements.FindIndex(candidate => ReferenceEquals(candidate, owner));
+        return site.Block.IndexOfStatement(owner);
     }
 
     /// <summary>The statement or terminator a use sits at; uses sharing a site are one use.</summary>
@@ -946,7 +946,7 @@ internal static partial class RegisterLocalPromotion {
             if (entry.Node.Equals(block.EntryOrigin)) {
                 continue;
             }
-            int position = block.Statements.FindIndex(statement => statement.Origin.Equals(entry.Node));
+            int position = block.IndexOfStatement(statement => statement.Origin.Equals(entry.Node));
             if (position < 0) {
                 position = block.Statements.Count;
             }

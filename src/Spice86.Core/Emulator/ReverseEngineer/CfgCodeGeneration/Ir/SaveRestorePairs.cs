@@ -295,7 +295,7 @@ internal static class SaveRestorePairs {
     /// <paramref name="method"/>.</summary>
     private static (IrBlock, int) SiteOf(IrMethod method, IrStatement statement) {
         foreach (IrBlock block in method.Blocks) {
-            int index = block.Statements.IndexOf(statement);
+            int index = block.IndexOfStatement(statement);
             if (index >= 0) {
                 return (block, index);
             }

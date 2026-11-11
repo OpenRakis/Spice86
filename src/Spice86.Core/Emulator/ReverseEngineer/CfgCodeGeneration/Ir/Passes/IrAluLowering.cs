@@ -29,7 +29,8 @@ internal static class IrAluLowering {
         new Dictionary<string, ConstantNode>();
 
     /// <summary>Rewrites the first body statement of every rewritable instruction.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         List<(IrBlock Block, int Index, IReadOnlyList<IVisitableAstNode> Nodes, ICfgNode Origin)> edits = [];
         foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in IrOrigins.ByOrigin(method)) {
             if (!IrOrigins.Rewritable(statements, origin)
@@ -46,19 +47,10 @@ internal static class IrAluLowering {
         }
         foreach ((IrBlock block, int index, IReadOnlyList<IVisitableAstNode> nodes, ICfgNode origin)
             in edits.OrderByDescending(edit => edit.Index)) {
-            IrStatement old = block.Statements[index];
-            block.Statements.RemoveAt(index);
             IrStatement[] replacements = nodes
                 .Select(node => IrStatement.Create(IrConstantFolder.Fold(node, EmptyConstants), origin))
                 .ToArray();
-            for (int i = replacements.Length - 1; i >= 0; i--) {
-                block.Statements.Insert(index, replacements[i]);
-            }
-            if (replacements.Length == 0) {
-                ssa.Remove(old);
-            } else {
-                ssa.Replace(old, replacements);
-            }
+            editor.Replace(block, index, replacements);
         }
     }
 

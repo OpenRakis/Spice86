@@ -160,6 +160,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BP, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_00A0_F00A0() {
+        ushort ax;
         ushort dx;
         CheckExternalEvents(biosSegment, 0x00A0);
         // F000:00A0 add BP,2
@@ -177,11 +178,11 @@ public partial class CfgGeneratedOverrides {
         // F000:00B5 mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:00BA div AX
-        (AX, dx) = Div16(divisor: 0xF110, dividend: 0x25C9F110);
+        (ax, dx) = Div16(divisor: 0xF110, dividend: 0x25C9F110);
         // F000:00BC add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00BF mov word ptr DS:[0x001E],AX
-        DsGlobals.Word001E = AX;
+        DsGlobals.Word001E = ax;
         // F000:00C2 mov word ptr DS:[0x0020],DX
         DsGlobals.Word0020 = dx;
         // F000:00C6 pushf
@@ -360,15 +361,15 @@ public partial class CfgGeneratedOverrides {
         // F000:01AF mov word ptr SS:[BP],2
         SsUInt16[BP] = 2;
         // F000:01B4 idiv CX
-        (AX, DX) = IDiv16(divisor: 1, dividend: -1);
+        (ax, dx) = IDiv16(divisor: 1, dividend: -1);
         // F000:01B6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01B9 mov word ptr DS:[0x004C],AX
-        DsGlobals.Word004C = AX;
+        DsGlobals.Word004C = ax;
         // F000:01BC mov word ptr DS:[0x004E],CX
         DsGlobals.Word004E = 1;
         // F000:01C0 mov word ptr DS:[0x0050],DX
-        DsGlobals.Word0050 = DX;
+        DsGlobals.Word0050 = dx;
         // F000:01C4 pushf
         Stack.Push16(FlagRegister16);
         // F000:01C5 mov DX,0xFFFF
@@ -706,7 +707,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, DI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, EDI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_1000_F1000() {
         ushort ax;
         ushort di;
@@ -758,7 +759,7 @@ public partial class CfgGeneratedOverrides {
         // F000:001B mov word ptr SS:[BP],2
         SsUInt16[0x00D0] = 2;
         // F000:0020 div BX
-        (AX, DX) = Div16(divisor: 5, dividend: 0x00000014);
+        (ax, dx) = Div16(divisor: 5, dividend: 0x00000014);
         // F000:0022 add BP,2
         BP = 0x00D2;
         CarryFlag = false;
@@ -768,11 +769,11 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         // F000:0025 mov word ptr DS:[0x0080],AX
-        DsGlobals.Word0080 = AX;
+        DsGlobals.Word0080 = ax;
         // F000:0028 mov word ptr DS:[0x0082],BX
         DsGlobals.Word0082 = 5;
         // F000:002C mov word ptr DS:[4],DX
-        DsGlobals.Word0004 = DX;
+        DsGlobals.Word0004 = dx;
         // F000:0030 pushf
         Stack.Push16(FlagRegister16);
         // F000:0031 mov DX,0xA320
@@ -782,7 +783,7 @@ public partial class CfgGeneratedOverrides {
         // F000:003D mov word ptr SS:[BP],4
         SsUInt16[0x00D2] = 4;
         // F000:0042 div word ptr DS:[6]
-        (ax, dx) = Div16(divisor: DsGlobals.Word0006, dividend: 0xA320C3DAu);
+        (AX, DX) = Div16(divisor: DsGlobals.Word0006, dividend: 0xA320C3DAu);
         // F000:0046 add BP,2
         BP = 0x00D4;
         CarryFlag = false;
@@ -792,9 +793,9 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         // F000:0049 mov word ptr DS:[8],AX
-        DsGlobals.Word0008 = ax;
+        DsGlobals.Word0008 = AX;
         // F000:004C mov word ptr DS:[0x000A],DX
-        DsGlobals.Word000A = dx;
+        DsGlobals.Word000A = DX;
         // F000:0050 pushf
         Stack.Push16(FlagRegister16);
         // F000:0051 mov DX,0xFFFF

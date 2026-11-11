@@ -14,6 +14,13 @@ using System.Linq;
 /// everything. Blocks the dominator tree does not reach are renamed each as a root starting from
 /// method entry versions.
 /// </summary>
+/// <remarks>
+/// Statements and terminators enter and leave the site tables only through <see cref="IrEditor"/>:
+/// exact local edits add uses derived from the site's effects and reuse or extend the definition
+/// versions; anything the editor cannot keep exact marks the SSA stale (<see cref="IsStale"/>) and
+/// every query then throws until the pipeline rebuilds it. Liveness can go stale separately
+/// (<see cref="IsLivenessStale"/>) and is recovered by <see cref="RecomputeLiveness"/>.
+/// </remarks>
 internal sealed class IrSsa {
     private const int ValueCount = (int)IrSsaValue.Count;
     private const int NoVersion = -1;
@@ -29,6 +36,10 @@ internal sealed class IrSsa {
     private readonly HashSet<int> _liveJoinVersionIds = [];
     private readonly Dictionary<object, (IrSsaValue Value, int Version)[]> _usesBySite = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, (IrSsaValue Value, int Version)[]> _definitionsBySite = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<int, object> _definitionSiteByVersion = new();
+
+    private string? _staleReason;
+    private string? _livenessStaleReason;
 
     private IrSsa() {
     }
@@ -54,217 +65,116 @@ internal sealed class IrSsa {
         return ssa;
     }
 
+    /// <summary>Whether an edit marked this SSA stale: every query throws the recorded reason.</summary>
+    internal bool IsStale => _staleReason is not null;
+
+    /// <summary>Whether an edit made the liveness tables unreliable: the liveness queries throw the
+    /// recorded reason until <see cref="RecomputeLiveness"/> runs.</summary>
+    internal bool IsLivenessStale => _livenessStaleReason is not null;
+
+    /// <summary>Marks every query of this SSA stale. Called by <see cref="IrEditor"/> only.</summary>
+    internal void MarkStale(string reason) => _staleReason ??= reason;
+
+    /// <summary>Marks the liveness tables stale. Called by <see cref="IrEditor"/> only.</summary>
+    internal void MarkLivenessStale(string reason) => _livenessStaleReason ??= reason;
+
+    /// <summary>Rebuilds the live join versions and the live use lists from the current use records.</summary>
+    internal void RecomputeLiveness() {
+        ThrowIfStale();
+        _liveJoinVersionIds.Clear();
+        _liveUsesByVersionId.Clear();
+        _livenessStaleReason = null;
+        ComputeLiveJoinVersions();
+        ComputeLiveUses();
+    }
+
+    private void ThrowIfStale() {
+        if (_staleReason is not null) {
+            throw new InvalidOperationException($"The SSA is stale: {_staleReason}");
+        }
+    }
+
+    private void ThrowIfLivenessStale() {
+        ThrowIfStale();
+        if (_livenessStaleReason is not null) {
+            throw new InvalidOperationException($"The SSA liveness is stale: {_livenessStaleReason}");
+        }
+    }
+
     /// <summary>How many versions exist (ids run from 0 to one less).</summary>
-    public int VersionCount => _infos.Count;
+    public int VersionCount {
+        get {
+            ThrowIfStale();
+            return _infos.Count;
+        }
+    }
 
     /// <summary>Every phi of every block.</summary>
-    public IReadOnlyList<IrSsaPhi> Phis => _phis;
+    public IReadOnlyList<IrSsaPhi> Phis {
+        get {
+            ThrowIfStale();
+            return _phis;
+        }
+    }
 
     /// <summary>What <paramref name="version"/> is.</summary>
-    public IrSsaVersionInfo Info(int version) => _infos[version];
+    public IrSsaVersionInfo Info(int version) {
+        ThrowIfStale();
+        return _infos[version];
+    }
 
     /// <summary>The version <paramref name="statement"/> uses of <paramref name="value"/>, or -1 when it does not use the value.</summary>
-    public int VersionUsed(IrStatement statement, IrSsaValue value) =>
-        _usesBySite.TryGetValue(statement, out (IrSsaValue Value, int Version)[]? uses)
+    public int VersionUsed(IrStatement statement, IrSsaValue value) {
+        ThrowIfStale();
+        return _usesBySite.TryGetValue(statement, out (IrSsaValue Value, int Version)[]? uses)
             ? VersionOf(uses, value)
             : NoVersion;
+    }
 
     /// <summary>The values <paramref name="statement"/> defines, with their new versions.</summary>
-    public IReadOnlyList<(IrSsaValue Value, int Version)> Definitions(IrStatement statement) =>
-        _definitionsBySite.TryGetValue(statement, out (IrSsaValue Value, int Version)[]? definitions)
+    public IReadOnlyList<(IrSsaValue Value, int Version)> Definitions(IrStatement statement) {
+        ThrowIfStale();
+        return _definitionsBySite.TryGetValue(statement, out (IrSsaValue Value, int Version)[]? definitions)
             ? definitions
             : [];
+    }
 
-    /// <summary>The statement whose definitions include <paramref name="version"/>, or
-    /// <c>null</c> when the site is not a still-present statement (terminator, phi, method entry
-    /// or a statement a pass removed). Statement indices in <see cref="IrSsaVersionInfo"/> go stale
-    /// when a pass edits the list, so the site is found by the definitions table, not by position.
-    /// </summary>
+    /// <summary>The statement that defines <paramref name="version"/>, or <c>null</c> when its site is
+    /// not a still-present statement (terminator, phi, method entry or a dropped definition).</summary>
     internal IrStatement? DefiningStatement(int version) {
+        ThrowIfStale();
         if (version < 0) {
             return null;
         }
-        IrSsaVersionInfo info = _infos[version];
-        foreach (IrStatement statement in info.Block.Statements) {
-            foreach ((IrSsaValue defined, int definedVersion) in Definitions(statement)) {
-                if (defined == info.Value && definedVersion == version) {
-                    return statement;
-                }
-            }
-        }
-        return null;
+        return _definitionSiteByVersion.GetValueOrDefault(version) as IrStatement;
     }
-
-    /// <summary>Whether a site of this SSA still defines <paramref name="version"/> of
-    /// <paramref name="value"/>: <see cref="Remove"/> and <see cref="Replace(IrStatement, IrStatement)"/>
-    /// can leave a version recorded as the previous link of a partial definition while no position
-    /// defines it anymore.</summary>
-    internal bool HasDefinitionSite(IrSsaValue value, int version) =>
-        _definitionsBySite.Values.Any(definitions =>
-            definitions.Any(definition => definition.Value == value && definition.Version == version));
 
     /// <summary>The version <paramref name="terminator"/> uses of <paramref name="value"/>, or -1 when it does not use the value.</summary>
-    internal int VersionUsed(IrTerminator terminator, IrSsaValue value) =>
-        _usesBySite.TryGetValue(terminator, out (IrSsaValue Value, int Version)[]? uses)
+    internal int VersionUsed(IrTerminator terminator, IrSsaValue value) {
+        ThrowIfStale();
+        return _usesBySite.TryGetValue(terminator, out (IrSsaValue Value, int Version)[]? uses)
             ? VersionOf(uses, value)
             : NoVersion;
-
-    /// <summary>
-    /// Distributes the site of <paramref name="old"/> over <paramref name="replacements"/>: every
-    /// replacement gets the recorded uses, and each old definition goes to the last replacement
-    /// whose writes include the defined value - or to the last replacement when none writes it.
-    /// Replacements that get no definition keep an empty site: version queries skip it, and a
-    /// replacement left site-less would be read as a statement a pass inserted without a rebuild.
-    /// Every machine value the replacements define must already be defined by
-    /// <paramref name="old"/>; otherwise the statement cannot be rebuilt under this SSA and the call
-    /// throws <see cref="InvalidOperationException"/>.
-    /// </summary>
-    public void Replace(IrStatement old, IrStatement replacement) => Replace(old, [replacement]);
-
-    /// <inheritdoc cref="Replace(IrStatement, IrStatement)"/>
-    public void Replace(IrStatement old, IReadOnlyList<IrStatement> replacements) {
-        if (!_definitionsBySite.Remove(old, out (IrSsaValue Value, int Version)[]? definitions)
-            || !_usesBySite.Remove(old, out (IrSsaValue Value, int Version)[]? uses)) {
-            throw new InvalidOperationException(
-                $"The replaced statement is not a site of this SSA: {old.Node.GetType().Name} at {old.Origin.Address}");
-        }
-        uint oldDefined = 0;
-        foreach ((IrSsaValue value, int _) in definitions) {
-            oldDefined |= 1u << (int)value;
-        }
-        uint[] replacementWrites = new uint[replacements.Count];
-        uint newDefined = 0;
-        for (int i = 0; i < replacements.Count; i++) {
-            (uint full, uint partial) = IrSsaValues.WriteBits(replacements[i].Effects);
-            replacementWrites[i] = full | partial;
-            newDefined |= full | partial;
-        }
-        if ((newDefined & ~oldDefined) != 0) {
-            throw new InvalidOperationException(
-                $"The replacement defines a machine value the replaced statement did not: {old.Node.GetType().Name} at {old.Origin.Address}");
-        }
-        if (replacements.Count == 0) {
-            return;
-        }
-        List<(IrSsaValue Value, int Version)>[] definitionsByReplacement =
-            new List<(IrSsaValue Value, int Version)>[replacements.Count];
-        for (int i = 0; i < replacements.Count; i++) {
-            definitionsByReplacement[i] = [];
-        }
-        foreach ((IrSsaValue value, int version) in definitions) {
-            int target = replacements.Count - 1;
-            for (int i = replacements.Count - 1; i >= 0; i--) {
-                if ((replacementWrites[i] & (1u << (int)value)) != 0) {
-                    target = i;
-                    break;
-                }
-            }
-            definitionsByReplacement[target].Add((value, version));
-        }
-        // Every replacement gets the recorded uses: a replacement left site-less would be read as a
-        // statement a pass inserted without an SSA rebuild.
-        for (int i = 0; i < replacements.Count; i++) {
-            _definitionsBySite[replacements[i]] = [.. definitionsByReplacement[i]];
-            _usesBySite[replacements[i]] = uses;
-        }
-        // The use records keep pointing at the statement that reads their version: the first
-        // replacement whose effects read it, else the first replacement.
-        foreach ((IrSsaValue value, int version) in uses) {
-            CpuValues mask = IrSsaValues.MaskOf(value);
-            IrStatement target = replacements[0];
-            foreach (IrStatement candidate in replacements) {
-                if ((candidate.Effects.Reads & mask) != CpuValues.None) {
-                    target = candidate;
-                    break;
-                }
-            }
-            UpdateUseRecords(version, old, target);
-        }
-    }
-
-    /// <summary>Whether <paramref name="statement"/> was present when this SSA was built, so a pass
-    /// knows it can call <see cref="Replace(IrStatement, IrStatement)"/> or <see cref="Remove"/> on it.</summary>
-    public bool HasSite(IrStatement statement) => _usesBySite.ContainsKey(statement);
-
-    /// <summary>Whether <paramref name="terminator"/> is a site of this SSA: a terminator that reads or
-    /// writes no machine value has none, and <see cref="ReplaceTerminator"/> would throw on it.</summary>
-    internal bool HasSite(IrTerminator terminator) => _usesBySite.ContainsKey(terminator)
-        && _definitionsBySite.ContainsKey(terminator);
-
-    /// <summary>
-    /// Drops the site of <paramref name="statement"/>: its definitions stay recorded as versions but
-    /// no position maps to them. Only allowed on a statement whose definitions have no live use.
-    /// </summary>
-    public void Remove(IrStatement statement) {
-        _definitionsBySite.Remove(statement);
-        _usesBySite.Remove(statement);
-    }
-
-    /// <summary>Points the use records of <paramref name="version"/> that referenced
-    /// <paramref name="old"/> at <paramref name="replacement"/> instead. The recorded and the live
-    /// use lists can be the same list instance, so each list is touched once.</summary>
-    private void UpdateUseRecords(int version, object old, object replacement) {
-        HashSet<List<IrSsaUse>> seen = new(ReferenceEqualityComparer.Instance);
-        List<IrSsaUse>?[] lists =
-            [_usesByVersionId.GetValueOrDefault(version),
-                _liveUsesByVersionId.GetValueOrDefault(version)];
-        foreach (List<IrSsaUse>? list in lists) {
-            if (list is null || !seen.Add(list)) {
-                continue;
-            }
-            for (int i = 0; i < list.Count; i++) {
-                IrSsaUse use = list[i];
-                if (replacement is IrStatement statement
-                        && ReferenceEquals(use.Statement, old)) {
-                    list[i] = use with { Statement = statement };
-                } else if (replacement is IrTerminator terminator
-                        && ReferenceEquals(use.Terminator, old)) {
-                    list[i] = use with { Terminator = terminator };
-                }
-            }
-        }
-    }
-
-    /// <summary>Moves the site of a replaced terminator: <paramref name="replacement"/> gets the
-    /// recorded uses and definitions. Every machine value it defines must already be defined by
-    /// <paramref name="old"/>; otherwise the terminator cannot be rebuilt under this SSA and the
-    /// call throws like <see cref="Replace(IrStatement, IrStatement)"/>.</summary>
-    internal void ReplaceTerminator(IrTerminator old, IrTerminator replacement) {
-        if (!_definitionsBySite.Remove(old, out (IrSsaValue Value, int Version)[]? definitions)
-            || !_usesBySite.Remove(old, out (IrSsaValue Value, int Version)[]? uses)) {
-            throw new InvalidOperationException("The replaced terminator is not a site of this SSA.");
-        }
-        uint oldDefined = 0;
-        foreach ((IrSsaValue value, int _) in definitions) {
-            oldDefined |= 1u << (int)value;
-        }
-        (uint full, uint partial) = IrSsaValues.WriteBits(replacement.Effects);
-        if (((full | partial) & ~oldDefined) != 0) {
-            throw new InvalidOperationException(
-                $"The replacement terminator defines a machine value the replaced terminator did not: {old}");
-        }
-        _definitionsBySite[replacement] = definitions;
-        _usesBySite[replacement] = uses;
-        foreach ((IrSsaValue _, int version) in uses) {
-            UpdateUseRecords(version, old, replacement);
-        }
     }
 
     /// <summary>The values <paramref name="terminator"/> defines, with their new versions.</summary>
-    internal IReadOnlyList<(IrSsaValue Value, int Version)> Definitions(IrTerminator terminator) =>
-        _definitionsBySite.TryGetValue(terminator, out (IrSsaValue Value, int Version)[]? definitions)
+    internal IReadOnlyList<(IrSsaValue Value, int Version)> Definitions(IrTerminator terminator) {
+        ThrowIfStale();
+        return _definitionsBySite.TryGetValue(terminator, out (IrSsaValue Value, int Version)[]? definitions)
             ? definitions
             : [];
+    }
 
     /// <summary>
     /// The version of <paramref name="value"/> before the statement at <paramref name="statementIndex"/>
     /// in <paramref name="block"/> runs: the nearest earlier definition in the block, else the block
     /// entry version (a phi result counts as the entry version). An index of
-    /// <c>block.Statements.Count</c> means before the terminator. A statement a pass inserted after
-    /// this SSA was built has no site here: it is skipped when it defines no machine value, and a
-    /// defining statement without a site is a pass bug and throws.
+    /// <c>block.Statements.Count</c> means before the terminator. A statement a pass inserted without
+    /// the editor has no site here: it is skipped when it defines no machine value, and a defining
+    /// statement without a site is a pass bug and throws.
     /// </summary>
     public int VersionBefore(IrBlock block, int statementIndex, IrSsaValue value) {
+        ThrowIfStale();
         for (int index = statementIndex - 1; index >= 0; index--) {
             IrStatement statement = block.Statements[index];
             if (!_definitionsBySite.TryGetValue(statement, out (IrSsaValue Value, int Version)[]? definitions)) {
@@ -285,6 +195,7 @@ internal sealed class IrSsa {
     /// terminator.
     /// </summary>
     public int VersionAfter(IrBlock block, int statementIndex, IrSsaValue value) {
+        ThrowIfStale();
         object site = statementIndex == block.Statements.Count ? block.Terminator : block.Statements[statementIndex];
         if (!_definitionsBySite.TryGetValue(site, out (IrSsaValue Value, int Version)[]? siteDefinitions)) {
             RequireNonDefining(site);
@@ -294,9 +205,8 @@ internal sealed class IrSsa {
         return defined != NoVersion ? defined : VersionBefore(block, statementIndex, value);
     }
 
-    /// <summary>A site this SSA never recorded must not define a machine value: a pass rebuilt or
-    /// inserted it without <see cref="Replace(IrStatement, IrStatement)"/>, so its writes would be
-    /// invisible to version queries.</summary>
+    /// <summary>A site this SSA never recorded must not define a machine value: a pass inserted it
+    /// without the editor, so its writes would be invisible to version queries.</summary>
     private static void RequireNonDefining(object site) {
         IrEffects effects = site switch {
             IrStatement statement => statement.Effects,
@@ -311,16 +221,20 @@ internal sealed class IrSsa {
     }
 
     /// <summary>The statements, terminators and phis reading <paramref name="version"/>.</summary>
-    public IReadOnlyList<IrSsaUse> Uses(int version) =>
-        _usesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses) ? uses : [];
+    public IReadOnlyList<IrSsaUse> Uses(int version) {
+        ThrowIfStale();
+        return _usesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses) ? uses : [];
+    }
 
     /// <summary>
     /// The uses of <paramref name="version"/> minus the dead ones: a phi is dead when its result
     /// reaches no statement or terminator, and the use a partial definition makes of the previous
     /// version is dead when the new version reaches no use.
     /// </summary>
-    public IReadOnlyList<IrSsaUse> LiveUses(int version) =>
-        _liveUsesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses) ? uses : [];
+    public IReadOnlyList<IrSsaUse> LiveUses(int version) {
+        ThrowIfLivenessStale();
+        return _liveUsesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses) ? uses : [];
+    }
 
     /// <summary>Whether <paramref name="version"/> reaches a statement or terminator.</summary>
     public bool IsLive(int version) => LiveUses(version).Count != 0;
@@ -335,6 +249,7 @@ internal sealed class IrSsa {
     /// skipped; any other live use refuses.
     /// </summary>
     internal bool IsUsedOnlyAt(int version, CpuValues bytes, IrTerminator allowed) {
+        ThrowIfLivenessStale();
         List<(int Version, CpuValues Bytes)> worklist = [(version, bytes)];
         HashSet<(int Version, CpuValues Bytes)> visited = [];
         while (worklist.Count > 0) {
@@ -380,9 +295,34 @@ internal sealed class IrSsa {
         return true;
     }
 
+    /// <summary>The recorded uses of every site, for the fresh-build comparison.</summary>
+    internal IReadOnlyDictionary<object, (IrSsaValue Value, int Version)[]> UsesBySite {
+        get {
+            ThrowIfStale();
+            return _usesBySite;
+        }
+    }
+
+    /// <summary>The recorded definitions of every site, for the fresh-build comparison.</summary>
+    internal IReadOnlyDictionary<object, (IrSsaValue Value, int Version)[]> DefinitionsBySite {
+        get {
+            ThrowIfStale();
+            return _definitionsBySite;
+        }
+    }
+
+    /// <summary>The statement or terminator that defines <paramref name="version"/>, or null for a phi,
+    /// a method entry version or a dropped definition.</summary>
+    internal object? DefinitionSite(int version) {
+        ThrowIfStale();
+        return _definitionSiteByVersion.GetValueOrDefault(version);
+    }
+
     /// <summary>The phis at the top of <paramref name="block"/>.</summary>
-    public IReadOnlyList<IrSsaPhi> PhisOf(IrBlock block) =>
-        _phisByBlock.TryGetValue(block, out List<IrSsaPhi>? phis) ? phis : [];
+    public IReadOnlyList<IrSsaPhi> PhisOf(IrBlock block) {
+        ThrowIfStale();
+        return _phisByBlock.TryGetValue(block, out List<IrSsaPhi>? phis) ? phis : [];
+    }
 
     /// <summary>
     /// Whether every value covered by <paramref name="reads"/> and <paramref name="tokenReads"/> has the
@@ -404,6 +344,155 @@ internal sealed class IrSsa {
         return true;
     }
 
+    /// <summary>The position of <paramref name="site"/> in <paramref name="block"/>: the index of a
+    /// statement or the statement count for the terminator; -1 for a site no longer in the block.</summary>
+    internal static int PositionIn(IrBlock block, object site) {
+        if (site is IrTerminator) {
+            return block.Statements.Count;
+        }
+        if (site is IrStatement statement) {
+            return block.IndexOfStatement(statement);
+        }
+        return -1;
+    }
+
+    /// <summary>The values the site of <paramref name="effects"/> uses: its reads, its token reads,
+    /// everything when it may fault, and the values it partially writes. Shared by the builder's
+    /// renaming and the editor's derived uses.</summary>
+    internal static uint UsedBits(IrEffects effects) {
+        uint reads = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads);
+        if (effects.MayFault) {
+            reads |= IrSsaValues.All;
+        }
+        (uint _, uint partial) = IrSsaValues.WriteBits(effects);
+        return reads | partial;
+    }
+
+    /// <summary>The values the site of <paramref name="effects"/> reads unconditionally: its reads and
+    /// token reads, or everything when it may fault. Excludes the partial writes, which read the
+    /// previous version only while their new version is live.</summary>
+    internal static uint ReadBits(IrEffects effects) {
+        uint reads = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads);
+        if (effects.MayFault) {
+            reads |= IrSsaValues.All;
+        }
+        return reads;
+    }
+
+    /// <summary>
+    /// Drops <paramref name="site"/> from the site tables: its use records leave both use lists and its
+    /// definition-site entries are removed, but the versions it defined keep their records. Returns the
+    /// definitions the site held. Deleting a live use of a join version marks the liveness stale.
+    /// Called by <see cref="IrEditor"/> only.
+    /// </summary>
+    internal (IrSsaValue Value, int Version)[] RemoveSiteRecords(object site) {
+        _usesBySite.Remove(site, out (IrSsaValue Value, int Version)[]? uses);
+        _definitionsBySite.Remove(site, out (IrSsaValue Value, int Version)[]? definitions);
+        if (uses is not null) {
+            foreach ((IrSsaValue _, int version) in uses) {
+                RemoveUseRecords(version, site);
+            }
+        }
+        if (definitions is not null) {
+            foreach ((IrSsaValue _, int version) in definitions) {
+                _definitionSiteByVersion.Remove(version);
+            }
+        }
+        MarkLivenessStale($"site {SiteName(site)} was edited");
+        return definitions ?? [];
+    }
+
+    /// <summary>Deletes the use records <paramref name="site"/> held on <paramref name="version"/> from
+    /// the recorded and the live use lists.</summary>
+    private void RemoveUseRecords(int version, object site) {
+        if (_usesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses)) {
+            uses.RemoveAll(use => References(use, site));
+        }
+        if (_liveUsesByVersionId.TryGetValue(version, out List<IrSsaUse>? live)) {
+            int removed = live.RemoveAll(use => References(use, site));
+            if (removed != 0
+                && _infos[version].Kind is IrSsaDefinitionKind.Phi or IrSsaDefinitionKind.PartialDefinition) {
+                MarkLivenessStale($"a live use of {_infos[version].Value} was removed from a join version");
+            }
+        }
+    }
+
+    private static bool References(IrSsaUse use, object site) =>
+        ReferenceEquals(use.Statement, site) || ReferenceEquals(use.Terminator, site);
+
+    /// <summary>
+    /// Records <paramref name="site"/> at position <paramref name="index"/> of <paramref name="block"/>
+    /// with <paramref name="uses"/> derived from its effects and <paramref name="definitions"/> assigned
+    /// by the edit rules. Each use is appended to the recorded uses of its version; a live use is also
+    /// appended to the live list, except that feeding a join version outside the live join set marks the
+    /// liveness stale. Called by <see cref="IrEditor"/> only.
+    /// </summary>
+    internal void RecordSite(IrBlock block, object site,
+        List<(IrSsaValue Value, int Version, int ConditionalNewVersion)> uses,
+        List<(IrSsaValue Value, int Version)> definitions) {
+        _usesBySite[site] = uses
+            .Select(use => (use.Value, use.Version))
+            .ToArray();
+        _definitionsBySite[site] = [.. definitions];
+        foreach ((IrSsaValue _, int version) in definitions) {
+            _definitionSiteByVersion[version] = site;
+        }
+        IrStatement? statement = site as IrStatement;
+        IrTerminator? terminator = site as IrTerminator;
+        foreach ((IrSsaValue _, int version, int conditionalNewVersion) in uses) {
+            IrSsaUse use = new(block, statement, terminator, null, null) {
+                ConditionalNewVersion = conditionalNewVersion
+            };
+            AddUse(version, use);
+            AddLiveUse(version, use);
+        }
+        MarkLivenessStale($"site {SiteName(site)} was edited");
+    }
+
+    private static string SiteName(object site) => site switch {
+        IrStatement statement => statement.Node.GetType().Name,
+        IrTerminator terminator => terminator.GetType().Name,
+        _ => site.GetType().Name
+    };
+
+    /// <summary>Appends <paramref name="use"/> to the live list of <paramref name="version"/> when the
+    /// use is live: an unconditional use is live, a conditional one lives only while the new join
+    /// version does. A live use of a plain definition or method entry version always joins the live
+    /// list; one of a join version does so only while the join is live, else the liveness is stale.</summary>
+    private void AddLiveUse(int version, IrSsaUse use) {
+        bool join = _infos[version].Kind is IrSsaDefinitionKind.Phi or IrSsaDefinitionKind.PartialDefinition;
+        if (join && !_liveJoinVersionIds.Contains(version)) {
+            MarkLivenessStale($"a use was added to the dead join version {_infos[version].Value}");
+            return;
+        }
+        bool live = use.ConditionalNewVersion < 0
+            || _liveJoinVersionIds.Contains(use.ConditionalNewVersion);
+        if (live) {
+            if (!_liveUsesByVersionId.TryGetValue(version, out List<IrSsaUse>? liveUses)) {
+                liveUses = [];
+                _liveUsesByVersionId[version] = liveUses;
+            }
+            liveUses.Add(use);
+        }
+    }
+
+    /// <summary>A fresh full-definition version of <paramref name="value"/> at
+    /// <paramref name="site"/> in <paramref name="block"/>. Called by <see cref="IrEditor"/> only.</summary>
+    internal int NewDefinition(IrBlock block, IrSsaValue value, object site) {
+        int version = NewVersion(value, IrSsaDefinitionKind.Definition, block, -1);
+        _definitionSiteByVersion[version] = site;
+        return version;
+    }
+
+    /// <summary>Drops the definition record of <paramref name="version"/>: the version keeps its info
+    /// but no site defines it anymore. Called by <see cref="IrEditor"/> only.</summary>
+    internal void DropDefinition(int version) => _definitionSiteByVersion.Remove(version);
+
+    /// <summary>Whether <paramref name="version"/> still has a recorded use. Called by
+    /// <see cref="IrEditor"/> only.</summary>
+    internal bool HasAnyUse(int version) =>
+        _usesByVersionId.TryGetValue(version, out List<IrSsaUse>? uses) && uses.Count != 0;
+
     private static int VersionOf((IrSsaValue Value, int Version)[] pairs, IrSsaValue value) {
         foreach ((IrSsaValue Value, int Version) pair in pairs) {
             if (pair.Value == value) {
@@ -422,7 +511,7 @@ internal sealed class IrSsa {
     private int[] NewMethodEntryVersions(IrBlock block) {
         int[] versions = new int[ValueCount];
         for (int v = 0; v < ValueCount; v++) {
-            versions[v] = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.MethodEntry, block, -1, -1);
+            versions[v] = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.MethodEntry, block, -1);
         }
         return versions;
     }
@@ -560,7 +649,7 @@ internal sealed class IrSsa {
         int[] current) {
         if (plannedPhis.TryGetValue(block, out List<PlannedPhi>? plans)) {
             foreach (PlannedPhi plan in plans) {
-                plan.Result = NewVersion(plan.Value, IrSsaDefinitionKind.Phi, block, -1, -1);
+                plan.Result = NewVersion(plan.Value, IrSsaDefinitionKind.Phi, block, -1);
                 current[(int)plan.Value] = plan.Result;
             }
         }
@@ -586,10 +675,7 @@ internal sealed class IrSsa {
 
     private void RenamePosition(IrEffects effects, IrBlock block, int index, int[] current,
         IrStatement? statement, IrTerminator? terminator) {
-        uint reads = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads);
-        if (effects.MayFault) {
-            reads |= IrSsaValues.All;
-        }
+        uint reads = ReadBits(effects);
         (uint full, uint partial) = IrSsaValues.WriteBits(effects);
         uint used = reads | partial;
         List<(IrSsaValue Value, int Version)> uses = [];
@@ -605,7 +691,7 @@ internal sealed class IrSsa {
         List<(IrSsaValue Value, int Version)> definitions = [];
         for (int v = 0; v < ValueCount; v++) {
             if ((full & (1u << v)) != 0) {
-                current[v] = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.Definition, block, index, -1);
+                current[v] = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.Definition, block, -1);
                 definitions.Add(((IrSsaValue)v, current[v]));
             }
         }
@@ -614,11 +700,11 @@ internal sealed class IrSsa {
                 continue;
             }
             int previous = current[v];
-            int fresh = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.PartialDefinition, block, index, previous);
+            int fresh = NewVersion((IrSsaValue)v, IrSsaDefinitionKind.PartialDefinition, block, previous);
             current[v] = fresh;
             definitions.Add(((IrSsaValue)v, fresh));
             bool conditional = (reads & (1u << v)) == 0;
-            AddUse(previous, new IrSsaUse(block, index, statement, terminator, null, null) {
+            AddUse(previous, new IrSsaUse(block, statement, terminator, null, null) {
                 ConditionalNewVersion = conditional ? fresh : -1
             });
         }
@@ -626,9 +712,12 @@ internal sealed class IrSsa {
             if ((partial & (1u << (int)usedValue)) != 0) {
                 continue;
             }
-            AddUse(usedVersion, new IrSsaUse(block, index, statement, terminator, null, null));
+            AddUse(usedVersion, new IrSsaUse(block, statement, terminator, null, null));
         }
         _definitionsBySite[site] = [.. definitions];
+        foreach ((IrSsaValue _, int definedVersion) in definitions) {
+            _definitionSiteByVersion[definedVersion] = site;
+        }
     }
 
     private void MaterializePhis(Dictionary<IrBlock, List<PlannedPhi>> plannedPhis) {
@@ -646,11 +735,11 @@ internal sealed class IrSsa {
                 _phis.Add(phi);
                 _phiByResultId[phi.Result] = phi;
                 foreach ((IrBlock predecessor, int version) in operands) {
-                    AddUse(version, new IrSsaUse(block, -1, null, null, phi, predecessor));
+                    AddUse(version, new IrSsaUse(block, null, null, phi, predecessor));
                 }
                 if (plan.HasEntryOperand && entryVersions is not null) {
                     AddUse(entryVersions[(int)plan.Value],
-                        new IrSsaUse(block, -1, null, null, phi, block));
+                        new IrSsaUse(block, null, null, phi, block));
                 }
             }
             phis.Sort((first, second) => first.Value.CompareTo(second.Value));
@@ -690,16 +779,13 @@ internal sealed class IrSsa {
             if (!_usesByVersionId.TryGetValue(id, out List<IrSsaUse>? uses)) {
                 continue;
             }
-            List<IrSsaUse>? live = null;
-            for (int i = 0; i < uses.Count; i++) {
-                if (IsLiveUse(uses[i])) {
-                    live?.Add(uses[i]);
-                } else if (live is null) {
-                    live = new List<IrSsaUse>(uses.Count);
-                    live.AddRange(uses.Take(i));
+            List<IrSsaUse> live = new(uses.Count);
+            foreach (IrSsaUse use in uses) {
+                if (IsLiveUse(use)) {
+                    live.Add(use);
                 }
             }
-            _liveUsesByVersionId[id] = live ?? uses;
+            _liveUsesByVersionId[id] = live;
         }
     }
 
@@ -718,10 +804,9 @@ internal sealed class IrSsa {
         return previous >= 0 ? [previous] : [];
     }
 
-    private int NewVersion(IrSsaValue value, IrSsaDefinitionKind kind, IrBlock block, int statementIndex,
-        int previous) {
+    private int NewVersion(IrSsaValue value, IrSsaDefinitionKind kind, IrBlock block, int previous) {
         int version = _infos.Count;
-        _infos.Add(new IrSsaVersionInfo(value, kind, block, statementIndex, previous));
+        _infos.Add(new IrSsaVersionInfo(value, kind, block, previous));
         return version;
     }
 

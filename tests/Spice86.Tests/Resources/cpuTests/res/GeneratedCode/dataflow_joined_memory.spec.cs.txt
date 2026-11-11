@@ -224,7 +224,6 @@ public partial class CfgGeneratedOverrides {
             // F000:00C0 mov word ptr DS:[0x0802],0xBEEF
             Segment2000Globals.Word0802 = 0xBEEF;
             // F000:00C6 mov DX,word ptr DS:[0x0802]
-            DX = 0xBEEF;
             // F000:00CA mov word ptr DS:[BX+0x14],AX
             UInt16[DS, (ushort)(BX + 0x14)] = ax;
             // F000:00CD mov word ptr DS:[BX+0x16],DX

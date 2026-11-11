@@ -71,7 +71,6 @@ public partial class CfgGeneratedOverrides {
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor DX,DX
-        DX = 0;
         // F000:000A mov EAX,1
         // F000:0010 cmp EAX,0x80000000
         // F000:0016 jl short 0x001B

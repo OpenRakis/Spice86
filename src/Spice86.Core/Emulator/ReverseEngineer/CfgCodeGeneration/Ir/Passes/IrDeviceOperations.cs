@@ -87,42 +87,31 @@ internal static class IrDeviceOperations {
     /// only combines when every port it touches is owned by the device the operation calls (DO-7).
     /// Returns the number of combined sequences. A nonzero count means the caller must rebuild the
     /// SSA and its webs, as every rewriting pass does.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa, IReadOnlyDictionary<ushort, Type> ioPorts) {
-        int combined = 0;
-        foreach (IrBlock block in method.Blocks) {
-            combined += ApplyBlock(block, ssa, ioPorts);
-        }
-        return combined;
-    }
-
-    private static int ApplyBlock(IrBlock block, IrSsa ssa,
+    public static int Apply(IrMethod method, IrEditor editor,
         IReadOnlyDictionary<ushort, Type> ioPorts) {
-        List<Access> accesses = AccessesOf(block);
-        if (accesses.Count == 0) {
-            return 0;
-        }
-        List<Rewrite> rewrites = [];
-        int m = 0;
-        while (m < accesses.Count) {
-            if (TryMatch(block, accesses, m, ssa, ioPorts, out Rewrite? rewrite)) {
-                rewrites.Add(rewrite);
-                m += rewrite.RemovedIndices.Count + 1;
-            } else {
-                m++;
+        IrSsa ssa = editor.Ssa;
+        List<(IrBlock Block, Rewrite Rewrite)> rewrites = [];
+        foreach (IrBlock block in method.Blocks) {
+            List<Access> accesses = AccessesOf(block);
+            int m = 0;
+            while (m < accesses.Count) {
+                if (TryMatch(block, accesses, m, ssa, ioPorts, out Rewrite? rewrite)) {
+                    rewrites.Add((block, rewrite));
+                    m += rewrite.RemovedIndices.Count + 1;
+                } else {
+                    m++;
+                }
             }
         }
-        foreach (Rewrite rewrite in rewrites) {
-            IrStatement old = block.Statements[rewrite.LastIndex];
-            IrStatement replacement = IrStatement.Create(rewrite.Node, old.Origin);
-            block.Statements[rewrite.LastIndex] = replacement;
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+        foreach ((IrBlock block, Rewrite rewrite) in rewrites) {
+            IrStatement replacement = IrStatement.Create(rewrite.Node,
+                block.Statements[rewrite.LastIndex].Origin);
+            editor.Replace(block, rewrite.LastIndex, replacement);
         }
-        foreach (int index in rewrites.SelectMany(rewrite => rewrite.RemovedIndices)
-                .OrderByDescending(index => index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+        foreach ((IrBlock block, int index) in rewrites
+                .SelectMany(pair => pair.Rewrite.RemovedIndices.Select(index => (pair.Block, index)))
+                .OrderByDescending(pair => pair.index)) {
+            editor.Remove(block, index);
         }
         return rewrites.Count;
     }
