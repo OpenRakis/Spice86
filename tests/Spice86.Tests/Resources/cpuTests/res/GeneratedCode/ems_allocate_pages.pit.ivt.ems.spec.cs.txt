@@ -158,7 +158,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:010C cmp DX,0
             Alu16.Sub(dx1, 0);
             // 016D:010F jbe short 0x0115
-            if (dx1 <= 0) {
+            if (dx1 == 0) {
                 goto L_0115;
             }
             // 016D:0111 mov AL,0

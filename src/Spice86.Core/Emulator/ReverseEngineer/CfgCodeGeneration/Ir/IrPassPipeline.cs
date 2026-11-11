@@ -23,8 +23,10 @@ internal enum IrPass {
     DeadRegisterWrites,
     ExpressionPropagation,
     ConstantChainFold,
+    WideComparisons,
     DeviceOperations,
     DoublePrecision,
+    JoinedMemory,
     SpeculativeGuardMerge
 }
 
@@ -211,12 +213,58 @@ internal static class IrPassPipeline {
         if (last == IrPass.DeadRegisterWrites) {
             return Finish();
         }
+        int combinedValues = timer.Measure("value sequences",
+            () => IrInstructionIdioms.ApplyValueSequences(method, ssa2));
+        if (combinedValues != 0) {
+            // Combined statements changed the SSA's reads and writes: rebuild it and its webs for
+            // the passes, the census and the verify that follow.
+            ssa2 = timer.Measure("ssa build value sequences", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
+        int combinedProducts = timer.Measure("products",
+            () => IrDoublePrecision.ApplyProducts(method, ssa2));
+        if (combinedProducts != 0) {
+            // Combined statements changed the SSA's reads and writes: rebuild it and its webs for
+            // the passes, the census and the verify that follow.
+            ssa2 = timer.Measure("ssa build products", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
         timer.Measure(IrPass.ExpressionPropagation.ToString(), () => IrExpressionPropagation.Apply(method, ssa2));
         if (last == IrPass.ExpressionPropagation) {
             return Finish();
         }
-        timer.Measure(IrPass.ConstantChainFold.ToString(), () => IrConstantFolder.FoldConstantChains(method, ssa2));
+        bool removedChainStatements = timer.Measure(IrPass.ConstantChainFold.ToString(),
+            () => IrConstantFolder.FoldConstantChains(method, ssa2));
+        if (removedChainStatements) {
+            // A removed self-assignment can leave a live version without a definition: rebuild
+            // the SSA and its webs before the next pass reads them.
+            ssa2 = timer.Measure("ssa build constant chains", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
         if (last == IrPass.ConstantChainFold) {
+            return Finish();
+        }
+        int foldedComparisons = timer.Measure(IrPass.WideComparisons.ToString(),
+            () => IrWideComparisons.Apply(method, ssa2));
+        if (foldedComparisons != 0) {
+            // Rewritten branches and removed test blocks made the SSA and its webs stale: rebuild
+            // both for the passes, the census and the verify that follow.
+            ssa2 = timer.Measure("ssa build wide comparisons", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
+        if (last == IrPass.WideComparisons) {
             return Finish();
         }
         int combinedSequences = timer.Measure(IrPass.DeviceOperations.ToString(),
@@ -234,7 +282,7 @@ internal static class IrPassPipeline {
             return Finish();
         }
         int rewrittenPairs = timer.Measure(IrPass.DoublePrecision.ToString(),
-            () => IrDoublePrecision.Apply(method));
+            () => IrDoublePrecision.Apply(method, ssa2));
         if (rewrittenPairs != 0) {
             // Rewritten statements made the SSA and its webs stale: rebuild both for the pass,
             // the census and the verify that follow.
@@ -245,6 +293,20 @@ internal static class IrPassPipeline {
             }
         }
         if (last == IrPass.DoublePrecision) {
+            return Finish();
+        }
+        int joinedAccesses = timer.Measure(IrPass.JoinedMemory.ToString(),
+            () => IrJoinedMemory.Apply(method, ssa2));
+        if (joinedAccesses != 0) {
+            // Joined statements changed the SSA's reads and writes: rebuild it and its webs for
+            // the pass, the census and the verify that follow.
+            ssa2 = timer.Measure("ssa build joined memory", () => BuildSsa(method));
+            ssa = ssa2;
+            if (buildWebs) {
+                webs = timer.Measure("ssa webs", () => IrSsaWebs.Build(ssa2));
+            }
+        }
+        if (last == IrPass.JoinedMemory) {
             return Finish();
         }
         timer.Measure(IrPass.SpeculativeGuardMerge.ToString(), () => IrSpeculativeGuardMerge.Apply(method, ssa2));

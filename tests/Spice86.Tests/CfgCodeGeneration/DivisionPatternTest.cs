@@ -83,8 +83,12 @@ public class DivisionPatternTest {
             .Should().BeTrue("the matcher must return the parsed dividend expression without rebuilding it");
         BinaryOperationNode quotientAssignment = (BinaryOperationNode)block.Statements[3];
         BinaryOperationNode remainderAssignment = (BinaryOperationNode)block.Statements[4];
-        ReferenceEquals(matched.Low, quotientAssignment.Left).Should().BeTrue();
-        ReferenceEquals(matched.High, remainderAssignment.Left).Should().BeTrue();
+        matched.Low.Should().Be(quotientAssignment.Left);
+        matched.High.Should().Be(remainderAssignment.Left);
+        ReferenceEquals(matched.Low, quotientAssignment.Left).Should().BeFalse(
+            "the half targets are fresh nodes so a shared read instance can never print as a local");
+        ReferenceEquals(matched.High, remainderAssignment.Left).Should().BeFalse(
+            "the half targets are fresh nodes so a shared read instance can never print as a local");
     }
 
     [Fact]

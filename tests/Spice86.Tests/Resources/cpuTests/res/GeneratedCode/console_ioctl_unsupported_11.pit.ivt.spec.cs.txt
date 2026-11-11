@@ -154,11 +154,11 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort di;
+        ushort ax;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x44
-        AH = 0x44;
         // 016D:0102 mov AL,0x11
-        AL = 0x11;
+        AX = 0x4411;
         // 016D:0104 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         // 016D:0106 int 0x21
@@ -184,11 +184,10 @@ public partial class CfgGeneratedOverrides {
         SegmentB800Globals.Word0000 = AX;
         di = (ushort)(DirectionFlag ? -2 : 2);
         // 016D:0119 mov AL,DL
-        AL = DL;
         // 016D:011B mov AH,7
-        AH = 7;
+        ax = (ushort)(DL | 0x0700);
         // 016D:011D stos word ptr ES:[DI],AX
-        UInt16[ES, di] = AX;
+        UInt16[ES, di] = ax;
         DI = (ushort)(di + (ushort)(DirectionFlag ? -2 : 2));
         // 016D:011E mov AX,0x4C00
         AX = 0x4C00;

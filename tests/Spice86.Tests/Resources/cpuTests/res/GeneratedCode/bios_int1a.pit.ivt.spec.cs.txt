@@ -275,9 +275,8 @@ public partial class CfgGeneratedOverrides {
                             // 016D:017F mov AH,5
                             AH = 5;
                             // 016D:0181 mov CH,0x20
-                            CH = 0x20;
                             // 016D:0183 mov CL,0x24
-                            CL = 0x24;
+                            CX = 0x2024;
                             // 016D:0185 mov DH,0x11
                             DH = 0x11;
                             // 016D:0187 mov DL,0x14

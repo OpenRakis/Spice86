@@ -421,9 +421,8 @@ public partial class CfgGeneratedOverrides {
             // F000:405A mov AX,BP
             AX = BP;
             // F000:405C mov AH,AL
-            AH = AL;
             // F000:405E mov AL,2
-            AL = 2;
+            AX = (ushort)(2 | AL << 8);
             // F000:4060 out DX,AX
             Vga.WriteSequencerRegister((byte)AX, (byte)(AX >> 8));
             // F000:4061 xor DI,DI

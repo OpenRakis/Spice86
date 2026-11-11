@@ -251,9 +251,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:014C mov DX,0x040C
         DX = 0x040C;
         // 016D:014F mov AL,0
-        AL = 0;
         // 016D:0151 mov AH,0x3D
-        AH = 0x3D;
+        AX = 0x3D00;
         // 016D:0153 int 0x21
         InterruptCall(cs1, 0x0155, 0x21);
         // 016D:0155 jb short 0x015D
@@ -356,9 +355,8 @@ public partial class CfgGeneratedOverrides {
             // 016D:01D7 jmp short 0x01E0
         }
         // 016D:01E0 mov DH,0x55
-        DH = 0x55;
         // 016D:01E2 mov DL,0
-        DL = 0;
+        DX = 0x5500;
         // 016D:01E4 mov AH,0x36
         AH = 0x36;
         // 016D:01E6 int 0x21
@@ -413,9 +411,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0233 mov word ptr ES:[0x005A],AX
         EsGlobals.Word005A = AX;
         // 016D:0237 mov AH,0x35
-        AH = 0x35;
         // 016D:0239 mov AL,0x21
-        AL = 0x21;
+        AX = 0x3521;
         // 016D:023B int 0x21
         InterruptCall(cs1, 0x023D, 0x21);
         // 016D:023D mov AX,ES
@@ -431,9 +428,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:024D mov DX,0x03AF
         DX = 0x03AF;
         // 016D:0250 mov AH,0x25
-        AH = 0x25;
         // 016D:0252 mov AL,0x21
-        AL = 0x21;
+        AX = 0x2521;
         // 016D:0254 int 0x21
         InterruptCall(cs1, 0x0256, 0x21);
         // 016D:0256 mov AH,0x30
@@ -532,13 +528,12 @@ public partial class CfgGeneratedOverrides {
         // 016D:02F8 mov DX,word ptr CS:[0x0417]
         DX = CsGlobals.Word0417;
         // 016D:02FD mov AX,word ptr CS:[0x0419]
-        AX = CsGlobals.Word0419;
+        ax = CsGlobals.Word0419;
         // 016D:0301 mov DS,AX
-        DS = AX;
+        DS = ax;
         // 016D:0303 mov AH,0x25
-        AH = 0x25;
         // 016D:0305 mov AL,0x21
-        AL = 0x21;
+        AX = 0x2521;
         // 016D:0307 int 0x21
         InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
         // 016D:0309 push CS

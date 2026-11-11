@@ -318,6 +318,126 @@ public class CSharpExpressionPrinterFragmentTest {
         }
     }
 
+    /// <summary>A range pattern must keep the source's byte truncation: <c>(byte)(x + 1)</c>
+    /// wraps, so <c>x + 1 is >= 1 and &lt;= 5</c> compared at int width would be wrong. The
+    /// printed condition is compiled and evaluated for every byte input against the explicit
+    /// conditional.</summary>
+    [Fact]
+    public void RangePatternPreservesSourceTruncation() {
+        RegisterNode al = new(DataType.UINT8, (int)RegisterIndex.AxIndex);
+        ValueNode sum = new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.PLUS,
+            new ConstantNode(DataType.UINT8, 1));
+        BinaryOperationNode range = new(DataType.BOOL,
+            new BinaryOperationNode(DataType.BOOL, sum,
+                BinaryOperation.GREATER_THAN_OR_EQUAL, new ConstantNode(DataType.UINT8, 1)),
+            BinaryOperation.LOGICAL_AND,
+            new BinaryOperationNode(DataType.BOOL, sum,
+                BinaryOperation.LESS_THAN_OR_EQUAL, new ConstantNode(DataType.UINT8, 5)));
+
+        string emitted = _printer.Print(range).Text;
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(
+            [$"public static class Ranges {{ public static bool Holds(byte AL) => {emitted}; }}"]);
+        compilation.EmitResult.Success.Should().BeTrue(
+            $"range '{emitted}' must compile: "
+            + string.Join("; ", compilation.EmitResult.Diagnostics));
+
+        using MemoryStream peStream = compilation.PeStream;
+        CollectibleAssemblyLoadContext context = new();
+        try {
+            peStream.Position = 0;
+            MethodInfo method = context.LoadFromStream(peStream).GetType("Ranges")
+                ?.GetMethod("Holds")
+                ?? throw new InvalidOperationException("Compiled Ranges.Holds missing.");
+            for (int x = 0; x < 256; x++) {
+                bool expected = (byte)(x + 1) >= 1 && (byte)(x + 1) <= 5;
+                method.Invoke(null, [(byte)x]).Should().Be(expected,
+                    $"range '{emitted}' for x={x}");
+            }
+        } finally {
+            context.Unload();
+        }
+    }
+
+    [Fact]
+    public void WideNonconstantPackDropsTheOuterUintCast() {
+        // Arrange: (uint)((uint)AX | (uint)DX << 16): the OR evaluates at uint already.
+        RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        RegisterNode dx = new(DataType.UINT16, (int)RegisterIndex.DxIndex);
+        ValueNode low = new TypeConversionNode(DataType.UINT32, ax);
+        ValueNode high = new BinaryOperationNode(DataType.UINT32,
+            new TypeConversionNode(DataType.UINT32, dx), BinaryOperation.LEFT_SHIFT,
+            new ConstantNode(DataType.INT32, 16));
+        TypeConversionNode pack = new(DataType.UINT32,
+            new BinaryOperationNode(DataType.UINT32, low, BinaryOperation.BITWISE_OR, high));
+
+        CSharpFragment fragment = _printer.Print(pack);
+
+        fragment.Text.Should().Be("(uint)AX | (uint)DX << 16");
+    }
+
+    [Fact]
+    public void WidePackOrConstantDropsTheOuterUintCast() {
+        // Arrange: (uint)((uint)DX << 16 | 0x0200): the literal promotes to uint, so
+        // the OR still evaluates at uint and the outer cast is redundant.
+        RegisterNode dx = new(DataType.UINT16, (int)RegisterIndex.DxIndex);
+        ValueNode high = new BinaryOperationNode(DataType.UINT32,
+            new TypeConversionNode(DataType.UINT32, dx), BinaryOperation.LEFT_SHIFT,
+            new ConstantNode(DataType.INT32, 16));
+        TypeConversionNode pack = new(DataType.UINT32,
+            new BinaryOperationNode(DataType.UINT32, high, BinaryOperation.BITWISE_OR,
+                new ConstantNode(DataType.UINT32, 0x0200)));
+
+        CSharpFragment fragment = _printer.Print(pack);
+
+        fragment.Text.Should().Be("(uint)DX << 16 | 0x00000200");
+    }
+
+    [Fact]
+    public void ConstantOrWidePackDropsTheOuterUintCast() {
+        // Arrange: the commuted form keeps the same proof.
+        RegisterNode dx = new(DataType.UINT16, (int)RegisterIndex.DxIndex);
+        ValueNode high = new BinaryOperationNode(DataType.UINT32,
+            new TypeConversionNode(DataType.UINT32, dx), BinaryOperation.LEFT_SHIFT,
+            new ConstantNode(DataType.INT32, 16));
+        TypeConversionNode pack = new(DataType.UINT32,
+            new BinaryOperationNode(DataType.UINT32,
+                new ConstantNode(DataType.UINT32, 0x0200), BinaryOperation.BITWISE_OR,
+                high));
+
+        CSharpFragment fragment = _printer.Print(pack);
+
+        fragment.Text.Should().Be("0x00000200 | (uint)DX << 16");
+    }
+
+    [Fact]
+    public void NarrowArithmeticKeepsTheRequiredCast() {
+        // Arrange: a word OR still promotes to int: the (ushort) wrap stays.
+        RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        RegisterNode bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);
+        TypeConversionNode narrow = new(DataType.UINT16,
+            new BinaryOperationNode(DataType.UINT16, ax, BinaryOperation.BITWISE_OR, bx));
+
+        CSharpFragment fragment = _printer.Print(narrow);
+
+        fragment.Text.Should().Be("(ushort)(AX | BX)");
+    }
+
+    [Fact]
+    public void AllConstantWidePackKeepsItsLiteralCast() {
+        // Arrange: constant halves print literals whose CLR type need not match the node type,
+        // so no result type is inferred and the cast stays.
+        TypeConversionNode pack = new(DataType.UINT32,
+            new BinaryOperationNode(DataType.UINT32,
+                new ConstantNode(DataType.UINT32, 1), BinaryOperation.BITWISE_OR,
+                new BinaryOperationNode(DataType.UINT32,
+                    new ConstantNode(DataType.UINT32, 2), BinaryOperation.LEFT_SHIFT,
+                    new ConstantNode(DataType.INT32, 16))));
+
+        CSharpFragment fragment = _printer.Print(pack);
+
+        fragment.Text.Should().Be("(uint)(1 | 2 << 16)");
+    }
+
     private CSharpFragment StackWord(ValueNode offset) {
         SegmentedPointerNode pointer = new(DataType.UINT16, new SegmentRegisterNode(2), null, offset);
         return _printer.Print(pointer);

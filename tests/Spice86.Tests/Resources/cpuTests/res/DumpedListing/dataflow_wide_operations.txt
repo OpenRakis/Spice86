@@ -1,0 +1,147 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov ES,AX
+F000:0007 mov SS,AX
+F000:0009 mov SP,0x1000
+F000:000C xor AX,AX
+F000:000E mov ES,AX
+F000:0010 mov word ptr ES:[0x0190],0x017D
+F000:0017 mov word ptr ES:[0x0192],CS
+F000:001C mov AX,0x2000
+F000:001F mov ES,AX
+F000:0021 cld
+F000:0022 xor DI,DI
+F000:0024 mov SI,0x0188
+F000:0027 mov AX,word ptr CS:[SI]
+F000:002A mov DX,word ptr CS:[SI+2]
+F000:002E mov BX,word ptr CS:[SI+4]
+F000:0032 mov CX,word ptr CS:[SI+6]
+F000:0036 and AX,BX
+F000:0038 inc BP
+F000:0039 and DX,CX
+F000:003B dec BP
+F000:003C mov word ptr DS:[DI],AX
+F000:003E mov word ptr DS:[DI+2],DX
+F000:0041 cmp DI,DI
+F000:0043 mov AX,word ptr CS:[SI]
+F000:0046 mov DX,word ptr CS:[SI+2]
+F000:004A mov BX,word ptr CS:[SI+4]
+F000:004E mov CX,word ptr CS:[SI+6]
+F000:0052 or AX,BX
+F000:0054 or DX,CX
+F000:0056 mov word ptr DS:[DI+4],AX
+F000:0059 mov word ptr DS:[DI+6],DX
+F000:005C cmp DI,DI
+F000:005E mov AX,word ptr CS:[SI]
+F000:0061 mov DX,word ptr CS:[SI+2]
+F000:0065 mov BX,word ptr CS:[SI+4]
+F000:0069 mov CX,word ptr CS:[SI+6]
+F000:006D xor AX,BX
+F000:006F xor DX,CX
+F000:0071 mov word ptr DS:[DI+8],AX
+F000:0074 mov word ptr DS:[DI+0x0A],DX
+F000:0077 cmp DI,DI
+F000:0079 mov AX,word ptr CS:[SI]
+F000:007C mov DX,word ptr CS:[SI+2]
+F000:0080 not AX
+F000:0082 not DX
+F000:0084 mov word ptr DS:[DI+0x0C],AX
+F000:0087 mov word ptr DS:[DI+0x0E],DX
+F000:008A cmp DI,DI
+F000:008C mov AX,word ptr CS:[SI]
+F000:008F mov DX,word ptr CS:[SI+2]
+F000:0093 sar DX,1
+F000:0095 rcr AX,1
+F000:0097 mov word ptr DS:[DI+0x10],AX
+F000:009A mov word ptr DS:[DI+0x12],DX
+F000:009D cmp DI,DI
+F000:009F mov AX,word ptr CS:[SI]
+F000:00A2 mov DX,word ptr CS:[SI+2]
+F000:00A6 sar DX,1
+F000:00A8 rcr AX,1
+F000:00AA pushf
+F000:00AB pop CX
+F000:00AC and CX,1
+F000:00AF mov byte ptr DS:[DI+0x24],CL
+F000:00B2 cmp DI,DI
+F000:00B4 mov AX,word ptr CS:[SI]
+F000:00B7 mov DX,word ptr CS:[SI+2]
+F000:00BB mov BX,word ptr CS:[SI+4]
+F000:00BF mov CX,word ptr CS:[SI+6]
+F000:00C3 push SI
+F000:00C4 push DI
+F000:00C5 mov SI,AX
+F000:00C7 mov DI,DX
+F000:00C9 mul BX
+F000:00CB mov BP,AX
+F000:00CD mov AX,SI
+F000:00CF imul AX,CX
+F000:00D2 add DX,AX
+F000:00D4 mov AX,DI
+F000:00D6 imul AX,BX
+F000:00D9 add DX,AX
+F000:00DB mov AX,BP
+F000:00DD pop DI
+F000:00DE pop SI
+F000:00DF mov word ptr DS:[DI+0x14],AX
+F000:00E2 mov word ptr DS:[DI+0x16],DX
+F000:00E5 cmp DI,DI
+F000:00E7 mov AX,word ptr CS:[SI]
+F000:00EA mov DX,word ptr CS:[SI+2]
+F000:00EE mov BX,AX
+F000:00F0 mov CX,DX
+F000:00F2 mov BP,3
+F000:00F5 add BX,1
+F000:00F8 adc CX,0
+F000:00FB dec BP
+F000:00FC jne short 0x00F5
+F000:00FE cmp DI,DI
+F000:0100 int 0x64
+F000:0102 mov word ptr DS:[DI+0x18],BX
+F000:0105 mov word ptr DS:[DI+0x1A],CX
+F000:0108 mov byte ptr DS:[DI+0x2E],BL
+F000:010B cmp DI,DI
+F000:010D mov AX,word ptr CS:[SI]
+F000:0110 mov DX,word ptr CS:[SI+2]
+F000:0114 mov CX,3
+F000:0117 shl AX,1
+F000:0119 rcl DX,1
+F000:011B loop 0x0117
+F000:011D mov word ptr DS:[DI+0x1C],AX
+F000:0120 mov word ptr DS:[DI+0x1E],DX
+F000:0123 cmp DI,DI
+F000:0125 mov AX,word ptr CS:[SI]
+F000:0128 mov DX,word ptr CS:[SI+2]
+F000:012C xor CX,CX
+F000:012E shl AX,1
+F000:0130 rcl DX,1
+F000:0132 loop 0x012E
+F000:0134 mov word ptr DS:[DI+0x20],AX
+F000:0137 mov word ptr DS:[DI+0x22],DX
+F000:013A cmp DI,DI
+F000:013C mov AX,word ptr CS:[SI]
+F000:013F mov DX,word ptr CS:[SI+2]
+F000:0143 mov BX,word ptr CS:[SI+4]
+F000:0147 mov CX,word ptr CS:[SI+6]
+F000:014B and AX,BX
+F000:014D mov word ptr DS:[DI+0x28],AX
+F000:0150 and DX,CX
+F000:0152 mov word ptr DS:[DI+0x2A],DX
+F000:0155 cmp DI,DI
+F000:0157 mov AX,word ptr CS:[SI]
+F000:015A mov DX,word ptr CS:[SI+2]
+F000:015E add AX,1
+F000:0161 not AX
+F000:0163 not DX
+F000:0165 mov word ptr DS:[DI+0x34],AX
+F000:0168 mov word ptr DS:[DI+0x36],DX
+F000:016B cmp DI,DI
+F000:016D add DI,0x0080
+F000:0171 add SI,8
+F000:0174 cmp DI,0x0200
+F000:0178 jb near 0x0027
+F000:017C hlt
+F000:017D mov word ptr DS:[DI+0x30],BX
+F000:0180 mov word ptr DS:[DI+0x32],CX
+F000:0183 iret
+F000:FFF0 jmp short 0

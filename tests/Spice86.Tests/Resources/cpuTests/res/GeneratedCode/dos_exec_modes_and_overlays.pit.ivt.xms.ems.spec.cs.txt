@@ -687,9 +687,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:02E0 mov AH,0x0E
         AH = 0x0E;
         // 016D:02E2 mov BH,0
-        BH = 0;
         // 016D:02E4 mov BL,7
-        BL = 7;
+        BX = 7;
         // 016D:02E6 int 0x10
         Video.WriteTextInTeletypeMode(AL, 7);
         // 016D:02E8 ret near
@@ -747,9 +746,8 @@ public partial class CfgGeneratedOverrides {
         // 0226:0002 mov AH,0x0E
         AH = 0x0E;
         // 0226:0004 mov BH,0
-        BH = 0;
         // 0226:0006 mov BL,7
-        BL = 7;
+        BX = 7;
         // 0226:0008 mov AL,0x4F
         // 0226:000A int 0x10
         Video.WriteTextInTeletypeMode(0x4F, 7);
@@ -973,13 +971,11 @@ public partial class CfgGeneratedOverrides {
                 throw FailAsUntested("Untested code variant at 01D6:0100");
             }
             // 01D6:0100 mov AH,0x0E
-            AH = 0x0E;
             // 01D6:0102 mov AL,0x4A
-            AL = 0x4A;
+            AX = 0x0E4A;
             // 01D6:0104 mov BH,0
-            BH = 0;
             // 01D6:0106 mov BL,7
-            BL = 7;
+            BX = 7;
             // 01D6:0108 int 0x10
             Video.WriteTextInTeletypeMode(0x4A, 7);
             // 01D6:010A mov AX,0x4C42

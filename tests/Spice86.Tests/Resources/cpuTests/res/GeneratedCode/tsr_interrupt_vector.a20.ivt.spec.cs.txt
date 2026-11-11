@@ -154,6 +154,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort ax1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov AX,0x1234
         AX = 0x1234;
@@ -162,16 +163,14 @@ public partial class CfgGeneratedOverrides {
         // 016E:0105 mov DX,0x5678
         DX = 0x5678;
         // 016E:0108 mov AH,0x25
-        AH = 0x25;
         // 016E:010A mov AL,0xF0
-        AL = 0xF0;
+        AX = 0x25F0;
         // 016E:010C int 0x21
         Dos.RecordCallerStack(SS, SP);
         Dos.SetInterruptVector(0xF0, DS, 0x5678);
         // 016E:010E mov AH,0x35
-        AH = 0x35;
         // 016E:0110 mov AL,0xF0
-        AL = 0xF0;
+        ax1 = 0x35F0;
         // 016E:0112 int 0x21
         Dos.RecordCallerStack(SS, SP);
         (BX, ES) = Dos.ReadInterruptVector(0xF0);
@@ -180,12 +179,13 @@ public partial class CfgGeneratedOverrides {
         // 016E:0118 jne short 0x0128
         if (BX == 0x5678) {
             // 016E:011A mov AX,ES
-            AX = ES;
+            ax1 = ES;
             // 016E:011C cmp AX,0x1234
-            Alu16.Sub(AX, 0x1234);
+            Alu16.Sub(ax1, 0x1234);
             // 016E:011F jne short 0x0128
-            if (AX == 0x1234) {
+            if (ax1 == 0x1234) {
                 // 016E:0121 mov AL,0
+                AX = ax1;
                 AL = 0;
                 // 016E:0123 mov AX,0x4C00
                 AX = 0x4C00;

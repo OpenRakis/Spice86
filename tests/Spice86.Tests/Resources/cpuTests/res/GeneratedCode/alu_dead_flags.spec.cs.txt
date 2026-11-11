@@ -65,6 +65,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort dx;
+        ushort ax;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -208,21 +209,21 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, (ushort)(BX + 0x1C)] = DX;
             // F000:00D1 cmp DI,DI
             // F000:00D3 mov AX,word ptr CS:[SI]
-            AX = UInt16[CS, SI];
+            ax = UInt16[CS, SI];
             // F000:00D6 mov CX,3
             // F000:00D9 mul CX
-            (AX, DX) = Mul16(AX, 3);
+            (AX, dx) = Mul16(ax, 3);
             // F000:00DB mov word ptr DS:[BX+0x1E],AX
             UInt16[DS, (ushort)(BX + 0x1E)] = AX;
             // F000:00DE mov word ptr DS:[BX+0x20],DX
-            UInt16[DS, (ushort)(BX + 0x20)] = DX;
+            UInt16[DS, (ushort)(BX + 0x20)] = dx;
             // F000:00E1 cmp DI,DI
             // F000:00E3 mov AX,word ptr CS:[SI]
-            AX = UInt16[CS, SI];
+            ax = UInt16[CS, SI];
             // F000:00E6 mov CX,0xFFFD
             CX = 0xFFFD;
             // F000:00E9 imul CX
-            (AX, DX) = IMul16((short)AX, (short)-3);
+            (AX, DX) = IMul16((short)ax, (short)-3);
             // F000:00EB mov word ptr DS:[BX+0x22],AX
             UInt16[DS, (ushort)(BX + 0x22)] = AX;
             // F000:00EE mov word ptr DS:[BX+0x24],DX
@@ -253,7 +254,7 @@ public partial class CfgGeneratedOverrides {
             // F000:011B mov EDX,dword ptr CS:[SI+6]
             // F000:0120 shr EDX,3
             // F000:0124 mov dword ptr DS:[BX+0x2C],EDX
-            UInt32[DS, (ushort)(BX + 0x2C)] = (uint)(UInt32[CS, (ushort)(SI + 6)] >> 3);
+            UInt32[DS, (ushort)(BX + 0x2C)] = UInt32[CS, (ushort)(SI + 6)] >> 3;
             // F000:0128 cmp DI,DI
             // F000:012A mov EDX,dword ptr CS:[SI+6]
             // F000:012F sar EDX,0x1F
@@ -262,14 +263,12 @@ public partial class CfgGeneratedOverrides {
             UInt32[DS, (ushort)(BX + 0x30)] = EDX;
             // F000:0137 cmp DI,DI
             // F000:0139 mov DX,word ptr CS:[SI]
-            DX = UInt16[CS, SI];
             // F000:013C stc
             // F000:013D clc
-            CarryFlag = false;
             // F000:013E adc DX,0
-            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
+            dx = UInt16[CS, SI];
             // F000:0141 mov word ptr DS:[BX+0x34],DX
-            UInt16[DS, (ushort)(BX + 0x34)] = DX;
+            UInt16[DS, (ushort)(BX + 0x34)] = dx;
             // F000:0144 cmp DI,DI
             // F000:0146 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
@@ -287,7 +286,7 @@ public partial class CfgGeneratedOverrides {
             DX = UInt16[CS, SI];
             // F000:0156 mov AH,1
             // F000:0158 sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
+            FlagRegister = FlagRegister & 0xFFFFFF00u | 1;
             // F000:0159 adc DX,0
             DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:015C mov word ptr DS:[BX+0x38],DX
@@ -295,15 +294,13 @@ public partial class CfgGeneratedOverrides {
             // F000:015F cmp DI,DI
             Alu16.Sub(DI, DI);
             // F000:0161 mov DX,word ptr CS:[SI]
-            DX = UInt16[CS, SI];
             // F000:0164 mov AH,1
             // F000:0166 sahf
             // F000:0167 clc
-            CarryFlag = false;
             // F000:0168 adc DX,0
-            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
+            dx = UInt16[CS, SI];
             // F000:016B mov word ptr DS:[BX+0x3A],DX
-            UInt16[DS, (ushort)(BX + 0x3A)] = DX;
+            UInt16[DS, (ushort)(BX + 0x3A)] = dx;
             // F000:016E cmp DI,DI
             // F000:0170 mov AX,word ptr CS:[SI+4]
             AX = UInt16[CS, (ushort)(SI + 4)];

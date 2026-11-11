@@ -84,7 +84,7 @@ public partial class CfgGeneratedOverrides {
         DX = Alu16.Xor(DX, DX);
         // F000:001F div BX
         try {
-            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: BX, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x001F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0022), unknown_F000_0022_F0022), new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0035), unknown_F000_0035_F0035)]);
@@ -159,9 +159,8 @@ public partial class CfgGeneratedOverrides {
         // F000:000A mov DS,AX
         DS = 0;
         // F000:000C mov word ptr DS:[0],0x0022
-        Segment0000Globals.Word0000 = 0x0022;
         // F000:0012 mov word ptr DS:[2],CS
-        Segment0000Globals.Word0002 = CS;
+        Segment0000Globals.Dword0000 = 0x00000022 | (uint)CS << 16;
         // F000:0016 xor SI,SI
         SI = 0;
         // F000:0018 xor BX,BX
@@ -209,7 +208,5 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
-
-    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+    public uint Dword0000 { get => _memory.UInt32[Segment, 0x0000]; set => _memory.UInt32[Segment, 0x0000] = value; }
 }

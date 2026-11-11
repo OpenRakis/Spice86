@@ -800,6 +800,33 @@ internal static class AsmFixtureCatalog {
                     (0x4A, 2, 0x2222), (0x4C, 2, 0x3333), (0x4E, 1, 0x11),
                     (0x50, 1, 0x11), (0x51, 1, 0x22), (0x52, 1, 0x44), (0x53, 1, 0x88),
                     (0x54, 2, 0x0055)));
+            case "dataflow_compiler_idioms":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    CompilerIdiomsRegion());
+            case "dataflow_arithmetic_idioms":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ArithmeticIdiomsRegion());
+            case "dataflow_joined_memory":
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    ConfigureMachine = machine => {
+                        machine.Memory.UInt32[0x2000, 0x0800] = 0x89ABCDEF;
+                        machine.Memory.UInt32[0x2000, 0x0804] = 0x01234567;
+                        machine.Memory.UInt16[0x2100, 0xFFFE] = 0xA55A;
+                        machine.Memory.UInt16[0x2100, 0x0000] = 0xCAFE;
+                    }
+                }, JoinedMemoryRegion());
+            case "dataflow_wide_conditions":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    WideConditionsRegion());
+            case "dataflow_wide_operations":
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    MaxCycles = 2000000,
+                    CpuModel = CpuModel.INTEL_80286,
+                    ConfigureMachine = machine =>
+                        machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286
+                }, WideOperationsRegion());
             case "dataflow_legality_traps":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
@@ -889,14 +916,19 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x48,
                     (0x40, 2, 0x0002), (0x42, 2, 0x0002), (0x44, 2, 0x0002), (0x46, 2, 0x0002)));
             case "register_locals":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x6E,
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x92,
                     (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 1, 0x34), (0x45, 2, 0x4445),
                     (0x47, 2, 0x6666), (0x49, 2, 0x0001), (0x4B, 1, 0x77), (0x4C, 2, 0x1111),
                     (0x4E, 2, 0x2222), (0x50, 2, 0x1234), (0x52, 2, 0x5555), (0x54, 1, 0x37),
                     (0x56, 2, 0x5555), (0x58, 2, 0x1111), (0x5A, 2, 0x4444), (0x5C, 2, 0x0001),
                     (0x5E, 2, 0x4444), (0x60, 2, 0x0000), (0x62, 1, 0x01), (0x63, 1, 0x01),
                     (0x64, 1, 0x00), (0x65, 1, 0x00), (0x66, 1, 0x00), (0x67, 1, 0x00),
-                    (0x68, 1, 0x01), (0x69, 1, 0x01), (0x6A, 2, 0xFFF8), (0x6C, 2, 0x7FF8)));
+                    (0x68, 1, 0x01), (0x69, 1, 0x01), (0x6A, 2, 0xFFF8), (0x6C, 2, 0x7FF8),
+                    (0x70, 2, 0x3333), (0x72, 2, 0x0000), (0x74, 2, 0x1233), (0x76, 1, 0x33),
+                    (0x78, 2, 0x0071), (0x7A, 2, 0x0002), (0x7C, 1, 0x71), (0x7E, 2, 0x0071),
+                    (0x80, 2, 0xFFD0), (0x82, 2, 0xFFFF), (0x84, 1, 0x01), (0x85, 1, 0x01),
+                    (0x86, 2, 0xFFF0), (0x88, 2, 0x0000), (0x8A, 1, 0x01), (0x8C, 2, 0x0000),
+                    (0x8E, 2, 0x0002), (0x90, 2, 0x3333)));
             case "register_locals_across":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0xFFFFFFF, EnablePit = true }, ResultRegion(0xB2,
                     (0x40, 2, 0x2222), (0x42, 2, 0x0060), (0x44, 2, 0x0006), (0x46, 2, 0x4444),
@@ -1177,6 +1209,172 @@ internal static class AsmFixtureCatalog {
         differences.Should().BeEmpty($"{binName}: every byte of the result region at 0x{ResultRegionAddress:X5} is the expected one");
     }
 
+    /// <summary>The four-pass result region of dataflow_compiler_idioms: pass p reads the input
+    /// pair (x, 5678h) and writes the same section outputs at offset 0x40 * p.</summary>
+    private static byte[] CompilerIdiomsRegion() {
+        uint[] inputs = [0x0000, 0xFFFF, 0x8001, 0x1234];
+        List<(int Offset, int Size, uint Value)> values = [];
+        foreach ((int pass, uint x) in inputs.Select((x, i) => (i, x))) {
+            int at = pass * 0x40;
+            uint low = x & 0xFF;
+            values.AddRange([
+                (at + 0x00, 2, low), (at + 0x02, 2, x | 0xFF),
+                (at + 0x04, 2, x), (at + 0x06, 2, x), (at + 0x08, 2, x & 0xFFF),
+                (at + 0x0A, 2, low), (at + 0x0C, 2, low << 8), (at + 0x0E, 2, x >> 8),
+                (at + 0x10, 2, 0x5678), (at + 0x12, 2, x),
+                (at + 0x14, 2, 0xAB00 | low), (at + 0x16, 2, low),
+                (at + 0x18, 2, x ^ 0x5678), (at + 0x1A, 2, 0x5678),
+                (at + 0x1C, 1, 0), (at + 0x1E, 2, 0),
+                (at + 0x22, 2, 0xAB00 | low), (at + 0x24, 2, low),
+                (at + 0x26, 2, (x & 0xFF00) | 0x34),
+                (at + 0x28, 2, x), (at + 0x2A, 2, 0x5678),
+                (at + 0x2C, 2, 0x5678), (at + 0x2E, 2, x)]);
+        }
+        return ResultRegion(0x100, [.. values]);
+    }
+
+    /// <summary>The eight-pass result region of dataflow_arithmetic_idioms: pass p reads input word
+    /// x at index p and writes the section outputs at offset 0x80 * p.</summary>
+    private static byte[] ArithmeticIdiomsRegion() {
+        uint[] inputs = [0x0000, 0x0001, 0xFFFF, 0x8000, 0x7FFF, 0x8001, 0x1234, 0xFFF9];
+        List<(int Offset, int Size, uint Value)> values = [];
+        foreach ((int pass, uint x) in inputs.Select((x, i) => (i, x))) {
+            int at = pass * 0x80;
+            int sx = unchecked((short)x);
+            uint sar1Carry = (x + (x >= 0x8000 ? 1u : 0u)) & 1;
+            values.AddRange([
+                (at + 0x00, 2, x < 7 ? 0xFFFFu : 0u),
+                (at + 0x02, 2, x == 0 ? 1u : 0u),
+                (at + 0x04, 2, x != 0 ? 1u : 0u),
+                (at + 0x06, 2, (uint)(ushort)(sx / 2)),
+                (at + 0x08, 2, (uint)(ushort)(sx / 4)),
+                (at + 0x0A, 2, (uint)(ushort)(sx / 8)),
+                (at + 0x0C, 2, x / 10),
+                (at + 0x0E, 2, (uint)(ushort)(sx % 4)),
+                (at + 0x10, 2, (x * 10) & 0xFFFFu),
+                (at + 0x12, 2, (x * 16 + 3) & 0xFFFFu),
+                (at + 0x14, 2, (uint)(ushort)(sx / 2)),
+                (at + 0x16, 2, x >= 0x8000 ? 0xFFFFu : 0u),
+                (at + 0x18, 2, (uint)(ushort)(sx / 2)),
+                (at + 0x1A, 2, sar1Carry),
+                (at + 0x1C, 2, (x * 2) & 0xFFFFu),
+                (at + 0x1E, 2, (x * 10) & 0xFFFFu),
+                (at + 0x20, 2, (0u - x) & 0xFFFFu),
+                (at + 0x22, 2, x == 0 ? 1u : 0u),
+                (at + 0x24, 2, x / 3),
+                (at + 0x26, 2, (uint)(ushort)(sx / 2)),
+                (at + 0x28, 2, (x >= 0x8000 ? 0xFF00u : 0u) | 7u)]);
+        }
+        return ResultRegion(0x400, [.. values]);
+    }
+
+    /// <summary>The four-pass result region of dataflow_joined_memory: pass p reads the input pair
+    /// (x, y) at index p and writes the section outputs at offset 0x80 * p; the absolute stores at
+    /// 44h..4Bh are rewritten every pass with the same bytes.</summary>
+    private static byte[] JoinedMemoryRegion() {
+        (uint X, uint Y)[] inputs = [(0x0000, 0x0000), (0xFFFF, 0x0001), (0x1234, 0x5678),
+            (0x8000, 0xFFFF)];
+        List<(int Offset, int Size, uint Value)> values = [
+            (0x44, 2, 0xCDEF), (0x46, 2, 0x89AB), (0x48, 2, 0xCDEF), (0x4A, 2, 0x89AB)];
+        foreach ((int pass, (uint x, uint y)) in inputs.Select((input, i) => (i, input))) {
+            int at = pass * 0x80;
+            uint carry1 = 0xCDEF + x > 0xFFFF ? 1u : 0u;
+            uint carry2 = 0x4567 + x > 0xFFFF ? 1u : 0u;
+            uint carryB = 0xA55A + x > 0xFFFF ? 1u : 0u;
+            uint low1 = (0xCDEF + x) & 0xFFFF;
+            uint high1 = (0x89AB + y + carry1) & 0xFFFF;
+            values.AddRange([
+                (at + 0x00, 2, low1), (at + 0x02, 2, high1),
+                (at + 0x04, 2, (0x4567 + x) & 0xFFFF), (at + 0x06, 2, (0x0123 + y + carry2) & 0xFFFF),
+                (at + 0x08, 2, 0xCDEF), (at + 0x0A, 2, 0x89AB),
+                (at + 0x0C, 2, low1), (at + 0x0E, 2, high1),
+                (at + 0x10, 2, 0xCDEF), (at + 0x12, 2, 0x89AB),
+                (at + 0x14, 2, 0xCDEF), (at + 0x16, 2, 0xBEEF),
+                (at + 0x18, 2, (0xA55A + x) & 0xFFFF), (at + 0x1A, 2, (0xCAFE + y + carryB) & 0xFFFF),
+                (at + 0x1C, 2, 0xCDEF), (at + 0x1E, 2, 0x89AB), (at + 0x22, 2, 0x1234)]);
+        }
+        return ResultRegion(0x200, [.. values]);
+    }
+
+    /// <summary>The seven-pass result region of dataflow_wide_conditions: pass p reads the input
+    /// pair (x, y) at index p and the z byte at zvals[p] and writes the section bytes and words at
+    /// offset 0x40 * p.</summary>
+    private static byte[] WideConditionsRegion() {
+        (uint X, uint Y)[] inputs = [(0, 0), (1, 0), (0, 1), (0xFFFFFFFF, 0),
+            (0x80000000, 0x7FFFFFFF), (0x00010000, 0x0000FFFF), (0x12345678, 0x12345678)];
+        byte[] zs = [0x60, 0x61, 0x7A, 0x7B, 0xFF, 0x00, 0x70];
+        List<(int Offset, int Size, uint Value)> values = [];
+        foreach ((int pass, ((uint x, uint y), byte z)) in
+                inputs.Zip(zs).Select((pair, i) => (i, pair))) {
+            int at = pass * 0x40;
+            int sx = unchecked((int)x);
+            int sy = unchecked((int)y);
+            uint lowX = x & 0xFFFF;
+            uint lowY = y & 0xFFFF;
+            uint sub = (lowX - lowY) & 0xFFFF;
+            uint flagByte = (sub >= 0x8000 ? 0x80u : 0u) | (sub == 0 ? 0x40u : 0u)
+                | (((lowX ^ lowY ^ sub) & 0x10) != 0 ? 0x10u : 0u)
+                | (Parity(sub & 0xFF) ? 0x04u : 0u) | 0x02u | (lowX < lowY ? 1u : 0u);
+            bool outside = z < 'a' || z > 'z';
+            values.AddRange([
+                (at + 0x00, 1, sx < sy ? 1u : 0u),
+                (at + 0x01, 1, x < y ? 1u : 0u),
+                (at + 0x02, 1, x != y ? 1u : 0u),
+                (at + 0x03, 1, x == y ? 1u : 0u),
+                (at + 0x04, 1, sx < 0x00010001 ? 1u : 0u),
+                (at + 0x05, 1, x == 0 ? 1u : 0u),
+                (at + 0x06, 1, outside ? 1u : 0u),
+                (at + 0x07, 1, !outside ? 1u : 0u),
+                (at + 0x08, 1, z == 0 ? 1u : 0u),
+                (at + 0x09, 1, x < y ? 1u : 0u),
+                (at + 0x0A, 1, (x >> 16) == (y >> 16) ? 1u : 0u),
+                (at + 0x0B, 1, outside ? 1u : 0u),
+                (at + 0x0C, 1, (uint)((z - 'a') & 0xFF)),
+                (at + 0x0D, 1, x < y ? 1u : 0u),
+                (at + 0x0E, 1, (x >> 16) == (y >> 16) ? flagByte : 0u),
+                (at + 0x0F, 1, sx < unchecked((int)0x80000001) ? 1u : 0u),
+                (at + 0x10, 1, sx < unchecked((int)0xFFFF8000) ? 1u : 0u)]);
+        }
+        return ResultRegion(7 * 0x40, [.. values]);
+    }
+
+    /// <summary>The four-pass result region of dataflow_wide_operations: pass p reads the input
+    /// pair (x, y) at index p and writes the section outputs at offset 0x80 * p. The int 64h
+    /// observer writes the pair's halves at 30h/32h.</summary>
+    private static byte[] WideOperationsRegion() {
+        (uint X, uint Y)[] inputs = [(0, 1), (0xFFFF, 0x10001), (0x80000000, 0xFFFFFFFF),
+            (0x12345678, 0xABCDEF01)];
+        List<(int Offset, int Size, uint Value)> values = [];
+        foreach ((int pass, (uint x, uint y)) in inputs.Select((input, i) => (i, input))) {
+            int at = pass * 0x80;
+            uint plus3 = x + 3;
+            values.AddRange([
+                (at + 0x00, 4, x & y),
+                (at + 0x04, 4, x | y),
+                (at + 0x08, 4, x ^ y),
+                (at + 0x0C, 4, ~x),
+                (at + 0x10, 4, (uint)(unchecked((int)x) >> 1)),
+                (at + 0x24, 1, x & 1),
+                (at + 0x14, 4, (uint)(unchecked(x * (ulong)y) & 0xFFFFFFFF)),
+                (at + 0x18, 4, plus3),
+                (at + 0x2E, 1, plus3 & 0xFF),
+                (at + 0x30, 4, plus3),
+                (at + 0x1C, 4, x << 3),
+                (at + 0x20, 4, 0),
+                (at + 0x28, 4, x & y),
+                (at + 0x34, 4, ~((x & 0xFFFF0000u) | ((x + 1) & 0xFFFFu)))]);
+        }
+        return ResultRegion(4 * 0x80, [.. values]);
+    }
+
+    private static bool Parity(uint value) {
+        int bits = 0;
+        for (uint v = value; v != 0; v >>= 1) {
+            bits += (int)(v & 1);
+        }
+        return bits % 2 == 0;
+    }
+
     /// <summary>
     /// An expected result region of <paramref name="length"/> bytes: zero, except for the little-endian values given
     /// as (offset, size in bytes, value).
@@ -1226,6 +1424,24 @@ internal static class AsmFixtureCatalog {
             VariantName = "386"
         };
         return ResultRegionFixture(settings, DoublePrecisionRegion());
+    }
+
+    /// <summary>Runs dataflow_joined_memory on the 286 memory model, which raises segment faults:
+    /// the boundary section at ES:FFFE works because it stays two word reads inside the 64 KB
+    /// limit, so a wrong dword join there faults instead of silently wrapping.</summary>
+    public static AsmFixture DataflowJoinedMemory286() {
+        AsmRunSettings settings = new() {
+            BinName = "dataflow_joined_memory",
+            CpuModel = CpuModel.INTEL_80286,
+            VariantName = "286",
+            ConfigureMachine = machine => {
+                machine.Memory.UInt32[0x2000, 0x0800] = 0x89ABCDEF;
+                machine.Memory.UInt32[0x2000, 0x0804] = 0x01234567;
+                machine.Memory.UInt16[0x2100, 0xFFFE] = 0xA55A;
+                machine.Memory.UInt16[0x2100, 0x0000] = 0xCAFE;
+            }
+        };
+        return ResultRegionFixture(settings, JoinedMemoryRegion());
     }
 
     private static byte[] DoublePrecisionRegion() {

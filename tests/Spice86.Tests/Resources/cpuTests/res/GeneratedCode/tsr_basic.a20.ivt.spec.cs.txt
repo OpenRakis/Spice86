@@ -155,9 +155,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x0111
         DX = 0x0111;
         // 016D:0103 mov AH,0x25
-        AH = 0x25;
         // 016D:0105 mov AL,0x22
-        AL = 0x22;
+        AX = 0x2522;
         // 016D:0107 int 0x21
         Dos.RecordCallerStack(SS, SP);
         Dos.SetInterruptVector(0x22, DS, 0x0111);

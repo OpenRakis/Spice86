@@ -115,9 +115,15 @@ internal static class IrBranchSimplification {
                 : right;
         }
         if (right is ConstantNode rightConstant) {
-            return (rightConstant.Value != 0) == shortCircuit
-                ? new ConstantNode(DataType.BOOL, shortCircuit ? 1UL : 0UL)
-                : left;
+            // A right constant that forces the result drops the left evaluation: it is sound only
+            // when the left is pure. `true || call` / `false && call` are safe either way: the
+            // short circuit never evaluates the right side.
+            if ((rightConstant.Value != 0) == shortCircuit) {
+                return IrVerifier.IsPureArm(left)
+                    ? new ConstantNode(DataType.BOOL, shortCircuit ? 1UL : 0UL)
+                    : null;
+            }
+            return left;
         }
         return null;
     }

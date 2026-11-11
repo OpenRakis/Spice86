@@ -325,6 +325,61 @@ internal sealed class IrSsa {
     /// <summary>Whether <paramref name="version"/> reaches a statement or terminator.</summary>
     public bool IsLive(int version) => LiveUses(version).Count != 0;
 
+    /// <summary>
+    /// Whether every byte of <paramref name="bytes"/> that <paramref name="version"/> contributes
+    /// is consumed only by <paramref name="allowed"/>. The worklist follows the byte mask through
+    /// phi results and through partial definitions (conditional or explicit): a phi passes the mask
+    /// to its result version, a site that faults or reads a followed byte refuses, and a partial
+    /// definition carries the bytes it does not overwrite into its new version - a full overwrite
+    /// ends the tracking for those bytes. Sites a pass removed no longer sit in the SSA and are
+    /// skipped; any other live use refuses.
+    /// </summary>
+    internal bool IsUsedOnlyAt(int version, CpuValues bytes, IrTerminator allowed) {
+        List<(int Version, CpuValues Bytes)> worklist = [(version, bytes)];
+        HashSet<(int Version, CpuValues Bytes)> visited = [];
+        while (worklist.Count > 0) {
+            (int current, CpuValues mask) = worklist[worklist.Count - 1];
+            worklist.RemoveAt(worklist.Count - 1);
+            if (!visited.Add((current, mask))) {
+                continue;
+            }
+            foreach (IrSsaUse use in LiveUses(current)) {
+                if (use.Phi is { } phi) {
+                    worklist.Add((phi.Result, mask));
+                    continue;
+                }
+                object? site = use.Statement ?? (object?)use.Terminator;
+                if (site is null) {
+                    return false;
+                }
+                if (!_usesBySite.ContainsKey(site)) {
+                    continue;
+                }
+                if (ReferenceEquals(site, allowed)) {
+                    continue;
+                }
+                if (site is not (IrStatement or IrTerminator)) {
+                    return false;
+                }
+                IrEffects effects = site is IrStatement statement
+                    ? statement.Effects : ((IrTerminator)site).Effects;
+                if (effects.MayFault || (effects.Reads & mask) != CpuValues.None) {
+                    return false;
+                }
+                if (_definitionsBySite.TryGetValue(site,
+                        out (IrSsaValue Value, int Version)[]? definitions)) {
+                    foreach ((IrSsaValue _, int newVersion) in definitions) {
+                        CpuValues surviving = mask & ~effects.MustWrite;
+                        if (_infos[newVersion].Previous == current && surviving != CpuValues.None) {
+                            worklist.Add((newVersion, surviving));
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     /// <summary>The phis at the top of <paramref name="block"/>.</summary>
     public IReadOnlyList<IrSsaPhi> PhisOf(IrBlock block) =>
         _phisByBlock.TryGetValue(block, out List<IrSsaPhi>? phis) ? phis : [];

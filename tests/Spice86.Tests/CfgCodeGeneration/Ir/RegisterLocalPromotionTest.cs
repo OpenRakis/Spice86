@@ -733,4 +733,32 @@ public sealed class RegisterLocalPromotionTest {
         program.SourceText.Should().Contain("DX = dx;");
         AssertCompiles(program);
     }
+
+    [Fact]
+    public void PairWebWithAnUnmatchedDefinition_StaysScalar() {
+        // Arrange: like the pairing test, but the else arm redefines only BX. The unmatched
+        // BX definition keeps both webs on their scalar plans.
+        TestInstructionHelper helper = new();
+        CfgInstruction movBx = Parse(helper, 0x0000, 0x89, 0xC3);
+        CfgInstruction movBp = Parse(helper, 0x0002, 0x89, 0xD5);
+        CfgInstruction cmp = Parse(helper, 0x0004, 0x83, 0xF8, 0x00);
+        CfgInstruction jz = Parse(helper, 0x0007, 0x74, 0x02);
+        CfgInstruction jmp = Parse(helper, 0x0009, 0xEB, 0x02);
+        CfgInstruction elseBx = Parse(helper, 0x000B, 0x89, 0xCB);
+        CfgInstruction storeBx = Parse(helper, 0x000D, 0x89, 0x1E, 0x00, 0x02);
+        CfgInstruction storeBp = Parse(helper, 0x0011, 0x89, 0x2E, 0x02, 0x02);
+        CfgInstruction ret = Parse(helper, 0x0015, 0xC3);
+        Chain(movBx, movBp, cmp, jz);
+        Branch(jz, jmp, elseBx);
+        Chain(jmp, storeBx);
+        Chain(elseBx, storeBx);
+        Chain(storeBx, storeBp, ret);
+        CfgBlock[] blocks = [Block(1, movBx, movBp, cmp, jz), Block(2, jmp),
+            Block(3, elseBx), Block(4, storeBx, storeBp, ret)];
+        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
+
+        // Assert
+        program.SourceText.Should().NotContain("uint value1");
+        AssertCompiles(program);
+    }
 }

@@ -43,7 +43,8 @@ internal static class AsmScenarioCatalog {
         .. Int21Scenarios,
         .. BatchScenarios,
         .. BootstrapScenarios,
-        .. ConsoleProgramScenarios
+        .. ConsoleProgramScenarios,
+        CompiledCompilerIdioms()
     ];
 
     /// <summary>Batch scripts routed through COMMAND.COM: redirection, labels, subroutines, call expansion,
@@ -367,6 +368,26 @@ internal static class AsmScenarioCatalog {
         }, [$"{resourceSubDirectory}/{fileName}"]);
     }
 
+    /// <summary>Runs the Open Watcom-compiled `compiler_idioms.exe` with argument 7: the console
+    /// oracle checks the `total * 2 + w` long fold, the long `/10`, the signed `/2`, the `!count`
+    /// boolean and the `1..9` range result of real compiler codegen.</summary>
+    /// <returns>The scenario, with the compiled program as its primary resource.</returns>
+    private static AsmScenario CompiledCompilerIdioms() {
+        return new AsmScenario("compiled_compiler_idioms", scope => {
+            DosProgramRun run = new(scope, "compiled_compiler_idioms");
+            run.ResourceCopy("NativeDosTests", "compiler_idioms.exe", "IDIOMS.EXE");
+            AsmRunSettings settings = run.Settings("IDIOMS.EXE") with {
+                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000
+            };
+            return run.RunCustomSettings(settings, result => {
+                DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1");
+                result.State.AX.Should().Be(0);
+            });
+        }, ["NativeDosTests/compiler_idioms.exe"]) {
+            PrimaryResourceFileName = "NativeDosTests/compiler_idioms.exe"
+        };
+    }
+
     private static string CopyResourceFile(string resourceSubDirectory, string fileName, string targetDirectory) {
         return CopyResourceFile(resourceSubDirectory, fileName, fileName, targetDirectory);
     }
@@ -489,6 +510,13 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
             PartitionScenario("dataflow_alias_traps"),
+            PartitionScenario("dataflow_compiler_idioms"),
+            PartitionScenario("dataflow_arithmetic_idioms"),
+            PartitionScenario("dataflow_joined_memory"),
+            AsmScenario.FromFixture("dataflow_joined_memory",
+                AsmFixtureCatalog.DataflowJoinedMemory286),
+            PartitionScenario("dataflow_wide_conditions"),
+            PartitionScenario("dataflow_wide_operations"),
             PartitionScenario("dataflow_legality_traps"),
             PartitionScenario("data_globals"),
             PartitionScenario("data_segment_values"),

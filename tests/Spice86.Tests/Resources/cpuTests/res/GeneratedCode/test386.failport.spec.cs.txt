@@ -159,9 +159,8 @@ public partial class CfgGeneratedOverrides {
         // F000:064F mov DS,AX
         DS = 0;
         // F000:0651 mov word ptr DS:[0x0018],0x15C7
-        Segment0000Globals.Word0018 = 0x15C7;
         // F000:0657 mov word ptr DS:[0x001A],0xF000
-        Segment0000Globals.Word001A = 0xF000;
+        Segment0000Globals.Dword0018 = 0xF00015C7u;
         // F000:065D xor AX,AX
         // F000:065F mov AX,CS
         ax1 = CS;
@@ -196,9 +195,8 @@ public partial class CfgGeneratedOverrides {
         // F000:068B mov DS,AX
         DS = 0;
         // F000:068D mov word ptr DS:[0x0018],0x06A8
-        Segment0000Globals.Word0018 = 0x06A8;
         // F000:0693 mov word ptr DS:[0x001A],0xF000
-        Segment0000Globals.Word001A = 0xF000;
+        Segment0000Globals.Dword0018 = 0xF00006A8u;
         // F000:0699 mov AX,0x1000
         AX = 0x1000;
         // F000:069C mov SS,AX
@@ -216,7 +214,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_06A8_F06A8() {
+        byte al1 = 0;
         ushort ax1 = 0;
+        byte al2 = 0;
         ushort ax2 = 0;
         uint eax1 = 0;
         ushort flagOperand_06B6 = 0;
@@ -259,9 +259,8 @@ public partial class CfgGeneratedOverrides {
         // F000:06C4 mov DS,AX
         DS = 0;
         // F000:06C6 mov word ptr DS:[0x0018],0x15C7
-        Segment0000Globals.Word0018 = 0x15C7;
         // F000:06CC mov word ptr DS:[0x001A],0xF000
-        Segment0000Globals.Word001A = 0xF000;
+        Segment0000Globals.Dword0018 = 0xF00015C7u;
         // F000:06D2 mov DX,0x2100
         // F000:06D5 mov DS,DX
         DS = 0x2100;
@@ -373,12 +372,13 @@ public partial class CfgGeneratedOverrides {
         // F000:07A9 xor EAX,EAX
         EAX = 0;
         // F000:07AC lods AL,byte ptr DS:[SI]
-        AL = Segment2100Globals.ByteFFFF;
+        al1 = Segment2100Globals.ByteFFFF;
         SI = 0;
         // F000:07AD cmp AL,0x78
-        Alu8.Sub(AL, 0x78);
+        Alu8.Sub(al1, 0x78);
         // F000:07AF jne near 0x15C7
-        if (AL != 0x78) {
+        AL = al1;
+        if (al1 != 0x78) {
             return unknown_F000_15C7_F15C7();
         }
         // F000:07B3 cmp ESI,0x00010000
@@ -701,12 +701,13 @@ public partial class CfgGeneratedOverrides {
         // F000:0A79 xor EAX,EAX
         EAX = 0;
         // F000:0A7C lods AL,byte ptr DS:[SI]
-        AL = Segment2100Globals.Byte0000;
+        al2 = Segment2100Globals.Byte0000;
         SI = 0xFFFF;
         // F000:0A7D cmp AL,0x78
-        Alu8.Sub(AL, 0x78);
+        Alu8.Sub(al2, 0x78);
         // F000:0A7F jne near 0x15C7
-        if (AL != 0x78) {
+        AL = al2;
+        if (al2 != 0x78) {
             return unknown_F000_15C7_F15C7();
         }
         // F000:0A83 cmp ESI,0x0001FFFF
@@ -2182,9 +2183,8 @@ public partial class CfgGeneratedOverrides {
         // F000:1430 mov DX,ES
         DX = ES;
         // F000:1432 mov word ptr ES:[DI],0x1234
-        Segment6300Globals.Word0000 = 0x1234;
         // F000:1437 mov word ptr ES:[DI+2],0xABCD
-        Segment6300Globals.Word0002 = 0xABCD;
+        Segment6300Globals.Dword0000 = 0xABCD1234u;
         // F000:143D lss BX,word ptr ES:[DI]
         BX = Segment6300Globals.Word0000;
         SS = Segment6300Globals.Word0002;
@@ -2234,9 +2234,8 @@ public partial class CfgGeneratedOverrides {
         // F000:1481 mov DX,ES
         DX = ES;
         // F000:1483 mov word ptr ES:[DI],0x1234
-        Segment6300Globals.Word0000 = 0x1234;
         // F000:1488 mov word ptr ES:[DI+2],0xABCD
-        Segment6300Globals.Word0002 = 0xABCD;
+        Segment6300Globals.Dword0000 = 0xABCD1234u;
         // F000:148E lds BX,word ptr ES:[DI]
         BX = Segment6300Globals.Word0000;
         DS = Segment6300Globals.Word0002;
@@ -2286,9 +2285,8 @@ public partial class CfgGeneratedOverrides {
         // F000:14D0 mov DX,ES
         DX = ES;
         // F000:14D2 mov word ptr ES:[DI],0x1234
-        Segment6300Globals.Word0000 = 0x1234;
         // F000:14D7 mov word ptr ES:[DI+2],0xABCD
-        Segment6300Globals.Word0002 = 0xABCD;
+        Segment6300Globals.Dword0000 = 0xABCD1234u;
         // F000:14DD les BX,word ptr ES:[DI]
         BX = Segment6300Globals.Word0000;
         ES = Segment6300Globals.Word0002;
@@ -2337,9 +2335,8 @@ public partial class CfgGeneratedOverrides {
         // F000:151F mov DX,ES
         DX = ES;
         // F000:1521 mov word ptr ES:[DI],0x1234
-        Segment6300Globals.Word0000 = 0x1234;
         // F000:1526 mov word ptr ES:[DI+2],0xABCD
-        Segment6300Globals.Word0002 = 0xABCD;
+        Segment6300Globals.Dword0000 = 0xABCD1234u;
         // F000:152C lfs BX,word ptr ES:[DI]
         BX = Segment6300Globals.Word0000;
         FS = Segment6300Globals.Word0002;
@@ -2389,9 +2386,8 @@ public partial class CfgGeneratedOverrides {
         // F000:156C mov DX,ES
         DX = ES;
         // F000:156E mov word ptr ES:[DI],0x1234
-        Segment6300Globals.Word0000 = 0x1234;
         // F000:1573 mov word ptr ES:[DI+2],0xABCD
-        Segment6300Globals.Word0002 = 0xABCD;
+        Segment6300Globals.Dword0000 = 0xABCD1234u;
         // F000:1579 lgs BX,word ptr ES:[DI]
         BX = Segment6300Globals.Word0000;
         GS = Segment6300Globals.Word0002;
@@ -2535,6 +2531,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        uint eax;
+        uint edx;
         ushort ax1 = 0;
         ushort ax2 = 0;
         ushort ax3 = 0;
@@ -2544,6 +2542,7 @@ public partial class CfgGeneratedOverrides {
         ushort ax7 = 0;
         ushort ax8 = 0;
         ushort ax9 = 0;
+        ushort ax10 = 0;
         ushort flagOperand_04ED = 0;
         ushort flagOperand_052F = 0;
         ushort flagOperand_0574 = 0;
@@ -2598,7 +2597,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0083 mov AH,1
         AH = 1;
         // F000:0085 sahf
-        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
+        FlagRegister = FlagRegister & 0xFFFFFF00u | 1;
         // F000:0086 jae short 0x00AC
         if (CarryFlag) {
             // F000:0088 jb short 0x00AD
@@ -2612,7 +2611,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:008B mov AH,0x40
                 AH = 0x40;
                 // F000:008D sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000040;
                 // F000:008E jne short 0x00AC
                 if (!ZeroFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00AC, Signature_00AC_hlt);
@@ -2631,7 +2630,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:0093 mov AH,4
                 AH = 4;
                 // F000:0095 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 4);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 4;
                 // F000:0096 jnp short 0x00AC
                 if (!ParityFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00AC, Signature_00AC_hlt);
@@ -2650,7 +2649,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:009B mov AH,0x80
                 AH = 0x80;
                 // F000:009D sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000080);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000080;
                 // F000:009E jns short 0x00AC
                 if (!SignFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00AC, Signature_00AC_hlt);
@@ -2669,7 +2668,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00A3 mov AH,0x41
                 AH = 0x41;
                 // F000:00A5 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000041);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000041;
                 // F000:00A6 ja short 0x00AC
                 if (!CarryFlag && !ZeroFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00AC, Signature_00AC_hlt);
@@ -2690,11 +2689,11 @@ public partial class CfgGeneratedOverrides {
         L_00B7:
             // F000:00B7 mov AH,0xD4
             // F000:00B9 sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D4);
+            FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000D4;
             // F000:00BA mov AX,0
             AX = 0;
             // F000:00BD sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+            FlagRegister = FlagRegister & 0xFFFFFF00u;
             // F000:00BE jae short 0x00DB
             if (CarryFlag) {
                 VerifySpeculativeEntryOrFail(biosSegment, 0x00C0, Signature_00C0_hlt);
@@ -2706,7 +2705,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00C1 mov AH,0x95
                 AH = 0x95;
                 // F000:00C3 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000095);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000095;
                 // F000:00C4 jne short 0x00DD
                 if (ZeroFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00C6, Signature_00C6_hlt);
@@ -2719,7 +2718,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00C7 mov AH,0xD1
                 AH = 0xD1;
                 // F000:00C9 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D1);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000D1;
                 // F000:00CA jnp short 0x00DF
                 if (ParityFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00CC, Signature_00CC_hlt);
@@ -2732,7 +2731,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00CD mov AH,0x55
                 AH = 0x55;
                 // F000:00CF sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000055);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000055;
                 // F000:00D0 jns short 0x00E1
                 if (SignFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00D2, Signature_00D2_hlt);
@@ -2745,7 +2744,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00D3 mov AH,0x94
                 AH = 0x94;
                 // F000:00D5 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000094);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000094;
                 // F000:00D6 ja short 0x00E3
                 if (CarryFlag || ZeroFlag) {
                     VerifySpeculativeEntryOrFail(biosSegment, 0x00D8, Signature_00D8_hlt);
@@ -2760,7 +2759,7 @@ public partial class CfgGeneratedOverrides {
             // F000:00E5 mov AH,0
             AH = 0;
             // F000:00E7 sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+            FlagRegister = FlagRegister & 0xFFFFFF00u;
             // F000:00E8 mov AL,0x40
             // F000:00EA shl AL,1
             AL = 0x80;
@@ -2812,7 +2811,7 @@ public partial class CfgGeneratedOverrides {
                     // F000:00FB mov AH,0x40
                     AH = 0x40;
                     // F000:00FD sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                    FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000040;
                     // F000:00FE jl short 0x0129
                     if (SignFlag == OverflowFlag) {
                         VerifySpeculativeEntryOrFail(biosSegment, 0x0100, Signature_0100_hlt);
@@ -2854,7 +2853,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:0132 mov AH,1
                 AH = 1;
                 // F000:0134 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
+                FlagRegister = FlagRegister & 0xFFFFFF00u | 1;
                 // F000:0135 jae near 0x01F0
                 if (CarryFlag) {
                     // F000:0139 jb near 0x01F1
@@ -2868,7 +2867,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:013E mov AH,0x40
                         AH = 0x40;
                         // F000:0140 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000040;
                         // F000:0141 jne near 0x01F0
                         if (!ZeroFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x01F0, Signature_01F0_hlt);
@@ -2887,7 +2886,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:014A mov AH,4
                         AH = 4;
                         // F000:014C sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 4);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 4;
                         // F000:014D jnp near 0x01F0
                         if (!ParityFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x01F0, Signature_01F0_hlt);
@@ -2906,7 +2905,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0156 mov AH,0x80
                         AH = 0x80;
                         // F000:0158 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000080);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000080;
                         // F000:0159 jns near 0x01F0
                         if (!SignFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x01F0, Signature_01F0_hlt);
@@ -2925,7 +2924,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0162 mov AH,0x41
                         AH = 0x41;
                         // F000:0164 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000041);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000041;
                         // F000:0165 ja near 0x01F0
                         if (!CarryFlag && !ZeroFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x01F0, Signature_01F0_hlt);
@@ -2946,11 +2945,11 @@ public partial class CfgGeneratedOverrides {
                 L_0205:
                     // F000:0205 mov AH,0xD4
                     // F000:0207 sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D4);
+                    FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000D4;
                     // F000:0208 mov AX,0
                     AX = 0;
                     // F000:020B sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+                    FlagRegister = FlagRegister & 0xFFFFFF00u;
                     // F000:020C jae near 0x02B4
                     if (CarryFlag) {
                         VerifySpeculativeEntryOrFail(biosSegment, 0x0210, Signature_0210_hlt);
@@ -2962,7 +2961,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0211 mov AH,0x95
                         AH = 0x95;
                         // F000:0213 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000095);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000095;
                         // F000:0214 jne near 0x02B8
                         if (ZeroFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x0218, Signature_0218_hlt);
@@ -2975,7 +2974,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0219 mov AH,0xD1
                         AH = 0xD1;
                         // F000:021B sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D1);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x000000D1;
                         // F000:021C jnp near 0x02BC
                         if (ParityFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x0220, Signature_0220_hlt);
@@ -2988,7 +2987,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0221 mov AH,0x55
                         AH = 0x55;
                         // F000:0223 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000055);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000055;
                         // F000:0224 jns near 0x02C0
                         if (SignFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x0228, Signature_0228_hlt);
@@ -3001,7 +3000,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:0229 mov AH,0x94
                         AH = 0x94;
                         // F000:022B sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000094);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000094;
                         // F000:022C ja near 0x02C4
                         if (CarryFlag || ZeroFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x0230, Signature_0230_hlt);
@@ -3016,7 +3015,7 @@ public partial class CfgGeneratedOverrides {
                     // F000:02C8 mov AH,0
                     AH = 0;
                     // F000:02CA sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+                    FlagRegister = FlagRegister & 0xFFFFFF00u;
                     // F000:02CB mov AL,0x40
                     // F000:02CD shl AL,1
                     AL = 0x80;
@@ -3074,7 +3073,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:02EA mov AH,0x40
                         AH = 0x40;
                         // F000:02EC sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                        FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000040;
                         // F000:02ED jl near 0x0387
                         if (SignFlag == OverflowFlag) {
                             VerifySpeculativeEntryOrFail(biosSegment, 0x02F1, Signature_02F1_hlt);
@@ -3308,9 +3307,9 @@ public partial class CfgGeneratedOverrides {
                         // F000:04AC mov ECX,0x88776655
                         ECX = 0x88776655u;
                         // F000:04B2 mul ECX
-                        (EAX, EDX) = Mul32(0x44332211, 0x88776655u);
+                        (eax, edx) = Mul32(0x44332211, 0x88776655u);
                         // F000:04B5 div ECX
-                        (EAX, EDX) = Div32(divisor: ECX, dividend: (ulong)((ulong)EDX << 32 | (ulong)EAX));
+                        (EAX, EDX) = Div32(divisor: 0x88776655u, dividend: (ulong)edx << 32 | (ulong)eax);
                         // F000:04B8 cmp EAX,EBX
                         Alu32.Sub(EAX, 0x44332211);
                         // F000:04BB jne near 0x15C7
@@ -3571,11 +3570,12 @@ public partial class CfgGeneratedOverrides {
                         // F000:0606 mov GS,word ptr DS:[0]
                         GS = DsGlobals.Word0000;
                         // F000:060A mov AX,GS
-                        AX = GS;
+                        ax10 = GS;
                         // F000:060C cmp AX,DX
-                        Alu16.Sub(AX, 0x2000);
+                        Alu16.Sub(ax10, 0x2000);
                         // F000:060E jne near 0x15C7
-                        if (AX != 0x2000) {
+                        AX = ax10;
+                        if (ax10 != 0x2000) {
                             return unknown_F000_15C7_F15C7();
                         }
                         // F000:0612 mov DX,0xF000
@@ -3584,9 +3584,8 @@ public partial class CfgGeneratedOverrides {
                         // F000:0618 mov DS,AX
                         DS = 0;
                         // F000:061A mov word ptr DS:[0x0018],0x0633
-                        Segment0000Globals.Word0018 = 0x0633;
                         // F000:0620 mov word ptr DS:[0x001A],0xF000
-                        Segment0000Globals.Word001A = 0xF000;
+                        Segment0000Globals.Dword0018 = 0xF0000633u;
                         // F000:0626 mov AX,0x1000
                         AX = 0x1000;
                         // F000:0629 mov SS,AX
@@ -3681,9 +3680,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 
-    public ushort Word0018 { get => _memory.UInt16[Segment, 0x0018]; set => _memory.UInt16[Segment, 0x0018] = value; }
-
-    public ushort Word001A { get => _memory.UInt16[Segment, 0x001A]; set => _memory.UInt16[Segment, 0x001A] = value; }
+    public uint Dword0018 { get => _memory.UInt32[Segment, 0x0018]; set => _memory.UInt32[Segment, 0x0018] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

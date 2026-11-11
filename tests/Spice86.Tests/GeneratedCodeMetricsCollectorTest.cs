@@ -424,6 +424,53 @@ public class GeneratedCodeMetricsCollectorTest {
         CollectFromMethodBody("ushort ax = AX; AX += ax;").WriteBacks.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData("ushort", "byte", "AL", "AH", "BL", "CL", 8, "packed")]
+    [InlineData("uint", "ushort", "AX", "DX", "BX", "CX", 16, "value1")]
+    [InlineData("ulong", "uint", "EAX", "EDX", "EBX", "ECX", 32, "unrelated")]
+    public void PackedLocalHalvesRemainWriteBacks(string wideType, string narrowType,
+        string low, string high, string shifted, string computed, int width, string name) {
+        // Arrange
+        string body = $$"""
+            {{wideType}} {{name}} = 0x1234;
+            {{low}} = ({{narrowType}}){{name}};
+            {{high}} = ({{narrowType}})({{name}} >> {{width}});
+            {{shifted}} = ({{narrowType}})({{name}} >> 1);
+            {{computed}} = ({{narrowType}})({{name}} + 1);
+            """;
+
+        // Act
+        GeneratedCodeMetrics metrics = CollectFromMethodBody(body);
+
+        // Assert
+        using (new AssertionScope()) {
+            metrics.WriteBacks.Should().Be(2);
+            metrics.RegisterWrites.Should().Be(4);
+            metrics.PlainRegisterAssignments.Should().Be(4);
+            metrics.LocalVariables.Should().Be(1);
+            metrics.LocalReads.Should().Be(4);
+            metrics.LocalWrites.Should().Be(1);
+            metrics.Statements.Should().Be(5);
+        }
+    }
+
+    [Fact]
+    public void NarrowingBeforeAShiftIsNotAnUpperHalfWriteBack() {
+        // Arrange
+        const string body = """
+            uint value = 0x12345678;
+            AX = (ushort)((ushort)value >> 16);
+            """;
+
+        // Act
+        GeneratedCodeMetrics metrics = CollectFromMethodBody(body);
+
+        // Assert
+        metrics.WriteBacks.Should().Be(0);
+        metrics.RegisterWrites.Should().Be(1);
+        metrics.LocalReads.Should().Be(1);
+    }
+
     [Fact]
     public void GenericInterruptReplacementFailsReadabilityGates() {
         // Arrange

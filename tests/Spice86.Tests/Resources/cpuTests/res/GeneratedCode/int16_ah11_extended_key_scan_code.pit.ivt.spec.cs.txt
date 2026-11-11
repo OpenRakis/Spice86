@@ -165,15 +165,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort ax1 = 0;
+        ushort ax;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x11
         AH = 0x11;
         // 016D:0102 int 0x16
-        (AX, ZeroFlag) = Keyboard.ReadKeystrokeStatus(AX, ZeroFlag);
+        (ax1, ZeroFlag) = Keyboard.ReadKeystrokeStatus(AX, ZeroFlag);
         // 016D:0104 mov AL,AH
-        AL = AH;
         // 016D:0106 mov AH,7
-        AH = 7;
+        ax = (ushort)((byte)(ax1 >> 8) | 0x0700);
         // 016D:0108 mov BX,0xB800
         BX = 0xB800;
         // 016D:010B mov ES,BX
@@ -181,7 +182,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:010D mov DI,0
         DI = 0;
         // 016D:0110 stos word ptr ES:[DI],AX
-        SegmentB800Globals.Word0000 = AX;
+        SegmentB800Globals.Word0000 = ax;
         DI = (ushort)(DirectionFlag ? -2 : 2);
         // 016D:0111 mov AX,0x4C00
         AX = 0x4C00;
@@ -252,7 +253,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AH. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0035_F0035() {
         CheckExternalEvents(biosSegment, 0x0035);

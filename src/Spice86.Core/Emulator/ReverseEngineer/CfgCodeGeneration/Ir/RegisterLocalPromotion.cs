@@ -26,7 +26,7 @@ using System.Linq;
 /// read and target node instances to the local name, like
 /// <see cref="CSharpExpressionPrinter.ParameterReads"/> does for typed parameters.
 /// </summary>
-internal static class RegisterLocalPromotion {
+internal static partial class RegisterLocalPromotion {
     private static readonly IrSsaValue[] Promotable =
         IrValueSets.ValuesIn(CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx
             | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi | CpuValues.Es | CpuValues.Ds);
@@ -117,13 +117,18 @@ internal static class RegisterLocalPromotion {
             }
             accepted.Add((candidate, name));
         }
-        HashSet<IVisitableAstNode> serviceResults = new(ReferenceEqualityComparer.Instance);
-        foreach (InterruptServiceCallNode serviceCall in method.Blocks.SelectMany(block => block.Statements)
-            .Select(statement => statement.Node).OfType<InterruptServiceCallNode>()) {
-            serviceResults.UnionWith(serviceCall.Results);
+        // The tuple helpers and the service calls hand back unsigned storage halves even for a
+        // signed operation, so a local defined by one of their targets stays unsigned whatever the
+        // web's signed reads vote.
+        HashSet<IVisitableAstNode> unsignedTupleResults = new(ReferenceEqualityComparer.Instance);
+        foreach (IVisitableAstNode node in method.Blocks.SelectMany(block => block.Statements)
+            .Select(statement => statement.Node)) {
+            if (node is MultiplicationNode or DivisionNode or InterruptServiceCallNode) {
+                unsignedTupleResults.UnionWith(DefinitionTargets(node));
+            }
         }
         HashSet<string> unsignedNames = accepted
-            .Where(item => item.Candidate.DefTargets.Any(serviceResults.Contains))
+            .Where(item => item.Candidate.DefTargets.Any(unsignedTupleResults.Contains))
             .Select(item => item.Name).ToHashSet(StringComparer.Ordinal);
         Dictionary<string, (int Signed, int Unsigned)> votes = new(StringComparer.Ordinal);
         foreach ((Candidate candidate, string name) in accepted) {
@@ -160,7 +165,11 @@ internal static class RegisterLocalPromotion {
                     new RegisterWriteBackNode(fresh, new RegisterLocalNode(fresh, name, localType))));
             }
         }
-        return new RegisterLocalPlan(reads, declarations, writeBacks, dropped);
+        Dictionary<IVisitableAstNode, IVisitableAstNode> replacements =
+            new(ReferenceEqualityComparer.Instance);
+        PlanPairs(method, accepted, reservedNames, declared, reads, declarations, writeBacks,
+            dropped, replacements);
+        return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements);
     }
 
     /// <summary>The next number for <paramref name="baseName"/>'s numbered names (<c>ax1</c>,
@@ -245,6 +254,29 @@ internal static class RegisterLocalPromotion {
         }
     }
 
+    /// <summary>The register outputs a statement defines: an assignment's left, both halves of a
+    /// multiplication or division tuple, or a service call's result lvalues.</summary>
+    private static IEnumerable<RegisterNode> DefinitionTargets(IVisitableAstNode node) {
+        switch (node) {
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register }:
+                yield return register;
+                break;
+            case MultiplicationNode multiplication:
+                yield return multiplication.Low;
+                yield return multiplication.High;
+                break;
+            case DivisionNode division:
+                yield return division.Division.Low;
+                yield return division.Division.High;
+                break;
+            case InterruptServiceCallNode serviceCall:
+                foreach (RegisterNode result in serviceCall.Results.OfType<RegisterNode>()) {
+                    yield return result;
+                }
+                break;
+        }
+    }
+
     /// <summary>The statement of <paramref name="info"/> that defines <paramref name="version"/>,
     /// with its index in the block's current statement order, or <c>null</c> when the defining
     /// statement is gone. SSA records statement indices of the list as built; later passes edited
@@ -271,16 +303,18 @@ internal static class RegisterLocalPromotion {
                     or IrSsaDefinitionKind.PartialDefinition)) {
                 continue;
             }
-            if (DefinitionSite(ssa, info, version) is not { } site
-                || site.Statement.Node is not BinaryOperationNode {
-                    BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode candidate }
-                || !RegisterMatchesValue(candidate, info.Value)) {
+            if (DefinitionSite(ssa, info, version) is not { } site) {
                 continue;
             }
-            if (register is not null && !register.Equals(candidate)) {
+            RegisterNode[] candidates = [.. DefinitionTargets(site.Statement.Node)
+                .Where(target => RegisterMatchesValue(target, info.Value)).Take(2)];
+            if (candidates.Length != 1) {
+                continue;
+            }
+            if (register is not null && !register.Equals(candidates[0])) {
                 return null;
             }
-            register = candidate;
+            register = candidates[0];
         }
         return register;
     }
@@ -299,24 +333,28 @@ internal static class RegisterLocalPromotion {
 
         IVisitableAstNode Insert(IVisitableAstNode node) {
             if (node is InstructionBoundaryNode boundary) {
-                List<IVisitableAstNode> kept = [.. boundary.Body.Statements
-                    .Where(statement => !plan.Dropped.Contains(statement))];
+                // Anchors and dropped statements match on the original boundary; the surviving
+                // statements are then rewritten recursively so pair replacements under a dropped
+                // sibling still apply.
                 List<RegisterLocalWriteBack> mine = [.. plan.WriteBacks.Where(writeBack =>
                     boundary.Node.Equals(writeBack.Instruction)
                     && IrAstChildren.Descendants(boundary)
                         .Any(descendant => ReferenceEquals(descendant, writeBack.Anchor)))];
-                if (mine.Count == 0) {
-                    return kept.Count == boundary.Body.Statements.Count
-                        ? IrAstChildren.MapChildren(node, Insert)
-                        : boundary with { Body = new BlockNode([.. kept]) };
-                }
                 foreach (RegisterLocalWriteBack writeBack in mine) {
                     pending.Remove(writeBack);
                 }
+                List<IVisitableAstNode> kept = [.. boundary.Body.Statements
+                    .Where(statement => !plan.Dropped.Contains(statement))
+                    .Select(Insert)];
                 int insertionIndex = kept
                         .FindIndex(statement => statement is InstructionStartNode) + 1;
                 kept.InsertRange(insertionIndex, mine.Select(writeBack => writeBack.Node));
                 return boundary with { Body = new BlockNode([.. kept]) };
+            }
+            if (plan.Replacements.TryGetValue(node, out IVisitableAstNode? replacement)) {
+                // The replacement keeps original subtrees (an initializer's packed reads): walk
+                // it so replacements nested inside still apply.
+                return IrAstChildren.MapChildren(replacement, Insert);
             }
             return IrAstChildren.MapChildren(node, Insert);
         }
@@ -389,13 +427,15 @@ internal static class RegisterLocalPromotion {
             .Where(definition => OrderOf(method, definition.Block) == firstBlockOrder)
             .Select(definition => definition.Index).DefaultIfEmpty(-1).Min();
         return new Candidate(touched.First(), singleBlock, firstBlockOrder, firstIndex, defIndex,
-            end, webRegister, baseName, collected.DefTargets, classification.WebReads, writeBackUses,
-            signedVotes, unsignedVotes);
+            end, webRegister, baseName, collected.DefTargets, collected.Sites,
+            classification.WebReads, writeBackUses, signedVotes, unsignedVotes);
     }
 
     /// <summary>The definition sites of the web's versions, or <c>null</c> when one disqualifies
-    /// the web: a method-entry version, a version with no site, a faulting definition, a
-    /// non-ASSIGN definition, a target of another register or a shared register node.</summary>
+    /// the web: a method-entry version, a version with no site, a faulting definition, a statement
+    /// with no register definition target (an <c>ASSIGN</c> left, a multiplication or division
+    /// tuple half, a service call result), a target of another register or more than one target on
+    /// the web's value, or a shared register node.</summary>
     private static WebDefinitions? CollectWebDefinitions(IrSsa ssa, List<int> members,
         IrSsaValue value, Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences) {
@@ -425,33 +465,20 @@ internal static class RegisterLocalPromotion {
             if (definition.Effects.MayFault) {
                 return null;
             }
-            if (definition.Node is InterruptServiceCallNode serviceCall) {
-                // The call is an explicit definition only for a register its return writes: the
-                // concrete result target is the local's def target, like an assignment's left.
-                // A parameter-, selector- or flag-only version keeps no target and stays
-                // ineligible.
-                if (serviceCall.Results.OfType<RegisterNode>()
-                        .FirstOrDefault(result => RegisterMatchesValue(result, value))
-                        is not { } result
-                    || !SingleOccurrence(occurrences, result, definition)) {
-                    return null;
-                }
+            // The def target is the statement's register output that covers the web's value: an
+            // assignment's left, one half of a multiplication or division tuple, or the service
+            // call's result lvalue. A byte division can put two halves (AL and AH) on the same SSA
+            // value: with more than one matching target the local would rename one half while the
+            // tuple writes both, so the web refuses.
+            RegisterNode[] targets = [.. DefinitionTargets(definition.Node)
+                .Where(target => RegisterMatchesValue(target, value)).Take(2)];
+            if (targets.Length != 1 || !SingleOccurrence(occurrences, targets[0], definition)) {
+                return null;
+            }
+            if (definition.Node is InterruptServiceCallNode) {
                 hasCall = true;
-                defTargets.Add(result);
-                definitions.Add(new Definition(info.Block, definitionIndex, definition));
-                continue;
             }
-            if (definition.Node is not BinaryOperationNode {
-                    BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register }) {
-                return null;
-            }
-            if (!RegisterMatchesValue(register, value)) {
-                return null;
-            }
-            if (!SingleOccurrence(occurrences, register, definition)) {
-                return null;
-            }
-            defTargets.Add(register);
+            defTargets.Add(targets[0]);
             definitions.Add(new Definition(info.Block, definitionIndex, definition));
         }
         return new WebDefinitions(defTargets, definitions, hasCall);
@@ -529,7 +556,7 @@ internal static class RegisterLocalPromotion {
                 Right: RegisterNode or ConstantNode });
 
     /// <summary>Whether printing the web as a local removes more register accesses than it adds:
-    /// saved is the register reads and assignment targets the local replaces, cost is the printed
+    /// saved is the register reads and definition targets the local replaces, cost is the printed
     /// write-backs plus the declaration - plus, for a segment web, each use site touching a
     /// <see cref="SegmentedPointerNode"/> through that segment, since a pointer segment is never
     /// substituted and still needs the register. Refusing keeps the register form, which is
@@ -1078,9 +1105,9 @@ internal static class RegisterLocalPromotion {
     /// block start) and its defining statement when it has one.</summary>
     private sealed record Definition(IrBlock Block, int Index, IrStatement? Statement);
 
-    /// <summary>The definitions <see cref="CollectWebDefinitions"/> collected: the ASSIGN targets
-    /// of the web's plain definitions, every definition site (a phi counts with index -1) and
-    /// whether a call's preserved value counts as a definition.</summary>
+    /// <summary>The definitions <see cref="CollectWebDefinitions"/> collected: the register
+    /// targets of the web's plain definitions, every definition site (a phi counts with index -1)
+    /// and whether a call's preserved value counts as a definition.</summary>
     private sealed record WebDefinitions(List<RegisterNode> DefTargets, List<Definition> Sites,
         bool HasCall);
 
@@ -1092,14 +1119,14 @@ internal static class RegisterLocalPromotion {
 
     /// <summary>A web that may promote: a block of it, whether it lives in one block, the ordering
     /// keys of its first definition, the start and end of its live range for the single-block
-    /// overlap rule, the local's register and base name, the assignment targets and read nodes to
+    /// overlap rule, the local's register and base name, the definition targets and read nodes to
     /// substitute (each with its direct parent), the implicit uses that take a write-back, and the
     /// signed-type vote of the web: reads under a same-width signed conversion and definitions from
     /// one on the signed side, every other read, definition and write-back on the unsigned side.
     /// </summary>
     private sealed record Candidate(IrBlock Block, bool SingleBlock, int FirstBlockOrder,
         int FirstIndex, int DefIndex, int End, RegisterNode Register, string BaseName,
-        IReadOnlyList<RegisterNode> DefTargets,
+        IReadOnlyList<RegisterNode> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
         IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes);
 }

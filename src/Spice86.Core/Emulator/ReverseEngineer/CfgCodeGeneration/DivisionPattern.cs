@@ -100,7 +100,11 @@ internal sealed record DivisionPattern(
 
         RegisterNode lowOutput = (RegisterNode)quotientAssignment.Left;
         RegisterNode highOutput = (RegisterNode)remainderAssignment.Left;
-        return new DivisionPattern(width, signed, dividendDecl.Initializer, divisorDecl.Initializer, lowOutput, highOutput);
+        // Fresh write nodes for the tuple halves: the matched targets may share their node
+        // instance with a dividend read, and a shared node must never print as a local.
+        return new DivisionPattern(width, signed, dividendDecl.Initializer, divisorDecl.Initializer,
+            new RegisterNode(lowOutput.DataType, lowOutput.RegisterIndex),
+            new RegisterNode(highOutput.DataType, highOutput.RegisterIndex));
     }
 
     private static void RequireType(SegmentedAddress instructionAddress, string what, DataType actual, DataType expected) {

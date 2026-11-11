@@ -157,8 +157,11 @@ internal static class IrExpressionPropagation {
             || !MemoryCrossable(block, i, j, moved, ssa, alias)) {
             return null;
         }
-        ValueNode merged = Substitute(e2, r1, e1);
-        if (CountNodes(merged) > MaxMergedNodes || covered[i] + covered[j] > MaxChainLength) {
+        ValueNode rawMerged = Substitute(e2, r1, e1);
+        ValueNode merged = (ValueNode)IrConstantFolder.FoldConstantTerms(rawMerged);
+        if (CountNodes(merged) > MaxMergedNodes
+            || (covered[i] + covered[j] > MaxChainLength
+                && CountNodes(merged) >= CountNodes(rawMerged))) {
             return null;
         }
         IrStatement replacement = IrStatement.Create(assign with { Right = merged }, reader.Origin);
@@ -264,7 +267,7 @@ internal static class IrExpressionPropagation {
         registers.AddRange(IrAstChildren.Descendants(node).OfType<RegisterNode>()
             .Where(register => register is not SegmentRegisterNode));
 
-    private static ValueNode Substitute(ValueNode node, RegisterNode target, ValueNode replacement) =>
+    internal static ValueNode Substitute(ValueNode node, RegisterNode target, ValueNode replacement) =>
         node switch {
             RegisterNode register when register.Equals(target) => replacement,
             _ => (ValueNode)IrAstChildren.MapChildren(node,

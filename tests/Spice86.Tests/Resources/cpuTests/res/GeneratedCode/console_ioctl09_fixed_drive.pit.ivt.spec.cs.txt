@@ -159,9 +159,8 @@ public partial class CfgGeneratedOverrides {
         byte al;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x44
-        AH = 0x44;
         // 016D:0102 mov AL,9
-        AL = 9;
+        AX = 0x4409;
         // 016D:0104 mov BX,3
         BX = 3;
         // 016D:0107 int 0x21

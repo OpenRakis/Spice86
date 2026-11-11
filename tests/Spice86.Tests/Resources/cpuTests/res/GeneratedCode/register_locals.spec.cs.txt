@@ -34,19 +34,23 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private static readonly byte?[] Signature_00C8_mov = [0xC6, 0x45, 0x22, 0x00];
-    private static readonly byte?[] Signature_00CC_jmp = [0xEB, 0x04];
-    private static readonly byte?[] Signature_00D4_mov = [0xC6, 0x45, 0x23, 0x00];
+    private static readonly byte?[] Signature_00D4_mov = [0xC6, 0x45, 0x22, 0x00];
     private static readonly byte?[] Signature_00D8_jmp = [0xEB, 0x04];
-    private static readonly byte?[] Signature_00E6_mov = [0xC6, 0x45, 0x24, 0x01];
-    private static readonly byte?[] Signature_00F2_mov = [0xC6, 0x45, 0x25, 0x01];
-    private static readonly byte?[] Signature_0101_mov = [0xC6, 0x45, 0x26, 0x01];
-    private static readonly byte?[] Signature_010D_mov = [0xC6, 0x45, 0x27, 0x01];
-    private static readonly byte?[] Signature_0113_mov = [0xC6, 0x45, 0x28, 0x00];
-    private static readonly byte?[] Signature_0117_jmp = [0xEB, 0x04];
-    private static readonly byte?[] Signature_0128_mov = [0xC6, 0x45, 0x29, 0x00];
+    private static readonly byte?[] Signature_00E0_mov = [0xC6, 0x45, 0x23, 0x00];
+    private static readonly byte?[] Signature_00E4_jmp = [0xEB, 0x04];
+    private static readonly byte?[] Signature_00F2_mov = [0xC6, 0x45, 0x24, 0x01];
+    private static readonly byte?[] Signature_00FE_mov = [0xC6, 0x45, 0x25, 0x01];
+    private static readonly byte?[] Signature_010D_mov = [0xC6, 0x45, 0x26, 0x01];
+    private static readonly byte?[] Signature_0119_mov = [0xC6, 0x45, 0x27, 0x01];
+    private static readonly byte?[] Signature_011F_mov = [0xC6, 0x45, 0x28, 0x00];
+    private static readonly byte?[] Signature_0123_jmp = [0xEB, 0x04];
+    private static readonly byte?[] Signature_0134_mov = [0xC6, 0x45, 0x29, 0x00];
+    private static readonly byte?[] Signature_01A2_mov = [0xC6, 0x45, 0x44, 0x00];
+    private static readonly byte?[] Signature_01B1_mov = [0xC6, 0x45, 0x45, 0x00];
+    private static readonly byte?[] Signature_01CF_mov = [0xC6, 0x45, 0x4A, 0x00];
 
-    private readonly Func<int, Action> unknown_F000_013B_F013BEntry;
+    private readonly Func<int, Action> unknown_F000_01D4_F01D4Entry;
+    private readonly Func<int, Action> unknown_F000_01D8_F01D8Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -61,9 +65,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_013B_F013BEntry = _ => unknown_F000_013B_F013B();
+        unknown_F000_01D4_F01D4Entry = _ => unknown_F000_01D4_F01D4();
+        unknown_F000_01D8_F01D8Entry = _ => unknown_F000_01D8_F01D8();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x013B, unknown_F000_013B_F013BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D4, unknown_F000_01D4_F01D4Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D8, unknown_F000_01D8_F01D8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
@@ -86,11 +92,20 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DI, DS. Outputs: none. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_013B_F013B() {
-        CheckExternalEvents(biosSegment, 0x013B);
-        // F000:013B mov word ptr DS:[DI+2],AX
+    public virtual Action unknown_F000_01D4_F01D4() {
+        CheckExternalEvents(biosSegment, 0x01D4);
+        // F000:01D4 mov word ptr DS:[DI+2],AX
         UInt16[DS, (ushort)(DI + 2)] = AX;
-        // F000:013E iret
+        // F000:01D7 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: AX, DI, DS. Outputs: none. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_01D8_F01D8() {
+        CheckExternalEvents(biosSegment, 0x01D8);
+        // F000:01D8 mov word ptr DS:[DI+0x3E],AX
+        UInt16[DS, (ushort)(DI + 0x3E)] = AX;
+        // F000:01DB iret
         return InterruptRet();
     }
 
@@ -101,6 +116,16 @@ public partial class CfgGeneratedOverrides {
         ushort dx1 = 0;
         ushort cx1 = 0;
         short ax1 = 0;
+        ushort dx;
+        ushort bx;
+        ushort dx2 = 0;
+        ushort cx2 = 0;
+        ushort bx1 = 0;
+        ushort ax2 = 0;
+        ushort dx3 = 0;
+        ushort cx3 = 0;
+        ushort bx2 = 0;
+        ushort ax3 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
@@ -120,238 +145,345 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         // F000:000C mov ES,AX
         ES = 0;
-        // F000:000E mov word ptr ES:[0x0184],0x013B
-        Segment0000Globals.Word0184 = 0x013B;
+        // F000:000E mov word ptr ES:[0x0184],0x01D4
         // F000:0015 mov word ptr ES:[0x0186],CS
-        Segment0000Globals.Word0186 = CS;
-        // F000:001A cld
+        Segment0000Globals.Dword0184 = 0x000001D4 | (uint)CS << 16;
+        // F000:001A mov word ptr ES:[0x0188],0x01D8
+        // F000:0021 mov word ptr ES:[0x018A],CS
+        Segment0000Globals.Dword0188 = 0x000001D8 | (uint)CS << 16;
+        // F000:0026 cld
         DirectionFlag = false;
-        // F000:001B mov DI,0x0040
+        // F000:0027 mov DI,0x0040
         DI = 0x0040;
-        // F000:001E mov SI,0x013F
-        SI = 0x013F;
-        // F000:0021 mov AX,word ptr CS:[SI]
-        ax = SegmentF000Globals.Word013F;
-        // F000:0024 mov CX,AX
+        // F000:002A mov SI,0x01DC
+        SI = 0x01DC;
+        // F000:002D mov AX,word ptr CS:[SI]
+        ax = SegmentF000Globals.Word01DC;
+        // F000:0030 mov CX,AX
         cx = ax;
-        // F000:0026 mov DX,AX
+        // F000:0032 mov DX,AX
         dx1 = ax;
-        // F000:0028 mov word ptr DS:[DI],CX
+        // F000:0034 mov word ptr DS:[DI],CX
         Segment2000Globals.Word0040 = cx;
-        // F000:002A mov word ptr DS:[DI+0x0C],DX
+        // F000:0036 mov word ptr DS:[DI+0x0C],DX
         Segment2000Globals.Word004C = dx1;
-        // F000:002D mov AX,word ptr CS:[SI+2]
-        AX = SegmentF000Globals.Word0141;
-        // F000:0031 mov CX,AX
+        // F000:0039 mov AX,word ptr CS:[SI+2]
+        AX = SegmentF000Globals.Word01DE;
+        // F000:003D mov CX,AX
         cx1 = AX;
-        // F000:0033 int 0x61
-        InterruptCall(biosSegment, 0x0035, 0x61, biosSegment, 0x013B, unknown_F000_013B_F013BEntry);
-        // F000:0035 mov word ptr DS:[DI+0x0E],CX
+        // F000:003F int 0x61
+        InterruptCall(biosSegment, 0x0041, 0x61, biosSegment, 0x01D4, unknown_F000_01D4_F01D4Entry);
+        // F000:0041 mov word ptr DS:[DI+0x0E],CX
         Segment2000Globals.Word004E = cx1;
-        // F000:0038 mov AX,word ptr CS:[SI+4]
-        AX = SegmentF000Globals.Word0143;
-        // F000:003C mov CX,AX
+        // F000:0044 mov AX,word ptr CS:[SI+4]
+        AX = SegmentF000Globals.Word01E0;
+        // F000:0048 mov CX,AX
         cx = AX;
-        // F000:003E mov byte ptr DS:[DI+4],AL
+        // F000:004A mov byte ptr DS:[DI+4],AL
         Segment2000Globals.Byte0044 = AL;
-        // F000:0041 mov word ptr DS:[DI+0x10],CX
+        // F000:004D mov word ptr DS:[DI+0x10],CX
         Segment2000Globals.Word0050 = cx;
-        // F000:0044 mov AX,word ptr CS:[SI+6]
-        // F000:0048 add AX,1
-        ax = (ushort)(SegmentF000Globals.Word0145 + 1);
-        // F000:004B mov word ptr DS:[DI+5],AX
+        // F000:0050 mov AX,word ptr CS:[SI+6]
+        // F000:0054 add AX,1
+        ax = (ushort)(SegmentF000Globals.Word01E2 + 1);
+        // F000:0057 mov word ptr DS:[DI+5],AX
         Segment2000Globals.Word0045 = ax;
-        // F000:004E mov AX,word ptr CS:[SI+8]
-        AX = SegmentF000Globals.Word0147;
-        // F000:0052 mov CX,AX
+        // F000:005A mov AX,word ptr CS:[SI+8]
+        AX = SegmentF000Globals.Word01E4;
+        // F000:005E mov CX,AX
         CX = AX;
-        // F000:0054 mov BX,word ptr CS:[SI+0x0A]
-        BX = SegmentF000Globals.Word0149;
-        // F000:0058 xchg BX,AX
+        // F000:0060 mov BX,word ptr CS:[SI+0x0A]
+        BX = SegmentF000Globals.Word01E6;
+        // F000:0064 xchg BX,AX
         (BX, AX) = (AX, BX);
-        // F000:0059 mov word ptr DS:[DI+7],AX
+        // F000:0065 mov word ptr DS:[DI+7],AX
         Segment2000Globals.Word0047 = AX;
-        // F000:005C mov word ptr DS:[DI+0x12],CX
+        // F000:0068 mov word ptr DS:[DI+0x12],CX
         Segment2000Globals.Word0052 = CX;
-        // F000:005F mov word ptr DS:[DI+0x16],BX
+        // F000:006B mov word ptr DS:[DI+0x16],BX
         Segment2000Globals.Word0056 = BX;
-        // F000:0062 mov AX,word ptr CS:[SI+0x0C]
-        AX = SegmentF000Globals.Word014B;
-        // F000:0066 mov CX,AX
-        cx = AX;
-        // F000:0068 mov byte ptr DS:[DI+0x14],AL
+        // F000:006E mov AX,word ptr CS:[SI+0x0C]
+        ax = SegmentF000Globals.Word01E8;
+        // F000:0072 mov CX,AX
+        cx = ax;
+        // F000:0074 mov byte ptr DS:[DI+0x14],AL
+        AX = ax;
         Segment2000Globals.Byte0054 = AL;
-        // F000:006B xor DX,DX
+        // F000:0077 xor DX,DX
         DX = 0;
-        // F000:006D div CX
-        (AX, DX) = Div16(divisor: cx, dividend: (uint)((uint)DX << 16 | (uint)AX));
-        // F000:006F mov word ptr DS:[DI+9],AX
+        // F000:0079 div CX
+        (AX, DX) = Div16(divisor: cx, dividend: (uint)ax);
+        // F000:007B mov word ptr DS:[DI+9],AX
         Segment2000Globals.Word0049 = AX;
-        // F000:0072 mov AX,word ptr CS:[SI+0x10]
-        ax = SegmentF000Globals.Word014F;
-        // F000:0076 mov DS,AX
+        // F000:007E mov AX,word ptr CS:[SI+0x10]
+        ax = SegmentF000Globals.Word01EC;
+        // F000:0082 mov DS,AX
         DS = ax;
-        // F000:0078 mov DX,DS
-        // F000:007A mov byte ptr DS:[0x0080],0x77
+        // F000:0084 mov DX,DS
+        // F000:0086 mov byte ptr DS:[0x0080],0x77
         DsGlobals.Byte0080 = 0x77;
-        // F000:007F mov AX,word ptr CS:[SI+0x0E]
-        AX = SegmentF000Globals.Word014D;
-        // F000:0083 mov DS,AX
+        // F000:008B mov AX,word ptr CS:[SI+0x0E]
+        AX = SegmentF000Globals.Word01EA;
+        // F000:008F mov DS,AX
         DS = AX;
-        // F000:0085 mov byte ptr DS:[0x0080],0x11
+        // F000:0091 mov byte ptr DS:[0x0080],0x11
         DsGlobals.Byte0080 = 0x11;
-        // F000:008A mov AX,word ptr CS:[SI+0x10]
-        ax = SegmentF000Globals.Word014F;
-        // F000:008E mov DS,AX
-        DS = ax;
-        // F000:0090 mov DX,DS
-        DX = DS;
-        // F000:0092 mov CX,word ptr DS:[0x0080]
-        CX = DsGlobals.Word0080;
-        // F000:0096 mov AX,word ptr CS:[SI+0x0E]
-        AX = SegmentF000Globals.Word014D;
+        // F000:0096 mov AX,word ptr CS:[SI+0x10]
+        ax = SegmentF000Globals.Word01EC;
         // F000:009A mov DS,AX
+        DS = ax;
+        // F000:009C mov DX,DS
+        // F000:009E mov CX,word ptr DS:[0x0080]
+        CX = DsGlobals.Word0080;
+        // F000:00A2 mov AX,word ptr CS:[SI+0x0E]
+        AX = SegmentF000Globals.Word01EA;
+        // F000:00A6 mov DS,AX
         DS = AX;
-        // F000:009C mov byte ptr DS:[DI+0x0B],CL
+        // F000:00A8 mov byte ptr DS:[DI+0x0B],CL
         DsGlobals.Byte004B = CL;
-        // F000:009F mov AX,word ptr CS:[SI]
-        ax = SegmentF000Globals.Word013F;
-        // F000:00A2 mov word ptr DS:[DI+0x18],AX
+        // F000:00AB mov AX,word ptr CS:[SI]
+        ax = SegmentF000Globals.Word01DC;
+        // F000:00AE mov word ptr DS:[DI+0x18],AX
         DsGlobals.Word0058 = ax;
-        // F000:00A5 mov AX,word ptr CS:[SI+6]
-        AX = SegmentF000Globals.Word0145;
-        // F000:00A9 mov word ptr DS:[DI+0x1A],AX
+        // F000:00B1 mov AX,word ptr CS:[SI+6]
+        AX = SegmentF000Globals.Word01E2;
+        // F000:00B5 mov word ptr DS:[DI+0x1A],AX
         DsGlobals.Word005A = AX;
-        // F000:00AC push AX
+        // F000:00B8 push AX
         Stack.Push16(AX);
-        // F000:00AD push ES
+        // F000:00B9 push ES
         Stack.Push16(ES);
-        // F000:00AE mov AX,1
-        // F000:00B1 mov ES,AX
-        // F000:00B3 mov word ptr DS:[DI+0x1C],AX
+        // F000:00BA mov AX,1
+        // F000:00BD mov ES,AX
+        // F000:00BF mov word ptr DS:[DI+0x1C],AX
         DsGlobals.Word005C = 1;
-        // F000:00B6 pop ES
+        // F000:00C2 pop ES
         ES = Stack.Pop16();
-        // F000:00B7 pop AX
+        // F000:00C3 pop AX
         ax = Stack.Pop16();
-        // F000:00B8 mov word ptr DS:[DI+0x1E],AX
+        // F000:00C4 mov word ptr DS:[DI+0x1E],AX
         DsGlobals.Word005E = ax;
-        // F000:00BB mov word ptr DS:[DI+0x20],ES
+        // F000:00C7 mov word ptr DS:[DI+0x20],ES
         DsGlobals.Word0060 = ES;
-        // F000:00BE movsx AX,byte ptr CS:[SI+0x12]
-        ax1 = (short)(sbyte)SegmentF000Globals.Byte0151;
-        // F000:00C3 cmp AX,-5
-        // F000:00C6 jl short 0x00CE
+        // F000:00CA movsx AX,byte ptr CS:[SI+0x12]
+        ax1 = (short)(sbyte)SegmentF000Globals.Byte01EE;
+        // F000:00CF cmp AX,-5
+        // F000:00D2 jl short 0x00DA
         if (ax1 < -5) {
-            // F000:00CE mov byte ptr DS:[DI+0x22],1
+            // F000:00DA mov byte ptr DS:[DI+0x22],1
             DsGlobals.Byte0062 = 1;
         }
         else {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00C8, Signature_00C8_mov);
-            // F000:00C8 mov byte ptr DS:[DI+0x22],0
-            DsGlobals.Byte0062 = 0;
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00CC, Signature_00CC_jmp);
-            // F000:00CC jmp short 0x00D2
-        }
-        // F000:00D2 jle short 0x00DA
-        if (ax1 <= -5) {
-            // F000:00DA mov byte ptr DS:[DI+0x23],1
-            DsGlobals.Byte0063 = 1;
-        }
-        else {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00D4, Signature_00D4_mov);
-            // F000:00D4 mov byte ptr DS:[DI+0x23],0
-            DsGlobals.Byte0063 = 0;
+            // F000:00D4 mov byte ptr DS:[DI+0x22],0
+            DsGlobals.Byte0062 = 0;
             VerifySpeculativeEntryOrFail(biosSegment, 0x00D8, Signature_00D8_jmp);
             // F000:00D8 jmp short 0x00DE
         }
-        // F000:00DE jg short 0x00E6
+        // F000:00DE jle short 0x00E6
+        if (ax1 <= -5) {
+            // F000:00E6 mov byte ptr DS:[DI+0x23],1
+            DsGlobals.Byte0063 = 1;
+        }
+        else {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00E0, Signature_00E0_mov);
+            // F000:00E0 mov byte ptr DS:[DI+0x23],0
+            DsGlobals.Byte0063 = 0;
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00E4, Signature_00E4_jmp);
+            // F000:00E4 jmp short 0x00EA
+        }
+        // F000:00EA jg short 0x00F2
         if (ax1 > -5) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00E6, Signature_00E6_mov);
-            // F000:00E6 mov byte ptr DS:[DI+0x24],1
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_mov);
+            // F000:00F2 mov byte ptr DS:[DI+0x24],1
             DsGlobals.Byte0064 = 1;
         }
         else {
-            // F000:00E0 mov byte ptr DS:[DI+0x24],0
+            // F000:00EC mov byte ptr DS:[DI+0x24],0
             DsGlobals.Byte0064 = 0;
-            // F000:00E4 jmp short 0x00EA
+            // F000:00F0 jmp short 0x00F6
         }
-        // F000:00EA jge short 0x00F2
+        // F000:00F6 jge short 0x00FE
         if (ax1 >= -5) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_mov);
-            // F000:00F2 mov byte ptr DS:[DI+0x25],1
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00FE, Signature_00FE_mov);
+            // F000:00FE mov byte ptr DS:[DI+0x25],1
             DsGlobals.Byte0065 = 1;
         }
         else {
-            // F000:00EC mov byte ptr DS:[DI+0x25],0
+            // F000:00F8 mov byte ptr DS:[DI+0x25],0
             DsGlobals.Byte0065 = 0;
-            // F000:00F0 jmp short 0x00F6
+            // F000:00FC jmp short 0x0102
         }
-        // F000:00F6 cmp AX,-20
-        // F000:00F9 jl short 0x0101
+        // F000:0102 cmp AX,-20
+        // F000:0105 jl short 0x010D
         if (ax1 < -0x0014) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0101, Signature_0101_mov);
-            // F000:0101 mov byte ptr DS:[DI+0x26],1
+            VerifySpeculativeEntryOrFail(biosSegment, 0x010D, Signature_010D_mov);
+            // F000:010D mov byte ptr DS:[DI+0x26],1
             DsGlobals.Byte0066 = 1;
         }
         else {
-            // F000:00FB mov byte ptr DS:[DI+0x26],0
+            // F000:0107 mov byte ptr DS:[DI+0x26],0
             DsGlobals.Byte0066 = 0;
-            // F000:00FF jmp short 0x0105
+            // F000:010B jmp short 0x0111
         }
-        // F000:0105 jle short 0x010D
+        // F000:0111 jle short 0x0119
         if (ax1 <= -0x0014) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x010D, Signature_010D_mov);
-            // F000:010D mov byte ptr DS:[DI+0x27],1
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0119, Signature_0119_mov);
+            // F000:0119 mov byte ptr DS:[DI+0x27],1
             DsGlobals.Byte0067 = 1;
         }
         else {
-            // F000:0107 mov byte ptr DS:[DI+0x27],0
+            // F000:0113 mov byte ptr DS:[DI+0x27],0
             DsGlobals.Byte0067 = 0;
-            // F000:010B jmp short 0x0111
+            // F000:0117 jmp short 0x011D
         }
-        // F000:0111 jg short 0x0119
+        // F000:011D jg short 0x0125
         if (ax1 > -0x0014) {
-            // F000:0119 mov byte ptr DS:[DI+0x28],1
+            // F000:0125 mov byte ptr DS:[DI+0x28],1
             DsGlobals.Byte0068 = 1;
         }
         else {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0113, Signature_0113_mov);
-            // F000:0113 mov byte ptr DS:[DI+0x28],0
+            VerifySpeculativeEntryOrFail(biosSegment, 0x011F, Signature_011F_mov);
+            // F000:011F mov byte ptr DS:[DI+0x28],0
             DsGlobals.Byte0068 = 0;
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0117, Signature_0117_jmp);
-            // F000:0117 jmp short 0x011D
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0123, Signature_0123_jmp);
+            // F000:0123 jmp short 0x0129
         }
-        // F000:011D cmp AX,3
-        Alu16.Sub((ushort)ax1, 3);
-        // F000:0120 jb short 0x0128
+        // F000:0129 cmp AX,3
+        // F000:012C jb short 0x0134
         if ((ushort)ax1 < 3) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0128, Signature_0128_mov);
-            // F000:0128 mov byte ptr DS:[DI+0x29],0
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0134, Signature_0134_mov);
+            // F000:0134 mov byte ptr DS:[DI+0x29],0
             DsGlobals.Byte0069 = 0;
         }
         else {
-            // F000:0122 mov byte ptr DS:[DI+0x29],1
+            // F000:012E mov byte ptr DS:[DI+0x29],1
             DsGlobals.Byte0069 = 1;
-            // F000:0126 jmp short 0x012C
+            // F000:0132 jmp short 0x0138
         }
-        // F000:012C push AX
-        // F000:012D pop BX
+        // F000:0138 push AX
+        // F000:0139 pop BX
         BX = (ushort)ax1;
-        // F000:012E sar BX,1
+        // F000:013A sar BX,1
         BX = (ushort)((short)BX >> 1);
-        // F000:0130 mov word ptr DS:[DI+0x2A],BX
+        // F000:013C mov word ptr DS:[DI+0x2A],BX
         DsGlobals.Word006A = BX;
-        // F000:0133 push AX
+        // F000:013F push AX
         Stack.Push16((ushort)ax1);
-        // F000:0134 pop CX
+        // F000:0140 pop CX
         CX = Stack.Pop16();
-        // F000:0135 shr CX,1
-        CX = Alu16.Shr(CX, 1);
-        // F000:0137 mov word ptr DS:[DI+0x2C],CX
+        // F000:0141 shr CX,1
+        CX >>= 1;
+        // F000:0143 mov word ptr DS:[DI+0x2C],CX
         DsGlobals.Word006C = CX;
-        // F000:013A hlt
-        AX = (ushort)ax1;
+        // F000:0146 mov AX,word ptr CS:[SI]
+        ax = SegmentF000Globals.Word01DC;
+        // F000:0149 mov BX,3
+        // F000:014C mul BX
+        (AX, dx) = Mul16(ax, 3);
+        // F000:014E mov CX,AX
+        cx = AX;
+        // F000:0150 mov BX,DX
+        bx = dx;
+        // F000:0152 mov word ptr DS:[DI+0x30],CX
+        DsGlobals.Word0070 = cx;
+        // F000:0155 mov word ptr DS:[DI+0x32],BX
+        DsGlobals.Word0072 = bx;
+        // F000:0158 mov word ptr DS:[DI+0x4C],DX
+        DsGlobals.Word008C = dx;
+        // F000:015B mov word ptr DS:[DI+0x50],AX
+        DsGlobals.Word0090 = AX;
+        // F000:015E mov AH,0x12
+        AH = 0x12;
+        // F000:0160 mov word ptr DS:[DI+0x34],AX
+        DsGlobals.Word0074 = AX;
+        // F000:0163 mov byte ptr DS:[DI+0x36],AL
+        DsGlobals.Byte0076 = AL;
+        // F000:0166 mov AX,word ptr CS:[SI+0x0C]
+        ax = SegmentF000Globals.Word01E8;
+        // F000:016A xor DX,DX
+        DX = dx;
+        DX = Alu16.Xor(DX, DX);
+        // F000:016C mov BX,5
+        // F000:016F div BX
+        (AX, dx2) = Div16(divisor: 5, dividend: (uint)ax);
+        // F000:0171 mov CX,AX
+        cx2 = AX;
+        // F000:0173 mov BX,DX
+        bx1 = dx2;
+        // F000:0175 mov word ptr DS:[DI+0x38],CX
+        DsGlobals.Word0078 = cx2;
+        // F000:0178 mov word ptr DS:[DI+0x3A],BX
+        DsGlobals.Word007A = bx1;
+        // F000:017B mov byte ptr DS:[DI+0x3C],AL
+        DsGlobals.Byte007C = AL;
+        // F000:017E mov word ptr DS:[DI+0x4E],DX
+        DsGlobals.Word008E = dx2;
+        // F000:0181 int 0x62
+        InterruptCall(biosSegment, 0x0183, 0x62, biosSegment, 0x01D8, unknown_F000_01D8_F01D8Entry);
+        // F000:0183 movsx AX,byte ptr CS:[SI+0x12]
+        ax = (ushort)(short)(sbyte)SegmentF000Globals.Byte01EE;
+        // F000:0188 mov BX,3
+        // F000:018B imul BX
+        (ax2, dx3) = IMul16((short)ax, (short)3);
+        // F000:018D mov CX,AX
+        cx3 = ax2;
+        // F000:018F mov BX,DX
+        bx2 = dx3;
+        // F000:0191 mov word ptr DS:[DI+0x40],CX
+        DsGlobals.Word0080 = cx3;
+        // F000:0194 mov word ptr DS:[DI+0x42],BX
+        DsGlobals.Word0082 = bx2;
+        // F000:0197 cmp AX,-48
+        // F000:019A jl short 0x01A2
+        if ((short)ax2 < -0x0030) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x01A2, Signature_01A2_mov);
+            // F000:01A2 mov byte ptr DS:[DI+0x44],0
+            DsGlobals.Byte0084 = 0;
+        }
+        else {
+            // F000:019C mov byte ptr DS:[DI+0x44],1
+            DsGlobals.Byte0084 = 1;
+            // F000:01A0 jmp short 0x01A6
+        }
+        // F000:01A6 cmp DX,-1
+        // F000:01A9 jl short 0x01B1
+        if ((short)dx3 < -1) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x01B1, Signature_01B1_mov);
+            // F000:01B1 mov byte ptr DS:[DI+0x45],0
+            DsGlobals.Byte0085 = 0;
+        }
+        else {
+            // F000:01AB mov byte ptr DS:[DI+0x45],1
+            DsGlobals.Byte0085 = 1;
+            // F000:01AF jmp short 0x01B5
+        }
+        // F000:01B5 mov BX,3
+        // F000:01B8 idiv BX
+        (ax3, DX) = IDiv16(divisor: 3, dividend: (int)((uint)dx3 << 16 | (uint)ax2));
+        // F000:01BA mov CX,AX
+        CX = ax3;
+        // F000:01BC mov BX,DX
+        BX = DX;
+        // F000:01BE mov word ptr DS:[DI+0x46],CX
+        DsGlobals.Word0086 = CX;
+        // F000:01C1 mov word ptr DS:[DI+0x48],BX
+        DsGlobals.Word0088 = BX;
+        // F000:01C4 cmp AX,-16
+        Alu16.Sub(ax3, 0xFFF0);
+        // F000:01C7 jl short 0x01CF
+        if ((short)ax3 < -0x0010) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x01CF, Signature_01CF_mov);
+            // F000:01CF mov byte ptr DS:[DI+0x4A],0
+            DsGlobals.Byte008A = 0;
+        }
+        else {
+            // F000:01C9 mov byte ptr DS:[DI+0x4A],1
+            DsGlobals.Byte008A = 1;
+            // F000:01CD jmp short 0x01D3
+        }
+        // F000:01D3 hlt
+        AX = ax3;
         return Hlt();
     }
 
@@ -423,11 +555,59 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
     /// DS:0x006C, whatever DS holds at the access.
     public ushort Word006C { get => _memory.UInt16[Segment, 0x006C]; set => _memory.UInt16[Segment, 0x006C] = value; }
 
+    /// DS:0x0070, whatever DS holds at the access.
+    public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
+
+    /// DS:0x0072, whatever DS holds at the access.
+    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
+
+    /// DS:0x0074, whatever DS holds at the access.
+    public ushort Word0074 { get => _memory.UInt16[Segment, 0x0074]; set => _memory.UInt16[Segment, 0x0074] = value; }
+
+    /// DS:0x0076, whatever DS holds at the access.
+    public byte Byte0076 { get => _memory.UInt8[Segment, 0x0076]; set => _memory.UInt8[Segment, 0x0076] = value; }
+
+    /// DS:0x0078, whatever DS holds at the access.
+    public ushort Word0078 { get => _memory.UInt16[Segment, 0x0078]; set => _memory.UInt16[Segment, 0x0078] = value; }
+
+    /// DS:0x007A, whatever DS holds at the access.
+    public ushort Word007A { get => _memory.UInt16[Segment, 0x007A]; set => _memory.UInt16[Segment, 0x007A] = value; }
+
+    /// DS:0x007C, whatever DS holds at the access.
+    public byte Byte007C { get => _memory.UInt8[Segment, 0x007C]; set => _memory.UInt8[Segment, 0x007C] = value; }
+
     /// DS:0x0080, whatever DS holds at the access.
     public byte Byte0080 { get => _memory.UInt8[Segment, 0x0080]; set => _memory.UInt8[Segment, 0x0080] = value; }
 
     /// DS:0x0080, whatever DS holds at the access.
     public ushort Word0080 { get => _memory.UInt16[Segment, 0x0080]; set => _memory.UInt16[Segment, 0x0080] = value; }
+
+    /// DS:0x0082, whatever DS holds at the access.
+    public ushort Word0082 { get => _memory.UInt16[Segment, 0x0082]; set => _memory.UInt16[Segment, 0x0082] = value; }
+
+    /// DS:0x0084, whatever DS holds at the access.
+    public byte Byte0084 { get => _memory.UInt8[Segment, 0x0084]; set => _memory.UInt8[Segment, 0x0084] = value; }
+
+    /// DS:0x0085, whatever DS holds at the access.
+    public byte Byte0085 { get => _memory.UInt8[Segment, 0x0085]; set => _memory.UInt8[Segment, 0x0085] = value; }
+
+    /// DS:0x0086, whatever DS holds at the access.
+    public ushort Word0086 { get => _memory.UInt16[Segment, 0x0086]; set => _memory.UInt16[Segment, 0x0086] = value; }
+
+    /// DS:0x0088, whatever DS holds at the access.
+    public ushort Word0088 { get => _memory.UInt16[Segment, 0x0088]; set => _memory.UInt16[Segment, 0x0088] = value; }
+
+    /// DS:0x008A, whatever DS holds at the access.
+    public byte Byte008A { get => _memory.UInt8[Segment, 0x008A]; set => _memory.UInt8[Segment, 0x008A] = value; }
+
+    /// DS:0x008C, whatever DS holds at the access.
+    public ushort Word008C { get => _memory.UInt16[Segment, 0x008C]; set => _memory.UInt16[Segment, 0x008C] = value; }
+
+    /// DS:0x008E, whatever DS holds at the access.
+    public ushort Word008E { get => _memory.UInt16[Segment, 0x008E]; set => _memory.UInt16[Segment, 0x008E] = value; }
+
+    /// DS:0x0090, whatever DS holds at the access.
+    public ushort Word0090 { get => _memory.UInt16[Segment, 0x0090]; set => _memory.UInt16[Segment, 0x0090] = value; }
 }
 
 // ==== file: Segment0000Globals.cs ====
@@ -446,9 +626,9 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public ushort Word0184 { get => _memory.UInt16[Segment, 0x0184]; set => _memory.UInt16[Segment, 0x0184] = value; }
+    public uint Dword0184 { get => _memory.UInt32[Segment, 0x0184]; set => _memory.UInt32[Segment, 0x0184] = value; }
 
-    public ushort Word0186 { get => _memory.UInt16[Segment, 0x0186]; set => _memory.UInt16[Segment, 0x0186] = value; }
+    public uint Dword0188 { get => _memory.UInt32[Segment, 0x0188]; set => _memory.UInt32[Segment, 0x0188] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====
@@ -506,23 +686,23 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public ushort Word013F { get => _memory.UInt16[Segment, 0x013F]; set => _memory.UInt16[Segment, 0x013F] = value; }
+    public ushort Word01DC { get => _memory.UInt16[Segment, 0x01DC]; set => _memory.UInt16[Segment, 0x01DC] = value; }
 
-    public ushort Word0141 { get => _memory.UInt16[Segment, 0x0141]; set => _memory.UInt16[Segment, 0x0141] = value; }
+    public ushort Word01DE { get => _memory.UInt16[Segment, 0x01DE]; set => _memory.UInt16[Segment, 0x01DE] = value; }
 
-    public ushort Word0143 { get => _memory.UInt16[Segment, 0x0143]; set => _memory.UInt16[Segment, 0x0143] = value; }
+    public ushort Word01E0 { get => _memory.UInt16[Segment, 0x01E0]; set => _memory.UInt16[Segment, 0x01E0] = value; }
 
-    public ushort Word0145 { get => _memory.UInt16[Segment, 0x0145]; set => _memory.UInt16[Segment, 0x0145] = value; }
+    public ushort Word01E2 { get => _memory.UInt16[Segment, 0x01E2]; set => _memory.UInt16[Segment, 0x01E2] = value; }
 
-    public ushort Word0147 { get => _memory.UInt16[Segment, 0x0147]; set => _memory.UInt16[Segment, 0x0147] = value; }
+    public ushort Word01E4 { get => _memory.UInt16[Segment, 0x01E4]; set => _memory.UInt16[Segment, 0x01E4] = value; }
 
-    public ushort Word0149 { get => _memory.UInt16[Segment, 0x0149]; set => _memory.UInt16[Segment, 0x0149] = value; }
+    public ushort Word01E6 { get => _memory.UInt16[Segment, 0x01E6]; set => _memory.UInt16[Segment, 0x01E6] = value; }
 
-    public ushort Word014B { get => _memory.UInt16[Segment, 0x014B]; set => _memory.UInt16[Segment, 0x014B] = value; }
+    public ushort Word01E8 { get => _memory.UInt16[Segment, 0x01E8]; set => _memory.UInt16[Segment, 0x01E8] = value; }
 
-    public ushort Word014D { get => _memory.UInt16[Segment, 0x014D]; set => _memory.UInt16[Segment, 0x014D] = value; }
+    public ushort Word01EA { get => _memory.UInt16[Segment, 0x01EA]; set => _memory.UInt16[Segment, 0x01EA] = value; }
 
-    public ushort Word014F { get => _memory.UInt16[Segment, 0x014F]; set => _memory.UInt16[Segment, 0x014F] = value; }
+    public ushort Word01EC { get => _memory.UInt16[Segment, 0x01EC]; set => _memory.UInt16[Segment, 0x01EC] = value; }
 
-    public byte Byte0151 { get => _memory.UInt8[Segment, 0x0151]; set => _memory.UInt8[Segment, 0x0151] = value; }
+    public byte Byte01EE { get => _memory.UInt8[Segment, 0x01EE]; set => _memory.UInt8[Segment, 0x01EE] = value; }
 }

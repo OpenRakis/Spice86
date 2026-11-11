@@ -169,19 +169,16 @@ public partial class CfgGeneratedOverrides {
         // 016E:0107 mov BH,0
         BH = 0;
         // 016E:0109 mov DH,0
-        DH = 0;
         // 016E:010B mov DL,0
-        DL = 0;
+        DX = 0;
         // 016E:010D int 0x10
         Video.SetCursorPosition(0, BX);
         // 016E:010F mov AH,9
-        AH = 9;
         // 016E:0111 mov AL,0xDB
-        AL = 0xDB;
+        AX = 0x09DB;
         // 016E:0113 mov BH,0
-        BH = 0;
         // 016E:0115 mov BL,3
-        BL = 3;
+        BX = 3;
         // 016E:0117 mov CX,0x0028
         CX = 0x0028;
         // 016E:011A int 0x10
@@ -191,19 +188,16 @@ public partial class CfgGeneratedOverrides {
         // 016E:011E mov BH,0
         BH = 0;
         // 016E:0120 mov DH,1
-        DH = 1;
         // 016E:0122 mov DL,0
-        DL = 0;
+        DX = 0x0100;
         // 016E:0124 int 0x10
         Video.SetCursorPosition(0x0100, 3);
         // 016E:0126 mov AH,9
-        AH = 9;
         // 016E:0128 mov AL,0x20
-        AL = 0x20;
+        AX = 0x0920;
         // 016E:012A mov BH,0
-        BH = 0;
         // 016E:012C mov BL,0
-        BL = 0;
+        BX = 0;
         // 016E:012E mov CX,0x0028
         CX = 0x0028;
         // 016E:0131 int 0x10
@@ -213,37 +207,31 @@ public partial class CfgGeneratedOverrides {
         // 016E:0135 mov BH,0
         BH = 0;
         // 016E:0137 mov DH,2
-        DH = 2;
         // 016E:0139 mov DL,0
-        DL = 0;
+        DX = 0x0200;
         // 016E:013B int 0x10
         Video.SetCursorPosition(0x0200, 0);
         // 016E:013D mov AH,9
-        AH = 9;
         // 016E:013F mov AL,0xDB
-        AL = 0xDB;
+        AX = 0x09DB;
         // 016E:0141 mov BH,0
-        BH = 0;
         // 016E:0143 mov BL,1
-        BL = 1;
+        BX = 1;
         // 016E:0145 mov CX,0x0028
         CX = 0x0028;
         // 016E:0148 int 0x10
         Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 1);
         // 016E:014A mov AH,6
-        AH = 6;
         // 016E:014C mov AL,1
-        AL = 1;
+        AX = 0x0601;
         // 016E:014E mov BH,0
         BH = 0;
         // 016E:0150 mov CH,0
-        CH = 0;
         // 016E:0152 mov CL,0
-        CL = 0;
+        CX = 0;
         // 016E:0154 mov DH,2
-        DH = 2;
         // 016E:0156 mov DL,0x27
-        DL = 0x27;
+        DX = 0x0227;
         // 016E:0158 int 0x10
         Video.ScrollPageUp(1, 0, 0x0227, 1);
         // 016E:015A mov AX,0xB800

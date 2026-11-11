@@ -579,9 +579,8 @@ public partial class CfgGeneratedOverrides {
             }
             CS = cs2;
             // 01CD:0100 mov AH,0x0E
-            AH = 0x0E;
             // 01CD:0102 mov AL,0x58
-            AL = 0x58;
+            AX = 0x0E58;
             // 01CD:0104 mov BH,0
             BH = 0;
             // 01CD:0106 int 0x10

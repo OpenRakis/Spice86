@@ -131,7 +131,7 @@ public partial class CfgGeneratedOverrides {
         BX = bx;
         CheckExternalEvents(biosSegment, 0x00B2);
         // F000:00B2 mul BX
-        (AX, DX) = Mul16(AX, bx);
+        (AX, DX) = Mul16(ax, bx);
         // F000:00B4 ret near
         NearReturn();
         return (AX, DX);
