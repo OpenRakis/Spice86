@@ -22,7 +22,7 @@ public class BoundParser : BaseInstructionParser {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         int elementSize = bitWidth.ToBytes();
         DataType signedType = _astBuilder.SType(bitWidth);
-        DataType addrType = _astBuilder.UType(BitWidth.WORD_16);
+        DataType addrType = _astBuilder.AddressType(context.AddressWidthFromPrefixes);
 
         ValueNode indexNode = _astBuilder.TypeConversion.Convert(signedType,
             _astBuilder.ModRm.RToNode(_astBuilder.UType(bitWidth), modRmContext));
@@ -40,7 +40,7 @@ public class BoundParser : BaseInstructionParser {
         ValueNode displayIndexNode = _astBuilder.ModRm.RToNode(signedType, modRmContext);
         ValueNode displayLowerPointer = _astBuilder.ModRm.ToMemoryAddressNode(signedType, modRmContext);
         ValueNode offset = _astBuilder.ModRm.MemoryOffsetToNode(modRmContext);
-        ValueNode upperOffset = _astBuilder.Constant.AddConstant(_astBuilder.AddressType(instr), offset, elementSize);
+        ValueNode upperOffset = _astBuilder.Constant.AddConstant(addrType, offset, elementSize);
         ValueNode displayUpperPointer = _astBuilder.Pointer.ToSegmentedPointer(signedType, (SegmentRegisterIndex)modRmContext.SegmentIndex.Value, upperOffset);
         InstructionNode displayAst = new InstructionNode(
             InstructionOperation.BOUND,

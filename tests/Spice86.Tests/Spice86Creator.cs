@@ -15,6 +15,13 @@ using Xunit;
 using Spice86.Audio.Filters;
 
 public sealed class Spice86Creator : IDisposable {
+    /// <summary>
+    /// Cycle budget for the long-running whole-ROM fixtures (test386 and friends). Generous enough that a
+    /// passing run never reaches it, finite so that a stalled run fails fast instead of hanging the suite.
+    /// Never pass <see cref="long.MaxValue"/>: it disables the only infinite-loop guard the tests have.
+    /// </summary>
+    public const long LongRunningMaxCycles = 10_000_000;
+
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
     private readonly string _exportFolder;
@@ -36,13 +43,15 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null)
+        bool enableSpeculativeCfgExploration = true, CpuModel? cpuModel = null,
+        bool cpuHeavyLog = false, int ramSizeKb = Configuration.RamSizeDefaultKb,
+        DateTimeOffset? clockStartTime = null)
         : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
-            recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
-            enableSpeculativeCfgExploration, clockStartTime) {
+            recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, cpuModel,
+            enableSpeculativeCfgExploration, cpuHeavyLog, ramSizeKb, clockStartTime) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
@@ -52,7 +61,7 @@ public sealed class Spice86Creator : IDisposable {
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, null) {
+            settings.EnableSpeculativeCfgExploration, settings.CpuHeavyLog, settings.RamSizeKb, null) {
         EnableUmb = settings.EnableUmb;
     }
 
@@ -63,7 +72,8 @@ public sealed class Spice86Creator : IDisposable {
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
-        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
+        bool enableSpeculativeCfgExploration, bool cpuHeavyLog, int ramSizeKb,
+        DateTimeOffset? clockStartTime) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -122,6 +132,8 @@ public sealed class Spice86Creator : IDisposable {
             ReloadCfgGraph = reloadCfgGraph,
             RenderingMode = renderingMode,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
+            CpuHeavyLog = cpuHeavyLog,
+            RamSizeKb = ramSizeKb,
             ClockStartTime = clockStartTime,
         };
 
@@ -132,10 +144,14 @@ public sealed class Spice86Creator : IDisposable {
         _configuration.Umb = EnableUmb;
         Spice86DependencyInjection res = new(_configuration);
         MachineLeakTracker.Track(res.Machine);
-        res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
+        res.Machine.CpuState.Flags.CpuModel = _configuration.CpuModel;
+        State state = res.Machine.CpuState;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
-            (breakpoint, _) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
+            (breakpoint, _) => Assert.Fail(
+                $"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong. " +
+                $"Stuck at {state.CS:X4}:{state.IP:X4} (EIP {state.EIP:X8}, CPL {state.Cpl}, mode {state.CpuMode})."),
+            true), true);
         // Init VGA card to map some addresses correctly otherwise there will be errors when saving the ram image
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);

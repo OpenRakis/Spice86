@@ -1,0 +1,47 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        46
+      ],
+      "entries": [
+        {
+          "block": 46,
+          "address": "0008:00DC",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        38,
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cpuFault",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 38,
+      "toBlock": 46,
+      "from": "0008:00D6",
+      "target": "0008:00DC"
+    }
+  ]
+}

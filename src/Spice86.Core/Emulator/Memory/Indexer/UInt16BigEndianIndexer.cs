@@ -30,19 +30,19 @@ public class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
 
     /// <inheritdoc />
     internal override ushort ReadSegmented(ushort segment, uint offset) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+        uint address1 = Mmu.TranslateAddress(segment, offset, isWrite: false);
+        uint address2 = Mmu.TranslateAddress(segment, offset + 1, isWrite: false);
         return (ushort)(_byteReaderWriter[address2] | _byteReaderWriter[address1] << 8);
     }
 
     /// <inheritdoc />
     internal override void WriteSegmented(ushort segment, uint offset, ushort value) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+        uint address1 = Mmu.TranslateAddress(segment, offset, isWrite: true);
+        uint address2 = Mmu.TranslateAddress(segment, offset + 1, isWrite: true);
         _byteReaderWriter[address1] = (byte)(value >> 8);
         _byteReaderWriter[address2] = (byte)value;
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _byteReaderWriter.Length / 2;
 }

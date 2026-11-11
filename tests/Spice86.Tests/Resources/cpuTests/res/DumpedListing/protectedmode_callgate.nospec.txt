@@ -1,0 +1,68 @@
+0008:00FD mov AX,0x0010
+0008:0100 mov DS,AX
+0008:0102 push 0x002B
+0008:0105 push 0x2000
+0008:0108 push 0x001B
+0008:010B push 0x010F
+0008:010E ret far
+0008:0135 mov byte ptr DS:[7],0xCD
+0008:013A ret far
+001B:010F mov AX,0x002B
+001B:0112 mov DS,AX
+001B:0114 mov byte ptr DS:[6],0xAB
+001B:0119 call far 0020:0000
+001B:011E mov byte ptr DS:[8],0xEF
+001B:0123 mov EAX,0
+001B:0126 and EAX,0xFFFFFFFE
+001B:012C mov 0,EAX
+001B:012F jmp far F000:0134
+F000:0000 mov SP,0x1000
+F000:0003 mov word ptr DS:[0x0608],0xFFFF
+F000:0009 mov word ptr DS:[0x060A],0
+F000:000F mov byte ptr DS:[0x060C],0x0F
+F000:0014 mov byte ptr DS:[0x060D],0x9A
+F000:0019 mov byte ptr DS:[0x060E],0
+F000:001E mov byte ptr DS:[0x060F],0
+F000:0023 mov word ptr DS:[0x0610],0xFFFF
+F000:0029 mov word ptr DS:[0x0612],0
+F000:002F mov byte ptr DS:[0x0614],0
+F000:0034 mov byte ptr DS:[0x0615],0x92
+F000:0039 mov byte ptr DS:[0x0616],0
+F000:003E mov byte ptr DS:[0x0617],0
+F000:0043 mov word ptr DS:[0x0618],0xFFFF
+F000:0049 mov word ptr DS:[0x061A],0
+F000:004F mov byte ptr DS:[0x061C],0x0F
+F000:0054 mov byte ptr DS:[0x061D],0xFA
+F000:0059 mov byte ptr DS:[0x061E],0
+F000:005E mov byte ptr DS:[0x061F],0
+F000:0063 mov word ptr DS:[0x0620],0x0135
+F000:0069 mov word ptr DS:[0x0622],8
+F000:006F mov byte ptr DS:[0x0624],0
+F000:0074 mov byte ptr DS:[0x0625],0xE4
+F000:0079 mov byte ptr DS:[0x0626],0
+F000:007E mov byte ptr DS:[0x0627],0
+F000:0083 mov word ptr DS:[0x0628],0xFFFF
+F000:0089 mov word ptr DS:[0x062A],0
+F000:008F mov byte ptr DS:[0x062C],0
+F000:0094 mov byte ptr DS:[0x062D],0xF2
+F000:0099 mov byte ptr DS:[0x062E],0
+F000:009E mov byte ptr DS:[0x062F],0
+F000:00A3 mov word ptr DS:[0x0630],0x0067
+F000:00A9 mov word ptr DS:[0x0632],0x0900
+F000:00AF mov byte ptr DS:[0x0634],0
+F000:00B4 mov byte ptr DS:[0x0635],0x89
+F000:00B9 mov byte ptr DS:[0x0636],0
+F000:00BE mov byte ptr DS:[0x0637],0
+F000:00C3 mov word ptr DS:[0x0660],0x0037
+F000:00C9 mov dword ptr DS:[0x0662],0x00000600
+F000:00D2 mov dword ptr DS:[0x0904],0x00001000
+F000:00DB mov word ptr DS:[0x0908],0x0010
+F000:00E1 lgdt dword ptr DS:[0x0660]
+F000:00E6 mov AX,0x0030
+F000:00E9 ltr AX
+F000:00EC mov EAX,0
+F000:00EF or EAX,1
+F000:00F5 mov 0,EAX
+F000:00F8 jmp far 0008:00FD
+F000:0134 hlt
+F000:FFF0 jmp near 0

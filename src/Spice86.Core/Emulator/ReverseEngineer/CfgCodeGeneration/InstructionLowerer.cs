@@ -119,13 +119,22 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ushort? segment = TryGetConstantWord(node.TargetAddress.Segment);
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
-            return EmitConstantJump(node.Instruction, new SegmentedAddress(segment.Value, offset.Value));
+            return Sequence(PrepareFarJump(segment.Value),
+                EmitConstantJump(node.Instruction, new SegmentedAddress(segment.Value, offset.Value)));
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "jump",
             // Every matched branch ends with its own transfer, so it never falls through to the trailing untested-target failure.
-            edge => Transfer.Emit(edge));
+            edge => Sequence(PrepareFarJump(edge.Target.Address.Segment), Transfer.Emit(edge)));
     }
+
+    private static BlockNode PrepareFarJump(ushort segment) =>
+        Sequence(
+            new InstructionExecutionHelperCallNode(InstructionExecutionHelperOperation.ValidateFarCodeSegmentTransfer,
+                new ConstantNode(DataType.UINT16, segment)),
+            new InstructionExecutionHelperCallNode(InstructionExecutionHelperOperation.LoadSegmentRegister,
+                new ConstantNode(DataType.UINT32, (uint)SegmentRegisterIndex.CsIndex),
+                new ConstantNode(DataType.UINT16, segment)));
 
     public IVisitableAstNode VisitCallNearNode(CallNearNode node) {
         if (TryGetConstantWord(node.TargetIp) is not ushort targetOffset) {
@@ -151,10 +160,24 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
-        if (TryResolveConstantTarget(node.Instruction, targetAddress) is not ResolvedCfgEdge targetEdge) {
-            return UntestedMessages.Call(node.Instruction.Address);
+        if (TryResolveConstantTarget(node.Instruction, targetAddress) is ResolvedCfgEdge targetEdge) {
+            return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
         }
-        return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
+
+        CallContinuation gateContinuation = Context.ResolveCallContinuation(node.Instruction);
+        SegmentedAddress expectedReturn = gateContinuation.ExpectedReturnAddress;
+        IVisitableAstNode[] gateArguments = [
+            new SegmentVariableNode(expectedReturn.Segment),
+            new OffsetLiteralNode(expectedReturn.Offset),
+            new ConstantNode(DataType.UINT16, targetSegment.Value),
+            new UntestedFarCallTargetNode(node.Instruction.Address)
+        ];
+        return Sequence(
+            Transfer.EmitCallWithRedirectedDispatch(node.Instruction, gateContinuation,
+                new ProcedureCallHelperNode(CallDistance.Far, node.CallBitWidth, gateArguments),
+                new ProcedureCallReturnedElsewhereHelperNode(CallDistance.Far, node.CallBitWidth,
+                    [.. gateArguments, Transfer.RedirectedAddressList(gateContinuation)])),
+            Transfer.EmitPostCallContinuation(node.Instruction, gateContinuation));
     }
 
     /// <summary>
@@ -590,7 +613,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     // printing is entirely delegated to CSharpExpressionPrinter.
     // ----------------------------------------------------------------------------------------------------
 
-    public IVisitableAstNode VisitMethodCallNode(MethodCallNode node) => node;
+    public IVisitableAstNode VisitMethodCallNode(MethodCallNode node) => node switch {
+        { PropertyPath: nameof(Stack), MethodName: nameof(Stack.Enter) } =>
+            new StackEnterHelperNode(node.Arguments.ToArray()),
+        _ => node
+    };
     public IVisitableAstNode VisitMethodCallValueNode(MethodCallValueNode node) => node;
     public IVisitableAstNode VisitRegisterNode(RegisterNode node) => node;
     public IVisitableAstNode VisitSegmentRegisterNode(SegmentRegisterNode node) => node;

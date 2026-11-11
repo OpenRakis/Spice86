@@ -217,7 +217,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("IO port dispatcher created...");
         }
 
-        Ram ram = new(A20Gate.EndOfHighMemoryArea);
+        Ram ram = new((uint)configuration.RamSizeKb * 1024);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("RAM created...");
@@ -229,7 +229,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("A20 gate created...");
         }
 
-        IMmu mmu = RealModeMmuFactory.FromCpuModel(configuration.CpuModel);
+        IMmu mmu = CpuMmuFactory.Create(configuration.CpuModel, state, ram);
 
         Memory memory = new(memoryReadWriteBreakpoints,
             ram, a20Gate,
@@ -520,7 +520,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardBuffer);
 
         ExpandedMemoryManager? emsManager = null;
-        if (configuration.Ems is not false || configuration.Xms is not false) {
+        if (configuration.Ems is not false) {
             emsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
         }
 

@@ -191,6 +191,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// that lets two runs share a golden. Relocated installed callbacks append their segment because
     /// their addresses appear in generated source, and a run with DOS upper memory blocks disabled
     /// appends <c>.noumb</c> because it changes the machine the generated source encodes.
+    /// CPU and RAM settings are fixture-specific; CPU logging does not affect the key.
     /// </summary>
     /// <param name="settings">Settings to build the key from.</param>
     /// <returns>The golden-file key.</returns>

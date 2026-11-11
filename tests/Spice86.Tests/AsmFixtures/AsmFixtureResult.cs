@@ -7,11 +7,13 @@ using Spice86.Core.Emulator.Devices.Video;
 /// <summary>
 /// What an oracle may read after a run: memory, CPU state, video state and this run's observations. An
 /// <c>AssertResult</c> may only read what the emulated run and the generated run must agree on: memory,
-/// video registers and final-state pixels, general and segment registers, <c>SP</c>, flags, values the
+/// video registers and final-state pixels, general and segment registers, <c>SP</c>, flags,
+/// protected-mode control and task registers, values the
 /// program wrote to I/O ports captured by a handler that the fixture installs in
 /// <c>ConfigureMachine</c>, and the run's own observations. It must not read <c>CS:IP</c> after the end,
 /// <c>IsRunning</c>, <c>InterruptShadowing</c>, cycle counts, or any CFG node or block: those are
 /// engine checks and stay in <c>MachineTest</c>.
+/// A protected-to-real-mode fixture may check the restored <c>CS</c> selector.
 /// </summary>
 /// <param name="Memory">Memory of the finished run.</param>
 /// <param name="State">CPU state of the finished run.</param>
