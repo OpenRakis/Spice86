@@ -3,15 +3,14 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -332,6 +331,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     [InterruptService(0xC0, Name = "UnsupportedC0", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     [InterruptService(0xC2, Name = "UnsupportedC2", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     [InterruptService(0xC4, Name = "UnsupportedC4", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
+    [InterruptService(0x84, Name = "Unsupported84", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     public void WriteUnsupported() {
         (State.AH, bool carryFlag) = Unsupported();
         SetCarryFlag(carryFlag, true);
