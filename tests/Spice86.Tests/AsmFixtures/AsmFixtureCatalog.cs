@@ -1091,6 +1091,23 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs convention_return_outputs: the stored results prove a return exit keeps the
+    /// flags and writes callers (and redirected-return landings) observe and drops the rest. The
+    /// strict gate proves s6_si_dead's promoted SI local is still written back at its ret: no
+    /// caller reads SI, but the terminal hlt observes it.</summary>
+    public static AsmFixture ConventionReturnOutputs() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_return_outputs", MaxCycles = 1000 }, result => {
+            result.Memory.UInt16[0x2000, 0x0200].Should().Be(0x0101, "add ax,[0400h] runs even when its flags are dead");
+            result.Memory.UInt8[0x2000, 0x0202].Should().Be(1, "the caller reads CF after the call, so the callee's stc survives");
+            result.Memory.UInt16[0x2000, 0x0204].Should().Be(5, "the caller stores DX, so the callee's DX write survives");
+            result.Memory.UInt16[0x2000, 0x0206].Should().Be(9, "the caller overwrites DX without reading it, so the earlier write is dead");
+            result.Memory.UInt16[0x2000, 0x0208].Should().Be(0x1234, "call way in: CX survives");
+            result.Memory.UInt16[0x2000, 0x020A].Should().Be(0x1234, "jump way in: CX survives too (non-call way keeps all outputs)");
+            result.Memory.UInt16[0x2000, 0x0214].Should().Be(0x55AA,
+                "the redirected ret lands on an entry that reads BX, so the callee's BX write survives");
+        });
+    }
+
     /// <summary>Runs stack_esp_high_bits: the dword stored at 2000:0200 keeps the ESP high half
     /// <c>mov esp</c> set, with the low half back at 1000h after balanced 32-bit stack ops.</summary>
     public static AsmFixture StackEspHighBits() {

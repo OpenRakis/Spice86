@@ -59,7 +59,7 @@ public partial class CfgGeneratedOverrides {
             else {
                 UInt8[DS, BX + 3] = 1;
             }
-            if ((int)((uint)ax1 | (uint)DX << 16) < (int)0x00010001) {
+            if ((int)((uint)ax1 | (uint)DX << 16) < 0x00010001) {
                 UInt8[DS, BX + 4] = 1;
             }
             else {
@@ -133,13 +133,13 @@ public partial class CfgGeneratedOverrides {
         L_0134:
             UInt8[DS, BX + 0x0D] = 1;
         L_0138:
-            if ((int)((uint)AX | (uint)DX << 16) < (int)-0x7FFFFFFF) {
+            if ((int)((uint)AX | (uint)DX << 16) < -0x7FFFFFFF) {
                 UInt8[DS, BX + 0x0F] = 1;
             }
             else {
                 UInt8[DS, BX + 0x0F] = 0;
             }
-            if ((int)((uint)AX | (uint)DX << 16) < (int)-0x00008000) {
+            if ((int)((uint)AX | (uint)DX << 16) < -0x00008000) {
                 UInt8[DS, BX + 0x10] = 1;
             }
             else {

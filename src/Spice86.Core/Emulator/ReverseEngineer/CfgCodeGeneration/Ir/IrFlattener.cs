@@ -18,6 +18,7 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// </summary>
 internal sealed class IrFlattener {
     private readonly bool _raw;
+    private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _exitEffects;
     private readonly List<IrBlock> _blocks = [];
     private readonly Stack<Func<IrBlock>> _breakTargets = new();
     private readonly List<PendingJump> _pendingJumps = [];
@@ -27,9 +28,13 @@ internal sealed class IrFlattener {
     /// (<paramref name="raw"/> true): in raw mode the runtime transfer nodes become
     /// <see cref="IrExit"/>s and <see cref="WhileWithExitNode"/> lowers to a header branch plus an
     /// exit-condition branch at the body tail.</summary>
-    public IrFlattener(bool raw) {
+    public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects) {
         _raw = raw;
+        _exitEffects = exitEffects;
     }
+
+    private IrEffects? ExitEffectsOf(ICfgNode origin) =>
+        _exitEffects.TryGetValue(origin, out IrEffects effects) ? effects : null;
 
     /// <summary>The blocks created so far, in creation order (instruction layout order).</summary>
     public List<IrBlock> Blocks => _blocks;
@@ -130,7 +135,7 @@ internal sealed class IrFlattener {
                 _current = null;
                 break;
             case ReturnNode or FailAsUntestedNode or ThrowNode or CyclicJumpNode or InterruptReturnNode:
-                EndBlock(_current, new IrExit(origin, IrNodeTyper.RenameTemporaries(statement, localSuffix)));
+                EndBlock(_current, new IrExit(origin, IrNodeTyper.RenameTemporaries(statement, localSuffix), ExitEffectsOf(origin)));
                 break;
             case WhileWithExitNode whileWithExit when _raw:
                 yield return AstTrampoline.Call(FlattenWhileWithExitIt(whileWithExit, origin, localSuffix, isLocalFallthrough));
@@ -138,7 +143,7 @@ internal sealed class IrFlattener {
             case JumpNearNode or JumpFarNode or CallNearNode or CallFarNode or MoveIpNextNode
                 or HltNode or InvalidInstructionNode or CpuidNode or InterruptCallNode
                 or ReturnNearNode or ReturnFarNode or ReturnInterruptNode or CallbackNode when _raw:
-                EndBlock(_current, new IrExit(origin, statement));
+                EndBlock(_current, new IrExit(origin, statement, ExitEffectsOf(origin)));
                 break;
             case WhileWithExitNode or InfiniteLoopNode or DoWhileNode or ContinueNode or LabelNode
                 or CpuFaultTryCatchNode or InstructionBoundaryNode or EntryDispatcherLabelNode

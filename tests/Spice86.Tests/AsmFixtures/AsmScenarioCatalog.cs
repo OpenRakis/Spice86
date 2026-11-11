@@ -478,6 +478,9 @@ internal static class AsmScenarioCatalog {
             // convention_conditional_flag_input proves a may-write does not kill demand: the
             // callee reads the caller's CF through shl's conditional write (G1.6).
             AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput),
+            // convention_return_outputs proves a return exit reads the method's outputs and its
+            // landings' inputs: dead flags and writes go, needed ones stay (G8.1).
+            AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt)
                 .WithoutGeneratedExecution("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing point is timing-dependent"),

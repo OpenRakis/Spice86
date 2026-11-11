@@ -34,7 +34,8 @@ using System.Linq;
 /// method's inputs); a partial definition forwards the bytes it does not write; a return exit needs
 /// the bytes the method's entries output; an abort exit (a <c>FailAsUntested</c>, a
 /// <see cref="ThrowNode"/>, or a return that leaves generated code like <c>Hlt</c> - nothing in
-/// generated code observes machine state after it) needs only the bytes its message parts read; a
+/// generated code observes machine state after it) needs only the bytes its message parts read,
+/// plus every reportable value under the observed demand of a machine-leaving return; a
 /// resolved exit to another partition needs the targets' inputs (unresolved: everything); anything
 /// else needs its effect reads.</para>
 /// <para>- <c>EffectOf(E).Reads</c> is the union of <c>Needed</c> over the values' versions at E's entry
@@ -74,9 +75,11 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<CfgCodePartitionEntry, MethodData> _methodByEntry = new();
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly List<MethodData> _methods = [];
+    private readonly bool _observed;
 
-    private IrCallingConventions(CfgGeneratorContext context) {
+    private IrCallingConventions(CfgGeneratorContext context, bool observed) {
         _context = context;
+        _observed = observed;
         foreach (CfgCodePartition partition in context.Program.Partitions) {
             foreach (CfgCodePartitionEntry entry in partition.Entries) {
                 _entryByNode[entry.Node] = entry;
@@ -89,10 +92,15 @@ internal sealed class IrCallingConventions {
     internal int Iterations { get; private set; }
 
     /// <summary>Computes the conventions of <paramref name="methods"/> to a fixed point, invoking
-    /// <paramref name="roundStarted"/> with the 1-based number of each fixed-point iteration.</summary>
+    /// <paramref name="roundStarted"/> with the 1-based number of each fixed-point iteration.
+    /// <paramref name="observed"/> adds the terminal-observation demand: a machine-leaving exit
+    /// observes the whole reportable state, and that demand propagates through the same rules.
+    /// The observed sets drive only the read sets and write-backs of round-two exits; the code
+    /// demand (what generated code reads after a call) drives the printed conventions and the
+    /// typed signatures.</summary>
     public static IrCallingConventions Compute(IReadOnlyList<PreparedMethod> methods,
-        CfgGeneratorContext context, Action<int> roundStarted) {
-        IrCallingConventions conventions = new(context);
+        CfgGeneratorContext context, bool observed, Action<int> roundStarted) {
+        IrCallingConventions conventions = new(context, observed);
         conventions.Preprocess(methods);
         conventions.SeedUnknownWays();
         conventions.Iterate(roundStarted);
@@ -109,6 +117,45 @@ internal sealed class IrCallingConventions {
     /// <summary>The changes of <paramref name="entry"/> its callers read after the call.</summary>
     public CpuValues OutputsOf(CfgCodePartitionEntry entry) =>
         _states.TryGetValue(entry, out EntryState? state) ? state.Outputs : Reportable;
+
+    /// <summary>Whether <paramref name="exit"/> of <paramref name="methodName"/> is a method
+    /// return - not an abort and not a transfer to another partition.</summary>
+    internal bool IsReturnExit(string methodName, IrExit exit) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.ExitByTerminator.TryGetValue(exit, out ExitSite? site)
+        && site.Kind == ExitKind.Return;
+
+    /// <summary>The bytes the observed landings of the return <paramref name="exit"/> of
+    /// <paramref name="methodName"/> read at their entries - see <see cref="LandingInputs"/>.
+    /// Every reportable value when the exit is not a modelled return.</summary>
+    internal CpuValues LandingInputsOf(string methodName, IrExit exit) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.ExitByTerminator.TryGetValue(exit, out ExitSite? site)
+        && site.Kind == ExitKind.Return
+            ? LandingInputs(site)
+            : Reportable;
+
+    /// <summary>The <see cref="OutputsOf"/> value of every entry, for the round-two subset check.</summary>
+    internal IReadOnlyDictionary<CfgCodePartitionEntry, CpuValues> OutputsSnapshot() =>
+        _states.ToDictionary(pair => pair.Key, pair => pair.Value.Outputs);
+
+    /// <summary>The <see cref="EffectOf"/> reads of every entry, for the round-two subset check.</summary>
+    internal IReadOnlyDictionary<CfgCodePartitionEntry, CpuValues> ReadsSnapshot() =>
+        _states.ToDictionary(pair => pair.Key, pair => pair.Value.Inputs);
+
+    /// <summary>Throws when <paramref name="later"/> holds a value bit <paramref name="earlier"/>
+    /// does not: round two of the prepare only removes writes justified by round one, so its
+    /// convention sets can only shrink.</summary>
+    internal static void VerifySubset<TKey>(IReadOnlyDictionary<TKey, CpuValues> earlier,
+        IReadOnlyDictionary<TKey, CpuValues> later, string label) where TKey : notnull {
+        foreach ((TKey key, CpuValues value) in later) {
+            CpuValues before = earlier.GetValueOrDefault(key, Reportable);
+            if ((value & ~before) != CpuValues.None) {
+                throw new InvalidOperationException(
+                    $"Round-two {label} of {key} grew beyond the round-one set: {value} not a subset of {before}.");
+            }
+        }
+    }
 
     /// <summary>Whether the method of <paramref name="entry"/> has a return exit or a resolved
     /// exit to another partition.</summary>
@@ -235,6 +282,10 @@ internal sealed class IrCallingConventions {
         public required ExitKind Kind { get; init; }
         public required bool Iret { get; init; }
         public List<CfgCodePartitionEntry> Targets { get; init; } = [];
+        /// <summary>For a return exit: every observed landing of the <c>ret</c> mapped to a
+        /// partition entry, so <see cref="Targets"/> is the complete landing demand. False when a
+        /// landing is not a generated-code entry - what it needs then is not modelled.</summary>
+        public bool LandingsResolved { get; init; }
     }
 
     private sealed class MethodData {
@@ -339,7 +390,7 @@ internal sealed class IrCallingConventions {
                 method.Exits.Add(site);
                 method.ExitByTerminator[exit] = site;
                 method.Returns |= site.Kind is ExitKind.Return or ExitKind.TransferResolved;
-                if (site.Kind == ExitKind.TransferResolved) {
+                if (site.Kind is ExitKind.Return or ExitKind.TransferResolved) {
                     foreach (CfgCodePartitionEntry target in site.Targets) {
                         AddReader(target, method);
                     }
@@ -354,7 +405,13 @@ internal sealed class IrCallingConventions {
     private ExitSite ClassifyExit(IrExit exit, IrBlock block) {
         bool iret = Contains<InterruptReturnNode>(exit.Transfer);
         if (iret || exit.Origin is CfgInstruction { IsReturn: true }) {
-            return new ExitSite { Exit = exit, Block = block, Kind = ExitKind.Return, Iret = iret };
+            List<CfgCodePartitionEntry> landings = [];
+            bool landingsResolved = exit.Origin is CfgInstruction instruction
+                && ReturnLandings(instruction, landings);
+            return new ExitSite {
+                Exit = exit, Block = block, Kind = ExitKind.Return, Iret = iret,
+                Targets = landings, LandingsResolved = landingsResolved
+            };
         }
         List<CfgCodePartitionEntry> targets = [];
         bool foundTransfer = false;
@@ -406,6 +463,21 @@ internal sealed class IrCallingConventions {
             Exit = exit, Block = block, Iret = false,
             Kind = kind
         };
+    }
+
+    /// <summary>Fills <paramref name="targets"/> with the partition entries the return
+    /// <paramref name="instruction"/> was observed to land on. False when a landing has no entry -
+    /// an unobserved way out whose demand is not modelled - or when no landing was recorded.</summary>
+    private bool ReturnLandings(CfgInstruction instruction, List<CfgCodePartitionEntry> targets) {
+        bool resolved = false;
+        foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
+            if (!_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
+                return false;
+            }
+            targets.Add(mapped);
+            resolved = true;
+        }
+        return resolved;
     }
 
     private static bool IsReturnExit(IrExit exit) =>
@@ -588,8 +660,14 @@ internal sealed class IrCallingConventions {
                     if (exit.Iret) {
                         changes |= CpuValues.StatusFlags | CpuValues.Direction;
                     }
-                    foreach (CfgCodePartitionEntry target in exit.Targets) {
-                        changes |= _states[target].Changes;
+                    // A resolved transfer continues in its target, so the target's changes are
+                    // this method's. A return's landing is the caller's continuation: its changes
+                    // are the caller's own, and adding them here would mask the bytes the caller
+                    // still demands back through the call.
+                    if (exit.Kind == ExitKind.TransferResolved) {
+                        foreach (CfgCodePartitionEntry target in exit.Targets) {
+                            changes |= _states[target].Changes;
+                        }
                     }
                     break;
                 case ExitKind.TransferUnresolved:
@@ -697,9 +775,26 @@ internal sealed class IrCallingConventions {
                 foreach (EntrySite site in method.Entries) {
                     outputs |= _states[site.Entry].Outputs;
                 }
+                CpuValues changes = CpuValues.None;
+                foreach (EntrySite site in method.Entries) {
+                    changes |= _states[site.Entry].Changes;
+                }
+                outputs |= LandingInputs(method.ExitByTerminator[exit]) & changes;
                 return outputs & mask;
             }
             case ExitKind.Abort:
+                // A return that leaves generated code (a terminal hlt) leaves the machine state
+                // observed - the strict differential gate compares every register and flag - so
+                // the observed demand adds every reportable value at that exit. Generated code
+                // after it reads nothing, so the code demand stays at the message parts only and
+                // the observed set never reaches the signatures. A fail-as-untested or a thrown
+                // abort ends the run failing: both demands are the message parts.
+                if (Contains<ReturnNode>(exit.Transfer)
+                        && !Contains<FailAsUntestedNode>(exit.Transfer)
+                        && !Contains<ThrowNode>(exit.Transfer)
+                        && _observed) {
+                    return (AbortReads(exit.Transfer) | Reportable) & mask;
+                }
                 return AbortReads(exit.Transfer) & mask;
             case ExitKind.TransferResolved: {
                 CpuValues inputs = CpuValues.None;
@@ -711,6 +806,26 @@ internal sealed class IrCallingConventions {
             default:
                 return mask;
         }
+    }
+
+    /// <summary>The bytes a return exit must still deliver to what it lands on: the union of the
+    /// inputs of every partition entry its <c>ret</c> was observed to reach. A landing that is not
+    /// a partition entry - a normal call continuation inside the caller's method - is already
+    /// covered by the caller's needed-after-call; an unmodelled landing adds every reportable
+    /// value under the observed demand only, since machine state leaving generated code is
+    /// observed, not a read generated code does. A byte the callee did not change keeps its entry
+    /// value in the machine state either way, so the caller masks this set by its changes: a
+    /// normal post-call continuation then adds nothing the <see cref="LiveAfter"/> outputs do not
+    /// already demand, while a redirected return still delivers the bytes its landing reads.</summary>
+    private CpuValues LandingInputs(ExitSite site) {
+        CpuValues inputs = CpuValues.None;
+        foreach (CfgCodePartitionEntry target in site.Targets) {
+            inputs |= _states[target].Inputs;
+        }
+        if (!site.LandingsResolved && _observed) {
+            inputs |= Reportable;
+        }
+        return inputs;
     }
 
     /// <summary>The machine bytes an abort exit's message reads: only the register / flag /

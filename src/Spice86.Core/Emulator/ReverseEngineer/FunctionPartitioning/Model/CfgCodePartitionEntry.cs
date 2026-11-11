@@ -14,4 +14,6 @@ internal sealed class CfgCodePartitionEntry {
         ?? throw new InvalidOperationException("Partition entry node has no containing block.");
 
     public SegmentedAddress Address => Node.Address;
+
+    public override string ToString() => $"{Kind} {Address}";
 }

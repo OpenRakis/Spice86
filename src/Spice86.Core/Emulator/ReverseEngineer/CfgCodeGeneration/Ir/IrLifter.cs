@@ -27,9 +27,18 @@ internal sealed class IrLifter(
     InstructionLowerer lowerer,
     AstInstructionRenderer assemblyRenderer) {
 
+    /// <summary>No return-exit effect overrides: the first prepare round lifts as before.</summary>
+    public static readonly IReadOnlyDictionary<ICfgNode, IrEffects> NoExitEffects =
+        new Dictionary<ICfgNode, IrEffects>();
+
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order.</summary>
-    public IrMethod Lift(MethodPlan method) {
-        IrFlattener flattener = new(false);
+    public IrMethod Lift(MethodPlan method) => Lift(method, NoExitEffects);
+
+    /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order; an exit
+    /// whose origin is a key of <paramref name="exitEffects"/> gets that entry's effect instead of
+    /// the transfer's own.</summary>
+    public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects) {
+        IrFlattener flattener = new(false, exitEffects);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, IrBlock> startBlocks = [];
         Dictionary<ICfgNode, IrInstructionShape> shapes = [];

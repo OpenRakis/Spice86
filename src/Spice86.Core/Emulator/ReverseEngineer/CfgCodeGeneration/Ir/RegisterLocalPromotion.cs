@@ -27,9 +27,13 @@ using System.Linq;
 /// <see cref="CSharpExpressionPrinter.ParameterReads"/> does for typed parameters.
 /// </summary>
 internal static partial class RegisterLocalPromotion {
-    private static readonly IrSsaValue[] Promotable =
-        IrValueSets.ValuesIn(CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx
-            | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi | CpuValues.Es | CpuValues.Ds);
+    /// <summary>The register bytes a web can be promoted to a local for: the values whose exit
+    /// versions need a write-back when promoted.</summary>
+    internal static readonly CpuValues PromotableMask =
+        CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx
+        | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi | CpuValues.Es | CpuValues.Ds;
+
+    private static readonly IrSsaValue[] Promotable = IrValueSets.ValuesIn(PromotableMask);
 
 
     /// <summary>

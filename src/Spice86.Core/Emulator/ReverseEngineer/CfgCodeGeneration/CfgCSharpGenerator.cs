@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
@@ -141,6 +142,42 @@ internal sealed class CfgCSharpGenerator {
         ProgramAnalysis analysis = ProgramAnalysis.Compute(prepared, context, effectBuilder,
             program.Inputs.ProgramImages, progress);
 
+        // A return exit reads only the outputs of its method's entries (plus every value the
+        // convention model does not describe and both tokens): methods where that set is smaller
+        // than the universal read of a first-round exit are prepared a second time with it, so the
+        // pipeline sees the real demand from the start.
+        int reprepared = 0;
+        for (int i = 0; i < prepared.Count; i++) {
+            IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects =
+                ReturnExitEffectsOf(prepared[i], analysis.ObservedConventions);
+            if (exitEffects.Count == 0) {
+                continue;
+            }
+            reprepared++;
+            GenerationStepTimer timer = timers[i];
+            MethodPlan methodPlan = plan.Methods[i];
+            prepared[i] = timer.Measure("round 2 prepare",
+                () => methodEmitter.Prepare(methodPlan, timer, exitEffects));
+        }
+        if (reprepared > 0) {
+            progress.Detail("Preparation round 2");
+            ProgramAnalysis second = ProgramAnalysis.Compute(prepared, context, effectBuilder,
+                program.Inputs.ProgramImages, progress);
+            IrCallingConventions.VerifySubset(analysis.CallingConventions.OutputsSnapshot(),
+                second.CallingConventions.OutputsSnapshot(), "outputs");
+            IrCallingConventions.VerifySubset(analysis.CallingConventions.ReadsSnapshot(),
+                second.CallingConventions.ReadsSnapshot(), "entry reads");
+            IrCallingConventions.VerifySubset(analysis.ObservedConventions.OutputsSnapshot(),
+                second.ObservedConventions.OutputsSnapshot(), "observed outputs");
+            IrCallingConventions.VerifySubset(analysis.ObservedConventions.ReadsSnapshot(),
+                second.ObservedConventions.ReadsSnapshot(), "observed entry reads");
+            analysis = second;
+            if (_verify) {
+                VerifyObservedExitReads(prepared, analysis.ObservedConventions);
+            }
+            progress.Detail($"Round-two conventions computed over {reprepared} re-prepared methods in {second.CallingConventions.Iterations} iterations");
+        }
+
         RewritePreparedBodies(prepared, program, analysis);
 
         IReadOnlyList<SpeculativeRunFieldPlan> speculativeRunFields = NameSpeculativeRunFields(prepared);
@@ -222,6 +259,81 @@ internal sealed class CfgCSharpGenerator {
             DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
             AddressMap = addressMap
         };
+    }
+
+    /// <summary>The effects to give the method's return exits in a second prepare round: every
+    /// return exit that still reads every value gets one entry in the map, reading the union of
+    /// its method entries' observed <see cref="IrCallingConventions.OutputsOf"/> plus every value
+    /// the conventions do not describe (both tokens read, nothing written, no fault). The observed
+    /// demand - passed as <paramref name="conventions"/> - adds the terminal-observation demand to
+    /// the code demand, so a value only the final machine state reads is still written back at the
+    /// exit without becoming a signature parameter or output. Empty when no return exit
+    /// shrinks.</summary>
+    private static IReadOnlyDictionary<ICfgNode, IrEffects> ReturnExitEffectsOf(
+        PreparedMethod prepared, IrCallingConventions conventions) {
+        string methodName = prepared.Method.MethodName;
+        List<IrExit> returnExits = prepared.IrMethod.Blocks
+            .Where(block => block.HasTerminator && block.Terminator is IrExit exit
+                && exit.Effects == IrEffects.ExitUse && conventions.IsReturnExit(methodName, exit))
+            .Select(block => (IrExit)block.Terminator).ToList();
+        if (returnExits.Count == 0) {
+            return IrLifter.NoExitEffects;
+        }
+        CpuValues outputs = CpuValues.None;
+        CpuValues changes = CpuValues.None;
+        foreach (CfgCodePartitionEntry entry in prepared.Method.Entries) {
+            outputs |= conventions.OutputsOf(entry);
+            changes |= conventions.EffectOf(entry).Writes;
+        }
+        CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
+        Dictionary<ICfgNode, IrEffects> effects = new();
+        foreach (IrExit exit in returnExits) {
+            CpuValues reads = outputs | nonReportable
+                | (conventions.LandingInputsOf(methodName, exit) & changes);
+            if (reads == CpuValues.All) {
+                continue;
+            }
+            effects[exit.Origin] = new IrEffects(reads, CpuValues.None, CpuValues.None,
+                IrTokens.All, IrTokens.None, false, false);
+        }
+        return effects.Count == 0 ? IrLifter.NoExitEffects : effects;
+    }
+
+    /// <summary>Verify mode: every return exit's reads cover the promotable part of its observed
+    /// demand - the observed outputs, the non-reportable values and the landing inputs the method
+    /// changed. A register of that demand held in a promoted local then has an implicit use at the
+    /// exit, which the write-back planning either serves (<c>AX = ax;</c> before the ret) or
+    /// refuses the promotion for; a read set below the demand would let the promotion through
+    /// without the write-back and the final machine state would lose the register. Only the
+    /// promotable bytes are checked: the rest of the demand lives in the machine registers, which
+    /// are never locals.</summary>
+    private static void VerifyObservedExitReads(List<PreparedMethod> prepared,
+        IrCallingConventions conventions) {
+        CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
+        foreach (PreparedMethod method in prepared) {
+            string methodName = method.Method.MethodName;
+            CpuValues outputs = CpuValues.None;
+            CpuValues changes = CpuValues.None;
+            foreach (CfgCodePartitionEntry entry in method.Method.Entries) {
+                outputs |= conventions.OutputsOf(entry);
+                changes |= conventions.EffectOf(entry).Writes;
+            }
+            foreach (IrBlock block in method.IrMethod.Blocks) {
+                if (!block.HasTerminator || block.Terminator is not IrExit exit
+                        || !conventions.IsReturnExit(methodName, exit)) {
+                    continue;
+                }
+                CpuValues required = (outputs | nonReportable
+                    | (conventions.LandingInputsOf(methodName, exit) & changes))
+                    & RegisterLocalPromotion.PromotableMask;
+                if ((required & ~exit.Effects.Reads) != CpuValues.None) {
+                    throw new InvalidOperationException(
+                        $"Return exit of {methodName} reads {exit.Effects.Reads}," +
+                        $" below its observed demand {required}: a promoted local could lose" +
+                        " its write-back to the machine state.");
+                }
+            }
+        }
     }
 
     /// <summary>Applies DOS call comments, single-case switch simplification and direction-flag

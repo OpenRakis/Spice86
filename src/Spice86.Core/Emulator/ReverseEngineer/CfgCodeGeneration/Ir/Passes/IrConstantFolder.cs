@@ -204,7 +204,7 @@ internal static partial class IrConstantFolder {
             : terminator,
         IrExit exit => FoldConstantTerms(exit.Transfer) is { } transfer
             && !ReferenceEquals(transfer, exit.Transfer)
-            ? new IrExit(exit.Origin, transfer)
+            ? new IrExit(exit.Origin, transfer, exit.Effects)
             : terminator,
         _ => terminator
     };

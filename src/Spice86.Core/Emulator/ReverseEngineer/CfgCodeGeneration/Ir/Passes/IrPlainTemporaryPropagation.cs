@@ -334,7 +334,7 @@ internal static class IrPlainTemporaryPropagation {
                 ? new IrSwitch(@switch.Origin, switched, @switch.Cases, @switch.Default)
                 : null,
             IrExit exit => Substitute(exit.Transfer, name, value) is { } transfer
-                ? new IrExit(exit.Origin, transfer)
+                ? new IrExit(exit.Origin, transfer, exit.Effects)
                 : null,
             _ => null
         };

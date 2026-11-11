@@ -50,8 +50,15 @@ internal sealed class IrMethodEmitter(
     /// <see cref="Print"/> so the generator can resolve global names over the accesses of the whole
     /// program before any method is printed.</summary>
     /// <returns>The prepared method to hand to <see cref="Print"/>.</returns>
-    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) {
-        IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method));
+    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) =>
+        Prepare(method, timer, IrLifter.NoExitEffects);
+
+    /// <inheritdoc cref="Prepare(MethodPlan, GenerationStepTimer)" />
+    /// <param name="exitEffects">Return-exit effects to apply at lift time, from the first
+    /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer,
+        IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects) {
+        IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method, exitEffects));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
