@@ -15,15 +15,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov BX,1
         BX = 1;
-        // F000:0003 mov CX,0
         CX = 0;
-        // F000:0006 mov SP,0x0090
         SP = 0x0090;
-        // F000:0009 mov AX,0x000A
-        // F000:000C aaa
         bool finalAuxiliaryFlag_000C = false;
         bool finalCarryFlag_000C = false;
         AX = 0x0110;
@@ -34,13 +28,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_000C;
         CarryFlag = finalCarryFlag_000C;
         OverflowFlag = false;
-        // F000:000D mov word ptr DS:[0],AX
         DsGlobals.Word0000 = 0x0100;
-        // F000:0010 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0011 mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:0014 aaa
         bool finalAuxiliaryFlag_0014 = false;
         bool finalCarryFlag_0014 = false;
         if (AuxiliaryFlag) {
@@ -53,18 +43,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0014;
         CarryFlag = finalCarryFlag_0014;
         OverflowFlag = false;
-        // F000:0015 mov word ptr DS:[2],AX
         DsGlobals.Word0002 = AX;
-        // F000:0018 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0019 push BX
         Stack.Push16(1);
-        // F000:001A popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x001B);
-        // F000:001B mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:001E aaa
         bool finalAuxiliaryFlag_001E = false;
         bool finalCarryFlag_001E = false;
         if (AuxiliaryFlag) {
@@ -77,13 +61,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_001E;
         CarryFlag = finalCarryFlag_001E;
         OverflowFlag = false;
-        // F000:001F mov word ptr DS:[4],AX
         DsGlobals.Word0004 = AX;
-        // F000:0022 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0023 mov AX,0x5D50
         AX = 0x5D50;
-        // F000:0026 aaa
         bool finalAuxiliaryFlag_0026 = false;
         bool finalCarryFlag_0026 = false;
         if (AuxiliaryFlag) {
@@ -96,13 +76,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0026;
         CarryFlag = finalCarryFlag_0026;
         OverflowFlag = false;
-        // F000:0027 mov word ptr DS:[6],AX
         DsGlobals.Word0006 = AX;
-        // F000:002A pushf
         Stack.Push16(FlagRegister16);
-        // F000:002B mov AX,0x4726
         AX = 0x4726;
-        // F000:002E aaa
         bool finalAuxiliaryFlag_002E = false;
         bool finalCarryFlag_002E = false;
         if (AuxiliaryFlag) {
@@ -115,12 +91,8 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_002E;
         CarryFlag = finalCarryFlag_002E;
         OverflowFlag = false;
-        // F000:002F mov word ptr DS:[8],AX
         DsGlobals.Word0008 = AX;
-        // F000:0032 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0033 mov AX,0x000A
-        // F000:0036 aas
         bool finalAuxiliaryFlag_0036 = false;
         bool finalCarryFlag_0036 = false;
         AX = 4;
@@ -132,13 +104,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0036;
         CarryFlag = finalCarryFlag_0036;
         OverflowFlag = false;
-        // F000:0037 mov word ptr DS:[0x000A],AX
         DsGlobals.Word000A = 0xFF04;
-        // F000:003A pushf
         Stack.Push16(FlagRegister16);
-        // F000:003B mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:003E aas
         bool finalAuxiliaryFlag_003E = false;
         bool finalCarryFlag_003E = false;
         if (AuxiliaryFlag) {
@@ -152,18 +120,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_003E;
         CarryFlag = finalCarryFlag_003E;
         OverflowFlag = false;
-        // F000:003F mov word ptr DS:[0x000C],AX
         DsGlobals.Word000C = AX;
-        // F000:0042 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0043 push BX
         Stack.Push16(BX);
-        // F000:0044 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0045);
-        // F000:0045 mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:0048 aas
         bool finalAuxiliaryFlag_0048 = false;
         bool finalCarryFlag_0048 = false;
         if (AuxiliaryFlag) {
@@ -177,13 +139,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0048;
         CarryFlag = finalCarryFlag_0048;
         OverflowFlag = false;
-        // F000:0049 mov word ptr DS:[0x000E],AX
         DsGlobals.Word000E = AX;
-        // F000:004C pushf
         Stack.Push16(FlagRegister16);
-        // F000:004D mov AX,0xDCC0
         AX = 0xDCC0;
-        // F000:0050 aas
         bool finalAuxiliaryFlag_0050 = false;
         bool finalCarryFlag_0050 = false;
         if (AuxiliaryFlag) {
@@ -197,12 +155,8 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0050;
         CarryFlag = finalCarryFlag_0050;
         OverflowFlag = false;
-        // F000:0051 mov word ptr DS:[0x0010],AX
         DsGlobals.Word0010 = AX;
-        // F000:0054 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0055 mov AX,0x5FFB
-        // F000:0058 aas
         bool finalAuxiliaryFlag_0058 = false;
         bool finalCarryFlag_0058 = false;
         AX = 0x5FF5;
@@ -214,13 +168,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0058;
         CarryFlag = finalCarryFlag_0058;
         OverflowFlag = false;
-        // F000:0059 mov word ptr DS:[0x0012],AX
         DsGlobals.Word0012 = 0x5E05;
-        // F000:005C pushf
         Stack.Push16(FlagRegister16);
-        // F000:005D mov AX,0x00AC
         AX = 0x00AC;
-        // F000:0060 daa
         byte initialAl_0060 = 0xAC;
         bool initialCf_0060 = CarryFlag;
         bool finalAuxiliaryFlag_0060 = false;
@@ -238,13 +188,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0060;
         CarryFlag = finalCarryFlag_0060;
         OverflowFlag = false;
-        // F000:0061 mov word ptr DS:[0x0014],AX
         DsGlobals.Word0014 = AX;
-        // F000:0064 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0065 mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:0068 daa
         byte initialAl_0068 = 0xF9;
         bool initialCf_0068 = CarryFlag;
         bool finalAuxiliaryFlag_0068 = false;
@@ -264,18 +210,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0068;
         CarryFlag = finalCarryFlag_0068;
         OverflowFlag = false;
-        // F000:0069 mov word ptr DS:[0x0016],AX
         DsGlobals.Word0016 = AX;
-        // F000:006C pushf
         Stack.Push16(FlagRegister16);
-        // F000:006D push BX
         Stack.Push16(BX);
-        // F000:006E popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x006F);
-        // F000:006F mov AX,0xFFF8
         AX = 0xFFF8;
-        // F000:0072 daa
         byte initialAl_0072 = 0xF8;
         bool initialCf_0072 = CarryFlag;
         bool finalAuxiliaryFlag_0072 = false;
@@ -295,18 +235,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0072;
         CarryFlag = finalCarryFlag_0072;
         OverflowFlag = false;
-        // F000:0073 mov word ptr DS:[0x0018],AX
         DsGlobals.Word0018 = AX;
-        // F000:0076 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0077 push CX
         Stack.Push16(CX);
-        // F000:0078 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0079);
-        // F000:0079 mov AX,0xFF8B
         AX = 0xFF8B;
-        // F000:007C daa
         byte initialAl_007C = 0x8B;
         bool initialCf_007C = CarryFlag;
         bool finalAuxiliaryFlag_007C = false;
@@ -324,18 +258,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_007C;
         CarryFlag = finalCarryFlag_007C;
         OverflowFlag = false;
-        // F000:007D mov word ptr DS:[0x001A],AX
         DsGlobals.Word001A = AX;
-        // F000:0080 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0081 push CX
         Stack.Push16(CX);
-        // F000:0082 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0083);
-        // F000:0083 mov AX,0x0082
         AX = 0x0082;
-        // F000:0086 daa
         byte initialAl_0086 = 0x82;
         bool initialCf_0086 = CarryFlag;
         bool finalAuxiliaryFlag_0086 = false;
@@ -355,13 +283,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0086;
         CarryFlag = finalCarryFlag_0086;
         OverflowFlag = false;
-        // F000:0087 mov word ptr DS:[0x001C],AX
         DsGlobals.Word001C = AX;
-        // F000:008A pushf
         Stack.Push16(FlagRegister16);
-        // F000:008B mov AX,0xCD3C
         AX = 0xCD3C;
-        // F000:008E daa
         byte initialAl_008E = 0x3C;
         bool initialCf_008E = CarryFlag;
         bool finalAuxiliaryFlag_008E = false;
@@ -379,13 +303,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_008E;
         CarryFlag = finalCarryFlag_008E;
         OverflowFlag = false;
-        // F000:008F mov word ptr DS:[0x001E],AX
         DsGlobals.Word001E = AX;
-        // F000:0092 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0093 mov AX,0x3F00
         AX = 0x3F00;
-        // F000:0096 daa
         byte initialAl_0096 = 0;
         bool initialCf_0096 = CarryFlag;
         bool finalAuxiliaryFlag_0096 = false;
@@ -405,13 +325,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_0096;
         CarryFlag = finalCarryFlag_0096;
         OverflowFlag = false;
-        // F000:0097 mov word ptr DS:[0x0020],AX
         DsGlobals.Word0020 = AX;
-        // F000:009A pushf
         Stack.Push16(FlagRegister16);
-        // F000:009B mov AX,0x00AC
         AX = 0x00AC;
-        // F000:009E das
         byte initialAl_009E = 0xAC;
         bool initialCf_009E = CarryFlag;
         bool finalAuxiliaryFlag_009E = false;
@@ -427,13 +343,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_009E;
         CarryFlag = finalCarryFlag_009E;
         OverflowFlag = false;
-        // F000:009F mov word ptr DS:[0x0022],AX
         DsGlobals.Word0022 = AX;
-        // F000:00A2 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00A3 mov AX,0xFFF9
         AX = 0xFFF9;
-        // F000:00A6 das
         byte initialAl_00A6 = 0xF9;
         bool initialCf_00A6 = CarryFlag;
         bool finalAuxiliaryFlag_00A6 = false;
@@ -451,18 +363,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00A6;
         CarryFlag = finalCarryFlag_00A6;
         OverflowFlag = false;
-        // F000:00A7 mov word ptr DS:[0x0024],AX
         DsGlobals.Word0024 = AX;
-        // F000:00AA pushf
         Stack.Push16(FlagRegister16);
-        // F000:00AB push BX
         Stack.Push16(BX);
-        // F000:00AC popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x00AD);
-        // F000:00AD mov AX,0xFFF8
         AX = 0xFFF8;
-        // F000:00B0 das
         byte initialAl_00B0 = 0xF8;
         bool initialCf_00B0 = CarryFlag;
         bool finalAuxiliaryFlag_00B0 = false;
@@ -480,18 +386,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00B0;
         CarryFlag = finalCarryFlag_00B0;
         OverflowFlag = false;
-        // F000:00B1 mov word ptr DS:[0x0026],AX
         DsGlobals.Word0026 = AX;
-        // F000:00B4 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00B5 push CX
         Stack.Push16(CX);
-        // F000:00B6 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x00B7);
-        // F000:00B7 mov AX,0xFF8B
         AX = 0xFF8B;
-        // F000:00BA das
         byte initialAl_00BA = 0x8B;
         bool initialCf_00BA = CarryFlag;
         bool finalAuxiliaryFlag_00BA = false;
@@ -507,18 +407,12 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00BA;
         CarryFlag = finalCarryFlag_00BA;
         OverflowFlag = false;
-        // F000:00BB mov word ptr DS:[0x0028],AX
         DsGlobals.Word0028 = AX;
-        // F000:00BE pushf
         Stack.Push16(FlagRegister16);
-        // F000:00BF push CX
         Stack.Push16(CX);
-        // F000:00C0 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x00C1);
-        // F000:00C1 mov AX,0x0082
         AX = 0x0082;
-        // F000:00C4 das
         byte initialAl_00C4 = 0x82;
         bool initialCf_00C4 = CarryFlag;
         bool finalAuxiliaryFlag_00C4 = false;
@@ -536,13 +430,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00C4;
         CarryFlag = finalCarryFlag_00C4;
         OverflowFlag = false;
-        // F000:00C5 mov word ptr DS:[0x002A],AX
         DsGlobals.Word002A = AX;
-        // F000:00C8 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00C9 mov AX,0x059A
         AX = 0x059A;
-        // F000:00CC das
         byte initialAl_00CC = 0x9A;
         bool initialCf_00CC = CarryFlag;
         bool finalAuxiliaryFlag_00CC = false;
@@ -558,13 +448,9 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00CC;
         CarryFlag = finalCarryFlag_00CC;
         OverflowFlag = false;
-        // F000:00CD mov word ptr DS:[0x002C],AX
         DsGlobals.Word002C = AX;
-        // F000:00D0 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00D1 mov AX,0x54F6
         AX = 0x54F6;
-        // F000:00D4 das
         byte initialAl_00D4 = 0xF6;
         bool initialCf_00D4 = CarryFlag;
         bool finalAuxiliaryFlag_00D4 = false;
@@ -582,61 +468,28 @@ public partial class CfgGeneratedOverrides {
         AuxiliaryFlag = finalAuxiliaryFlag_00D4;
         CarryFlag = finalCarryFlag_00D4;
         OverflowFlag = false;
-        // F000:00D5 mov word ptr DS:[0x002E],AX
         DsGlobals.Word002E = AX;
-        // F000:00D8 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00D9 mov AX,0xFF7F
-        // F000:00DC cbw
-        // F000:00DD mov word ptr DS:[0x0030],AX
         DsGlobals.Word0030 = 0x007F;
-        // F000:00E0 mov word ptr DS:[0x0032],DX
         DsGlobals.Word0032 = DX;
-        // F000:00E4 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00E5 mov AX,0x0080
-        // F000:00E8 cbw
-        // F000:00E9 mov word ptr DS:[0x0034],AX
         DsGlobals.Word0034 = 0xFF80;
-        // F000:00EC mov word ptr DS:[0x0036],DX
         DsGlobals.Word0036 = DX;
-        // F000:00F0 pushf
         Stack.Push16(FlagRegister16);
-        // F000:00F1 mov AX,0xF1ED
-        // F000:00F4 cbw
-        // F000:00F5 mov word ptr DS:[0x0038],AX
         DsGlobals.Word0038 = 0xFFED;
-        // F000:00F8 mov word ptr DS:[0x003A],DX
         DsGlobals.Word003A = DX;
-        // F000:00FC pushf
         Stack.Push16(FlagRegister16);
-        // F000:00FD mov AX,0x8000
-        // F000:0100 cwd
-        // F000:0101 mov word ptr DS:[0x003C],AX
         DsGlobals.Word003C = 0x8000;
-        // F000:0104 mov word ptr DS:[0x003E],DX
         DsGlobals.Word003E = 0xFFFF;
-        // F000:0108 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0109 mov AX,0x7FFF
-        // F000:010C cwd
-        // F000:010D mov word ptr DS:[0x0040],AX
         DsGlobals.Word0040 = 0x7FFF;
-        // F000:0110 mov word ptr DS:[0x0042],DX
         DsGlobals.Word0042 = 0;
-        // F000:0114 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0115 mov AX,0x43F1
         AX = 0x43F1;
-        // F000:0118 cwd
         DX = 0;
-        // F000:0119 mov word ptr DS:[0x0044],AX
         DsGlobals.Word0044 = 0x43F1;
-        // F000:011C mov word ptr DS:[0x0046],DX
         DsGlobals.Word0046 = 0;
-        // F000:0120 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0121 hlt
         return Hlt();
     }
 

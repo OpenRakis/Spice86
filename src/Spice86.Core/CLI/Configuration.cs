@@ -33,6 +33,12 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--A20Gate")]
     public bool A20Gate { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides print the
+    /// <c>// SSSS:OOOO asm</c> comment of every instruction; off by default - the instruction
+    /// address map keeps the navigation.</summary>
+    [CommandOption("--GeneratedCodeAsmComments")]
+    public bool GeneratedCodeAsmComments { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

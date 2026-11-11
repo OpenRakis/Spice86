@@ -138,7 +138,7 @@ internal sealed class IrLifter(
         }
         string comment = InstructionBoundary.AsmCommentText(assemblyRenderer, node)
             ?? throw new NotSupportedException($"IR lifting does not support node {node.GetType().FullName} at {node.Address}.");
-        flattener.Add(new InstructionStartNode(comment), node, string.Empty);
+        flattener.Add(new InstructionStartNode(comment) { Address = node.Address }, node, string.Empty);
     }
 
     private IVisitableAstNode BodyOf(NodeEmissionPlan plan) => plan.Node switch {

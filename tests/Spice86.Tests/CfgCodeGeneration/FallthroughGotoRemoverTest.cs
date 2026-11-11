@@ -447,7 +447,7 @@ public class FallthroughGotoRemoverTest {
 
     private string Print(IVisitableAstNode node) {
         CSharpSourceWriter writer = new();
-        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0x1000] = "cs1" }), LabelOf);
+        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0x1000] = "cs1" }), LabelOf, printAsmComments: true);
         printer.Print(node);
         return writer.ToString();
     }

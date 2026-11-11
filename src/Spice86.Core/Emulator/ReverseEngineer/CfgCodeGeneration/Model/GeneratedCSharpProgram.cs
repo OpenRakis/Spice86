@@ -41,6 +41,16 @@ internal sealed class GeneratedCSharpProgram {
     /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
     /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.
     /// </summary>
+    /// <summary>
+    /// One entry per printed instruction - address, file, method and 1-based line range - the data
+    /// behind <c>GeneratedAddressMap.json</c>; empty for programs built without generation.
+    /// </summary>
+    public IReadOnlyList<GeneratedAddressMapEntry> AddressMap { get; init; } = [];
+
+    /// <summary>
+    /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
+    /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.
+    /// </summary>
     public GotoCensus GotoCensus { get; init; } = new();
     /// <summary>
     /// The census of the status-flag reads the printed program holds; empty for programs built without

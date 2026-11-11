@@ -16,9 +16,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_001B_F001B() {
         CheckExternalEvents(biosSegment, 0x001B);
         VerifySpeculativeRunOrFail(biosSegment, 0x001B, SpeculativeRun_001B);
-        // F000:001B mov AL,0x42
         AL = 0x42;
-        // F000:001D ret near
         return NearRet();
     }
 
@@ -26,27 +24,17 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov byte ptr DS:[0x0400],1
         DsGlobals.Byte0400 = 1;
-        // F000:0005 mov AL,byte ptr DS:[0x0500]
         al1 = DsGlobals.Byte0500;
-        // F000:0008 test AL,AL
         Alu8.And(al1, al1);
-        // F000:000A jne short 0x0013
         if (al1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0013, Signature_0013_call);
-            // F000:0013 call near 0x001B
             AL = al1;
             NearCall(biosSegment, 0x0016, unknown_F000_001B_F001BEntry);
             throw FailAsUntested("Untested return from call at F000:0013");
         }
-        // F000:000C mov byte ptr DS:[0x0401],0xDD
         DsGlobals.Byte0401 = 0xDD;
-        // F000:0011 jmp short 0x001E
-        // F000:001E mov byte ptr DS:[0x0402],0xAA
         DsGlobals.Byte0402 = 0xAA;
-        // F000:0023 hlt
         AL = al1;
         return Hlt();
     }

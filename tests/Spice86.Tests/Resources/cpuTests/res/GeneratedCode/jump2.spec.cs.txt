@@ -15,48 +15,34 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, DS. Outputs: CX, DX, BX. Changes: CX, DX, BX, SI, flags, DF.</summary>
     public virtual Action unknown_E342_EBE0_F2000() {
         CheckExternalEvents(cs1, 0xEBE0);
-        // E342:EBE0 call near word ptr DS:[0x3000]
         if (DsGlobals.Word3000 != 0xFDE0) {
             throw FailAsUntested($"Untested near call target 0x{DsGlobals.Word3000:X4} at E342:EBE0");
         }
         NearCall(cs1, 0xEBE4, unknown_E342_FDE0_F3200Entry);
-        // E342:EBE4 mov DX,0
         DX = 0;
-        // E342:EBE7 push DX
         Stack.Push16(0);
-        // E342:EBE8 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0xEBE9);
-        // E342:EBE9 mov CX,1
-        // E342:EBEC loopne 0xEBE9
-        // E342:EBEE loopne 0xEBF1
         CX = 0xFFFF;
         if (!ZeroFlag) {
-            // E342:EBF1 ret far
             return FarRet();
         }
         VerifySpeculativeEntryOrFail(cs1, 0xEBF0, Signature_EBF0_hlt);
-        // E342:EBF0 hlt
         return Hlt();
     }
 
     /// <summary>Inputs: DX. Outputs: BX. Changes: BX, SI.</summary>
     public virtual Action unknown_E342_FDE0_F3200() {
         CheckExternalEvents(cs1, 0xFDE0);
-        // E342:FDE0 mov BX,0x2FF0
         BX = 0x2FF0;
-        // E342:FDE3 mov SI,0x0010
         SI = 0x0010;
-        // E342:FDE6 push DX
         Stack.Push16(DX);
-        // E342:FDE7 call far dword ptr DS:[BX+SI+2]
         ushort targetSegment_FDE7 = DsGlobals.Word3004;
         ushort targetOffset_FDE7 = DsGlobals.Word3002;
         if (targetSegment_FDE7 != biosSegment || targetOffset_FDE7 != 0x4000) {
             throw FailAsUntested($"Untested far call target {targetSegment_FDE7:X4}:{targetOffset_FDE7:X4} at E342:FDE7");
         }
         FarCall(cs1, 0xFDEA, biosSegment, unknown_F000_4000_F4000Entry);
-        // E342:FDEA ret near
         return NearRet();
     }
 
@@ -79,27 +65,19 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ZF. Outputs: CX, BX. Changes: all.</summary>
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
-        // F000:0000 mov BX,0xF000
         BX = 0xF000;
-        // F000:0003 mov DS,BX
         DS = 0xF000;
-        // F000:0005 mov AX,0x1290
         AX = 0x1290;
-        // F000:0008 mov CX,5
         CX = 5;
         do {
             CheckExternalEvents(biosSegment, 0x000B);
-            // F000:000B push CX
             Stack.Push16(CX);
-            // F000:000C loop 0x000B
             CX--;
         } while (CX != 0);
-        // F000:000E call near AX
         if (AX != 0x1290) {
             throw FailAsUntested($"Untested near call target 0x{AX:X4} at F000:000E");
         }
         NearCall(biosSegment, 0x0010, unknown_F000_1290_F1290Entry);
-        // F000:0010 ret near
         return NearRet();
     }
 
@@ -108,59 +86,40 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_1290_F1290() {
         do {
             CheckExternalEvents(biosSegment, 0x1290);
-            // F000:1290 mov CX,0xFFFF
             CX = 0xFFFF;
-            // F000:1293 loope 0x1290
             CX = 0xFFFE;
         } while (ZeroFlag);
-        // F000:1295 mov DX,0x0040
         DX = 0x0040;
-        // F000:1298 push DX
         Stack.Push16(0x0040);
-        // F000:1299 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x129A);
-        // F000:129A loope 0x129D
         CX = 0xFFFD;
         if (!ZeroFlag) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x129C, Signature_129C_hlt);
-            // F000:129C hlt
             return Hlt();
         }
         do {
             CheckExternalEvents(biosSegment, 0x129D);
-            // F000:129D call far E342:EBE0
             FarCall(biosSegment, 0x12A2, cs1, unknown_E342_EBE0_F2000Entry);
-            // F000:12A2 jcxz short 0x129D
         } while (CX == 0);
-        // F000:12A4 mov CX,0
         CX = 0;
-        // F000:12A7 jcxz short 0x12AA
-        // F000:12AA ret near 0x000A
         return NearRet(0x000A);
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
     public virtual Action unknown_F000_4000_F4000() {
         CheckExternalEvents(biosSegment, 0x4000);
-        // F000:4000 ret far 2
         return FarRet(2);
     }
 
     /// <summary>Inputs: ZF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 mov SP,0x1000
         SP = 0x1000;
-        // F000:FFF3 mov SS,SP
         SS = SP;
-        // F000:FFF5 call near 0
         NearCall(biosSegment, 0xFFF8, unknown_F000_0000_F0000Entry);
-        // F000:FFF8 mov DS,CX
         DS = CX;
-        // F000:FFFA mov word ptr DS:[0],BX
         DsGlobals.Word0000 = BX;
-        // F000:FFFE hlt
         return Hlt();
     }
 

@@ -16,14 +16,12 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0049_F0049() {
         CheckExternalEvents(biosSegment, 0x0049);
-        // F000:0049 jmp short 0x004D
         return unknown_F000_004D_F004D(0x0000);
     }
 
     /// <summary>Inputs: all. Does not return.</summary>
     public virtual Action unknown_F000_004B_F004B() {
         CheckExternalEvents(biosSegment, 0x004B);
-        // F000:004B jmp short 0x005B
         return unknown_F000_004D_F004D(0x005B);
     }
 
@@ -31,16 +29,13 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0069_F0069() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0069);
-        // F000:0069 cmp DX,3
         Alu16.Sub(DX, 3);
-        // F000:006C je short 0x004D
         if (DX == 3) {
             if (JumpDispatcher.Jump(unknown_F000_004D_F004D, 0x0000)) {
                 goto entrydispatcher;
             }
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
-        // F000:006E jmp short 0x005B
         if (JumpDispatcher.Jump(unknown_F000_004D_F004D, 0x005B)) {
             goto entrydispatcher;
         }
@@ -50,16 +45,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: all.</summary>
     public virtual Action unknown_F000_0070_F0070() {
         CheckExternalEvents(biosSegment, 0x0070);
-        // F000:0070 jmp short 0x0069
         return unknown_F000_0069_F0069();
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
     public virtual Action unknown_F000_0072_F0072() {
         CheckExternalEvents(biosSegment, 0x0072);
-        // F000:0072 push 0x77
         Stack.Push16(0x0077);
-        // F000:0074 ret near
         return NearRet();
     }
 
@@ -67,7 +59,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0075_F0075() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0075);
-        // F000:0075 jmp short 0x0077
         if (JumpDispatcher.Jump(unknown_F000_0077_F0077Entry, 0x0000)) {
             goto entrydispatcher;
         }
@@ -77,73 +68,41 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_0077_F0077() {
         CheckExternalEvents(biosSegment, 0x0077);
-        // F000:0077 inc SI
         SI++;
-        // F000:0078 iret
         return InterruptRet();
     }
 
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 xor AX,AX
         AX = Alu16.Xor(AX, AX);
-        // F000:0002 mov DS,AX
         DS = 0;
-        // F000:0004 mov AX,0x1000
         AX = 0x1000;
-        // F000:0007 mov SS,AX
         SS = 0x1000;
-        // F000:0009 mov SP,0x0100
         SP = 0x0100;
-        // F000:000C mov DX,0
         DX = 0;
-        // F000:000F mov CX,0
         CX = 0;
-        // F000:0012 call near 0x0049
         NearCall(biosSegment, 0x0015, unknown_F000_0049_F0049Entry);
-        // F000:0015 mov CX,1
         CX = 1;
-        // F000:0018 call near 0x004B
         NearCall(biosSegment, 0x001B, unknown_F000_004B_F004BEntry);
-        // F000:001B mov CX,2
         CX = 2;
-        // F000:001E call near 0x0069
         NearCall(biosSegment, 0x0021, unknown_F000_0069_F0069Entry);
-        // F000:0021 mov BX,0
         BX = 0;
-        // F000:0024 mov DX,3
         DX = 3;
-        // F000:0027 call near 0x0070
         NearCall(biosSegment, 0x002A, unknown_F000_0070_F0070Entry);
-        // F000:002A mov word ptr DS:[0x0200],0x0077
         DsGlobals.Word0200 = 0x0077;
-        // F000:0030 mov word ptr DS:[0x0202],CS
         DsGlobals.Word0202 = CS;
-        // F000:0034 mov SI,0
         SI = 0;
-        // F000:0037 int 0x80
         InterruptCall(biosSegment, 0x0039, 0x80, biosSegment, 0x0077, unknown_F000_0077_F0077Entry);
-        // F000:0039 pushf
         Stack.Push16(FlagRegister16);
-        // F000:003A push CS
         Stack.Push16(CS);
-        // F000:003B call near 0x0072
         NearCall(biosSegment, 0x003E, unknown_F000_0072_F0072Entry);
-        // F000:003E pushf
         Stack.Push16(FlagRegister16);
-        // F000:003F push CS
         Stack.Push16(CS);
-        // F000:0040 call near 0x0077
         NearCall(biosSegment, 0x0043, unknown_F000_0077_F0077Entry);
-        // F000:0043 pushf
         Stack.Push16(FlagRegister16);
-        // F000:0044 push CS
         Stack.Push16(CS);
-        // F000:0045 call near 0x0075
         NearCall(biosSegment, 0x0048, unknown_F000_0075_F0075Entry);
-        // F000:0048 hlt
         return Hlt();
     }
 
@@ -164,51 +123,36 @@ public partial class CfgGeneratedOverrides {
 
     L_004D:
         CheckExternalEvents(biosSegment, 0x004D);
-        // F000:004D inc BX
         BX++;
-        // F000:004E cmp CX,0
         Alu16.Sub(CX, 0);
-        // F000:0051 je short 0x005B
         if (ZeroFlag) {
             goto L_005B;
         }
-        // F000:0053 cmp DX,0
         Alu16.Sub(DX, 0);
-        // F000:0056 je short 0x0068
         if (DX != 0) {
-            // F000:0058 dec DX
             DX = Alu16.Dec(DX);
-            // F000:0059 jmp short 0x0069
             if (JumpDispatcher.Jump(unknown_F000_0069_F0069Entry, 0x0000)) {
                 loadOffset = JumpDispatcher.NextEntryAddress;
                 goto entrydispatcher;
             }
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
-        // F000:0068 ret near
         return NearRet();
     L_005B:
         CheckExternalEvents(biosSegment, 0x005B);
-        // F000:005B cmp CX,1
         Alu16.Sub(CX, 1);
-        // F000:005E je short 0x004D
         if (ZeroFlag) {
             goto L_004D;
         }
-        // F000:0060 cmp DX,0
         Alu16.Sub(DX, 0);
-        // F000:0063 je short 0x0068
         if (DX != 0) {
-            // F000:0065 dec DX
             DX = Alu16.Dec(DX);
-            // F000:0066 jmp short 0x0069
             if (JumpDispatcher.Jump(unknown_F000_0069_F0069Entry, 0x0000)) {
                 loadOffset = JumpDispatcher.NextEntryAddress;
                 goto entrydispatcher;
             }
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
-        // F000:0068 ret near
         return NearRet();
     }
 

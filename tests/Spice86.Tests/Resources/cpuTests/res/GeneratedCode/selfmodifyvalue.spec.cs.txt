@@ -16,31 +16,18 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort ax1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0
         ax1 = 0;
-        // F000:0003 mov SS,AX
         SS = 0;
-        // F000:0005 mov SP,4
         SP = 4;
-        // F000:0008 mov BX,0x000A
         BX = 0x000A;
         do {
             CheckExternalEvents(biosSegment, 0x000B);
-            // F000:000B jmp short 0x000D
-            // F000:000D mov AX,word ptr [0x000F000E]
             ax1 = UInt16[0x000F000E];
-            // F000:0010 push AX
             Stack.Push16(ax1);
-            // F000:0011 mov word ptr CS:[0x000E],BX
             SegmentF000Globals.Word000E = BX;
-            // F000:0016 dec BX
             BX--;
-            // F000:0017 cmp AX,0
             Alu16.Sub(ax1, 0);
-            // F000:001A jne short 0x000B
         } while (ax1 != 0);
-        // F000:001C hlt
         AX = ax1;
         return Hlt();
     }

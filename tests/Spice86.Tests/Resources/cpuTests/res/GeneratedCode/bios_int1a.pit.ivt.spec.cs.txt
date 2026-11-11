@@ -16,141 +16,72 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov DX,0x0998
         DX = 0x0998;
-        // 016D:0103 mov AL,1
         AL = 1;
-        // 016D:0105 out DX,AL
         Out8(0x0998, 1);
-        // 016D:0106 mov AH,0
         AH = 0;
-        // 016D:0108 int 0x1A
         (AL, CX, DX) = ServiceCall(cs1, 0x010A, Clock, () => Clock.ReadSystemClockCounter());
-        // 016D:010A mov DX,0x0998
-        // 016D:010D mov AL,2
         AL = 2;
-        // 016D:010F out DX,AL
         Out8(0x0998, 2);
-        // 016D:0110 mov AH,1
-        // 016D:0112 mov CX,0x0012
-        // 016D:0115 mov DX,0x3456
-        // 016D:0118 int 0x1A
         ServiceCall(cs1, 0x011A, Clock, () => Clock.SetSystemClockCounter(0x0012, 0x3456));
-        // 016D:011A mov AH,0
         AH = 0;
-        // 016D:011C int 0x1A
         (AL, CX, DX) = ServiceCall(cs1, 0x011E, Clock, () => Clock.ReadSystemClockCounter());
-        // 016D:011E mov DX,0x0998
-        // 016D:0121 mov AL,3
         AL = 3;
-        // 016D:0123 out DX,AL
         Out8(0x0998, 3);
-        // 016D:0124 mov AH,2
         AH = 2;
-        // 016D:0126 int 0x1A
         (CX, DX, CarryFlag) = ServiceCall(cs1, 0x0128, Clock, () => Clock.ReadTimeFromRTC(), r => CarryOnInterruptStack(r.carryFlag));
-        // 016D:0128 jb short 0x0192
         if (!CarryFlag) {
-            // 016D:012A mov AL,CH
             AL = CH;
-            // 016D:012C call near 0x0199
             (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x012F, () => unknown_016D_0199_01869(AL));
-            // 016D:012F jb short 0x0192
             if (!CarryFlag) {
-                // 016D:0131 mov AL,CL
                 AL = CL;
-                // 016D:0133 call near 0x0199
                 (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0136, () => unknown_016D_0199_01869(AL));
-                // 016D:0136 jb short 0x0192
                 if (!CarryFlag) {
-                    // 016D:0138 mov AL,DH
                     AL = DH;
-                    // 016D:013A call near 0x0199
                     (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x013D, () => unknown_016D_0199_01869(AL));
-                    // 016D:013D jb short 0x0192
                     if (!CarryFlag) {
-                        // 016D:013F mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0142 mov AL,4
                         AL = 4;
-                        // 016D:0144 out DX,AL
                         Out8(0x0998, 4);
-                        // 016D:0145 mov AH,3
                         AH = 3;
-                        // 016D:0147 mov CH,0x12
                         CH = 0x12;
-                        // 016D:0149 mov CL,0x34
-                        // 016D:014B mov DH,0x56
                         DH = 0x56;
-                        // 016D:014D mov DL,0
-                        // 016D:014F int 0x1A
                         CarryFlag = ServiceCall(cs1, 0x0151, Clock, () => Clock.SetRTCTime(), r => CarryOnInterruptStack(r));
-                        // 016D:0151 mov DX,0x0998
-                        // 016D:0154 mov AL,5
                         AL = 5;
-                        // 016D:0156 out DX,AL
                         Out8(0x0998, 5);
-                        // 016D:0157 mov AH,4
                         AH = 4;
-                        // 016D:0159 int 0x1A
                         (CX, DX, CarryFlag) = ServiceCall(cs1, 0x015B, Clock, () => Clock.ReadDateFromRTC(), r => CarryOnInterruptStack(r.carryFlag));
-                        // 016D:015B jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:015D mov AL,CH
                         AL = CH;
-                        // 016D:015F call near 0x0199
                         (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0162, () => unknown_016D_0199_01869(AL));
-                        // 016D:0162 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:0164 mov AL,CL
                         AL = CL;
-                        // 016D:0166 call near 0x0199
                         (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0169, () => unknown_016D_0199_01869(AL));
-                        // 016D:0169 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:016B mov AL,DH
                         AL = DH;
-                        // 016D:016D call near 0x0199
                         (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0170, () => unknown_016D_0199_01869(AL));
-                        // 016D:0170 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:0172 mov AL,DL
                         AL = DL;
-                        // 016D:0174 call near 0x0199
                         (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0177, () => unknown_016D_0199_01869(AL));
-                        // 016D:0177 jb short 0x0192
                         if (!CarryFlag) {
-                            // 016D:0179 mov DX,0x0998
                             DX = 0x0998;
-                            // 016D:017C mov AL,6
                             AL = 6;
-                            // 016D:017E out DX,AL
                             Out8(0x0998, 6);
-                            // 016D:017F mov AH,5
                             AH = 5;
-                            // 016D:0181 mov CH,0x20
-                            // 016D:0183 mov CL,0x24
                             CX = 0x2024;
-                            // 016D:0185 mov DH,0x11
                             DH = 0x11;
-                            // 016D:0187 mov DL,0x14
-                            // 016D:0189 int 0x1A
                             CarryFlag = ServiceCall(cs1, 0x018B, Clock, () => Clock.SetRTCDate(), r => CarryOnInterruptStack(r));
-                            // 016D:018B mov DX,0x0999
                             DX = 0x0999;
-                            // 016D:018E mov AL,0
                             AL = 0;
-                            // 016D:0190 out DX,AL
                             Out8(0x0999, 0);
-                            // 016D:0191 hlt
                             return Hlt();
                         }
                     }
@@ -159,14 +90,10 @@ public partial class CfgGeneratedOverrides {
         }
     L_0192:
         VerifySpeculativeRunOrFail(cs1, 0x0192, SpeculativeRun_0192);
-        // 016D:0192 mov DX,0x0999
         DX = 0x0999;
-        // 016D:0195 mov AL,0xFF
         AL = 0xFF;
-        // 016D:0197 out DX,AL
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0198, Signature_0198_hlt);
-        // 016D:0198 hlt
         return Hlt();
     }
 
@@ -176,43 +103,25 @@ public partial class CfgGeneratedOverrides {
         AL = al;
         byte bl1 = 0;
         CheckExternalEvents(cs1, 0x0199);
-        // 016D:0199 push AX
         Stack.Push16(AX);
-        // 016D:019A push BX
         Stack.Push16(BX);
-        // 016D:019B mov BL,AL
-        // 016D:019D shr BL,4
         bl1 = (byte)(al >> 4);
-        // 016D:01A0 cmp BL,9
         Alu8.Sub(bl1, 9);
-        // 016D:01A3 ja short 0x01B3
         if (bl1 <= 9) {
-            // 016D:01A5 mov BL,AL
-            // 016D:01A7 and BL,0x0F
             bl1 = (byte)(al & 0x0F);
-            // 016D:01AA cmp BL,9
             Alu8.Sub(bl1, 9);
-            // 016D:01AD ja short 0x01B3
             if (bl1 <= 9) {
-                // 016D:01AF clc
                 CarryFlag = false;
-                // 016D:01B0 pop BX
                 BX = Stack.Pop16();
-                // 016D:01B1 pop AX
                 AX = Stack.Pop16();
-                // 016D:01B2 ret near
                 NearReturn();
                 return (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x01B3, SpeculativeRun_01B3);
-        // 016D:01B3 stc
         CarryFlag = true;
-        // 016D:01B4 pop BX
         BX = Stack.Pop16();
-        // 016D:01B5 pop AX
         AX = Stack.Pop16();
-        // 016D:01B6 ret near
         NearReturn();
         return (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
@@ -376,33 +285,23 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0006_F0006() {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
-        // F000:0006 callback 8
         // Spice86 callback: TimerInt8Handler.IncTickCounterValue
         Callback(biosSegment, 0x0006, 8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000A, Signature_000A_push);
-        // F000:000A push DS
         Stack.Push16(DS);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000B, Signature_000B_push);
-        // F000:000B push AX
         Stack.Push16(AX);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
-        // F000:000C push DX
         Stack.Push16(DX);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
-        // F000:000D int 0x1C
         InterruptCall(biosSegment, 0x000F, 0x1C);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
-        // F000:000F callback 0x0101
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);
         VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
-        // F000:0013 pop DX
         DX = Stack.Pop16();
-        // F000:0014 pop AX
         AX = Stack.Pop16();
-        // F000:0015 pop DS
         DS = Stack.Pop16();
-        // F000:0016 iret
         return InterruptRet();
     }
 
@@ -410,11 +309,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0017_F0017() {
         CheckExternalEvents(biosSegment, 0x0017);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);
-        // F000:0017 callback 9
         // INT 09h: BiosKeyboardInt9Handler
         Callback(biosSegment, 0x0017, 9);
         VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_iret);
-        // F000:001B iret
         return InterruptRet();
     }
 
@@ -422,10 +319,8 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0053_F0053() {
         CheckExternalEvents(biosSegment, 0x0053);
-        // F000:0053 callback 0x001A
         // INT 1Ah: Clock services selected by AH
         Callback(biosSegment, 0x0053, 0x001A);
-        // F000:0057 iret
         return InterruptRet();
     }
 
@@ -433,11 +328,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_005D_F005D() {
         CheckExternalEvents(biosSegment, 0x005D);
         VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
-        // F000:005D callback 0x0070
         // INT 70h: Rtc.HandleInterrupt
         Callback(biosSegment, 0x005D, 0x0070);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_iret);
-        // F000:0061 iret
         return InterruptRet();
     }
 
@@ -445,14 +338,11 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0063_F0063() {
         CheckExternalEvents(biosSegment, 0x0063);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
-        // F000:0063 call far F000:00E9
         FarCall(biosSegment, 0x0068, biosSegment, unknown_F000_00E9_F00E9Entry);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0068, Signature_0068_callback);
-        // F000:0068 callback 0x0074
         // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
         Callback(biosSegment, 0x0068, 0x0074);
         VerifySpeculativeEntryOrFail(biosSegment, 0x006C, Signature_006C_iret);
-        // F000:006C iret
         return InterruptRet();
     }
 
@@ -460,11 +350,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_006D_F006D() {
         CheckExternalEvents(biosSegment, 0x006D);
         VerifySpeculativeEntryOrFail(biosSegment, 0x006D, Signature_006D_callback);
-        // F000:006D callback 0x0104
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x006D, 0x0104);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0071, Signature_0071_iret);
-        // F000:0071 iret
         return InterruptRet();
     }
 
@@ -472,11 +360,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0072_F0072() {
         CheckExternalEvents(biosSegment, 0x0072);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0072, Signature_0072_callback);
-        // F000:0072 callback 0x0105
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x0072, 0x0105);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0076, Signature_0076_iret);
-        // F000:0076 iret
         return InterruptRet();
     }
 
@@ -484,11 +370,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0077_F0077() {
         CheckExternalEvents(biosSegment, 0x0077);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0077, Signature_0077_callback);
-        // F000:0077 callback 0x0106
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x0077, 0x0106);
         VerifySpeculativeEntryOrFail(biosSegment, 0x007B, Signature_007B_iret);
-        // F000:007B iret
         return InterruptRet();
     }
 
@@ -496,11 +380,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_007C_F007C() {
         CheckExternalEvents(biosSegment, 0x007C);
         VerifySpeculativeEntryOrFail(biosSegment, 0x007C, Signature_007C_callback);
-        // F000:007C callback 0x0107
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x007C, 0x0107);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0080, Signature_0080_iret);
-        // F000:0080 iret
         return InterruptRet();
     }
 
@@ -508,11 +390,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0081_F0081() {
         CheckExternalEvents(biosSegment, 0x0081);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0081, Signature_0081_callback);
-        // F000:0081 callback 0x0108
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x0081, 0x0108);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_iret);
-        // F000:0085 iret
         return InterruptRet();
     }
 
@@ -520,11 +400,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0086_F0086() {
         CheckExternalEvents(biosSegment, 0x0086);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0086, Signature_0086_callback);
-        // F000:0086 callback 0x0109
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(biosSegment, 0x0086, 0x0109);
         VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_iret);
-        // F000:008A iret
         return InterruptRet();
     }
 
@@ -532,7 +410,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_00E8_F00E8() {
         CheckExternalEvents(biosSegment, 0x00E8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
-        // F000:00E8 ret far
         return FarRet();
     }
 
@@ -540,18 +417,14 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_00E9_F00E9() {
         CheckExternalEvents(biosSegment, 0x00E9);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);
-        // F000:00E9 callback 0x010C
         // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
         Callback(biosSegment, 0x00E9, 0x010C);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
-        // F000:00ED call far F000:00E8
         FarCall(biosSegment, 0x00F2, biosSegment, unknown_F000_00E8_F00E8Entry);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
-        // F000:00F2 callback 0x010D
         // Spice86 callback: MouseDriver.AfterUserHandlerExecution
         Callback(biosSegment, 0x00F2, 0x010D);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00F6, Signature_00F6_ret);
-        // F000:00F6 ret far
         return FarRet();
     }
 

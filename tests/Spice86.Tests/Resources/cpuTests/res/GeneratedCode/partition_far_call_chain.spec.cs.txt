@@ -16,9 +16,7 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F000_001E_F001E(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x001E);
-        // F000:001E add DX,1
         DX = Alu16.Add(DX, 1);
-        // F000:0021 ret far
         FarReturn();
         return;
     }
@@ -32,9 +30,7 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F000_0022_F0022(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x0022);
-        // F000:0022 add DX,0x0010
         DX = Alu16.Add(DX, 0x0010);
-        // F000:0025 ret far
         FarReturn();
         return;
     }
@@ -48,9 +44,7 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F000_0026_F0026(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x0026);
-        // F000:0026 add DX,0x0100
         DX = Alu16.Add(DX, 0x0100);
-        // F000:002A ret far
         FarReturn();
         return;
     }
@@ -64,9 +58,7 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F000_002B_F002B(ushort dx) {
         DX = dx;
         CheckExternalEvents(biosSegment, 0x002B);
-        // F000:002B add DX,0x1000
         DX = Alu16.Add(DX, 0x1000);
-        // F000:002F ret far
         FarReturn();
         return;
     }
@@ -81,17 +73,11 @@ public partial class CfgGeneratedOverrides {
         DI = di;
         DS = ds;
         CheckExternalEvents(biosSegment, 0x0030);
-        // F000:0030 push CS
         Stack.Push16(CS);
-        // F000:0031 pop AX
         AX = Stack.Pop16();
-        // F000:0032 mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
-        // F000:0034 mov word ptr DS:[DI+2],0x1000
         UInt16[ds, di + 2] = 0x1000;
-        // F000:0039 add DI,4
         DI = Alu16.Add(DI, 4);
-        // F000:003C ret far
         FarReturn();
         return;
     }
@@ -106,17 +92,11 @@ public partial class CfgGeneratedOverrides {
         DI = di;
         DS = ds;
         CheckExternalEvents(biosSegment, 0x013D);
-        // F000:013D push CS
         Stack.Push16(CS);
-        // F000:013E pop AX
         AX = Stack.Pop16();
-        // F000:013F mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
-        // F000:0141 mov word ptr DS:[DI+2],0x3000
         UInt16[ds, di + 2] = 0x3000;
-        // F000:0146 add DI,4
         DI = Alu16.Add(DI, 4);
-        // F000:0149 ret far
         FarReturn();
         return;
     }
@@ -129,30 +109,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x2000
         AX = 0x2000;
-        // F000:0003 mov DS,AX
         DS = 0x2000;
-        // F000:0005 mov SS,AX
         SS = 0x2000;
-        // F000:0007 mov SP,0x1000
         SP = 0x1000;
-        // F000:000A xor DX,DX
         DX = 0;
-        // F000:000C xor DI,DI
         DI = 0;
-        // F000:000E mov CX,8
         CX = 8;
         do {
             CheckExternalEvents(biosSegment, 0x0011);
-            // F000:0011 mov BX,CX
             BX = CX;
-            // F000:0013 dec BX
             BX = Alu16.Dec(BX);
-            // F000:0014 shl BX,2
             BX = Alu16.Shl(BX, 2);
-            // F000:0017 call far dword ptr CS:[BX+0x3D]
             ushort targetSegment_0017 = UInt16[CS, BX + 0x003F];
             ushort targetOffset_0017 = UInt16[CS, BX + 0x3D];
             switch ((uint)(targetSegment_0017 << 16 | targetOffset_0017)) {
@@ -183,10 +151,8 @@ public partial class CfgGeneratedOverrides {
                 default:
                     throw FailAsUntested($"Untested far call target {targetSegment_0017:X4}:{targetOffset_0017:X4} at F000:0017");
             }
-            // F000:001B loop 0x0011
             CX--;
         } while (CX != 0);
-        // F000:001D hlt
         return Hlt();
     }
 
@@ -211,17 +177,11 @@ public partial class CfgGeneratedOverrides {
         DI = di;
         DS = ds;
         CheckExternalEvents(cs1, 0x012D);
-        // F001:012D push CS
         Stack.Push16(CS);
-        // F001:012E pop AX
         AX = Stack.Pop16();
-        // F001:012F mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
-        // F001:0131 mov word ptr DS:[DI+2],0x3000
         UInt16[ds, di + 2] = 0x3000;
-        // F001:0136 add DI,4
         DI = Alu16.Add(DI, 4);
-        // F001:0139 ret far
         FarReturn();
         return;
     }
@@ -252,17 +212,11 @@ public partial class CfgGeneratedOverrides {
         DI = di;
         DS = ds;
         CheckExternalEvents(cs2, 0x0030);
-        // F010:0030 push CS
         Stack.Push16(CS);
-        // F010:0031 pop AX
         AX = Stack.Pop16();
-        // F010:0032 mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
-        // F010:0034 mov word ptr DS:[DI+2],0x2000
         UInt16[ds, di + 2] = 0x2000;
-        // F010:0039 add DI,4
         DI = Alu16.Add(DI, 4);
-        // F010:003C ret far
         FarReturn();
         return;
     }

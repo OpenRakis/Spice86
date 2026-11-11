@@ -16,6 +16,10 @@ internal static class GeneratedOverrideNames {
     /// <summary>The file (without directory) holding the generated override supplier class.</summary>
     public const string SupplierFileName = SupplierClassName + ".cs";
 
+    /// <summary>The file (without directory) holding the instruction address map JSON the dump
+    /// writes next to the generated files.</summary>
+    public const string AddressMapFileName = "GeneratedAddressMap.json";
+
     /// <summary>The support file (without directory) holding the class declaration, segment
     /// fields, entry delegates and constructor registrations of the override class.</summary>
     public const string SupportWiringFileName = OverrideClassName + ".Support.Wiring.cs";

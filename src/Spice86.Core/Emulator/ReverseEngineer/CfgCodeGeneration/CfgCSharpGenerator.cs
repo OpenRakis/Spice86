@@ -24,6 +24,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;
+using System.Text;
 
 /// <summary>
 /// The top-level orchestrator: takes a partitioned CFG program and produces a complete, compilable C# source
@@ -41,9 +42,11 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _collectCensuses;
     private readonly bool _verify;
     private readonly int _maxLinesPerFile;
+    private readonly bool _printAsmComments;
 
-    /// <summary>The production generator: no census collection, no IR verification.</summary>
-    public CfgCSharpGenerator() : this(false, false) {
+    /// <summary>The production generator: no census collection, no IR verification, no ASM
+    /// instruction comments.</summary>
+    public CfgCSharpGenerator() : this(false, false, false) {
     }
 
     /// <summary>Creates a generator; production uses the parameterless options.</summary>
@@ -52,13 +55,27 @@ internal sealed class CfgCSharpGenerator {
     /// <param name="verify">Whether the IR invariants are checked after the passes; tests enable it.
     /// </param>
     public CfgCSharpGenerator(bool collectCensuses, bool verify)
-        : this(collectCensuses, verify, MaxLinesPerFile) {
+        : this(collectCensuses, verify, false, MaxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with the ASM comment option.</summary>
+    /// <param name="printAsmComments">Whether every instruction keeps its
+    /// <c>// SSSS:OOOO asm</c> comment; the address map records the address either way.</param>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments)
+        : this(collectCensuses, verify, printAsmComments, MaxLinesPerFile) {
     }
 
     /// <summary>Creates a generator with a per-file line limit; tests use a small limit.</summary>
-    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile) {
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile)
+        : this(collectCensuses, verify, false, maxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with a per-file line limit and explicit comment option.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        int maxLinesPerFile) {
         _collectCensuses = collectCensuses;
         _verify = verify;
+        _printAsmComments = printAsmComments;
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -90,7 +107,7 @@ internal sealed class CfgCSharpGenerator {
             effectBuilder.Compute());
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify);
+            effectBuilder, _collectCensuses, _verify, _printAsmComments);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 
@@ -130,7 +147,8 @@ internal sealed class CfgCSharpGenerator {
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePrinting);
-        List<(ushort Segment, string Text, bool HasFrame, bool Support, uint EntryLinear)> methodTexts =
+        List<(ushort Segment, string Text, bool HasFrame, bool Support, uint EntryLinear,
+                string MethodName, IReadOnlyList<MethodInstructionLine> Instructions)> methodTexts =
             new(plan.Methods.Count);
         for (int i = 0; i < prepared.Count; i++) {
             PreparedMethod preparedMethod = prepared[i];
@@ -139,14 +157,16 @@ internal sealed class CfgCSharpGenerator {
             CSharpSourceWriter methodWriter = new();
             methodWriter.Indent();
             AnalyzedMethod analyzed = methodEmitter.Analyze(preparedMethod, analysis, timer);
-            methodEmitter.Print(methodWriter, analyzed, analysis, timer);
+            List<MethodInstructionLine> instructionLines =
+                methodEmitter.Print(methodWriter, analyzed, analysis, timer);
             bool support = program.Inputs.ProgramImages.IsSupportCode(preparedMethod.Method.Nodes
                 .OfType<CfgInstruction>()
                 .Select(instruction => instruction.Address.Linear)
                 .ToList());
             methodTexts.Add((preparedMethod.Method.PrimaryEntry.Address.Segment, methodWriter.ToString(),
                 preparedMethod.FramePlan is not null, support,
-                preparedMethod.Method.PrimaryEntry.Address.Linear));
+                preparedMethod.Method.PrimaryEntry.Address.Linear,
+                preparedMethod.Method.MethodName, instructionLines));
             MethodCensus methodCensus = preparedMethod.Emission.Census;
             census.Merge(methodCensus.Gotos);
             if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
@@ -156,10 +176,13 @@ internal sealed class CfgCSharpGenerator {
                     methodCensus.LiftedBlocks, methodCensus.LiftedStatements, timer));
             }
         }
+        List<GeneratedAddressMapEntry> addressMap = new(plan.Methods
+            .Sum(method => method.Nodes.OfType<CfgInstruction>().Count()));
         files.AddRange(BuildSegmentFiles(methodTexts
             .Where(method => !method.Support)
-            .Select(method => (method.Segment, method.Text, method.HasFrame))
-            .ToList()));
+            .Select(method => (method.Segment, method.Text, method.HasFrame, method.MethodName,
+                method.Instructions))
+            .ToList(), addressMap));
         files.AddRange(EmitGlobalsFiles(analysis.GlobalClasses));
         files.AddRange(EmitTableFiles(analysis.GlobalClasses));
 
@@ -184,8 +207,9 @@ internal sealed class CfgCSharpGenerator {
 
         files.AddRange(BuildSupportStubFiles(methodTexts
             .Where(method => method.Support)
-            .Select(method => (method.Text, method.HasFrame, method.EntryLinear))
-            .ToList()));
+            .Select(method => (method.Text, method.HasFrame, method.EntryLinear, method.MethodName,
+                method.Instructions))
+            .ToList(), addressMap));
         files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupplierFileName, supplierWriter.ToString()));
         progress.EndPhase();
 
@@ -195,7 +219,8 @@ internal sealed class CfgCSharpGenerator {
             FlagReadCensus = flagReadCensus,
             WebCensus = webCensus,
             ConstantMemoryAccesses = constantMemoryAccesses,
-            DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses)
+            DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
+            AddressMap = addressMap
         };
     }
 
@@ -327,13 +352,16 @@ internal sealed class CfgCSharpGenerator {
     /// method boundaries into numbered parts.
     /// </summary>
     private List<GeneratedSourceFile> BuildSegmentFiles(
-        List<(ushort Segment, string Text, bool HasFrame)> methodTexts) {
+        List<(ushort Segment, string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)> methodTexts,
+        List<GeneratedAddressMapEntry> addressMap) {
         List<GeneratedSourceFile> files = [];
-        foreach (IGrouping<ushort, (ushort Segment, string Text, bool HasFrame)> group in methodTexts
+        foreach (var group in methodTexts
             .GroupBy(method => method.Segment)
             .OrderBy(group => group.Key)) {
             files.AddRange(BuildSegmentPartFiles(group.Key,
-                group.Select(method => (method.Text, method.HasFrame)).ToList()));
+                group.Select(method => (method.Text, method.HasFrame, method.MethodName,
+                    method.Instructions)).ToList(), addressMap));
         }
         return files;
     }
@@ -343,42 +371,70 @@ internal sealed class CfgCSharpGenerator {
     /// order, split at method boundaries on the same line limit as the segment files.
     /// </summary>
     private List<GeneratedSourceFile> BuildSupportStubFiles(
-        List<(string Text, bool HasFrame, uint EntryLinear)> methodTexts) {
-        List<(string Text, bool HasFrame)> chunks = methodTexts
+        List<(string Text, bool HasFrame, uint EntryLinear, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)> methodTexts,
+        List<GeneratedAddressMapEntry> addressMap) {
+        var chunks = methodTexts
             .OrderBy(method => method.EntryLinear)
-            .Select(method => (method.Text, method.HasFrame)).ToList();
+            .Select(method => (method.Text, method.HasFrame, method.MethodName, method.Instructions))
+            .ToList();
         if (chunks.Count == 0) {
             return [];
         }
-        List<List<(string Text, bool HasFrame)>> parts = SplitChunks(chunks);
+        List<List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)>> parts = SplitChunks(chunks);
         List<GeneratedSourceFile> files = new(parts.Count);
         for (int i = 0; i < parts.Count; i++) {
-            files.Add(new GeneratedSourceFile(
-                GeneratedOverrideNames.SupportStubsFileName(i + 1, parts.Count),
-                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
-                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
+            string name = GeneratedOverrideNames.SupportStubsFileName(i + 1, parts.Count);
+            files.Add(new GeneratedSourceFile(name, BuildPartFileText(parts[i], name, addressMap)));
         }
         return files;
     }
 
     private List<GeneratedSourceFile> BuildSegmentPartFiles(ushort segment,
-        List<(string Text, bool HasFrame)> chunks) {
-        List<List<(string Text, bool HasFrame)>> parts = SplitChunks(chunks);
+        List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)> chunks,
+        List<GeneratedAddressMapEntry> addressMap) {
+        var parts = SplitChunks(chunks);
         List<GeneratedSourceFile> files = new(parts.Count);
         for (int i = 0; i < parts.Count; i++) {
-            files.Add(new GeneratedSourceFile(SegmentFileName(segment, i + 1, parts.Count),
-                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
-                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
+            string name = SegmentFileName(segment, i + 1, parts.Count);
+            files.Add(new GeneratedSourceFile(name, BuildPartFileText(parts[i], name, addressMap)));
         }
         return files;
     }
 
-    private List<List<(string Text, bool HasFrame)>> SplitChunks(
-        List<(string Text, bool HasFrame)> chunks) {
+    /// <summary>Assembles one segment or stubs file and records every instruction's 1-based line
+    /// range of its methods into <paramref name="addressMap"/>.</summary>
+    private static string BuildPartFileText(
+        List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)> part, string fileName,
+        List<GeneratedAddressMapEntry> addressMap) {
+        string prefix = SegmentFilePrefix(part.Any(chunk => chunk.HasFrame));
+        int startIndex = CountLines(prefix);
+        StringBuilder text = new(prefix);
+        foreach (var chunk in part) {
+            foreach (MethodInstructionLine instruction in chunk.Instructions) {
+                addressMap.Add(new GeneratedAddressMapEntry(instruction.Address.ToString(), fileName,
+                    chunk.MethodName, startIndex + instruction.FirstLine + 1,
+                    startIndex + instruction.LastLine + 1));
+            }
+            text.Append(chunk.Text);
+            startIndex += CountLines(chunk.Text);
+        }
+        text.Append("}\n");
+        return text.ToString();
+    }
+
+    private List<List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)>> SplitChunks(
+        List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)> chunks) {
         int overhead = CountLines(SegmentFilePrefix(true)) + 1;
-        List<List<(string Text, bool HasFrame)>> parts = [[]];
+        List<List<(string Text, bool HasFrame, string MethodName,
+            IReadOnlyList<MethodInstructionLine> Instructions)>> parts = [[]];
         int lines = overhead;
-        foreach ((string Text, bool HasFrame) chunk in chunks) {
+        foreach (var chunk in chunks) {
             int chunkLines = CountLines(chunk.Text);
             if (parts[^1].Count > 0 && lines + chunkLines > _maxLinesPerFile) {
                 parts.Add([]);

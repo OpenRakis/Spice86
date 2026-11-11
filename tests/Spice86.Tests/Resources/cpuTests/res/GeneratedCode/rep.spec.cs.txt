@@ -35,33 +35,26 @@ public partial class CfgGeneratedOverrides {
         ushort di4 = 0;
         ushort si4 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 mov SP,0x1000
         SP = 0x1000;
-        // F000:FFF3 mov SS,SP
         SS = SP;
-        // F000:FFF5 jmp short 0
-        // F000:0000 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0002 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0004 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0006 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0006 = UInt8[DS, SI] == UInt8[ES, DI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
@@ -71,7 +64,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:0008 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0008 = UInt8[DS, SI] == UInt8[ES, DI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
@@ -81,7 +73,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:000A repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_000A = UInt8[DS, SI] == UInt8[ES, DI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
@@ -91,7 +82,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:000C repe scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_000C = AL == UInt8[ES, DI];
             DI += (ushort)(DirectionFlag ? -1 : 1);
@@ -100,7 +90,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:000E repe scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_000E = AL == UInt8[ES, DI];
             DI += (ushort)(DirectionFlag ? -1 : 1);
@@ -109,7 +98,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:0010 repne scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0010 = AL == UInt8[ES, DI];
             DI += (ushort)(DirectionFlag ? -1 : 1);
@@ -118,64 +106,52 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:0012 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0014 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0016 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0018 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:001A rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:001C rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:001E mov BX,0x0040
         BX = 0x0040;
-        // F000:0021 push BX
         Stack.Push16(0x0040);
-        // F000:0022 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0023);
-        // F000:0023 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0025 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0027 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0027 = UInt8[DS, SI] == UInt8[ES, DI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
@@ -185,7 +161,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:0029 repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0029 = UInt8[DS, SI] == UInt8[ES, DI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
@@ -195,7 +170,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:002B repe scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_002B = AL == UInt8[ES, DI];
             DI += (ushort)(DirectionFlag ? -1 : 1);
@@ -204,7 +178,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:002D repne scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_002D = AL == UInt8[ES, DI];
             DI += (ushort)(DirectionFlag ? -1 : 1);
@@ -213,256 +186,161 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:002F rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0031 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0033 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0035 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        // F000:0037 mov AX,DI
         AX = DI;
-        // F000:0039 mov AH,0x10
         AH = 0x10;
-        // F000:003B jmp near AX
         if (AX != 0x1000) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:003B");
         }
-        // F000:1000 mov CX,0
-        // F000:1003 push CX
         Stack.Push16(0);
-        // F000:1005 jmp near SP
         if (SP != 0x0FFE) {
             throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:1005");
         }
-        // F000:0FFE jmp short 0x1007
-        // F000:1007 mov CX,0x110A
         CX = 0x110A;
-        // F000:100A push CX
         Stack.Push16(0x110A);
-        // F000:100C jmp near SP
         if (SP != 0x0FFC) {
             throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:100C");
         }
-        // F000:0FFC jmp short 0x100E
-        // F000:100E jmp near CX
         if (CX != 0x110A) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:100E");
         }
-        // F000:110A mov CX,5
-        // F000:110D mov DX,0
         DX = 0;
-        // F000:1110 push DX
         Stack.Push16(0);
-        // F000:1111 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x1112);
-        // F000:1112 pop CX
         cx1 = Stack.Pop16();
-        // F000:1114 mov AX,CX
         AX = cx1;
-        // F000:1116 mov AH,0x20
         AH = 0x20;
-        // F000:1118 jmp near AX
         if (AX != 0x200A) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:1118");
         }
-        // F000:200A push BX
         Stack.Push16(0x0040);
-        // F000:200B popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x200C);
-        // F000:200C mov CX,2
         cx2 = 2;
-        // F000:200F mov SI,0x3000
         si1 = 0x3000;
-        // F000:2012 mov AX,0xF000
-        // F000:2015 mov DS,AX
         DS = 0xF000;
-        // F000:2017 mov AX,0x1000
-        // F000:201A mov ES,AX
         ES = 0x1000;
-        // F000:201C mov DI,0
         di1 = 0;
-        // F000:201F rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (cx2 != 0) {
             UInt8[ES, di1] = UInt8[DS, si1];
             si1 += (ushort)(DirectionFlag ? -1 : 1);
             di1 += (ushort)(DirectionFlag ? -1 : 1);
             cx2--;
         }
-        // F000:2021 mov DS,AX
         DS = 0x1000;
-        // F000:2023 mov AX,word ptr DS:[0]
         AX = Segment1000Globals.Word0000;
-        // F000:2026 mov BP,DI
         BP = di1;
-        // F000:2028 mov word ptr SS:[BP+SI],AX
         SsUInt16[BP + si1] = AX;
-        // F000:202A jcxz short 0x202D
         if (cx2 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x202C, Signature_202C_hlt);
-            // F000:202C hlt
             CX = cx2;
             SI = si1;
             DI = di1;
             return Hlt();
         }
-        // F000:202D jmp near word ptr DS:[0x3004]
         if (Segment1000Globals.Word3004 != 0x0809) {
             throw FailAsUntested($"Untested near jump target 0x{Segment1000Globals.Word3004:X4} at F000:202D");
         }
-        // F000:0809 jmp near 0x300D
-        // F000:300D mov AX,0xF000
-        // F000:3010 mov DS,AX
         DS = 0xF000;
-        // F000:3012 mov CX,1
         cx3 = 1;
-        // F000:3015 mov AX,0
-        // F000:3018 push AX
         Stack.Push16(0);
-        // F000:3019 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x301A);
-        // F000:301A rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (cx3 != 0) {
             UInt16[ES, di1] = UInt16[DS, si1];
             si1 += (ushort)(DirectionFlag ? -2 : 2);
             di1 += (ushort)(DirectionFlag ? -2 : 2);
             cx3--;
         }
-        // F000:301C mov AX,0x1000
-        // F000:301F mov DS,AX
         DS = 0x1000;
-        // F000:3021 mov AX,word ptr DS:[2]
         AX = Segment1000Globals.Word0002;
-        // F000:3024 mov BP,DI
         BP = di1;
-        // F000:3026 mov word ptr SS:[BP+SI],AX
         SsUInt16[BP + si1] = AX;
-        // F000:3028 jcxz short 0x302B
         if (cx3 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x302A, Signature_302A_hlt);
-            // F000:302A hlt
             SI = si1;
             DI = di1;
             CX = cx3;
             return Hlt();
         }
-        // F000:302B jmp near word ptr DS:[0x3008]
         if (Segment1000Globals.Word3008 != 0x0607) {
             throw FailAsUntested($"Untested near jump target 0x{Segment1000Globals.Word3008:X4} at F000:302B");
         }
-        // F000:0607 jmp near 0x302F
-        // F000:302F mov AX,0xF000
         AX = 0xF000;
-        // F000:3032 mov DS,AX
         DS = 0xF000;
-        // F000:3034 mov CX,3
-        // F000:3037 rep lods AL,byte ptr DS:[SI]
         for (cx4 = 3; cx4 != 0; cx4--) {
             AL = UInt8[DS, si1];
             si1 += (ushort)(DirectionFlag ? -1 : 1);
         }
-        // F000:3039 jmp near AX
         if (AX != 0xF003) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:3039");
         }
-        // F000:F003 jmp near 0x303C
-        // F000:303C mov BX,0x0040
-        // F000:303F push BX
         Stack.Push16(0x0040);
-        // F000:3040 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x3041);
-        // F000:3041 mov AX,0xF000
         AX = 0xF000;
-        // F000:3044 mov DS,AX
         DS = 0xF000;
-        // F000:3046 mov CX,1
-        // F000:3049 rep lods AX,word ptr DS:[SI]
         for (cx5 = 1; cx5 != 0; cx5--) {
             AX = UInt16[DS, si1];
             si1 += (ushort)(DirectionFlag ? -2 : 2);
         }
-        // F000:304B jmp near AX
         if (AX != 0x0102) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:304B");
         }
-        // F000:0102 jmp near 0x304D
-        // F000:304D mov CX,2
         cx6 = 2;
-        // F000:3050 mov AX,0x4000
         ax1 = 0x4000;
-        // F000:3053 rep stos word ptr ES:[DI],AX
         while (cx6 != 0) {
             UInt16[ES, di1] = ax1;
             di1 += (ushort)(DirectionFlag ? -2 : 2);
             cx6--;
         }
-        // F000:3055 mov AX,0x1000
         AX = 0x1000;
-        // F000:3058 mov DS,AX
         DS = 0x1000;
-        // F000:305A jmp near word ptr DS:[6]
         if (Segment1000Globals.Word0006 != 0x4000) {
             throw FailAsUntested($"Untested near jump target 0x{Segment1000Globals.Word0006:X4} at F000:305A");
         }
-        // F000:4000 mov BX,0
         BX = 0;
-        // F000:4003 push BX
         Stack.Push16(0);
-        // F000:4004 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4005);
-        // F000:4005 mov CX,4
-        // F000:4008 rep stos word ptr ES:[DI],AX
         for (cx7 = 4; cx7 != 0; cx7--) {
             UInt16[ES, di1] = AX;
             di1 += (ushort)(DirectionFlag ? -2 : 2);
         }
-        // F000:400A jcxz short 0x400D
         if (cx7 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x400C, Signature_400C_hlt);
-            // F000:400C hlt
             SI = si1;
             DI = di1;
             CX = cx7;
             return Hlt();
         }
-        // F000:400D mov BX,0x0040
-        // F000:4010 push BX
         Stack.Push16(0x0040);
-        // F000:4011 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4012);
-        // F000:4012 mov CX,0x1234
         CX = 0x1234;
-        // F000:4015 mov SI,0x3000
         si2 = 0x3000;
-        // F000:4018 mov DI,0
         di2 = 0;
-        // F000:401B mov AX,0xF000
-        // F000:401E mov DS,AX
         DS = 0xF000;
-        // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_4020 = UInt8[DS, si2] == UInt8[ES, di2];
             si2 += (ushort)(DirectionFlag ? -1 : 1);
@@ -472,20 +350,13 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:4022 jmp near CX
         if (CX != 0x122F) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4022");
         }
-        // F000:122F jmp near 0x4024
-        // F000:4024 mov BX,0x0040
-        // F000:4027 push BX
         Stack.Push16(0x0040);
-        // F000:4028 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4029);
-        // F000:4029 mov AX,0x0040
         ax2 = 0x0040;
-        // F000:402C repe scas AX,word ptr ES:[DI]
         while (CX != 0) {
             bool equal_402C = ax2 == UInt16[ES, di2];
             di2 += (ushort)(DirectionFlag ? -2 : 2);
@@ -494,16 +365,11 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:402E jmp near CX
         if (CX != 0x122C) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:402E");
         }
-        // F000:122C jmp near 0x4030
-        // F000:4030 mov AX,0x0607
         AX = 0x0607;
-        // F000:4033 mov CX,0x5004
         CX = 0x5004;
-        // F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_4036 = UInt16[DS, si2] == UInt16[ES, di2];
             si2 += (ushort)(DirectionFlag ? -2 : 2);
@@ -513,7 +379,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:4038 repe scas AX,word ptr ES:[DI]
         while (CX != 0) {
             bool equal_4038 = AX == UInt16[ES, di2];
             di2 += (ushort)(DirectionFlag ? -2 : 2);
@@ -522,18 +387,12 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:403A mov BX,0x0040
         BX = 0x0040;
-        // F000:403D push BX
         Stack.Push16(0x0040);
-        // F000:403E popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x403F);
-        // F000:403F mov SI,0x3000
         si3 = 0x3000;
-        // F000:4042 mov DI,0
         di3 = 0;
-        // F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             Alu16.Sub(UInt16[DS, si3], UInt16[ES, di3]);
             si3 += (ushort)(DirectionFlag ? -2 : 2);
@@ -543,7 +402,6 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:4047 repne scas AX,word ptr ES:[DI]
         while (CX != 0) {
             Alu16.Sub(AX, UInt16[ES, di3]);
             di3 += (ushort)(DirectionFlag ? -2 : 2);
@@ -552,71 +410,50 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:4049 jmp near CX
         if (CX != 0x5000) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4049");
         }
-        // F000:5000 mov CX,2
-        // F000:5003 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         for (cx8 = 2; cx8 != 0; cx8--) {
             UInt8[ES, di3] = UInt8[DS, si3];
             si3 += (ushort)(DirectionFlag ? -1 : 1);
             di3 += (ushort)(DirectionFlag ? -1 : 1);
         }
-        // F000:5005 jcxz short 0x5008
         if (cx8 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x5007, Signature_5007_hlt);
-            // F000:5007 hlt
             SI = si3;
             DI = di3;
             CX = cx8;
             return Hlt();
         }
-        // F000:5008 mov CX,2
-        // F000:500B rep lods AL,byte ptr DS:[SI]
         for (cx9 = 2; cx9 != 0; cx9--) {
             AL = UInt8[DS, si3];
             si3 += (ushort)(DirectionFlag ? -1 : 1);
         }
-        // F000:500D jcxz short 0x5010
         if (cx9 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x500F, Signature_500F_hlt);
-            // F000:500F hlt
             SI = si3;
             DI = di3;
             CX = cx9;
             return Hlt();
         }
-        // F000:5010 mov CX,2
-        // F000:5013 rep stos byte ptr ES:[DI],AL
         for (cx10 = 2; cx10 != 0; cx10--) {
             UInt8[ES, di3] = AL;
             di3 += (ushort)(DirectionFlag ? -1 : 1);
         }
-        // F000:5015 jcxz short 0x5018
         if (cx10 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x5017, Signature_5017_hlt);
-            // F000:5017 hlt
             SI = si3;
             DI = di3;
             CX = cx10;
             return Hlt();
         }
-        // F000:5018 mov BX,0
-        // F000:501B push BX
         Stack.Push16(0);
-        // F000:501C popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x501D);
-        // F000:501D mov CX,0x6023
         CX = 0x6023;
-        // F000:5020 std
         DirectionFlag = true;
-        // F000:5021 mov DI,6
         di4 = 6;
-        // F000:5024 mov SI,0x3006
         si4 = 0x3006;
-        // F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_5027 = UInt16[DS, si4] == UInt16[ES, di4];
             si4 -= 2;
@@ -626,18 +463,12 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:5029 mov AX,0x1000
         AX = 0x1000;
-        // F000:502C mov BX,0
         BX = 0;
-        // F000:502F push BX
         Stack.Push16(0);
-        // F000:5030 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x5031);
-        // F000:5031 cld
         DirectionFlag = false;
-        // F000:5032 repne scas AX,word ptr ES:[DI]
         while (CX != 0) {
             Alu16.Sub(AX, UInt16[ES, di4]);
             di4 += 2;
@@ -646,17 +477,12 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        // F000:5034 jmp near CX
         if (CX != 0x601B) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:5034");
         }
-        // F000:601B mov DX,0
         DX = 0;
-        // F000:601E mov DS,DX
         DS = 0;
-        // F000:6020 mov word ptr DS:[4],0x1234
         Segment0000Globals.Word0004 = 0x1234;
-        // F000:6026 hlt
         DI = di4;
         SI = si4;
         return Hlt();

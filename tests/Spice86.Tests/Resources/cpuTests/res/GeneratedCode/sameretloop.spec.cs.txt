@@ -17,40 +17,26 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_0018 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0013);
-            // F000:0013 inc byte ptr CS:[0x0024]
             SegmentF000Globals.Byte0024 += 1;
-            // F000:0018 cmp byte ptr CS:[0x0024],4
             flagOperand_0018 = SegmentF000Globals.Byte0024;
             Alu8.Sub(flagOperand_0018, 4);
-            // F000:001E jae short 0x0023
             if (flagOperand_0018 >= 4) {
                 break;
             }
-            // F000:0020 push 0x13
             Stack.Push16(0x0013);
-            // F000:0022 ret near
             return NearRet();
         }
-        // F000:0023 hlt
         return Hlt();
     }
 
     /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0
-        // F000:0003 mov SS,AX
         SS = 0;
-        // F000:0005 mov SP,0x0100
         SP = 0x0100;
-        // F000:0008 mov byte ptr CS:[0x0024],0
         SegmentF000Globals.Byte0024 = 0;
-        // F000:000E mov AX,0x0013
         AX = 0x0013;
-        // F000:0011 push AX
         Stack.Push16(0x0013);
-        // F000:0012 ret near
         return NearRet();
     }
 

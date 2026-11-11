@@ -17,9 +17,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DS. Does not return.</summary>
     public virtual Action unknown_F000_002A_F002A() {
         CheckExternalEvents(biosSegment, 0x002A);
-        // F000:002A mov word ptr DS:[0x0042],AX
         DsGlobals.Word0042 = AX;
-        // F000:002D mov word ptr DS:[0x00010000],AX
         try {
             UInt16[DS, 0x00010000] = AX;
             throw FailAsUntested("Untested fallthrough after F000:002D");
@@ -32,11 +30,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_0033_F0033() {
         CheckExternalEvents(biosSegment, 0x0033);
-        // F000:0033 mov AX,word ptr DS:[0]
         AX = DsGlobals.Word0000;
-        // F000:0039 mov word ptr DS:[0x0044],AX
         DsGlobals.Word0044 = AX;
-        // F000:003C hlt
         return Hlt();
     }
 
@@ -44,16 +39,10 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_003D_F003D() {
         unknown_F000_003D_F003DFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x003D);
-        // F000:003D inc word ptr DS:[0x0040]
         DsGlobals.Word0040 += 1;
-        // F000:0041 push BP
         Stack.Push16(BP);
-        // F000:0042 mov BP,SP
-        // F000:0044 add word ptr SS:[BP+2],6
         frame.ReturnIp += 6;
-        // F000:0048 pop BP
         BP = Stack.Pop16();
-        // F000:0049 iret
         return InterruptRet();
     }
 
@@ -67,17 +56,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 cli
         InterruptFlag = false;
-        // F000:0001 mov AX,0x2000
-        // F000:0004 mov DS,AX
         DS = 0x2000;
-        // F000:0006 mov SS,AX
         SS = 0x2000;
-        // F000:0008 mov SP,0x1000
         SP = 0x1000;
-        // F000:000B xor AX,AX
         AX = 0;
         CarryFlag = false;
         ParityFlag = true;
@@ -85,16 +67,10 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
-        // F000:000D mov ES,AX
         ES = 0;
-        // F000:000F mov word ptr ES:[0x0034],0x003D
-        // F000:0016 mov word ptr ES:[0x0036],CS
         Segment0000Globals.Dword0034 = 0x0000003D | (uint)CS << 16;
-        // F000:001B mov word ptr DS:[0],0x1234
         Segment2000Globals.Word0000 = 0x1234;
-        // F000:0021 mov AX,0x5678
         AX = 0x5678;
-        // F000:0024 mov AX,word ptr DS:[0x00010000]
         try {
             AX = UInt16[DS, 0x00010000];
             throw FailAsUntested("Untested fallthrough after F000:0024");

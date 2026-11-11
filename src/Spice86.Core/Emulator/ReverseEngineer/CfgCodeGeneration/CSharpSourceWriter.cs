@@ -6,12 +6,17 @@ internal sealed class CSharpSourceWriter {
     private readonly StringBuilder _builder = new();
     private int _indent;
 
+    /// <summary>The number of lines written so far; the next <see cref="Line"/> or
+    /// <see cref="Label"/> lands at this zero-based index.</summary>
+    public int LineCount { get; private set; }
+
     public void Line(string text = "") {
         if (text.Length > 0) {
             _builder.Append(' ', _indent * 4);
             _builder.Append(text);
         }
         _builder.AppendLine();
+        LineCount++;
     }
 
     public void OpenBlock(string header) {
@@ -35,6 +40,7 @@ internal sealed class CSharpSourceWriter {
         _builder.Append(' ', Math.Max(0, (_indent - 1) * 4));
         _builder.Append(label);
         _builder.AppendLine(":");
+        LineCount++;
     }
 
     public override string ToString() => _builder.ToString();

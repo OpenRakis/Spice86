@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -454,9 +455,48 @@ internal sealed class GeneratedCodeMachineTestRunner {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram =
             new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
+        AssertAddressMapCoversEveryInstruction(program, generatedProgram);
         IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);
+    }
+
+    /// <summary>The address map covers every instruction of every printed method: each instruction
+    /// address of the partitioned program has an entry, and every entry points to a line range
+    /// inside its own file, inside its own method.</summary>
+    private static void AssertAddressMapCoversEveryInstruction(CfgPartitionedProgram program,
+        GeneratedCSharpProgram generated) {
+        HashSet<string> expected = program.Partitions
+            .SelectMany(partition => partition.Blocks)
+            .SelectMany(block => block.Instructions.OfType<CfgInstruction>())
+            .Select(instruction => instruction.Address.ToString())
+            .ToHashSet();
+        HashSet<string> mapped = generated.AddressMap.Select(entry => entry.Address).ToHashSet();
+        mapped.Should().BeSubsetOf(expected,
+            "every mapped instruction is an instruction of the partitioned program; coverage of "
+            + "printed instructions is structural - the printer records one entry per "
+            + "InstructionStartNode");
+        Dictionary<string, string[]> fileLines = generated.Files
+            .ToDictionary(file => file.Name, file => file.Text.Split('\n'));
+        foreach (GeneratedAddressMapEntry entry in generated.AddressMap) {
+            fileLines.Should().ContainKey(entry.File, $"entry {entry.Address} names an existing file");
+            string[] lines = fileLines[entry.File];
+            entry.FirstLine.Should().BeGreaterThanOrEqualTo(1);
+            entry.FirstLine.Should().BeLessThanOrEqualTo(lines.Length,
+                $"entry {entry.Address} starts inside {entry.File}");
+            entry.LastLine.Should().BeLessThanOrEqualTo(lines.Length,
+                $"entry {entry.Address} ends inside {entry.File}");
+            int decl = Array.FindIndex(lines,
+                line => line.Contains("public virtual") && line.Contains($"{entry.Method}("));
+            decl.Should().BeGreaterThanOrEqualTo(0, $"entry {entry.Address}'s method {entry.Method} is declared in {entry.File}");
+            int methodEnd = Array.FindIndex(lines, decl + 1,
+                line => line.Equals("    }", StringComparison.Ordinal));
+            methodEnd.Should().BeGreaterThanOrEqualTo(0, $"{entry.Method}'s block closes");
+            (entry.FirstLine - 1).Should().BeGreaterThanOrEqualTo(decl,
+                $"entry {entry.Address} starts inside {entry.Method}");
+            (entry.LastLine - 1).Should().BeLessThanOrEqualTo(methodEnd,
+                $"entry {entry.Address} ends inside {entry.Method}");
+        }
     }
 
     /// <summary>The recorded program and finished-machine state of <paramref name="scope"/>'s

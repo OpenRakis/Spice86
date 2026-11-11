@@ -15,29 +15,17 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
-        // F000:0003 mov SS,AX
         SS = 0x1000;
-        // F000:0005 mov SP,0x0100
         SP = 0x0100;
-        // F000:0008 mov AX,1
         AX = 1;
-        // F000:000B mov BX,0x0020
         BX = 0x0020;
-        // F000:000E cmp AX,0
-        // F000:0011 jne short 0x0015
-        // F000:0015 cmp AX,0
         CarryFlag = false;
         ParityFlag = false;
         AuxiliaryFlag = false;
         ZeroFlag = false;
         SignFlag = false;
         OverflowFlag = false;
-        // F000:0018 jne short 0x001C
-        // F000:001C mov CX,2
         CX = 2;
-        // F000:001F hlt
         return Hlt();
     }
 

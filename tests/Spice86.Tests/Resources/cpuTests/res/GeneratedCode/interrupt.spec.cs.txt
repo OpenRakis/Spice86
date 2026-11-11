@@ -15,14 +15,9 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_E342_EBE0_F2000() {
         CheckExternalEvents(cs1, 0xEBE0);
-        // E342:EBE0 mov byte ptr DS:[1],1
         DsGlobals.Byte0001 = 1;
-        // E342:EBE5 pushf
         Stack.Push16(FlagRegister16);
-        // E342:EBE6 pop AX
         AX = Stack.Pop16();
-        // E342:EBE7 clc
-        // E342:EBE8 iret
         return InterruptRet();
     }
 
@@ -45,86 +40,51 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_3001_F3001() {
         CheckExternalEvents(biosSegment, 0x3001);
-        // F000:3001 mov byte ptr DS:[5],5
         DsGlobals.Byte0005 = 5;
-        // F000:3006 pop CX
         CX = Stack.Pop16();
-        // F000:3007 mov CX,0x4002
         CX = 0x4002;
-        // F000:300A push CX
         Stack.Push16(0x4002);
-        // F000:300B iret
         return InterruptRet();
     }
 
     /// <summary>Inputs: AX, CX, DX, BX, DS. Does not return.</summary>
     public virtual Action unknown_F000_4013_F4013() {
         CheckExternalEvents(biosSegment, 0x4013);
-        // F000:4013 mov word ptr DS:[8],AX
         DsGlobals.Word0008 = AX;
-        // F000:4016 mov word ptr DS:[0x000A],BX
         DsGlobals.Word000A = BX;
-        // F000:401A mov word ptr DS:[0x000C],CX
         DsGlobals.Word000C = CX;
-        // F000:401E mov word ptr DS:[0x000E],DX
         DsGlobals.Word000E = DX;
-        // F000:4022 mov word ptr DS:[0x0010],SP
         DsGlobals.Word0010 = SP;
-        // F000:4026 hlt
         return Hlt();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov DX,0
         DX = 0;
-        // F000:0003 mov DS,DX
         DS = 0;
-        // F000:0005 mov SP,0x1000
         SP = 0x1000;
-        // F000:0008 mov SP,SS
         SP = SS;
-        // F000:000A mov word ptr DS:[0x0034],0xEBE0
-        // F000:0010 mov word ptr DS:[0x0036],0xE342
         Segment0000Globals.Dword0034 = 0xE342EBE0u;
-        // F000:0016 mov AX,0x0EFF
         AX = 0x0EFF;
-        // F000:0019 push AX
         Stack.Push16(0x0EFF);
-        // F000:001A popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x001B);
-        // F000:001B mov byte ptr DS:[0],0
         DsGlobals.Byte0000 = 0;
-        // F000:0020 int 0x0D
         InterruptCall(biosSegment, 0x0022, 0x0D, cs1, 0xEBE0, unknown_E342_EBE0_F2000Entry);
-        // F000:0022 mov byte ptr DS:[2],2
         DsGlobals.Byte0002 = 2;
-        // F000:0027 jmp near AX
         if (AX != 0x0CD7) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0027");
         }
-        // F000:0CD7 mov byte ptr DS:[3],3
         DsGlobals.Byte0003 = 3;
-        // F000:0CDC pushf
         Stack.Push16(FlagRegister16);
-        // F000:0CDD pop BX
         BX = Stack.Pop16();
-        // F000:0CDE mov word ptr DS:[0x000C],0xEBE0
         DsGlobals.Word000C = 0xEBE0;
-        // F000:0CE4 mov word ptr DS:[0x000E],0xE342
         DsGlobals.Word000E = 0xE342;
-        // F000:0CEA int 3
         InterruptCall(biosSegment, 0x0CEC, 3, cs1, 0xEBE0, unknown_E342_EBE0_F2000Entry);
-        // F000:0CEC mov byte ptr DS:[4],4
         DsGlobals.Byte0004 = 4;
-        // F000:0CF1 mov word ptr DS:[0x0010],0x3001
         DsGlobals.Word0010 = 0x3001;
-        // F000:0CF7 mov word ptr DS:[0x0012],0xF000
         DsGlobals.Word0012 = 0xF000;
-        // F000:0CFD into
         if (!OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0CFD");
         }
@@ -134,18 +94,12 @@ public partial class CfgGeneratedOverrides {
         if (CS != biosSegment || IP != 0x4002) {
             throw FailAsUntested("Redirected return target not observed at F000:0CFD");
         }
-        // F000:4002 mov byte ptr DS:[6],6
         DsGlobals.Byte0006 = 6;
-        // F000:4007 mov DX,0x04FF
         DX = 0x04FF;
-        // F000:400A push DX
         Stack.Push16(0x04FF);
-        // F000:400B popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x400C);
-        // F000:400C mov word ptr DS:[0x0010],0x5000
         DsGlobals.Word0010 = 0x5000;
-        // F000:4012 into
         if (!OverflowFlag) {
             return unknown_F000_4013_F4013();
         }

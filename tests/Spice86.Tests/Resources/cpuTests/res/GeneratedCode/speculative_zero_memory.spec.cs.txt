@@ -16,47 +16,28 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov byte ptr DS:[0x0400],1
         DsGlobals.Byte0400 = 1;
-        // F000:0005 mov AL,byte ptr DS:[0x0500]
         al1 = DsGlobals.Byte0500;
-        // F000:0008 test AL,AL
-        // F000:000A jne short 0x0039
         if (al1 != 0) {
             throw FailAsUntested("Untested jump at F000:000A");
         }
-        // F000:000C test AL,AL
         Alu8.And(al1, al1);
-        // F000:000E jne short 0x0030
         if (al1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0030, Signature_0030_add);
-            // F000:0030 add byte ptr DS:[BX+SI],AL
             UInt8[DS, BX + SI] = Alu8.Add(UInt8[DS, BX + SI], al1);
             VerifySpeculativeEntryOrFail(biosSegment, 0x0032, Signature_0032_mov);
-            // F000:0032 mov byte ptr DS:[0x0403],0x77
             DsGlobals.Byte0403 = 0x77;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0037, Signature_0037_jmp);
-            // F000:0037 jmp short 0x0048
         }
         else {
-            // F000:0010 mov byte ptr CS:[0x0043],0xC6
             SegmentF000Globals.Byte0043 = 0xC6;
-            // F000:0016 mov byte ptr CS:[0x0044],6
             SegmentF000Globals.Byte0044 = 6;
-            // F000:001C mov byte ptr CS:[0x0045],1
             SegmentF000Globals.Byte0045 = 1;
-            // F000:0022 mov byte ptr CS:[0x0046],4
             SegmentF000Globals.Byte0046 = 4;
-            // F000:0028 mov byte ptr CS:[0x0047],0xDD
             SegmentF000Globals.Byte0047 = 0xDD;
-            // F000:002E jmp short 0x0043
-            // F000:0043 mov byte ptr DS:[0x0401],0xDD
             DsGlobals.Byte0401 = 0xDD;
         }
-        // F000:0048 mov byte ptr DS:[0x0402],0xEE
         DsGlobals.Byte0402 = 0xEE;
-        // F000:004D hlt
         AL = al1;
         return Hlt();
     }

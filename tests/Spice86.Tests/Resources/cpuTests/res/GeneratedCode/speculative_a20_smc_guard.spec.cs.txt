@@ -16,63 +16,37 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 cli
         InterruptFlag = false;
-        // F000:0001 mov AX,0x2000
-        // F000:0004 mov SS,AX
         SS = 0x2000;
-        // F000:0006 mov SP,0x1000
         SP = 0x1000;
-        // F000:0009 xor AX,AX
         AX = 0;
-        // F000:000B mov DS,AX
         DS = 0;
-        // F000:000D mov CX,0
         CX = 0;
-        // F000:0010 mov byte ptr DS:[0],0x22
         Segment0000Globals.Byte0000 = 0x22;
-        // F000:0015 mov byte ptr DS:[1],0x22
         Segment0000Globals.Byte0001 = 0x22;
-        // F000:001A mov byte ptr DS:[2],0x41
         Segment0000Globals.Byte0002 = 0x41;
-        // F000:001F mov byte ptr DS:[3],0xF4
         Segment0000Globals.Byte0003 = 0xF4;
-        // F000:0024 mov byte ptr DS:[0x0400],1
         Segment0000Globals.Byte0400 = 1;
-        // F000:0029 jmp far FFFE:0000
         CS = cs1;
-        // FFFE:0000 mov AL,byte ptr DS:[0x0500]
         al1 = Segment0000Globals.Byte0500;
-        // FFFE:0003 test AL,AL
         Alu8.And(al1, al1);
-        // FFFE:0005 jne short 0x0014
         if (al1 != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x0014, Signature_0014_mov);
-            // FFFE:0014 mov byte ptr DS:[2],0x43
             Segment0000Globals.Byte0002 = 0x43;
             VerifySpeculativeRunOrFail(cs1, 0x0019, SpeculativeRun_0019);
-            // FFFE:0019 mov DX,0x1111
             DX = 0x1111;
-            // FFFE:001C mov BX,0x1234
             BX = 0x1234;
-            // FFFE:001F mov AX,0x2222
             AX = 0x2222;
-            // FFFE:0022 inc CX
             CX = 1;
             ParityFlag = false;
             AuxiliaryFlag = false;
             ZeroFlag = false;
             SignFlag = false;
             OverflowFlag = false;
-            // FFFE:0023 hlt
             return Hlt();
         }
-        // FFFE:0007 jmp far F000:002E
         CS = biosSegment;
-        // F000:002E mov byte ptr DS:[0x0401],0xDD
         Segment0000Globals.Byte0401 = 0xDD;
-        // F000:0033 hlt
         AL = al1;
         return Hlt();
     }

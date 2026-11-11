@@ -16,53 +16,31 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort di1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp near 0x4000
-        // F000:4000 cli
         InterruptFlag = false;
-        // F000:4001 mov AX,0x1000
-        // F000:4004 mov SS,AX
         SS = 0x1000;
-        // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
-        // F000:4009 mov AX,0x0013
         AX = 0x0013;
-        // F000:400C int 0x10
         AL = ServiceCall(biosSegment, 0x400E, Video, () => Video.SetVideoMode(0x13));
-        // F000:400E cli
         InterruptFlag = false;
-        // F000:400F mov AX,0xA000
         AX = 0xA000;
-        // F000:4012 mov ES,AX
         ES = 0xA000;
-        // F000:4014 xor DI,DI
         di1 = 0;
-        // F000:4016 xor BX,BX
         BX = 0;
-        // F000:4018 cld
         DirectionFlag = false;
         do {
             CheckExternalEvents(biosSegment, 0x4019);
-            // F000:4019 mov CX,0x0140
             CX = 0x0140;
-            // F000:401C mov AX,BX
             AX = BX;
             do {
                 CheckExternalEvents(biosSegment, 0x401E);
-                // F000:401E stos byte ptr ES:[DI],AL
                 UInt8[ES, di1] = AL;
                 di1++;
-                // F000:401F inc AL
                 AL++;
-                // F000:4021 loop 0x401E
                 CX--;
             } while (CX != 0);
-            // F000:4023 inc BX
             BX++;
-            // F000:4024 cmp BX,0x00C8
             Alu16.Sub(BX, 0x00C8);
-            // F000:4028 jb short 0x4019
         } while (BX < 0x00C8);
-        // F000:402A hlt
         DI = di1;
         return Hlt();
     }
@@ -207,10 +185,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_D000_0000_D0000() {
         CheckExternalEvents(cs1, 0x0000);
-        // D000:0000 callback 0x0010
         // INT 10h: Video services selected by AH
         Callback(cs1, 0x0000, 0x0010);
-        // D000:0004 iret
         return InterruptRet();
     }
 
@@ -218,33 +194,23 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0006_D0006() {
         CheckExternalEvents(cs1, 0x0006);
         VerifySpeculativeEntryOrFail(cs1, 0x0006, Signature_0006_callback);
-        // D000:0006 callback 8
         // Spice86 callback: TimerInt8Handler.IncTickCounterValue
         Callback(cs1, 0x0006, 8);
         VerifySpeculativeEntryOrFail(cs1, 0x000A, Signature_000A_push);
-        // D000:000A push DS
         Stack.Push16(DS);
         VerifySpeculativeEntryOrFail(cs1, 0x000B, Signature_000B_push);
-        // D000:000B push AX
         Stack.Push16(AX);
         VerifySpeculativeEntryOrFail(cs1, 0x000C, Signature_000C_push);
-        // D000:000C push DX
         Stack.Push16(DX);
         VerifySpeculativeEntryOrFail(cs1, 0x000D, Signature_000D_int);
-        // D000:000D int 0x1C
         InterruptCall(cs1, 0x000F, 0x1C);
         VerifySpeculativeEntryOrFail(cs1, 0x000F, Signature_000F_callback);
-        // D000:000F callback 0x0101
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(cs1, 0x000F, 0x0101);
         VerifySpeculativeRunOrFail(cs1, 0x0013, SpeculativeRun_0013);
-        // D000:0013 pop DX
         DX = Stack.Pop16();
-        // D000:0014 pop AX
         AX = Stack.Pop16();
-        // D000:0015 pop DS
         DS = Stack.Pop16();
-        // D000:0016 iret
         return InterruptRet();
     }
 
@@ -252,11 +218,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0017_D0017() {
         CheckExternalEvents(cs1, 0x0017);
         VerifySpeculativeEntryOrFail(cs1, 0x0017, Signature_0017_callback);
-        // D000:0017 callback 9
         // INT 09h: BiosKeyboardInt9Handler
         Callback(cs1, 0x0017, 9);
         VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_iret);
-        // D000:001B iret
         return InterruptRet();
     }
 
@@ -264,11 +228,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_005D_D005D() {
         CheckExternalEvents(cs1, 0x005D);
         VerifySpeculativeEntryOrFail(cs1, 0x005D, Signature_005D_callback);
-        // D000:005D callback 0x0070
         // INT 70h: Rtc.HandleInterrupt
         Callback(cs1, 0x005D, 0x0070);
         VerifySpeculativeEntryOrFail(cs1, 0x0061, Signature_0061_iret);
-        // D000:0061 iret
         return InterruptRet();
     }
 
@@ -276,14 +238,11 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0063_D0063() {
         CheckExternalEvents(cs1, 0x0063);
         VerifySpeculativeEntryOrFail(cs1, 0x0063, Signature_0063_call);
-        // D000:0063 call far D000:00E9
         FarCall(cs1, 0x0068, cs1, unknown_D000_00E9_D00E9Entry);
         VerifySpeculativeEntryOrFail(cs1, 0x0068, Signature_0068_callback);
-        // D000:0068 callback 0x0074
         // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
         Callback(cs1, 0x0068, 0x0074);
         VerifySpeculativeEntryOrFail(cs1, 0x006C, Signature_006C_iret);
-        // D000:006C iret
         return InterruptRet();
     }
 
@@ -291,11 +250,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_006D_D006D() {
         CheckExternalEvents(cs1, 0x006D);
         VerifySpeculativeEntryOrFail(cs1, 0x006D, Signature_006D_callback);
-        // D000:006D callback 0x0104
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x006D, 0x0104);
         VerifySpeculativeEntryOrFail(cs1, 0x0071, Signature_0071_iret);
-        // D000:0071 iret
         return InterruptRet();
     }
 
@@ -303,11 +260,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0072_D0072() {
         CheckExternalEvents(cs1, 0x0072);
         VerifySpeculativeEntryOrFail(cs1, 0x0072, Signature_0072_callback);
-        // D000:0072 callback 0x0105
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x0072, 0x0105);
         VerifySpeculativeEntryOrFail(cs1, 0x0076, Signature_0076_iret);
-        // D000:0076 iret
         return InterruptRet();
     }
 
@@ -315,11 +270,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0077_D0077() {
         CheckExternalEvents(cs1, 0x0077);
         VerifySpeculativeEntryOrFail(cs1, 0x0077, Signature_0077_callback);
-        // D000:0077 callback 0x0106
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x0077, 0x0106);
         VerifySpeculativeEntryOrFail(cs1, 0x007B, Signature_007B_iret);
-        // D000:007B iret
         return InterruptRet();
     }
 
@@ -327,11 +280,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_007C_D007C() {
         CheckExternalEvents(cs1, 0x007C);
         VerifySpeculativeEntryOrFail(cs1, 0x007C, Signature_007C_callback);
-        // D000:007C callback 0x0107
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x007C, 0x0107);
         VerifySpeculativeEntryOrFail(cs1, 0x0080, Signature_0080_iret);
-        // D000:0080 iret
         return InterruptRet();
     }
 
@@ -339,11 +290,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0081_D0081() {
         CheckExternalEvents(cs1, 0x0081);
         VerifySpeculativeEntryOrFail(cs1, 0x0081, Signature_0081_callback);
-        // D000:0081 callback 0x0108
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x0081, 0x0108);
         VerifySpeculativeEntryOrFail(cs1, 0x0085, Signature_0085_iret);
-        // D000:0085 iret
         return InterruptRet();
     }
 
@@ -351,11 +300,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_0086_D0086() {
         CheckExternalEvents(cs1, 0x0086);
         VerifySpeculativeEntryOrFail(cs1, 0x0086, Signature_0086_callback);
-        // D000:0086 callback 0x0109
         // Spice86 callback: DefaultIrqHandler.HandleIrq
         Callback(cs1, 0x0086, 0x0109);
         VerifySpeculativeEntryOrFail(cs1, 0x008A, Signature_008A_iret);
-        // D000:008A iret
         return InterruptRet();
     }
 
@@ -363,7 +310,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_00E8_D00E8() {
         CheckExternalEvents(cs1, 0x00E8);
         VerifySpeculativeEntryOrFail(cs1, 0x00E8, Signature_00E8_ret);
-        // D000:00E8 ret far
         return FarRet();
     }
 
@@ -371,18 +317,14 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_D000_00E9_D00E9() {
         CheckExternalEvents(cs1, 0x00E9);
         VerifySpeculativeEntryOrFail(cs1, 0x00E9, Signature_00E9_callback);
-        // D000:00E9 callback 0x010C
         // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
         Callback(cs1, 0x00E9, 0x010C);
         VerifySpeculativeEntryOrFail(cs1, 0x00ED, Signature_00ED_call);
-        // D000:00ED call far D000:00E8
         FarCall(cs1, 0x00F2, cs1, unknown_D000_00E8_D00E8Entry);
         VerifySpeculativeEntryOrFail(cs1, 0x00F2, Signature_00F2_callback);
-        // D000:00F2 callback 0x010D
         // Spice86 callback: MouseDriver.AfterUserHandlerExecution
         Callback(cs1, 0x00F2, 0x010D);
         VerifySpeculativeEntryOrFail(cs1, 0x00F6, Signature_00F6_ret);
-        // D000:00F6 ret far
         return FarRet();
     }
 

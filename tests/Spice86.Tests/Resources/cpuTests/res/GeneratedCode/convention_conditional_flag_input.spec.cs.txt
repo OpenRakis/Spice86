@@ -19,11 +19,8 @@ public partial class CfgGeneratedOverrides {
         CL = cl;
         CarryFlag = carryFlag;
         CheckExternalEvents(biosSegment, 0x0039);
-        // F000:0039 shl AX,CL
         AX = Alu16.Shl(AX, (int)cl);
-        // F000:003B setb DL
         DL = (byte)(CarryFlag ? 1 : 0);
-        // F000:003E ret near
         NearReturn();
         return (AX, DL);
     }
@@ -36,52 +33,28 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x2000
         AX = 0x2000;
-        // F000:0003 mov DS,AX
         DS = 0x2000;
-        // F000:0005 mov SS,AX
         SS = 0x2000;
-        // F000:0007 mov SP,0x1000
         SP = 0x1000;
-        // F000:000A stc
         CarryFlag = true;
-        // F000:000B mov CL,0
         CL = 0;
-        // F000:000D call near 0x0039
         (AX, DL) = NearCall(biosSegment, 0x0010, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
-        // F000:0010 mov byte ptr DS:[0x0200],DL
         Segment2000Globals.Byte0200 = DL;
-        // F000:0014 clc
         CarryFlag = false;
-        // F000:0015 mov CL,0
         CL = 0;
-        // F000:0017 call near 0x0039
         (AX, DL) = NearCall(biosSegment, 0x001A, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
-        // F000:001A mov byte ptr DS:[0x0201],DL
         Segment2000Globals.Byte0201 = DL;
-        // F000:001E clc
         CarryFlag = false;
-        // F000:001F mov CL,1
         CL = 1;
-        // F000:0021 mov AX,0x8000
         AX = 0x8000;
-        // F000:0024 call near 0x0039
         (AX, DL) = NearCall(biosSegment, 0x0027, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
-        // F000:0027 mov byte ptr DS:[0x0202],DL
         Segment2000Globals.Byte0202 = DL;
-        // F000:002B clc
         CarryFlag = false;
-        // F000:002C mov CL,1
         CL = 1;
-        // F000:002E mov AX,1
         AX = 1;
-        // F000:0031 call near 0x0039
         (AX, DL) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(AX, CL, CarryFlag));
-        // F000:0034 mov byte ptr DS:[0x0203],DL
         Segment2000Globals.Byte0203 = DL;
-        // F000:0038 hlt
         return Hlt();
     }
 

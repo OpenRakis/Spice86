@@ -21,7 +21,26 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// Writes a tree of runtime and code-generation AST nodes as C# statements. Expressions are printed by
 /// <see cref="CSharpExpressionPrinter"/>; labels come from <paramref name="labelOf"/>.
 /// </summary>
-internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf) {
+internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions,
+    Func<IGotoTarget, string> labelOf, bool printAsmComments) {
+    private (SegmentedAddress Address, int FirstLine)? _openInstruction;
+
+    /// <summary>The line range of every instruction printed so far, in method-relative line
+    /// indices; populated even when <paramref name="printAsmComments"/> suppresses the comment.</summary>
+    public List<MethodInstructionLine> InstructionLines { get; } = [];
+
+    /// <summary>Closes the open instruction's line range; the emitter calls it after the method
+    /// body so the last instruction ends at the method's last printed line.</summary>
+    public void FinishInstructions() => CloseInstruction();
+
+    private void CloseInstruction() {
+        if (_openInstruction is { } open) {
+            InstructionLines.Add(new MethodInstructionLine(open.Address, open.FirstLine,
+                writer.LineCount - 1));
+            _openInstruction = null;
+        }
+    }
+
     /// <summary>The goto targets of the whole method being printed. A
     /// <c>for</c> rewrite refuses a loop when any statement of the method - not only of the block
     /// being dispatched - jumps to its header or its step.</summary>
@@ -99,9 +118,11 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 writer.Line($"goto {labelOf(gotoNode.Target)};");
                 return;
             case LabelNode label:
+                CloseInstruction();
                 writer.Label(labelOf(label.Target));
                 return;
             case EntryDispatcherLabelNode:
+                CloseInstruction();
                 writer.Label("entrydispatcher");
                 return;
             case ReturnNode { Value: ProcedureReturnHelperNode helper } when
@@ -125,7 +146,13 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 writer.Line($"// {comment.Text}");
                 return;
             case InstructionStartNode instructionStart:
-                writer.Line($"// {instructionStart.Comment}");
+                CloseInstruction();
+                if (instructionStart.Address is { } address) {
+                    _openInstruction = (address, writer.LineCount);
+                }
+                if (printAsmComments) {
+                    writer.Line($"// {instructionStart.Comment}");
+                }
                 return;
             case CheckExternalEventsNode checkExternalEvents:
                 PrintCheckExternalEvents(checkExternalEvents);

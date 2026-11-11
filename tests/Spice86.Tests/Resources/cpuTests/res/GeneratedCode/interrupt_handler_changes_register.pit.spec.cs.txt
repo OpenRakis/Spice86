@@ -15,15 +15,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_F000_0031_F0031() {
         CheckExternalEvents(biosSegment, 0x0031);
-        // F000:0031 mov AL,0x20
         AL = 0x20;
-        // F000:0033 out 0x20,AL
         PicPorts.WritePrimaryCommand(0x20);
-        // F000:0035 mov AX,5
         AX = 5;
-        // F000:0038 call near 0x003C
         AX = NearCall(biosSegment, 0x003B, () => unknown_F000_003C_F003C(AX));
-        // F000:003B iret
         return InterruptRet();
     }
 
@@ -31,8 +26,6 @@ public partial class CfgGeneratedOverrides {
     public virtual ushort unknown_F000_003C_F003C(ushort ax) {
         AX = ax;
         CheckExternalEvents(biosSegment, 0x003C);
-        // F000:003C nop
-        // F000:003D ret near
         NearReturn();
         return AX;
     }
@@ -46,52 +39,24 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort ax1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x2000
-        // F000:0003 mov DS,AX
         DS = 0x2000;
-        // F000:0005 mov SS,AX
         SS = 0x2000;
-        // F000:0007 mov SP,0x1000
         SP = 0x1000;
-        // F000:000A xor AX,AX
-        // F000:000C mov ES,AX
         ES = 0;
-        // F000:000E mov word ptr ES:[0x0020],0x0031
-        // F000:0015 mov word ptr ES:[0x0022],CS
         Segment0000Globals.Dword0020 = 0x00000031 | (uint)CS << 16;
-        // F000:001A mov AX,DS
         ax1 = DS;
-        // F000:001C mov ES,AX
         ES = ax1;
-        // F000:001E cld
         DirectionFlag = false;
-        // F000:001F mov AL,0x36
-        // F000:0021 out 0x43,AL
-        // F000:0023 mov AL,0x51
-        // F000:0025 out 0x40,AL
-        // F000:0027 mov AL,0x22
-        // F000:0029 out 0x40,AL
         Pit.ProgramChannel(0, 0x36, 0x2251);
-        // F000:002B mov AL,0
-        // F000:002D out 0x21,AL
         PicPorts.WritePrimaryData(0);
-        // F000:002F jmp short 0x003E
-        // F000:003E xor AX,AX
         AX = 0;
-        // F000:0040 sti
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0x0041);
-            // F000:0041 cmp AX,5
             Alu16.Sub(AX, 5);
-            // F000:0044 jne short 0x0041
         } while (AX != 5);
-        // F000:0046 mov word ptr DS:[0x0080],AX
         Segment2000Globals.Word0080 = AX;
-        // F000:0049 cli
         InterruptFlag = false;
-        // F000:004A hlt
         return Hlt();
     }
 

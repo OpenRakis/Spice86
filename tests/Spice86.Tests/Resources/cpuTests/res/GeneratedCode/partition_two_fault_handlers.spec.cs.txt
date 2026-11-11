@@ -17,18 +17,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, BX. Does not return.</summary>
     public virtual Action unknown_F000_001A_F001A() {
         CheckExternalEvents(biosSegment, 0x001A);
-        // F000:001A mov AX,0x000A
         AX = 0x000A;
-        // F000:001D xor DX,DX
         DX = Alu16.Xor(DX, DX);
-        // F000:001F div BX
         try {
             (AX, DX) = Div16(divisor: BX, dividend: (uint)DX << 16 | (uint)AX);
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x001F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0022), unknown_F000_0022_F0022), new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0035), unknown_F000_0035_F0035)]);
         }
-        // F000:0021 hlt
         return Hlt();
     }
 
@@ -36,18 +32,11 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0022_F0022() {
         unknown_F000_0022_F0022Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0022);
-        // F000:0022 add SI,1
         SI++;
-        // F000:0025 mov word ptr DS:[0],0x0035
         DsGlobals.Word0000 = 0x0035;
-        // F000:002B push BP
         Stack.Push16(BP);
-        // F000:002C mov BP,SP
-        // F000:002E mov word ptr SS:[BP+2],0x001A
         frame.ReturnIp = 0x001A;
-        // F000:0033 pop BP
         BP = Stack.Pop16();
-        // F000:0034 iret
         return InterruptRet();
     }
 
@@ -62,18 +51,11 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0035_F0035() {
         unknown_F000_0035_F0035Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0035);
-        // F000:0035 add SI,0x0010
         SI += 0x0010;
-        // F000:0038 mov BX,5
         BX = 5;
-        // F000:003B push BP
         Stack.Push16(BP);
-        // F000:003C mov BP,SP
-        // F000:003E mov word ptr SS:[BP+2],0x001A
         frame.ReturnIp = 0x001A;
-        // F000:0043 pop BP
         BP = Stack.Pop16();
-        // F000:0044 iret
         return InterruptRet();
     }
 
@@ -87,22 +69,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, BX. Outputs: AX, BX, SI, DS, flags. Changes: AX, BX, SI, DS, flags.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
-        // F000:0003 mov SS,AX
         SS = 0x1000;
-        // F000:0005 mov SP,0x0100
         SP = 0x0100;
-        // F000:0008 xor AX,AX
         AX = 0;
-        // F000:000A mov DS,AX
         DS = 0;
-        // F000:000C mov word ptr DS:[0],0x0022
-        // F000:0012 mov word ptr DS:[2],CS
         Segment0000Globals.Dword0000 = 0x00000022 | (uint)CS << 16;
-        // F000:0016 xor SI,SI
         SI = 0;
-        // F000:0018 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         return unknown_F000_001A_F001A();
     }

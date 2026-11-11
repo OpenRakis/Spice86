@@ -15,36 +15,25 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: none. Changes: AX.</summary>
     public virtual Action unknown_F000_0012_F0012() {
         CheckExternalEvents(biosSegment, 0x0012);
-        // F000:0012 mov AX,0x1111
         AX = 0x1111;
-        // F000:0015 ret near
         return NearRet();
     }
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
         AX = 0x1000;
-        // F000:0003 mov SS,AX
         SS = 0x1000;
-        // F000:0005 mov SP,0x0100
         SP = 0x0100;
-        // F000:0008 mov BX,0x0012
         BX = 0x0012;
-        // F000:000B call near BX
         if (BX != 0x0012) {
             throw FailAsUntested($"Untested near call target 0x{BX:X4} at F000:000B");
         }
         NearCall(biosSegment, 0x000D, unknown_F000_0012_F0012Entry);
-        // F000:000D mov BX,0x0016
         BX = 0x0016;
-        // F000:0010 jmp near BX
         if (BX != 0x0016) {
             throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:0010");
         }
-        // F000:0016 hlt
         return Hlt();
     }
 

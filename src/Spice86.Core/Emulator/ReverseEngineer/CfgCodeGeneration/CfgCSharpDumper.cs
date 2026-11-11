@@ -9,6 +9,7 @@ using Spice86.Shared.Interfaces;
 
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 /// <summary>
 /// Writes the generated C# override file to the recording directory. Thin adapter between the
@@ -51,16 +52,34 @@ internal sealed class CfgCSharpDumper {
         foreach (GeneratedSourceFile file in generated.Files) {
             File.WriteAllText(Path.Join(directory, file.Name), file.Text);
         }
+        WriteAddressMap(generated, directory);
     }
+
+    /// <summary>Writes the instruction address map as <c>GeneratedAddressMap.json</c>: a JSON array
+    /// of <c>{address, file, method, firstLine, lastLine}</c> entries, one per printed instruction.
+    /// An empty range (<c>lastLine &lt; firstLine</c>) marks an instruction that printed nothing.</summary>
+    private static void WriteAddressMap(GeneratedCSharpProgram generated, string directory) {
+        string json = JsonSerializer.Serialize(generated.AddressMap.Select(entry => new {
+            address = entry.Address, file = entry.File, method = entry.Method,
+            firstLine = entry.FirstLine, lastLine = entry.LastLine
+        }), JsonOptions);
+        File.WriteAllText(Path.Join(directory, GeneratedOverrideNames.AddressMapFileName), json);
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() {
+        WriteIndented = true
+    };
 
     /// <summary>Deletes the generated source files an earlier dump left directly in
     /// <paramref name="directory"/> that <paramref name="generated"/> does not rewrite: a re-dump
     /// with another segment set would otherwise leave a partial class that no longer compiles.</summary>
     private static void DeleteStaleGeneratedFiles(string directory, GeneratedCSharpProgram generated) {
         HashSet<string> kept = generated.Files.Select(file => file.Name).ToHashSet();
+        kept.Add(GeneratedOverrideNames.AddressMapFileName);
         foreach (string path in Directory.EnumerateFiles(directory)) {
             string name = Path.GetFileName(path);
             bool isGenerated = name == GeneratedOverrideNames.SupplierFileName
+                || name == GeneratedOverrideNames.AddressMapFileName
                 || (name.StartsWith(GeneratedOverrideNames.OverrideClassName, StringComparison.Ordinal)
                     && name.EndsWith(".cs", StringComparison.Ordinal));
             if (isGenerated && !kept.Contains(name)) {
@@ -95,6 +114,7 @@ internal sealed class CfgCSharpDumper {
         foreach (GeneratedSourceFile file in generated.Files) {
             File.WriteAllText(Path.Join(projectDirectory, file.Name), file.Text);
         }
+        WriteAddressMap(generated, projectDirectory);
     }
 
     /// <summary>

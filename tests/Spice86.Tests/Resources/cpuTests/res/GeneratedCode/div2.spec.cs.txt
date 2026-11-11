@@ -15,33 +15,17 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 cli
         InterruptFlag = false;
-        // F000:0001 xor AX,AX
         AX = Alu16.Xor(AX, AX);
-        // F000:0003 mov DS,AX
         DS = 0;
-        // F000:0005 mov SS,AX
         SS = 0;
-        // F000:0007 mov SP,0xFFFE
         SP = 0xFFFE;
-        // F000:000A mov BP,0x0100
         BP = 0x0100;
-        // F000:000D mov word ptr SS:[BP-14],0xE4C3
         SsUInt16[0x00F2] = 0xE4C3;
-        // F000:0012 mov AX,0
-        // F000:0015 mov DX,0x8000
-        // F000:0018 div word ptr SS:[BP-14]
         (AX, DX) = Div16(divisor: SsUInt16[0x00F2], dividend: 0x80000000u);
-        // F000:001B mov word ptr DS:[0],AX
-        // F000:001E mov word ptr DS:[2],DX
         Segment0000Globals.Dword0000 = (uint)AX | (uint)DX << 16;
-        // F000:0022 mov CX,word ptr SS:[BP-14]
         CX = 0xE4C3;
-        // F000:0025 mov word ptr DS:[4],CX
         Segment0000Globals.Word0004 = 0xE4C3;
-        // F000:0029 hlt
         return Hlt();
     }
 

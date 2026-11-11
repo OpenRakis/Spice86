@@ -16,32 +16,20 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov byte ptr DS:[0x0400],1
         DsGlobals.Byte0400 = 1;
-        // F000:0005 mov AL,byte ptr DS:[0x0500]
         al1 = DsGlobals.Byte0500;
-        // F000:0008 test AL,AL
         Alu8.And(al1, al1);
-        // F000:000A jne short 0x0013
         if (al1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0013, Signature_0013_mov);
-            // F000:0013 mov byte ptr CS:[0x001A],0xEE
             SegmentF000Globals.Byte001A = 0xEE;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0019, Signature_0019_mov);
-            // F000:0019 mov byte ptr DS:[0x0401],0
             DsGlobals.Byte0401 = 0;
             VerifySpeculativeEntryOrFail(biosSegment, 0x001E, Signature_001E_jmp);
-            // F000:001E jmp short 0x0020
         }
         else {
-            // F000:000C mov byte ptr DS:[0x0401],0xDD
             DsGlobals.Byte0401 = 0xDD;
-            // F000:0011 jmp short 0x0020
         }
-        // F000:0020 mov byte ptr DS:[0x0402],0xAA
         DsGlobals.Byte0402 = 0xAA;
-        // F000:0025 hlt
         AL = al1;
         return Hlt();
     }

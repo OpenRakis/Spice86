@@ -15,55 +15,28 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
-        // F000:0003 mov SS,AX
         SS = 0x1000;
-        // F000:0005 mov SP,0x1000
         SP = 0x1000;
-        // F000:0008 mov CX,0xFEFF
-        // F000:000B push CX
         Stack.Push16(0xFEFF);
-        // F000:000C popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x000D);
-        // F000:000D clc
         CarryFlag = false;
-        // F000:000E cld
         DirectionFlag = false;
-        // F000:000F cli
         InterruptFlag = false;
-        // F000:0010 nop
-        // F000:0011 pushf
-        // F000:0012 pop AX
         AX = FlagRegister16;
-        // F000:0013 mov DX,1
         DX = 1;
-        // F000:0016 push DX
         Stack.Push16(1);
-        // F000:0017 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0018);
-        // F000:0018 cmc
-        // F000:0019 stc
         CarryFlag = true;
-        // F000:001A std
         DirectionFlag = true;
-        // F000:001B sti
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x001C);
-        // F000:001C pushf
         Stack.Push16(FlagRegister16);
-        // F000:001D pop BX
         BX = Stack.Pop16();
-        // F000:001E mov CX,0
         CX = 0;
-        // F000:0021 mov DS,CX
         DS = 0;
-        // F000:0023 mov word ptr DS:[0],AX
-        // F000:0026 mov word ptr DS:[2],BX
         Segment0000Globals.Dword0000 = (uint)AX | (uint)BX << 16;
-        // F000:002A hlt
         return Hlt();
     }
 

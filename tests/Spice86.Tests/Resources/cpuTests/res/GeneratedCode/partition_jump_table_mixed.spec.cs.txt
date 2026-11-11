@@ -15,46 +15,30 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
         AX = 0x1000;
-        // F000:0003 mov SS,AX
         SS = 0x1000;
-        // F000:0005 mov SP,0x0100
         SP = 0x0100;
-        // F000:0008 xor DX,DX
         DX = 0;
-        // F000:000A mov CX,3
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x000D);
-            // F000:000D mov BX,CX
             BX = CX;
-            // F000:000F dec BX
             BX = Alu16.Dec(BX);
-            // F000:0010 shl BX,1
             BX = Alu16.Shl(BX, 1);
-            // F000:0012 jmp near word ptr CS:[BX+0x23]
             switch (UInt16[CS, BX + 0x23]) {
                 case 0x0016:
-                    // F000:0016 add DX,1
                     DX = Alu16.Add(DX, 1);
-                    // F000:0019 jmp short 0x0020
                     break;
                 case 0x001B:
-                    // F000:001B add DX,0x0010
                     DX = Alu16.Add(DX, 0x0010);
-                    // F000:001E jmp short 0x0020
                     break;
                 case 0x0020:
                     break;
                 default:
                     throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x23]:X4} at F000:0012");
             }
-            // F000:0020 loop 0x000D
             CX--;
         } while (CX != 0);
-        // F000:0022 hlt
         return Hlt();
     }
 

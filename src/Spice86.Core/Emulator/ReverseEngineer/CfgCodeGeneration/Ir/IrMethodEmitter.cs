@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
@@ -38,9 +39,11 @@ internal sealed class IrMethodEmitter(
     AstInstructionRenderer assemblyRenderer,
     HardwareInterruptEffectBuilder effectBuilder,
     bool collectCensuses,
-    bool verify) {
+    bool verify,
+    bool printAsmComments) {
 
     private readonly IrLifter _lifter = new(context, lowerer, assemblyRenderer);
+    private readonly bool _printAsmComments = printAsmComments;
 
     /// <summary>Builds the AST of <paramref name="method"/> and times the lift, each IR pass and the
     /// lowering and structuring into <paramref name="timer"/>. Printing is deferred to
@@ -160,14 +163,16 @@ internal sealed class IrMethodEmitter(
 
     /// <summary>Prints an analyzed method as one C# method to <paramref name="writer"/>, timed into
     /// <paramref name="timer"/>.</summary>
-    public void Print(CSharpSourceWriter writer, AnalyzedMethod method, ProgramAnalysis analysis,
+    public List<MethodInstructionLine> Print(CSharpSourceWriter writer, AnalyzedMethod method, ProgramAnalysis analysis,
         GenerationStepTimer timer) {
+        List<MethodInstructionLine>? instructionLines = null;
         timer.Measure("printing", () => {
             PrintHeader(writer, method.Prepared.Method, analysis);
             writer.OpenBlock(SignatureText(method.Prepared.Method, method.Signature));
-            PrintBody(writer, method, analysis);
+            instructionLines = PrintBody(writer, method, analysis);
             PrintTail(writer, method.Prepared.Method, method.Signature, method.Prepared.FramePlan);
         });
+        return instructionLines ?? [];
     }
 
     /// <summary>The <c>public virtual</c> line that opens the method: typed signature, entry
@@ -193,7 +198,7 @@ internal sealed class IrMethodEmitter(
 
     /// <summary>The parameter-to-register assignments, declarations, entry dispatch and structured
     /// body inside the method's block, followed by the closing brace.</summary>
-    private void PrintBody(CSharpSourceWriter writer, AnalyzedMethod analyzed,
+    private List<MethodInstructionLine> PrintBody(CSharpSourceWriter writer, AnalyzedMethod analyzed,
         ProgramAnalysis analysis) {
         PreparedMethod prepared = analyzed.Prepared;
         MethodPlan method = prepared.Method;
@@ -208,7 +213,7 @@ internal sealed class IrMethodEmitter(
         }
         CSharpExpressionPrinter expressions = new(context.SegmentVariables,
             context.Program.Inputs.IoPorts, analyzed, analysis);
-        CSharpStatementPrinter printer = new(writer, expressions, LabelOf);
+        CSharpStatementPrinter printer = new(writer, expressions, LabelOf, _printAsmComments);
         // Every read the body makes of a register the signature declares must see the argument:
         // the assignment sits before the entrydispatcher label so a cyclic jump to an entry
         // does not reassign stale arguments.
@@ -242,7 +247,9 @@ internal sealed class IrMethodEmitter(
             writer.Line();
         }
         printer.Print(analyzed.Body);
+        printer.FinishInstructions();
         writer.CloseBlock();
+        return printer.InstructionLines;
     }
 
     /// <summary>What follows the method's closing brace: the <c>_Asm</c> wrapper of a typed method,

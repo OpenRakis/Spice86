@@ -19,9 +19,7 @@ public partial class CfgGeneratedOverrides {
         AX = ax;
         BX = bx;
         CheckExternalEvents(biosSegment, 0x00AB);
-        // F000:00AB add AX,BX
         AX = Alu16.Add(AX, bx);
-        // F000:00AD ret near
         NearReturn();
         return AX;
     }
@@ -37,9 +35,7 @@ public partial class CfgGeneratedOverrides {
     public virtual bool unknown_F000_00AE_F00AE(ushort ax) {
         AX = ax;
         CheckExternalEvents(biosSegment, 0x00AE);
-        // F000:00AE cmp AX,0x0010
         Alu16.Sub(ax, 0x0010);
-        // F000:00B1 ret near
         NearReturn();
         return CarryFlag;
     }
@@ -56,9 +52,7 @@ public partial class CfgGeneratedOverrides {
         AX = ax;
         BX = bx;
         CheckExternalEvents(biosSegment, 0x00B2);
-        // F000:00B2 mul BX
         (AX, DX) = Mul16(ax, bx);
-        // F000:00B4 ret near
         NearReturn();
         return (AX, DX);
     }
@@ -73,13 +67,9 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort bx, ushort es) unknown_F000_00B5_F00B5() {
         CheckExternalEvents(biosSegment, 0x00B5);
-        // F000:00B5 mov BX,0x2000
         BX = 0x2000;
-        // F000:00B8 mov ES,BX
         ES = 0x2000;
-        // F000:00BA mov BX,0x0100
         BX = 0x0100;
-        // F000:00BD ret near
         NearReturn();
         return (BX, ES);
     }
@@ -94,17 +84,10 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_00BE_F00BE() {
         CheckExternalEvents(biosSegment, 0x00BE);
-        // F000:00BE push SI
         Stack.Push16(SI);
-        // F000:00BF push DI
         Stack.Push16(DI);
-        // F000:00C0 mov SI,0xAAAA
-        // F000:00C3 mov DI,0xBBBB
-        // F000:00C6 pop DI
         DI = Stack.Pop16();
-        // F000:00C7 pop SI
         SI = Stack.Pop16();
-        // F000:00C8 ret near
         return NearRet();
     }
 
@@ -113,9 +96,7 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_00C9_F00C9() {
         CheckExternalEvents(biosSegment, 0x00C9);
-        // F000:00C9 mov CX,0x9999
         CX = 0x9999;
-        // F000:00CC ret near
         return NearRet();
     }
 
@@ -123,120 +104,63 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte al;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x2000
-        // F000:0003 mov DS,AX
         DS = 0x2000;
-        // F000:0005 mov SS,AX
         SS = 0x2000;
-        // F000:0007 mov SP,0x1000
         SP = 0x1000;
-        // F000:000A cld
         DirectionFlag = false;
-        // F000:000B mov byte ptr DS:[0x0100],0x5A
         Segment2000Globals.Byte0100 = 0x5A;
-        // F000:0010 mov AX,0x1000
-        // F000:0013 mov ES,AX
         ES = 0x1000;
-        // F000:0015 mov byte ptr ES:[0x0100],0x66
         Segment1000Globals.Byte0100 = 0x66;
-        // F000:001B mov AX,0x2000
-        // F000:001E mov ES,AX
         ES = 0x2000;
-        // F000:0020 mov AX,3
         AX = 3;
-        // F000:0023 mov BX,4
         BX = 4;
-        // F000:0026 call near 0x00AB
         AX = NearCall(biosSegment, 0x0029, () => unknown_F000_00AB_F00AB(AX, BX));
-        // F000:0029 mov word ptr DS:[0x0040],AX
         Segment2000Globals.Word0040 = AX;
-        // F000:002C mov AX,8
-        // F000:002F mov BX,9
-        // F000:0032 mov AX,0x0010
         AX = 0x0010;
-        // F000:0035 mov BX,0x0020
         BX = 0x0020;
-        // F000:0038 call near 0x00AB
         AX = NearCall(biosSegment, 0x003B, () => unknown_F000_00AB_F00AB(AX, BX));
-        // F000:003B mov word ptr DS:[0x0042],AX
         Segment2000Globals.Word0042 = AX;
-        // F000:003E mov AX,5
         AX = 5;
-        // F000:0041 call near 0x00AE
         CarryFlag = NearCall(biosSegment, 0x0044, () => unknown_F000_00AE_F00AE(AX));
-        // F000:0044 jb short 0x004D
         if (CarryFlag) {
-            // F000:004D mov byte ptr DS:[0x0044],0x11
             Segment2000Globals.Byte0044 = 0x11;
         }
         else {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0046, Signature_0046_mov);
-            // F000:0046 mov byte ptr DS:[0x0044],0xEE
             Segment2000Globals.Byte0044 = 0xEE;
             VerifySpeculativeEntryOrFail(biosSegment, 0x004B, Signature_004B_jmp);
-            // F000:004B jmp short 0x0052
         }
-        // F000:0052 mov AX,0x0020
         AX = 0x0020;
-        // F000:0055 call near 0x00AE
         CarryFlag = NearCall(biosSegment, 0x0058, () => unknown_F000_00AE_F00AE(AX));
-        // F000:0058 jb short 0x0061
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_mov);
-            // F000:0061 mov byte ptr DS:[0x0045],0xEE
             Segment2000Globals.Byte0045 = 0xEE;
         }
         else {
-            // F000:005A mov byte ptr DS:[0x0045],0x22
             Segment2000Globals.Byte0045 = 0x22;
-            // F000:005F jmp short 0x0066
         }
-        // F000:0066 mov AX,0x8000
         AX = 0x8000;
-        // F000:0069 mov BX,4
         BX = 4;
-        // F000:006C call near 0x00B2
         (AX, DX) = NearCall(biosSegment, 0x006F, () => unknown_F000_00B2_F00B2(AX, BX));
-        // F000:006F mov word ptr DS:[0x0046],AX
         Segment2000Globals.Word0046 = AX;
-        // F000:0072 mov word ptr DS:[0x0048],DX
         Segment2000Globals.Word0048 = DX;
-        // F000:0076 mov AX,0x1000
         AX = 0x1000;
-        // F000:0079 mov ES,AX
         ES = 0x1000;
-        // F000:007B call near 0x00B5
         (BX, ES) = NearCall(biosSegment, 0x007E, () => unknown_F000_00B5_F00B5());
-        // F000:007E mov AL,byte ptr ES:[BX]
         al = UInt8[ES, BX];
-        // F000:0081 mov byte ptr DS:[0x004A],AL
         Segment2000Globals.Byte004A = al;
-        // F000:0084 mov AX,0x2000
         AX = 0x2000;
-        // F000:0087 mov ES,AX
         ES = 0x2000;
-        // F000:0089 mov SI,0x1111
         SI = 0x1111;
-        // F000:008C mov DI,0x2222
         DI = 0x2222;
-        // F000:008F call near 0x00BE
         NearCall(biosSegment, 0x0092, unknown_F000_00BE_F00BEEntry);
-        // F000:0092 mov word ptr DS:[0x004C],SI
         Segment2000Globals.Word004C = SI;
-        // F000:0096 mov word ptr DS:[0x004E],DI
         Segment2000Globals.Word004E = DI;
-        // F000:009A mov BP,0x3333
         BP = 0x3333;
-        // F000:009D mov CX,0x4444
         CX = 0x4444;
-        // F000:00A0 call near 0x00C9
         NearCall(biosSegment, 0x00A3, unknown_F000_00C9_F00C9Entry);
-        // F000:00A3 mov CX,0x5555
         CX = 0x5555;
-        // F000:00A6 mov word ptr DS:[0x0050],BP
         Segment2000Globals.Word0050 = BP;
-        // F000:00AA hlt
         return Hlt();
     }
 

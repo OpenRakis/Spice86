@@ -15,20 +15,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBP. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x2000
         AX = 0x2000;
-        // F000:0003 mov DS,AX
         DS = 0x2000;
-        // F000:0005 mov SS,AX
         SS = 0x2000;
-        // F000:0007 mov ESP,0x12341000
         ESP = 0x12341000;
-        // F000:000D push EAX
         Stack.Push32(EAX);
-        // F000:000F pop EAX
         EAX = Stack.Pop32();
-        // F000:0011 enterw 4,0
         byte level_0011 = 0;
         uint oldBasePointer_0011 = EBP;
         ushort spIndex_0011 = (ushort)(SP - 4);
@@ -52,11 +44,8 @@ public partial class CfgGeneratedOverrides {
         EBP = (uint)framePtr_0011;
         spIndex_0011 -= 4;
         SP = spIndex_0011;
-        // F000:0016 leavew
         Stack.Leave32();
-        // F000:0018 mov dword ptr DS:[0x0200],ESP
         Segment2000Globals.Dword0200 = ESP;
-        // F000:001D hlt
         return Hlt();
     }
 
