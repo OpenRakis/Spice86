@@ -264,19 +264,19 @@ internal sealed class GeneratedCodeMachineTestRunner {
     public CompiledGeneratedOverride CompileGeneratedProgram(AsmRunSettings settings, GeneratedCSharpProgram generatedProgram) {
         GeneratedOverrideCompiler compiler = new();
         GeneratedCompilation compilation = compiler.Compile(generatedProgram);
-        GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts = GeneratedCodeMetricsCollector.CollectParts(
             GoldenKey(settings), compilation);
         IReadOnlyDictionary<string, GeneratedCodeMetrics> methods =
             GeneratedCodeMetricsCollector.CollectMethods(GoldenKey(settings), compilation);
-        WriteMetrics(metrics, methods);
+        WriteMetrics(parts, methods);
         WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
-        generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
+        generatedProgram.GotoCensus.Total.Should().Be(parts.Program.GotoStatements + parts.Support.GotoStatements,
             $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
         WriteFlagReadCensus(FlagReadCensusLine.Format(GoldenKey(settings), generatedProgram.FlagReadCensus));
-        generatedProgram.FlagReadCensus.Total.Should().Be(metrics.StatusFlagReads,
+        generatedProgram.FlagReadCensus.Total.Should().Be(parts.Program.StatusFlagReads + parts.Support.StatusFlagReads,
             $"every printed flag read of {GoldenKey(settings)} has exactly one census line entry");
         WriteWebCensus(WebCensusLine.Format(GoldenKey(settings), generatedProgram.WebCensus));
-        GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText, methods);
+        GeneratedCodeMetricsAssertions.AssertInvariants(parts, generatedProgram.SourceText, methods);
         return compiler.CompileSupplier(compilation);
     }
 
@@ -391,13 +391,15 @@ internal sealed class GeneratedCodeMachineTestRunner {
     private static readonly object MetricsFileLock = new();
     private static readonly SortedDictionary<string, (string Summary, string[] Methods)> MetricsRows = new(StringComparer.Ordinal);
 
-    private static void WriteMetrics(GeneratedCodeMetrics metrics, IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
+    private static void WriteMetrics(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts,
+        IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         Directory.CreateDirectory(outputDirectory);
         string[] methodLines = methods.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .Select(pair => $"method={pair.Key} {pair.Value.SourceLocation} {pair.Value.ToLine()}").ToArray();
         lock (MetricsFileLock) {
-            MetricsRows[metrics.Fixture] = (metrics.ToLine(), methodLines);
+            MetricsRows[parts.Program.Fixture] = ("part=program " + parts.Program.ToLine()
+                + " | part=support " + parts.Support.ToLine(), methodLines);
             File.WriteAllLines(Path.Join(outputDirectory, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
             File.WriteAllLines(Path.Join(outputDirectory, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
         }

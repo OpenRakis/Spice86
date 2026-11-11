@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Shared.Emulator.Memory;
 using System.Collections.Immutable;
 
@@ -84,10 +85,41 @@ internal static class GeneratedCodeMetricsCollector {
         SyntaxKind.RightShiftAssignmentExpression
     };
 
+    /// <summary>Metrics of one generated program, split along the file boundary S.1 established:
+    /// every emulator-owned support file in <see cref="Support"/> and every other generated file
+    /// in <see cref="Program"/>.</summary>
+    internal sealed record GeneratedCodePartMetrics(GeneratedCodeMetrics Program, GeneratedCodeMetrics Support) {
+        public IEnumerable<GeneratedCodeMetrics> Parts {
+            get {
+                yield return Program;
+                yield return Support;
+            }
+        }
+    }
+
+    /// <summary>True for the support file names <see cref="GeneratedOverrideNames"/> assigns in S.1.</summary>
+    public static bool IsSupportFileName(string fileName) =>
+        fileName == GeneratedOverrideNames.SupplierFileName
+        || (fileName.StartsWith(GeneratedOverrideNames.OverrideClassName + ".Support.", StringComparison.Ordinal)
+            && fileName.EndsWith(".cs", StringComparison.Ordinal));
+
     public static GeneratedCodeMetrics Collect(string fixture, GeneratedCompilation compilation) {
         EnsureBinding(compilation);
         return Collect(fixture, compilation, compilation.SyntaxTrees.Select(tree => tree.GetRoot()).ToArray());
     }
+
+    /// <summary>Measures the program part and the support part of <paramref name="compilation"/> separately.</summary>
+    public static GeneratedCodePartMetrics CollectParts(string fixture, GeneratedCompilation compilation) {
+        EnsureBinding(compilation);
+        SyntaxNode[] programRoots = RootsOf(compilation.SyntaxTrees.Where(tree => !IsSupportFileName(tree.FilePath)));
+        SyntaxNode[] supportRoots = RootsOf(compilation.SyntaxTrees.Where(tree => IsSupportFileName(tree.FilePath)));
+        return new GeneratedCodePartMetrics(
+            Collect(fixture, compilation, programRoots),
+            Collect(fixture, compilation, supportRoots));
+    }
+
+    private static SyntaxNode[] RootsOf(IEnumerable<SyntaxTree> trees) =>
+        trees.Select(tree => tree.GetRoot()).ToArray();
 
     public static IReadOnlyDictionary<string, GeneratedCodeMetrics> CollectMethods(
         string fixture, GeneratedCompilation compilation) {
@@ -101,8 +133,9 @@ internal static class GeneratedCodeMetricsCollector {
                 IMethodSymbol symbol = model.GetDeclaredSymbol(method)
                     ?? throw new InvalidOperationException($"Unbound method in {fixture}.");
                 string key = symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+                string fileLabel = tree.FilePath.Length == 0 ? $"tree={treeIndex}" : tree.FilePath;
                 methods.Add(key, Collect(fixture, compilation, [method]) with {
-                    SourceLocation = $"tree={treeIndex},line={method.GetLocation().GetLineSpan().StartLinePosition.Line + 1}"
+                    SourceLocation = $"file={fileLabel},line={method.GetLocation().GetLineSpan().StartLinePosition.Line + 1}"
                 });
             }
         }

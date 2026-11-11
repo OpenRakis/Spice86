@@ -6,6 +6,8 @@ using FluentAssertions.Execution;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -482,13 +484,13 @@ public class GeneratedCodeMetricsCollectorTest {
         Dictionary<string, int> maximum = new() { ["InterruptCalls"] = 0 };
 
         // Act
-        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after, minimum, maximum);
+        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after, "program", minimum, maximum);
 
         // Assert
-        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before, minimum, maximum).Should().BeEmpty();
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before, "program", minimum, maximum).Should().BeEmpty();
         failures.Should().HaveCount(2);
-        failures.Should().Contain("test: serviceCalls.Dos minimum=1, actual=0, delta=-1.");
-        failures.Should().Contain("test: InterruptCalls maximum=0, actual=1, delta=+1.");
+        failures.Should().Contain("test program: serviceCalls.Dos minimum=1, actual=0, delta=-1.");
+        failures.Should().Contain("test program: InterruptCalls maximum=0, actual=1, delta=+1.");
     }
 
     [Fact]
@@ -505,13 +507,13 @@ public class GeneratedCodeMetricsCollectorTest {
         Dictionary<string, int> maximum = new() { ["PortWrapperCalls"] = 0 };
 
         // Act
-        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after, minimum, maximum);
+        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after, "program", minimum, maximum);
 
         // Assert
-        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before, minimum, maximum).Should().BeEmpty();
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before, "program", minimum, maximum).Should().BeEmpty();
         failures.Should().HaveCount(2);
-        failures.Should().Contain("test: deviceCalls.Vga minimum=1, actual=0, delta=-1.");
-        failures.Should().Contain("test: PortWrapperCalls maximum=0, actual=4, delta=+4.");
+        failures.Should().Contain("test program: deviceCalls.Vga minimum=1, actual=0, delta=-1.");
+        failures.Should().Contain("test program: PortWrapperCalls maximum=0, actual=4, delta=+4.");
     }
 
     [Fact]
@@ -526,12 +528,12 @@ public class GeneratedCodeMetricsCollectorTest {
         Dictionary<string, int> maximum = new() { ["InterruptCalls"] = 0 };
 
         // Act
-        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(loss, minimum, maximum);
-        IReadOnlyList<string> improvements = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(gain, minimum, maximum);
+        IReadOnlyList<string> failures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(loss, "program", minimum, maximum);
+        IReadOnlyList<string> improvements = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(gain, "program", minimum, maximum);
 
         // Assert
         improvements.Should().BeEmpty();
-        failures.Should().HaveCount(2).And.OnlyContain(message => message.StartsWith("loss:", StringComparison.Ordinal));
+        failures.Should().HaveCount(2).And.OnlyContain(message => message.StartsWith("loss program:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -562,7 +564,7 @@ public class GeneratedCodeMetricsCollectorTest {
         // Arrange
         JsonObject metadata = JsonNode.Parse(ValidBaselineMetadataJson())?.AsObject() ?? throw new InvalidOperationException();
         JsonObject fixture = JsonNode.Parse(ValidBaselineJson())?.AsObject() ?? throw new InvalidOperationException();
-        JsonObject maximum = fixture["maximum"]?.AsObject() ?? throw new InvalidOperationException();
+        JsonObject maximum = fixture["program"]?["maximum"]?.AsObject() ?? throw new InvalidOperationException();
         switch (defect) {
             case "missingMetric": maximum.Remove("RegisterReads"); break;
             case "unknownMetric": maximum["MadeUpCount"] = 0; break;
@@ -571,7 +573,7 @@ public class GeneratedCodeMetricsCollectorTest {
             case "referenceRevision": metadata["referenceRevision"] = "invalid"; break;
             case "missingMetadataField": metadata.Remove("referenceRevision"); break;
             case "hash": fixture["sourceSha256"] = "invalid"; break;
-            case "missingField": fixture.Remove("minimum"); break;
+            case "missingField": fixture.Remove("program"); break;
             case "direction": maximum["serviceCalls.Dos"] = 0; break;
         }
 
@@ -624,7 +626,7 @@ public class GeneratedCodeMetricsCollectorTest {
         methods["Generated.Method(int)"].RegisterWrites.Should().Be(1);
         total.RegisterReads.Should().Be(4);
         methods.Values.Sum(row => row.RegisterReads).Should().Be(2, "field initializers and accessors remain in fixture totals");
-        methods.Values.Should().OnlyContain(row => row.SourceLocation.StartsWith("tree=0,line=", StringComparison.Ordinal));
+        methods.Values.Should().OnlyContain(row => row.SourceLocation.StartsWith("file=tree=0,line=", StringComparison.Ordinal));
         methods.Keys.Should().BeInAscendingOrder(StringComparer.Ordinal);
     }
 
@@ -636,7 +638,8 @@ public class GeneratedCodeMetricsCollectorTest {
         GeneratedCodeMetrics metrics = CollectFromMethodBody("AX = BX;");
 
         // Act
-        Action assert = () => GeneratedCodeMetricsAssertions.AssertInvariants(metrics, "AX = BX;",
+        Action assert = () => GeneratedCodeMetricsAssertions.AssertInvariants(
+            new GeneratedCodeMetricsCollector.GeneratedCodePartMetrics(metrics, metrics), "AX = BX;",
             new Dictionary<string, GeneratedCodeMetrics>());
 
         // Assert
@@ -647,15 +650,121 @@ public class GeneratedCodeMetricsCollectorTest {
         }
     }
 
+    [Fact]
+    public void ProgramAndSupportPartsAreMeasuredSeparately() {
+        // Arrange
+        GeneratedCompilation compilation = CompileProgramWithParts("AX = BX;", "CX = BX;");
+        using MemoryStream stream = compilation.PeStream;
+
+        // Act
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts =
+            GeneratedCodeMetricsCollector.CollectParts("test", compilation);
+
+        // Assert
+        parts.Program.Methods.Should().Be(1);
+        parts.Support.Methods.Should().Be(1);
+        parts.Program.RegisterWrites.Should().Be(1);
+        parts.Support.RegisterWrites.Should().Be(1);
+    }
+
+    [Fact]
+    public void ProgramMutationFailsTheProgramBoundButNotTheSupportBound() {
+        // Arrange
+        GeneratedCompilation original = CompileProgramWithParts("AX = BX;", "CX = BX;");
+        using MemoryStream originalStream = original.PeStream;
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics before =
+            GeneratedCodeMetricsCollector.CollectParts("test", original);
+        Dictionary<string, int> programMaximum = new() { [nameof(GeneratedCodeMetrics.RegisterReads)] = 1 };
+        Dictionary<string, int> supportMaximum = new() { [nameof(GeneratedCodeMetrics.RegisterReads)] = 1 };
+        GeneratedCompilation mutated = CompileProgramWithParts("AX = BX; CX = AX;", "CX = BX;");
+        using MemoryStream mutatedStream = mutated.PeStream;
+
+        // Act
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics after =
+            GeneratedCodeMetricsCollector.CollectParts("test", mutated);
+
+        // Assert
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before.Program, "program",
+            new Dictionary<string, int>(), programMaximum).Should().BeEmpty();
+        IReadOnlyList<string> programFailures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(
+            after.Program, "program", new Dictionary<string, int>(), programMaximum);
+        programFailures.Should().ContainSingle().Which.Should().Contain("test program: RegisterReads");
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after.Support, "support",
+            new Dictionary<string, int>(), supportMaximum).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SupportMutationFailsTheSupportBoundButNotTheProgramBound() {
+        // Arrange
+        GeneratedCompilation original = CompileProgramWithParts("AX = BX;", "CX = BX;");
+        using MemoryStream originalStream = original.PeStream;
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics before =
+            GeneratedCodeMetricsCollector.CollectParts("test", original);
+        Dictionary<string, int> programMaximum = new() { [nameof(GeneratedCodeMetrics.RegisterReads)] = 1 };
+        Dictionary<string, int> supportMaximum = new() { [nameof(GeneratedCodeMetrics.RegisterReads)] = 1 };
+        GeneratedCompilation mutated = CompileProgramWithParts("AX = BX;", "CX = BX; DX = CX;");
+        using MemoryStream mutatedStream = mutated.PeStream;
+
+        // Act
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics after =
+            GeneratedCodeMetricsCollector.CollectParts("test", mutated);
+
+        // Assert
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(before.Support, "support",
+            new Dictionary<string, int>(), supportMaximum).Should().BeEmpty();
+        IReadOnlyList<string> supportFailures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(
+            after.Support, "support", new Dictionary<string, int>(), supportMaximum);
+        supportFailures.Should().ContainSingle().Which.Should().Contain("test support: RegisterReads");
+        GeneratedCodeMetricsAssertions.FindReadabilityRegressions(after.Program, "program",
+            new Dictionary<string, int>(), programMaximum).Should().BeEmpty();
+    }
+
+    private static GeneratedCompilation CompileProgramWithParts(string programBody, string supportBody) {
+        string programSource = $$"""
+            using Spice86.Core.Emulator.ReverseEngineer;
+            partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+                protected CfgGeneratedOverrides() : base(null, null, null, null) { }
+                public void ProgramMethod() {
+                    {{programBody}}
+                }
+            }
+            """;
+        string supportSource = $$"""
+            using Spice86.Core.Emulator.ReverseEngineer;
+            partial class CfgGeneratedOverrides {
+                public void SupportMethod() {
+                    {{supportBody}}
+                }
+            }
+            """;
+        GeneratedCSharpProgram program = new() {
+            Files = [
+                new GeneratedSourceFile("CfgGeneratedOverrides.016D.cs", programSource),
+                new GeneratedSourceFile("CfgGeneratedOverrides.Support.Wiring.cs", supportSource)
+            ]
+        };
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(program);
+        compilation.Compilation.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Should().BeEmpty();
+        return compilation;
+    }
+
     private static string ValidBaselineMetadataJson() => JsonSerializer.Serialize(new {
-        schemaVersion = 2,
+        schemaVersion = 3,
         referenceRevision = new string('a', 40)
     });
 
     private static string ValidBaselineJson() => JsonSerializer.Serialize(new {
         sourceSha256 = new string('b', 64),
-        minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
-        maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)
+        program = new {
+            minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
+            maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)
+        },
+        support = new {
+            minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
+            maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)
+        }
     });
 
     private static GeneratedCompilation CompileMethodBody(string body) => CompileMethodBody(body, "");
