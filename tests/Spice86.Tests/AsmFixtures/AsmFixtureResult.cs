@@ -11,7 +11,7 @@ using Spice86.Core.Emulator.Devices.Video;
 /// program wrote to I/O ports captured by a handler that the fixture installs in
 /// <c>ConfigureMachine</c>, and the run's own observations. It must not read <c>CS:IP</c> after the end,
 /// <c>IsRunning</c>, <c>InterruptShadowing</c>, cycle counts, or any CFG node or block: those are
-/// engine checks and stay in <c>MachineTest</c>.
+/// engine checks and live in the fixture's engine assertions instead.
 /// </summary>
 /// <param name="Memory">Memory of the finished run.</param>
 /// <param name="State">CPU state of the finished run.</param>

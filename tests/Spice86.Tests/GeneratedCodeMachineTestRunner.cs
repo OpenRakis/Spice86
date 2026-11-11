@@ -65,7 +65,11 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <summary>
     /// Discovers one scenario, generates and compiles its source, then runs every execution scenario
     /// with the compiled override installed, each from a fresh preparation whose oracle is checked.
-    /// Every scope is disposed whether the pipeline succeeds or fails.
+    /// Every scope is disposed whether the pipeline succeeds or fails. Before generation, every
+    /// execution that is not the discovery's own variant also gets its interpreted run checked against
+    /// the oracle, the engine assertions and the machine goldens, and when
+    /// <see cref="TestJitSettings.CompiledRun"/> is set every execution additionally runs through the
+    /// JIT compiler the same way.
     /// </summary>
     /// <param name="discovery">Scenario whose run is recorded for code generation.</param>
     /// <param name="executions">Scenarios executed with the compiled override, in order.</param>
@@ -73,11 +77,38 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <exception cref="ArgumentException">Discovery and executions do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmScenario discovery, IReadOnlyList<AsmScenario> executions) {
         using AsmRunScope discoveryScope = discovery.Prepare();
+        AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
+        foreach (AsmScenario execution in executions) {
+            if (!IsSameVariantAsDiscovery(execution, discoverySettings)) {
+                RunEmulatedAndCheckMachineGoldens(execution, JitMode.InterpretedOnly);
+            }
+            if (TestJitSettings.CompiledRun) {
+                RunEmulatedAndCheckMachineGoldens(execution, JitMode.CompiledOnly);
+            }
+        }
         using OwnedRunScopes executionScopes = new();
         foreach (AsmScenario execution in executions) {
             executionScopes.Add(execution.Prepare());
         }
         return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+    }
+
+    /// <summary>Whether an execution scenario is another run of the same scenario variant as the
+    /// discovery, which the discovery run already covers interpreted.</summary>
+    private static bool IsSameVariantAsDiscovery(AsmScenario execution, AsmRunSettings discoverySettings) {
+        using AsmRunScope scope = execution.Prepare();
+        return IsEquivalentScenarioVariant(discoverySettings, scope.Fixture.Settings);
+    }
+
+    /// <summary>Runs one scenario emulated and checks its oracle, engine assertions and machine goldens:
+    /// the interpreted run of every non-discovery variant, and the compiled-JIT run of every variant
+    /// when <see cref="TestJitSettings.CompiledRun"/> opts in.</summary>
+    private static void RunEmulatedAndCheckMachineGoldens(AsmScenario scenario, JitMode jitMode) {
+        using AsmRunScope scope = scenario.Prepare();
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
+        string goldenKey = MachineGoldens.GoldenKey(scope.Fixture);
+        MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
+        MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
     }
 
     /// <summary>

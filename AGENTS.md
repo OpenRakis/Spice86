@@ -55,11 +55,14 @@ SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test
 # Opt-in: run the tests with the JIT executing each instruction's execution AST after the IR round trip of the code generator (no filter, so SingleStepTest is included)
 SPICE86_JIT_GENERATOR_IR=1 dotnet test tests/Spice86.Tests
 
+# Opt-in: also run every catalogue scenario with the JIT-compiled CPU (JitMode.CompiledOnly) against its oracle and goldens, e.g. after updating the expression compiler
+SPICE86_JIT_COMPILED_RUN=1 dotnet test tests/Spice86.Tests -- --filter-class '*AsmScenarioTest*'
+
 # Opt-in: code coverage of the code generator (ReverseEngineer/CfgCodeGeneration) over the golden tests only; the settings path must be absolute (it is resolved from the test binary folder)
-dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --coverage --coverage-output-format cobertura --coverage-output generator.cobertura.xml --coverage-settings "$PWD/tests/Spice86.Tests/GeneratorCoverage.config.xml" --results-directory "$PWD/tmp/generator-coverage"
+dotnet test tests/Spice86.Tests --no-build -- --filter-class '*AsmScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --coverage --coverage-output-format cobertura --coverage-output generator.cobertura.xml --coverage-settings "$PWD/tests/Spice86.Tests/GeneratorCoverage.config.xml" --results-directory "$PWD/tmp/generator-coverage"
 
 # Opt-in: run an instrumented copy of every generated program and append one row per generated statement (ran or not) to a TSV report (path must be absolute)
-SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*'
+SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tests/Spice86.Tests --no-build -- --filter-class '*AsmScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*'
 ```
 
 > **Generator audit tools**: the two commands above measure which generator paths no golden reaches and which generated statements never run. `tasks/done/phase3/14-generator-coverage-audit.md` ("Measurement runs") has the one-liners that turn their output into lists of uncovered lines and a per-construct table.
@@ -85,10 +88,10 @@ SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tes
 > Run regeneration serially because several tests can address the same golden (`--maximum-parallel-threads` is not a valid option for this runner):
 >
 > ```text
-> dotnet test tests/Spice86.Tests --no-build -- --filter-class 'Spice86.Tests.MachineTest' --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
+> dotnet test tests/Spice86.Tests --no-build -- --filter-class '*AsmScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
 > ```
 >
-> `GeneratedCodeScenarioTest` covers the catalogue. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. `MachineTest` also compares listing and CFG goldens, including scenario variants no other class runs (the `.unobserved` speculative variants); leaving it out leaves those goldens stale. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
+> `AsmScenarioTest` covers the whole catalogue: it compares the listing and CFG goldens of every scenario and variant (including the `.unobserved` speculative variants), plus the generated-source goldens. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
 >
 > During fix or review rework rounds, do not repeat the whole procedure: with the writers enabled, run the catalogue command once and read the `git diff` of the goldens. Run the second serial pass (no change allowed), disable the writers, rebuild and run the final check only once, on the final state of the task, before it is committed or handed back.
 
@@ -274,8 +277,9 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - Use assembly-based integration tests for comprehensive emulator validation
 - **Every runnable ASM scenario is catalogue-driven**
   - Register it in `tests/Spice86.Tests/AsmFixtures/AsmScenarioCatalog.cs` with one behavioral oracle. Keep child programs, overlays, includes, and data files as dependencies of the scenario that loads them, not as standalone scenarios.
-  - `GeneratedCodeScenarioTest.CatalogueCaseRunsAsGeneratedCode` derives its cases from the catalogue. It performs interpreted discovery, checks the machine goldens, generates and compiles C#, executes each registered variant with the same oracle, and checks the generated-source golden. Adding a scenario therefore adds generated coverage automatically.
-  - `MachineTest`, `GeneratedCodeMachineTest`, and `SpeculativeCfgTest` retain focused engine, speculative, and fault-injection checks. They are not the registration source of truth.
+  - `AsmScenarioTest` derives its cases from the catalogue, split across `Shard0` to `Shard7` so they run in parallel. Each case runs the non-discovery variants interpreted against the machine goldens, performs interpreted discovery, generates and compiles C#, executes each registered variant with the same oracle, and checks the generated-source golden. Adding a scenario therefore adds interpreted and generated coverage automatically.
+  - Engine checks of the finished machine (CFG nodes and blocks, CPU shadow state) live in `AsmScenarioEngineAssertions` and attach to the fixture with `AsmFixture.WithEngineAssertions`; every emulated run of that fixture then performs them after the oracle.
+  - `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine, speculative, and fault-injection checks. They are not the registration source of truth.
   - Follow the golden-key and regeneration rules above. Do not force machine-golden and generated-source keys to match, and do not add exceptions for missing or orphan files.
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`

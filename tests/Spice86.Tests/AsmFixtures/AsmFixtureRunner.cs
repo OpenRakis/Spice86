@@ -60,20 +60,22 @@ internal static class AsmFixtureRunner {
         return RunSettingsWithOverride(scope, overrideSupplier, scope.Fixture.Settings);
     }
 
-    /// <summary>Runs the fixture's program and checks its oracle. The run is disposed if anything throws.</summary>
+    /// <summary>Runs the fixture's program and checks its oracle and engine assertions. The run is
+    /// disposed if anything throws.</summary>
     /// <param name="fixture">Fixture to run.</param>
     /// <param name="jitMode">JIT mode to run in.</param>
     /// <returns>The finished run, owned by the caller.</returns>
     public static AsmFixtureRun RunEmulated(AsmFixture fixture, JitMode jitMode) {
-        return AssertOracleAndReturn(RunSettings(new AsmRunScope(fixture), jitMode), fixture);
+        return RunEmulated(new AsmRunScope(fixture), jitMode);
     }
 
-    /// <summary>Runs the scope's fixture and checks its oracle. The run is disposed if anything throws.</summary>
+    /// <summary>Runs the scope's fixture and checks its oracle and engine assertions. The run is
+    /// disposed if anything throws.</summary>
     /// <param name="scope">Prepared run scope carrying the fixture and its observations.</param>
     /// <param name="jitMode">JIT mode to run in.</param>
     /// <returns>The finished run, owned by the caller.</returns>
     public static AsmFixtureRun RunEmulated(AsmRunScope scope, JitMode jitMode) {
-        return AssertOracleAndReturn(RunSettings(scope, jitMode), scope.Fixture);
+        return AssertEngineAndReturn(AssertOracleAndReturn(RunSettings(scope, jitMode), scope.Fixture), scope);
     }
 
     /// <summary>Prepares a fresh run of the scenario, runs it and checks its oracle, so a caller only names
@@ -212,6 +214,19 @@ internal static class AsmFixtureRunner {
     private static void PreloadKeys(AsmRunSettings settings, Machine machine) {
         foreach (ushort keyCode in settings.PreloadedKeyCodes) {
             machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer.EnqueueKeyCode(keyCode);
+        }
+    }
+
+    private static AsmFixtureRun AssertEngineAndReturn(AsmFixtureRun run, AsmRunScope scope) {
+        bool succeeded = false;
+        try {
+            scope.Fixture.AssertEngine(scope, run.Machine);
+            succeeded = true;
+            return run;
+        } finally {
+            if (!succeeded) {
+                run.Dispose();
+            }
         }
     }
 
