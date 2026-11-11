@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort di;
-        ushort ax;
+        ushort word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4411;
         BX = Alu16.Xor(BX, BX);
@@ -30,10 +30,10 @@ public partial class CfgGeneratedOverrides {
         ES = 0xB800;
         DI = 0;
         SegmentB800Globals.Word0000 = AX;
-        di = (ushort)(DirectionFlag ? -2 : 2);
-        ax = (ushort)(DL | 0x0700);
-        UInt16[ES, di] = ax;
-        DI = (ushort)(di + (ushort)(DirectionFlag ? -2 : 2));
+        word1 = (ushort)(DirectionFlag ? -2 : 2);
+        word2 = (ushort)(DL | 0x0700);
+        UInt16[ES, word1] = word2;
+        DI = (ushort)(word1 + (ushort)(DirectionFlag ? -2 : 2));
         AX = 0x4C00;
         InterruptCall(cs1, 0x0123, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0121");

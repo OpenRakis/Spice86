@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         ImageMinus0002Globals.Byte0231 = 1;
         AX = 0x4310;
@@ -174,7 +174,7 @@ public partial class CfgGeneratedOverrides {
                         if (AL != 0) {
                             goto L_0223;
                         }
-                        al1 = 0;
+                        byte1 = 0;
                         goto L_0226;
                     }
                 }
@@ -182,11 +182,11 @@ public partial class CfgGeneratedOverrides {
         }
     L_0223:
         VerifySpeculativeEntryOrFail(cs1, 0x0223, Signature_0223_mov);
-        al1 = DsGlobals.Byte0231;
+        byte1 = DsGlobals.Byte0231;
     L_0226:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

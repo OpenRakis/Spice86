@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: EAX, ECX, ESI, ES, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_1000_F1000(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_1000_F1000(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x1000);
         CX = 4;
         do {
@@ -90,8 +90,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: EAX, ECX, ESI, ES, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F100_1000_F2000(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F100_1000_F2000(ushort word1) {
+        DS = word1;
         CheckExternalEvents(cs1, 0x1000);
         CX = 4;
         do {

@@ -15,23 +15,23 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         DS = Stack.Pop16();
         (AX, CarryFlag) = ServiceCall(cs1, 0x010A, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x011E, '\0', "EMMXXXX0")), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_mov);
-            al1 = 0xFF;
+            byte1 = 0xFF;
         }
         else {
             BX = AX;
             (AX, CarryFlag) = ServiceCall(cs1, 0x0113, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
-            al1 = 0;
+            byte1 = 0;
         }
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

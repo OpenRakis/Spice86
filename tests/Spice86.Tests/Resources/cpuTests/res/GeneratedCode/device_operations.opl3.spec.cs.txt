@@ -24,7 +24,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
         DS = 0;
@@ -37,8 +37,8 @@ public partial class CfgGeneratedOverrides {
         AL &= 0x7F;
         Segment0000Globals.Byte0000 = AL;
         Cmos.WriteRegister(0xA0, 0x45);
-        al = Cmos.ReadRegister(0xA0);
-        Segment0000Globals.Byte0001 = al;
+        byte1 = Cmos.ReadRegister(0xA0);
+        Segment0000Globals.Byte0001 = byte1;
         RealTimeClockPorts.WriteAddress(0x8B);
         Out8((ushort)0x80 /* no device */, 0x8B);
         AL = RealTimeClockPorts.ReadData();
@@ -68,24 +68,24 @@ public partial class CfgGeneratedOverrides {
         Vga.SetPaletteEntry(0x10, 1, 2, 3);
         VgaPorts.WriteDacData(0x3F);
         VgaPorts.WriteDacReadIndex(0x10);
-        al = VgaPorts.ReadDacData();
-        Segment0000Globals.Byte0007 = al;
+        byte1 = VgaPorts.ReadDacData();
+        Segment0000Globals.Byte0007 = byte1;
         AL = VgaPorts.ReadDacData();
         Segment0000Globals.Byte0008 = AL;
-        al = VgaPorts.ReadDacData();
-        Segment0000Globals.Byte0009 = al;
+        byte1 = VgaPorts.ReadDacData();
+        Segment0000Globals.Byte0009 = byte1;
         VgaPorts.WriteDacReadIndex(0x11);
         AL = VgaPorts.ReadDacData();
         Segment0000Globals.Byte000A = AL;
         Vga.WriteSequencerRegister(2, 0x0F);
         VgaPorts.WriteSequencerAddress(2);
-        al = VgaPorts.ReadSequencerData();
-        Segment0000Globals.Byte000B = al;
+        byte1 = VgaPorts.ReadSequencerData();
+        Segment0000Globals.Byte000B = byte1;
         AX = 0x4005;
         Vga.WriteGraphicsControllerRegister(5, 0x40);
         VgaPorts.WriteGraphicsControllerAddress(5);
-        al = VgaPorts.ReadGraphicsControllerData();
-        Segment0000Globals.Byte000C = al;
+        byte1 = VgaPorts.ReadGraphicsControllerData();
+        Segment0000Globals.Byte000C = byte1;
         Opl3Ports.WriteAdlibAddress0(0x20);
         Opl3Ports.WriteAdlibData0(0xF1);
         AL = Opl3Ports.ReadAdlibAddress0();

@@ -14,12 +14,12 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CL, CF. Outputs: AX, DL. Changes: AX, DL, CF, PF, ZF, SF, OF.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
-    public virtual (ushort ax, byte dl) unknown_F000_0039_F0039(ushort ax, byte cl, bool carryFlag) {
-        AX = ax;
-        CL = cl;
-        CarryFlag = carryFlag;
+    public virtual (ushort word2, byte byte2) unknown_F000_0039_F0039(ushort word1, byte byte1, bool flag1) {
+        AX = word1;
+        CL = byte1;
+        CarryFlag = flag1;
         CheckExternalEvents(biosSegment, 0x0039);
-        AX = Alu16.Shl(AX, (int)cl);
+        AX = Alu16.Shl(AX, (int)byte1);
         DL = (byte)(CarryFlag ? 1 : 0);
         NearReturn();
         return (AX, DL);

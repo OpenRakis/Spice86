@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort bx1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
         byte flagOperand_0145 = 0;
         byte flagOperand_014F = 0;
         byte flagOperand_0157 = 0;
@@ -25,8 +25,8 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_01A4 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        bx1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
-        ImageMinus0003Globals.Word01EB = bx1;
+        word1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        ImageMinus0003Globals.Word01EB = word1;
         DX = 0x2000;
         SI = 0x0010;
         AH = 0x55;
@@ -124,7 +124,7 @@ public partial class CfgGeneratedOverrides {
                         if (CarryFlag) {
                             goto L_01D1;
                         }
-                        al1 = 0;
+                        byte1 = 0;
                         goto L_01D3;
                     }
                 }
@@ -132,28 +132,28 @@ public partial class CfgGeneratedOverrides {
         }
     L_01D1:
         VerifySpeculativeEntryOrFail(cs1, 0x01D1, Signature_01D1_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_01D3:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 
     /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX. Changes: EAX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_016D_01D8_018A8() {
-        ushort ax1 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(cs1, 0x01D8);
         AX = 0x3D00;
-        (ax1, CarryFlag) = ServiceCall(cs1, 0x01DD, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, CarryFlag) = ServiceCall(cs1, 0x01DD, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x01DF, Signature_01DF_mov);
-            ax1 = 0xFFFF;
+            word1 = 0xFFFF;
         }
-        Stack.Push16(ax1);
+        Stack.Push16(word1);
         Stack.Push16(DX);
-        AX = ax1;
+        AX = word1;
         Out8(0x0998, AL);
         DX = Stack.Pop16();
         AX = Stack.Pop16();

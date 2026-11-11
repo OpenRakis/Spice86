@@ -43,10 +43,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ES. Outputs: DX. Changes: DX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_00C8_F00C8(ushort es) {
-        ES = es;
+    public virtual ushort unknown_F000_00C8_F00C8(ushort word1) {
+        ES = word1;
         CheckExternalEvents(biosSegment, 0x00C8);
-        DX = es;
+        DX = word1;
         NearReturn();
         return DX;
     }
@@ -59,10 +59,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: DX. Changes: DX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_00CB_F00CB(ushort ax) {
-        AX = ax;
+    public virtual ushort unknown_F000_00CB_F00CB(ushort word1) {
+        AX = word1;
         CheckExternalEvents(biosSegment, 0x00CB);
-        Stack.Push16(ax);
+        Stack.Push16(word1);
         if (AX == 0) {
             DX = Stack.Pop16();
             DX = Alu16.Add(DX, 0x0020);
@@ -82,17 +82,17 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        ushort es;
-        ushort cx1 = 0;
-        ushort es1 = 0;
-        ushort ax1 = 0;
-        ushort cx;
-        ushort bp;
-        ushort dx;
-        ushort ax2 = 0;
-        ushort dx1 = 0;
-        ushort ax3 = 0;
+        ushort word1;
+        ushort word2;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6;
+        ushort word7;
+        ushort word8;
+        ushort word9 = 0;
+        ushort word10 = 0;
+        ushort word11 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -104,63 +104,63 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0F00 = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
-            ax = UInt16[CS, SI];
+            word1 = UInt16[CS, SI];
             DX = UInt16[CS, SI + 2];
-            es = DX;
-            Stack.Push16(ax);
-            Stack.Push16(es);
-            es = 1;
-            cx1 = (ushort)(es + 1);
-            es1 = Stack.Pop16();
+            word2 = DX;
+            Stack.Push16(word1);
+            Stack.Push16(word2);
+            word2 = 1;
+            word3 = (ushort)(word2 + 1);
+            word4 = Stack.Pop16();
             AX = Stack.Pop16();
             UInt16[DS, BX] = AX;
-            UInt16[DS, BX + 2] = es1;
-            UInt16[DS, BX + 4] = cx1;
-            ax1 = UInt16[CS, SI + 4];
-            DX = CallWithStackArguments(biosSegment, 0x003E, () => unknown_F000_00BD_F00BD(ax1), ax1);
-            cx = Stack.Pop16();
+            UInt16[DS, BX + 2] = word4;
+            UInt16[DS, BX + 4] = word3;
+            word5 = UInt16[CS, SI + 4];
+            DX = CallWithStackArguments(biosSegment, 0x003E, () => unknown_F000_00BD_F00BD(word5), word5);
+            word6 = Stack.Pop16();
             UInt16[DS, BX + 6] = DX;
-            UInt16[DS, BX + 8] = cx;
-            ax = UInt16[CS, SI + 6];
-            Stack.Push16(ax);
+            UInt16[DS, BX + 8] = word6;
+            word1 = UInt16[CS, SI + 6];
+            Stack.Push16(word1);
             Stack.Push16(BP);
-            bp = SP;
-            dx = SsUInt16[bp + 2];
+            word7 = SP;
+            word8 = SsUInt16[word7 + 2];
             BP = Stack.Pop16();
             AX = Stack.Pop16();
-            UInt16[DS, BX + 0x0A] = dx;
+            UInt16[DS, BX + 0x0A] = word8;
             Stack.Push16(AX);
             CX = SP;
             AX = Stack.Pop16();
             UInt16[DS, BX + 0x0C] = CX;
-            ax = UInt16[CS, SI + 8];
-            Stack.Push16(ax);
+            word1 = UInt16[CS, SI + 8];
+            Stack.Push16(word1);
             BP = SP;
             SsUInt16[BP] = 0x5A5A;
             AX = Stack.Pop16();
             UInt16[DS, BX + 0x0E] = AX;
-            ax = UInt16[CS, SI + 8];
-            Stack.Push16(ax);
+            word1 = UInt16[CS, SI + 8];
+            Stack.Push16(word1);
             Segment2000Globals.Word0FFE = 0x6B6B;
             DX = Stack.Pop16();
             UInt16[DS, BX + 0x10] = DX;
-            ax2 = UInt16[CS, SI + 0x0A];
+            word9 = UInt16[CS, SI + 0x0A];
             CX = UInt16[CS, SI + 0x0C];
-            dx1 = 0;
+            word10 = 0;
             DI = 0;
-            Stack.Push16(ax2);
+            Stack.Push16(word9);
             if (CX == 0) {
                 DI = Stack.Pop16();
             }
             else {
-                dx1 = Stack.Pop16();
+                word10 = Stack.Pop16();
             }
-            UInt16[DS, BX + 0x12] = dx1;
+            UInt16[DS, BX + 0x12] = word10;
             UInt16[DS, BX + 0x14] = DI;
-            Stack.Push16(es1);
-            ax3 = UInt16[CS, SI + 0x0E];
-            ES = ax3;
-            DX = dx1;
+            Stack.Push16(word4);
+            word11 = UInt16[CS, SI + 0x0E];
+            ES = word11;
+            DX = word10;
             DX = NearCall(biosSegment, 0x00A0, () => unknown_F000_00C8_F00C8(ES));
             ES = Stack.Pop16();
             UInt16[DS, BX + 0x16] = DX;

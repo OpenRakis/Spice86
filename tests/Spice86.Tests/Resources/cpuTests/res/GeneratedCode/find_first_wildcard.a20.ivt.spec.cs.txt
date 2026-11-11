@@ -15,14 +15,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort dx1 = 0;
-        byte al;
-        byte al1 = 0;
+        ushort word1 = 0;
+        byte byte1;
+        byte byte2 = 0;
         byte flagOperand_0122 = 0;
         byte flagOperand_012A = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
-        dx1 = 0x0258;
+        word1 = 0x0258;
         ServiceCall(cs1, 0x0107, Dos, () => Dos.SetDiskTransferAddress(DS, 0x0258));
         SI = 0x0147;
         CX = 0;
@@ -35,8 +35,8 @@ public partial class CfgGeneratedOverrides {
             }
             Stack.Push16(CX);
             Stack.Push16(SI);
-            dx1 = BX;
-            (AX, CarryFlag) = ServiceCall(cs1, 0x011E, Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, dx1, '\0'), 0), r => CarryOnInterruptStack(r.carryFlag));
+            word1 = BX;
+            (AX, CarryFlag) = ServiceCall(cs1, 0x011E, Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, word1, '\0'), 0), r => CarryOnInterruptStack(r.carryFlag));
             SI = Stack.Pop16();
             CX = Stack.Pop16();
             if (CarryFlag) {
@@ -59,18 +59,18 @@ public partial class CfgGeneratedOverrides {
             SI += 3;
         }
         VerifySpeculativeRunOrFail(cs1, 0x0136, SpeculativeRun_0136);
-        al = CL;
-        dx1 = 0x0998;
-        Out8(0x0998, al);
+        byte1 = CL;
+        word1 = 0x0998;
+        Out8(0x0998, byte1);
         VerifySpeculativeRunOrFail(cs1, 0x013C, SpeculativeRun_013C);
-        al1 = 0xFF;
+        byte2 = 0xFF;
         goto L_0142;
     L_0140:
-        al1 = 0;
+        byte2 = 0;
     L_0142:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

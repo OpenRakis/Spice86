@@ -15,31 +15,31 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        byte ah1 = 0;
-        byte al1 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0;
-        ah1 = ServiceCall(cs1, 0x0107, Ems, () => Ems.SavePageMap(0));
-        Alu8.Sub(ah1, 0);
-        if (ah1 == 0) {
+        byte1 = ServiceCall(cs1, 0x0107, Ems, () => Ems.SavePageMap(0));
+        Alu8.Sub(byte1, 0);
+        if (byte1 == 0) {
             DX = 0;
-            ah1 = ServiceCall(cs1, 0x0113, Ems, () => Ems.RestorePageMap(0));
-            Alu8.Sub(ah1, 0);
-            if (ah1 != 0) {
+            byte1 = ServiceCall(cs1, 0x0113, Ems, () => Ems.RestorePageMap(0));
+            Alu8.Sub(byte1, 0);
+            if (byte1 != 0) {
                 goto L_011C;
             }
-            AH = ah1;
-            al1 = 0;
+            AH = byte1;
+            byte2 = 0;
             goto L_011E;
         }
     L_011C:
         VerifySpeculativeEntryOrFail(cs1, 0x011C, Signature_011C_mov);
-        AH = ah1;
-        al1 = 0xFF;
+        AH = byte1;
+        byte2 = 0xFF;
     L_011E:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

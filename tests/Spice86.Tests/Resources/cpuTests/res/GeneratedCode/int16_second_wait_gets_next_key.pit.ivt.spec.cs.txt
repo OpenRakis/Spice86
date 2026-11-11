@@ -15,13 +15,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax;
-        ushort di;
+        ushort word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x0100);
         AX = Alu16.Xor(AX, AX);
         ES = 0;
-        ax = Segment0000Globals.Word0070;
-        CsGlobals.Word0188 = ax;
+        word1 = Segment0000Globals.Word0070;
+        CsGlobals.Word0188 = word1;
         AX = Segment0000Globals.Word0072;
         CsGlobals.Word018A = AX;
         Segment0000Globals.Dword0070 = 0x00000168 | (uint)CS << 16;
@@ -39,8 +39,8 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x013B, 0x16);
         CsGlobals.Byte0187 = AL;
         InterruptFlag = false;
-        ax = CsGlobals.Word0188;
-        EsGlobals.Word0070 = ax;
+        word1 = CsGlobals.Word0188;
+        EsGlobals.Word0070 = word1;
         AX = CsGlobals.Word018A;
         EsGlobals.Word0072 = AX;
         AX = 0xB800;
@@ -49,10 +49,10 @@ public partial class CfgGeneratedOverrides {
         AH = 7;
         AL = CsGlobals.Byte0186;
         SegmentB800Globals.Word0000 = AX;
-        di = (ushort)(DirectionFlag ? -2 : 2);
+        word2 = (ushort)(DirectionFlag ? -2 : 2);
         AL = CsGlobals.Byte0187;
-        UInt16[ES, di] = AX;
-        DI = (ushort)(di + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[ES, word2] = AX;
+        DI = (ushort)(word2 + (ushort)(DirectionFlag ? -2 : 2));
         AX = 0x4C00;
         InterruptCall(cs1, 0x0168, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0166");

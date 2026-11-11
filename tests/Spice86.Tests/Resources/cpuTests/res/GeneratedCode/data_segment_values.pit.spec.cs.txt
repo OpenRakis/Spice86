@@ -43,9 +43,9 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: BP, DS. Outputs: BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (ushort bp, ushort ds) unknown_F000_02B9_F02B9(ushort bp, ushort ds) {
-        BP = bp;
-        DS = ds;
+    public virtual (ushort word3, ushort word4) unknown_F000_02B9_F02B9(ushort word1, ushort word2) {
+        BP = word1;
+        DS = word2;
         CheckExternalEvents(biosSegment, 0x02B9);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x02BA);
@@ -70,13 +70,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_02C9_F02C9() {
-        ushort bp;
+        ushort word1;
         unknown_F000_02C9_F02C9Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x02C9);
-        bp = SP;
+        word1 = SP;
         frame.ReturnIp = Alu16.Add(frame.ReturnIp, 3);
         DsGlobals.Byte0084 = 0x0C;
-        BP = bp;
+        BP = word1;
         return InterruptRet();
     }
 
@@ -89,13 +89,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, FS, GS. Outputs: EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) unknown_F000_02E1_F02E1(uint ebx, uint ebp, uint esi, uint edi, ushort fs, ushort gs) {
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        FS = fs;
-        GS = gs;
+    public virtual (uint dword5, uint dword6, uint dword7, uint dword8, ushort word3, ushort word4, ushort word5) unknown_F000_02E1_F02E1(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2) {
+        EBX = dword1;
+        EBP = dword2;
+        ESI = dword3;
+        EDI = dword4;
+        FS = word1;
+        GS = word2;
         CheckExternalEvents(biosSegment, 0x02E1);
         AX = 0x2001;
         DS = 0x2001;
@@ -110,14 +110,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte al, uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) unknown_F000_02E7_F02E7(uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) {
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        DS = ds;
-        FS = fs;
-        GS = gs;
+    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02E7_F02E7(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+        EBX = dword1;
+        EBP = dword2;
+        ESI = dword3;
+        EDI = dword4;
+        DS = word1;
+        FS = word2;
+        GS = word3;
         CheckExternalEvents(biosSegment, 0x02E7);
         AL = DsGlobals.Byte0064;
         NearReturn();
@@ -132,14 +132,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte al, uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) unknown_F000_02EB_F02EB(uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) {
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        DS = ds;
-        FS = fs;
-        GS = gs;
+    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02EB_F02EB(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+        EBX = dword1;
+        EBP = dword2;
+        ESI = dword3;
+        EDI = dword4;
+        DS = word1;
+        FS = word2;
+        GS = word3;
         CheckExternalEvents(biosSegment, 0x02EB);
         AL = DsGlobals.Byte0065;
         NearReturn();
@@ -153,14 +153,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AH, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte ah, uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) unknown_F000_02EF_F02EF(uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) {
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        DS = ds;
-        FS = fs;
-        GS = gs;
+    public virtual (byte byte1, uint dword5, uint dword6, uint dword7, uint dword8, ushort word4, ushort word5, ushort word6) unknown_F000_02EF_F02EF(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1, ushort word2, ushort word3) {
+        EBX = dword1;
+        EBP = dword2;
+        ESI = dword3;
+        EDI = dword4;
+        DS = word1;
+        FS = word2;
+        GS = word3;
         CheckExternalEvents(biosSegment, 0x02EF);
         Stack.Push16(DS);
         AX = 0x2001;
@@ -198,16 +198,16 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint eax, uint ebx, uint ebp, uint esi, uint edi, ushort ds, ushort fs, ushort gs) unknown_F000_030C_F030C(uint eax, uint ebx, uint ebp, uint esi, uint edi, ushort es, ushort ds, ushort fs, ushort gs) {
-        EAX = eax;
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        ES = es;
-        DS = ds;
-        FS = fs;
-        GS = gs;
+    public virtual (uint dword6, uint dword7, uint dword8, uint dword9, uint dword10, ushort word5, ushort word6, ushort word7) unknown_F000_030C_F030C(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, ushort word1, ushort word2, ushort word3, ushort word4) {
+        EAX = dword1;
+        EBX = dword2;
+        EBP = dword3;
+        ESI = dword4;
+        EDI = dword5;
+        ES = word1;
+        DS = word2;
+        FS = word3;
+        GS = word4;
         CheckExternalEvents(biosSegment, 0x030C);
         AL = EsGlobals.Byte0063;
         Stack.Push16(DS);
@@ -240,9 +240,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EBX, EBP, ESI, FS, GS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        byte al;
-        byte al1 = 0;
+        ushort word1;
+        byte byte1;
+        byte byte2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -274,8 +274,8 @@ public partial class CfgGeneratedOverrides {
         DS = 0x2000;
         Segment2000Globals.Dword0090 = 0x30000000;
         Segment2000Globals.Dword0094 = 0x40000000;
-        ax = DS;
-        ES = ax;
+        word1 = DS;
+        ES = word1;
         Segment2000Globals.Word0060 = 0x1111;
         Segment2000Globals.Word0040 = 0x1111;
         AX = DS;
@@ -285,19 +285,19 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         ES = Stack.Pop16();
         Segment2000Globals.Byte0061 = 0x22;
-        al = Segment2000Globals.Byte0061;
-        Segment2000Globals.Byte0044 = al;
+        byte1 = Segment2000Globals.Byte0061;
+        Segment2000Globals.Byte0044 = byte1;
         Stack.Push16(DS);
         BX = SP;
         SsUInt16[BX] = 0x2001;
         ES = Stack.Pop16();
-        al1 = EsGlobals.Byte0061;
-        Segment2000Globals.Byte0045 = al1;
+        byte2 = EsGlobals.Byte0061;
+        Segment2000Globals.Byte0045 = byte2;
         SI = 0x0046;
         DX = 2;
         do {
             CheckExternalEvents(biosSegment, 0x00EE);
-            AL = al1;
+            AL = byte2;
             CX = (ushort)(DX - 1);
             if (CX == 0) {
                 AX = 0x2000;
@@ -307,23 +307,23 @@ public partial class CfgGeneratedOverrides {
                 AX = 0x2001;
                 ES = 0x2001;
             }
-            al1 = EsGlobals.Byte0062;
-            UInt8[DS, SI] = al1;
+            byte2 = EsGlobals.Byte0062;
+            UInt8[DS, SI] = byte2;
             SI = 0x0051;
             DX--;
         } while (DX != 0);
         DI = DsGlobals.Word006A;
         ES = DsGlobals.Word006C;
-        al = EsGlobals.Byte0062;
-        DsGlobals.Byte0047 = al;
+        byte1 = EsGlobals.Byte0062;
+        DsGlobals.Byte0047 = byte1;
         DI = 0;
         AX = 0x2000;
         ES = 0x2000;
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x0120);
-            al = EsGlobals.Byte0062;
-            UInt8[DS, DI + 0x48] = al;
+            byte1 = EsGlobals.Byte0062;
+            UInt8[DS, DI + 0x48] = byte1;
             DI++;
             AX = (ushort)(ES + 1);
             ES = AX;
@@ -354,8 +354,8 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2000;
         ES = 0x2000;
         InterruptCall(biosSegment, 0x017C, 0x60, biosSegment, 0x02FC, unknown_F000_02FC_F02FCEntry);
-        al = EsGlobals.Byte0068;
-        DsGlobals.Byte0050 = al;
+        byte1 = EsGlobals.Byte0068;
+        DsGlobals.Byte0050 = byte1;
         AX = 0x2000;
         ES = 0x2000;
         SI = 0x0052;
@@ -401,9 +401,9 @@ public partial class CfgGeneratedOverrides {
         ES = DsGlobals.Word0092;
         BX = DsGlobals.Word0094;
         DS = DsGlobals.Word0096;
-        al = EsGlobals.Byte0062;
+        byte1 = EsGlobals.Byte0062;
         DS = Stack.Pop16();
-        DsGlobals.Byte0056 = al;
+        DsGlobals.Byte0056 = byte1;
         AX = 0x2000;
         ES = 0x2000;
         Stack.Push16(DS);
@@ -418,9 +418,9 @@ public partial class CfgGeneratedOverrides {
         ES = 0x2000;
         (EAX, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0200, () => unknown_F000_030C_F030C(EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS));
         DsGlobals.Byte0058 = AL;
-        al = DsGlobals.Byte0062;
+        byte1 = DsGlobals.Byte0062;
         BX = 0x0059;
-        DsGlobals.Byte0059 = al;
+        DsGlobals.Byte0059 = byte1;
         AX = 0x2000;
         EDX = 0x30000000;
         Stack.Push16(0x2000);
@@ -429,8 +429,8 @@ public partial class CfgGeneratedOverrides {
         Stack.Push32(0x30000000);
         CX = Stack.Pop16();
         ES = Stack.Pop16();
-        al = EsGlobals.Byte0010;
-        DsGlobals.Byte005A = al;
+        byte1 = EsGlobals.Byte0010;
+        DsGlobals.Byte005A = byte1;
         AX = 0x2000;
         ES = 0x2000;
         CX = 0;

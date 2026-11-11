@@ -49,19 +49,19 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, ES, DS, FS, GS, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_012B_017FB() {
-        ushort ax1 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(cs1, 0x012B);
         AH = 0x62;
         BX = ServiceCall(cs1, 0x012F, Dos, () => Dos.ReadPspAddress());
         ES = BX;
-        ax1 = EsGlobals.Word002C;
-        Alu16.And(ax1, ax1);
-        AX = ax1;
-        if (ax1 == 0) {
+        word1 = EsGlobals.Word002C;
+        Alu16.And(word1, word1);
+        AX = word1;
+        if (word1 == 0) {
             return unknown_016D_0124_017F4(0x0000);
         }
-        ES = ax1;
-        AX = ax1;
+        ES = word1;
+        AX = word1;
         return NearRet();
     }
 

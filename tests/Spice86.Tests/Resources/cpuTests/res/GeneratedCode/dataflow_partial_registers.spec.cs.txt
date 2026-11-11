@@ -21,15 +21,15 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax1 = 0;
-        ushort cx;
-        ushort dx1 = 0;
-        ushort cx1 = 0;
-        ushort ax2 = 0;
-        ushort cx2 = 0;
-        ushort dx2 = 0;
+        ushort word1 = 0;
+        ushort word2;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6 = 0;
+        ushort word7 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        ax1 = 0x2000;
+        word1 = 0x2000;
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
@@ -53,26 +53,26 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 8] = AX;
             AX = (ushort)(UInt16[CS, SI] + 1);
             AH = 7;
-            cx = AX;
-            UInt16[DS, BX + 0x0A] = cx;
-            dx1 = UInt16[CS, SI + 2];
-            AX = dx1;
+            word2 = AX;
+            UInt16[DS, BX + 0x0A] = word2;
+            word3 = UInt16[CS, SI + 2];
+            AX = word3;
             AL = 1;
-            cx1 = AX;
-            UInt16[DS, BX + 0x0C] = cx1;
+            word4 = AX;
+            UInt16[DS, BX + 0x0C] = word4;
             Stack.Push16(DS);
             DS = 0x2200;
-            ax2 = UInt16[CS, SI];
-            Segment2200Globals.Word0000 = ax2;
+            word5 = UInt16[CS, SI];
+            Segment2200Globals.Word0000 = word5;
             NearCall(biosSegment, 0x0069, unknown_F000_00A4_F00A4Entry);
-            cx2 = Segment2200Globals.Word0000;
-            dx2 = DS;
+            word6 = Segment2200Globals.Word0000;
+            word7 = DS;
             DS = Stack.Pop16();
-            UInt16[DS, BX + 0x0E] = cx2;
-            UInt16[DS, BX + 0x10] = dx2;
+            UInt16[DS, BX + 0x0E] = word6;
+            UInt16[DS, BX + 0x10] = word7;
             ES = 0x2200;
-            ax1 = UInt16[CS, SI + 2];
-            Segment2200Globals.Word0002 = ax1;
+            word1 = UInt16[CS, SI + 2];
+            Segment2200Globals.Word0002 = word1;
             NearCall(biosSegment, 0x0086, unknown_F000_00A4_F00A4Entry);
             CX = Segment2200Globals.Word0002;
             DX = ES;
@@ -84,7 +84,7 @@ public partial class CfgGeneratedOverrides {
             SI = Alu16.Add(SI, 8);
             DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
         } while (!ZeroFlag);
-        AX = ax1;
+        AX = word1;
         return Hlt();
     }
 

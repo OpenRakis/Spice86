@@ -57,23 +57,23 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, BX, DS, DF. Outputs: EAX, BX, flags, DF. Changes: EAX, BX, flags, DF.</summary>
     public virtual Action unknown_F000_0300_F0300() {
-        ushort ax1 = 0;
-        byte al;
+        ushort word1 = 0;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0x0300);
         DsGlobals.Word040E = SS;
         DsGlobals.Word0410 = SP;
         Stack.Push16(AX);
         Stack.Push16(BX);
-        ax1 = DsGlobals.Word040E;
-        BL = (byte)(ax1 == 0 ? 1 : 0);
+        word1 = DsGlobals.Word040E;
+        BL = (byte)(word1 == 0 ? 1 : 0);
         BH = (byte)(DsGlobals.Word0410 == 0x7FF8 ? 1 : 0);
         BL &= BH;
-        AX = ax1;
-        AL = (byte)(ax1 == 0x1000 ? 1 : 0);
+        AX = word1;
+        AL = (byte)(word1 == 0x1000 ? 1 : 0);
         AH = (byte)(DsGlobals.Word0410 == 0x8FFA ? 1 : 0);
-        al = (byte)((AL & AH | BL) ^ 1);
+        byte1 = (byte)((AL & AH | BL) ^ 1);
         CarryFlag = false;
-        DsGlobals.Byte040D |= al;
+        DsGlobals.Byte040D |= byte1;
         DsGlobals.Byte040C = Alu8.Inc(DsGlobals.Byte040C);
         PicPorts.WritePrimaryData(0xFF);
         PicPorts.WritePrimaryCommand(0x20);
@@ -84,7 +84,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         AX = 0;
@@ -127,15 +127,15 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Byte0403 = 1;
         Segment0000Globals.Dword0404 = 0x90001000u;
         Pit.ProgramChannel(0, 0x30, 0x04A9);
-        al1 = 0x0A;
+        byte1 = 0x0A;
         PicPorts.WritePrimaryCommand(0x0A);
         do {
             CheckExternalEvents(biosSegment, 0x00C1);
-            AL = al1;
-            al1 = PicPorts.ReadPrimaryCommand();
-            Alu8.And(al1, 1);
-        } while ((al1 & 1) == 0);
-        AL = al1;
+            AL = byte1;
+            byte1 = PicPorts.ReadPrimaryCommand();
+            Alu8.And(byte1, 1);
+        } while ((byte1 & 1) == 0);
+        AL = byte1;
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00C8);
         NearCall(biosSegment, 0x00CC, unknown_F000_0200_F0200);

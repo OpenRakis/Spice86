@@ -15,34 +15,34 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort dx1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         BX = 2;
-        (AH, dx1) = ServiceCall(cs1, 0x0107, Ems, () => Ems.AllocatePageHandle(2, DX));
+        (AH, word1) = ServiceCall(cs1, 0x0107, Ems, () => Ems.AllocatePageHandle(2, DX));
         Alu8.Sub(AH, 0);
         if (AH == 0) {
-            SI = dx1;
+            SI = word1;
             AX = 0xE000;
             ES = 0xE000;
             AL = 0;
             BX = 0;
-            dx1 = SI;
-            AH = ServiceCall(cs1, 0x011E, Ems, () => Ems.MapUnmapHandlePage(0, 0, dx1));
+            word1 = SI;
+            AH = ServiceCall(cs1, 0x011E, Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
             Alu8.Sub(AH, 0);
             if (AH == 0) {
                 SegmentE000Globals.Byte0000 = 0x11;
                 AL = 0;
                 BX = 1;
-                dx1 = SI;
-                AH = ServiceCall(cs1, 0x0134, Ems, () => Ems.MapUnmapHandlePage(1, 0, dx1));
+                word1 = SI;
+                AH = ServiceCall(cs1, 0x0134, Ems, () => Ems.MapUnmapHandlePage(1, 0, word1));
                 Alu8.Sub(AH, 0);
                 if (AH == 0) {
                     SegmentE000Globals.Byte0000 = 0x22;
                     AL = 0;
                     BX = 0;
-                    dx1 = SI;
-                    AH = ServiceCall(cs1, 0x014A, Ems, () => Ems.MapUnmapHandlePage(0, 0, dx1));
+                    word1 = SI;
+                    AH = ServiceCall(cs1, 0x014A, Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
                     Alu8.Sub(AH, 0);
                     if (AH == 0) {
                         AL = SegmentE000Globals.Byte0000;
@@ -50,7 +50,7 @@ public partial class CfgGeneratedOverrides {
                         if (AL != 0x11) {
                             goto L_015B;
                         }
-                        al1 = 0;
+                        byte1 = 0;
                         goto L_015D;
                     }
                 }
@@ -58,11 +58,11 @@ public partial class CfgGeneratedOverrides {
         }
     L_015B:
         VerifySpeculativeEntryOrFail(cs1, 0x015B, Signature_015B_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_015D:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

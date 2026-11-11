@@ -41,10 +41,10 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort es;
-        ushort ax;
-        byte al;
-        ushort bx;
+        ushort word1;
+        ushort word2;
+        byte byte1;
+        ushort word3;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -62,18 +62,18 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0070 = 0x56781234;
         Segment2000Globals.Dword0074 = 0xDEF09ABCu;
         DI = Segment2000Globals.Word0070;
-        es = Segment2000Globals.Word0072;
-        ax = DI;
-        Segment2000Globals.Word0043 = ax;
-        AX = es;
+        word1 = Segment2000Globals.Word0072;
+        word2 = DI;
+        Segment2000Globals.Word0043 = word2;
+        AX = word1;
         Segment2000Globals.Word0045 = AX;
         AX = 0x2000;
         Segment2000Globals.Byte0080 = 1;
         Segment2000Globals.Byte0081 = 2;
         Segment2000Globals.Byte0082 = 3;
         Segment2000Globals.Word0088 = 2;
-        al = Segment2000Globals.Byte0082;
-        Segment2000Globals.Byte0047 = al;
+        byte1 = Segment2000Globals.Byte0082;
+        Segment2000Globals.Byte0047 = byte1;
         Segment2000Globals.Byte0090 = 0;
         Segment2000Globals.Byte0091 = 1;
         Segment2000Globals.Byte0092 = 2;
@@ -93,8 +93,8 @@ public partial class CfgGeneratedOverrides {
         Segment3005Globals.Byte0000 = 0x9E;
         Stack.Push16(0xFFF0);
         AX = 0;
-        bx = Stack.Pop16();
-        AL = UInt8[DS, bx + 0x60];
+        word3 = Stack.Pop16();
+        AL = UInt8[DS, word3 + 0x60];
         Segment2000Globals.Byte0049 = AL;
         Segment2000Globals.Byte004A = 0;
         AX = Alu16.Xor(AX, AX);

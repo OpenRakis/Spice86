@@ -22,20 +22,20 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Byte0400 = 1;
-        al1 = DsGlobals.Byte0500;
-        Alu8.And(al1, al1);
-        if (al1 != 0) {
+        byte1 = DsGlobals.Byte0500;
+        Alu8.And(byte1, byte1);
+        if (byte1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0013, Signature_0013_call);
-            AL = al1;
+            AL = byte1;
             NearCall(biosSegment, 0x0016, unknown_F000_001B_F001BEntry);
             throw FailAsUntested("Untested return from call at F000:0013");
         }
         DsGlobals.Byte0401 = 0xDD;
         DsGlobals.Byte0402 = 0xAA;
-        AL = al1;
+        AL = byte1;
         return Hlt();
     }
 

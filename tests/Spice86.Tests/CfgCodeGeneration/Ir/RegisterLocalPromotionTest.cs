@@ -20,6 +20,9 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.CfgCpu;
 using Spice86.Tests.CfgCpu.Blocks;
 
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
 using Xunit;
 
 using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
@@ -42,8 +45,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert
-        program.SourceText.Should().Contain("CX = ax;");
-        program.SourceText.Should().NotContain("AX = ax;");
+        program.SourceText.Should().Contain("CX = word2;");
+        program.SourceText.Should().NotContain("AX = word2;");
         AssertCompiles(program);
     }
 
@@ -66,9 +69,9 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert
-        program.SourceText.Should().Contain("ushort ax1 = 0;");
-        program.SourceText.Should().Contain("CX = ax1;");
-        program.SourceText.Should().Contain("AX = ax1;");
+        program.SourceText.Should().Contain("ushort word2 = 0;");
+        program.SourceText.Should().Contain("CX = word2;");
+        program.SourceText.Should().Contain("AX = word2;");
         AssertCompiles(program);
     }
 
@@ -98,8 +101,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(entries, main, second);
 
         // Assert
-        program.SourceText.Should().Contain("BX = ax;");
-        program.SourceText.Should().Contain("AX = ax;");
+        program.SourceText.Should().Contain("BX = word1;");
+        program.SourceText.Should().Contain("AX = word1;");
         AssertCompiles(program);
     }
 
@@ -126,8 +129,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(entries, main, second);
 
         // Assert
-        program.SourceText.Should().Contain("CX = ax;");
-        program.SourceText.Should().Contain("AX = ax;");
+        program.SourceText.Should().Contain("CX = word1;");
+        program.SourceText.Should().Contain("AX = word1;");
         AssertCompiles(program);
     }
 
@@ -166,7 +169,7 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = GenerateProgram([mainPartition, handler], [faultTransfer]);
 
         // Assert: the faulting div reads every register; the write-back precedes it.
-        program.SourceText.Should().Contain("AX = ax;");
+        program.SourceText.Should().Contain("AX = word1;");
         AssertCompiles(program);
     }
 
@@ -194,8 +197,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(entries, main, second);
 
         // Assert
-        program.SourceText.Should().Contain("CX = ds;");
-        program.SourceText.Should().Contain("DS = ds;");
+        program.SourceText.Should().Contain("CX = word1;");
+        program.SourceText.Should().Contain("DS = word1;");
         AssertCompiles(program);
     }
 
@@ -258,9 +261,9 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert: one declaration, both definitions print as the local.
-        program.SourceText.Should().Contain("CX = ax;");
-        program.SourceText.Should().Contain("DX = ax;");
-        program.SourceText.Split('\n').Count(line => line.Contains("ushort ax;")).Should().Be(1);
+        program.SourceText.Should().Contain("CX = word2;");
+        program.SourceText.Should().Contain("DX = word2;");
+        program.SourceText.Split('\n').Count(line => line.Contains("ushort word2;")).Should().Be(1);
         AssertCompiles(program);
     }
 
@@ -280,9 +283,9 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert: the killed web takes no write-back before AX = 5 (the mov dx,ax folds to DX = 5).
-        program.SourceText.Should().Contain("CX = ax;");
+        program.SourceText.Should().Contain("CX = word2;");
         program.SourceText.Should().Contain("AX = 5;");
-        program.SourceText.Should().NotContain("AX = ax;");
+        program.SourceText.Should().NotContain("AX = word2;");
         AssertCompiles(program);
     }
 
@@ -310,10 +313,10 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert
-        program.SourceText.Should().Contain("ushort bx1 = 0;");
-        program.SourceText.Should().Contain("bx1 = 1;");
-        program.SourceText.Should().Contain("bx1 = 2;");
-        program.SourceText.Should().Contain("CX = bx1;");
+        program.SourceText.Should().Contain("ushort word2 = 0;");
+        program.SourceText.Should().Contain("word2 = 1;");
+        program.SourceText.Should().Contain("word2 = 2;");
+        program.SourceText.Should().Contain("CX = word2;");
         AssertCompiles(program);
     }
 
@@ -338,9 +341,9 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert: the condition prints the local and no write-back precedes the branch.
-        program.SourceText.Should().Contain("ushort cx;");
-        program.SourceText.Should().Contain("cx == 0");
-        program.SourceText.Should().NotContain("CX = cx;");
+        program.SourceText.Should().Contain("ushort word2;");
+        program.SourceText.Should().Contain("word2 == 0");
+        program.SourceText.Should().NotContain("CX = word2;");
         AssertCompiles(program);
     }
 
@@ -364,8 +367,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert
-        program.SourceText.Should().NotContain("cx1");
-        program.SourceText.Should().NotContain("ushort cx");
+        program.SourceText.Should().NotContain("word2");
+        program.SourceText.Should().NotContain("ushort word2");
         AssertCompiles(program);
     }
 
@@ -387,7 +390,7 @@ public sealed class RegisterLocalPromotionTest {
 
         // Assert
         program.SourceText.Should().Contain("CX = AX;");
-        program.SourceText.Should().NotContain("ushort ax");
+        program.SourceText.Should().NotContain("ushort word2");
         AssertCompiles(program);
     }
 
@@ -414,7 +417,7 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), [leaf], blocks);
 
         // Assert
-        program.SourceText.Should().NotContain("ushort bx1");
+        program.SourceText.Should().NotContain("ushort word2");
         program.SourceText.Should().Contain("BX = DsGlobals.Word0200;");
         program.SourceText.Should().Contain("CX = BX;");
         AssertCompiles(program);
@@ -460,10 +463,10 @@ public sealed class RegisterLocalPromotionTest {
             new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(partitioned);
 
         // Assert
-        program.SourceText.Should().Contain("ushort bx;");
-        program.SourceText.Should().Contain("bx = DsGlobals.Word0200;");
-        program.SourceText.Should().Contain("BX = bx;");
-        program.SourceText.Should().Contain("CX = bx;");
+        program.SourceText.Should().Contain("ushort word1;");
+        program.SourceText.Should().Contain("word1 = DsGlobals.Word0200;");
+        program.SourceText.Should().Contain("BX = word1;");
+        program.SourceText.Should().Contain("CX = word1;");
         AssertCompiles(program);
     }
 
@@ -538,8 +541,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert: neither web of the instruction prints a local.
-        program.SourceText.Should().NotContain("ushort ax;");
-        program.SourceText.Should().NotContain("ushort bx;");
+        program.SourceText.Should().NotContain("ushort word");
+        program.SourceText.Should().NotContain("ushort word");
         AssertCompiles(program);
     }
 
@@ -567,10 +570,10 @@ public sealed class RegisterLocalPromotionTest {
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
-        program.SourceText.Should().Contain("ax = DsGlobals.Word0200;");
-        program.SourceText.Should().Contain("DsGlobals.Word0202 = ax;");
+        program.SourceText.Should().Contain("word1 = DsGlobals.Word0200;");
+        program.SourceText.Should().Contain("DsGlobals.Word0202 = word1;");
         program.SourceText.Should().Contain("AX = Stack.Pop16();");
-        program.SourceText.Should().NotContain("AX = ax;");
+        program.SourceText.Should().NotContain("AX = word1;");
         program.SourceText.Should().Contain("DsGlobals.Word0204 = AX;");
         AssertCompiles(program);
     }
@@ -604,11 +607,11 @@ public sealed class RegisterLocalPromotionTest {
         // Assert: the region web promotes and is read as a value, the pop ends it with no
         // write-back before the pop, and the read after it is the popped value (which promotes
         // under the same name  -  `pop es` emits a memory statement plus the SP bump).
-        program.SourceText.Should().Contain("es = ax;");
-        program.SourceText.Should().Contain("DX = es;");
-        program.SourceText.Should().NotContain("ES = es;\n              // F000:000A pop ES");
-        program.SourceText.Should().Contain("es = Stack.Pop16();");
-        program.SourceText.Should().Contain("DsGlobals.Word0204 = es;");
+        program.SourceText.Should().Contain("word2 = word1;");
+        program.SourceText.Should().Contain("DX = word2;");
+        program.SourceText.Should().NotContain("ES = word2;\n              // F000:000A pop ES");
+        program.SourceText.Should().Contain("word2 = Stack.Pop16();");
+        program.SourceText.Should().Contain("DsGlobals.Word0204 = word2;");
         AssertCompiles(program);
     }
 
@@ -643,9 +646,9 @@ public sealed class RegisterLocalPromotionTest {
 
         // Assert: a signed local prints bare inside the signed comparisons and with a cast back at
         // the plain reads; the definition from a signed conversion keeps no round trip.
-        program.SourceText.Should().Contain("short ax1 = 0;");
-        program.SourceText.Should().Contain("ax1 = (short)(sbyte)");
-        program.SourceText.Should().Contain("CX = (ushort)ax1;");
+        program.SourceText.Should().Contain("short word2 = 0;");
+        program.SourceText.Should().Contain("word2 = (short)(sbyte)");
+        program.SourceText.Should().Contain("CX = (ushort)word2;");
         program.SourceText.Should().NotContain("(ushort)((short)");
         program.SourceText.Should().NotContain("(short)((ushort)");
         AssertCompiles(program);
@@ -671,8 +674,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert: the unsigned local is cast back to the signed type inside the comparison.
-        program.SourceText.Should().Contain("ushort ax1 = 0;");
-        program.SourceText.Should().Contain("(short)ax1");
+        program.SourceText.Should().Contain("ushort word2 = 0;");
+        program.SourceText.Should().Contain("(short)word2");
         AssertCompiles(program);
     }
 
@@ -705,8 +708,8 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert
-        program.SourceText.Should().Contain("short ax1 = 0;");
-        program.SourceText.Should().Contain("AX = (ushort)ax1;");
+        program.SourceText.Should().Contain("short word2 = 0;");
+        program.SourceText.Should().Contain("AX = (ushort)word2;");
         AssertCompiles(program);
     }
 
@@ -730,7 +733,7 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert
-        program.SourceText.Should().Contain("DX = dx;");
+        program.SourceText.Should().Contain("DX = word4;");
         AssertCompiles(program);
     }
 
@@ -758,7 +761,63 @@ public sealed class RegisterLocalPromotionTest {
         GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
 
         // Assert
-        program.SourceText.Should().NotContain("uint value1");
+        program.SourceText.Should().NotContain("uint dword");
         AssertCompiles(program);
+    }
+
+    [Fact]
+    public void MethodPreparationOrder_DoesNotChangeLocalNames() {
+        // Arrange: two single-block methods, each with a register web that promotes (mov ax,[x] /
+        // mov cx,ax / mov dx,ax / ret). Generating the program with the partitions in one order or
+        // the other must give every method the same generic names: numbering derives from
+        // definition addresses inside the method, never from preparation order.
+        TestInstructionHelper helper = new();
+        CfgInstruction aLoad = Parse(helper, 0x0000, 0xA1, 0x00, 0x02);
+        CfgInstruction aUse1 = Parse(helper, 0x0003, 0x89, 0xC1);
+        CfgInstruction aUse2 = Parse(helper, 0x0005, 0x89, 0xC2);
+        CfgInstruction aRet = Parse(helper, 0x0007, 0xC3);
+        CfgBlock blockA = Linear(aLoad, aUse1, aUse2, aRet);
+        CfgInstruction bLoad = Parse(helper, 0x0100, 0x8B, 0x1E, 0x04, 0x02);
+        CfgInstruction bUse1 = Parse(helper, 0x0104, 0x89, 0xD9);
+        CfgInstruction bUse2 = Parse(helper, 0x0106, 0x89, 0xDA);
+        CfgInstruction bRet = Parse(helper, 0x0108, 0xC3);
+        CfgBlock blockB = Linear(bLoad, bUse1, bUse2, bRet);
+
+        // Act
+        GeneratedCSharpProgram forward = GenerateProgram(
+            [Partition(1, blockA), Partition(2, blockB)], []);
+        GeneratedCSharpProgram backward = GenerateProgram(
+            [Partition(2, blockB), Partition(1, blockA)], []);
+
+        // Assert
+        NamesPerMethod(forward).Should().BeEquivalentTo(NamesPerMethod(backward),
+            "each method keeps the same names whichever order the methods are prepared in");
+        AssertCompiles(forward);
+        AssertCompiles(backward);
+    }
+
+    private static readonly Regex MethodHeader = new(@"public virtual \S+ (\w+)\(");
+    private static readonly Regex GenericName = new(@"\b(?:word|byte|dword|flag)\d+\b");
+
+    private static Dictionary<string, List<string>> NamesPerMethod(GeneratedCSharpProgram program) {
+        Dictionary<string, List<string>> names = new(StringComparer.Ordinal);
+        string current = "";
+        foreach (string line in program.SourceText.Split('\n')) {
+            Match header = MethodHeader.Match(line);
+            if (header.Success) {
+                current = header.Groups[1].Value;
+            }
+            if (!names.TryGetValue(current, out List<string>? found)) {
+                names[current] = found = [];
+            }
+            foreach (Match match in GenericName.Matches(line)) {
+                found.Add(match.Value);
+            }
+        }
+        names.Remove("");
+        foreach (List<string> found in names.Values) {
+            found.Sort(StringComparer.Ordinal);
+        }
+        return names;
     }
 }

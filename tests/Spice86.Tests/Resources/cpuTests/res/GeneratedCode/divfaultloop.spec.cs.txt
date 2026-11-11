@@ -33,15 +33,15 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: BX, BP, DF. Outputs: BX, BP, flags, DF. Changes: BX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_0037_F0037() {
-        ushort bx1 = 0;
+        ushort word1 = 0;
         unknown_F000_0037_F0037Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0037);
         Stack.Push16(BP);
         Stack.Push16(BX);
-        bx1 = (ushort)(SegmentF000Globals.Word0100 + 1);
-        SegmentF000Globals.Word0100 = bx1;
-        Alu16.Sub(bx1, 3);
-        if (bx1 == 3) {
+        word1 = (ushort)(SegmentF000Globals.Word0100 + 1);
+        SegmentF000Globals.Word0100 = word1;
+        Alu16.Sub(word1, 3);
+        if (word1 == 3) {
             SegmentF000Globals.Word0102 = 5;
         }
         frame.ReturnIp = 0x0020;

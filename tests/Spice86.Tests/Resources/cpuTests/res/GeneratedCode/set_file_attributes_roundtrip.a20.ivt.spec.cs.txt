@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x012D;
         (AX, CX, CarryFlag) = ServiceCall(cs1, 0x010B, Dos, () => Dos.GetSetFileAttributes(0x4301, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), 0x0021), r => CarryOnInterruptStack(r.carryFlag));
@@ -30,17 +30,17 @@ public partial class CfgGeneratedOverrides {
                 if ((CL & 1) == 0) {
                     goto L_0126;
                 }
-                al1 = 0;
+                byte1 = 0;
                 goto L_0128;
             }
         }
     L_0126:
         VerifySpeculativeEntryOrFail(cs1, 0x0126, Signature_0126_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_0128:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

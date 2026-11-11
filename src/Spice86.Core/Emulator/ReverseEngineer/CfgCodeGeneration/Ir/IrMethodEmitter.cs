@@ -328,6 +328,7 @@ internal sealed class IrMethodEmitter(
         if (signature is not null) {
             foreach (TypedParameter parameter in signature.Parameters) {
                 names.Add(parameter.Name);
+                names.Add(parameter.Register.ToLowerInvariant());
             }
         }
         if (framePlan is not null) {

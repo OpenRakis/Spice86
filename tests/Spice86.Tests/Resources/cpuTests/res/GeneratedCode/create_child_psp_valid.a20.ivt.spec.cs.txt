@@ -15,20 +15,20 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, ESI, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort bx1 = 0;
-        ushort bp1 = 0;
-        ushort di1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        byte byte1 = 0;
         byte flagOperand_0130 = 0;
         byte flagOperand_0138 = 0;
         ushort flagOperand_0140 = 0;
         ushort flagOperand_0147 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        bx1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
-        bp1 = bx1;
-        ES = bx1;
-        di1 = EsGlobals.Word002C;
+        word1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        word2 = word1;
+        ES = word1;
+        word3 = EsGlobals.Word002C;
         DX = 0x2000;
         SI = 0x0010;
         AH = 0x55;
@@ -36,11 +36,11 @@ public partial class CfgGeneratedOverrides {
         Alu8.Sub(AL, 0xF0);
         if (AL == 0xF0) {
             AH = 0x62;
-            bx1 = ServiceCall(cs1, 0x011F, Dos, () => Dos.ReadPspAddress());
-            Alu16.Sub(bx1, 0x2000);
-            if (bx1 == 0x2000) {
-                bx1 = bp1;
-                ServiceCall(cs1, 0x012B, Dos, () => Dos.SetCurrentPsp(bx1));
+            word1 = ServiceCall(cs1, 0x011F, Dos, () => Dos.ReadPspAddress());
+            Alu16.Sub(word1, 0x2000);
+            if (word1 == 0x2000) {
+                word1 = word2;
+                ServiceCall(cs1, 0x012B, Dos, () => Dos.SetCurrentPsp(word1));
                 AX = 0x2000;
                 ES = 0x2000;
                 flagOperand_0130 = Segment2000Globals.Byte0000;
@@ -50,16 +50,16 @@ public partial class CfgGeneratedOverrides {
                     Alu8.Sub(flagOperand_0138, 0x20);
                     if (flagOperand_0138 == 0x20) {
                         flagOperand_0140 = Segment2000Globals.Word0016;
-                        Alu16.Sub(flagOperand_0140, bp1);
-                        if (flagOperand_0140 != bp1) {
+                        Alu16.Sub(flagOperand_0140, word2);
+                        if (flagOperand_0140 != word2) {
                             goto L_0152;
                         }
                         flagOperand_0147 = Segment2000Globals.Word002C;
-                        Alu16.Sub(flagOperand_0147, di1);
-                        if (flagOperand_0147 != di1) {
+                        Alu16.Sub(flagOperand_0147, word3);
+                        if (flagOperand_0147 != word3) {
                             goto L_0152;
                         }
-                        al1 = 0;
+                        byte1 = 0;
                         goto L_0154;
                     }
                 }
@@ -67,14 +67,14 @@ public partial class CfgGeneratedOverrides {
         }
     L_0152:
         VerifySpeculativeEntryOrFail(cs1, 0x0152, Signature_0152_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_0154:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        BX = bx1;
-        BP = bp1;
-        DI = di1;
-        AL = al1;
+        Out8(0x0999, byte1);
+        BX = word1;
+        BP = word2;
+        DI = word3;
+        AL = byte1;
         return Hlt();
     }
 

@@ -14,7 +14,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort cx;
+        ushort word1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Word0000 = 0x1B76;
         DsGlobals.Word0002 = 0x240B;
@@ -28,10 +28,10 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0020 = 0x4218;
-        cx = Alu16.And(0x3C84, DsGlobals.Word0002);
+        word1 = Alu16.And(0x3C84, DsGlobals.Word0002);
         Stack.Push16(FlagRegister16);
-        DsGlobals.Word0022 = cx;
-        DsGlobals.Word0000 = Alu16.And(DsGlobals.Word0000, cx);
+        DsGlobals.Word0022 = word1;
+        DsGlobals.Word0000 = Alu16.And(DsGlobals.Word0000, word1);
         Stack.Push16(FlagRegister16);
         AX = 0x4451;
         CarryFlag = false;
@@ -62,7 +62,7 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         Stack.Push16(FlagRegister16);
         DsGlobals.Byte0028 = 0x40;
-        CX = cx;
+        CX = word1;
         CL = Alu8.And(CL, DsGlobals.Byte0001);
         Stack.Push16(FlagRegister16);
         DsGlobals.Byte0029 = CL;

@@ -14,13 +14,13 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: SI. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort cx1 = 0;
-        ushort cx2 = 0;
-        ushort ax1 = 0;
-        ushort ax2 = 0;
-        ushort cx;
-        ushort bp;
-        ushort ax;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5;
+        ushort word6;
+        ushort word7;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         ES = 0x2000;
@@ -59,20 +59,20 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0003 = 0;
         }
         Segment2000Globals.Word0004 = DX;
-        cx1 = BitScanForward16(0x0A00);
-        Segment2000Globals.Word0006 = cx1;
-        cx2 = BitScanReverse16(0x0A00);
-        Segment2000Globals.Dword0008 = (uint)cx2 | 0x234A0000;
+        word1 = BitScanForward16(0x0A00);
+        Segment2000Globals.Word0006 = word1;
+        word2 = BitScanReverse16(0x0A00);
+        Segment2000Globals.Dword0008 = (uint)word2 | 0x234A0000;
         Segment2000Globals.Word000C = 0xD123;
         ushort sum_0060 = 0x000C;
         CX = 5;
-        ax1 = sum_0060;
-        Segment2000Globals.Dword000E = (uint)ax1 | 0x00050000;
+        word3 = sum_0060;
+        Segment2000Globals.Dword000E = (uint)word3 | 0x00050000;
         Segment2000Globals.Word0012 = 9;
         Segment2000Globals.Word0014 = 9;
         EDX = 0x78563412;
         Segment2000Globals.Dword0016 = 0x78563412;
-        ax2 = SP;
+        word4 = SP;
         byte level_0093 = 0;
         ushort oldBasePointer_0093 = 0x1234;
         ushort spIndex_0093 = (ushort)(SP - 2);
@@ -96,9 +96,9 @@ public partial class CfgGeneratedOverrides {
         BP = framePtr_0093;
         spIndex_0093 -= 4;
         SP = spIndex_0093;
-        cx = (ushort)(BP - SP);
+        word5 = (ushort)(BP - SP);
         Stack.Leave16();
-        Segment2000Globals.Dword001A = (uint)cx | (uint)(ushort)(SP - ax2) << 16;
+        Segment2000Globals.Dword001A = (uint)word5 | (uint)(ushort)(SP - word4) << 16;
         Segment2000Globals.Word001E = BP;
         Segment2000Globals.Dword0E00 = 0x000A0000;
         CheckBound((short)5, Int16[DS, 0x0E00], Int16[DS, 0x0E02]);
@@ -112,9 +112,9 @@ public partial class CfgGeneratedOverrides {
         EDX = 0xFFFFFFFFu;
         Segment2000Globals.Dword0032 = 0xFFFFFFFFu;
         Stack.PushAll16(1, 2, 3, 0, SP, 5, SI, 7);
-        bp = SP;
-        ax = SsUInt16[bp + 6];
-        Segment2000Globals.Word003C = ax;
+        word6 = SP;
+        word7 = SsUInt16[word6 + 6];
+        Segment2000Globals.Word003C = word7;
         Stack.PopAll16();
         UInt16[DS, BX + 0x36] = AX;
         UInt16[DS, BX + 0x38] = CX;

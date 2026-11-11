@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax1 = 0;
-        ushort ax2 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x2000;
         SS = 0x2000;
@@ -30,13 +30,13 @@ public partial class CfgGeneratedOverrides {
         BX = 1;
         CX = 4;
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        (ax1, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.WriteFile(1, 4, DS, 0x017A), r => CarryOnInterruptStack(r.carryFlag));
-        Segment2000Globals.Word0042 = ax1;
+        (word1, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.WriteFile(1, 4, DS, 0x017A), r => CarryOnInterruptStack(r.carryFlag));
+        Segment2000Globals.Word0042 = word1;
         AX = Alu16.Adc(0, 0);
         Segment2000Globals.Byte0044 = AL;
         AL = 0;
-        (ax2, CarryFlag) = ServiceCall(cs1, 0x0139, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")), r => CarryOnInterruptStack(r.carryFlag));
-        Segment2000Globals.Word0045 = ax2;
+        (word2, CarryFlag) = ServiceCall(cs1, 0x0139, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+        Segment2000Globals.Word0045 = word2;
         AX = Alu16.Adc(0, 0);
         Segment2000Globals.Byte0047 = AL;
         ImageMinus0003Globals.Byte017E = 0x48;

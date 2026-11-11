@@ -16,14 +16,14 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, EBP, SI, ES, DS, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_006A_F006A() {
-        ushort ax;
-        ushort di1 = 0;
-        ushort dx;
-        ushort dx1 = 0;
-        ushort di2 = 0;
-        ushort di;
-        ushort si1 = 0;
-        ushort di3 = 0;
+        ushort word1;
+        ushort word2 = 0;
+        ushort word3;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6;
+        ushort word7 = 0;
+        ushort word8 = 0;
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x006A);
         try {
@@ -35,10 +35,10 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, BX] = AX;
         UInt16[DS, BX + 2] = DX;
         UInt16[DS, BX + 4] = CX;
-        ax = DsGlobals.Word0E00;
-        UInt16[DS, BX + 6] = ax;
+        word1 = DsGlobals.Word0E00;
+        UInt16[DS, BX + 6] = word1;
         CX = 3;
-        di1 = 0x0E10;
+        word2 = 0x0E10;
         AX = UInt16[CS, SI + 4];
         while (true) {
             CheckExternalEvents(biosSegment, 0x0084);
@@ -46,21 +46,21 @@ public partial class CfgGeneratedOverrides {
                 continue;
             }
             DsGlobals.Byte0E02 = 0;
-            UInt16[ES, di1] = AX;
-            di1 += (ushort)(DirectionFlag ? -2 : 2);
+            UInt16[ES, word2] = AX;
+            word2 += (ushort)(DirectionFlag ? -2 : 2);
             AX = Alu16.Add(AX, 1);
             CX--;
             if (CX == 0) {
                 break;
             }
         }
-        UInt16[DS, BX + 8] = di1;
+        UInt16[DS, BX + 8] = word2;
         UInt16[DS, BX + 0x0A] = AX;
         UInt16[DS, BX + 0x0C] = CX;
-        dx = DsGlobals.Word0E10;
-        UInt16[DS, BX + 0x0E] = dx;
-        dx1 = DsGlobals.Word0E14;
-        UInt16[DS, BX + 0x10] = dx1;
+        word3 = DsGlobals.Word0E10;
+        UInt16[DS, BX + 0x0E] = word3;
+        word4 = DsGlobals.Word0E14;
+        UInt16[DS, BX + 0x10] = word4;
         AH = UInt8[CS, SI + 6];
         AL = 3;
         InterruptCall(biosSegment, 0x00B5, 0x60, biosSegment, 0x011E, unknown_F000_011E_F011EEntry);
@@ -72,33 +72,33 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00BC);
         AX = UInt16[CS, SI + 8];
         EsGlobals.Word0E20 = AX;
-        di2 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
-        UInt16[DS, BX + 0x14] = di2;
+        word5 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[DS, BX + 0x14] = word5;
         DirectionFlag = false;
         (AX, BP, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_0123_F0123(AX, BP));
         EsGlobals.Word0E30 = AX;
-        di = 0x0E2E;
-        UInt16[DS, BX + 0x16] = di;
+        word6 = 0x0E2E;
+        UInt16[DS, BX + 0x16] = word6;
         DirectionFlag = false;
         Stack.Push16(SI);
-        si1 = 0x0E20;
-        di3 = 0x0E40;
+        word7 = 0x0E20;
+        word8 = 0x0E40;
         CX = 2;
         do {
             CheckExternalEvents(biosSegment, 0x00DD);
-            UInt8[ES, di3] = UInt8[DS, si1];
-            si1++;
-            di3++;
+            UInt8[ES, word8] = UInt8[DS, word7];
+            word7++;
+            word8++;
             CX--;
         } while (CX != 0);
         SI = Stack.Pop16();
-        UInt16[DS, BX + 0x18] = di3;
+        UInt16[DS, BX + 0x18] = word8;
         DX = DsGlobals.Word0E40;
         UInt16[DS, BX + 0x1A] = DX;
         BX += 0x0040;
         SI = Alu16.Add(SI, 0x000A);
         DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
-        DI = di3;
+        DI = word8;
         if (!ZeroFlag) {
             if (JumpDispatcher.Jump(unknown_F000_0058_F0058Entry, 0x0000)) {
                 goto entrydispatcher;
@@ -106,7 +106,7 @@ public partial class CfgGeneratedOverrides {
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
         InterruptFlag = false;
-        DI = di3;
+        DI = word8;
         return Hlt();
     }
 
@@ -152,9 +152,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, BP. Outputs: AX, BP, DF. Changes: AX, CX, BP, DF.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort ax, ushort bp, bool directionFlag) unknown_F000_0123_F0123(ushort ax, ushort bp) {
-        AX = ax;
-        BP = bp;
+    public virtual (ushort word3, ushort word4, bool flag1) unknown_F000_0123_F0123(ushort word1, ushort word2) {
+        AX = word1;
+        BP = word2;
         CheckExternalEvents(biosSegment, 0x0123);
         DirectionFlag = true;
         NearReturn();

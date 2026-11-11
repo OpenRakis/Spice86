@@ -38,8 +38,8 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
-    public virtual void unknown_F000_0038_F0038(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_0038_F0038(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x0038);
         DsGlobals.Byte0010 = 0xAA;
         NearReturn();

@@ -99,18 +99,18 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL. Outputs: flags. Changes: flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (bool carryFlag, bool parityFlag, bool auxiliaryFlag, bool zeroFlag, bool signFlag, bool overflowFlag) unknown_016D_0199_01869(byte al) {
-        AL = al;
-        byte bl1 = 0;
+    public virtual (bool flag1, bool flag2, bool flag3, bool flag4, bool flag5, bool flag6) unknown_016D_0199_01869(byte byte1) {
+        AL = byte1;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0199);
         Stack.Push16(AX);
         Stack.Push16(BX);
-        bl1 = (byte)(al >> 4);
-        Alu8.Sub(bl1, 9);
-        if (bl1 <= 9) {
-            bl1 = (byte)(al & 0x0F);
-            Alu8.Sub(bl1, 9);
-            if (bl1 <= 9) {
+        byte2 = (byte)(byte1 >> 4);
+        Alu8.Sub(byte2, 9);
+        if (byte2 <= 9) {
+            byte2 = (byte)(byte1 & 0x0F);
+            Alu8.Sub(byte2, 9);
+            if (byte2 <= 9) {
                 CarryFlag = false;
                 BX = Stack.Pop16();
                 AX = Stack.Pop16();

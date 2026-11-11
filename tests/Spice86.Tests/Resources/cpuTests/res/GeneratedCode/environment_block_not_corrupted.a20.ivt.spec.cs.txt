@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
         byte flagOperand_0110 = 0;
         byte flagOperand_0118 = 0;
         byte flagOperand_0120 = 0;
@@ -25,10 +25,10 @@ public partial class CfgGeneratedOverrides {
         AH = 0x62;
         BX = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
         ES = BX;
-        ax1 = EsGlobals.Word002C;
-        Alu16.And(ax1, ax1);
-        if (ax1 != 0) {
-            ES = ax1;
+        word1 = EsGlobals.Word002C;
+        Alu16.And(word1, word1);
+        if (word1 != 0) {
+            ES = word1;
             flagOperand_0110 = EsGlobals.Byte0000;
             Alu8.Sub(flagOperand_0110, 0x42);
             if (flagOperand_0110 == 0x42) {
@@ -43,8 +43,8 @@ public partial class CfgGeneratedOverrides {
                         if (flagOperand_0128 == 0x60) {
                             goto L_0134;
                         }
-                        AX = ax1;
-                        al1 = 0;
+                        AX = word1;
+                        byte1 = 0;
                         goto L_0136;
                     }
                 }
@@ -52,12 +52,12 @@ public partial class CfgGeneratedOverrides {
         }
     L_0134:
         VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_mov);
-        AX = ax1;
-        al1 = 0xFF;
+        AX = word1;
+        byte1 = 0xFF;
     L_0136:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

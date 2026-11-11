@@ -14,9 +14,9 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort di1 = 0;
-        ushort di2 = 0;
-        byte al;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         SS = 0x1000;
@@ -38,12 +38,12 @@ public partial class CfgGeneratedOverrides {
         ES = 0xA000;
         DirectionFlag = false;
         Vga.WriteSequencerRegister(2, 0x0F);
-        di1 = 0;
+        word1 = 0;
         AX = 0;
         CX = 0x8000;
         while (CX != 0) {
-            UInt16[ES, di1] = AX;
-            di1 += 2;
+            UInt16[ES, word1] = AX;
+            word1 += 2;
             CX--;
         }
         BP = 1;
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
             AX = BP;
             AX = (ushort)(2 | AL << 8);
             Vga.WriteSequencerRegister((byte)AX, (byte)(AX >> 8));
-            di2 = 0;
+            word2 = 0;
             BX = 0;
             do {
                 CheckExternalEvents(biosSegment, 0x4065);
@@ -61,14 +61,14 @@ public partial class CfgGeneratedOverrides {
                 AL += 0x41;
                 do {
                     CheckExternalEvents(biosSegment, 0x406E);
-                    UInt8[ES, di2] = AL;
-                    di2++;
+                    UInt8[ES, word2] = AL;
+                    word2++;
                     AL++;
                     CX--;
                 } while (CX != 0);
                 BX++;
             } while (BX < 0x00E1);
-            di1 = 0x3A00;
+            word1 = 0x3A00;
             BX = 0;
             do {
                 CheckExternalEvents(biosSegment, 0x407F);
@@ -78,8 +78,8 @@ public partial class CfgGeneratedOverrides {
                 AX += BP;
                 do {
                     CheckExternalEvents(biosSegment, 0x4088);
-                    UInt8[ES, di1] = AL;
-                    di1++;
+                    UInt8[ES, word1] = AL;
+                    word1++;
                     AL++;
                     CX--;
                 } while (CX != 0);
@@ -108,11 +108,11 @@ public partial class CfgGeneratedOverrides {
         VgaPorts.WriteAttributeAddress(0x30);
         VgaPorts.WriteAttributeAddress(0x61);
         VgaPorts.WriteAttributeAddress(0x33);
-        al = Segment0000Globals.Byte0500;
-        VgaPorts.WriteAttributeAddress(al);
+        byte1 = Segment0000Globals.Byte0500;
+        VgaPorts.WriteAttributeAddress(byte1);
         AL = 0x20;
         VgaPorts.WriteAttributeAddress(0x20);
-        DI = di1;
+        DI = word1;
         return Hlt();
     }
 

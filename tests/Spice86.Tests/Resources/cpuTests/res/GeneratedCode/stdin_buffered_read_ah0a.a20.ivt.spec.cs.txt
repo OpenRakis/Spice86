@@ -15,36 +15,36 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al2 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         ImageMinus0003Globals.Byte0080 = 0x14;
         ImageMinus0003Globals.Byte0081 = 0;
         DX = 0x0080;
         AH = 0x0A;
         InterruptCall(cs1, 0x0111, 0x21);
-        al1 = DsGlobals.Byte0081;
+        byte1 = DsGlobals.Byte0081;
         DX = 0x0998;
-        Out8(0x0998, al1);
-        Alu8.Sub(al1, 5);
-        if (al1 == 5) {
-            al1 = DsGlobals.Byte0082;
+        Out8(0x0998, byte1);
+        Alu8.Sub(byte1, 5);
+        if (byte1 == 5) {
+            byte1 = DsGlobals.Byte0082;
             DX = 0x0998;
-            Out8(0x0998, al1);
-            Alu8.Sub(al1, 0x48);
-            if (al1 != 0x48) {
+            Out8(0x0998, byte1);
+            Alu8.Sub(byte1, 0x48);
+            if (byte1 != 0x48) {
                 goto L_012B;
             }
-            al2 = 0;
+            byte2 = 0;
             goto L_012D;
         }
     L_012B:
         VerifySpeculativeEntryOrFail(cs1, 0x012B, Signature_012B_mov);
-        al2 = 0xFF;
+        byte2 = 0xFF;
     L_012D:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        AL = al2;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

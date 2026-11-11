@@ -15,12 +15,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX. Outputs: CF. Changes: flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual bool unknown_F000_00BD_F00BD(ushort ax, ushort cx) {
-        AX = ax;
-        CX = cx;
+    public virtual bool unknown_F000_00BD_F00BD(ushort word1, ushort word2) {
+        AX = word1;
+        CX = word2;
         CheckExternalEvents(biosSegment, 0x00BD);
-        Alu16.Sub(ax, cx);
-        if (ax < cx) {
+        Alu16.Sub(word1, word2);
+        if (word1 < word2) {
             CarryFlag = true;
             NearReturn();
             return CarryFlag;
@@ -37,11 +37,11 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax1 = 0;
-        ushort cx1 = 0;
-        ushort cx2 = 0;
-        ushort dx1 = 0;
-        ushort ax2 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
         byte flagOperand_006A = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
@@ -55,11 +55,11 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0F00 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
-            ax1 = UInt16[CS, SI];
-            cx1 = UInt16[CS, SI + 2];
+            word1 = UInt16[CS, SI];
+            word2 = UInt16[CS, SI + 2];
             DX = UInt16[CS, SI + 4];
             UInt8[DS, BX] = 1;
-            Alu16.Sub(ax1, cx1);
+            Alu16.Sub(word1, word2);
             DX++;
             ZeroFlag = DX == 0;
             if (!CarryFlag && !ZeroFlag) {
@@ -68,28 +68,28 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 2] = DX;
             DI = UInt16[CS, SI + 6];
             if (DI == 0) {
-                Alu16.Sub(cx1, ax1);
+                Alu16.Sub(word2, word1);
             }
             else {
-                Alu16.Sub(ax1, cx1);
+                Alu16.Sub(word1, word2);
             }
             UInt8[DS, BX + 4] = 1;
             if (!CarryFlag) {
                 UInt8[DS, BX + 4] = 2;
             }
-            cx2 = UInt16[CS, SI + 6];
-            dx1 = UInt16[CS, SI + 2];
-            Alu16.Sub(ax1, dx1);
-            if (cx2 != 0) {
-                ax1 = dx1;
+            word3 = UInt16[CS, SI + 6];
+            word4 = UInt16[CS, SI + 2];
+            Alu16.Sub(word1, word4);
+            if (word3 != 0) {
+                word1 = word4;
             }
             UInt8[DS, BX + 5] = 1;
             if (!CarryFlag) {
                 UInt8[DS, BX + 5] = 2;
             }
-            UInt16[DS, BX + 6] = ax1;
-            ax2 = UInt16[CS, SI];
-            Segment2000Globals.Word0E00 = ax2;
+            UInt16[DS, BX + 6] = word1;
+            word5 = UInt16[CS, SI];
+            Segment2000Globals.Word0E00 = word5;
             flagOperand_006A = Segment2000Globals.Byte0E00;
             Segment2000Globals.Byte0E00 = 9;
             UInt8[DS, BX + 8] = 1;
@@ -97,13 +97,13 @@ public partial class CfgGeneratedOverrides {
                 UInt8[DS, BX + 8] = 2;
             }
             CX = UInt16[CS, SI + 2];
-            Alu16.Sub(ax2, CX);
+            Alu16.Sub(word5, CX);
             Stack.Push16(FlagRegister16);
             DX = Stack.Pop16();
             CarryFlag = false;
             DX &= 0x08D5;
             UInt16[DS, BX + 0x0A] = DX;
-            AX = ax2;
+            AX = word5;
             CarryFlag = NearCall(biosSegment, 0x0090, () => unknown_F000_00BD_F00BD(AX, CX));
             UInt8[DS, BX + 0x0C] = 1;
             if (!CarryFlag) {

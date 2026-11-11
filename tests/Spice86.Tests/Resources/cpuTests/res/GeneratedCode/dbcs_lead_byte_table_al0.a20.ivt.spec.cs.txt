@@ -15,14 +15,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ESI, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al2 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
         ushort flagOperand_0112 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x6300;
-        (al1, SI, DS, CarryFlag) = ServiceCall(cs1, 0x0105, Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag), r => CarryOnInterruptStack(r.carryFlag));
-        Alu8.Sub(al1, 0);
-        if (al1 == 0 && al1 >= 0) {
+        (byte1, SI, DS, CarryFlag) = ServiceCall(cs1, 0x0105, Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag), r => CarryOnInterruptStack(r.carryFlag));
+        Alu8.Sub(byte1, 0);
+        if (byte1 == 0 && byte1 >= 0) {
             DX = DS;
             Alu16.Sub(DX, 0);
             if (DX != 0) {
@@ -31,17 +31,17 @@ public partial class CfgGeneratedOverrides {
                 if (flagOperand_0112 != 0) {
                     goto L_011B;
                 }
-                al2 = 0;
+                byte2 = 0;
                 goto L_011D;
             }
         }
     L_011B:
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
-        al2 = 0xFF;
+        byte2 = 0xFF;
     L_011D:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        AL = al2;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

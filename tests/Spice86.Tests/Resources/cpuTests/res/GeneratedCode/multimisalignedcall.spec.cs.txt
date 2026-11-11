@@ -13,32 +13,32 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX, flags.</summary>
-    public virtual void unknown_F000_002A_F002A(ushort ds) {
-        DS = ds;
-        ushort bx1 = 0;
+    public virtual void unknown_F000_002A_F002A(ushort word1) {
+        DS = word1;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0x002A);
         AX = Stack.Pop16();
-        bx1 = DsGlobals.Word0000;
+        word2 = DsGlobals.Word0000;
         DsGlobals.Word0000 += 1;
-        Alu16.Sub(bx1, 0);
-        if (bx1 == 0) {
+        Alu16.Sub(word2, 0);
+        if (word2 == 0) {
             AX = 0x0014;
             Stack.Push16(0x0014);
-            BX = bx1;
+            BX = word2;
             NearReturn();
             return;
         }
-        Alu16.Sub(bx1, 1);
-        if (bx1 == 1) {
+        Alu16.Sub(word2, 1);
+        if (word2 == 1) {
             AX = 0x001B;
             Stack.Push16(0x001B);
-            BX = bx1;
+            BX = word2;
             NearReturn();
             return;
         }
         AX = 0x0022;
         Stack.Push16(0x0022);
-        BX = bx1;
+        BX = word2;
         NearReturn();
         return;
     }

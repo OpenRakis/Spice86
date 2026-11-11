@@ -15,19 +15,19 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, PF, AF, ZF, SF, OF, DF. Outputs: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, CF, DF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, CF, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax;
-        ushort ax1 = 0;
-        ushort ax2 = 0;
-        ushort si1 = 0;
-        ushort di1 = 0;
-        ushort cx1 = 0;
-        ushort ax3 = 0;
+        ushort word1;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6 = 0;
+        ushort word7 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
-        ax = Stack.Pop16();
-        DS = ax;
-        ES = ax;
-        SS = ax;
+        word1 = Stack.Pop16();
+        DS = word1;
+        ES = word1;
+        SS = word1;
         SP = 0x03D4;
         (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0112, Dos, () => Dos.ModifyMemory(ES, 0x003E), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
@@ -36,16 +36,16 @@ public partial class CfgGeneratedOverrides {
             InterruptCall(cs1, 0x01A2, 0x21);
             throw FailAsUntested("Untested return from call at 016D:01A0");
         }
-        (ax1, BX, CarryFlag) = ServiceCall(cs1, 0x011D, Dos, () => Dos.AllocateMemory(0x0013), r => CarryOnInterruptStack(r.carryFlag));
+        (word2, BX, CarryFlag) = ServiceCall(cs1, 0x011D, Dos, () => Dos.AllocateMemory(0x0013), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A2, SpeculativeRun_01A2);
             AX = 0x4C02;
             InterruptCall(cs1, 0x01A7, 0x21);
             throw FailAsUntested("Untested return from call at 016D:01A5");
         }
-        ImageMinus0003Globals.Word03D4 = ax1;
-        DX = ax1;
-        AX = ax1;
+        ImageMinus0003Globals.Word03D4 = word2;
+        DX = word2;
+        AX = word2;
         AH = 0x26;
         InterruptCall(cs1, 0x012A, 0x21);
         if (CarryFlag) {
@@ -55,50 +55,50 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested return from call at 016D:01AA");
         }
         Stack.Push16(DS);
-        ax2 = ImageMinus0003Globals.Word03D4;
-        ES = ax2;
+        word3 = ImageMinus0003Globals.Word03D4;
+        ES = word3;
         DS = Stack.Pop16();
         DirectionFlag = false;
-        si1 = 0x02AC;
-        di1 = 0x0100;
-        for (cx1 = 0x0028; cx1 != 0; cx1--) {
-            UInt8[ES, di1] = UInt8[DS, si1];
-            si1++;
-            di1++;
+        word4 = 0x02AC;
+        word5 = 0x0100;
+        for (word6 = 0x0028; word6 != 0; word6--) {
+            UInt8[ES, word5] = UInt8[DS, word4];
+            word4++;
+            word5++;
         }
-        ax = ImageMinus0003Globals.Word03D4;
-        ES = ax;
+        word1 = ImageMinus0003Globals.Word03D4;
+        ES = word1;
         EsGlobals.Word000A = 0x016A;
         Stack.Push16(CS);
-        ax3 = Stack.Pop16();
-        EsGlobals.Word000C = ax3;
+        word7 = Stack.Pop16();
+        EsGlobals.Word000C = word7;
         BX = ImageMinus0003Globals.Word03D4;
         ServiceCall(cs1, 0x0159, Dos, () => Dos.SetCurrentPsp(BX));
-        ax = ImageMinus0003Globals.Word03D4;
-        DS = ax;
-        ES = ax;
-        SS = ax;
+        word1 = ImageMinus0003Globals.Word03D4;
+        DS = word1;
+        ES = word1;
+        SS = word1;
         SP = 0x0128;
-        Stack.Push16(ax);
+        Stack.Push16(word1);
         Stack.Push16(0x0100);
-        SI = si1;
-        DI = di1;
-        CX = cx1;
-        AX = ax;
+        SI = word4;
+        DI = word5;
+        CX = word6;
+        AX = word1;
         return FarRet();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_016D_016A_0183A() {
-        ushort ax;
+        ushort word1;
         CheckExternalEvents(cs1, 0x016A);
         Stack.Push16(CS);
-        ax = Stack.Pop16();
-        DS = ax;
-        ES = ax;
-        SS = ax;
+        word1 = Stack.Pop16();
+        DS = word1;
+        ES = word1;
+        SS = word1;
         SP = 0x03D4;
-        AX = ax;
+        AX = word1;
         AH = 0x4D;
         AX = ServiceCall(cs1, 0x0179, Dos, () => Dos.ReadReturnCode());
         Alu8.Sub(AL, 0xAA);

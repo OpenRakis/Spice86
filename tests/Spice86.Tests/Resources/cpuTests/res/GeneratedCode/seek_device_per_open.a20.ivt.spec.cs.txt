@@ -15,24 +15,24 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort bx1 = 0;
-        ushort ax1 = 0;
-        ushort dx1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        bx1 = 1;
+        word1 = 1;
         CX = Alu16.Xor(CX, CX);
-        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7), r => CarryOnInterruptStack(r.carryFlag));
+        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7), r => CarryOnInterruptStack(r.carryFlag));
         if (!CarryFlag) {
-            Alu16.Sub(dx1, 0);
-            if (dx1 == 0) {
-                Alu16.Sub(ax1, 7);
-                if (ax1 == 7) {
-                    dx1 = 0x02C7;
-                    (ax1, CarryFlag) = ServiceCall(cs1, 0x0127, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
+            Alu16.Sub(word3, 0);
+            if (word3 == 0) {
+                Alu16.Sub(word2, 7);
+                if (word2 == 7) {
+                    word3 = 0x02C7;
+                    (word2, CarryFlag) = ServiceCall(cs1, 0x0127, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
                     if (!CarryFlag) {
-                        ImageMinus0003Globals.Word02BF = ax1;
-                        bx1 = ImageMinus0003Globals.Word02BF;
+                        ImageMinus0003Globals.Word02BF = word2;
+                        word1 = ImageMinus0003Globals.Word02BF;
                         CX = 0;
                         DX = 0;
                         CarryFlag = false;
@@ -41,25 +41,25 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x013B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x013B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 0);
-                        if (ax1 != 0) {
+                        Alu16.Sub(word2, 0);
+                        if (word2 != 0) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02BF;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0155, Dos, () => Dos.DuplicateHandle(bx1), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = ImageMinus0003Globals.Word02BF;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0155, Dos, () => Dos.DuplicateHandle(word1), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        ImageMinus0003Globals.Word02C1 = ax1;
-                        bx1 = ImageMinus0003Globals.Word02C1;
+                        ImageMinus0003Globals.Word02C1 = word2;
+                        word1 = ImageMinus0003Globals.Word02C1;
                         CX = 0;
                         CarryFlag = false;
                         ParityFlag = true;
@@ -67,47 +67,47 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x016A, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, bx1, 0, 4), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x016A, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, word1, 0, 4), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 4);
-                        if (ax1 != 4) {
+                        Alu16.Sub(word2, 4);
+                        if (word2 != 4) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02BF;
+                        word1 = ImageMinus0003Globals.Word02BF;
                         CX = 0;
-                        DX = dx1;
+                        DX = word3;
                         DX = Alu16.Xor(DX, DX);
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x0189, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0189, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 4);
-                        if (ax1 != 4) {
+                        Alu16.Sub(word2, 4);
+                        if (word2 != 4) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02BF;
+                        word1 = ImageMinus0003Globals.Word02BF;
                         CX = 2;
-                        dx1 = 0x02CF;
+                        word3 = 0x02CF;
                         // DOS 40h write "xy"
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x01A9, Dos, () => Dos.WriteFile(bx1, 2, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x01A9, Dos, () => Dos.WriteFile(word1, 2, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 2);
-                        if (ax1 != 2) {
+                        Alu16.Sub(word2, 2);
+                        if (word2 != 2) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C1;
+                        word1 = ImageMinus0003Globals.Word02C1;
                         CX = 0;
                         DX = 0;
                         CarryFlag = false;
@@ -116,51 +116,51 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x01C1, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x01C1, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 6);
-                        if (ax1 != 6) {
+                        Alu16.Sub(word2, 6);
+                        if (word2 != 6) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02BF;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x01DB, Dos, () => Dos.CloseFile(bx1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = ImageMinus0003Globals.Word02BF;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x01DB, Dos, () => Dos.CloseFile(word1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C1;
+                        word1 = ImageMinus0003Globals.Word02C1;
                         CX = 0;
-                        DX = dx1;
+                        DX = word3;
                         DX = Alu16.Xor(DX, DX);
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x01EC, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x01EC, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 6);
-                        if (ax1 != 6) {
+                        Alu16.Sub(word2, 6);
+                        if (word2 != 6) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C1;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0206, Dos, () => Dos.CloseFile(bx1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = ImageMinus0003Globals.Word02C1;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0206, Dos, () => Dos.CloseFile(word1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        dx1 = 0x02C7;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0212, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
+                        word3 = 0x02C7;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0212, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        ImageMinus0003Globals.Word02C3 = ax1;
-                        bx1 = ImageMinus0003Globals.Word02C3;
+                        ImageMinus0003Globals.Word02C3 = word2;
+                        word1 = ImageMinus0003Globals.Word02C3;
                         CX = 0;
                         DX = 0;
                         CarryFlag = false;
@@ -169,19 +169,19 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x0226, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0226, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 0);
-                        if (ax1 != 0) {
+                        Alu16.Sub(word2, 0);
+                        if (word2 != 0) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C3;
+                        word1 = ImageMinus0003Globals.Word02C3;
                         CX = 0;
                         CarryFlag = false;
                         ParityFlag = true;
@@ -189,41 +189,41 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x0246, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, bx1, 0, 3), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x0246, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, word1, 0, 3), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 3);
-                        if (ax1 != 3) {
+                        Alu16.Sub(word2, 3);
+                        if (word2 != 3) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C3;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x025A, Dos, () => Dos.CloseFile(bx1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = ImageMinus0003Globals.Word02C3;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x025A, Dos, () => Dos.CloseFile(word1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        dx1 = 0x02CB;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0264, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")), r => CarryOnInterruptStack(r.carryFlag));
+                        word3 = 0x02CB;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0264, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        ImageMinus0003Globals.Word02C5 = ax1;
-                        bx1 = ImageMinus0003Globals.Word02C5;
+                        ImageMinus0003Globals.Word02C5 = word2;
+                        word1 = ImageMinus0003Globals.Word02C5;
                         CX = 5;
-                        dx1 = 0x02CF;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0277, Dos, () => Dos.WriteFile(bx1, 5, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
+                        word3 = 0x02CF;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x0277, Dos, () => Dos.WriteFile(word1, 5, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 5);
-                        if (ax1 != 5) {
+                        Alu16.Sub(word2, 5);
+                        if (word2 != 5) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C5;
+                        word1 = ImageMinus0003Globals.Word02C5;
                         CX = 0;
                         DX = 0;
                         CarryFlag = false;
@@ -232,37 +232,37 @@ public partial class CfgGeneratedOverrides {
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x028B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x028B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, word1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(dx1, 0);
-                        if (dx1 != 0) {
+                        Alu16.Sub(word3, 0);
+                        if (word3 != 0) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 5);
-                        if (ax1 != 5) {
+                        Alu16.Sub(word2, 5);
+                        if (word2 != 5) {
                             goto L_02B8;
                         }
-                        bx1 = ImageMinus0003Globals.Word02C5;
-                        (ax1, CarryFlag) = ServiceCall(cs1, 0x029F, Dos, () => Dos.CloseFile(bx1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = ImageMinus0003Globals.Word02C5;
+                        (word2, CarryFlag) = ServiceCall(cs1, 0x029F, Dos, () => Dos.CloseFile(word1, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
-                        bx1 = 1;
+                        word1 = 1;
                         CX = 0;
-                        DX = dx1;
+                        DX = word3;
                         DX = Alu16.Xor(DX, DX);
-                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x02AD, Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, word3, CarryFlag) = ServiceCall(cs1, 0x02AD, Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
                         if (!CarryFlag) {
                             goto L_02B8;
                         }
-                        Alu16.Sub(ax1, 1);
-                        if (ax1 != 1) {
+                        Alu16.Sub(word2, 1);
+                        if (word2 != 1) {
                             goto L_02B8;
                         }
-                        AX = ax1;
-                        al1 = 0;
+                        AX = word2;
+                        byte1 = 0;
                         goto L_02BA;
                     }
                 }
@@ -270,13 +270,13 @@ public partial class CfgGeneratedOverrides {
         }
     L_02B8:
         VerifySpeculativeEntryOrFail(cs1, 0x02B8, Signature_02B8_mov);
-        AX = ax1;
-        al1 = 0xFF;
+        AX = word2;
+        byte1 = 0xFF;
     L_02BA:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        BX = bx1;
-        AL = al1;
+        Out8(0x0999, byte1);
+        BX = word1;
+        AL = byte1;
         return Hlt();
     }
 

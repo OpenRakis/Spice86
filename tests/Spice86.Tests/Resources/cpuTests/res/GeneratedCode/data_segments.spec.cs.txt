@@ -14,21 +14,21 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        byte al;
+        ushort word1;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        ax = (ushort)(CS + 0x0100);
-        Segment2000Globals.Word0040 = ax;
+        word1 = (ushort)(CS + 0x0100);
+        Segment2000Globals.Word0040 = word1;
         AX = (ushort)(CS + 0x0200);
         Segment2000Globals.Word0042 = AX;
         AX = 0x0040;
         ES = 0x0040;
-        al = Segment0040Globals.Byte0017;
-        Segment2000Globals.Byte0044 = al;
+        byte1 = Segment0040Globals.Byte0017;
+        Segment2000Globals.Byte0044 = byte1;
         Vga.WriteGraphicsControllerRegister(6, 0x0C);
         Vga.WriteGraphicsControllerRegister(8, 0xFF);
         DX = 0x03C5;
@@ -38,16 +38,16 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0049 = AX;
         SegmentB800Globals.Byte0000 = 0x42;
         SegmentB800Globals.Byte0001 = 0x24;
-        al = SegmentB800Globals.Byte0000;
-        Segment2000Globals.Byte0045 = al;
+        byte1 = SegmentB800Globals.Byte0000;
+        Segment2000Globals.Byte0045 = byte1;
         AL = SegmentB800Globals.Byte0001;
         Segment2000Globals.Byte0046 = AL;
         AX = DS;
         AX = Alu16.Add(AX, 0x0100);
         ES = AX;
         EsGlobals.Word0010 = 0xABCD;
-        ax = EsGlobals.Word0010;
-        Segment2000Globals.Word0047 = ax;
+        word1 = EsGlobals.Word0010;
+        Segment2000Globals.Word0047 = word1;
         AX = 0x2000;
         ES = 0x2000;
         return Hlt();

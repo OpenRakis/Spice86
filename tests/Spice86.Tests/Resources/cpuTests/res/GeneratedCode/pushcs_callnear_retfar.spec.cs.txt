@@ -49,10 +49,10 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: BX. Outputs: none. Changes: BX, flags.</summary>
-    public virtual void unknown_F100_0008_F1008(ushort bx) {
-        BX = bx;
+    public virtual void unknown_F100_0008_F1008(ushort word1) {
+        BX = word1;
         CheckExternalEvents(cs1, 0x0008);
-        BX = Alu16.Xor(BX, bx);
+        BX = Alu16.Xor(BX, word1);
         FarReturn();
         return;
     }

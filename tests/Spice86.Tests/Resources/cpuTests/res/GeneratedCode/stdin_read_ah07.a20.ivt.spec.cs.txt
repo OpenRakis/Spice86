@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 7;
         InterruptCall(cs1, 0x0104, 0x21);
@@ -23,14 +23,14 @@ public partial class CfgGeneratedOverrides {
         Alu8.Sub(AL, 0x41);
         if (AL != 0x41) {
             VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_mov);
-            al1 = 0xFF;
+            byte1 = 0xFF;
         }
         else {
-            al1 = 0;
+            byte1 = 0;
         }
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

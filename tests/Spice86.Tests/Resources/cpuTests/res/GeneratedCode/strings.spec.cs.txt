@@ -54,29 +54,29 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: CX, SI, DS. Does not return.</summary>
     public virtual Action unknown_F000_0883_F0883() {
-        ushort si1 = 0;
-        ushort si2 = 0;
-        ushort si3 = 0;
-        ushort ax;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4;
         ushort flagOperand_1304 = 0;
         byte flagOperand_E078 = 0;
         CheckExternalEvents(biosSegment, 0x0883);
         AH = 0x10;
         DirectionFlag = true;
         AL = UInt8[DS, SI];
-        si1 = (ushort)(SI - 1);
+        word1 = (ushort)(SI - 1);
         if (AX != 0x10C2) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0887");
         }
-        AX = UInt16[DS, si1];
-        si2 = (ushort)(si1 - 2);
+        AX = UInt16[DS, word1];
+        word2 = (ushort)(word1 - 2);
         if (AX != 0xC200) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:10C3");
         }
         DX = 0x1000;
         ES = 0x1000;
-        Segment1000Globals.ByteFFFF = UInt8[DS, si2];
-        si3 = (ushort)(si2 - 1);
+        Segment1000Globals.ByteFFFF = UInt8[DS, word2];
+        word3 = (ushort)(word2 - 1);
         DI = 0xFFFE;
         DS = 0x1000;
         Segment1000Globals.ByteFFFE = 0xC2;
@@ -84,8 +84,8 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI]:X4} at F000:C20E");
         }
         DS = CX;
-        Segment1000Globals.WordFFFE = UInt16[DS, si3];
-        SI = (ushort)(si3 - 2);
+        Segment1000Globals.WordFFFE = UInt16[DS, word3];
+        SI = (ushort)(word3 - 2);
         DI = 0xFFFC;
         DS = 0x1000;
         if (Segment1000Globals.WordFFFE != 0x80FF) {
@@ -122,8 +122,8 @@ public partial class CfgGeneratedOverrides {
         DX = 0;
         DS = 0;
         Segment0000Globals.Word0002 = 0x1234;
-        ax = CS;
-        DS = ax;
+        word4 = CS;
+        DS = word4;
         AX = 0;
         ES = 0;
         DirectionFlag = false;
@@ -181,13 +181,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL, SI, DI, ES, DS, DF. Outputs: AL, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte al, ushort di, ushort es, ushort ds) unknown_F000_E100_FE100(byte al, ushort si, ushort di, ushort es, ushort ds, bool directionFlag) {
-        AL = al;
-        SI = si;
-        DI = di;
-        ES = es;
-        DS = ds;
-        DirectionFlag = directionFlag;
+    public virtual (byte byte2, ushort word5, ushort word6, ushort word7) unknown_F000_E100_FE100(byte byte1, ushort word1, ushort word2, ushort word3, ushort word4, bool flag1) {
+        AL = byte1;
+        SI = word1;
+        DI = word2;
+        ES = word3;
+        DS = word4;
+        DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE100);
         UInt16[ES, DI] = UInt16[DS, SI];
         SI += 2;
@@ -202,17 +202,17 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AL, SI, DI, ES, DS, DF. Outputs: AL, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (byte al, ushort di, ushort es, ushort ds) unknown_F000_E102_FE102(byte al, ushort si, ushort di, ushort es, ushort ds, bool directionFlag) {
-        AL = al;
-        SI = si;
-        DI = di;
-        ES = es;
-        DS = ds;
-        DirectionFlag = directionFlag;
+    public virtual (byte byte2, ushort word5, ushort word6, ushort word7) unknown_F000_E102_FE102(byte byte1, ushort word1, ushort word2, ushort word3, ushort word4, bool flag1) {
+        AL = byte1;
+        SI = word1;
+        DI = word2;
+        ES = word3;
+        DS = word4;
+        DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE102);
         UInt16[ES, DI] = UInt16[DS, SI];
-        SI += (ushort)(directionFlag ? -2 : 2);
-        DI += (ushort)(directionFlag ? -2 : 2);
+        SI += (ushort)(flag1 ? -2 : 2);
+        DI += (ushort)(flag1 ? -2 : 2);
         NearReturn();
         return (AL, DI, ES, DS);
     }
@@ -224,11 +224,11 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL, ES, DS, DF. Outputs: ES, DS, DF. Changes: all.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort es, ushort ds, bool directionFlag) unknown_F000_E104_FE104(byte al, ushort es, ushort ds, bool directionFlag) {
-        AL = al;
-        ES = es;
-        DS = ds;
-        DirectionFlag = directionFlag;
+    public virtual (ushort word3, ushort word4, bool flag2) unknown_F000_E104_FE104(byte byte1, ushort word1, ushort word2, bool flag1) {
+        AL = byte1;
+        ES = word1;
+        DS = word2;
+        DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE104);
         Alu8.And(AL, 1);
         if ((AL & 1) == 0) {

@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
-    public virtual ushort unknown_F000_0017_F0017(ushort ds) {
-        DS = ds;
+    public virtual ushort unknown_F000_0017_F0017(ushort word1) {
+        DS = word1;
         byte flagOperand_0017 = 0;
         CheckExternalEvents(biosSegment, 0x0017);
         flagOperand_0017 = DsGlobals.Byte002B;

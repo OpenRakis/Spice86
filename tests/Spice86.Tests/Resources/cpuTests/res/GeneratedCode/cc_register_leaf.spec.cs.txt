@@ -15,11 +15,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_00AB_F00AB(ushort ax, ushort bx) {
-        AX = ax;
-        BX = bx;
+    public virtual ushort unknown_F000_00AB_F00AB(ushort word1, ushort word2) {
+        AX = word1;
+        BX = word2;
         CheckExternalEvents(biosSegment, 0x00AB);
-        AX = Alu16.Add(AX, bx);
+        AX = Alu16.Add(AX, word2);
         NearReturn();
         return AX;
     }
@@ -32,10 +32,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: CF. Changes: flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual bool unknown_F000_00AE_F00AE(ushort ax) {
-        AX = ax;
+    public virtual bool unknown_F000_00AE_F00AE(ushort word1) {
+        AX = word1;
         CheckExternalEvents(biosSegment, 0x00AE);
-        Alu16.Sub(ax, 0x0010);
+        Alu16.Sub(word1, 0x0010);
         NearReturn();
         return CarryFlag;
     }
@@ -48,11 +48,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX. Outputs: AX, DX. Changes: AX, DX, CF, ZF, OF.</summary>
     /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort ax, ushort dx) unknown_F000_00B2_F00B2(ushort ax, ushort bx) {
-        AX = ax;
-        BX = bx;
+    public virtual (ushort word3, ushort word4) unknown_F000_00B2_F00B2(ushort word1, ushort word2) {
+        AX = word1;
+        BX = word2;
         CheckExternalEvents(biosSegment, 0x00B2);
-        (AX, DX) = Mul16(ax, bx);
+        (AX, DX) = Mul16(word1, word2);
         NearReturn();
         return (AX, DX);
     }
@@ -65,7 +65,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: BX, ES. Changes: BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort bx, ushort es) unknown_F000_00B5_F00B5() {
+    public virtual (ushort word1, ushort word2) unknown_F000_00B5_F00B5() {
         CheckExternalEvents(biosSegment, 0x00B5);
         BX = 0x2000;
         ES = 0x2000;
@@ -102,7 +102,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -144,8 +144,8 @@ public partial class CfgGeneratedOverrides {
         AX = 0x1000;
         ES = 0x1000;
         (BX, ES) = NearCall(biosSegment, 0x007E, () => unknown_F000_00B5_F00B5());
-        al = UInt8[ES, BX];
-        Segment2000Globals.Byte004A = al;
+        byte1 = UInt8[ES, BX];
+        Segment2000Globals.Byte004A = byte1;
         AX = 0x2000;
         ES = 0x2000;
         SI = 0x1111;

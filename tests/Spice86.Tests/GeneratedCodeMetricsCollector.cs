@@ -35,6 +35,10 @@ internal static class GeneratedCodeMetricsCollector {
     private static readonly HashSet<string> TypedFlagParameterNames = new(StringComparer.Ordinal) {
         "carryFlag", "parityFlag", "auxiliaryFlag", "zeroFlag", "signFlag", "overflowFlag"
     };
+
+    /// <summary>The G4.1 generic names of typed flag parameters (<c>flag1</c>, <c>flag2</c>).</summary>
+    private static readonly System.Text.RegularExpressions.Regex TypedFlagParameterName =
+        new("^flag[0-9]+$");
     private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
         "Push16", "Push32", "Pop16", "Pop32"
     };
@@ -52,11 +56,12 @@ internal static class GeneratedCodeMetricsCollector {
     };
     private static readonly System.Text.RegularExpressions.Regex LocationTableClassName = new(
         @"^(Segment[0-9A-F]{4}|Image(Minus)?[0-9A-F]{4})Tables$");
-    private static readonly HashSet<string> RegisterLocalNames = new(StringComparer.Ordinal) {
-        "ax", "cx", "dx", "bx", "bp", "si", "di", "es", "ds",
-        "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh",
-        "eax", "ecx", "edx", "ebx", "ebp", "esi", "edi"
-    };
+    /// <summary>The G4.1 generic local names: a width prefix and a number (<c>word1</c>,
+    /// <c>byte2</c>, <c>dword1</c>). The generator's temporaries and variables never take this
+    /// shape (<c>flagOperand_0103</c>, <c>dxAx_003A</c>, <c>cs1</c>, <c>arg0</c>, <c>value</c>
+    /// keyword arguments).</summary>
+    private static readonly System.Text.RegularExpressions.Regex RegisterLocalName =
+        new("^(byte|word|dword|flag)[0-9]+$");
     private static readonly HashSet<string> RegisterNames = new(StringComparer.Ordinal) {
         "AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI",
         "ES", "CS", "SS", "DS", "FS", "GS", "IP",
@@ -64,20 +69,10 @@ internal static class GeneratedCodeMetricsCollector {
         "EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"
     };
 
-    /// <summary>The register local name <paramref name="name"/> starts from, trailing digits removed
-    /// (<c>cx1</c> gives <c>cx</c>).</summary>
-    private static string RegisterLocalBase(string name) {
-        int end = name.Length;
-        while (end > 0 && char.IsAsciiDigit(name[end - 1])) {
-            end--;
-        }
-        return name[..end];
-    }
-
-    /// <summary>Whether <paramref name="name"/> is a numbered register local (<c>cx1</c>, <c>ax2</c>).</summary>
+    /// <summary>Whether <paramref name="name"/> is a generated register local; every one of them is
+    /// numbered under G4.1.</summary>
     private static bool IsNumberedRegisterLocal(string name) =>
-        name.Length > 0 && char.IsAsciiDigit(name[^1])
-        && RegisterLocalNames.Contains(RegisterLocalBase(name));
+        RegisterLocalName.IsMatch(name);
     private static readonly HashSet<SyntaxKind> CompoundAssignmentKinds = new() {
         SyntaxKind.AddAssignmentExpression, SyntaxKind.SubtractAssignmentExpression,
         SyntaxKind.AndAssignmentExpression, SyntaxKind.OrAssignmentExpression,
@@ -373,17 +368,40 @@ internal static class GeneratedCodeMetricsCollector {
             };
         }
 
+        /// <summary>The generic <c>flagN</c> names the current method binds to a status flag in
+        /// an entry copy (<c>CarryFlag = flag1</c>): only those parameters stand for a census flag.
+        /// A parameter bound to <c>DirectionFlag</c> or a promoted flag local of the same shape is
+        /// not a flag read.</summary>
+        private HashSet<string> _statusFlagParameterNames = new(StringComparer.Ordinal);
+
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
             GotoTargets.Clear();
+            _statusFlagParameterNames = StatusFlagBoundParameters(node);
             base.VisitMethodDeclaration(node);
             DistinctGotoTargetsPerMethod += GotoTargets.Count;
         }
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node) {
             GotoTargets.Clear();
+            _statusFlagParameterNames = new(StringComparer.Ordinal);
             base.VisitConstructorDeclaration(node);
             DistinctGotoTargetsPerMethod += GotoTargets.Count;
+        }
+
+        private HashSet<string> StatusFlagBoundParameters(SyntaxNode node) {
+            HashSet<string> names = new(StringComparer.Ordinal);
+            foreach (AssignmentExpressionSyntax assignment in node.DescendantNodes()
+                    .OfType<AssignmentExpressionSyntax>()) {
+                if (assignment.Left is IdentifierNameSyntax flag
+                    && StatusFlagNames.Contains(flag.Identifier.ValueText)
+                    && assignment.Right is IdentifierNameSyntax parameter
+                    && TypedFlagParameterName.IsMatch(parameter.Identifier.ValueText)
+                    && _models[node.SyntaxTree].GetSymbolInfo(parameter).Symbol is IParameterSymbol) {
+                    names.Add(parameter.Identifier.ValueText);
+                }
+            }
+            return names;
         }
 
         public override void VisitLabeledStatement(LabeledStatementSyntax node) {
@@ -605,8 +623,7 @@ internal static class GeneratedCodeMetricsCollector {
             if (node.Parent is BlockSyntax { Parent: MethodDeclarationSyntax }) {
                 MethodVariables++;
                 if (node.Declaration.Variables.Any(variable =>
-                        RegisterLocalNames.Contains(variable.Identifier.ValueText)
-                        || IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
+                        IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
                     RegisterLocals++;
                     if (node.Declaration.Variables.Any(variable =>
                             IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
@@ -632,10 +649,14 @@ internal static class GeneratedCodeMetricsCollector {
         /// <summary>Whether <paramref name="node"/> names a flag the IR actually reads: a status
         /// flag name that is not a generated flag use, or a typed flag parameter that is not the
         /// entry assignment to its flag and not a member name (<c>r.carryFlag</c> reads a
-        /// service call result tuple, not the CPU flag).</summary>
-        private static bool IsCountedFlagName(IdentifierNameSyntax node) {
+        /// service call result tuple, not the CPU flag). A generic <c>flagN</c> name counts only
+        /// when it binds to a parameter: a promoted flag local of the same shape is a local, not
+        /// a flag read.</summary>
+        private bool IsCountedFlagName(IdentifierNameSyntax node) {
             string name = node.Identifier.ValueText;
-            bool typedParameterRead = TypedFlagParameterNames.Contains(name)
+            bool flagName = TypedFlagParameterNames.Contains(name)
+                || (TypedFlagParameterName.IsMatch(name) && _statusFlagParameterNames.Contains(name));
+            bool typedParameterRead = flagName
                 && !IsFlagParameterEntryAssignment(node)
                 && (node.Parent is not MemberAccessExpressionSyntax memberAccess
                     || memberAccess.Name != node);

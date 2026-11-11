@@ -71,7 +71,7 @@ A partition with a single entry has no `loadOffset` to dispatch on: its method p
 
 ### Typed signatures
 
-A single-entry method whose every return exit is a near or far `ret`/`retf` gets a signature built from its calling-convention sets (`IrCallingConventions`): inputs become parameters, outputs become the return value - `void` when empty, one scalar otherwise, a tuple when several. Registers print by their 16-bit name (`ax`), segment registers and 32-bit values in full (`ds`, `eax`), flags as `bool` (`carryFlag`). Register reads still at their method-entry version print the parameter name instead of `AX` (a narrower read of the same version gets a cast, `(byte)ax`); a register that is reassigned or first written in the body keeps printing `AX`; the substitution is only a name, never applied to an assignment target. Typed parameters come from the calling convention, including inputs read through machine state. The method body first assigns each parameter to its register. Every explicit or implicit read then sees the supplied argument. Generated callers pass the live registers; direct C# callers and subclasses may supply different values. A return exit prints `NearReturn(popBytes)` / `FarReturn(popBytes)` - the parameterless `NearReturn()` / `FarReturn()` for a plain `ret`/`retf` - (the stacked return address is popped by the callee, exactly like the helper-returning code does) and then `return (<outputs>);`.
+A single-entry method whose every return exit is a near or far `ret`/`retf` gets a signature built from its calling-convention sets (`IrCallingConventions`): inputs become parameters, outputs become the return value - `void` when empty, one scalar otherwise, a tuple when several. Parameters and output elements take generic width-prefixed names numbered per method per prefix from 1 (`word1`, `byte1`, `dword1`, `flag1`, `word2`...). Register reads still at their method-entry version print the parameter name instead of `AX` (a narrower read of the same version gets a cast, `(byte)word1`); a register that is reassigned or first written in the body keeps printing `AX`; the substitution is only a name, never applied to an assignment target. Typed parameters come from the calling convention, including inputs read through machine state. The method body first assigns each parameter to its register. Every explicit or implicit read then sees the supplied argument. Generated callers pass the live registers; direct C# callers and subclasses may supply different values. A return exit prints `NearReturn(popBytes)` / `FarReturn(popBytes)` - the parameterless `NearReturn()` / `FarReturn()` for a plain `ret`/`retf` - (the stacked return address is popped by the callee, exactly like the helper-returning code does) and then `return (<outputs>);`.
 
 The typed method is never referenced as a delegate: an `Action`-shaped `<Name>_Asm` wrapper printed right after it calls it with the current registers, stores the outputs back, and returns `Returned`. Registration, untyped call sites, cyclic jumps, CPU fault targets and partition returns (`return <Name>_Asm();`) all point at the wrapper, so generated code always enters the typed method with live registers and the real machine stack.
 
@@ -146,7 +146,7 @@ memory at each dispatch preserves table changes made by the program or before ex
 
 ### Frame slots
 
-A stack access `IrFrames` proved sits at a known offset from the method-entry SP prints through a named property instead of the indexer: `AX = frame.Arg0;` for `AX = SsUInt16[BP + 4];`. A method that has at least one such access declares `frame` right after its `entrydispatcher:` label (else as the first statement before the entry dispatch), `XxxFrame frame = new(Memory, State.SegmentRegisters, SP);`, and gets a nested `public readonly struct <MethodName>Frame` printed right after it in the same segment file (one primary-constructor line plus the `_slots` field, one property per slot). A register local no printed statement reads - typically the `bp` a `mov bp,sp` left, whose every read became a frame slot - drops with its declaration and its plain-copy definitions. The class holds one property per distinct `(EntryOffset, Width)` of the method's printed frame accesses, sorted by entry offset then width, named with `r` the method's return address size (2 for `ret`, 4 for `retf`, 6 for `iret`, from every return exit of the method; unknown when they disagree or there is none): `Arg<entry offset - r>` past the return address (`[bp+4]` of a near frame is `Arg0`), `ReturnIp` / `ReturnCs` / `SavedFlags` inside the return frame by the word they hold (`ReturnFrame<entry offset>` for any other offset inside it), `SavedBp` for a word at `-2` when the entry has the standard prologue, `Local<-entry offset>` below (`[bp-2]` of a standard frame is entry offset -4: `Local4`, Ghidra names locals by the same entry-relative offset), `Stack<entry offset>` for a non-negative offset when `r` is unknown; a byte / dword access suffixes `Byte` / `Dword` (`Arg0Byte`).
+A stack access `IrFrames` proved sits at a known offset from the method-entry SP prints through a named property instead of the indexer: `AX = frame.Arg0;` for `AX = SsUInt16[BP + 4];`. A method that has at least one such access declares `frame` right after its `entrydispatcher:` label (else as the first statement before the entry dispatch), `XxxFrame frame = new(Memory, State.SegmentRegisters, SP);`, and gets a nested `public readonly struct <MethodName>Frame` printed right after it in the same segment file (one primary-constructor line plus the `_slots` field, one property per slot). A register local no printed statement reads - typically the local a `mov bp,sp` left, whose every read became a frame slot - drops with its declaration and its plain-copy definitions. The class holds one property per distinct `(EntryOffset, Width)` of the method's printed frame accesses, sorted by entry offset then width, named with `r` the method's return address size (2 for `ret`, 4 for `retf`, 6 for `iret`, from every return exit of the method; unknown when they disagree or there is none): `Arg<entry offset - r>` past the return address (`[bp+4]` of a near frame is `Arg0`), `ReturnIp` / `ReturnCs` / `SavedFlags` inside the return frame by the word they hold (`ReturnFrame<entry offset>` for any other offset inside it), `SavedBp` for a word at `-2` when the entry has the standard prologue, `Local<-entry offset>` below (`[bp-2]` of a standard frame is entry offset -4: `Local4`, Ghidra names locals by the same entry-relative offset), `Stack<entry offset>` for a non-negative offset when `r` is unknown; a byte / dword access suffixes `Byte` / `Dword` (`Arg0Byte`).
 
 Which accesses qualify is decided per pointer node (`FrameSlotPlan`): an unsigned byte / word / dword `SegmentedPointerNode` whose every occurrence in the method's post-pipeline statements is a recorded `IrFrameAccess` with the same `(EntryOffset, Width)`. A node with one occurrence that is not a frame access, or occurrences at different slots, keeps the indexer - so a register expression the frame rule only proves in one place never splits its printed form, and the same holds when tail duplication pastes a node twice (occurrences are the shared node objects, keyed by reference). Signed accesses and `CheckBound` operands keep the indexer like globals.
 
@@ -241,7 +241,7 @@ One method is one AST. Its leaves are the instruction ASTs: the same runtime nod
 | `CheckExternalEventsNode`, `SpeculativeGuardNode`, `CommentNode`, `DivisionNode` | the helper calls and the comment of an instruction boundary, and the `Div16` / `IDiv16` tuple call |
 | `SegmentVariableNode`, `OffsetLiteralNode`, `InstructionPointerNode`, `LoadOffsetParameterNode`, `MethodGroupNode`, `SignatureFieldNode`, `ExplicitCastNode` | expression leaves: `cs1`, `0x0010`, `IP`, `loadOffset`, a method group or a `_ => M(0x0004)` lambda, a `Signature_...` field, a cast |
 | `RegisterLocalNode` | a C# local holding one register's value inside a promoted register web: reads no machine value, is not an instruction temporary, and is not printed yet (no pass emits it) |
-| `RegisterWriteBackNode` | the statement `AX = ax;` writing a `RegisterLocalNode` back to its register; must-write the register's bytes, reads nothing; not printed yet either |
+| `RegisterWriteBackNode` | the statement `AX = word1;` writing a `RegisterLocalNode` back to its register; must-write the register's bytes, reads nothing; not printed yet either |
 
 Helper calls (`NearCall`, `InterruptCall`, `Callback`, `SelectorSignatureMatches`, ...) reuse the runtime `MethodCallNode` and `MethodCallValueNode`.
 
@@ -449,7 +449,7 @@ The per-instruction `VerifySpeculativeEntryOrFail` guards of a speculative run m
 ### Register locals
 
 A register web - the SSA versions joined through phis and through calls that preserve the register  - 
-prints as a C# local instead of the register property: `ax = ...; ... CX = ax;`. At emission
+prints as a C# local instead of the register property: `word1 = ...; ... CX = word1;`. At emission
 `RegisterLocalPromotion.Plan` builds the webs and promotes one when all of these hold:
 
 1. every definition of a member version is an `ASSIGN` to a `RegisterNode` /
@@ -477,9 +477,11 @@ prints as a C# local instead of the register property: `ax = ...; ... CX = ax;`.
    handlers may write the register ends it too;
 5. the local name is free: a web whose live range overlaps an already promoted same-name web, or
    whose name is reserved (a typed-signature parameter, `frame`, any method temporary), is not
-   promoted. Webs in different blocks of the same register take numbered locals (`ax`, `ax1`...).
+   promoted. A promoted web takes a generic width-prefixed name numbered per prefix by the
+   address of its first definition (`byte1`, `word2`, `dword1`, signed views keep the width
+   prefix: `short word3`), independent of which register the web holds.
 
-An implicit use needs the register to hold the value again: a `RegisterWriteBackNode` (`AX = ax;`)
+An implicit use needs the register to hold the value again: a `RegisterWriteBackNode` (`AX = word1;`)
 is inserted at the top of the boundary of the first implicit use's instruction - including the
 instruction containing a preserving call, so the callee reads the promoted value - unless that
 instruction is the defining one, one of its earlier statements writes a byte of the value, or the
@@ -494,7 +496,7 @@ already wrote it back takes none. A web whose promotion would not pay for itself
 reads and assignment targets the local would replace do not outnumber the write-backs plus the
 declaration (an ES/DS web also counts each pointer access through the segment, and a web defined
 only by constants keeps the register when it needs a write-back) - stays in register form. The
-local's declaration (`ushort ax;`, `byte al;`, `uint eax;`, `ushort ds;`
+local's declaration (`ushort word1;`, `byte byte1;`, `uint dword1;`
 by the width of the defining target, or `= 0` when the web spans blocks) is printed once per local
 at the top of the method. The substitution rides on the same node-instance `ParameterReads`
 dictionary as the typed parameters: nothing in the IR changes, only the printed text, so the
@@ -503,17 +505,17 @@ later passes - propagation, idioms - already ran on the registers and need nothi
 The local's C# type is the one that removes the most casts: a local whose definition is a
 multiplication/division tuple half or a service-call result stays unsigned whatever the vote, since
 the helpers hand back unsigned halves even for `IMul`/`IDiv`; otherwise the web votes, and the signed type of
-the register's width (`short ax;`, `sbyte al;`, `int eax;`) wins when the signed reads strictly
+the register's width (`short word1;`, `sbyte byte1;`, `int dword1;`) wins when the signed reads strictly
 outnumber the unsigned ones - each read under a same-width signed conversion and each definition
 from one on the signed side, every other read and definition plus every write-back on the unsigned
 side (a tie keeps the register's type). The choices are only those two: not `bool`, which would
 rewrite the comparisons rather than the leaf, and not a narrower type, which a web could never use  - 
 a low-byte read of a full-width web is an implicit use already. The type only chooses how the same
 bits print: a read that disagrees with the local's type is cast back to its node's type
-(`(ushort)ax`, fragment type unchanged), a read under a conversion to the local's type prints the
-bare name, a definition's right side is cast to the local's type (`ax = (short)(...)` - the round
+(`(ushort)word1`, fragment type unchanged), a read under a conversion to the local's type prints the
+bare name, a definition's right side is cast to the local's type (`word1 = (short)(...)` - the round
 trip disappears when the right side already converts from it), and a write-back casts the local to
-the register's type (`AX = (ushort)ax;`).
+the register's type (`AX = (ushort)word1;`).
 
 ### Counted loops
 
@@ -534,8 +536,8 @@ statement stay `while`.
 A `push X` ... `pop Y` pair prints without the stack - the pushed value is any expression and the
 pop's target a general register, a segment register or the flag register, as long as the widths
 match. When nothing sits between the two but comments they print the direct idiom: the push
-prints nothing and the pop prints `Y = X;` - `push ax; pop bx` becomes `bx = AX;`, `pushf; pop
-ax` becomes `ax = FlagRegister16;`, and a `pop` into a segment register also drops the `SP += 2`
+prints nothing and the pop prints `Y = X;` - `push ax; pop bx` becomes `word1 = AX;`, `pushf; pop
+ax` becomes `word1 = FlagRegister16;`, and a `pop` into a segment register also drops the `SP += 2`
 that freed its slot. When any real statement sits between, the pair keeps the save local:
 `savedY_0014 = X;` where the push was and `Y = savedY_0014;` where the pop was, with
 `ushort savedY_0014 = 0;` declared at the method top so the restore is always in scope and

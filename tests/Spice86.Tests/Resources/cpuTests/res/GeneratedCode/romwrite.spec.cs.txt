@@ -14,27 +14,27 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort si1 = 0;
-        ushort di1 = 0;
-        ushort cx1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         DirectionFlag = false;
         DS = 0x1000;
         Segment1000Globals.Dword0100 = 0xC3C2C1C0u;
         ES = 0xB800;
-        si1 = 0x0100;
-        di1 = 0x9190;
-        for (cx1 = 4; cx1 != 0; cx1--) {
-            UInt8[ES, di1] = UInt8[DS, si1];
-            si1++;
-            di1++;
+        word1 = 0x0100;
+        word2 = 0x9190;
+        for (word3 = 4; word3 != 0; word3--) {
+            UInt8[ES, word2] = UInt8[DS, word1];
+            word1++;
+            word2++;
         }
         SegmentB800Globals.Word9190 = 0xA55A;
         AX = 0x600D;
-        SI = si1;
-        DI = di1;
-        CX = cx1;
+        SI = word1;
+        DI = word2;
+        CX = word3;
         return Hlt();
     }
 

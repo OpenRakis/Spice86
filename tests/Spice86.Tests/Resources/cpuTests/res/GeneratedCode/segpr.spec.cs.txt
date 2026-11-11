@@ -49,9 +49,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DF. Does not return.</summary>
     public virtual Action unknown_F000_1200_F1200() {
-        ushort di1 = 0;
-        ushort si1 = 0;
-        ushort cx1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
         CheckExternalEvents(biosSegment, 0x1200);
         CX = 0xF120;
         ES = 0xF120;
@@ -61,36 +61,36 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         AX = 1;
         ES = 1;
-        di1 = 6;
-        si1 = 0x1400;
-        for (cx1 = 6; cx1 != 0; cx1--) {
-            UInt8[ES, di1] = UInt8[CS, si1];
-            si1 += (ushort)(DirectionFlag ? -1 : 1);
-            di1 += (ushort)(DirectionFlag ? -1 : 1);
+        word1 = 6;
+        word2 = 0x1400;
+        for (word3 = 6; word3 != 0; word3--) {
+            UInt8[ES, word1] = UInt8[CS, word2];
+            word2 += (ushort)(DirectionFlag ? -1 : 1);
+            word1 += (ushort)(DirectionFlag ? -1 : 1);
         }
-        DI = di1;
-        SI = si1;
-        CX = cx1;
+        DI = word1;
+        SI = word2;
+        CX = word3;
         return Hlt();
     }
 
     /// <summary>Inputs: BP, DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort bx;
-        ushort ax;
-        ushort dx;
-        ushort es;
+        ushort word1;
+        ushort word2;
+        ushort word3;
+        ushort word4;
         CheckExternalEvents(biosSegment, 0xFFF0);
         ES = 0xF100;
-        bx = SegmentF100Globals.Word0000;
-        ax = SegmentF100Globals.Word0002;
-        DsGlobals.Word0002 = ax;
+        word1 = SegmentF100Globals.Word0000;
+        word2 = SegmentF100Globals.Word0002;
+        DsGlobals.Word0002 = word2;
         SP = 2;
-        Stack.Push16(bx);
-        dx = SegmentF100Globals.Word0000;
-        es = SegmentF100Globals.Word0002;
-        DsGlobals.Word0004 = dx;
-        DX = es;
+        Stack.Push16(word1);
+        word3 = SegmentF100Globals.Word0000;
+        word4 = SegmentF100Globals.Word0002;
+        DsGlobals.Word0004 = word3;
+        DX = word4;
         DsGlobals.Word0006 = DX;
         DI = 5;
         SI = (ushort)(BP + 0x001C);

@@ -59,20 +59,20 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        ushort dx;
-        ushort di;
-        ushort cx1 = 0;
-        ushort ax1 = 0;
-        ushort cx2 = 0;
-        ushort es;
-        ushort cx3 = 0;
-        ushort ax2 = 0;
-        ushort si1 = 0;
-        ushort es1 = 0;
-        ushort es2 = 0;
-        ushort cx4 = 0;
-        byte al;
+        ushort word1;
+        ushort word2;
+        ushort word3;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6 = 0;
+        ushort word7;
+        ushort word8 = 0;
+        ushort word9 = 0;
+        ushort word10 = 0;
+        ushort word11 = 0;
+        ushort word12 = 0;
+        ushort word13 = 0;
+        byte byte1;
         ushort flagOperand_0091 = 0;
         ushort flagOperand_0246 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -89,32 +89,32 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2000;
         do {
             CheckExternalEvents(biosSegment, 0x003A);
-            ax = UInt16[CS, SI + 2];
-            (AX, dx) = Mul16(ax, UInt16[CS, SI + 4]);
-            UInt16[DS, BX] = dx;
+            word1 = UInt16[CS, SI + 2];
+            (AX, word2) = Mul16(word1, UInt16[CS, SI + 4]);
+            UInt16[DS, BX] = word2;
             CX = UInt16[CS, SI + 0x20];
             CX = Alu16.Sub(CX, UInt16[CS, SI + 0x22]);
             DX = CX;
             CX = UInt16[CS, SI + 8];
-            ax = DX;
-            UInt16[DS, BX + 2] = ax;
+            word1 = DX;
+            UInt16[DS, BX + 2] = word1;
             Stack.Push16(FlagRegister16);
-            di = Stack.Pop16();
-            UInt16[DS, BX + 0x18] = di;
+            word3 = Stack.Pop16();
+            UInt16[DS, BX + 0x18] = word3;
             EDX = 0;
             AX = UInt16[CS, SI + 0x0A];
             Segment2000Globals.Word0F30 = AX;
             Segment2000Globals.Word0F30 = 9;
-            cx1 = AX;
-            UInt16[DS, BX + 4] = cx1;
+            word4 = AX;
+            UInt16[DS, BX + 4] = word4;
             EDX = 0;
             DI = UInt16[CS, SI + 0x1E];
             UInt16[DS, DI] = DI;
             EDI = 0;
-            ax1 = UInt16[CS, SI + 0x0C];
+            word5 = UInt16[CS, SI + 0x0C];
             flagOperand_0091 = UInt16[CS, SI + 0x0E];
-            Alu16.Sub(ax1, flagOperand_0091);
-            if (ax1 >= flagOperand_0091) {
+            Alu16.Sub(word5, flagOperand_0091);
+            if (word5 >= flagOperand_0091) {
                 UInt8[DS, BX + 8] = 0;
             }
             else {
@@ -136,9 +136,9 @@ public partial class CfgGeneratedOverrides {
             }
             UInt16[DS, BX + 0x0E] = DX;
             AX = UInt16[CS, SI + 0x14];
-            cx2 = UInt16[CS, SI + 0x16];
-            CarryFlag = AX < cx2;
-            AX -= cx2;
+            word6 = UInt16[CS, SI + 0x16];
+            CarryFlag = AX < word6;
+            AX -= word6;
             CarryFlag = NearCall(biosSegment, 0x00CE, () => unknown_F000_0377_F0377());
             if (!CarryFlag) {
                 VerifySpeculativeEntryOrFail(biosSegment, 0x00D7, Signature_00D7_mov);
@@ -151,15 +151,15 @@ public partial class CfgGeneratedOverrides {
             ushort lxsValue_00EB = Segment2000Globals.Word0F60;
             ushort lxsSegment_00EB = Segment2000Globals.Word0F62;
             DI = lxsValue_00EB;
-            es = lxsSegment_00EB;
-            Stack.Push16(es);
-            cx3 = Stack.Pop16();
-            UInt16[DS, BX + 0x12] = cx3;
+            word7 = lxsSegment_00EB;
+            Stack.Push16(word7);
+            word8 = Stack.Pop16();
+            UInt16[DS, BX + 0x12] = word8;
             ES = 0x2000;
-            ax2 = UInt16[CS, SI + 0x18];
+            word9 = UInt16[CS, SI + 0x18];
             BP = UInt16[CS, SI + 0x1A];
             DX = UInt16[CS, SI];
-            if ((DL & 8) == 0 && ax2 != 1 || BP != 2) {
+            if ((DL & 8) == 0 && word9 != 1 || BP != 2) {
                 goto L_0118;
             }
             UInt16[DS, BX + 0x14] = 1;
@@ -175,14 +175,14 @@ public partial class CfgGeneratedOverrides {
                 EAX = 0x00001105;
             }
             UInt8[DS, BX + 0x16] = AH;
-            ax = UInt16[CS, SI + 0x32];
-            Segment2000Globals.Word0F40 = ax;
+            word1 = UInt16[CS, SI + 0x32];
+            Segment2000Globals.Word0F40 = word1;
             CX = UInt16[CS, SI + 0x34];
-            ushort sum_0141 = (ushort)(CX + ax);
-            CX = ax;
+            ushort sum_0141 = (ushort)(CX + word1);
+            CX = word1;
             Segment2000Globals.Word0F40 = sum_0141;
             UInt16[DS, BX + 6] = CX;
-            AX = ax;
+            AX = word1;
             AX = Alu16.Or(AX, 1);
             UInt16[DS, BX + 0x1A] = 0xBBBB;
             AX = UInt16[CS, SI + 0x2A];
@@ -190,14 +190,14 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(AX);
             Stack.Push16(DX);
             CX = Stack.Pop16();
-            di = Stack.Pop16();
-            UInt16[DS, BX + 0x1E] = di;
+            word3 = Stack.Pop16();
+            UInt16[DS, BX + 0x1E] = word3;
             EDI = 0;
             Stack.Push32(FlagRegister & 0x0000FFFF);
             FlagRegister = Stack.Pop32();
             CheckExternalEvents(biosSegment, 0x0172);
-            ax = UInt16[CS, SI + 0x2E];
-            Alu16.Sub(ax, UInt16[CS, SI + 0x30]);
+            word1 = UInt16[CS, SI + 0x2E];
+            Alu16.Sub(word1, UInt16[CS, SI + 0x30]);
             AX = UInt16[CS, SI + 0x24];
             if ((AL & 0x10) != 0) {
                 Alu8.And(UInt8[CS, SI + 0x28], 4);
@@ -233,7 +233,7 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0E70 = Segment2000Globals.Byte0E60;
             SI = 0x0E5F;
             DI = 0x0E6F;
-            si1 = Stack.Pop16();
+            word10 = Stack.Pop16();
             DirectionFlag = false;
             UInt16[DS, BX + 0x2A] = 0x0E6F;
             DL = Segment2000Globals.Byte0E70;
@@ -246,7 +246,7 @@ public partial class CfgGeneratedOverrides {
             AX = 0;
             ES = 0;
             Segment0000Globals.Word0020 = 0x038A;
-            es1 = Stack.Pop16();
+            word11 = Stack.Pop16();
             AL = 0xFE;
             PicPorts.WritePrimaryData(0xFE);
             EBP = 0x00001234;
@@ -258,16 +258,16 @@ public partial class CfgGeneratedOverrides {
             InterruptFlag = false;
             UInt16[DS, BX + 0x2E] = Segment2000Globals.Word0E08;
             PicPorts.WritePrimaryData(0xFF);
-            Stack.Push16(es1);
+            Stack.Push16(word11);
             ES = 0;
             Segment0000Globals.Word0020 = 0x037D;
-            es2 = Stack.Pop16();
+            word12 = Stack.Pop16();
             UInt16[DS, BX + 0x3A] = 7;
             Stack.Push16(0x1234);
             flagOperand_0246 = UInt16[DS, BX + 0x3A];
-            cx4 = Stack.Pop16();
+            word13 = Stack.Pop16();
             if (flagOperand_0246 == 7) {
-                UInt16[DS, BX + 0x38] = cx4;
+                UInt16[DS, BX + 0x38] = word13;
             }
             EAX = SegmentF000Globals.Dword0406;
             CX = 2;
@@ -283,7 +283,7 @@ public partial class CfgGeneratedOverrides {
             DX = SegmentF000Globals.Word040A;
             UInt32[DS, BX + 0x30] = EDX;
             EDX = 0;
-            Stack.Push16(es2);
+            Stack.Push16(word12);
             Vga.WriteSequencerRegister(2, 0x0F);
             Vga.WriteSequencerRegister(4, 6);
             Vga.WriteGraphicsControllerRegister(6, 0);
@@ -300,8 +300,8 @@ public partial class CfgGeneratedOverrides {
             Vga.WriteSequencerRegister(2, 0x0F);
             AX = 4;
             Vga.WriteGraphicsControllerRegister(4, 0);
-            al = SegmentA000Globals.Byte0000;
-            UInt8[DS, BX + 0x0D] = al;
+            byte1 = SegmentA000Globals.Byte0000;
+            UInt8[DS, BX + 0x0D] = byte1;
             Vga.WriteSequencerRegister(2, 1);
             SegmentA000Globals.Byte0001 = 0x55;
             Vga.WriteSequencerRegister(2, 2);
@@ -322,30 +322,30 @@ public partial class CfgGeneratedOverrides {
             Vga.WriteGraphicsControllerRegister(5, 0);
             AX = 4;
             Vga.WriteGraphicsControllerRegister(4, 0);
-            al = SegmentA000Globals.Byte0010;
-            UInt8[DS, BX + 9] = al;
+            byte1 = SegmentA000Globals.Byte0010;
+            UInt8[DS, BX + 9] = byte1;
             AX = 0x0104;
             Vga.WriteGraphicsControllerRegister(4, 1);
-            al = SegmentA000Globals.Byte0010;
-            UInt8[DS, BX + 0x0B] = al;
+            byte1 = SegmentA000Globals.Byte0010;
+            UInt8[DS, BX + 0x0B] = byte1;
             AX = 0x0204;
             Vga.WriteGraphicsControllerRegister(4, 2);
-            al = SegmentA000Globals.Byte0010;
-            UInt8[DS, BX + 0x17] = al;
+            byte1 = SegmentA000Globals.Byte0010;
+            UInt8[DS, BX + 0x17] = byte1;
             AX = 0x0304;
             Vga.WriteGraphicsControllerRegister(4, 3);
-            al = SegmentA000Globals.Byte0010;
-            UInt8[DS, BX + 0x1C] = al;
+            byte1 = SegmentA000Globals.Byte0010;
+            UInt8[DS, BX + 0x1C] = byte1;
             Vga.WriteGraphicsControllerRegister(6, 0x0E);
             ES = Stack.Pop16();
-            AX = UInt16[CS, si1 + 6];
+            AX = UInt16[CS, word10 + 6];
             AX = 0;
             UInt16[DS, BX + 0x20] = 0;
-            CX = UInt16[CS, si1 + 6];
+            CX = UInt16[CS, word10 + 6];
             CX = 0;
             UInt16[DS, BX + 0x24] = 0;
             BX += 0x0040;
-            SI = si1;
+            SI = word10;
             SI = Alu16.Add(SI, 0x0036);
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);

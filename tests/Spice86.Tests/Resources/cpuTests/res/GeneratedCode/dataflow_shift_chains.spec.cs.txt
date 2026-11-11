@@ -14,9 +14,9 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort dx;
-        uint edx;
-        byte dl;
+        ushort word1;
+        uint dword1;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -29,24 +29,24 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0F00 = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
-            dx = (ushort)(UInt16[CS, SI] >> 3);
-            UInt16[DS, BX] = dx;
+            word1 = (ushort)(UInt16[CS, SI] >> 3);
+            UInt16[DS, BX] = word1;
             DX = (ushort)(UInt16[CS, SI] & 0);
             UInt16[DS, BX + 2] = DX;
-            edx = UInt32[CS, SI] & 0;
-            UInt32[DS, BX + 4] = edx;
+            dword1 = UInt32[CS, SI] & 0;
+            UInt32[DS, BX + 4] = dword1;
             EDX = UInt32[CS, SI] & 0;
             UInt32[DS, BX + 8] = EDX;
-            dx = (ushort)((short)UInt16[CS, SI] >> 15);
-            UInt16[DS, BX + 0x0C] = dx;
+            word1 = (ushort)((short)UInt16[CS, SI] >> 15);
+            UInt16[DS, BX + 0x0C] = word1;
             EDX = (uint)((int)UInt32[CS, SI] >> 31);
             UInt32[DS, BX + 0x0E] = EDX;
-            dx = (ushort)(UInt16[CS, SI] >> 2);
-            UInt16[DS, BX + 0x12] = dx;
+            word1 = (ushort)(UInt16[CS, SI] >> 2);
+            UInt16[DS, BX + 0x12] = word1;
             DX = (ushort)(UInt16[CS, SI] & 0x7FFF);
             UInt16[DS, BX + 0x14] = DX;
-            dx = (ushort)((ushort)((short)UInt16[CS, SI] >> 1) >> 1);
-            UInt16[DS, BX + 0x16] = dx;
+            word1 = (ushort)((ushort)((short)UInt16[CS, SI] >> 1) >> 1);
+            UInt16[DS, BX + 0x16] = word1;
             EDX = UInt32[CS, SI] >> 8;
             DX >>= 8;
             UInt32[DS, BX + 0x18] = EDX;
@@ -69,8 +69,8 @@ public partial class CfgGeneratedOverrides {
             DX = Alu16.Shr(DX, 0x20);
             DX >>= 1;
             UInt16[DS, BX + 0x24] = DX;
-            dl = (byte)(UInt8[CS, SI] & 0);
-            UInt8[DS, BX + 0x26] = dl;
+            byte1 = (byte)(UInt8[CS, SI] & 0);
+            UInt8[DS, BX + 0x26] = byte1;
             DL = (byte)((sbyte)UInt8[CS, SI] >> 7);
             UInt8[DS, BX + 0x27] = DL;
             CL = UInt8[CS, SI + 4];

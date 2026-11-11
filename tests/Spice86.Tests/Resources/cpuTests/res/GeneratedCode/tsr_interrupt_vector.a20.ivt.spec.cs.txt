@@ -15,21 +15,21 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort ax1 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x1234;
         DS = 0x1234;
         DX = 0x5678;
         AX = 0x25F0;
         ServiceCall(cs1, 0x010E, Dos, () => Dos.SetInterruptVector(0xF0, DS, 0x5678));
-        ax1 = 0x35F0;
+        word1 = 0x35F0;
         (BX, ES) = ServiceCall(cs1, 0x0114, Dos, () => Dos.ReadInterruptVector(0xF0));
         Alu16.Sub(BX, 0x5678);
         if (BX == 0x5678) {
-            ax1 = ES;
-            Alu16.Sub(ax1, 0x1234);
-            if (ax1 == 0x1234) {
-                AX = ax1;
+            word1 = ES;
+            Alu16.Sub(word1, 0x1234);
+            if (word1 == 0x1234) {
+                AX = word1;
                 AL = 0;
                 AX = 0x4C00;
                 InterruptCall(cs1, 0x0128, 0x21);

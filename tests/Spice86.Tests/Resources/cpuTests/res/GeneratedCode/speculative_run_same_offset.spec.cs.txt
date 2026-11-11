@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: AL, BL, flags.</summary>
-    public virtual void unknown_F000_0100_F0100(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_0100_F0100(ushort word1) {
+        DS = word1;
         byte flagOperand_0100 = 0;
         CheckExternalEvents(biosSegment, 0x0100);
         flagOperand_0100 = DsGlobals.Byte0500;
@@ -71,8 +71,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: AL, BL, flags.</summary>
-    public virtual void unknown_F010_0100_F0200(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F010_0100_F0200(ushort word1) {
+        DS = word1;
         byte flagOperand_0100 = 0;
         CheckExternalEvents(cs1, 0x0100);
         flagOperand_0100 = DsGlobals.Byte0500;

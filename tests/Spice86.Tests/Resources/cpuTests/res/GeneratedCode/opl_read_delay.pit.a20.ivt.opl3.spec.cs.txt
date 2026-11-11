@@ -15,16 +15,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al2 = 0;
-        byte al;
+        byte byte1 = 0;
+        byte byte2 = 0;
+        byte byte3;
         CheckExternalEvents(cs1, 0x0100);
         NearCall(cs1, 0x0103, unknown_016D_01A6_01876Entry);
         NearCall(cs1, 0x0106, unknown_016D_01B9_01889Entry);
         DX = 0x0388;
-        al1 = Opl3Ports.ReadAdlibAddress0();
-        Alu8.And(al1, 0xE0);
-        if ((al1 & 0xE0) == 0) {
+        byte1 = Opl3Ports.ReadAdlibAddress0();
+        Alu8.And(byte1, 0xE0);
+        if ((byte1 & 0xE0) == 0) {
             DX = 0x0388;
             AL = 2;
             Opl3Ports.WriteAdlibAddress0(2);
@@ -41,7 +41,7 @@ public partial class CfgGeneratedOverrides {
             AL = 0x21;
             Opl3Ports.WriteAdlibData0(0x21);
             DX = 0x0388;
-            al2 = Opl3Ports.ReadAdlibAddress0();
+            byte2 = Opl3Ports.ReadAdlibAddress0();
             CX = 0;
             DX = 0x0388;
             while (true) {
@@ -50,17 +50,17 @@ public partial class CfgGeneratedOverrides {
                 if (CX >= 0x2710) {
                     goto L_015C;
                 }
-                al2 = Opl3Ports.ReadAdlibAddress0();
+                byte2 = Opl3Ports.ReadAdlibAddress0();
                 CX++;
-                Alu8.And(al2, 0xC0);
-                if ((al2 & 0xC0) != 0) {
+                Alu8.And(byte2, 0xC0);
+                if ((byte2 & 0xC0) != 0) {
                     break;
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x015A, Signature_015A_jmp);
             }
             DX = 0x0998;
-            al = CL;
-            Out8(0x0998, al);
+            byte3 = CL;
+            Out8(0x0998, byte3);
             AL = CH;
             Out8(0x0998, AL);
             DX = 0x0999;
@@ -79,8 +79,8 @@ public partial class CfgGeneratedOverrides {
         L_015C:
             VerifySpeculativeRunOrFail(cs1, 0x015C, SpeculativeRun_015C);
             DX = 0x0998;
-            al = CL;
-            Out8(0x0998, al);
+            byte3 = CL;
+            Out8(0x0998, byte3);
             VerifySpeculativeRunOrFail(cs1, 0x0162, SpeculativeRun_0162);
             AL = CH;
             Out8(0x0998, AL);

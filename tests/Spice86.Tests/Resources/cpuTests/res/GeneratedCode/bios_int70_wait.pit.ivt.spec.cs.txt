@@ -15,49 +15,49 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ds1 = 0;
-        ushort dx1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        ds1 = CS;
+        word1 = CS;
         AL = 1;
         Out8(0x0998, 1);
-        DS = ds1;
+        DS = word1;
         ImageMinus0003Globals.Byte01A2 = 0;
         AX = 0x8300;
         CX = 0;
-        dx1 = 0x2710;
+        word2 = 0x2710;
         BX = 0x01A2;
         Stack.Push16(CS);
         ES = Stack.Pop16();
         (AH, CarryFlag) = ServiceCall(cs1, 0x011E, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2710, ES, 0x01A2, 0x83), r => CarryOnInterruptStack(r.carryFlag));
         if (!CarryFlag) {
-            dx1 = 0x0998;
+            word2 = 0x0998;
             Out8(0x0998, 2);
-            Stack.Push16(ds1);
+            Stack.Push16(word1);
             AX = 0x0040;
             DS = 0x0040;
             AL = Segment0040Globals.Byte00A0;
-            ds1 = Stack.Pop16();
+            word1 = Stack.Pop16();
             Alu8.Sub(AL, 1);
             if (AL == 1) {
-                dx1 = 0x0998;
+                word2 = 0x0998;
                 Out8(0x0998, 3);
                 AL = Cmos.ReadRegister(0x0B);
                 Alu8.And(AL, 0x40);
                 if ((AL & 0x40) != 0) {
                     Out8(0x0998, 4);
-                    Stack.Push16(ds1);
+                    Stack.Push16(word1);
                     DS = 0x0040;
                     AX = Segment0040Globals.Word009C;
-                    dx1 = Segment0040Globals.Word009E;
-                    ds1 = Stack.Pop16();
-                    Alu16.Sub(dx1, 0);
-                    if (dx1 == 0) {
+                    word2 = Segment0040Globals.Word009E;
+                    word1 = Stack.Pop16();
+                    Alu16.Sub(word2, 0);
+                    if (word2 == 0) {
                         Alu16.Sub(AX, 0x2710);
                         if (AX != 0x2710) {
                             goto L_019B;
                         }
-                        dx1 = 0x0998;
+                        word2 = 0x0998;
                         AL = 5;
                         Out8(0x0998, 5);
                         AX = 0x8301;
@@ -65,18 +65,18 @@ public partial class CfgGeneratedOverrides {
                         if (CarryFlag) {
                             goto L_019B;
                         }
-                        dx1 = 0x0998;
+                        word2 = 0x0998;
                         Out8(0x0998, 6);
-                        Stack.Push16(ds1);
+                        Stack.Push16(word1);
                         AX = 0x0040;
                         DS = 0x0040;
                         AL = Segment0040Globals.Byte00A0;
-                        ds1 = Stack.Pop16();
+                        word1 = Stack.Pop16();
                         Alu8.Sub(AL, 0);
                         if (AL != 0) {
                             goto L_019B;
                         }
-                        dx1 = 0x0998;
+                        word2 = 0x0998;
                         Out8(0x0998, 7);
                         AL = Cmos.ReadRegister(0x0B);
                         Alu8.And(AL, 0x40);
@@ -84,7 +84,7 @@ public partial class CfgGeneratedOverrides {
                             DX = 0x0999;
                             AL = 0;
                             Out8(0x0999, 0);
-                            DS = ds1;
+                            DS = word1;
                             return Hlt();
                         }
                     }
@@ -97,7 +97,7 @@ public partial class CfgGeneratedOverrides {
         AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x01A1, Signature_01A1_hlt);
-        DS = ds1;
+        DS = word1;
         return Hlt();
     }
 

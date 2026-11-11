@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_0029_F0029(ushort dx) {
-        DX = dx;
+    public virtual ushort unknown_F000_0029_F0029(ushort word1) {
+        DX = word1;
         CheckExternalEvents(biosSegment, 0x0029);
         DX = Alu16.Add(DX, 1);
         FarReturn();
@@ -27,8 +27,8 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_002D_F002D(ushort dx) {
-        DX = dx;
+    public virtual ushort unknown_F000_002D_F002D(ushort word1) {
+        DX = word1;
         CheckExternalEvents(biosSegment, 0x002D);
         DX = Alu16.Add(DX, 0x0010);
         FarReturn();

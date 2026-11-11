@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
@@ -104,13 +105,28 @@ internal sealed class TypedSignatures {
                 effectBuilder)) {
             return null;
         }
+        Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
         return new TypedSignature {
-            Parameters = CpuValueParameters.Decompose(inputs),
-            Outputs = CpuValueParameters.Decompose(outputs),
+            Parameters = GenericNames(CpuValueParameters.Decompose(inputs), nameCounters),
+            Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
             Distance = distance,
             PoppedBytes = poppedBytes,
             EntryBlock = irEntry.Block
         };
+    }
+
+    /// <summary>The G4.1 generic parameter names: the width prefix plus a per-prefix number in
+    /// describe order, one numbering for the signature's parameters and outputs.</summary>
+    private static List<TypedParameter> GenericNames(List<TypedParameter> parameters,
+        Dictionary<string, int> counters) {
+        List<TypedParameter> named = new(parameters.Count);
+        foreach (TypedParameter parameter in parameters) {
+            string prefix = GenericValueNames.Prefix(parameter.Type);
+            counters.TryGetValue(prefix, out int number);
+            counters[prefix] = ++number;
+            named.Add(parameter with { Name = $"{prefix}{number}" });
+        }
+        return named;
     }
 
     /// <summary>Whether <paramref name="method"/> structurally returns to its caller: every return

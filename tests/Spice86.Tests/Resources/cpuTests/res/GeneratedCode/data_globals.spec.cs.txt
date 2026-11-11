@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_008C_F008C(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_008C_F008C(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x008C);
         Segment2000Globals.Word0032 = 0x5555;
         NearReturn();
@@ -31,8 +31,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_0093_F0093(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_0093_F0093(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x0093);
         AX = Segment2000Globals.Word0032;
         BX = 0x2000;
@@ -49,8 +49,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al;
-        ushort ax;
+        byte byte1;
+        ushort word1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -64,14 +64,14 @@ public partial class CfgGeneratedOverrides {
         EAX = 0xAABBCCDDu;
         Segment2000Globals.Dword0043 = 0xAABBCCDDu;
         Segment2000Globals.Word0028 = 0xBEEF;
-        al = Segment2000Globals.Byte0028;
-        Segment2000Globals.Byte0047 = al;
+        byte1 = Segment2000Globals.Byte0028;
+        Segment2000Globals.Byte0047 = byte1;
         Segment2000Globals.Word0048 = 0xBEEF;
         Segment2000Globals.Byte0010 = 0x11;
         Segment2000Globals.Byte0011 = 0x22;
         Segment2000Globals.Byte0012 = 0x33;
-        ax = Segment2000Globals.Word0010;
-        Segment2000Globals.Word004A = ax;
+        word1 = Segment2000Globals.Word0010;
+        Segment2000Globals.Word004A = word1;
         AX = Segment2000Globals.Word0011;
         Segment2000Globals.Word004C = AX;
         Stack.Push16(DS);

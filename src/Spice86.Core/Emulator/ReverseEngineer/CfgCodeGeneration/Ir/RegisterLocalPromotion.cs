@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -106,21 +107,41 @@ internal static partial class RegisterLocalPromotion {
                 nonSubstitutable, occurrences, unprinted, dropped))
             .OfType<Candidate>()];
         Dictionary<string, int> counters = new(StringComparer.Ordinal);
-        List<(Candidate Candidate, string Name)> accepted = [];
+        List<(Candidate Candidate, string LegacyName)> promotable = [];
         foreach (Candidate candidate in candidates.OrderBy(candidate => candidate.FirstBlockOrder)
                 .ThenBy(candidate => candidate.FirstIndex)) {
-            string name = candidate.SingleBlock ? candidate.BaseName : candidate.BaseName + NextNumber(counters, candidate.BaseName);
-            if (reservedNames.Contains(name)) {
+            string legacyName = candidate.SingleBlock ? candidate.BaseName : candidate.BaseName + NextNumber(counters, candidate.BaseName);
+            if (reservedNames.Contains(legacyName)) {
                 continue;
             }
             if (candidate.SingleBlock) {
                 if (Overlaps(ranges, candidate)) {
                     continue;
                 }
-                ranges.Add((candidate.Block, name, candidate.DefIndex, candidate.End));
+                ranges.Add((candidate.Block, legacyName, candidate.DefIndex, candidate.End));
             }
-            accepted.Add((candidate, name));
+            promotable.Add((candidate, legacyName));
         }
+        // The printed name is the width prefix numbered by the first definition address (G4.1);
+        // the legacy register name above only decides which webs promote, as before. Webs that
+        // shared one local keep sharing it: they had one legacy name.
+        HashSet<string> taken = new(reservedNames, StringComparer.Ordinal);
+        Dictionary<string, string> names = new(StringComparer.Ordinal);
+        foreach ((Candidate candidate, string legacyName) in promotable
+                .OrderBy(item => item.Candidate.FirstAddress)
+                .ThenBy(item => item.Candidate.FirstBlockOrder)
+                .ThenBy(item => item.Candidate.FirstIndex)
+                .ThenBy(item => item.Candidate.BaseName, StringComparer.Ordinal)) {
+            if (names.ContainsKey(legacyName)) {
+                continue;
+            }
+            string name = GenericValueNames.Next(
+                GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken);
+            taken.Add(name);
+            names[legacyName] = name;
+        }
+        List<(Candidate Candidate, string Name)> accepted = [.. promotable
+            .Select(item => (item.Candidate, names[item.LegacyName]))];
         // The tuple helpers and the service calls hand back unsigned storage halves even for a
         // signed operation, so a local defined by one of their targets stays unsigned whatever the
         // web's signed reads vote.
@@ -430,9 +451,14 @@ internal static partial class RegisterLocalPromotion {
         int firstIndex = collected.Sites
             .Where(definition => OrderOf(method, definition.Block) == firstBlockOrder)
             .Select(definition => definition.Index).DefaultIfEmpty(-1).Min();
+        Definition first = collected.Sites
+            .Where(definition => OrderOf(method, definition.Block) == firstBlockOrder
+                && definition.Index == firstIndex).First();
+        SegmentedAddress firstAddress = first.Statement?.Origin.Address
+            ?? first.Block.EntryOrigin.Address;
         return new Candidate(touched.First(), singleBlock, firstBlockOrder, firstIndex, defIndex,
             end, webRegister, baseName, collected.DefTargets, collected.Sites,
-            classification.WebReads, writeBackUses, signedVotes, unsignedVotes);
+            classification.WebReads, writeBackUses, signedVotes, unsignedVotes, firstAddress);
     }
 
     /// <summary>The definition sites of the web's versions, or <c>null</c> when one disqualifies
@@ -1132,5 +1158,6 @@ internal static partial class RegisterLocalPromotion {
         int FirstIndex, int DefIndex, int End, RegisterNode Register, string BaseName,
         IReadOnlyList<RegisterNode> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
-        IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes);
+        IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes,
+        SegmentedAddress FirstAddress);
 }

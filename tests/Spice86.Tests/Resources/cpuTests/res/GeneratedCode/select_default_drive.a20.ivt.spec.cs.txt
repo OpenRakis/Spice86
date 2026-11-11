@@ -15,44 +15,44 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al2 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x0E;
-        al1 = ServiceCall(cs1, 0x0106, Dos, () => Dos.SelectDefaultDrive(2));
+        byte1 = ServiceCall(cs1, 0x0106, Dos, () => Dos.SelectDefaultDrive(2));
         DX = 0x0998;
-        Out8(0x0998, al1);
-        Alu8.Sub(al1, 0x1A);
-        if (al1 == 0x1A) {
-            AL = al1;
+        Out8(0x0998, byte1);
+        Alu8.Sub(byte1, 0x1A);
+        if (byte1 == 0x1A) {
+            AL = byte1;
             AH = 0x19;
-            al1 = ServiceCall(cs1, 0x0112, Dos, () => Dos.ReadCurrentDefaultDrive());
+            byte1 = ServiceCall(cs1, 0x0112, Dos, () => Dos.ReadCurrentDefaultDrive());
             DX = 0x0998;
-            Out8(0x0998, al1);
-            Alu8.Sub(al1, 2);
-            if (al1 == 2) {
-                AL = al1;
+            Out8(0x0998, byte1);
+            Alu8.Sub(byte1, 2);
+            if (byte1 == 2) {
+                AL = byte1;
                 AH = 0x0E;
                 AL = ServiceCall(cs1, 0x0120, Dos, () => Dos.SelectDefaultDrive(0x1A));
                 AH = 0x19;
-                al1 = ServiceCall(cs1, 0x0124, Dos, () => Dos.ReadCurrentDefaultDrive());
+                byte1 = ServiceCall(cs1, 0x0124, Dos, () => Dos.ReadCurrentDefaultDrive());
                 DX = 0x0998;
-                Out8(0x0998, al1);
-                Alu8.Sub(al1, 2);
-                if (al1 != 2) {
+                Out8(0x0998, byte1);
+                Alu8.Sub(byte1, 2);
+                if (byte1 != 2) {
                     goto L_0130;
                 }
-                al2 = 0;
+                byte2 = 0;
                 goto L_0132;
             }
         }
     L_0130:
         VerifySpeculativeEntryOrFail(cs1, 0x0130, Signature_0130_mov);
-        al2 = 0xFF;
+        byte2 = 0xFF;
     L_0132:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        AL = al2;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

@@ -15,38 +15,38 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort bx1 = 0;
-        ushort bx2 = 0;
-        ushort bx3 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x33;
         DL = 1;
-        (AL, DX, bx1) = ServiceCall(cs1, 0x0108, Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
+        (AL, DX, word1) = ServiceCall(cs1, 0x0108, Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
         AH = 0x33;
-        (AL, DX, bx2) = ServiceCall(cs1, 0x010E, Dos, () => Dos.GetSetControlBreak(0, DL, DH, bx1));
+        (AL, DX, word2) = ServiceCall(cs1, 0x010E, Dos, () => Dos.GetSetControlBreak(0, DL, DH, word1));
         Alu8.Sub(DL, 1);
         if (DL == 1) {
             AH = 0x33;
             DL = 0;
-            (AL, DX, bx3) = ServiceCall(cs1, 0x011B, Dos, () => Dos.GetSetControlBreak(1, 0, DH, bx2));
+            (AL, DX, word3) = ServiceCall(cs1, 0x011B, Dos, () => Dos.GetSetControlBreak(1, 0, DH, word2));
             AH = 0x33;
-            (AL, DX, bx2) = ServiceCall(cs1, 0x0121, Dos, () => Dos.GetSetControlBreak(0, DL, DH, bx3));
+            (AL, DX, word2) = ServiceCall(cs1, 0x0121, Dos, () => Dos.GetSetControlBreak(0, DL, DH, word3));
             Alu8.Sub(DL, 0);
             if (DL != 0) {
                 goto L_012A;
             }
-            al1 = 0;
+            byte1 = 0;
             goto L_012C;
         }
     L_012A:
         VerifySpeculativeEntryOrFail(cs1, 0x012A, Signature_012A_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_012C:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        BX = bx2;
-        AL = al1;
+        Out8(0x0999, byte1);
+        BX = word2;
+        AL = byte1;
         return Hlt();
     }
 

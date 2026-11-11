@@ -15,11 +15,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, BP, DI, ES, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax1 = 0;
-        byte al1 = 0;
-        ushort ax2 = 0;
-        ushort ax;
-        byte al2 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
+        ushort word2 = 0;
+        ushort word3;
+        byte byte2 = 0;
         byte flagOperand_013C = 0;
         ushort flagOperand_018D = 0;
         ushort flagOperand_0198 = 0;
@@ -71,9 +71,9 @@ public partial class CfgGeneratedOverrides {
             }
         }
     L_0125:
-        ax1 = ServiceCall(cs1, 0x0127, Equipment, () => Equipment.GetEquipmentList());
-        Alu16.And(ax1, ax1);
-        AX = ax1;
+        word1 = ServiceCall(cs1, 0x0127, Equipment, () => Equipment.GetEquipmentList());
+        Alu16.And(word1, word1);
+        AX = word1;
         AL = 1;
         if (ZeroFlag) {
             AX = ServiceCall(cs1, 0x0131, MemorySize, () => MemorySize.GetConventionalMemorySize());
@@ -133,11 +133,11 @@ public partial class CfgGeneratedOverrides {
                         if (BP != flagOperand_01BE) {
                             goto L_02F0;
                         }
-                        al1 = ImageMinus0003Globals.Byte02FB;
-                        if (al1 == 0x68) {
+                        byte1 = ImageMinus0003Globals.Byte02FB;
+                        if (byte1 == 0x68) {
                             goto L_0218;
                         }
-                        if (al1 == 0x66) {
+                        if (byte1 == 0x66) {
                             goto L_025A;
                         }
                         AL = 4;
@@ -252,9 +252,9 @@ public partial class CfgGeneratedOverrides {
                         AX = Alu16.Sub(AX, 6);
                         ImageMinus0003Globals.Word02FC = AX;
                         ImageMinus0003Globals.Word02FE = SS;
-                        (ax2, CX, BX) = ServiceCall(cs1, 0x02A4, Dos, () => Dos.ReadDosVersion());
-                        ECX = (uint)(int)(short)ax2;
-                        EDX = (uint)(int)(short)ax2;
+                        (word2, CX, BX) = ServiceCall(cs1, 0x02A4, Dos, () => Dos.ReadDosVersion());
+                        ECX = (uint)(int)(short)word2;
+                        EDX = (uint)(int)(short)word2;
                         EAX = 0;
                         AL = 0x13;
                         Alu32.Sub(ECX, 5);
@@ -266,8 +266,8 @@ public partial class CfgGeneratedOverrides {
                         if (EDX != 5) {
                             goto L_02F0;
                         }
-                        ax = ImageMinus0003Globals.Word002E;
-                        ImageMinus0003Globals.Word0300 = ax;
+                        word3 = ImageMinus0003Globals.Word002E;
+                        ImageMinus0003Globals.Word0300 = word3;
                         AX = ImageMinus0003Globals.Word0030;
                         ImageMinus0003Globals.Word0302 = AX;
                         AX = ImageMinus0003Globals.Word02FC;
@@ -282,7 +282,7 @@ public partial class CfgGeneratedOverrides {
                         if (flagOperand_02E5 != AX) {
                             goto L_02F0;
                         }
-                        al2 = 0;
+                        byte2 = 0;
                         goto L_02F6;
                     }
                 }
@@ -293,11 +293,11 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0998;
         Out8(0x0998, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x02F4, Signature_02F4_mov);
-        al2 = 0xFF;
+        byte2 = 0xFF;
     L_02F6:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        AL = al2;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

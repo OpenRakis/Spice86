@@ -465,10 +465,10 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, DX, DS. Outputs: AX, DX, DS. Changes: AX, DX, DS.</summary>
-    public virtual (ushort ax, ushort dx, ushort ds) unknown_F000_00E8_F00E8(ushort ax, ushort dx, ushort ds) {
-        AX = ax;
-        DX = dx;
-        DS = ds;
+    public virtual (ushort word4, ushort word5, ushort word6) unknown_F000_00E8_F00E8(ushort word1, ushort word2, ushort word3) {
+        AX = word1;
+        DX = word2;
+        DS = word3;
         CheckExternalEvents(biosSegment, 0x00E8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
         FarReturn();

@@ -22,8 +22,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        ushort dx;
+        ushort word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -38,22 +38,22 @@ public partial class CfgGeneratedOverrides {
         BP = 4;
         do {
             CheckExternalEvents(biosSegment, 0x0027);
-            ax = (ushort)(UInt16[CS, SI] & 0x00FF);
-            UInt16[DS, BX] = ax;
+            word1 = (ushort)(UInt16[CS, SI] & 0x00FF);
+            UInt16[DS, BX] = word1;
             AX = (ushort)(UInt16[CS, SI] | 0x00FF);
             UInt16[DS, BX + 2] = AX;
-            ax = UInt16[CS, SI];
-            UInt16[DS, BX + 4] = ax;
+            word1 = UInt16[CS, SI];
+            UInt16[DS, BX + 4] = word1;
             AX = UInt16[CS, SI];
             UInt16[DS, BX + 6] = AX;
-            ax = (ushort)(UInt16[CS, SI] & 0x0FFF);
-            UInt16[DS, BX + 8] = ax;
+            word1 = (ushort)(UInt16[CS, SI] & 0x0FFF);
+            UInt16[DS, BX + 8] = word1;
             AX = UInt16[CS, SI];
-            dx = (ushort)(AL | 0);
-            UInt16[DS, BX + 0x0A] = dx;
+            word2 = (ushort)(AL | 0);
+            UInt16[DS, BX + 0x0A] = word2;
             AX = UInt16[CS, SI];
-            ax = (ushort)(AL << 8);
-            UInt16[DS, BX + 0x0C] = ax;
+            word1 = (ushort)(AL << 8);
+            UInt16[DS, BX + 0x0C] = word1;
             AX = UInt16[CS, SI];
             DX = (ushort)((byte)(AX >> 8) | 0);
             UInt16[DS, BX + 0x0E] = DX;
@@ -68,11 +68,11 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x14] = DX;
             DH = 0;
             UInt16[DS, BX + 0x16] = DX;
-            ax = (ushort)(UInt16[CS, SI] ^ 0x5678);
-            UInt16[DS, BX + 0x18] = ax;
-            dx = (ushort)(0x5678 ^ ax);
-            AX = ax;
-            AX ^= dx;
+            word1 = (ushort)(UInt16[CS, SI] ^ 0x5678);
+            UInt16[DS, BX + 0x18] = word1;
+            word2 = (ushort)(0x5678 ^ word1);
+            AX = word1;
+            AX ^= word2;
             UInt16[DS, BX + 0x1A] = AX;
             CarryFlag = false;
             ParityFlag = true;
@@ -88,16 +88,16 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x24] = DX;
             AX = (ushort)(UInt16[CS, SI] ^ 0x5678);
             UInt8[DS, BX + 0x1C] = 0;
-            dx = (ushort)(0x5678 ^ AX);
-            AX = Alu16.Xor(AX, dx);
+            word2 = (ushort)(0x5678 ^ AX);
+            AX = Alu16.Xor(AX, word2);
             Stack.Push16(FlagRegister16);
             CX = Stack.Pop16();
             CX &= 1;
             UInt16[DS, BX + 0x1E] = CX;
             CX = UInt16[CS, SI];
             AX = (ushort)(CL | 0x0700);
-            ax = (ushort)(0x34 | (byte)(CX >> 8) << 8);
-            UInt16[DS, BX + 0x26] = ax;
+            word1 = (ushort)(0x34 | (byte)(CX >> 8) << 8);
+            UInt16[DS, BX + 0x26] = word1;
             AX = UInt16[CS, SI];
             DX = UInt16[CS, SI + 2];
             (AX, DX) = (DX, AX);

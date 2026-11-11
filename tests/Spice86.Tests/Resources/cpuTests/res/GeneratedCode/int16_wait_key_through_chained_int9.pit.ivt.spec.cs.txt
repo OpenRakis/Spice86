@@ -15,14 +15,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax;
-        ushort di;
+        ushort word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x0100);
         InterruptFlag = false;
         AX = Alu16.Xor(AX, AX);
         ES = 0;
-        ax = Segment0000Globals.Word0024;
-        CsGlobals.Word0167 = ax;
+        word1 = Segment0000Globals.Word0024;
+        CsGlobals.Word0167 = word1;
         AX = Segment0000Globals.Word0026;
         CsGlobals.Word0169 = AX;
         Segment0000Globals.Dword0024 = 0x00000159 | (uint)CS << 16;
@@ -34,8 +34,8 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x012D, 0x16);
         BX = AX;
         InterruptFlag = false;
-        ax = CsGlobals.Word0167;
-        EsGlobals.Word0024 = ax;
+        word1 = CsGlobals.Word0167;
+        EsGlobals.Word0024 = word1;
         AX = CsGlobals.Word0169;
         EsGlobals.Word0026 = AX;
         AX = 0xB800;
@@ -43,10 +43,10 @@ public partial class CfgGeneratedOverrides {
         DI = Alu16.Xor(DI, DI);
         AX = (ushort)(BL | 0x0700);
         SegmentB800Globals.Word0000 = AX;
-        di = (ushort)(DirectionFlag ? -2 : 2);
+        word2 = (ushort)(DirectionFlag ? -2 : 2);
         AL = BH;
-        UInt16[ES, di] = AX;
-        DI = (ushort)(di + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[ES, word2] = AX;
+        DI = (ushort)(word2 + (ushort)(DirectionFlag ? -2 : 2));
         AL = CsGlobals.Byte0166;
         UInt16[ES, DI] = AX;
         DI += (ushort)(DirectionFlag ? -2 : 2);
@@ -57,11 +57,11 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_016D_0159_01829() {
-        byte al;
+        byte byte1;
         CheckExternalEvents(cs1, 0x0159);
         Stack.Push16(AX);
-        al = KeyboardControllerPorts.ReadData();
-        CsGlobals.Byte0166 = al;
+        byte1 = KeyboardControllerPorts.ReadData();
+        CsGlobals.Byte0166 = byte1;
         AX = Stack.Pop16();
         ushort targetSegment_0161 = CsGlobals.Word0169;
         ushort targetOffset_0161 = CsGlobals.Word0167;
@@ -521,18 +521,18 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint eax, uint ecx, uint edx, uint ebx, uint ebp, uint esi, uint edi, ushort es, ushort ds, ushort fs, ushort gs) unknown_F000_00E8_F00E8(uint eax, uint ecx, uint edx, uint ebx, uint ebp, uint esi, uint edi, ushort es, ushort ds, ushort fs, ushort gs) {
-        EAX = eax;
-        ECX = ecx;
-        EDX = edx;
-        EBX = ebx;
-        EBP = ebp;
-        ESI = esi;
-        EDI = edi;
-        ES = es;
-        DS = ds;
-        FS = fs;
-        GS = gs;
+    public virtual (uint dword8, uint dword9, uint dword10, uint dword11, uint dword12, uint dword13, uint dword14, ushort word5, ushort word6, ushort word7, ushort word8) unknown_F000_00E8_F00E8(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, uint dword6, uint dword7, ushort word1, ushort word2, ushort word3, ushort word4) {
+        EAX = dword1;
+        ECX = dword2;
+        EDX = dword3;
+        EBX = dword4;
+        EBP = dword5;
+        ESI = dword6;
+        EDI = dword7;
+        ES = word1;
+        DS = word2;
+        FS = word3;
+        GS = word4;
         CheckExternalEvents(biosSegment, 0x00E8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
         FarReturn();

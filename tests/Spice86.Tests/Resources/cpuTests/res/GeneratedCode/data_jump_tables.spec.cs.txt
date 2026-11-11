@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_02D7_F02D7(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_02D7_F02D7(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x02D7);
         Segment2000Globals.Word0052 = 0xF0F0;
         NearReturn();
@@ -31,8 +31,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_02DE_F02DE(ushort ds) {
-        DS = ds;
+    public virtual void unknown_F000_02DE_F02DE(ushort word1) {
+        DS = word1;
         CheckExternalEvents(biosSegment, 0x02DE);
         Segment2000Globals.Word0054 = 0xF1F1;
         NearReturn();

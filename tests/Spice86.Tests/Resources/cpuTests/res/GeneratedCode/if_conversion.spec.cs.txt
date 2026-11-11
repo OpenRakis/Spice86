@@ -14,15 +14,15 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax1 = 0;
-        byte al1 = 0;
-        byte al2 = 0;
-        ushort bx1 = 0;
-        ushort cx1 = 0;
-        ushort bx2 = 0;
-        ushort cx2 = 0;
-        ushort cx3 = 0;
-        ushort cx4 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
+        ushort word6 = 0;
+        ushort word7 = 0;
         ushort flagOperand_0013 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -30,24 +30,24 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         DI = 0x0040;
         SI = 0x00B9;
-        ax1 = SegmentF000Globals.Word00B9;
+        word1 = SegmentF000Globals.Word00B9;
         flagOperand_0013 = SegmentF000Globals.Word00BB;
-        CL = (byte)(ax1 < flagOperand_0013 ? 1 : 0);
-        CH = (byte)(ax1 > flagOperand_0013 ? 1 : 0);
+        CL = (byte)(word1 < flagOperand_0013 ? 1 : 0);
+        CH = (byte)(word1 > flagOperand_0013 ? 1 : 0);
         Segment2000Globals.Word0040 = CX;
         DX = SegmentF000Globals.Word00BD;
-        DL = (byte)(DX == ax1 ? 1 : 0);
+        DL = (byte)(DX == word1 ? 1 : 0);
         Segment2000Globals.Word0042 = DX;
-        AX = ax1;
-        al1 = (byte)(ax1 < SegmentF000Globals.Word00BB ? 0xFF : 0);
-        Segment2000Globals.Byte0044 = al1;
+        AX = word1;
+        byte1 = (byte)(word1 < SegmentF000Globals.Word00BB ? 0xFF : 0);
+        Segment2000Globals.Byte0044 = byte1;
         AX = SegmentF000Globals.Word00BB;
-        al2 = (byte)(AX < SegmentF000Globals.Word00B9 ? 0xFF : 0);
-        Segment2000Globals.Byte0045 = al2;
-        bx1 = SegmentF000Globals.Word00BF;
-        cx1 = 0xFFFF;
-        if (bx1 != 0) {
-            cx1 = BitScanForward16(bx1);
+        byte2 = (byte)(AX < SegmentF000Globals.Word00B9 ? 0xFF : 0);
+        Segment2000Globals.Byte0045 = byte2;
+        word2 = SegmentF000Globals.Word00BF;
+        word3 = 0xFFFF;
+        if (word2 != 0) {
+            word3 = BitScanForward16(word2);
             ZeroFlag = false;
         }
         else {
@@ -59,11 +59,11 @@ public partial class CfgGeneratedOverrides {
         else {
             Segment2000Globals.Byte0046 = 0;
         }
-        Segment2000Globals.Word0047 = cx1;
-        bx2 = SegmentF000Globals.Word00C1;
-        cx2 = 0xFFFF;
-        if (bx2 != 0) {
-            cx2 = BitScanForward16(bx2);
+        Segment2000Globals.Word0047 = word3;
+        word4 = SegmentF000Globals.Word00C1;
+        word5 = 0xFFFF;
+        if (word4 != 0) {
+            word5 = BitScanForward16(word4);
             ZeroFlag = false;
         }
         else {
@@ -75,7 +75,7 @@ public partial class CfgGeneratedOverrides {
         else {
             Segment2000Globals.Byte0049 = 0;
         }
-        Segment2000Globals.Word004A = cx2;
+        Segment2000Globals.Word004A = word5;
         AL = SegmentF000Globals.Byte00C3;
         AL = Alu8.Add(AL, SegmentF000Globals.Byte00C4);
         byte initialAl_0068 = AL;
@@ -122,10 +122,10 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word004E = AX;
         AX = SegmentF000Globals.Word00B9;
         BX = SegmentF000Globals.Word00B9;
-        cx3 = SegmentF000Globals.Word00BB;
+        word6 = SegmentF000Globals.Word00BB;
         if (BX == AX) {
             ZeroFlag = true;
-            BX = cx3;
+            BX = word6;
         }
         else {
             ZeroFlag = false;
@@ -141,7 +141,7 @@ public partial class CfgGeneratedOverrides {
         BX = SegmentF000Globals.Word00BD;
         if (BX == AX) {
             ZeroFlag = true;
-            BX = cx3;
+            BX = word6;
         }
         else {
             ZeroFlag = false;
@@ -158,13 +158,13 @@ public partial class CfgGeneratedOverrides {
         Alu8.And(AL, 1);
         if ((AL & 1) == 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00B2, Signature_00B2_mov);
-            cx4 = 2;
+            word7 = 2;
         }
         else {
-            cx4 = 1;
+            word7 = 1;
         }
-        Segment2000Globals.Word005A = cx4;
-        CX = cx4;
+        Segment2000Globals.Word005A = word7;
+        CX = word7;
         return Hlt();
     }
 

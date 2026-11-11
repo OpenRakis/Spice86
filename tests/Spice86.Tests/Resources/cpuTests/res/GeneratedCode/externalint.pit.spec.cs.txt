@@ -24,7 +24,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
         SS = 0;
@@ -45,8 +45,8 @@ public partial class CfgGeneratedOverrides {
             CX--;
         } while (CX != 0);
         Alu16.Sub(DX, 0);
-        al1 = (byte)(DX != 0 ? 1 : 0);
-        AX = (ushort)al1;
+        byte1 = (byte)(DX != 0 ? 1 : 0);
+        AX = (ushort)byte1;
         Stack.Push16(AX);
         return Hlt();
     }

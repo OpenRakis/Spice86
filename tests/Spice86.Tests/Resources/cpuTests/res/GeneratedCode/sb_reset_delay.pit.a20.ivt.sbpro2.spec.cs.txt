@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al;
+        byte byte1 = 0;
+        byte byte2;
         CheckExternalEvents(cs1, 0x0100);
         SI = 0x01A5;
         NearCall(cs1, 0x0106, unknown_016D_0174_01844Entry);
@@ -24,7 +24,7 @@ public partial class CfgGeneratedOverrides {
         AL = 1;
         SoundBlasterPorts.WriteDspReset(1);
         DX = 0x0226;
-        al1 = 0;
+        byte1 = 0;
         SoundBlasterPorts.WriteDspReset(0);
         CX = 0;
         while (true) {
@@ -34,27 +34,27 @@ public partial class CfgGeneratedOverrides {
                 goto L_0130;
             }
             DX = 0x022E;
-            al1 = SoundBlasterPorts.ReadDspReadStatus();
-            if ((al1 & 0x80) != 0) {
+            byte1 = SoundBlasterPorts.ReadDspReadStatus();
+            if ((byte1 & 0x80) != 0) {
                 DX = 0x022A;
-                al1 = SoundBlasterPorts.ReadDspData();
-                Alu8.Sub(al1, 0xAA);
-                if (al1 == 0xAA) {
+                byte1 = SoundBlasterPorts.ReadDspData();
+                Alu8.Sub(byte1, 0xAA);
+                if (byte1 == 0xAA) {
                     break;
                 }
             }
             CX++;
         }
         SI = 0x01BB;
-        AL = al1;
+        AL = byte1;
         NearCall(cs1, 0x0158, unknown_016D_0174_01844Entry);
         AX = CX;
         NearCall(cs1, 0x015D, unknown_016D_0183_01853Entry);
         SI = 0x01CB;
         NearCall(cs1, 0x0163, unknown_016D_0174_01844Entry);
         DX = 0x0998;
-        al = CL;
-        Out8(0x0998, al);
+        byte2 = CL;
+        Out8(0x0998, byte2);
         AL = CH;
         Out8(0x0998, AL);
         DX = 0x0999;
@@ -65,7 +65,7 @@ public partial class CfgGeneratedOverrides {
     L_0130:
         VerifySpeculativeRunOrFail(cs1, 0x0130, SpeculativeRun_0130);
         SI = 0x01D9;
-        AL = al1;
+        AL = byte1;
         NearCall(cs1, 0x0136, unknown_016D_0174_01844Entry);
         throw FailAsUntested("Untested return from call at 016D:0133");
     }

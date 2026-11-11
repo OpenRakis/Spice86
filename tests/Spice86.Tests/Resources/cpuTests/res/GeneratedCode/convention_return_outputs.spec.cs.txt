@@ -28,9 +28,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DS. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
-    public virtual ushort unknown_F000_0056_F0056(ushort ax, ushort ds) {
-        AX = ax;
-        DS = ds;
+    public virtual ushort unknown_F000_0056_F0056(ushort word1, ushort word2) {
+        AX = word1;
+        DS = word2;
         CheckExternalEvents(biosSegment, 0x0056);
         AX = Alu16.Add(AX, Segment2000Globals.Word0400);
         NearReturn();
@@ -93,14 +93,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Outputs: none. Changes: SI, DI, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
-    public virtual void unknown_F000_0069_F0069(ushort ds) {
-        DS = ds;
-        ushort si;
+    public virtual void unknown_F000_0069_F0069(ushort word1) {
+        DS = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x0069);
-        si = Segment2000Globals.Word0400;
-        DI = (ushort)(si + si);
-        DI = Alu16.Add(DI, si);
-        SI = si;
+        word2 = Segment2000Globals.Word0400;
+        DI = (ushort)(word2 + word2);
+        DI = Alu16.Add(DI, word2);
+        SI = word2;
         NearReturn();
         return;
     }

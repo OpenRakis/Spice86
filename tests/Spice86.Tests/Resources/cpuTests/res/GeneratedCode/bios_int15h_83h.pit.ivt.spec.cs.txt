@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort es1 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0998;
         AL = 1;
@@ -25,8 +25,8 @@ public partial class CfgGeneratedOverrides {
         DX = 0x1000;
         BX = 0;
         Stack.Push16(CS);
-        es1 = Stack.Pop16();
-        (AH, CarryFlag) = ServiceCall(cs1, 0x0117, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, es1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+        word1 = Stack.Pop16();
+        (AH, CarryFlag) = ServiceCall(cs1, 0x0117, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, word1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
         if (!CarryFlag) {
             AL = 2;
             Out8(0x0998, 2);
@@ -35,8 +35,8 @@ public partial class CfgGeneratedOverrides {
             DX = 0x1000;
             BX = 0;
             Stack.Push16(CS);
-            es1 = Stack.Pop16();
-            (AH, CarryFlag) = ServiceCall(cs1, 0x0130, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, es1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+            word1 = Stack.Pop16();
+            (AH, CarryFlag) = ServiceCall(cs1, 0x0130, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, word1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
             if (CarryFlag) {
                 Alu8.Sub(AH, 0x80);
                 if (AH == 0x80) {
@@ -44,7 +44,7 @@ public partial class CfgGeneratedOverrides {
                     AL = 3;
                     Out8(0x0998, 3);
                     AX = 0x8301;
-                    (AH, CarryFlag) = ServiceCall(cs1, 0x0143, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                    (AH, CarryFlag) = ServiceCall(cs1, 0x0143, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, word1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
                     if (!CarryFlag) {
                         AL = 4;
                         Out8(0x0998, 4);
@@ -53,8 +53,8 @@ public partial class CfgGeneratedOverrides {
                         DX = 0x2000;
                         BX = 0;
                         Stack.Push16(CS);
-                        es1 = Stack.Pop16();
-                        (AH, CarryFlag) = ServiceCall(cs1, 0x015C, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, es1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                        word1 = Stack.Pop16();
+                        (AH, CarryFlag) = ServiceCall(cs1, 0x015C, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, word1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_0173;
                         }
@@ -62,12 +62,12 @@ public partial class CfgGeneratedOverrides {
                         AL = 5;
                         Out8(0x0998, 5);
                         AX = 0x8301;
-                        (AH, CarryFlag) = ServiceCall(cs1, 0x016A, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, es1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                        (AH, CarryFlag) = ServiceCall(cs1, 0x016A, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, word1, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
                         if (!CarryFlag) {
                             DX = 0x0999;
                             AL = 0;
                             Out8(0x0999, 0);
-                            ES = es1;
+                            ES = word1;
                             return Hlt();
                         }
                     }
@@ -80,7 +80,7 @@ public partial class CfgGeneratedOverrides {
         AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0179, Signature_0179_hlt);
-        ES = es1;
+        ES = word1;
         return Hlt();
     }
 

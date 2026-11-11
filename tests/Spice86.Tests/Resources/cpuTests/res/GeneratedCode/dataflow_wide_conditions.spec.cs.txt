@@ -14,10 +14,10 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax1 = 0;
-        byte al1 = 0;
-        byte al2 = 0;
-        byte al3 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
+        byte byte3 = 0;
         byte rangeOperand_00A4 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
@@ -31,41 +31,41 @@ public partial class CfgGeneratedOverrides {
         DI = 0x01B8;
         do {
             CheckExternalEvents(biosSegment, 0x0015);
-            ax1 = UInt16[CS, SI];
+            word1 = UInt16[CS, SI];
             DX = UInt16[CS, SI + 2];
             BP = UInt16[CS, SI + 4];
             CX = UInt16[CS, SI + 6];
-            if ((int)((uint)ax1 | (uint)DX << 16) < (int)((uint)BP | (uint)CX << 16)) {
+            if ((int)((uint)word1 | (uint)DX << 16) < (int)((uint)BP | (uint)CX << 16)) {
                 UInt8[DS, BX] = 1;
             }
             else {
                 UInt8[DS, BX] = 0;
             }
-            if (((uint)ax1 | (uint)DX << 16) < ((uint)BP | (uint)CX << 16)) {
+            if (((uint)word1 | (uint)DX << 16) < ((uint)BP | (uint)CX << 16)) {
                 UInt8[DS, BX + 1] = 1;
             }
             else {
                 UInt8[DS, BX + 1] = 0;
             }
-            if (((uint)ax1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
+            if (((uint)word1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
                 UInt8[DS, BX + 2] = 1;
             }
             else {
                 UInt8[DS, BX + 2] = 0;
             }
-            if (((uint)ax1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
+            if (((uint)word1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
                 UInt8[DS, BX + 3] = 0;
             }
             else {
                 UInt8[DS, BX + 3] = 1;
             }
-            if ((int)((uint)ax1 | (uint)DX << 16) < 0x00010001) {
+            if ((int)((uint)word1 | (uint)DX << 16) < 0x00010001) {
                 UInt8[DS, BX + 4] = 1;
             }
             else {
                 UInt8[DS, BX + 4] = 0;
             }
-            if ((ax1 | DX) == 0) {
+            if ((word1 | DX) == 0) {
                 UInt8[DS, BX + 5] = 1;
             }
             else {
@@ -79,15 +79,15 @@ public partial class CfgGeneratedOverrides {
             else {
                 UInt8[DS, BX + 6] = 0;
             }
-            al1 = UInt8[CS, DI];
-            if (al1 is < 0x61 or > 0x7A) {
+            byte1 = UInt8[CS, DI];
+            if (byte1 is < 0x61 or > 0x7A) {
                 UInt8[DS, BX + 7] = 0;
             }
             else {
                 UInt8[DS, BX + 7] = 1;
             }
-            al2 = UInt8[CS, DI];
-            if (al2 == 0) {
+            byte2 = UInt8[CS, DI];
+            if (byte2 == 0) {
                 UInt8[DS, BX + 8] = 1;
             }
             else {
@@ -108,14 +108,14 @@ public partial class CfgGeneratedOverrides {
         L_00FB:
             UInt8[DS, BX + 9] = 1;
         L_00FF:
-            al3 = (byte)(UInt8[CS, DI] - 0x61);
-            if (al3 > 0x19) {
+            byte3 = (byte)(UInt8[CS, DI] - 0x61);
+            if (byte3 > 0x19) {
                 UInt8[DS, BX + 0x0B] = 1;
             }
             else {
                 UInt8[DS, BX + 0x0B] = 0;
             }
-            UInt8[DS, BX + 0x0C] = al3;
+            UInt8[DS, BX + 0x0C] = byte3;
             AX = UInt16[CS, SI];
             UInt8[DS, BX + 0x0E] = 0;
             if (DX >= CX) {

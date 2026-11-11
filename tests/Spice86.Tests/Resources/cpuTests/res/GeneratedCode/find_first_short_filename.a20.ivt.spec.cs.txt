@@ -15,8 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
-        byte al2 = 0;
+        byte byte1 = 0;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
         DX = 0x0288;
@@ -32,9 +32,9 @@ public partial class CfgGeneratedOverrides {
             }
             Stack.Push16(CX);
             Stack.Push16(SI);
-            al1 = UInt8[DS, SI + 4];
-            Alu8.And(al1, al1);
-            if (al1 != 0) {
+            byte1 = UInt8[DS, SI + 4];
+            Alu8.And(byte1, byte1);
+            if (byte1 != 0) {
                 (AX, CarryFlag) = ServiceCall(cs1, 0x012B, Dos, () => Dos.FindNext(), r => CarryOnInterruptStack(r.carryFlag));
             }
             else {
@@ -79,14 +79,14 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0998;
         Out8(0x0998, AL);
         VerifySpeculativeRunOrFail(cs1, 0x0151, SpeculativeRun_0151);
-        al2 = 0xFF;
+        byte2 = 0xFF;
         goto L_015D;
     L_015B:
-        al2 = 0;
+        byte2 = 0;
     L_015D:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        AL = al2;
+        Out8(0x0999, byte2);
+        AL = byte2;
         return Hlt();
     }
 

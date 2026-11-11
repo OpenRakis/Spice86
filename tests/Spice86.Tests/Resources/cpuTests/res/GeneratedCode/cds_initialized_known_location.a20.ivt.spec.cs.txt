@@ -15,50 +15,50 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort bx1 = 0;
-        ushort si;
-        byte al1 = 0;
-        ushort si1 = 0;
-        byte al2 = 0;
+        ushort word1 = 0;
+        ushort word2;
+        byte byte1 = 0;
+        ushort word3 = 0;
+        byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x52;
-        (bx1, ES) = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadListOfListsAddress());
-        si = UInt16[ES, bx1 + 0x16];
-        ES = UInt16[ES, bx1 + 0x0018];
+        (word1, ES) = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadListOfListsAddress());
+        word2 = UInt16[ES, word1 + 0x16];
+        ES = UInt16[ES, word1 + 0x0018];
         Stack.Push16(ES);
         DS = Stack.Pop16();
-        al1 = UInt8[DS, si];
-        si1 = (ushort)(si + (ushort)(DirectionFlag ? -1 : 1));
-        Alu8.Sub(al1, 0x43);
-        if (al1 == 0x43) {
-            al1 = UInt8[DS, si1];
-            si1 += (ushort)(DirectionFlag ? -1 : 1);
-            Alu8.Sub(al1, 0x3A);
-            if (al1 == 0x3A) {
-                al1 = UInt8[DS, si1];
-                si1 += (ushort)(DirectionFlag ? -1 : 1);
-                Alu8.Sub(al1, 0x5C);
-                if (al1 == 0x5C) {
-                    al1 = UInt8[DS, si1];
-                    si1 += (ushort)(DirectionFlag ? -1 : 1);
-                    Alu8.Sub(al1, 0);
-                    if (al1 != 0) {
+        byte1 = UInt8[DS, word2];
+        word3 = (ushort)(word2 + (ushort)(DirectionFlag ? -1 : 1));
+        Alu8.Sub(byte1, 0x43);
+        if (byte1 == 0x43) {
+            byte1 = UInt8[DS, word3];
+            word3 += (ushort)(DirectionFlag ? -1 : 1);
+            Alu8.Sub(byte1, 0x3A);
+            if (byte1 == 0x3A) {
+                byte1 = UInt8[DS, word3];
+                word3 += (ushort)(DirectionFlag ? -1 : 1);
+                Alu8.Sub(byte1, 0x5C);
+                if (byte1 == 0x5C) {
+                    byte1 = UInt8[DS, word3];
+                    word3 += (ushort)(DirectionFlag ? -1 : 1);
+                    Alu8.Sub(byte1, 0);
+                    if (byte1 != 0) {
                         goto L_0122;
                     }
-                    al2 = 0;
+                    byte2 = 0;
                     goto L_0124;
                 }
             }
         }
     L_0122:
         VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_mov);
-        al2 = 0xFF;
+        byte2 = 0xFF;
     L_0124:
         DX = 0x0999;
-        Out8(0x0999, al2);
-        BX = bx1;
-        SI = si1;
-        AL = al2;
+        Out8(0x0999, byte2);
+        BX = word1;
+        SI = word3;
+        AL = byte2;
         return Hlt();
     }
 

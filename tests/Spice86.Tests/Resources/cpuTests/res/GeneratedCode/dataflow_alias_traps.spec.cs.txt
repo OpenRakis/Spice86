@@ -14,13 +14,13 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort si;
-        byte cl;
-        byte al;
-        ushort ax1 = 0;
-        ushort si1 = 0;
-        ushort di1 = 0;
-        ushort cx1 = 0;
+        ushort word1;
+        byte byte1;
+        byte byte2;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -42,10 +42,10 @@ public partial class CfgGeneratedOverrides {
         ES = 0;
         Segment0000Globals.Byte8000 = 0x55;
         Segment0000Globals.Byte8001 = 0;
-        si = Segment0000Globals.Word8000;
+        word1 = Segment0000Globals.Word8000;
         ES = 0xFFFF;
         SegmentFFFFGlobals.Word8010 = 0x1234;
-        Segment2000Globals.Word0054 = si;
+        Segment2000Globals.Word0054 = word1;
         Stack.Push16(ES);
         Vga.WriteSequencerRegister(2, 0x0F);
         Vga.WriteSequencerRegister(4, 6);
@@ -62,40 +62,40 @@ public partial class CfgGeneratedOverrides {
         SegmentA000Globals.Byte0000 = 0x88;
         Vga.WriteSequencerRegister(2, 0x0F);
         Vga.WriteGraphicsControllerRegister(5, 1);
-        cl = SegmentA000Globals.Byte0000;
+        byte1 = SegmentA000Globals.Byte0000;
         SegmentA000Globals.Byte0010 = 0;
-        Segment2000Globals.Byte004E = cl;
+        Segment2000Globals.Byte004E = byte1;
         Vga.WriteGraphicsControllerRegister(5, 0);
         AX = 4;
         Vga.WriteGraphicsControllerRegister(4, 0);
-        al = SegmentA000Globals.Byte0010;
-        Segment2000Globals.Byte0050 = al;
+        byte2 = SegmentA000Globals.Byte0010;
+        Segment2000Globals.Byte0050 = byte2;
         AX = 0x0104;
         Vga.WriteGraphicsControllerRegister(4, 1);
-        al = SegmentA000Globals.Byte0010;
-        Segment2000Globals.Byte0051 = al;
+        byte2 = SegmentA000Globals.Byte0010;
+        Segment2000Globals.Byte0051 = byte2;
         AX = 0x0204;
         Vga.WriteGraphicsControllerRegister(4, 2);
-        al = SegmentA000Globals.Byte0010;
-        Segment2000Globals.Byte0052 = al;
+        byte2 = SegmentA000Globals.Byte0010;
+        Segment2000Globals.Byte0052 = byte2;
         AX = 0x0304;
         Vga.WriteGraphicsControllerRegister(4, 3);
-        al = SegmentA000Globals.Byte0010;
-        Segment2000Globals.Byte0053 = al;
+        byte2 = SegmentA000Globals.Byte0010;
+        Segment2000Globals.Byte0053 = byte2;
         Vga.WriteGraphicsControllerRegister(6, 0x0E);
         ES = Stack.Pop16();
         Segment2000Globals.Word0008 = 0x3333;
         Segment2000Globals.Word004C = 0x3333;
         Segment2000Globals.Word0006 = 0x1111;
         Segment2000Globals.Word0070 = 0x2222;
-        ax1 = DS;
-        ES = ax1;
-        si1 = 0x0070;
-        di1 = 6;
-        for (cx1 = 2; cx1 != 0; cx1--) {
-            UInt8[ES, di1] = UInt8[DS, si1];
-            si1++;
-            di1++;
+        word2 = DS;
+        ES = word2;
+        word3 = 0x0070;
+        word4 = 6;
+        for (word5 = 2; word5 != 0; word5--) {
+            UInt8[ES, word4] = UInt8[DS, word3];
+            word3++;
+            word4++;
         }
         CX = Segment2000Globals.Word0006;
         Segment2000Globals.Word004A = CX;
@@ -113,8 +113,8 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
-        SI = si1;
-        DI = di1;
+        SI = word3;
+        DI = word4;
         return Hlt();
     }
 

@@ -23,8 +23,8 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
-    public virtual ushort unknown_F000_003C_F003C(ushort ax) {
-        AX = ax;
+    public virtual ushort unknown_F000_003C_F003C(ushort word1) {
+        AX = word1;
         CheckExternalEvents(biosSegment, 0x003C);
         NearReturn();
         return AX;
@@ -37,15 +37,15 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax1 = 0;
+        ushort word1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         ES = 0;
         Segment0000Globals.Dword0020 = 0x00000031 | (uint)CS << 16;
-        ax1 = DS;
-        ES = ax1;
+        word1 = DS;
+        ES = word1;
         DirectionFlag = false;
         Pit.ProgramChannel(0, 0x36, 0x2251);
         PicPorts.WritePrimaryData(0);

@@ -15,13 +15,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort ax;
-        ushort es;
+        ushort word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x0100);
-        ax = CS;
-        SS = ax;
-        DS = ax;
-        es = ax;
+        word1 = CS;
+        SS = word1;
+        DS = word1;
+        word2 = word1;
         SP = 0x017E;
         BX = 0x017E;
         BX = 0x0017;
@@ -32,9 +32,9 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = false;
         SignFlag = false;
         OverflowFlag = false;
-        AX = ax;
+        AX = word1;
         AH = 0x4A;
-        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.ModifyMemory(es, 0x0018), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.ModifyMemory(word2, 0x0018), r => CarryOnInterruptStack(r.carryFlag));
         AX = 0xB800;
         ES = 0xB800;
         DI = 8;

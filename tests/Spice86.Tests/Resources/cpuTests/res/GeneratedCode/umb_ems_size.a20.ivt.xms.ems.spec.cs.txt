@@ -15,7 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         ushort flagOperand_0105 = 0;
         byte flagOperand_0112 = 0;
         ushort flagOperand_011A = 0;
@@ -35,17 +35,17 @@ public partial class CfgGeneratedOverrides {
                 if (flagOperand_011A != 0x0FFF) {
                     goto L_0127;
                 }
-                al1 = 0;
+                byte1 = 0;
                 goto L_0129;
             }
         }
     L_0127:
         VerifySpeculativeEntryOrFail(cs1, 0x0127, Signature_0127_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_0129:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        AL = al1;
+        Out8(0x0999, byte1);
+        AL = byte1;
         return Hlt();
     }
 

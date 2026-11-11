@@ -28,12 +28,12 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Outputs: none. Changes: BP, PF, AF, ZF, SF, OF.</summary>
     public virtual Action unknown_F000_0047_F0047() {
-        ushort bp;
+        ushort word1;
         unknown_F000_0047_F0047Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0047);
-        bp = SP;
+        word1 = SP;
         frame.ReturnIp = Alu16.Inc(frame.ReturnIp);
-        BP = bp;
+        BP = word1;
         return NearRet(2);
     }
 
@@ -46,13 +46,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Outputs: none. Changes: BP, PF, AF, ZF, SF, OF.</summary>
     public virtual Action unknown_F000_004F_F004F() {
-        ushort bp;
+        ushort word1;
         unknown_F000_004F_F004FFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x004F);
-        bp = SP;
+        word1 = SP;
         frame.ReturnIp = Alu16.Inc(frame.ReturnIp);
         Stack.Push16(0x0057);
-        BP = bp;
+        BP = word1;
         return NearRet();
     }
 

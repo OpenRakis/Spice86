@@ -14,12 +14,12 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte al1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Byte0400 = 1;
-        al1 = DsGlobals.Byte0500;
-        Alu8.Sub(al1, 0);
-        if (al1 == 0) {
+        byte1 = DsGlobals.Byte0500;
+        Alu8.Sub(byte1, 0);
+        if (byte1 == 0) {
             DsGlobals.Byte0401 = 0xDD;
         }
         else {
@@ -28,7 +28,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0011, Signature_0011_jmp);
         }
         DsGlobals.Byte0402 = 0xAA;
-        AL = al1;
+        AL = byte1;
         return Hlt();
     }
 

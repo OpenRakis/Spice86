@@ -14,9 +14,9 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        uint eax;
-        ushort ax1 = 0;
-        ushort bp1 = 0;
+        uint dword1;
+        ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         ES = 0x2000;
@@ -28,9 +28,9 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0F00 = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
-            eax = UInt32[CS, SI + 4];
-            UInt32[DS, BX] = eax;
-            UInt32[DS, BX + 0x0080] = eax;
+            dword1 = UInt32[CS, SI + 4];
+            UInt32[DS, BX] = dword1;
+            UInt32[DS, BX + 0x0080] = dword1;
             EAX = 0;
             AX = UInt16[CS, SI];
             UInt32[DS, BX + 4] = EAX;
@@ -51,8 +51,8 @@ public partial class CfgGeneratedOverrides {
             }
             UInt16[DS, BX + 8] = AX;
             UInt8[DS, BX + 0x0A] = AH;
-            ax1 = UInt16[CS, SI + 0x0A];
-            bp1 = UInt16[CS, SI + 0x0C];
+            word1 = UInt16[CS, SI + 0x0A];
+            word2 = UInt16[CS, SI + 0x0C];
             CX = UInt16[CS, SI + 0x0E];
             do {
                 CheckExternalEvents(biosSegment, 0x006A);
@@ -65,11 +65,11 @@ public partial class CfgGeneratedOverrides {
         L_006F:
             goto L_0079;
         L_0074:
-            if (ax1 == 1) {
+            if (word1 == 1) {
                 goto L_0085;
             }
         L_0079:
-            if (bp1 == 2) {
+            if (word2 == 2) {
                 goto L_0085;
             }
             UInt16[DS, BX + 0x0C] = 0;

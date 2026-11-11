@@ -72,7 +72,7 @@ public class TableAccessClassificationTest {
         // Assert: the pipeline keeps the shift as a separate statement, so the offset is
         // `SI + 0x0200` on the post-shift version: a word access of the R + c shape, which only a
         // byte element qualifies for. It stays an indexer.
-        program.SourceText.Should().Contain("AX = UInt16[ds, SI + 0x0200];");
+        program.SourceText.Should().Contain("AX = UInt16[word2, SI + 0x0200];");
         program.SourceText.Should().NotContain("DsTables");
         AssertCompiles(program);
     }
@@ -102,7 +102,7 @@ public class TableAccessClassificationTest {
             (0x0004, [0xC3]));                // ret
 
         // Assert
-        program.SourceText.Should().Contain("UInt8[ds, bx + 0x0120]");
+        program.SourceText.Should().Contain("UInt8[word2, word1 + 0x0120]");
         program.SourceText.Should().NotContain("Tables");
         AssertCompiles(program);
     }
@@ -116,7 +116,7 @@ public class TableAccessClassificationTest {
             (0x0007, [0xC3]));                // ret
 
         // Assert: the 0xFFFC constant prints as the equivalent -4 displacement.
-        program.SourceText.Should().Contain("UInt8[ds, BX - 4]");
+        program.SourceText.Should().Contain("UInt8[word2, BX - 4]");
         program.SourceText.Should().NotContain("DsTables");
         AssertCompiles(program);
     }

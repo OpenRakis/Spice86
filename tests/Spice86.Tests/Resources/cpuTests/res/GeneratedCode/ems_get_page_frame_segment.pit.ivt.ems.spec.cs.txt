@@ -15,28 +15,28 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort bx1 = 0;
-        byte al1 = 0;
+        ushort word1 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x41;
-        (AH, bx1) = ServiceCall(cs1, 0x0104, Ems, () => Ems.GetPageFrameSegment());
+        (AH, word1) = ServiceCall(cs1, 0x0104, Ems, () => Ems.GetPageFrameSegment());
         Alu8.Sub(AH, 0);
         if (AH == 0) {
-            Alu16.Sub(bx1, 0xE000);
-            if (bx1 != 0xE000) {
+            Alu16.Sub(word1, 0xE000);
+            if (word1 != 0xE000) {
                 goto L_0113;
             }
-            al1 = 0;
+            byte1 = 0;
             goto L_0115;
         }
     L_0113:
         VerifySpeculativeEntryOrFail(cs1, 0x0113, Signature_0113_mov);
-        al1 = 0xFF;
+        byte1 = 0xFF;
     L_0115:
         DX = 0x0999;
-        Out8(0x0999, al1);
-        BX = bx1;
-        AL = al1;
+        Out8(0x0999, byte1);
+        BX = word1;
+        AL = byte1;
         return Hlt();
     }
 

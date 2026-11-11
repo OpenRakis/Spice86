@@ -17,14 +17,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: CX, BP.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_01A7_F01A7(ushort di, ushort ds, ushort arg0) {
-        DI = di;
-        DS = ds;
+    public virtual void unknown_F000_01A7_F01A7(ushort word1, ushort word2, ushort arg0) {
+        DI = word1;
+        DS = word2;
         unknown_F000_01A7_F01A7Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01A7);
         BP = SP;
         CX = arg0;
-        UInt16[ds, di + 8] = CX;
+        UInt16[word2, word1 + 8] = CX;
         NearReturn();
         return;
     }
@@ -43,185 +43,185 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort ax;
-        ushort bx;
-        ushort ax1 = 0;
-        ushort bx1 = 0;
-        ushort cx;
-        ushort bp1 = 0;
-        ushort dx1 = 0;
-        ushort bx2 = 0;
-        ushort es;
-        ushort di;
-        ushort ax2 = 0;
-        ushort cx1 = 0;
-        ushort bx3 = 0;
-        ushort ax3 = 0;
-        ushort bx4 = 0;
-        ushort ax4 = 0;
-        ushort bx5 = 0;
-        ushort ax5 = 0;
-        ushort bx6 = 0;
-        ushort ax6 = 0;
-        ushort bx7 = 0;
-        ushort ax7 = 0;
-        ushort bx8 = 0;
-        ushort ax8 = 0;
-        ushort bx9 = 0;
-        ushort ax9 = 0;
+        ushort word1;
+        ushort word2;
+        ushort word3 = 0;
+        ushort word4 = 0;
+        ushort word5;
+        ushort word6 = 0;
+        ushort word7 = 0;
+        ushort word8 = 0;
+        ushort word9;
+        ushort word10;
+        ushort word11 = 0;
+        ushort word12 = 0;
+        ushort word13 = 0;
+        ushort word14 = 0;
+        ushort word15 = 0;
+        ushort word16 = 0;
+        ushort word17 = 0;
+        ushort word18 = 0;
+        ushort word19 = 0;
+        ushort word20 = 0;
+        ushort word21 = 0;
+        ushort word22 = 0;
+        ushort word23 = 0;
+        ushort word24 = 0;
+        ushort word25 = 0;
+        ushort word26 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
         DI = 0x0040;
-        ax = 0x1111;
-        bx = BX;
-        Segment2000Globals.Word0040 = ax;
+        word1 = 0x1111;
+        word2 = BX;
+        Segment2000Globals.Word0040 = word1;
         BP = SP;
         Stack.Push16(0x2222);
         SsUInt16[BP - 2] = 0x0099;
         AX = Stack.Pop16();
-        BX = bx;
+        BX = word2;
         Segment2000Globals.Word0042 = AX;
         Stack.Push16(0x3333);
-        ax1 = 0x5555;
+        word3 = 0x5555;
         CX = SegmentF000Globals.Word01B0;
         if (CX != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x003C, Signature_003C_pop);
-            ax1 = Stack.Pop16();
+            word3 = Stack.Pop16();
         }
-        bx1 = Stack.Pop16();
-        Segment2000Globals.Dword0044 = (uint)bx1 | (uint)ax1 << 16;
+        word4 = Stack.Pop16();
+        Segment2000Globals.Dword0044 = (uint)word4 | (uint)word3 << 16;
         CallWithStackArguments(biosSegment, 0x004B, () => unknown_F000_01A7_F01A7(DI, DS, 0x4444), 0x4444);
         AX = Stack.Pop16();
-        BX = bx1;
+        BX = word4;
         Stack.Push16(0x5555);
-        bx = SP;
+        word2 = SP;
         AX = Stack.Pop16();
         CX = CX;
-        Segment2000Globals.Word004A = bx;
+        Segment2000Globals.Word004A = word2;
         Stack.Push16(0x6666);
-        cx = Segment2000Globals.Word0FFE;
+        word5 = Segment2000Globals.Word0FFE;
         AX = Stack.Pop16();
-        BX = bx;
-        Segment2000Globals.Word004C = cx;
-        bp1 = SP;
+        BX = word2;
+        Segment2000Globals.Word004C = word5;
+        word6 = SP;
         Stack.Push16(0x7777);
         AX = Stack.Pop16();
-        dx1 = SsUInt16[bp1 - 2];
-        Segment2000Globals.Word004E = dx1;
-        bx2 = 0x8888;
+        word7 = SsUInt16[word6 - 2];
+        Segment2000Globals.Word004E = word7;
+        word8 = 0x8888;
         CX = 0x7777;
-        Segment2000Globals.Word0050 = bx2;
-        es = 0x1111;
-        Stack.Push16(es);
+        Segment2000Globals.Word0050 = word8;
+        word9 = 0x1111;
+        Stack.Push16(word9);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0088);
-        di = Segment2000Globals.Word0FFE;
+        word10 = Segment2000Globals.Word0FFE;
         ES = Segment2000Globals.Word1000;
-        BP = di;
+        BP = word10;
         DI = 0x0040;
         Segment2000Globals.Word0052 = BP;
-        ax2 = FlagRegister16;
+        word11 = FlagRegister16;
         BX = 0x1000;
-        Segment2000Globals.Word0054 = ax2;
+        Segment2000Globals.Word0054 = word11;
         Stack.Push16(0x0200);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x00A5);
-        cx = FlagRegister16;
-        Segment2000Globals.Word0056 = cx;
+        word5 = FlagRegister16;
+        Segment2000Globals.Word0056 = word5;
         Stack.Push16(0x9999);
-        bx = SP;
-        cx1 = Stack.Pop16();
-        DX = dx1;
-        Segment2000Globals.Word0058 = bx;
-        bx3 = (ushort)(SP - 2);
+        word2 = SP;
+        word12 = Stack.Pop16();
+        DX = word7;
+        Segment2000Globals.Word0058 = word2;
+        word13 = (ushort)(SP - 2);
         Stack.Push16(0x1234);
-        if (SsUInt16[bx3] == 0x1234) {
-            ax3 = 0x1357;
+        if (SsUInt16[word13] == 0x1234) {
+            word14 = 0x1357;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x00C6, SpeculativeRun_00C6);
-            ax3 = 0xBAD0;
+            word14 = 0xBAD0;
         }
         SI = Stack.Pop16();
-        CX = cx1;
-        Segment2000Globals.Word005A = ax3;
-        bx4 = (ushort)(SP - 2);
+        CX = word12;
+        Segment2000Globals.Word005A = word14;
+        word15 = (ushort)(SP - 2);
         Stack.Push16(0x2222);
         DX = Stack.Pop16();
-        if (SsUInt16[bx4] == 0x2222) {
-            ax4 = 0x2468;
+        if (SsUInt16[word15] == 0x2222) {
+            word16 = 0x2468;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x00E9, SpeculativeRun_00E9);
-            ax4 = 0xBAD1;
+            word16 = 0xBAD1;
         }
-        Segment2000Globals.Word005C = ax4;
-        BX = bx4;
-        bx5 = (ushort)(SP - 2);
+        Segment2000Globals.Word005C = word16;
+        BX = word15;
+        word17 = (ushort)(SP - 2);
         Stack.Push16(0x3333);
         ES = Stack.Pop16();
-        if (SsUInt16[bx5] == 0x3333) {
-            ax5 = 0x3579;
+        if (SsUInt16[word17] == 0x3333) {
+            word18 = 0x3579;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x010D, SpeculativeRun_010D);
-            ax5 = 0xBAD2;
+            word18 = 0xBAD2;
         }
-        Segment2000Globals.Word005E = ax5;
-        BX = bx5;
-        bx6 = (ushort)(SP - 2);
+        Segment2000Globals.Word005E = word18;
+        BX = word17;
+        word19 = (ushort)(SP - 2);
         Stack.Push16(0x4646);
         CX = 0x4646;
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0128);
-        if (SsUInt16[bx6] == 0x4646) {
-            ax6 = 0x9ABC;
+        if (SsUInt16[word19] == 0x4646) {
+            word20 = 0x9ABC;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0131, SpeculativeRun_0131);
-            ax6 = 0xBAD3;
+            word20 = 0xBAD3;
         }
-        Segment2000Globals.Word0060 = ax6;
-        BX = bx6;
-        bx7 = (ushort)(SP - 2);
+        Segment2000Globals.Word0060 = word20;
+        BX = word19;
+        word21 = (ushort)(SP - 2);
         Stack.Push16(0x5555);
         DX = Stack.Pop16();
-        if (SsUInt16[bx7] == 0x5555) {
-            ax7 = 0x5151;
+        if (SsUInt16[word21] == 0x5555) {
+            word22 = 0x5151;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0153, SpeculativeRun_0153);
-            ax7 = 0xBAD4;
+            word22 = 0xBAD4;
         }
-        Segment2000Globals.Word0062 = ax7;
-        BX = bx7;
-        bx8 = (ushort)(SP - 2);
+        Segment2000Globals.Word0062 = word22;
+        BX = word21;
+        word23 = (ushort)(SP - 2);
         Stack.Push16(0x6666);
         ES = Stack.Pop16();
-        if (SsUInt16[bx8] == 0x6666) {
-            ax8 = 0x6262;
+        if (SsUInt16[word23] == 0x6666) {
+            word24 = 0x6262;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0175, SpeculativeRun_0175);
-            ax8 = 0xBAD5;
+            word24 = 0xBAD5;
         }
-        Segment2000Globals.Word0064 = ax8;
-        BX = bx8;
-        bx9 = (ushort)(SP - 2);
+        Segment2000Globals.Word0064 = word24;
+        BX = word23;
+        word25 = (ushort)(SP - 2);
         Stack.Push16(0x4646);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x018E);
-        if (SsUInt16[bx9] == 0x4646) {
-            ax9 = 0x7373;
+        if (SsUInt16[word25] == 0x4646) {
+            word26 = 0x7373;
         }
         else {
             VerifySpeculativeRunOrFail(biosSegment, 0x0197, SpeculativeRun_0197);
-            ax9 = 0xBAD6;
+            word26 = 0xBAD6;
         }
-        Segment2000Globals.Word0066 = ax9;
+        Segment2000Globals.Word0066 = word26;
         DX = 0;
         CarryFlag = false;
         ParityFlag = true;
@@ -229,9 +229,9 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
-        Stack.Push16(bx9);
+        Stack.Push16(word25);
         BX = Stack.Pop16();
-        AX = ax9;
+        AX = word26;
         return Hlt();
     }
 
