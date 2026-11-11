@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
 using Serilog.Core;
 
+using Spice86.Core.Emulator.Http;
 using Spice86.Mcp;
 
 using System.Linq;
@@ -44,6 +46,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
         builder.Logging.AddSerilog(_mcpFileLogger);
 
         builder.Services.AddSingleton(services);
+        builder.Services.AddSingleton<IHostLifetime, EmbeddedHostLifetime>();
 
         // Register additional services (from override projects) before building
         if (additionalServices != null) {
@@ -115,17 +118,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
     }
 
     public void Stop() {
-        if (_disposed) {
-            return;
-        }
-        _disposed = true;
-        if (_app != null) {
-            _app.StopAsync().GetAwaiter().GetResult();
-            _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _app = null;
-        }
-        _mcpFileLogger?.Dispose();
-        _mcpFileLogger = null;
+        Task.Run(() => DisposeAsync().AsTask()).GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync() {
