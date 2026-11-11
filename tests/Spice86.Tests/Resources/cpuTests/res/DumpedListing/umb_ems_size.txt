@@ -1,19 +1,19 @@
-016D:0100 mov AX,0x5200
-016D:0103 int 0x21
-016D:0105 cmp word ptr ES:[BX+0x66],0x9FFF
-016D:010B jne short 0x0127
-016D:010D mov AX,0xD000
-016D:0110 mov ES,AX
-016D:0112 cmp byte ptr ES:[0],0x5A
-016D:0118 jne short 0x0127
-016D:011A cmp word ptr ES:[3],0x0FFF
-016D:0121 jne short 0x0127
-016D:0123 mov AL,0
-016D:0125 jmp short 0x0129
-016D:0127 mov AL,0xFF
-016D:0129 mov DX,0x0999
-016D:012C out DX,AL
-016D:012D hlt
+016E:0100 mov AX,0x5200
+016E:0103 int 0x21
+016E:0105 cmp word ptr ES:[BX+0x66],0x9FFF
+016E:010B jne short 0x0127
+016E:010D mov AX,0xD000
+016E:0110 mov ES,AX
+016E:0112 cmp byte ptr ES:[0],0x5A
+016E:0118 jne short 0x0127
+016E:011A cmp word ptr ES:[3],0x0FFF
+016E:0121 jne short 0x0127
+016E:0123 mov AL,0
+016E:0125 jmp short 0x0129
+016E:0127 mov AL,0xFF
+016E:0129 mov DX,0x0999
+016E:012C out DX,AL
+016E:012D hlt
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX

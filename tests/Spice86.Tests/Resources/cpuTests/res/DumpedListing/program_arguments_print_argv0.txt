@@ -1,38 +1,38 @@
-016D:0100 push CS
-016D:0101 pop DS
-016D:0102 call near 0x0133
-016D:0105 cmp word ptr ES:[DI],1
-016D:0109 jne short 0x011B
-016D:010B add DI,2
-016D:010E mov DL,byte ptr ES:[DI]
-016D:0111 push CS
-016D:0112 pop DS
-016D:0113 mov AH,2
-016D:0115 int 0x21
-016D:0117 mov AL,0
-016D:0119 jmp short 0x011D
-016D:011B mov AL,0xFF
-016D:011D mov DX,0x0999
-016D:0120 out DX,AL
-016D:0121 hlt
-016D:0122 mov AH,0x62
-016D:0124 int 0x21
-016D:0126 mov ES,BX
-016D:0128 mov AX,word ptr ES:[0x002C]
-016D:012C test AX,AX
-016D:012E je short 0x011B
-016D:0130 mov ES,AX
-016D:0132 ret near
-016D:0133 call near 0x0122
-016D:0136 xor DI,DI
-016D:0138 cmp byte ptr ES:[DI],0
-016D:013C jne short 0x0145
-016D:013E cmp byte ptr ES:[DI+1],0
-016D:0143 je short 0x0148
-016D:0145 inc DI
-016D:0146 jmp short 0x0138
-016D:0148 add DI,2
-016D:014B ret near
+016E:0100 push CS
+016E:0101 pop DS
+016E:0102 call near 0x0133
+016E:0105 cmp word ptr ES:[DI],1
+016E:0109 jne short 0x011B
+016E:010B add DI,2
+016E:010E mov DL,byte ptr ES:[DI]
+016E:0111 push CS
+016E:0112 pop DS
+016E:0113 mov AH,2
+016E:0115 int 0x21
+016E:0117 mov AL,0
+016E:0119 jmp short 0x011D
+016E:011B mov AL,0xFF
+016E:011D mov DX,0x0999
+016E:0120 out DX,AL
+016E:0121 hlt
+016E:0122 mov AH,0x62
+016E:0124 int 0x21
+016E:0126 mov ES,BX
+016E:0128 mov AX,word ptr ES:[0x002C]
+016E:012C test AX,AX
+016E:012E je short 0x011B
+016E:0130 mov ES,AX
+016E:0132 ret near
+016E:0133 call near 0x0122
+016E:0136 xor DI,DI
+016E:0138 cmp byte ptr ES:[DI],0
+016E:013C jne short 0x0145
+016E:013E cmp byte ptr ES:[DI+1],0
+016E:0143 je short 0x0148
+016E:0145 inc DI
+016E:0146 jmp short 0x0138
+016E:0148 add DI,2
+016E:014B ret near
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX

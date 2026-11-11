@@ -88,13 +88,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_03A7_01A77Entry;
-    private readonly Func<int, Action> unknown_016D_03AA_01A7AEntry;
-    private readonly Func<int, Action> unknown_016D_03AF_01A7FEntry;
-    private readonly Func<int, Action> unknown_016D_03E1_01AB1Entry;
-    private readonly Func<int, Action> unknown_016D_03E3_01AB3Entry;
-    private readonly Func<int, Action> unknown_016D_0421_01AF1Entry;
+    private readonly Func<int, Action> unknown_016F_0100_017F0Entry;
+    private readonly Func<int, Action> unknown_016F_03A7_01A97Entry;
+    private readonly Func<int, Action> unknown_016F_03AA_01A9AEntry;
+    private readonly Func<int, Action> unknown_016F_03AF_01A9FEntry;
+    private readonly Func<int, Action> unknown_016F_03E1_01AD1Entry;
+    private readonly Func<int, Action> unknown_016F_03E3_01AD3Entry;
+    private readonly Func<int, Action> unknown_016F_0421_01B11Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -112,27 +112,27 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly DsGlobals DsGlobals;
     protected readonly EsGlobals EsGlobals;
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0001Globals ImageMinus0001Globals;
     protected readonly Segment2000Globals Segment2000Globals;
     protected readonly Segment3000Globals Segment3000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0001);
         biosSegment = 0xF000;
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0001Globals = new ImageMinus0001Globals(Memory, programStartSegment);
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         Segment3000Globals = new Segment3000Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_03A7_01A77Entry = _ => unknown_016D_03A7_01A77();
-        unknown_016D_03AA_01A7AEntry = _ => unknown_016D_03AA_01A7A();
-        unknown_016D_03AF_01A7FEntry = _ => unknown_016D_03AF_01A7F();
-        unknown_016D_03E1_01AB1Entry = _ => unknown_016D_03E1_01AB1();
-        unknown_016D_03E3_01AB3Entry = _ => unknown_016D_03E3_01AB3();
-        unknown_016D_0421_01AF1Entry = _ => unknown_016D_0421_01AF1();
+        unknown_016F_0100_017F0Entry = _ => unknown_016F_0100_017F0();
+        unknown_016F_03A7_01A97Entry = _ => unknown_016F_03A7_01A97();
+        unknown_016F_03AA_01A9AEntry = _ => unknown_016F_03AA_01A9A();
+        unknown_016F_03AF_01A9FEntry = _ => unknown_016F_03AF_01A9F();
+        unknown_016F_03E1_01AD1Entry = _ => unknown_016F_03E1_01AD1();
+        unknown_016F_03E3_01AD3Entry = _ => unknown_016F_03E3_01AD3();
+        unknown_016F_0421_01B11Entry = _ => unknown_016F_0421_01B11();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -146,13 +146,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03A7, unknown_016D_03A7_01A77Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03AA, unknown_016D_03AA_01A7AEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03AF, unknown_016D_03AF_01A7FEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03E1, unknown_016D_03E1_01AB1Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03E3, unknown_016D_03E3_01AB3Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0421, unknown_016D_0421_01AF1Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016F_0100_017F0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03A7, unknown_016F_03A7_01A97Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03AA, unknown_016F_03AA_01A9AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03AF, unknown_016F_03AF_01A9FEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03E1, unknown_016F_03E1_01AD1Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03E3, unknown_016F_03E3_01AD3Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0421, unknown_016F_0421_01B11Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -166,13 +166,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03EA, unknown_016D_03EA_01ABA, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x03F0, _ => unknown_016D_03EA_01ABA(0x03F0), "unknown_entry");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03EA, unknown_016F_03EA_01ADA, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x03F0, _ => unknown_016F_03EA_01ADA(0x03F0), "unknown_entry");
     }
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016F.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -189,8 +189,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual Action unknown_016F_0100_017F0() {
         ushort bp;
         ushort ax;
         ushort ax1 = 0;
@@ -198,264 +198,264 @@ public partial class CfgGeneratedOverrides {
         ushort ax3 = 0;
         byte al;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov AX,0x2000
+        // 016F:0100 mov AX,0x2000
         AX = 0x2000;
-        // 016D:0103 mov SS,AX
+        // 016F:0103 mov SS,AX
         SS = 0x2000;
-        // 016D:0105 mov SP,0x1000
+        // 016F:0105 mov SP,0x1000
         SP = 0x1000;
-        // 016D:0108 mov ES,AX
+        // 016F:0108 mov ES,AX
         ES = 0x2000;
-        // 016D:010A mov BX,0x1111
+        // 016F:010A mov BX,0x1111
         BX = 0x1111;
-        // 016D:010D mov CX,0x2222
+        // 016F:010D mov CX,0x2222
         CX = 0x2222;
-        // 016D:0110 mov AH,0x30
+        // 016F:0110 mov AH,0x30
         AH = 0x30;
-        // 016D:0112 int 0x21
+        // 016F:0112 int 0x21
         InterruptCall(cs1, 0x0114, 0x21);
-        // 016D:0114 mov word ptr ES:[0x0040],AX
+        // 016F:0114 mov word ptr ES:[0x0040],AX
         EsGlobals.Word0040 = AX;
-        // 016D:0118 mov word ptr ES:[0x0042],BX
+        // 016F:0118 mov word ptr ES:[0x0042],BX
         EsGlobals.Word0042 = BX;
-        // 016D:011D mov word ptr ES:[0x0044],CX
+        // 016F:011D mov word ptr ES:[0x0044],CX
         EsGlobals.Word0044 = CX;
-        // 016D:0122 mov SI,0x3333
+        // 016F:0122 mov SI,0x3333
         SI = 0x3333;
-        // 016D:0125 mov BP,0x4444
+        // 016F:0125 mov BP,0x4444
         BP = 0x4444;
-        // 016D:0128 mov DL,0x2A
+        // 016F:0128 mov DL,0x2A
         DL = 0x2A;
-        // 016D:012A mov AH,2
+        // 016F:012A mov AH,2
         AH = 2;
-        // 016D:012C int 0x21
+        // 016F:012C int 0x21
         InterruptCall(cs1, 0x012E, 0x21);
-        // 016D:012E mov word ptr ES:[0x0046],SI
+        // 016F:012E mov word ptr ES:[0x0046],SI
         EsGlobals.Word0046 = SI;
-        // 016D:0133 mov word ptr ES:[0x0048],BP
+        // 016F:0133 mov word ptr ES:[0x0048],BP
         EsGlobals.Word0048 = BP;
-        // 016D:0138 mov AH,0x30
+        // 016F:0138 mov AH,0x30
         AH = 0x30;
-        // 016D:013A int 0x21
+        // 016F:013A int 0x21
         InterruptCall(cs1, 0x013C, 0x21);
-        // 016D:013C mov byte ptr ES:[0x004A],AH
+        // 016F:013C mov byte ptr ES:[0x004A],AH
         EsGlobals.Byte004A = AH;
-        // 016D:0141 mov AH,2
+        // 016F:0141 mov AH,2
         AH = 2;
-        // 016D:0143 mov DL,0x24
+        // 016F:0143 mov DL,0x24
         DL = 0x24;
-        // 016D:0145 int 0x21
+        // 016F:0145 int 0x21
         InterruptCall(cs1, 0x0147, 0x21);
-        // 016D:0147 mov byte ptr ES:[0x004B],AH
+        // 016F:0147 mov byte ptr ES:[0x004B],AH
         EsGlobals.Byte004B = AH;
-        // 016D:014C mov DX,0x040C
+        // 016F:014C mov DX,0x040C
         DX = 0x040C;
-        // 016D:014F mov AL,0
-        // 016D:0151 mov AH,0x3D
+        // 016F:014F mov AL,0
+        // 016F:0151 mov AH,0x3D
         AX = 0x3D00;
-        // 016D:0153 int 0x21
+        // 016F:0153 int 0x21
         InterruptCall(cs1, 0x0155, 0x21);
-        // 016D:0155 jb short 0x015D
+        // 016F:0155 jb short 0x015D
         if (CarryFlag) {
-            // 016D:015D mov word ptr ES:[0x004C],AX
+            // 016F:015D mov word ptr ES:[0x004C],AX
             EsGlobals.Word004C = AX;
-            // 016D:0161 mov word ptr ES:[0x004E],0xF00D
+            // 016F:0161 mov word ptr ES:[0x004E],0xF00D
             EsGlobals.Word004E = 0xF00D;
         }
         else {
             VerifySpeculativeEntryOrFail(cs1, 0x0157, Signature_0157_mov);
-            // 016D:0157 mov word ptr ES:[0x004C],AX
+            // 016F:0157 mov word ptr ES:[0x004C],AX
             EsGlobals.Word004C = AX;
             VerifySpeculativeEntryOrFail(cs1, 0x015B, Signature_015B_jmp);
-            // 016D:015B jmp short 0x0168
+            // 016F:015B jmp short 0x0168
         }
-        // 016D:0168 stc
+        // 016F:0168 stc
         CarryFlag = true;
-        // 016D:0169 mov AH,2
+        // 016F:0169 mov AH,2
         AH = 2;
-        // 016D:016B mov DL,0x2B
+        // 016F:016B mov DL,0x2B
         DL = 0x2B;
-        // 016D:016D int 0x21
+        // 016F:016D int 0x21
         InterruptCall(cs1, 0x016F, 0x21);
-        // 016D:016F jb short 0x017A
+        // 016F:016F jb short 0x017A
         if (CarryFlag) {
-            // 016D:017A mov word ptr ES:[0x0050],0xBEEF
+            // 016F:017A mov word ptr ES:[0x0050],0xBEEF
             EsGlobals.Word0050 = 0xBEEF;
         }
         else {
             VerifySpeculativeEntryOrFail(cs1, 0x0171, Signature_0171_mov);
-            // 016D:0171 mov word ptr ES:[0x0050],0
+            // 016F:0171 mov word ptr ES:[0x0050],0
             EsGlobals.Word0050 = 0;
             VerifySpeculativeEntryOrFail(cs1, 0x0178, Signature_0178_jmp);
-            // 016D:0178 jmp short 0x0181
+            // 016F:0178 jmp short 0x0181
         }
-        // 016D:0181 mov AX,0
+        // 016F:0181 mov AX,0
         AX = 0;
-        // 016D:0184 push AX
+        // 016F:0184 push AX
         Stack.Push16(0);
-        // 016D:0185 popf
+        // 016F:0185 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0186);
-        // 016D:0186 mov AH,2
+        // 016F:0186 mov AH,2
         AH = 2;
-        // 016D:0188 mov DL,0x23
+        // 016F:0188 mov DL,0x23
         DL = 0x23;
-        // 016D:018A int 0x21
+        // 016F:018A int 0x21
         InterruptCall(cs1, 0x018C, 0x21);
-        // 016D:018C mov BP,SP
+        // 016F:018C mov BP,SP
         bp = SP;
-        // 016D:018E mov AX,word ptr SS:[BP-6]
+        // 016F:018E mov AX,word ptr SS:[BP-6]
         ax = SsUInt16[(ushort)(bp - 6)];
-        // 016D:0191 mov word ptr ES:[0x0052],AX
+        // 016F:0191 mov word ptr ES:[0x0052],AX
         EsGlobals.Word0052 = ax;
-        // 016D:0195 mov AX,word ptr SS:[BP-4]
+        // 016F:0195 mov AX,word ptr SS:[BP-4]
         AX = SsUInt16[(ushort)(bp - 4)];
-        // 016D:0198 mov word ptr ES:[0x0054],AX
+        // 016F:0198 mov word ptr ES:[0x0054],AX
         EsGlobals.Word0054 = AX;
-        // 016D:019C mov AX,word ptr SS:[BP-2]
+        // 016F:019C mov AX,word ptr SS:[BP-2]
         AX = SsUInt16[(ushort)(bp - 2)];
-        // 016D:019F mov word ptr ES:[0x0056],AX
+        // 016F:019F mov word ptr ES:[0x0056],AX
         EsGlobals.Word0056 = AX;
-        // 016D:01A3 mov BX,0x1111
+        // 016F:01A3 mov BX,0x1111
         BX = 0x1111;
-        // 016D:01A6 mov CX,0x2222
+        // 016F:01A6 mov CX,0x2222
         CX = 0x2222;
-        // 016D:01A9 mov AH,0x30
+        // 016F:01A9 mov AH,0x30
         AH = 0x30;
-        // 016D:01AB int 0x21
+        // 016F:01AB int 0x21
         BP = bp;
         InterruptCall(cs1, 0x01AD, 0x21);
-        // 016D:01AD add BX,1
+        // 016F:01AD add BX,1
         BX++;
-        // 016D:01B0 mov word ptr ES:[0x0068],BX
+        // 016F:01B0 mov word ptr ES:[0x0068],BX
         EsGlobals.Word0068 = BX;
-        // 016D:01B5 cmp CX,0x2222
-        // 016D:01B9 je short 0x01C4
+        // 016F:01B5 cmp CX,0x2222
+        // 016F:01B9 je short 0x01C4
         if (CX == 0x2222) {
             VerifySpeculativeEntryOrFail(cs1, 0x01C4, Signature_01C4_mov);
-            // 016D:01C4 mov word ptr ES:[0x006A],0xBEEF
+            // 016F:01C4 mov word ptr ES:[0x006A],0xBEEF
             EsGlobals.Word006A = 0xBEEF;
         }
         else {
-            // 016D:01BB mov word ptr ES:[0x006A],0
+            // 016F:01BB mov word ptr ES:[0x006A],0
             EsGlobals.Word006A = 0;
-            // 016D:01C2 jmp short 0x01CB
+            // 016F:01C2 jmp short 0x01CB
         }
-        // 016D:01CB cmp CH,0x22
+        // 016F:01CB cmp CH,0x22
         Alu8.Sub(CH, 0x22);
-        // 016D:01CE je short 0x01D9
+        // 016F:01CE je short 0x01D9
         if (CH == 0x22) {
             VerifySpeculativeEntryOrFail(cs1, 0x01D9, Signature_01D9_mov);
-            // 016D:01D9 mov word ptr ES:[0x006C],0xBEEF
+            // 016F:01D9 mov word ptr ES:[0x006C],0xBEEF
             EsGlobals.Word006C = 0xBEEF;
         }
         else {
-            // 016D:01D0 mov word ptr ES:[0x006C],0
+            // 016F:01D0 mov word ptr ES:[0x006C],0
             EsGlobals.Word006C = 0;
-            // 016D:01D7 jmp short 0x01E0
+            // 016F:01D7 jmp short 0x01E0
         }
-        // 016D:01E0 mov DH,0x55
-        // 016D:01E2 mov DL,0
+        // 016F:01E0 mov DH,0x55
+        // 016F:01E2 mov DL,0
         DX = 0x5500;
-        // 016D:01E4 mov AH,0x36
+        // 016F:01E4 mov AH,0x36
         AH = 0x36;
-        // 016D:01E6 int 0x21
+        // 016F:01E6 int 0x21
         InterruptCall(cs1, 0x01E8, 0x21);
-        // 016D:01E8 add DX,1
+        // 016F:01E8 add DX,1
         DX++;
-        // 016D:01EB mov word ptr ES:[0x006E],DX
+        // 016F:01EB mov word ptr ES:[0x006E],DX
         EsGlobals.Word006E = DX;
-        // 016D:01F0 cmp DX,0x5556
+        // 016F:01F0 cmp DX,0x5556
         Alu16.Sub(DX, 0x5556);
-        // 016D:01F4 je short 0x01FF
+        // 016F:01F4 je short 0x01FF
         if (DX == 0x5556) {
             VerifySpeculativeEntryOrFail(cs1, 0x01FF, Signature_01FF_mov);
-            // 016D:01FF mov word ptr ES:[0x0070],0xBEEF
+            // 016F:01FF mov word ptr ES:[0x0070],0xBEEF
             EsGlobals.Word0070 = 0xBEEF;
         }
         else {
-            // 016D:01F6 mov word ptr ES:[0x0070],0
+            // 016F:01F6 mov word ptr ES:[0x0070],0
             EsGlobals.Word0070 = 0;
-            // 016D:01FD jmp short 0x0206
+            // 016F:01FD jmp short 0x0206
         }
-        // 016D:0206 mov SI,0x3333
+        // 016F:0206 mov SI,0x3333
         SI = 0x3333;
-        // 016D:0209 mov AH,2
+        // 016F:0209 mov AH,2
         AH = 2;
-        // 016D:020B mov DL,0x7E
+        // 016F:020B mov DL,0x7E
         DL = 0x7E;
-        // 016D:020D int 0x21
+        // 016F:020D int 0x21
         InterruptCall(cs1, 0x020F, 0x21);
-        // 016D:020F add SI,1
+        // 016F:020F add SI,1
         SI = Alu16.Add(SI, 1);
-        // 016D:0212 mov word ptr ES:[0x0072],SI
+        // 016F:0212 mov word ptr ES:[0x0072],SI
         EsGlobals.Word0072 = SI;
-        // 016D:0217 call near 0x03AA
-        NearCall(cs1, 0x021A, unknown_016D_03AA_01A7AEntry);
-        // 016D:021A mov word ptr ES:[0x0074],AX
+        // 016F:0217 call near 0x03AA
+        NearCall(cs1, 0x021A, unknown_016F_03AA_01A9AEntry);
+        // 016F:021A mov word ptr ES:[0x0074],AX
         EsGlobals.Word0074 = AX;
-        // 016D:021E mov word ptr ES:[0x0076],BX
+        // 016F:021E mov word ptr ES:[0x0076],BX
         EsGlobals.Word0076 = BX;
-        // 016D:0223 mov AH,0x30
+        // 016F:0223 mov AH,0x30
         AH = 0x30;
-        // 016D:0225 call near 0x03A7
-        NearCall(cs1, 0x0228, unknown_016D_03A7_01A77Entry);
-        // 016D:0228 mov word ptr ES:[0x0058],AX
+        // 016F:0225 call near 0x03A7
+        NearCall(cs1, 0x0228, unknown_016F_03A7_01A97Entry);
+        // 016F:0228 mov word ptr ES:[0x0058],AX
         EsGlobals.Word0058 = AX;
-        // 016D:022C mov AH,2
+        // 016F:022C mov AH,2
         AH = 2;
-        // 016D:022E mov DL,0x76
+        // 016F:022E mov DL,0x76
         DL = 0x76;
-        // 016D:0230 call near 0x03A7
-        NearCall(cs1, 0x0233, unknown_016D_03A7_01A77Entry);
-        // 016D:0233 mov word ptr ES:[0x005A],AX
+        // 016F:0230 call near 0x03A7
+        NearCall(cs1, 0x0233, unknown_016F_03A7_01A97Entry);
+        // 016F:0233 mov word ptr ES:[0x005A],AX
         EsGlobals.Word005A = AX;
-        // 016D:0237 mov AH,0x35
-        // 016D:0239 mov AL,0x21
+        // 016F:0237 mov AH,0x35
+        // 016F:0239 mov AL,0x21
         AX = 0x3521;
-        // 016D:023B int 0x21
+        // 016F:023B int 0x21
         InterruptCall(cs1, 0x023D, 0x21);
-        // 016D:023D mov AX,ES
+        // 016F:023D mov AX,ES
         ax = ES;
-        // 016D:023F mov word ptr CS:[0x0417],BX
+        // 016F:023F mov word ptr CS:[0x0417],BX
         CsGlobals.Word0417 = BX;
-        // 016D:0244 mov word ptr CS:[0x0419],AX
+        // 016F:0244 mov word ptr CS:[0x0419],AX
         CsGlobals.Word0419 = ax;
-        // 016D:0248 mov AX,0x2000
+        // 016F:0248 mov AX,0x2000
         AX = 0x2000;
-        // 016D:024B mov ES,AX
+        // 016F:024B mov ES,AX
         ES = 0x2000;
-        // 016D:024D mov DX,0x03AF
+        // 016F:024D mov DX,0x03AF
         DX = 0x03AF;
-        // 016D:0250 mov AH,0x25
-        // 016D:0252 mov AL,0x21
+        // 016F:0250 mov AH,0x25
+        // 016F:0252 mov AL,0x21
         AX = 0x2521;
-        // 016D:0254 int 0x21
+        // 016F:0254 int 0x21
         InterruptCall(cs1, 0x0256, 0x21);
-        // 016D:0256 mov AH,0x30
+        // 016F:0256 mov AH,0x30
         AH = 0x30;
-        // 016D:0258 int 0x21
-        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
-        // 016D:025A mov word ptr ES:[0x005C],AX
+        // 016F:0258 int 0x21
+        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x03AF, unknown_016F_03AF_01A9FEntry);
+        // 016F:025A mov word ptr ES:[0x005C],AX
         EsGlobals.Word005C = AX;
-        // 016D:025E mov word ptr ES:[0x005E],BX
+        // 016F:025E mov word ptr ES:[0x005E],BX
         EsGlobals.Word005E = BX;
-        // 016D:0263 mov AH,0x30
+        // 016F:0263 mov AH,0x30
         AH = 0x30;
-        // 016D:0265 call near 0x03A7
-        NearCall(cs1, 0x0268, unknown_016D_03A7_01A77Entry);
-        // 016D:0268 mov word ptr ES:[0x0060],AX
+        // 016F:0265 call near 0x03A7
+        NearCall(cs1, 0x0268, unknown_016F_03A7_01A97Entry);
+        // 016F:0268 mov word ptr ES:[0x0060],AX
         EsGlobals.Word0060 = AX;
-        // 016D:026C mov word ptr ES:[0x0062],BX
+        // 016F:026C mov word ptr ES:[0x0062],BX
         EsGlobals.Word0062 = BX;
-        // 016D:0271 call near 0x03AA
-        NearCall(cs1, 0x0274, unknown_016D_03AA_01A7AEntry);
-        // 016D:0274 mov word ptr ES:[0x0078],AX
+        // 016F:0271 call near 0x03AA
+        NearCall(cs1, 0x0274, unknown_016F_03AA_01A9AEntry);
+        // 016F:0274 mov word ptr ES:[0x0078],AX
         EsGlobals.Word0078 = AX;
-        // 016D:0278 mov word ptr ES:[0x007A],BX
+        // 016F:0278 mov word ptr ES:[0x007A],BX
         EsGlobals.Word007A = BX;
-        // 016D:027D mov SI,0x1200
-        // 016D:0280 add SI,0x0034
+        // 016F:027D mov SI,0x1200
+        // 016F:0280 add SI,0x0034
         SI = 0x1234;
         CarryFlag = false;
         ParityFlag = false;
@@ -463,251 +463,251 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = false;
         SignFlag = false;
         OverflowFlag = false;
-        // 016D:0283 mov word ptr ES:[0x0096],SI
+        // 016F:0283 mov word ptr ES:[0x0096],SI
         EsGlobals.Word0096 = 0x1234;
-        // 016D:0288 mov word ptr CS:[0x041F],SP
+        // 016F:0288 mov word ptr CS:[0x041F],SP
         CsGlobals.Word041F = SP;
-        // 016D:028D mov AX,0x30A5
+        // 016F:028D mov AX,0x30A5
         AX = 0x30A5;
-        // 016D:0290 int 0x21
-        InterruptCall(cs1, 0x0292, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
-        // 016D:0292 pushf
+        // 016F:0290 int 0x21
+        InterruptCall(cs1, 0x0292, 0x21, cs1, 0x03AF, unknown_016F_03AF_01A9FEntry);
+        // 016F:0292 pushf
         Stack.Push16(FlagRegister16);
-        // 016D:0293 pop AX
+        // 016F:0293 pop AX
         AX = Stack.Pop16();
-        // 016D:0294 and AX,1
+        // 016F:0294 and AX,1
         AX &= 1;
-        // 016D:0297 mov word ptr ES:[0x008E],AX
+        // 016F:0297 mov word ptr ES:[0x008E],AX
         EsGlobals.Word008E = AX;
-        // 016D:029B mov word ptr ES:[0x008A],BX
+        // 016F:029B mov word ptr ES:[0x008A],BX
         EsGlobals.Word008A = BX;
-        // 016D:02A0 mov word ptr ES:[0x008C],DI
+        // 016F:02A0 mov word ptr ES:[0x008C],DI
         EsGlobals.Word008C = DI;
-        // 016D:02A5 mov word ptr ES:[0x0090],0
+        // 016F:02A5 mov word ptr ES:[0x0090],0
         EsGlobals.Word0090 = 0;
-        // 016D:02AC mov AX,word ptr CS:[0x041B]
+        // 016F:02AC mov AX,word ptr CS:[0x041B]
         ax1 = CsGlobals.Word041B;
-        // 016D:02B0 cmp AX,0x0292
-        // 016D:02B3 jne short 0x02BC
+        // 016F:02B0 cmp AX,0x0292
+        // 016F:02B3 jne short 0x02BC
         if (ax1 == 0x0292) {
-            // 016D:02B5 mov word ptr ES:[0x0090],1
+            // 016F:02B5 mov word ptr ES:[0x0090],1
             EsGlobals.Word0090 = 1;
         }
-        // 016D:02BC mov word ptr ES:[0x0092],0
+        // 016F:02BC mov word ptr ES:[0x0092],0
         EsGlobals.Word0092 = 0;
-        // 016D:02C3 mov AX,word ptr CS:[0x041D]
+        // 016F:02C3 mov AX,word ptr CS:[0x041D]
         ax2 = CsGlobals.Word041D;
-        // 016D:02C7 mov BX,CS
+        // 016F:02C7 mov BX,CS
         BX = CS;
-        // 016D:02C9 cmp AX,BX
-        // 016D:02CB jne short 0x02D4
+        // 016F:02C9 cmp AX,BX
+        // 016F:02CB jne short 0x02D4
         if (ax2 == BX) {
-            // 016D:02CD mov word ptr ES:[0x0092],1
+            // 016F:02CD mov word ptr ES:[0x0092],1
             EsGlobals.Word0092 = 1;
         }
-        // 016D:02D4 mov word ptr ES:[0x0094],0
+        // 016F:02D4 mov word ptr ES:[0x0094],0
         EsGlobals.Word0094 = 0;
-        // 016D:02DB cmp SP,word ptr CS:[0x041F]
-        // 016D:02E0 jne short 0x02E9
+        // 016F:02DB cmp SP,word ptr CS:[0x041F]
+        // 016F:02E0 jne short 0x02E9
         if (SP == CsGlobals.Word041F) {
-            // 016D:02E2 mov word ptr ES:[0x0094],1
+            // 016F:02E2 mov word ptr ES:[0x0094],1
             EsGlobals.Word0094 = 1;
         }
-        // 016D:02E9 mov AX,SI
+        // 016F:02E9 mov AX,SI
         ax3 = SI;
-        // 016D:02EB cmp SI,0x1234
+        // 016F:02EB cmp SI,0x1234
         Alu16.Sub(SI, 0x1234);
-        // 016D:02EF je short 0x02F4
+        // 016F:02EF je short 0x02F4
         if (SI != 0x1234) {
             VerifySpeculativeEntryOrFail(cs1, 0x02F1, Signature_02F1_mov);
-            // 016D:02F1 mov AX,0xDEAD
+            // 016F:02F1 mov AX,0xDEAD
             ax3 = 0xDEAD;
         }
-        // 016D:02F4 mov word ptr ES:[0x0096],AX
+        // 016F:02F4 mov word ptr ES:[0x0096],AX
         EsGlobals.Word0096 = ax3;
-        // 016D:02F8 mov DX,word ptr CS:[0x0417]
+        // 016F:02F8 mov DX,word ptr CS:[0x0417]
         DX = CsGlobals.Word0417;
-        // 016D:02FD mov AX,word ptr CS:[0x0419]
+        // 016F:02FD mov AX,word ptr CS:[0x0419]
         ax = CsGlobals.Word0419;
-        // 016D:0301 mov DS,AX
+        // 016F:0301 mov DS,AX
         DS = ax;
-        // 016D:0303 mov AH,0x25
-        // 016D:0305 mov AL,0x21
+        // 016F:0303 mov AH,0x25
+        // 016F:0305 mov AL,0x21
         AX = 0x2521;
-        // 016D:0307 int 0x21
-        InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016D_03AF_01A7FEntry);
-        // 016D:0309 push CS
+        // 016F:0307 int 0x21
+        InterruptCall(cs1, 0x0309, 0x21, cs1, 0x03AF, unknown_016F_03AF_01A9FEntry);
+        // 016F:0309 push CS
         Stack.Push16(CS);
-        // 016D:030A pop DS
+        // 016F:030A pop DS
         DS = Stack.Pop16();
-        // 016D:030B mov AH,0x30
+        // 016F:030B mov AH,0x30
         AH = 0x30;
-        // 016D:030D int 0x21
+        // 016F:030D int 0x21
         InterruptCall(cs1, 0x030F, 0x21);
-        // 016D:030F mov word ptr ES:[0x0064],AX
+        // 016F:030F mov word ptr ES:[0x0064],AX
         EsGlobals.Word0064 = AX;
-        // 016D:0313 mov word ptr ES:[0x0066],BX
+        // 016F:0313 mov word ptr ES:[0x0066],BX
         EsGlobals.Word0066 = BX;
-        // 016D:0318 mov AX,0x2000
-        // 016D:031B mov ES,AX
+        // 016F:0318 mov AX,0x2000
+        // 016F:031B mov ES,AX
         ES = 0x2000;
-        // 016D:031D mov AX,0x3521
+        // 016F:031D mov AX,0x3521
         AX = 0x3521;
-        // 016D:0320 int 0x21
+        // 016F:0320 int 0x21
         InterruptCall(cs1, 0x0322, 0x21);
-        // 016D:0322 mov BL,byte ptr ES:[0]
+        // 016F:0322 mov BL,byte ptr ES:[0]
         BL = EsGlobals.Byte0000;
-        // 016D:0327 mov AX,0x2000
-        // 016D:032A mov ES,AX
+        // 016F:0327 mov AX,0x2000
+        // 016F:032A mov ES,AX
         ES = 0x2000;
-        // 016D:032C mov byte ptr ES:[0x007C],BL
+        // 016F:032C mov byte ptr ES:[0x007C],BL
         Segment2000Globals.Byte007C = BL;
-        // 016D:0331 mov AX,0x2000
+        // 016F:0331 mov AX,0x2000
         AX = 0x2000;
-        // 016D:0334 mov DS,AX
+        // 016F:0334 mov DS,AX
         DS = 0x2000;
-        // 016D:0336 mov byte ptr ES:[0x00F0],0x24
+        // 016F:0336 mov byte ptr ES:[0x00F0],0x24
         Segment2000Globals.Byte00F0 = 0x24;
-        // 016D:033C mov DX,0x00F0
+        // 016F:033C mov DX,0x00F0
         DX = 0x00F0;
-        // 016D:033F mov AH,9
+        // 016F:033F mov AH,9
         AH = 9;
-        // 016D:0341 int 0x21
+        // 016F:0341 int 0x21
         InterruptCall(cs1, 0x0343, 0x21);
-        // 016D:0343 mov AL,byte ptr DS:[0x00F0]
+        // 016F:0343 mov AL,byte ptr DS:[0x00F0]
         al = DsGlobals.Byte00F0;
-        // 016D:0346 mov byte ptr ES:[0x007E],AL
+        // 016F:0346 mov byte ptr ES:[0x007E],AL
         EsGlobals.Byte007E = al;
-        // 016D:034A mov DX,0xBEEF
+        // 016F:034A mov DX,0xBEEF
         DX = 0xBEEF;
-        // 016D:034D mov AX,0x4400
+        // 016F:034D mov AX,0x4400
         AX = 0x4400;
-        // 016D:0350 mov BX,1
+        // 016F:0350 mov BX,1
         BX = 1;
-        // 016D:0353 int 0x21
+        // 016F:0353 int 0x21
         InterruptCall(cs1, 0x0355, 0x21);
-        // 016D:0355 mov word ptr ES:[0x0080],DX
+        // 016F:0355 mov word ptr ES:[0x0080],DX
         EsGlobals.Word0080 = DX;
-        // 016D:035A mov AX,0x2000
-        // 016D:035D mov DS,AX
+        // 016F:035A mov AX,0x2000
+        // 016F:035D mov DS,AX
         DS = 0x2000;
-        // 016D:035F mov byte ptr DS:[0x00E8],0x59
+        // 016F:035F mov byte ptr DS:[0x00E8],0x59
         Segment2000Globals.Byte00E8 = 0x59;
-        // 016D:0364 mov byte ptr DS:[0x00E9],0x24
+        // 016F:0364 mov byte ptr DS:[0x00E9],0x24
         Segment2000Globals.Byte00E9 = 0x24;
-        // 016D:0369 mov AX,0x3000
-        // 016D:036C mov DS,AX
+        // 016F:0369 mov AX,0x3000
+        // 016F:036C mov DS,AX
         DS = 0x3000;
-        // 016D:036E mov byte ptr DS:[0x00E8],0x5A
+        // 016F:036E mov byte ptr DS:[0x00E8],0x5A
         Segment3000Globals.Byte00E8 = 0x5A;
-        // 016D:0373 mov byte ptr DS:[0x00E9],0x24
+        // 016F:0373 mov byte ptr DS:[0x00E9],0x24
         Segment3000Globals.Byte00E9 = 0x24;
-        // 016D:0378 mov AX,0x2000
+        // 016F:0378 mov AX,0x2000
         AX = 0x2000;
-        // 016D:037B mov DS,AX
+        // 016F:037B mov DS,AX
         DS = 0x2000;
-        // 016D:037D mov CX,0
+        // 016F:037D mov CX,0
         CX = 0;
-        // 016D:0380 call near 0x03E1
-        NearCall(cs1, 0x0383, unknown_016D_03E1_01AB1Entry);
-        // 016D:0383 mov byte ptr ES:[0x0082],AL
+        // 016F:0380 call near 0x03E1
+        NearCall(cs1, 0x0383, unknown_016F_03E1_01AD1Entry);
+        // 016F:0383 mov byte ptr ES:[0x0082],AL
         EsGlobals.Byte0082 = AL;
-        // 016D:0387 mov CX,1
+        // 016F:0387 mov CX,1
         CX = 1;
-        // 016D:038A call near 0x03E3
-        NearCall(cs1, 0x038D, unknown_016D_03E3_01AB3Entry);
-        // 016D:038D mov byte ptr ES:[0x0083],AL
+        // 016F:038A call near 0x03E3
+        NearCall(cs1, 0x038D, unknown_016F_03E3_01AD3Entry);
+        // 016F:038D mov byte ptr ES:[0x0083],AL
         EsGlobals.Byte0083 = AL;
-        // 016D:0391 mov AX,0x2000
-        // 016D:0394 mov DS,AX
+        // 016F:0391 mov AX,0x2000
+        // 016F:0394 mov DS,AX
         DS = 0x2000;
-        // 016D:0396 mov DX,0xBEEF
+        // 016F:0396 mov DX,0xBEEF
         DX = 0xBEEF;
-        // 016D:0399 mov AX,0x0CFF
+        // 016F:0399 mov AX,0x0CFF
         AX = 0x0CFF;
-        // 016D:039C int 0x21
+        // 016F:039C int 0x21
         InterruptCall(cs1, 0x039E, 0x21);
-        // 016D:039E mov word ptr ES:[0x0084],DX
+        // 016F:039E mov word ptr ES:[0x0084],DX
         EsGlobals.Word0084 = DX;
-        // 016D:03A3 call near 0x0421
-        NearCall(cs1, 0x03A6, unknown_016D_0421_01AF1Entry);
-        // 016D:03A6 hlt
+        // 016F:03A3 call near 0x0421
+        NearCall(cs1, 0x03A6, unknown_016F_0421_01B11Entry);
+        // 016F:03A6 hlt
         return Hlt();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
-    public virtual Action unknown_016D_03A7_01A77() {
+    public virtual Action unknown_016F_03A7_01A97() {
         CheckExternalEvents(cs1, 0x03A7);
-        // 016D:03A7 int 0x21
+        // 016F:03A7 int 0x21
         InterruptCall(cs1, 0x03A9, 0x21);
-        // 016D:03A9 ret near
+        // 016F:03A9 ret near
         return NearRet();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
-    public virtual Action unknown_016D_03AA_01A7A() {
+    public virtual Action unknown_016F_03AA_01A9A() {
         CheckExternalEvents(cs1, 0x03AA);
-        // 016D:03AA mov AH,0x30
+        // 016F:03AA mov AH,0x30
         AH = 0x30;
-        // 016D:03AC int 0x21
+        // 016F:03AC int 0x21
         InterruptCall(cs1, 0x03AE, 0x21);
-        // 016D:03AE ret near
+        // 016F:03AE ret near
         return NearRet();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_016D_03AF_01A7F() {
+    public virtual Action unknown_016F_03AF_01A9F() {
         ushort ax;
-        unknown_016D_03AF_01A7FFrame frame = new(Memory, State.SegmentRegisters, SP);
+        unknown_016F_03AF_01A9FFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x03AF);
-        // 016D:03AF cmp AX,0x30A5
-        // 016D:03B2 je short 0x03BE
+        // 016F:03AF cmp AX,0x30A5
+        // 016F:03B2 je short 0x03BE
         if (AX == 0x30A5) {
-            // 016D:03BE push BP
+            // 016F:03BE push BP
             Stack.Push16(BP);
-            // 016D:03BF mov BP,SP
-            // 016D:03C1 mov AX,word ptr SS:[BP+2]
+            // 016F:03BF mov BP,SP
+            // 016F:03C1 mov AX,word ptr SS:[BP+2]
             ax = frame.ReturnIp;
-            // 016D:03C4 mov word ptr CS:[0x041B],AX
-            ImageMinus0003Globals.Word041B = ax;
-            // 016D:03C8 mov AX,word ptr SS:[BP+4]
+            // 016F:03C4 mov word ptr CS:[0x041B],AX
+            ImageMinus0001Globals.Word041B = ax;
+            // 016F:03C8 mov AX,word ptr SS:[BP+4]
             AX = frame.ReturnCs;
-            // 016D:03CB mov word ptr CS:[0x041D],AX
-            ImageMinus0003Globals.Word041D = AX;
-            // 016D:03CF or word ptr SS:[BP+6],1
+            // 016F:03CB mov word ptr CS:[0x041D],AX
+            ImageMinus0001Globals.Word041D = AX;
+            // 016F:03CF or word ptr SS:[BP+6],1
             frame.SavedFlags |= 1;
-            // 016D:03D3 pop BP
+            // 016F:03D3 pop BP
             BP = Stack.Pop16();
-            // 016D:03D4 mov BX,SI
+            // 016F:03D4 mov BX,SI
             BX = SI;
-            // 016D:03D6 mov DI,0xBEEF
+            // 016F:03D6 mov DI,0xBEEF
             DI = 0xBEEF;
-            // 016D:03D9 iret
+            // 016F:03D9 iret
             return InterruptRet();
         }
-        // 016D:03B4 cmp AH,0x30
+        // 016F:03B4 cmp AH,0x30
         Alu8.Sub(AH, 0x30);
-        // 016D:03B7 je short 0x03DA
+        // 016F:03B7 je short 0x03DA
         if (AH == 0x30) {
-            // 016D:03DA mov AX,0x1234
+            // 016F:03DA mov AX,0x1234
             AX = 0x1234;
-            // 016D:03DD mov BX,0x5678
+            // 016F:03DD mov BX,0x5678
             BX = 0x5678;
-            // 016D:03E0 iret
+            // 016F:03E0 iret
             return InterruptRet();
         }
-        // 016D:03B9 jmp far dword ptr CS:[0x0417]
-        ushort targetSegment_03B9 = ImageMinus0003Globals.Word0419;
-        ushort targetOffset_03B9 = ImageMinus0003Globals.Word0417;
+        // 016F:03B9 jmp far dword ptr CS:[0x0417]
+        ushort targetSegment_03B9 = ImageMinus0001Globals.Word0419;
+        ushort targetOffset_03B9 = ImageMinus0001Globals.Word0417;
         if (targetSegment_03B9 == biosSegment && targetOffset_03B9 == 0x0096) {
             return unknown_F000_0096_F0096();
         }
         else {
-            throw FailAsUntested($"Untested far jump target {targetSegment_03B9:X4}:{targetOffset_03B9:X4} at 016D:03B9");
+            throw FailAsUntested($"Untested far jump target {targetSegment_03B9:X4}:{targetOffset_03B9:X4} at 016F:03B9");
         }
     }
 
-    public readonly struct unknown_016D_03AF_01A7FFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_016F_03AF_01A9FFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0000].</summary>
@@ -722,52 +722,52 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: all. Does not return.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
-    public virtual Action unknown_016D_03E1_01AB1() {
+    public virtual Action unknown_016F_03E1_01AD1() {
         CheckExternalEvents(cs1, 0x03E1);
-        // 016D:03E1 jmp short 0x03EA
-        return unknown_016D_03EA_01ABA(0x0000);
+        // 016F:03E1 jmp short 0x03EA
+        return unknown_016F_03EA_01ADA(0x0000);
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
-    public virtual Action unknown_016D_03E3_01AB3() {
+    public virtual Action unknown_016F_03E3_01AD3() {
         CheckExternalEvents(cs1, 0x03E3);
-        // 016D:03E3 mov AX,0x3000
+        // 016F:03E3 mov AX,0x3000
         AX = 0x3000;
-        // 016D:03E6 mov DS,AX
+        // 016F:03E6 mov DS,AX
         DS = 0x3000;
-        // 016D:03E8 jmp short 0x03F0
-        return unknown_016D_03EA_01ABA(0x03F0);
+        // 016F:03E8 jmp short 0x03F0
+        return unknown_016F_03EA_01ADA(0x03F0);
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
-    public virtual Action unknown_016D_0421_01AF1() {
+    public virtual Action unknown_016F_0421_01B11() {
         CheckExternalEvents(cs1, 0x0421);
-        // 016D:0421 nop
-        // 016D:0422 mov AX,0x675A
+        // 016F:0421 nop
+        // 016F:0422 mov AX,0x675A
         AX = 0x675A;
-        // 016D:0425 mov BX,0x0014
+        // 016F:0425 mov BX,0x0014
         BX = 0x0014;
-        // 016D:0428 int 0x21
+        // 016F:0428 int 0x21
         InterruptCall(cs1, 0x042A, 0x21);
-        // 016D:042A mov word ptr ES:[0x0086],AX
+        // 016F:042A mov word ptr ES:[0x0086],AX
         EsGlobals.Word0086 = AX;
-        // 016D:042E pushf
+        // 016F:042E pushf
         Stack.Push16(FlagRegister16);
-        // 016D:042F pop AX
+        // 016F:042F pop AX
         AX = Stack.Pop16();
-        // 016D:0430 and AX,1
+        // 016F:0430 and AX,1
         AX = Alu16.And(AX, 1);
-        // 016D:0433 mov word ptr ES:[0x0088],AX
+        // 016F:0433 mov word ptr ES:[0x0088],AX
         EsGlobals.Word0088 = AX;
-        // 016D:0437 ret near
+        // 016F:0437 ret near
         return NearRet();
     }
 
     /// <summary>
-    /// Entry 016D:03EA: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
-    /// Entry 016D:03F0: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
+    /// Entry 016F:03EA: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
+    /// Entry 016F:03F0: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
     /// </summary>
-    public virtual Action unknown_016D_03EA_01ABA(int loadOffset) {
+    public virtual Action unknown_016F_03EA_01ADA(int loadOffset) {
         switch (loadOffset) {
             case 0x0000:
                 goto L_03EA;
@@ -779,37 +779,37 @@ public partial class CfgGeneratedOverrides {
 
     L_03EA:
         CheckExternalEvents(cs1, 0x03EA);
-        // 016D:03EA cmp CX,0
+        // 016F:03EA cmp CX,0
         Alu16.Sub(CX, 0);
-        // 016D:03ED je short 0x0405
+        // 016F:03ED je short 0x0405
         if (!ZeroFlag) {
-            // 016D:03EF ret near
+            // 016F:03EF ret near
             return NearRet();
         }
-        // 016D:0405 mov AX,0x2000
+        // 016F:0405 mov AX,0x2000
         AX = 0x2000;
-        // 016D:0408 mov DS,AX
+        // 016F:0408 mov DS,AX
         DS = 0x2000;
-        // 016D:040A jmp short 0x03F0
+        // 016F:040A jmp short 0x03F0
     L_03F0:
         CheckExternalEvents(cs1, 0x03F0);
-        // 016D:03F0 mov AL,byte ptr DS:[0x00E8]
+        // 016F:03F0 mov AL,byte ptr DS:[0x00E8]
         AL = DsGlobals.Byte00E8;
-        // 016D:03F3 cmp CX,2
+        // 016F:03F3 cmp CX,2
         Alu16.Sub(CX, 2);
-        // 016D:03F6 je short 0x03EA
+        // 016F:03F6 je short 0x03EA
         if (!ZeroFlag) {
-            // 016D:03F8 mov DX,0x00E8
+            // 016F:03F8 mov DX,0x00E8
             DX = 0x00E8;
-            // 016D:03FB mov AH,9
+            // 016F:03FB mov AH,9
             AH = 9;
-            // 016D:03FD int 0x21
+            // 016F:03FD int 0x21
             InterruptCall(cs1, 0x03FF, 0x21);
-            // 016D:03FF cmp CX,1
+            // 016F:03FF cmp CX,1
             Alu16.Sub(CX, 1);
-            // 016D:0402 je short 0x03EA
+            // 016F:0402 je short 0x03EA
             if (CX != 1) {
-                // 016D:0404 ret near
+                // 016F:0404 ret near
                 return NearRet();
             }
         }
@@ -1277,20 +1277,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public ushort Word041F { get => _memory.UInt16[Segment, 0x041F]; set => _memory.UInt16[Segment, 0x041F] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0001Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0001Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0001Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0001) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0001);
     }
 
     public ushort Word0417 { get => _memory.UInt16[Segment, 0x0417]; set => _memory.UInt16[Segment, 0x0417] = value; }

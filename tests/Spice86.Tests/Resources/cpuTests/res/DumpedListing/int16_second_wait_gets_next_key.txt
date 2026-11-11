@@ -1,48 +1,48 @@
-016D:0100 xor AX,AX
-016D:0102 mov ES,AX
-016D:0104 mov AX,word ptr ES:[0x0070]
-016D:0108 mov word ptr CS:[0x0188],AX
-016D:010C mov AX,word ptr ES:[0x0072]
-016D:0110 mov word ptr CS:[0x018A],AX
-016D:0114 mov word ptr ES:[0x0070],0x0168
-016D:011B mov word ptr ES:[0x0072],CS
-016D:0120 sti
-016D:0121 mov AL,0xD2
-016D:0123 out 0x64,AL
-016D:0125 mov AL,0x1E
-016D:0127 out 0x60,AL
-016D:0129 mov AH,0
-016D:012B int 0x16
-016D:012D mov byte ptr CS:[0x0186],AL
-016D:0131 mov byte ptr CS:[0x0185],1
-016D:0137 mov AH,0
-016D:0139 int 0x16
-016D:013B mov byte ptr CS:[0x0187],AL
-016D:013F cli
-016D:0140 mov AX,word ptr CS:[0x0188]
-016D:0144 mov word ptr ES:[0x0070],AX
-016D:0148 mov AX,word ptr CS:[0x018A]
-016D:014C mov word ptr ES:[0x0072],AX
-016D:0150 mov AX,0xB800
-016D:0153 mov ES,AX
-016D:0155 xor DI,DI
-016D:0157 mov AH,7
-016D:0159 mov AL,byte ptr CS:[0x0186]
-016D:015D stos word ptr ES:[DI],AX
-016D:015E mov AL,byte ptr CS:[0x0187]
-016D:0162 stos word ptr ES:[DI],AX
-016D:0163 mov AX,0x4C00
-016D:0166 int 0x21
-016D:0168 cmp byte ptr CS:[0x0185],0
-016D:016E je short 0x0180
-016D:0170 mov byte ptr CS:[0x0185],0
-016D:0176 push AX
-016D:0177 mov AL,0xD2
-016D:0179 out 0x64,AL
-016D:017B mov AL,0x30
-016D:017D out 0x60,AL
-016D:017F pop AX
-016D:0180 jmp far dword ptr CS:[0x0188]
+016E:0100 xor AX,AX
+016E:0102 mov ES,AX
+016E:0104 mov AX,word ptr ES:[0x0070]
+016E:0108 mov word ptr CS:[0x0188],AX
+016E:010C mov AX,word ptr ES:[0x0072]
+016E:0110 mov word ptr CS:[0x018A],AX
+016E:0114 mov word ptr ES:[0x0070],0x0168
+016E:011B mov word ptr ES:[0x0072],CS
+016E:0120 sti
+016E:0121 mov AL,0xD2
+016E:0123 out 0x64,AL
+016E:0125 mov AL,0x1E
+016E:0127 out 0x60,AL
+016E:0129 mov AH,0
+016E:012B int 0x16
+016E:012D mov byte ptr CS:[0x0186],AL
+016E:0131 mov byte ptr CS:[0x0185],1
+016E:0137 mov AH,0
+016E:0139 int 0x16
+016E:013B mov byte ptr CS:[0x0187],AL
+016E:013F cli
+016E:0140 mov AX,word ptr CS:[0x0188]
+016E:0144 mov word ptr ES:[0x0070],AX
+016E:0148 mov AX,word ptr CS:[0x018A]
+016E:014C mov word ptr ES:[0x0072],AX
+016E:0150 mov AX,0xB800
+016E:0153 mov ES,AX
+016E:0155 xor DI,DI
+016E:0157 mov AH,7
+016E:0159 mov AL,byte ptr CS:[0x0186]
+016E:015D stos word ptr ES:[DI],AX
+016E:015E mov AL,byte ptr CS:[0x0187]
+016E:0162 stos word ptr ES:[DI],AX
+016E:0163 mov AX,0x4C00
+016E:0166 int 0x21
+016E:0168 cmp byte ptr CS:[0x0185],0
+016E:016E je short 0x0180
+016E:0170 mov byte ptr CS:[0x0185],0
+016E:0176 push AX
+016E:0177 mov AL,0xD2
+016E:0179 out 0x64,AL
+016E:017B mov AL,0x30
+016E:017D out 0x60,AL
+016E:017F pop AX
+016E:0180 jmp far dword ptr CS:[0x0188]
 F000:0005 iret
 F000:0006 callback 8
 F000:000A push DS
