@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
@@ -16,7 +15,8 @@ using System.Linq;
 /// writes, and the call touches memory
 /// always and I/O ports when the service does. The call delivers no hardware interrupt: no
 /// event delivery occurs inside the selected cores (delivery stays on the separate event-check
-/// statement), and no interrupt frame is built, so the frame's SS/SP/FLAGS reads are gone too.
+/// statement). The call builds the interrupt frame the interpreted <c>int</c> pushes and pops it
+/// like <c>iret</c>, so it reads the frame's SS/SP/CS/FLAGS/DF in addition to the service inputs.
 /// </summary>
 internal static class ServiceContractEffects {
     /// <summary>The effects of <paramref name="node"/>, without the reads of its printed
@@ -24,14 +24,15 @@ internal static class ServiceContractEffects {
     public static IrEffects Of(InterruptServiceCallNode node) {
         CpuValues resultMask = node.Results.Aggregate(CpuValues.None,
             (mask, result) => mask | IrEffectsVisitor.Of(result, false).Reads);
-        // The printed RecordCallerStack bookkeeping of a DOS call reads the caller SS:SP.
-        CpuValues reads = CpuValues.None;
-        if (node.Vector == 0x21 && DosInt21Handler.SavesCallerStack((byte)node.SelectorValue)) {
-            reads = CpuValues.Ss | CpuValues.Sp;
-        }
+        // The frame reads SS/SP to push and pop and CS/FLAGS (the pushed image); the popped
+        // FLAGS keeps its pre-call value except where the service wrote a declared flag result
+        // into the frame, so the may-writes stay the contract's writes. Argument reads come
+        // from the call's children, not the contract.
+        CpuValues reads = CpuValues.Ss | CpuValues.Sp | CpuValues.Cs
+            | CpuValues.StatusFlags | CpuValues.Direction;
+        CpuValues mayWrite = node.Contract.Registers.Writes;
         IrTokens tokens = node.Contract.Io ? IrTokens.All : IrTokens.Memory;
-        return new IrEffects(reads, resultMask, node.Contract.Registers.Writes,
-            tokens, tokens, false, false);
+        return new IrEffects(reads, resultMask, mayWrite, tokens, tokens, false, false);
     }
 
     /// <summary>The effects of a generic <c>InterruptCall</c> that still dispatches the installed

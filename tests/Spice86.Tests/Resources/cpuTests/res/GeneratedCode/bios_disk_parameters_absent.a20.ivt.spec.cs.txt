@@ -212,8 +212,8 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort ax1 = 0;
         byte al1 = 0;
-        ushort ax;
         ushort ax2 = 0;
+        ushort ax;
         byte al2 = 0;
         byte flagOperand_013C = 0;
         ushort flagOperand_018D = 0;
@@ -260,11 +260,13 @@ public partial class CfgGeneratedOverrides {
         // 016D:0110 mov DL,0x80
         DL = 0x80;
         // 016D:0112 cmp AL,0x68
+        Alu8.Sub(AL, 0x68);
         // 016D:0114 je short 0x0125
         if (AL != 0x68) {
             // 016D:0116 mov DL,0
             DL = 0;
             // 016D:0118 cmp AL,0x66
+            Alu8.Sub(AL, 0x66);
             // 016D:011A je short 0x0125
             if (AL != 0x66) {
                 // 016D:011C cmp AL,0x61
@@ -282,7 +284,7 @@ public partial class CfgGeneratedOverrides {
         }
     L_0125:
         // 016D:0125 int 0x11
-        ax1 = Equipment.GetEquipmentList();
+        ax1 = ServiceCall(cs1, 0x0127, Equipment, () => Equipment.GetEquipmentList());
         // 016D:0127 test AX,AX
         Alu16.And(ax1, ax1);
         // 016D:0129 mov AL,1
@@ -291,7 +293,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:012B jne near 0x02F0
         if (ZeroFlag) {
             // 016D:012F int 0x12
-            AX = MemorySize.GetConventionalMemorySize();
+            AX = ServiceCall(cs1, 0x0131, MemorySize, () => MemorySize.GetConventionalMemorySize());
             // 016D:0131 cmp AX,0x0280
             Alu16.Sub(AX, 0x0280);
             // 016D:0134 mov AL,2
@@ -328,7 +330,7 @@ public partial class CfgGeneratedOverrides {
                 // 016D:016B mov word ptr CS:[0x030E],BP
                 ImageMinus0003Globals.Word030E = BP;
                 // 016D:0170 int 0x13
-                (AX, CX, DX, BX, CarryFlag) = Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3);
+                (AX, CX, DX, BX, CarryFlag) = ServiceCall(cs1, 0x0172, Disk, () => Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3), r => CarryOnInterruptStack(r.carryFlag));
                 // 016D:0172 pushf
                 Stack.Push16(FlagRegister16);
                 // 016D:0173 pop word ptr CS:[0x0310]
@@ -556,16 +558,16 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0258 jmp short 0x0292
                     L_0292:
                         // 016D:0292 mov AX,SP
+                        AX = SP;
                         // 016D:0294 sub AX,6
-                        ax = (ushort)(SP - 6);
+                        AX = Alu16.Sub(AX, 6);
                         // 016D:0297 mov word ptr CS:[0x02FC],AX
-                        ImageMinus0003Globals.Word02FC = ax;
+                        ImageMinus0003Globals.Word02FC = AX;
                         // 016D:029B mov word ptr CS:[0x02FE],SS
                         ImageMinus0003Globals.Word02FE = SS;
                         // 016D:02A0 mov AH,0x30
                         // 016D:02A2 int 0x21
-                        Dos.RecordCallerStack(SS, SP);
-                        (ax2, CX, BX) = Dos.ReadDosVersion();
+                        (ax2, CX, BX) = ServiceCall(cs1, 0x02A4, Dos, () => Dos.ReadDosVersion());
                         // 016D:02A4 movsx ECX,AX
                         ECX = (uint)(int)(short)ax2;
                         // 016D:02A8 movsx EDX,AX
@@ -727,7 +729,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, ECX, DX, EBX, CF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: AX, ECX, DX, EBX, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0058_F0058() {
         CheckExternalEvents(biosSegment, 0x0058);

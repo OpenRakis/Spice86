@@ -140,7 +140,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX. Does not return.</summary>
+    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         byte ah1 = 0;
@@ -150,7 +150,7 @@ public partial class CfgGeneratedOverrides {
         DX = 0;
         // 016E:0103 mov AH,0x47
         // 016E:0105 int 0x67
-        ah1 = Ems.SavePageMap(0);
+        ah1 = ServiceCall(cs1, 0x0107, Ems, () => Ems.SavePageMap(0));
         // 016E:0107 cmp AH,0
         Alu8.Sub(ah1, 0);
         // 016E:010A jne short 0x011C
@@ -159,7 +159,7 @@ public partial class CfgGeneratedOverrides {
             DX = 0;
             // 016E:010F mov AH,0x48
             // 016E:0111 int 0x67
-            ah1 = Ems.RestorePageMap(0);
+            ah1 = ServiceCall(cs1, 0x0113, Ems, () => Ems.RestorePageMap(0));
             // 016E:0113 cmp AH,0
             Alu8.Sub(ah1, 0);
             // 016E:0116 jne short 0x011C

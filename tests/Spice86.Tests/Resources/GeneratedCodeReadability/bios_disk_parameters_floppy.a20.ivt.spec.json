@@ -1,5 +1,5 @@
 {
-  "sourceSha256": "4570a56ea8c786e3741357f31696d59628e0949fc6f3a62ca187836dec753f7e",
+  "sourceSha256": "1aeb6896ce3acd67cc3a6b8b10a973f1611e114e3ad965ca6453a86e50c50b2b",
   "minimum": {
     "StringServiceCalls": 0,
     "deviceCalls.Cmos": 0,
@@ -33,12 +33,12 @@
     "LocalReads": 62,
     "LocalVariables": 33,
     "LocalWrites": 64,
-    "PlainRegisterAssignments": 46,
+    "PlainRegisterAssignments": 47,
     "PortWrapperCalls": 0,
     "RawIoCalls": 2,
-    "RegisterReads": 58,
-    "RegisterWrites": 53,
-    "Statements": 396,
+    "RegisterReads": 60,
+    "RegisterWrites": 54,
+    "Statements": 398,
     "WriteBacks": 4
   }
 }

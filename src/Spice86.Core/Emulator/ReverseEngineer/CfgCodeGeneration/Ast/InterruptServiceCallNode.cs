@@ -6,11 +6,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 /// <summary>
-/// A generated direct interrupt service implementation call
-/// (<c>Disk.ReadSectors(dl, al, es, bx, cx, dx)</c>). Printed instead of <c>InterruptCall</c>
-/// when every <c>int</c> site of the program on the vector observed only the installed stub and
-/// the selector register has a known constant value whose service entry binds an implementation.
-/// The omitted interrupt frame is intentional: the bound cores do not depend on it.
+/// A generated typed interrupt service call
+/// (<c>(AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => (AX, CarryFlag))</c>). Printed instead
+/// of <c>InterruptCall</c> when every <c>int</c> site of the program on the vector observed only
+/// the installed stub and the selector register has a known constant value whose service entry
+/// binds an implementation. The helper performs the same stack traffic as the interpreted
+/// <c>int</c> + stub + <c>iret</c> path.
 /// </summary>
 internal sealed record InterruptServiceCallNode : MethodCallNode {
     /// <summary>Creates the typed service call.</summary>
@@ -58,11 +59,33 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
     /// are never read as part of the invocation.</summary>
     public IReadOnlyList<ValueNode> Results { get; init; } = [];
 
+    /// <summary>The segment the pushed frame must return to, printed as the first
+    /// <c>ServiceCall</c> argument.</summary>
+    public required IVisitableAstNode ReturnSegment { get; init; }
+
+    /// <summary>The offset the pushed frame must return to, printed as the second
+    /// <c>ServiceCall</c> argument.</summary>
+    public required IVisitableAstNode ReturnOffset { get; init; }
+
     /// <inheritdoc />
     public override MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
         new InterruptServiceCallNode(Vector, Selector, Service,
             PropertyPath ?? string.Empty, arguments) {
             StringLiteral = StringLiteral,
-            Results = Results
+            Results = Results,
+            ReturnSegment = ReturnSegment,
+            ReturnOffset = ReturnOffset
+        };
+
+    /// <summary>A copy of the call with its read children - the pushed return address and the
+    /// input arguments - replaced; the result lvalues are write targets and stay.</summary>
+    public InterruptServiceCallNode WithMappedReads(IVisitableAstNode returnSegment,
+        IVisitableAstNode returnOffset, IVisitableAstNode[] arguments) =>
+        new InterruptServiceCallNode(Vector, Selector, Service,
+            PropertyPath ?? string.Empty, arguments) {
+            StringLiteral = StringLiteral,
+            Results = Results,
+            ReturnSegment = returnSegment,
+            ReturnOffset = returnOffset
         };
 }

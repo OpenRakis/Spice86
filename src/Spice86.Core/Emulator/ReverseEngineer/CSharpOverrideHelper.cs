@@ -1175,6 +1175,87 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a typed interrupt service call with the same stack traffic the interpreted
+    /// <c>int</c> + stub + <c>iret</c> path performs: pushes the FLAGS/CS/IP frame, clears IF,
+    /// runs the handler's entry bookkeeping (<see cref="InterruptHandler.OnInterruptEntry"/>),
+    /// invokes the service implementation, then pops the frame like <c>iret</c> does and restores
+    /// the stacked FLAGS (including the flags <paramref name="stackedFlags"/> wrote into the stack
+    /// image). Used only where the service returns normally.
+    /// </summary>
+    /// <param name="expectedReturnCs">The CS of the continuation the frame must return to.</param>
+    /// <param name="expectedReturnIp">The IP of the continuation the frame must return to.</param>
+    /// <param name="handler">The installed handler the service belongs to.</param>
+    /// <param name="invocation">The typed service implementation call; runs with the frame pushed.</param>
+    /// <param name="stackedFlags">Writes the service's flag results into the stacked FLAGS word,
+    /// the way the interpreted dispatch's <c>SetFlagOnInterruptStack</c> does.</param>
+    /// <returns>The service implementation's return value.</returns>
+    /// <exception cref="UnrecoverableException">The frame the service left does not return to the
+    /// expected continuation.</exception>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Func<T> invocation, Action<T> stackedFlags) {
+        Stack.Push16(State.Flags.FlagRegister16);
+        Stack.PushSegmentedAddress(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
+        State.InterruptFlag = false;
+        if (handler is InterruptHandler registered) {
+            registered.OnInterruptEntry();
+        }
+        T result = invocation();
+        stackedFlags(result);
+        ushort ip = Stack.Pop16();
+        ushort cs = Stack.Pop16();
+        ushort flags = Stack.Pop16();
+        State.Flags.FlagRegister16 = flags;
+        if (ip != expectedReturnIp || cs != expectedReturnCs) {
+            throw FailAsUntested(
+                $"Service call returned to {cs:X4}:{ip:X4} instead of the expected {expectedReturnCs:X4}:{expectedReturnIp:X4}");
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// service that returns no flag on the interrupt stack.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Func<T> invocation) =>
+        ServiceCall(expectedReturnCs, expectedReturnIp, handler, invocation, _ => { });
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// service with no return value.
+    /// </summary>
+    public void ServiceCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Action invocation) {
+        ServiceCall<int>(expectedReturnCs, expectedReturnIp, handler,
+            () => { invocation(); return 0; }, _ => { });
+    }
+
+    /// <summary>Writes a carry result into the stacked FLAGS of a
+    /// <see cref="ServiceCall"/> frame.</summary>
+    protected void CarryOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Carry, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void ParityOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Parity, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void AuxiliaryOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Auxiliary, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void ZeroOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Zero, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void SignOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Sign, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void OverflowOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Overflow, value);
+
+    /// <summary>
     /// Returns the installed interrupt handler of type <typeparamref name="THandler"/>.
     /// </summary>
     /// <typeparam name="THandler">The handler type.</typeparam>

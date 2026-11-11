@@ -92,13 +92,11 @@ internal static class IrFlagReadCensusClassifier {
                 yield return (assign.Right, false);
                 yield break;
             }
-            if (node is InterruptServiceCallNode serviceCall) {
-                foreach (IVisitableAstNode argument in serviceCall.Arguments) {
-                    yield return (argument, false);
-                }
-                foreach (IVisitableAstNode result in serviceCall.Results) {
-                    yield return (result, true);
-                }
+            if (node is InterruptServiceCallNode) {
+                // Every flag the printed statement reads sits inside its lambdas (the typed
+                // invocation and the stacked-flags writer): the metrics walker counts them as
+                // generated flag uses, not IR flag reads, so the census must not count them
+                // either. The results are write targets and never flag reads.
                 yield break;
             }
             foreach (IVisitableAstNode child in IrAstChildren.ChildrenOf(node)) {

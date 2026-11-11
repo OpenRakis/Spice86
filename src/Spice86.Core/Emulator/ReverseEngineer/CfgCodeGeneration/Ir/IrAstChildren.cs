@@ -101,6 +101,8 @@ internal static class IrAstChildren {
             case InterruptServiceCallNode serviceCall:
                 children.AddRange(serviceCall.Arguments);
                 children.AddRange(serviceCall.Results);
+                Add(serviceCall.ReturnSegment);
+                Add(serviceCall.ReturnOffset);
                 break;
             case MethodCallNode call:
                 children.AddRange(call.Arguments);
@@ -228,9 +230,13 @@ internal static class IrAstChildren {
         ReturnNode returnNode => Map(node, map, [returnNode.Value],
             c => returnNode with { Value = Child<IVisitableAstNode>(c[0]) }),
         // A service call's results are write targets, like an assignment's left: the mapping
-        // covers the argument reads only and never substitutes a result lvalue.
-        InterruptServiceCallNode serviceCall => MapList(serviceCall, map, serviceCall.Arguments,
-            serviceCall.WithArguments),
+        // covers the argument reads and the return address only and never substitutes a result
+        // lvalue.
+        InterruptServiceCallNode serviceCall => Map(serviceCall, map,
+            [serviceCall.ReturnSegment, serviceCall.ReturnOffset, .. serviceCall.Arguments],
+            children => serviceCall.WithMappedReads(Child<IVisitableAstNode>(children[0]),
+                Child<IVisitableAstNode>(children[1]),
+                [.. children.Skip(2).Select(Child<IVisitableAstNode>)])),
         MethodCallNode call => MapList(call, map, call.Arguments, call.WithArguments),
         MethodCallValueNode callValue => MapList(callValue, map, callValue.CallNode.Arguments,
             callValue.WithArguments),

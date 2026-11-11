@@ -2416,12 +2416,11 @@ public partial class CfgGeneratedOverrides {
         byte al1 = 0;
         ushort si1 = 0;
         ushort di2 = 0;
-        ushort di3 = 0;
         ushort cx2 = 0;
-        ushort di4 = 0;
+        ushort di3 = 0;
         ushort cx3 = 0;
         ushort ax3 = 0;
-        ushort di5 = 0;
+        ushort di4 = 0;
         ushort cx4 = 0;
         ushort ax4 = 0;
         ushort dx;
@@ -2510,13 +2509,12 @@ public partial class CfgGeneratedOverrides {
             // 017D:02F4 mov ES,AX
             ES = ax;
             // 017D:02F6 sub BX,AX
-            BX -= ax;
+            BX = Alu16.Sub(BX, ax);
             // 017D:02F8 mov AH,0x4A
             AX = ax;
             AH = 0x4A;
             // 017D:02FA int 0x21
-            Dos.RecordCallerStack(SS, SP);
-            (AX, BX, CarryFlag) = Dos.ModifyMemory(ES, BX);
+            (AX, BX, CarryFlag) = ServiceCall(cs1, 0x02FC, Dos, () => Dos.ModifyMemory(ES, BX), r => CarryOnInterruptStack(r.carryFlag));
         }
         // 017D:02FC mov DI,DS
         di = DS;
@@ -2568,23 +2566,25 @@ public partial class CfgGeneratedOverrides {
         }
         // 017D:0329 sub AL,AL
         AL = 0;
+        CarryFlag = false;
         // 017D:032B stos byte ptr ES:[DI],AL
         UInt8[ES, di2] = 0;
-        di3 = (ushort)(di2 + 1);
+        di = (ushort)(di2 + 1);
         // 017D:032C stos byte ptr ES:[DI],AL
-        UInt8[ES, di3] = 0;
+        UInt8[ES, di] = 0;
+        DI = (ushort)(di + 1);
         // 017D:032D dec DI
+        DI = Alu16.Dec(DI);
         // 017D:032E mov AH,0x30
         AH = 0x30;
         // 017D:0330 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (AX, CX, BX) = Dos.ReadDosVersion();
+        (AX, CX, BX) = ServiceCall(cs1, 0x0332, Dos, () => Dos.ReadDosVersion());
         // 017D:0332 mov byte ptr ES:[0x01BA],AL
         Segment03A8Globals.Byte01BA = AL;
         // 017D:0336 mov byte ptr ES:[0x01BB],AH
         Segment03A8Globals.Byte01BB = AH;
         // 017D:033B mov CX,DI
-        cx2 = di3;
+        cx2 = DI;
         // 017D:033D cmp AL,3
         // 017D:033F jb short 0x0399
         if (AL >= 3) {
@@ -2676,9 +2676,9 @@ public partial class CfgGeneratedOverrides {
                 // 017D:0393 cmp byte ptr DS:[SI],0
                 flagOperand_0393 = UInt8[DS, si1];
                 // 017D:0396 movs byte ptr ES:[DI],byte ptr DS:[SI]
-                UInt8[ES, di3] = UInt8[DS, si1];
+                UInt8[ES, DI] = UInt8[DS, si1];
                 si1++;
-                di3++;
+                DI++;
                 // 017D:0397 jne short 0x0393
             } while (flagOperand_0393 != 0);
         }
@@ -2698,19 +2698,19 @@ public partial class CfgGeneratedOverrides {
         // 017D:03AC and byte ptr DS:[0x02F8],AH
         Segment03A8Globals.Byte02F8 &= AH;
         // 017D:03B0 mov word ptr DS:[0x01BE],DI
-        Segment03A8Globals.Word01BE = di3;
+        Segment03A8Globals.Word01BE = DI;
         // 017D:03B4 mov CX,0x0494
         CX = 0x0494;
         // 017D:03B7 mov DI,0x0376
-        di4 = 0x0376;
+        di3 = 0x0376;
         // 017D:03BA sub CX,DI
         cx3 = 0x011E;
         // 017D:03BC xor AL,AL
         AL = 0;
         // 017D:03BE rep stos byte ptr ES:[DI],AL
         while (cx3 != 0) {
-            UInt8[ES, di4] = AL;
-            di4++;
+            UInt8[ES, di3] = AL;
+            di3++;
             cx3--;
         }
         // 017D:03C0 cmp word ptr DS:[0x01C7],0
@@ -2738,7 +2738,7 @@ public partial class CfgGeneratedOverrides {
         // 017D:03EB mov AX,0x00FF
         AX = 0x00FF;
         // 017D:03EE call near 0x05E4
-        DI = di4;
+        DI = di3;
         CX = cx3;
         NearCall(cs1, 0x03F1, unknown_017D_05E4_01DB4Entry);
         // 017D:03F1 jmp near 0x05A4
@@ -2786,7 +2786,7 @@ public partial class CfgGeneratedOverrides {
         // 017D:03FA cld
         DirectionFlag = false;
         // 017D:03FB lea DI,0
-        di5 = 0;
+        di4 = 0;
         // 017D:03FF mov ES,DX
         ES = 0x03A8;
         // 017D:0401 mov CX,0x0010
@@ -2795,8 +2795,8 @@ public partial class CfgGeneratedOverrides {
         ax4 = 0x0101;
         // 017D:0407 repe scas AX,word ptr ES:[DI]
         while (cx4 != 0) {
-            Alu16.Sub(ax4, UInt16[ES, di5]);
-            di5 += 2;
+            Alu16.Sub(ax4, UInt16[ES, di4]);
+            di4 += 2;
             cx4--;
             if (!ZeroFlag) {
                 break;
@@ -2815,7 +2815,7 @@ public partial class CfgGeneratedOverrides {
             // 017D:0446 mov DX,0x000F
             DX = 0x000F;
             // 017D:0449 call near 0x063B
-            DI = di5;
+            DI = di4;
             CX = cx4;
             NearCall(cs1, 0x044C, unknown_017D_063B_01E0BEntry);
             // 017D:044C pop AX
@@ -7309,7 +7309,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS. Outputs: EDX, BX. Changes: EAX, EDX, BX, flags.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Outputs: EDX, BX. Changes: EAX, EDX, BX, flags.</summary>
     public virtual Action unknown_017D_191D_030ED() {
         byte flagOperand_1920 = 0;
         byte flagOperand_1936 = 0;
@@ -8017,6 +8017,7 @@ public partial class CfgGeneratedOverrides {
         DI = di1;
         AX = NearCall(cs1, 0x1C05, () => unknown_017D_2194_03964(AX, DS));
         // 017D:1C05 test AL,0x80
+        Alu8.And(AL, 0x80);
         // 017D:1C07 je short 0x1C1D
         if ((AL & 0x80) == 0) {
             // 017D:1C1D mov DX,word ptr SS:[BP-2]
@@ -8027,8 +8028,7 @@ public partial class CfgGeneratedOverrides {
             BX = si1;
             // 017D:1C24 mov AH,0x40
             // 017D:1C26 int 0x21
-            Dos.RecordCallerStack(SS, SP);
-            (ax1, CarryFlag) = Dos.WriteFile(BX, CX, DS, dx1);
+            (ax1, CarryFlag) = ServiceCall(cs1, 0x1C28, Dos, () => Dos.WriteFile(BX, CX, DS, dx1), r => CarryOnInterruptStack(r.carryFlag));
             // 017D:1C28 sbb DX,DX
             dx2 = (ushort)(CarryFlag ? 0xFFFF : 0);
             // 017D:1C2A test DX,DX
@@ -9245,7 +9245,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 017D:203F");
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS. Outputs: AX, EDX, BX. Changes: EAX, EDX, BX, flags.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Outputs: AX, EDX, BX. Changes: EAX, EDX, BX, flags.</summary>
     public virtual Action unknown_017D_205E_0382E() {
         ushort bx1 = 0;
         ushort dx1 = 0;
@@ -9258,8 +9258,7 @@ public partial class CfgGeneratedOverrides {
         bx1 = AX;
         // 017D:2062 mov AX,0x4400
         // 017D:2065 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (AX, dx1, CarryFlag) = Dos.IoControl(0x4400, CX, DX, bx1, DS);
+        (AX, dx1, CarryFlag) = ServiceCall(cs1, 0x2067, Dos, () => Dos.IoControl(0x4400, CX, DX, bx1, DS), r => CarryOnInterruptStack(r.carryFlag));
         // 017D:2067 sbb BX,BX
         BX = (ushort)(CarryFlag ? 0xFFFF : 0);
         // 017D:2069 jne short 0x206D
@@ -9575,7 +9574,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, CX, DX, EBX, ES, DS. Outputs: EAX, CX, DX, EBX, ES. Changes: EAX, CX, DX, EBX, ES, flags.</summary>
+    /// <summary>Inputs: EAX, CX, DX, EBX, ES, DS, DF. Outputs: EAX, CX, DX, EBX, ES. Changes: EAX, CX, DX, EBX, ES, flags.</summary>
     public virtual Action unknown_017D_21E5_039B5() {
         ushort dx1 = 0;
         ushort ax1 = 0;
@@ -9620,7 +9619,7 @@ public partial class CfgGeneratedOverrides {
                 // 017D:220B sub AX,word ptr DS:[0x01B8]
                 ax = (ushort)(SS - DsGlobals.Word01B8);
                 // 017D:220F add BX,AX
-                BX += ax;
+                BX = Alu16.Add(BX, ax);
                 // 017D:2211 mov AX,word ptr DS:[0x01B8]
                 ax1 = DsGlobals.Word01B8;
             }
@@ -9628,8 +9627,7 @@ public partial class CfgGeneratedOverrides {
             ES = ax1;
             // 017D:2216 mov AH,0x4A
             // 017D:2218 int 0x21
-            Dos.RecordCallerStack(SS, SP);
-            (AX, BX, CarryFlag) = Dos.ModifyMemory(ES, BX);
+            (AX, BX, CarryFlag) = ServiceCall(cs1, 0x221A, Dos, () => Dos.ModifyMemory(ES, BX), r => CarryOnInterruptStack(r.carryFlag));
             // 017D:221A sbb BX,BX
             BX = (ushort)(CarryFlag ? 0xFFFF : 0);
             // 017D:221C test BX,BX
@@ -9728,7 +9726,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, CX, BX, BP, ESI, DI, DS. Outputs: EAX, CX, DX, BX, BP, ESI, DI, DS. Changes: EAX, CX, DX, BX, BP, ESI, DI, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, BX, BP, ESI, DI, DS, DF. Outputs: EAX, CX, DX, BX, BP, ESI, DI, DS. Changes: EAX, CX, DX, BX, BP, ESI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_2257_03A27() {
         ushort ds;
         ushort ds1 = 0;
@@ -9748,15 +9746,13 @@ public partial class CfgGeneratedOverrides {
         // 017D:225C push DS
         Stack.Push16(DS);
         // 017D:225D xor AX,AX
-        CarryFlag = false;
-        AX = 0;
+        AX = Alu16.Xor(AX, AX);
         // 017D:225F mov DS,AX
         ds = 0;
         // 017D:2261 mov AH,0x63
         AH = 0x63;
         // 017D:2263 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (al1, SI, ds1, CarryFlag) = Dos.ReadLeadByteTable(0, SI, ds, CarryFlag);
+        (al1, SI, ds1, CarryFlag) = ServiceCall(cs1, 0x2265, Dos, () => Dos.ReadLeadByteTable(0, SI, ds, CarryFlag), r => CarryOnInterruptStack(r.carryFlag));
         // 017D:2265 mov DI,DS
         di1 = ds1;
         // 017D:2267 jb short 0x2271

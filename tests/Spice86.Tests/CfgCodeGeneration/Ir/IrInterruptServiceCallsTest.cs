@@ -479,9 +479,10 @@ public sealed class IrInterruptServiceCallsTest {
             "a hooked call can deliver any handler, so a known DS does not survive it");
     }
 
-    /// <summary>A direct call must-writes only its result targets, reads only its bound input
-    /// arguments (added by the statement effects, not by the contract effects) and may-write
-    /// the contract's writes - no frame, no selector, no preserved outputs.</summary>
+    /// <summary>A direct call must-writes only its result targets and reads only the interrupt
+    /// frame's SS/SP/CS/FLAGS/DF; the contract's input reads come from the argument children. Its
+    /// may-writes are the contract's writes only, the popped frame restoring each flag's pre-call
+    /// value except declared flag results.</summary>
     [Fact]
     public void DirectEffectsWriteOnlyTheResultTargets() {
         // Arrange: int 17h WriteCharacter, declared Writes = Ah|Carry.
@@ -491,7 +492,9 @@ public sealed class IrInterruptServiceCallsTest {
         InterruptServiceCallNode call = new(0x17, ServiceSelector.Ah, entry, "Printer",
             [(RegisterNode)IrValueSets.NodeOf(CpuValues.Al),
                 (RegisterNode)IrValueSets.NodeOf(CpuValues.Dx)]) {
-            Results = [new RegisterNode(DataType.UINT8, 4), new CpuFlagNode(Flags.Carry)]
+            Results = [new RegisterNode(DataType.UINT8, 4), new CpuFlagNode(Flags.Carry)],
+            ReturnSegment = new SegmentVariableNode(0x1000),
+            ReturnOffset = new OffsetLiteralNode(0x1234)
         };
 
         // Act
@@ -500,10 +503,13 @@ public sealed class IrInterruptServiceCallsTest {
         // Assert
         effects.MustWrite.Should().Be(CpuValues.Ah | CpuValues.Carry,
             "only the result targets are must-written");
-        effects.Reads.Should().Be(CpuValues.None,
-            "the bound inputs arrive as arguments; the contract effects read nothing else");
+        effects.Reads.Should().Be(
+            CpuValues.Ss | CpuValues.Sp | CpuValues.Cs
+                | CpuValues.StatusFlags | CpuValues.Direction,
+            "the call pushes the interrupt frame; input reads come from the argument children");
         effects.MayWrite.Should().Be(CpuValues.Ah | CpuValues.Carry,
-            "may-write is the contract's writes");
+            "may-write is the contract's writes; the popped frame keeps each flag's pre-call " +
+            "value except declared flag results");
         effects.TokenReads.Should().Be(IrTokens.Memory,
             "a direct call still touches memory conservatively");
         effects.TokenWrites.Should().Be(IrTokens.Memory);

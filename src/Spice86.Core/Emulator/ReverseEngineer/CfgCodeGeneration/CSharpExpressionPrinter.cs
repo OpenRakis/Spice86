@@ -18,11 +18,13 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
+using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -230,6 +232,39 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
 
         return node.Arguments.Select((argument, index) => Argument(parameters[index], argument));
+    }
+
+    /// <summary>The stacked-FLAGS writer of a typed service call
+    /// (<c>r => CarryOnInterruptStack(r.carryFlag)</c>), or
+    /// <see langword="null"/> when no output of the contract is a status flag. The interpreted
+    /// dispatch writes flag results into the stacked FLAGS word
+    /// (<c>SetFlagOnInterruptStack</c>); the typed call reproduces the same write into the frame
+    /// the helper pushed, so the popped FLAGS and the abandoned frame bytes match.</summary>
+    public string? ServiceCallStackedFlags(InterruptServiceCallNode call) {
+        IReadOnlyList<TypedParameter> outputs = ServiceCallSignature.Outputs(call.Contract);
+        MethodInfo implementation = call.Service.Implementation ?? throw new InvalidOperationException(
+            $"{call.Service.Name} has no implementation to call");
+        IList<string?> names = implementation.ReturnParameter
+            .GetCustomAttribute<TupleElementNamesAttribute>()?.TransformNames ?? [];
+        List<string> writes = [];
+        for (int index = 0; index < outputs.Count; index++) {
+            CpuValues mask = outputs[index].Mask;
+            if (!IsSingleFlag(mask)) {
+                continue;
+            }
+            string element = names.Count == 0 ? "r" : $"r.{names[index]}";
+            writes.Add($"{mask}OnInterruptStack({element})");
+        }
+        return writes.Count switch {
+            0 => null,
+            1 => $"r => {writes[0]}",
+            _ => $"r => {{ {string.Join(" ", writes.Select(write => write + ";"))} }}"
+        };
+    }
+
+    private static bool IsSingleFlag(CpuValues mask) {
+        ulong bits = (ulong)mask;
+        return (mask & ~CpuValues.StatusFlags) == 0 && bits != 0 && (bits & (bits - 1)) == 0;
     }
 
     /// <summary>An argument of a typed service call. A string parameter is the decoded DOS string

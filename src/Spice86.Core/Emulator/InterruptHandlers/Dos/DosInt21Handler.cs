@@ -2273,12 +2273,16 @@ public class DosInt21Handler : InterruptHandler {
     /// Like MS-DOS, the caller SS:SP is saved into the current PSP (offset 2Eh) on entry, except for the
     /// PSP get/set functions. Process termination restores the parent's stack from this field.
     /// </remarks>
-    public override void Run() {
-        byte operation = State.AH;
-        if (SavesCallerStack(operation)) {
+    public override void OnInterruptEntry() {
+        if (SavesCallerStack(State.AH)) {
             RecordCallerStack(State.SS, (ushort)(State.SP + 6));
         }
-        Run(operation);
+    }
+
+    /// <inheritdoc />
+    public override void Run() {
+        OnInterruptEntry();
+        Run(State.AH);
     }
 
     /// <summary>Whether <paramref name="operation"/> enters through the caller-stack save DOS

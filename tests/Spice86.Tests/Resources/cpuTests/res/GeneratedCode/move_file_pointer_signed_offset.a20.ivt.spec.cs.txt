@@ -152,7 +152,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort dx1 = 0;
@@ -164,8 +164,7 @@ public partial class CfgGeneratedOverrides {
         dx1 = 0x017A;
         // 016D:0103 mov AX,0x3D00
         // 016D:0106 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (AX, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017A, '\0', "SEEKTEST.BIN"));
+        (AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017A, '\0', "SEEKTEST.BIN")), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:0108 jb short 0x0170
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x0170, Signature_0170_mov);
@@ -182,8 +181,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:0113 mov DX,0x0200
             // 016D:0116 mov AX,0x4200
             // 016D:0119 int 0x21
-            Dos.RecordCallerStack(SS, SP);
-            (ax1, dx1, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Begin, bx1, 0, 0x0200);
+            (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x011B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, bx1, 0, 0x0200), r => CarryOnInterruptStack(r.carryFlag));
             // 016D:011B jb short 0x0162
             if (!CarryFlag) {
                 // 016D:011D cmp DX,0
@@ -201,8 +199,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:012E mov DX,0xFFFF
                         // 016D:0131 mov AX,0x4201
                         // 016D:0134 int 0x21
-                        Dos.RecordCallerStack(SS, SP);
-                        (ax1, dx1, CarryFlag) = Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0xFFFF, 0xFFFF);
+                        (ax1, dx1, CarryFlag) = ServiceCall(cs1, 0x0136, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, bx1, 0xFFFF, 0xFFFF), r => CarryOnInterruptStack(r.carryFlag));
                         // 016D:0136 jb short 0x0162
                         if (CarryFlag) {
                             goto L_0162;
@@ -227,8 +224,7 @@ public partial class CfgGeneratedOverrides {
                         dx1 = 0x0179;
                         // 016D:014C mov AH,0x3F
                         // 016D:014E int 0x21
-                        Dos.RecordCallerStack(SS, SP);
-                        (ax1, CarryFlag) = Dos.ReadFile(bx1, 1, DS, 0x0179);
+                        (ax1, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.ReadFile(bx1, 1, DS, 0x0179), r => CarryOnInterruptStack(r.carryFlag));
                         // 016D:0150 jb short 0x0162
                         if (CarryFlag) {
                             goto L_0162;
@@ -266,8 +262,7 @@ public partial class CfgGeneratedOverrides {
             BX = ImageMinus0003Globals.Word0177;
             // 016D:0169 mov AH,0x3E
             // 016D:016B int 0x21
-            Dos.RecordCallerStack(SS, SP);
-            (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
+            (AX, CarryFlag) = ServiceCall(cs1, 0x016D, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
             // 016D:016D pop AX
             AX = Stack.Pop16();
             // 016D:016E jmp short 0x0172

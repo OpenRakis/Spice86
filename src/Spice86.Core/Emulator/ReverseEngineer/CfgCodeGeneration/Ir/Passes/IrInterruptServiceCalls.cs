@@ -132,7 +132,9 @@ internal static class IrInterruptServiceCalls {
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
             Results = [.. ServiceCallSignature.Outputs(entry.Contract)
-                .Select(output => IrValueSets.NodeOf(output.Mask))]
+                .Select(output => IrValueSets.NodeOf(output.Mask))],
+            ReturnSegment = call.Arguments[0],
+            ReturnOffset = call.Arguments[1]
         };
     }
 

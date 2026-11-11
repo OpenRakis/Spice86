@@ -172,7 +172,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        bx1 = Dos.ReadPspAddress();
+        bx1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
         // 016D:0104 mov word ptr DS:[0x0192],BX
         ImageMinus0003Globals.Word0192 = bx1;
         // 016D:0108 xor AX,AX
@@ -202,7 +202,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:012C mov AH,0x62
         AH = 0x62;
         // 016D:012E int 0x21
-        BX = Dos.ReadPspAddress();
+        BX = ServiceCall(cs1, 0x0130, Dos, () => Dos.ReadPspAddress());
         // 016D:0130 cmp BX,0x2000
         Alu16.Sub(BX, 0x2000);
         // 016D:0134 jne short 0x018B
@@ -211,7 +211,7 @@ public partial class CfgGeneratedOverrides {
             BX = 0x2000;
             // 016D:0139 mov AH,0x50
             // 016D:013B int 0x21
-            Dos.SetCurrentPsp(0x2000);
+            ServiceCall(cs1, 0x013D, Dos, () => Dos.SetCurrentPsp(0x2000));
             // 016D:013D mov AX,0x2000
             // 016D:0140 mov ES,AX
             ES = 0x2000;
@@ -246,7 +246,7 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0165 mov AH,0x62
                     AH = 0x62;
                     // 016D:0167 int 0x21
-                    BX = Dos.ReadPspAddress();
+                    BX = ServiceCall(cs1, 0x0169, Dos, () => Dos.ReadPspAddress());
                     // 016D:0169 cmp BX,word ptr DS:[0x0192]
                     flagOperand_0169 = DsGlobals.Word0192;
                     Alu16.Sub(BX, flagOperand_0169);

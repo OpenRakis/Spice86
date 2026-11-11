@@ -227,7 +227,9 @@ public class CfgCSharpGeneratorLocationsTest {
             .FindIndex(statement => statement.Node is InterruptCallHelperNode);
         callIndex.Should().BeGreaterThanOrEqualTo(0);
         InterruptServiceCallNode callNode = new(0x33, ServiceSelector.Ax, entry, "Mouse") {
-            Results = [new RegisterNode(DataType.UINT16, 0)]
+            Results = [new RegisterNode(DataType.UINT16, 0)],
+            ReturnSegment = new SegmentVariableNode(0x1000),
+            ReturnOffset = new OffsetLiteralNode(0x1234)
         };
         IrEditor.WithoutSsa.Replace(block, callIndex, IrStatement.Create(callNode,
             block.Statements[callIndex].Origin));

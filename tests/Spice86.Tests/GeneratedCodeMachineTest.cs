@@ -238,15 +238,13 @@ public sealed class GeneratedCodeMachineTest {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(discovery, [discovery, unwindExecution]);
     }
 
-    /// <summary>The one approved frame difference: an <c>int 11h</c> to the installed stub pushes
-    /// the six-byte interrupt frame in the interpreter, while the generated direct call to
-    /// <c>GetEquipmentList</c> builds none. The program sets known entry flags, seeds the six bytes
-    /// below SP, invokes the service and halts with no instruction in between touching flags or the
-    /// stack. The interpreted run must show return IP, caller CS and the entry FLAGS in the seeded
-    /// slots; the generated run must leave the seeds untouched; SP, AX and the flags must match the
-    /// interpreted run's.</summary>
+    /// <summary>An <c>int 11h</c> to the installed stub pushes the six-byte interrupt frame in the
+    /// interpreter; the generated typed service call builds the same frame. The program sets known
+    /// entry flags, seeds the six bytes below SP, invokes the service and halts with no instruction
+    /// in between touching flags or the stack. Both runs must show return IP, caller CS and the
+    /// entry FLAGS in the seeded slots; SP, AX and the flags must match the interpreted run's.</summary>
     [Fact]
-    public void BuiltInOperationWithoutFrameDependencyLeavesStackBytesUntouched() {
+    public void TypedServiceCallWritesTheInterruptFrame() {
         // mov ax,2000h; mov ss,ax; mov sp,1000h; mov bp,sp; push word 0CD7h; popf;
         // six seeded bytes at [bp-6..bp-1]; int 11h; hlt
         byte[] program = [
@@ -301,7 +299,7 @@ public sealed class GeneratedCodeMachineTest {
         // The generated run of the same discovered CFG calls the service directly.
         GeneratedCSharpProgram generated = new CfgCSharpGenerator(
             collectCensuses: false, verify: true).Generate(partitioned);
-        generated.SourceText.Should().Contain("GetEquipmentList(");
+        generated.SourceText.Should().Contain("ServiceCall(");
         using CompiledGeneratedOverride compiled =
             new GeneratedOverrideCompiler().CompileSupplier(generated);
         using AsmRunScope executionScope = FrameScope(program);
@@ -317,8 +315,8 @@ public sealed class GeneratedCodeMachineTest {
             "the direct call returns the same AX as the interrupt");
         generatedMachine.CpuState.Flags.FlagRegister16.Should().Be(entryFlags,
             "the direct call leaves the same flags as the interrupt");
-        generatedFrame.Should().Equal([0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
-            "the direct call builds no interrupt frame: the seeded bytes survive");
+        generatedFrame.Should().Equal(interpretedFrame,
+            "the typed service call writes the same interrupt frame as the interpreted int");
     }
 
     /// <summary>The recorded <c>NOFILE.TXT</c> literal of the <c>data_strings</c> open call is
@@ -356,7 +354,7 @@ public sealed class GeneratedCodeMachineTest {
 
     private static AsmRunScope FrameScope(byte[] program) {
         AsmRunScope scope = new();
-        string directory = scope.CreateWorkingDirectory("frame_omission");
+        string directory = scope.CreateWorkingDirectory("service_call_frame");
         string comPath = Path.Join(directory, "frame.com");
         File.WriteAllBytes(comPath, program);
         scope.AttachFixture(new AsmFixture(new AsmRunSettings {

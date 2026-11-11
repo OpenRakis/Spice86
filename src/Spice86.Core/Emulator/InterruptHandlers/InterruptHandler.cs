@@ -111,6 +111,16 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     public abstract void Run();
 
+    /// <summary>
+    /// The bookkeeping the interpreted <see cref="Run()"/> entry performs after the interrupt
+    /// pushed its frame and before the service dispatches. The generated typed service call runs
+    /// it from the same lowered SP through
+    /// <see cref="CSharpOverrideHelper.ServiceCall(ushort, ushort, InterruptHandler, Action)"/>,
+    /// so the rule lives only here.
+    /// </summary>
+    public virtual void OnInterruptEntry() {
+    }
+
     /// <inheritdoc />
     public virtual SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         // Default implementation for most Interrupts:

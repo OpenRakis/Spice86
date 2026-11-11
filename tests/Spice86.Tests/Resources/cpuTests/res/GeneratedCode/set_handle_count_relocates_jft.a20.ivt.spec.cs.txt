@@ -153,7 +153,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort bx1 = 0;
@@ -168,7 +168,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        bx1 = Dos.ReadPspAddress();
+        bx1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
         // 016D:0104 mov word ptr DS:[0x0186],BX
         ImageMinus0003Globals.Word0186 = bx1;
         // 016D:0108 mov ES,BX
@@ -182,8 +182,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0113 mov BX,0x001E
         BX = 0x001E;
         // 016D:0116 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (ax1, CarryFlag) = Dos.ResizeHandleTable(0x001E, AX);
+        (ax1, CarryFlag) = ServiceCall(cs1, 0x0118, Dos, () => Dos.ResizeHandleTable(0x001E, AX), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:0118 jb short 0x017F
         if (!CarryFlag) {
             // 016D:011A cmp word ptr ES:[0x0032],0x001E
@@ -206,8 +205,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0135 mov DX,0x018C
                         DX = 0x018C;
                         // 016D:0138 int 0x21
-                        Dos.RecordCallerStack(SS, SP);
-                        (ax1, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT"));
+                        (ax1, CarryFlag) = ServiceCall(cs1, 0x013A, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
                         // 016D:013A jb short 0x017F
                         if (CarryFlag) {
                             goto L_017F;
@@ -239,8 +237,7 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0156 mov DX,0x018C
                     DX = 0x018C;
                     // 016D:0159 int 0x21
-                    Dos.RecordCallerStack(SS, SP);
-                    (ax1, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT"));
+                    (ax1, CarryFlag) = ServiceCall(cs1, 0x015B, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")), r => CarryOnInterruptStack(r.carryFlag));
                     // 016D:015B jae short 0x017F
                     if (CarryFlag) {
                         // 016D:015D cmp AX,4
@@ -264,8 +261,7 @@ public partial class CfgGeneratedOverrides {
                             CheckExternalEvents(cs1, 0x016F);
                             // 016D:016F mov AH,0x3E
                             // 016D:0171 int 0x21
-                            Dos.RecordCallerStack(SS, SP);
-                            (ax1, CarryFlag) = Dos.CloseFile(BX, 0x3E);
+                            (ax1, CarryFlag) = ServiceCall(cs1, 0x0173, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                             // 016D:0173 jb short 0x017F
                             if (CarryFlag) {
                                 goto L_017F;

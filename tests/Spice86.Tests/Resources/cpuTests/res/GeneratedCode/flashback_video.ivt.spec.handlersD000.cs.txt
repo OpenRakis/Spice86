@@ -338,7 +338,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX. Does not return.</summary>
+    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort di1 = 0;
         ushort di2 = 0;
@@ -355,7 +355,7 @@ public partial class CfgGeneratedOverrides {
         // F000:4009 mov AX,0x0013
         AX = 0x0013;
         // F000:400C int 0x10
-        AL = Video.SetVideoMode(0x13);
+        AL = ServiceCall(biosSegment, 0x400E, Video, () => Video.SetVideoMode(0x13));
         // F000:400E cli
         InterruptFlag = false;
         // F000:400F mov DX,0x03C4

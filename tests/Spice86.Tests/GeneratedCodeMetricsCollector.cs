@@ -598,11 +598,15 @@ internal static class GeneratedCodeMetricsCollector {
 
         /// <summary>Whether <paramref name="node"/> names a flag the IR actually reads: a status
         /// flag name that is not a generated flag use, or a typed flag parameter that is not the
-        /// entry assignment to its flag.</summary>
+        /// entry assignment to its flag and not a member name (<c>r.carryFlag</c> reads a
+        /// service call result tuple, not the CPU flag).</summary>
         private static bool IsCountedFlagName(IdentifierNameSyntax node) {
             string name = node.Identifier.ValueText;
-            return (StatusFlagNames.Contains(name) && !IsGeneratedFlagUse(node))
-                || (TypedFlagParameterNames.Contains(name) && !IsFlagParameterEntryAssignment(node));
+            bool typedParameterRead = TypedFlagParameterNames.Contains(name)
+                && !IsFlagParameterEntryAssignment(node)
+                && (node.Parent is not MemberAccessExpressionSyntax memberAccess
+                    || memberAccess.Name != node);
+            return (StatusFlagNames.Contains(name) && !IsGeneratedFlagUse(node)) || typedParameterRead;
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) {

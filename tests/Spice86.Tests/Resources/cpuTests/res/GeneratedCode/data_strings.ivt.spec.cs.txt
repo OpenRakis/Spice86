@@ -183,13 +183,12 @@ public partial class CfgGeneratedOverrides {
         // 016D:011E mov AH,0x40
         // 016D:0120 int 0x21
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        Dos.RecordCallerStack(SS, SP);
-        (ax1, CarryFlag) = Dos.WriteFile(1, 4, DS, 0x017A);
+        (ax1, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.WriteFile(1, 4, DS, 0x017A), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:0122 mov word ptr ES:[0x0042],AX
         Segment2000Globals.Word0042 = ax1;
         // 016D:0126 mov AX,0
         // 016D:0129 adc AX,0
-        AX = (ushort)(CarryFlag ? 1 : 0);
+        AX = Alu16.Adc(0, 0);
         // 016D:012C mov byte ptr ES:[0x0044],AL
         Segment2000Globals.Byte0044 = AL;
         // 016D:0130 mov DX,0x016F
@@ -197,8 +196,7 @@ public partial class CfgGeneratedOverrides {
         AL = 0;
         // 016D:0135 mov AH,0x3D
         // 016D:0137 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (ax2, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT"));
+        (ax2, CarryFlag) = ServiceCall(cs1, 0x0139, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:0139 mov word ptr ES:[0x0045],AX
         Segment2000Globals.Word0045 = ax2;
         // 016D:013D mov AX,0

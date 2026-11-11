@@ -201,8 +201,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:010B mov BX,0x003E
         // 016D:010E mov AH,0x4A
         // 016D:0110 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (AX, BX, CarryFlag) = Dos.ModifyMemory(ES, 0x003E);
+        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0112, Dos, () => Dos.ModifyMemory(ES, 0x003E), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:0112 jb near 0x019D
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x019D, SpeculativeRun_019D);
@@ -215,8 +214,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0116 mov BX,0x0013
         // 016D:0119 mov AH,0x48
         // 016D:011B int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (ax1, BX, CarryFlag) = Dos.AllocateMemory(0x0013);
+        (ax1, BX, CarryFlag) = ServiceCall(cs1, 0x011D, Dos, () => Dos.AllocateMemory(0x0013), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:011D jb near 0x01A2
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A2, SpeculativeRun_01A2);
@@ -281,7 +279,7 @@ public partial class CfgGeneratedOverrides {
         BX = ImageMinus0003Globals.Word03D4;
         // 016D:0155 mov AH,0x50
         // 016D:0157 int 0x21
-        Dos.SetCurrentPsp(BX);
+        ServiceCall(cs1, 0x0159, Dos, () => Dos.SetCurrentPsp(BX));
         // 016D:0159 mov AX,word ptr DS:[0x03D4]
         ax = ImageMinus0003Globals.Word03D4;
         // 016D:015C mov DS,AX
@@ -324,8 +322,7 @@ public partial class CfgGeneratedOverrides {
         AX = ax;
         AH = 0x4D;
         // 016D:0177 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        AX = Dos.ReadReturnCode();
+        AX = ServiceCall(cs1, 0x0179, Dos, () => Dos.ReadReturnCode());
         // 016D:0179 cmp AL,0xAA
         Alu8.Sub(AL, 0xAA);
         // 016D:017B jne short 0x0193
@@ -342,7 +339,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:017F mov AH,0x50
         AH = 0x50;
         // 016D:0181 int 0x21
-        Dos.SetCurrentPsp(BX);
+        ServiceCall(cs1, 0x0183, Dos, () => Dos.SetCurrentPsp(BX));
         // 016D:0183 mov AX,word ptr DS:[0x03D4]
         AX = ImageMinus0003Globals.Word03D4;
         // 016D:0186 mov ES,AX
@@ -350,8 +347,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0188 mov AH,0x49
         AH = 0x49;
         // 016D:018A int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        (AX, CarryFlag) = Dos.FreeMemory(ES, AX);
+        (AX, CarryFlag) = ServiceCall(cs1, 0x018C, Dos, () => Dos.FreeMemory(ES, AX), r => CarryOnInterruptStack(r.carryFlag));
         // 016D:018C jb short 0x0198
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0198, SpeculativeRun_0198);
