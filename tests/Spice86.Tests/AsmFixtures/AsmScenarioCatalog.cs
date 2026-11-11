@@ -410,10 +410,16 @@ internal static class AsmScenarioCatalog {
             CpuBin("div"),
             CpuBin("interrupt"),
             CpuBin("jump1"),
+            // jump2 exercises a runtime far-call dispatch; it must transfer explicitly on a matched
+            // observed target instead of falling through to the trailing untested-target failure.
             CpuBin("jump2"),
             CpuBin("rep"),
             CpuBin("rotate"),
-            CpuBin("segpr"),
+            // segpr contains a direct call whose callee never returns during discovery, so there is no observed
+            // continuation edge. The generator must still emit the call helper with the statically-known expected
+            // return address, then guard the unobserved post-call path with an explicit untested failure.
+            AsmScenario.FromFixture("segpr", () => AsmFixtureCatalog.Dump("segpr")
+                .WithEngineAssertions(AsmScenarioEngineAssertions.Segpr)),
             CpuBin("shifts"),
             CpuBin("strings"),
             CpuBin("sub"),
@@ -421,16 +427,46 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("control", AsmFixtureCatalog.Control),
             AsmScenario.FromFixture("mul", AsmFixtureCatalog.Mul),
             AsmScenario.FromFixture("div2", AsmFixtureCatalog.Div2),
-            AsmScenario.FromFixture("jmpmov", AsmFixtureCatalog.JmpMov),
+            // jmpmov exercises a runtime far-jump dispatch; it must transfer explicitly on a matched
+            // observed target instead of falling through to the trailing untested-target failure.
+            AsmScenario.FromFixture("jmpmov", () => AsmFixtureCatalog.JmpMov()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.JmpMov)),
             AsmScenario.FromFixture("returnedterminator", AsmFixtureCatalog.ReturnedTerminator),
+            // The LOCK prefix validation correctly fires INT 6 (#UD) for architecturally invalid
+            // uses of LOCK and does NOT fire it for valid uses.
+            // Three valid cases (FASM assembles them directly, no INT 6 expected):
+            //   LOCK ADD [mem], ax   -- ADD with memory destination
+            //   LOCK INC word [mem]  -- INC with memory destination
+            //   LOCK DEC word [mem]  -- DEC with memory destination
+            // Three invalid cases (raw bytes, FASM refuses to assemble them, INT 6 expected):
+            //   LOCK MOV [mem], ax   -- MOV is not in the LOCK-allowed instruction set
+            //   LOCK ADD ax, bx      -- ADD allowed but destination is a register, not memory
+            //   LOCK INC ax          -- INC allowed but destination is a register, not memory
             AsmScenario.FromFixture("lockprefix", AsmFixtureCatalog.LockPrefix),
-            AsmScenario.FromFixture("selfmodifyvalue", AsmFixtureCatalog.SelfModifyValue),
+            AsmScenario.FromFixture("selfmodifyvalue", () => AsmFixtureCatalog.SelfModifyValue()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyValue)),
             AsmScenario.FromFixture("selfmodifyinstructions", AsmFixtureCatalog.SelfModifyInstructions),
             AsmScenario.FromFixture("selfmodifyrep", AsmFixtureCatalog.SelfModifyRep),
-            AsmScenario.FromFixture("selfmodifyterminator", AsmFixtureCatalog.SelfModifyTerminator),
-            AsmScenario.FromFixture("selfmodifyje", AsmFixtureCatalog.SelfModifyJe),
-            AsmScenario.FromFixture("selfmodifycall", AsmFixtureCatalog.SelfModifyCall),
+            AsmScenario.FromFixture("selfmodifyterminator", () => AsmFixtureCatalog.SelfModifyTerminator()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyTerminator)),
+            AsmScenario.FromFixture("selfmodifyje", () => AsmFixtureCatalog.SelfModifyJe()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyJe)),
+            AsmScenario.FromFixture("selfmodifycall", () => AsmFixtureCatalog.SelfModifyCall()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyCall)),
+            // selfmodifycalltarget reproduces the Dune2 "unknown_3409_0025" failure: one CALL-target address
+            // is self-modified between calls so several distinct instruction variants live at that one address.
+            // The function partitioner promotes each variant into its own partition, all sharing the same entry
+            // address. Before the fix this produced several C# methods with the identical name (CS0111) and
+            // several DefineFunction registrations at the identical address (an UnrecoverableException when the
+            // override is installed). Compiling the generated source and installing the override proves both
+            // are resolved: unique method names and a single registration per address.
             AsmScenario.FromFixture("selfmodifycalltarget", AsmFixtureCatalog.SelfModifyCallTarget),
+            // multimisalignedcall has a single shared CALL node whose callee discards its real return address
+            // and returns to a different continuation on each run (an overlay/trampoline thunk). The returns
+            // are stack-balanced: each ret consumes the call's own frame, so the call node accumulates
+            // CallToRedirectedReturn successors. The continuations stay in the caller's method, and the
+            // generated code runs them by dispatching to the actual landing address when
+            // NearCallReturnedElsewhere reports a redirected return.
             AsmScenario.FromFixture("multimisalignedcall", AsmFixtureCatalog.MultiMisalignedCall),
             AsmScenario.FromFixture("redirectedreturn", AsmFixtureCatalog.RedirectedReturn),
             AsmScenario.FromFixture("stalestackframes", AsmFixtureCatalog.StaleStackFrames),
@@ -441,14 +477,37 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
             AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry),
             AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister),
-            AsmScenario.FromFixture("divfaultloop", AsmFixtureCatalog.DivFaultLoop),
+            AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
             AsmScenario.FromFixture("flagconditions", AsmFixtureCatalog.FlagConditions),
             AsmScenario.FromFixture("linearsamesegmenteddifferent", AsmFixtureCatalog.LinearSameSegmentedDifferent),
-            AsmScenario.FromFixture("sticli", AsmFixtureCatalog.StiCli),
-            AsmScenario.FromFixture("ownerlesscallcycle", AsmFixtureCatalog.OwnerlessCallCycle),
-            AsmScenario.FromFixture("sameretloop", AsmFixtureCatalog.SameretLoop),
-            AsmScenario.FromFixture("intchain", AsmFixtureCatalog.IntChain),
+            // The oracle checks the value the program writes: mov [si], ax stores AX at DS:SI.
+            // (The generated Hlt() helper exits via HaltRequestedException, so CpuState.IsRunning is not
+            // the relevant invariant there, unlike the emulated-mode CPU HLT path the engine assertions check.)
+            AsmScenario.FromFixture("sticli", () => AsmFixtureCatalog.StiCli()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.StiCli)),
+            AsmScenario.FromFixture("ownerlesscallcycle", () => AsmFixtureCatalog.OwnerlessCallCycle()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.OwnerlessCallCycle)),
+            // sameretloop's function returns to its own entry address on every iteration, so the dispatcher
+            // must recognize each unchanged-CS:IP return as a control transfer and dispatch the override
+            // again; the fallback guard rejects any iteration the interpreter would run instead.
+            AsmScenario.FromFixture("sameretloop", () => AsmFixtureCatalog.SameretLoop()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SameretLoop)),
+            AsmScenario.FromFixture("intchain", () => AsmFixtureCatalog.IntChain()
+                .WithEngineAssertions(AsmScenarioEngineAssertions.IntChain)),
+            // Test 386 but not protected mode. test386.asm was assembled with 'make' which invokes
+            // NASM; the environment was GNU/Linux Ubuntu 24.04.1, and make and NASM were installed
+            // from the software repositories with apt package manager. The assembled binary must be
+            // installed at physical address 0xf0000 and aliased at physical address 0xffff0000. The
+            // jump at resetVector should align with the CPU reset address 0xfffffff0, which will
+            // transfer control to f000:0045. All memory accesses remain within the first 1MB.
             AsmScenario.FromFixture("test386", AsmFixtureCatalog.Test386),
+            // jump1 contains conditional jumps that were always taken during discovery (e.g. `clc; ja j01`),
+            // so their fallthrough (next-in-memory) edge was never observed. With speculation off, each such
+            // jump must lower to an `if` that guards the unobserved fallthrough with FailAsUntested, not
+            // silently collapse to an unconditional transfer to the taken target. The guarded `if` with
+            // FailAsUntested is visible in the `jump1` golden (no suffix); the run checks the `jump1`
+            // memory dump.
             AsmScenario.FromFixture("jump1", AsmFixtureCatalog.Jump1WithoutSpeculation),
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Unobserved)),
@@ -464,6 +523,9 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_call_entry", AsmFixtureCatalog.SpeculativeCallEntry),
             AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode),
             AsmScenario.FromFixture("speculative_zero_memory", AsmFixtureCatalog.SpeculativeZeroMemory),
+            // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the
+            // transfer has no successor in the CFG. The generator must fail that transfer as untested at run
+            // time instead of throwing while it generates the whole program.
             AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData),
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
@@ -473,13 +535,17 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("callstackunwind",
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Unobserved)),
             PartitionScenario("partition_jump_into_function_middle"),
-            PartitionScenario("partition_shared_tail"),
+            AsmScenario.FromFixture("partition_shared_tail", () => AsmFixtureCatalog.Partition("partition_shared_tail")
+                .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionSharedTail)),
             PartitionScenario("partition_multi_entry_dominated_shared"),
             PartitionScenario("partition_multi_entry_irreducible_shared"),
+            // The shared region's two exits are each reached from both entries and do not reach each other, so
+            // the blocks no single entry dominates form two unconnected regions. Partitioning must keep both.
             PartitionScenario("partition_multi_entry_disconnected_shared"),
             PartitionScenario("partition_cross_function_loop"),
             PartitionScenario("partition_mixed_activation_cycle"),
-            PartitionScenario("partition_indirect_call_jump"),
+            AsmScenario.FromFixture("partition_indirect_call_jump", () => AsmFixtureCatalog.Partition("partition_indirect_call_jump")
+                .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionIndirectCallJump)),
             PartitionScenario("partition_jump_table"),
             PartitionScenario("partition_untested_indirect"),
             PartitionScenario("partition_jump_table_mixed"),
@@ -536,7 +602,13 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("interrupt_contract_unseen_handler"),
             PartitionScenario("interrupt_contract_unseen_1c_handler"),
             PartitionScenario("instruction_coverage_386"),
+            // partition_mutual_recursion_unwind has two call-target partitions that jump to each other in a
+            // strongly connected component, lowered as CyclicCrossPartitionFlow (JumpDispatcher.Jump +
+            // RequiredJumpAsmReturn). The first call bounces a -> b -> a, re-entering function_a while it is
+            // still on the jump stack: the mutual-recursion unwind where JumpAsmReturn is read while still null.
+            // This crashed with InvalidOperationException before RequiredJumpAsmReturn returned a no-op there.
             AsmScenario.FromFixture("partition_mutual_recursion_unwind", AsmFixtureCatalog.PartitionMutualRecursionUnwind),
+            // Ignores guest byte-string and word writes to ROM in every execution mode.
             AsmScenario.FromFixture("romwrite", AsmFixtureCatalog.RomWrite),
             AsmScenario.FromFixture("flashback_mode13", () => AsmFixtureCatalog.FlashbackVideo(false)),
             AsmScenario.FromFixture("flashback_video", () => AsmFixtureCatalog.FlashbackVideo(true))

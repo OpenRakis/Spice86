@@ -18,7 +18,9 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="xunit.v3" />
+        <!-- Avalonia.Headless.XUnit's discoverer is binary-bound to xUnit v3 extensibility 3.x;
+             stay on 3.2.2 until Avalonia ships a build against xUnit 4. -->
+        <PackageReference Include="xunit.v3" VersionOverride="3.2.2" />
     </ItemGroup>
 
     <ItemGroup>

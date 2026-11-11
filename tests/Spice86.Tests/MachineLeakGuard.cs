@@ -1,4 +1,6 @@
 [assembly: Xunit.AssemblyFixture(typeof(Spice86.Tests.MachineLeakGuard))]
+// Every test may run in parallel with every other; tests sharing mutable state opt out individually.
+[assembly: Xunit.v3.Parallelization(Mode = Xunit.Sdk.ParallelMode.All)]
 
 namespace Spice86.Tests;
 
@@ -16,9 +18,10 @@ public sealed class MachineLeakGuard : IDisposable {
             return;
         }
 
-        int surviving = MachineLeakTracker.CountSurvivingAfterCollection();
-        Assert.True(surviving == 0,
-            $"{surviving} of {tracked} emulator instances created via Spice86Creator were still alive after " +
-            "disposal and garbage collection. This indicates a reference leak that keeps the entire Machine graph rooted.");
+        List<string> surviving = MachineLeakTracker.SurvivingAfterCollection();
+        Assert.True(surviving.Count == 0,
+            $"{surviving.Count} of {tracked} emulator instances created via Spice86Creator were still alive after " +
+            "disposal and garbage collection. This indicates a reference leak that keeps the entire Machine graph rooted. " +
+            $"Created by: {string.Join("; ", surviving)}");
     }
 }

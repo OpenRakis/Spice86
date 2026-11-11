@@ -8,6 +8,9 @@ using System.IO;
 
 using Xunit;
 
+// Parses through Spectre.Console.Cli's CommandApp, whose AnsiConsole is a process-wide static
+// shared by every parse in this class (including deliberate error paths), so the class stays serial.
+[TestClass(DisableParallelization = true)]
 public class CommandLineParserTests {
 
     [Fact]

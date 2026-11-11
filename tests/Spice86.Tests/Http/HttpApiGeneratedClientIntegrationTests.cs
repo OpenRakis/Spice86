@@ -10,6 +10,8 @@ using NSubstitute;
 
 using Xunit;
 
+// The class fixture shares one HTTP server and its mutable CPU/memory state across all tests.
+[TestClass(DisableParallelization = true)]
 public sealed partial class HttpApiGeneratedClientIntegrationTests : IClassFixture<HttpApiServerFixture> {
     private const string KiotaToolVersion = "1.34.0";
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(3);

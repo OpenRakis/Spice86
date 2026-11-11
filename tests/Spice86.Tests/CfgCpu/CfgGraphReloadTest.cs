@@ -84,7 +84,7 @@ public class CfgGraphReloadTest {
     }.Select(name => new object[] { name });
 
     /// <summary>
-    /// Per-bin run configuration. Mirrors the knobs the corresponding MachineTest cases use so each bin
+    /// Per-bin run configuration. Mirrors the knobs the corresponding catalogue scenarios use so each bin
     /// reaches the same deterministic end state; bins not listed run with the defaults.
     /// </summary>
     private static (long MaxCycles, bool EnablePit, bool EnableA20Gate) GetBinConfig(string binName) => binName switch {

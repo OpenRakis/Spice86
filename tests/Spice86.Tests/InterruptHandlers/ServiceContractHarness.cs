@@ -149,17 +149,6 @@ internal static class ServiceContractHarness {
         assert(state);
     }
 
-    /// <summary>Captures the whole post-service machine of <paramref name="testCase"/> run
-    /// through the stub as one frozen line: every register lane, the output frame flags and a
-    /// hash of the full memory, so a refactor can be checked against the pre-refactor state
-    /// without regenerating the line.</summary>
-    internal static string CaptureBaseline(ServiceContractCase testCase) {
-        RunResult result = RunCase(testCase, 0, ServiceRunMode.Stub);
-        string registers = string.Join(",", Fields.Select(field => $"{field.Name}={result.Outputs[field]:X8}"));
-        string memoryHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(result.MemoryAfter));
-        return $"{registers};FLAGS={result.OutputFrameFlags:X4};MEMORY={memoryHash}";
-    }
-
     private static void AssertContract(ServiceContractCase testCase, ServiceRunMode mode) {
         RunResult first = RunCase(testCase, 0, mode);
         RunResult second = RunCase(testCase, 1, mode);

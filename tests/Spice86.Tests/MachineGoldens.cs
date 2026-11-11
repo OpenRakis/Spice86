@@ -13,7 +13,7 @@ using System.Runtime.CompilerServices;
 using Xunit;
 
 /// <summary>
-/// Listing and CFG golden comparisons shared by every registered scenario: <c>MachineTest</c> and any
+/// Listing and CFG golden comparisons shared by every registered scenario: <c>AsmScenarioTest</c> and any
 /// other entry point compare through these helpers, so there is one route to the machine goldens. Both
 /// the writers and the comparisons address the committed golden in the source tree, never a build copy.
 /// </summary>

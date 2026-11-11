@@ -1,0 +1,621 @@
+namespace Spice86.Tests.AsmFixtures;
+
+using FluentAssertions;
+
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
+
+using Spice86.Tests.Utility;
+
+using Xunit;
+
+/// <summary>
+/// Engine checks of the finished machine (CFG nodes and blocks, graph transfers, CPU shadow state),
+/// one method per catalogue fixture. They run on every emulated run of the fixture they are attached
+/// to, after its behavioral oracle: a result oracle may only read what the emulated and the generated
+/// run agree on, so these assertions live on the fixture, never in the oracle itself.
+/// </summary>
+internal static class AsmScenarioEngineAssertions {
+    /// <summary>jmpmov ends on the HLT that follows the stored far-jump target.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void JmpMov(AsmRunScope scope, Machine machine) {
+        State state = machine.CpuState;
+        uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
+        // Last instruction HLT is one byte long and is at 0xF400C
+        Assert.Equal((uint)0xF400D, endAddress);
+    }
+
+    /// <summary>segpr: a division by 0 CPU fault is handled by an interrupt handler that rewrites the
+    /// return address, checked at the instruction level, at the block level and in the graph transfers.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void Segpr(AsmRunScope scope, Machine machine) {
+        // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
+        CfgInstruction? divBy0HandlerEntry = currentInstructions.GetAtAddress(new(0xF000, 0x1100));
+        CfgInstruction? divBy0HandlerIret = currentInstructions.GetAtAddress(new(0xF000, 0x1111));
+        CfgInstruction? divBy0NextInstruction = currentInstructions.GetAtAddress(new(0xF000, 0x0065));
+        Assert.NotNull(divBy0);
+        Assert.NotNull(divBy0HandlerEntry);
+        Assert.NotNull(divBy0HandlerIret);
+        Assert.NotNull(divBy0NextInstruction);
+        // Check that the int handler is linked to the division by 0 as a cpu fault type successor
+        Assert.Contains(divBy0HandlerEntry, divBy0.Successors);
+        Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.CpuFault]);
+        // Check that the instruction next to the div by 0 to which the handler returned to  is linked to the division by 0 as a regular "Call to return" link.
+        // Side-note, normally, div by 0 int handler should return to the div instruction. However, here the handler edits the call stack making it return to the next instruction which is how a regular function call in a high level language would behave
+        Assert.Contains(divBy0NextInstruction, divBy0.Successors);
+        Assert.Contains(divBy0NextInstruction, divBy0.SuccessorsPerType[InstructionSuccessorType.CallToReturn]);
+        // Check that IRET is normally connected to the return target
+        Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.Successors);
+        Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
+
+        // Block-level assertions: same scenario verified at the CfgBlock layer.
+
+        // divBy0 carries an extra CpuFault successor, so it is the Terminator of its block.
+        CfgBlock? divBy0Block = divBy0.ContainingBlock;
+        Assert.NotNull(divBy0Block);
+        divBy0Block.IsDiscoveryComplete.Should().BeTrue();
+        divBy0Block.Terminator.Should().BeSameAs(divBy0);
+
+        // The handler entry at F000:1100 is the entry of the handler block.
+        CfgBlock? handlerBlock = divBy0HandlerEntry.ContainingBlock;
+        Assert.NotNull(handlerBlock);
+        handlerBlock.IsDiscoveryComplete.Should().BeTrue();
+        handlerBlock.Entry.Should().BeSameAs(divBy0HandlerEntry);
+
+        // The IRET remains in the handler block: returned terminators are valid interior
+        // nodes, and the executor cold-steps them when entered directly.
+        CfgBlock? iretBlock = divBy0HandlerIret.ContainingBlock;
+        Assert.NotNull(iretBlock);
+        iretBlock.Should().BeSameAs(handlerBlock);
+        iretBlock.Entry.Should().BeSameAs(divBy0HandlerEntry);
+        iretBlock.Terminator.Should().BeSameAs(divBy0HandlerIret);
+        iretBlock.IsDiscoveryComplete.Should().BeTrue();
+
+        // The instruction following divBy0 in memory is the entry of the post-fault block.
+        CfgBlock? nextBlock = divBy0NextInstruction.ContainingBlock;
+        Assert.NotNull(nextBlock);
+        nextBlock.IsDiscoveryComplete.Should().BeTrue();
+        nextBlock.Entry.Should().BeSameAs(divBy0NextInstruction);
+
+        // The blocks are distinct.
+        divBy0Block.Should().NotBeSameAs(handlerBlock);
+        divBy0Block.Should().NotBeSameAs(nextBlock);
+        iretBlock.Should().NotBeSameAs(nextBlock);
+        handlerBlock.Should().NotBeSameAs(nextBlock);
+
+        // Block-level edges derived from the underlying instruction-level edges.
+        IEnumerable<CfgBlock?> divBlockSuccessors = divBy0Block.Successors.Select(s => s.ContainingBlock);
+        // CpuFault edge: div block → handler block.
+        divBlockSuccessors.Should().Contain(handlerBlock);
+        // CallToReturn edge: div block → post-fault block (handler rewrote the stack
+        // to return past the div instead of retrying it).
+        divBlockSuccessors.Should().Contain(nextBlock);
+
+        // Normal edge: IRET block -> post-fault block.
+        iretBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(nextBlock);
+
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Should().Contain(t => t.Kind == "callOut",
+            "the call whose callee never returns must produce a callOut transfer");
+    }
+
+    /// <summary>selfmodifyvalue: the overwritten immediate is read from memory, and the variant merge
+    /// keeps the post-replacement instruction inside its CfgBlock.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void SelfModifyValue(AsmRunScope scope, Machine machine) {
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
+        Assert.NotNull(instruction);
+        // The immediate value field is the last field in a MOV reg, imm16 instruction
+        InstructionField<ushort> immField = (InstructionField<ushort>)instruction.FieldsInOrder[^1];
+        // Code should have been modified so instruction should use memory and not stored value
+        Assert.False(immField.UseValue);
+        Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
+
+        // Block-level assertions: variant merging must keep the post-replacement
+        // instruction inside its CfgBlock.
+        CfgBlock? movBlock = instruction.ContainingBlock;
+        Assert.NotNull(movBlock);
+        Assert.Contains(instruction, movBlock.Instructions);
+        // The mov sits right after the jmp short 0x000D (a terminator), so it is the entry
+        // of its own block.
+        Assert.Same(instruction, movBlock.Entry);
+        // The block's discovery is complete and keeps both graph successors: the loop-back
+        // jump and the terminal HLT path.
+        Assert.True(movBlock.IsDiscoveryComplete);
+        CfgInstruction? loopJump = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x000B));
+        CfgInstruction? hlt = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x001C));
+        Assert.NotNull(loopJump);
+        Assert.NotNull(hlt);
+        movBlock.Successors.Should().BeEquivalentTo([loopJump, hlt]);
+        foreach (ICfgNode successor in movBlock.Successors) {
+            Assert.NotNull(successor.ContainingBlock);
+            Assert.Same(successor, successor.ContainingBlock.Entry);
+            Assert.True(successor.IsBlockTerminator);
+        }
+    }
+
+    /// <summary>
+    /// selfmodifyje: regression for the bug in <c>NodeLinker</c> where
+    /// <c>SwitchPredecessorsToNew</c> adds the new successor before removing the old one.
+    /// If adding the new successor brings <c>Successors.Count</c> to
+    /// <c>MaxSuccessorsCount</c>, <c>CanHaveMoreSuccessors</c> is set to <c>false</c>.
+    /// Removing the old successor afterwards drops the count back below the max, but
+    /// <c>CanHaveMoreSuccessors</c> is never reset to <c>true</c>.
+    /// This causes the <c>je -> hlt</c> fall-through link to never be added.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void SelfModifyJe(AsmRunScope scope, Machine machine) {
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        // Layout (F000:0000 = start):
+        //   0000: mov cx, 0       (3 bytes)
+        //   0003: cmp cx, 0       (3 bytes)  <- jump label
+        //   0006: je selfmodify   (2 bytes)
+        //   0008: hlt             (1 byte)
+        //   0009: mov ax, 1234    (3 bytes)  <- selfmodify label
+        CfgInstruction? je = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0006));
+        CfgInstruction? hlt = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0008));
+        CfgInstruction? selfModify = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0009));
+        Assert.NotNull(je);
+        Assert.NotNull(hlt);
+        Assert.NotNull(selfModify);
+        // Both successor paths are discovered: selfModify (taken) and hlt (fall-through).
+        Assert.Equal(2, je.Successors.Count);
+        // hlt must be a successor of je (fall-through path, added on iteration 3)
+        Assert.Contains(hlt, je.Successors);
+        // selfModify must still be a successor of je (taken path)
+        Assert.Contains(selfModify, je.Successors);
+    }
+
+    /// <summary>selfmodifycall: the SelectorNode inserted mid-execution dispatches between the two
+    /// variants at the patched address and finalises the predecessor's CfgBlock.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void SelfModifyCall(AsmRunScope scope, Machine machine) {
+        // Block-level assertions: SelectorNode insertion via CreateSelectorNodeBetween
+        // must finalise the predecessor's CfgBlock and must not disturb the variant
+        // CfgInstructions' containing-block back-pointers.
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        // The call near 0x0017 sits at F000:000D and is the predecessor of the SelectorNode
+        // injected at F000:0010 once the second-iteration return point switches from `nop`
+        // to `hlt` (the byte at F000:0010 is patched mid-execution).
+        CfgInstruction? call = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x000D));
+        Assert.NotNull(call);
+        SelectorNode selector = call.Successors.OfType<SelectorNode>().Single();
+
+        // The SelectorNode dispatches between the two variants (nop and hlt) at F000:0010.
+        Assert.Equal(new SegmentedAddress(0xF000, 0x0010), selector.Address);
+        ICfgNode[] variants = selector.Successors.ToArray();
+        Assert.Equal(2, variants.Length);
+        // Each variant is itself a CfgInstruction with its own non-null ContainingBlock.
+        foreach (ICfgNode variant in variants) {
+            CfgInstruction variantInstruction = Assert.IsAssignableFrom<CfgInstruction>(variant);
+            Assert.NotNull(variantInstruction.ContainingBlock);
+            Assert.Contains(variantInstruction, variantInstruction.ContainingBlock.Instructions);
+        }
+
+        // The predecessor's (call's) CfgBlock is finalised: the call is itself a block
+        // terminator, so its block was discovery-complete from the moment the call landed
+        // in it, and the subsequent SelectorNode insertion did not regress that state.
+        CfgBlock? callBlock = call.ContainingBlock;
+        Assert.NotNull(callBlock);
+        Assert.True(callBlock.IsDiscoveryComplete);
+        Assert.True(callBlock.Terminator.IsBlockTerminator);
+        Assert.Same(call, callBlock.Terminator);
+        // The SelectorNode is reachable as a block-level successor (the underlying
+        // instruction-level edge call → selector aliases through CfgBlock.Successors).
+        Assert.Contains(selector, callBlock.Successors);
+    }
+
+    /// <summary>selfmodifyterminator: the SelectorNode injected at the terminator's address is
+    /// absorbed into the predecessor's block by normal continuation.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void SelfModifyTerminator(AsmRunScope scope, Machine machine) {
+        // Block-level assertions: Case T continuation — the SelectorNode injected at the
+        // terminator's address (F000:0019) is absorbed into the predecessor's block because
+        // the predecessor (or ax, ax at F000:0017) is a non-terminator whose
+        // NextInMemoryAddress matches the selector's address.
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+
+        // The 'or ax, ax' at F000:0017 is the predecessor of the SelectorNode.
+        CfgInstruction? orAxAx = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0017));
+        Assert.NotNull(orAxAx);
+
+        // The SelectorNode at F000:0019 (where the jne was patched to jmp).
+        SelectorNode selector = orAxAx.Successors.OfType<SelectorNode>().Single();
+        Assert.Equal(new SegmentedAddress(0xF000, 0x0019), selector.Address);
+
+        // The selector is appended to the predecessor block by normal continuation.
+        CfgBlock? predecessorBlock = orAxAx.ContainingBlock;
+        Assert.NotNull(predecessorBlock);
+        CfgBlock? selectorBlock = selector.ContainingBlock;
+        Assert.NotNull(selectorBlock);
+        Assert.Same(predecessorBlock, selectorBlock);
+        Assert.Contains(orAxAx, predecessorBlock.Instructions);
+        Assert.Same(selector, selectorBlock.Terminator);
+        Assert.True(predecessorBlock.IsDiscoveryComplete);
+        Assert.True(selectorBlock.IsDiscoveryComplete);
+
+        // The selector dispatches between two variants (original jne and patched jmp).
+        ICfgNode[] variants = selector.Successors.ToArray();
+        Assert.Equal(2, variants.Length);
+        foreach (ICfgNode variant in variants) {
+            CfgInstruction variantInstruction = Assert.IsAssignableFrom<CfgInstruction>(variant);
+            Assert.NotNull(variantInstruction.ContainingBlock);
+            Assert.Contains(variantInstruction, variantInstruction.ContainingBlock.Instructions);
+        }
+    }
+
+    /// <summary>divfaultloop: the fault handler's retried division rewires the fault edges, checked
+    /// at the instruction level, at the block level and in the graph transfers.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void DivFaultLoop(AsmRunScope scope, Machine machine) {
+        CurrentInstructions currentInstructions =
+            machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+
+        // div bx at F000:0028
+        CfgInstruction? div = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0028));
+        // handler entry (push bp) at F000:0037
+        CfgInstruction? handlerEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0037));
+        // handler iret at F000:0059
+        CfgInstruction? handlerIret = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0059));
+        // divblock entry (mov ax,10) at F000:0020 — the handler rewrites the return
+        // address so iret returns here instead of to the faulting div.
+        CfgInstruction? divblockEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0020));
+        // post-fault instruction: mov bx,[cs:0x100] at F000:002A
+        CfgInstruction? postDiv = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x002A));
+
+        Assert.NotNull(div);
+        Assert.NotNull(handlerEntry);
+        Assert.NotNull(handlerIret);
+        Assert.NotNull(divblockEntry);
+        Assert.NotNull(postDiv);
+
+        // Instruction-level: div has CpuFault edge to handler entry
+        Assert.Contains(handlerEntry, div.Successors);
+        Assert.Contains(handlerEntry, div.SuccessorsPerType[InstructionSuccessorType.CpuFault]);
+
+        // Instruction-level: div has CallToReturn edge to divblockEntry
+        // (handler rewrites return IP to divblock start)
+        Assert.Contains(divblockEntry, div.Successors);
+        Assert.Contains(postDiv, div.Successors);
+        Assert.Contains(postDiv, div.SuccessorsPerType[InstructionSuccessorType.Normal]);
+
+        // Block-level: div is a block terminator (CpuFault gives it multiple successor types)
+        CfgBlock? divBlock = div.ContainingBlock;
+        Assert.NotNull(divBlock);
+        divBlock.Terminator.Should().BeSameAs(div);
+        divBlock.IsDiscoveryComplete.Should().BeTrue();
+
+        // Block-level: divblockEntry is in the same block as div (the block entry is divblockEntry)
+        divBlock.Entry.Should().BeSameAs(divblockEntry);
+
+        // Block-level: handler entry starts its own block
+        CfgBlock? handlerBlock = handlerEntry.ContainingBlock;
+        Assert.NotNull(handlerBlock);
+        handlerBlock.Entry.Should().BeSameAs(handlerEntry);
+        handlerBlock.Should().NotBeSameAs(divBlock);
+
+        // Block-level: post-div instruction starts its own block
+        CfgBlock? postDivBlock = postDiv.ContainingBlock;
+        Assert.NotNull(postDivBlock);
+        postDivBlock.Entry.Should().BeSameAs(postDiv);
+        postDivBlock.Should().NotBeSameAs(divBlock);
+
+        // Block-level edges
+        IEnumerable<CfgBlock?> divBlockSuccessors = divBlock.Successors.Select(s => s.ContainingBlock);
+        divBlockSuccessors.Should().Contain(handlerBlock, "CpuFault edge to handler");
+        // The CallToReturn edge from div goes to divblockEntry which is the entry of
+        // divBlock itself — so the block-level successor list includes divBlock (self-loop).
+        divBlockSuccessors.Should().Contain(divBlock,
+            "handler rewrites return to divblock entry, creating a self-loop at block level");
+
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Should().Contain(t => t.Kind == "cpuFault",
+            "the div fault edge to the handler must produce a cpuFault transfer");
+    }
+
+    /// <summary>
+    /// Callback CFG assertions of intchain.com: the INT 8 chain, the layout of the handler behind IVT[8]
+    /// and the block level edges around them. They run on the shared route, after the fixture's behavioral
+    /// oracle and the listing and CFG goldens of the same run.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void IntChain(AsmRunScope scope, Machine machine) {
+        IMemory memory = machine.Memory;
+        // Entry INT 8 in the COM, observed on the fresh machine before the program ran
+        SegmentedAddress entryPoint = scope.Observations.Get<SegmentedAddress>(AsmRunScope.EntryPointObservation);
+        InterruptVectorTable ivt = new(memory);
+        CurrentInstructions currentInstructions =
+            machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+
+        // Entry INT 8 in the COM
+        CfgInstruction? int8Entry = currentInstructions.GetAtAddress(entryPoint);
+        Assert.NotNull(int8Entry);
+
+        // Post-INT8 instruction in COM: int 8 is 2 bytes long
+        SegmentedAddress postInt8Addr = entryPoint + 2;
+        CfgInstruction? postInt8 = currentInstructions.GetAtAddress(postInt8Addr);
+        Assert.NotNull(postInt8);
+
+        // INT 8 handler entry: callback at IVT[8]
+        CfgInstruction? int8HandlerEntry = currentInstructions.GetAtAddress(ivt[8]);
+        Assert.NotNull(int8HandlerEntry);
+
+        // INT 1C handler entry: IRET-only at IVT[1C]
+        CfgInstruction? int1CHandlerEntry = currentInstructions.GetAtAddress(ivt[0x1C]);
+        Assert.NotNull(int1CHandlerEntry);
+
+        // A) Entry INT8 has exactly two successors: handler entry and post-INT8 (call-to-return link)
+        int8Entry.Successors.Should().BeEquivalentTo([int8HandlerEntry, postInt8]);
+
+        // Inside INT8 handler exact layout:
+        // [0] callback at IVT[8] (4 bytes)
+        // [4] PUSH DS, PUSH AX, PUSH DX (3 bytes)
+        // [7] INT 1C (2 bytes)
+        // [9] EOI callback (4 bytes)
+        // [13] POP DX, POP AX, POP DS (3 bytes)
+        // [16] IRET (1 byte)
+
+        SegmentedAddress addrPushDs = int8HandlerEntry.Address + 4;
+        SegmentedAddress addrInt1C = addrPushDs + 3;
+        SegmentedAddress addrEoiCallback = addrInt1C + 2;
+        SegmentedAddress addrPopDx = addrEoiCallback + 4;
+        SegmentedAddress addrIret8 = addrPopDx + 3;
+
+        CfgInstruction? pushDs = currentInstructions.GetAtAddress(addrPushDs);
+        CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
+        CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);
+        CfgInstruction? popDx = currentInstructions.GetAtAddress(addrPopDx);
+        CfgInstruction? iret8 = currentInstructions.GetAtAddress(addrIret8);
+
+        Assert.NotNull(pushDs);
+        Assert.NotNull(intNode1C);
+        Assert.NotNull(eoiCallback);
+        Assert.NotNull(popDx);
+        Assert.NotNull(iret8);
+
+        // B) Callback (tick++) must fall through to the register saves only
+        int8HandlerEntry.Successors.Should().BeEquivalentTo([pushDs]);
+
+        // C) INT 1C node must have exactly two successors:
+        //    - INT 1C handler entry (invoke)
+        //    - fallthrough to EOI callback (return target after INT)
+        intNode1C.Successors.Should().BeEquivalentTo([int1CHandlerEntry, eoiCallback]);
+
+        // D) INT 1C handler (IRET-only) must return to EOI callback only
+        int1CHandlerEntry.Successors.Should().BeEquivalentTo([eoiCallback]);
+
+        // E) EOI callback must fall through to the register restores only
+        eoiCallback.Successors.Should().BeEquivalentTo([popDx]);
+
+        // F) INT8 IRET must return to post-INT8 instruction only
+        iret8.Successors.Should().BeEquivalentTo([postInt8]);
+
+        // G) No direct edge from entry INT8 to INT1C handler
+        int8Entry.Successors.Should().NotContain(int1CHandlerEntry);
+
+        // ---------------------------------------------------------------
+        // Block-level assertions
+        // ---------------------------------------------------------------
+        CfgBlock? int8EntryBlock = int8Entry.ContainingBlock;
+        CfgBlock? int8HandlerEntryBlock = int8HandlerEntry.ContainingBlock;
+        CfgBlock? postInt8Block = postInt8.ContainingBlock;
+        CfgBlock? iret8Block = iret8.ContainingBlock;
+        CfgBlock? eoiCallbackBlock = eoiCallback.ContainingBlock;
+
+        Assert.NotNull(int8EntryBlock);
+        Assert.NotNull(int8HandlerEntryBlock);
+        Assert.NotNull(postInt8Block);
+        Assert.NotNull(iret8Block);
+        Assert.NotNull(eoiCallbackBlock);
+
+        int8EntryBlock.IsDiscoveryComplete.Should().BeTrue();
+        int8HandlerEntryBlock.IsDiscoveryComplete.Should().BeTrue();
+        postInt8Block.IsDiscoveryComplete.Should().BeTrue();
+        iret8Block.IsDiscoveryComplete.Should().BeTrue();
+        eoiCallbackBlock.IsDiscoveryComplete.Should().BeTrue();
+
+        // INT 8 (call) is a block terminator, so it ends its block.
+        int8EntryBlock.Terminator.Should().BeSameAs(int8Entry);
+
+        // The INT 8 handler entry callback has unbounded MaxSuccessorsCount,
+        // making it a block terminator on its own (single-instruction block).
+        int8HandlerEntryBlock.Entry.Should().BeSameAs(int8HandlerEntry);
+        int8HandlerEntryBlock.Terminator.Should().BeSameAs(int8HandlerEntry);
+
+        // The post-INT8 fall-through is the entry of its block.
+        postInt8Block.Entry.Should().BeSameAs(postInt8);
+
+        // IRET is a Return, hence a block terminator.
+        iret8Block.Terminator.Should().BeSameAs(iret8);
+
+        // The EOI callback is a callback (unbounded successors), so it is the
+        // terminator of its containing block.
+        eoiCallbackBlock.Terminator.Should().BeSameAs(eoiCallback);
+
+        // CfgBlock-to-block edges: block.Successors entries are CfgInstructions
+        // (the underlying terminator's successors). Follow ContainingBlock to
+        // get the corresponding blocks.
+        int8EntryBlock.Successors.Select(s => s.ContainingBlock)
+            .Should().Contain(int8HandlerEntryBlock); // Call edge
+        int8EntryBlock.Successors.Select(s => s.ContainingBlock)
+            .Should().Contain(postInt8Block);         // CallToReturn edge
+
+        eoiCallbackBlock.Successors.Select(s => s.ContainingBlock)
+            .Should().Contain(iret8Block);            // Normal fall-through to IRET
+
+        iret8Block.Successors.Select(s => s.ContainingBlock)
+            .Should().Contain(postInt8Block);         // Normal IRET return edge
+    }
+
+    /// <summary>
+    /// sticli: the CfgBlock-level structure around STI / CLI. The fixture
+    /// <c>sticli.bin</c> (BIOS-style, entry at F000:FFF0) contains:
+    /// <code>
+    /// mov ax, 0x1000
+    /// mov ds, ax
+    /// sti
+    /// mov ax, 0x1234
+    /// cli
+    /// mov [si], ax
+    /// hlt
+    /// </code>
+    /// STI is a Block_Terminator and CLI is a Block_Starter, so the linker must
+    /// split the instruction stream into three distinct blocks chained via successors.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void StiCli(AsmRunScope scope, Machine machine) {
+        machine.CpuState.IsRunning.Should().BeFalse(
+            "the program is expected to reach HLT");
+        machine.CpuState.InterruptShadowing.Should().BeFalse(
+            "InterruptShadowing arms for one instruction after STI and is consumed at the next boundary");
+
+        CurrentInstructions ci =
+            machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+
+        // Code layout at F000:0000 (jumped to from the BIOS entry point at F000:FFF0):
+        //   +0: B8 00 10           mov ax, 0x1000        (3 bytes)
+        //   +3: 8E D8              mov ds, ax            (2 bytes)
+        //   +5: FB                 sti                   (1 byte)  Block_Terminator
+        //   +6: B8 34 12           mov ax, 0x1234        (3 bytes) middle block
+        //   +9: FA                 cli                   (1 byte)  Block_Starter
+        //   +A: 89 04              mov [si], ax          (2 bytes)
+        //   +C: F4                 hlt                   (1 byte)
+        SegmentedAddress stiAddr = new(0xF000, 0x0005);
+        SegmentedAddress movAxImmAddr = new(0xF000, 0x0006);
+        SegmentedAddress cliAddr = new(0xF000, 0x0009);
+
+        CfgInstruction? sti = ci.GetAtAddress(stiAddr);
+        CfgInstruction? movAxImm = ci.GetAtAddress(movAxImmAddr);
+        CfgInstruction? cli = ci.GetAtAddress(cliAddr);
+
+        Assert.NotNull(sti);
+        Assert.NotNull(movAxImm);
+        Assert.NotNull(cli);
+
+        sti.IsBlockTerminator.Should().BeTrue("STI is an explicit Block_Terminator");
+        cli.IsBlockStarter.Should().BeTrue("CLI is an explicit Block_Starter");
+        movAxImm.IsBlockTerminator.Should().BeFalse("the middle MOV is not itself a terminator");
+        movAxImm.IsBlockStarter.Should().BeFalse("the middle MOV is not itself a starter");
+
+        CfgBlock? stiBlock = sti.ContainingBlock;
+        CfgBlock? midBlock = movAxImm.ContainingBlock;
+        CfgBlock? cliBlock = cli.ContainingBlock;
+
+        Assert.NotNull(stiBlock);
+        Assert.NotNull(midBlock);
+        Assert.NotNull(cliBlock);
+
+        stiBlock.IsDiscoveryComplete.Should().BeTrue();
+        midBlock.IsDiscoveryComplete.Should().BeTrue();
+        cliBlock.IsDiscoveryComplete.Should().BeTrue();
+
+        // STI is the terminator of its block.
+        stiBlock.Terminator.Should().BeSameAs(sti);
+
+        // The middle block contains exactly one instruction (the MOV between STI and CLI).
+        midBlock.Entry.Should().BeSameAs(movAxImm);
+        midBlock.Terminator.Should().BeSameAs(movAxImm);
+
+        // CLI is the entry of its block.
+        cliBlock.Entry.Should().BeSameAs(cli);
+
+        // The three blocks must be distinct.
+        stiBlock.Should().NotBeSameAs(midBlock);
+        midBlock.Should().NotBeSameAs(cliBlock);
+        stiBlock.Should().NotBeSameAs(cliBlock);
+
+        // Block-level successors: STI -> MID -> CLI.
+        stiBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(midBlock);
+        midBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(cliBlock);
+    }
+
+    /// <summary>partition_indirect_call_jump: the indirect call produces a callOut transfer and the
+    /// ret of the indirect target an alignedReturn.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void PartitionIndirectCallJump(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+        graph.Partitions.Should().NotBeNull();
+        graph.Partitions.Should().HaveCount(2, "one for the indirect target function, one for the entry point");
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Should().Contain(t => t.Kind == "callOut", "indirect call via BX must produce a callOut transfer");
+        graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn", "ret from indirect target must produce an alignedReturn transfer");
+    }
+
+    /// <summary>partition_shared_tail: the ret of the shared tail produces an alignedReturn transfer.</summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void PartitionSharedTail(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn",
+            "the ret of the shared tail back to each caller must produce an alignedReturn transfer");
+    }
+
+    /// <summary>
+    /// ownerlesscallcycle: a CFG function-partitioning failure on an ownership-preserving call/loop cycle that
+    /// no partition root can reach. The fixture bootstraps a loop by pushing the loop continuation and
+    /// executing RET into it. That continuation is also the aligned call-continuation target of the
+    /// loop body's CALL, so the partitioner suppresses promoting the return target to a root. The loop
+    /// head is reached only by the loop-back jump, so it is not a call target either. The whole cycle
+    /// therefore had no root and every block in it was ownerless, which made partitioning throw and the
+    /// snapshot degrade to a blocks-only graph (no partitions). The ownerless-region rescue fixes this
+    /// by promoting a root for the unreachable cycle, so partitioning now attributes every block. The
+    /// golden CfgBlocks/CfgPartitions fixtures lock in the recovered partitioning.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void OwnerlessCallCycle(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+        graph.Truncated.Should().BeFalse("the graph is small and fully exported");
+        graph.Partitions.Should().NotBeNull(
+            "partitioning must not throw on the ownerless cycle and degrade the snapshot to a blocks-only graph");
+        CfgPartitionInfo[] partitions = graph.Partitions ?? [];
+        int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
+        partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
+            "every exported block, including the rescued ownership-preserving cycle, must belong to exactly one partition");
+    }
+
+    /// <summary>
+    /// sameretloop: a function whose near return pops its own entry address, so CS:IP does not move
+    /// when the return executes. The CFG must still record the return as a real transfer into the loop
+    /// body, and partitioning must attribute every block of the loop, so the generated-code run can keep
+    /// dispatching the override instead of reading the unchanged address as a completion.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    public static void SameretLoop(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+        graph.Truncated.Should().BeFalse("the graph is small and fully exported");
+        graph.Partitions.Should().NotBeNull("partitioning must attribute the same-address return loop");
+        CfgPartitionInfo[] partitions = graph.Partitions ?? [];
+        int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
+        partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
+            "every block of the same-address return loop must belong to exactly one partition");
+    }
+}
