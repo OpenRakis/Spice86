@@ -301,7 +301,7 @@ public sealed class IrEffectsVisitorTest {
     }
 
     [Fact]
-    public void StackPop32_WritesEsp() {
+    public void StackPop32_WritesSpOnly() {
         // Arrange
         StackCallValueNode node = new(StackOperation.Pop, BitWidth.DWORD_32);
 
@@ -309,7 +309,50 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be(CpuValues.Esp);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
+        effects.TokenReads.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackPush32_ReadsAndWritesSpOnly() {
+        // Arrange
+        StackCallNode node = new(StackOperation.Push, BitWidth.DWORD_32,
+            new RegisterNode(DataType.UINT32, 0));
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Eax | CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
+        effects.TokenWrites.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackPeek32_ReadsSpOnly() {
+        // Arrange
+        StackCallValueNode node = new(StackOperation.Peek, BitWidth.DWORD_32, Constant());
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.None);
+        effects.TokenReads.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackLeave32_ReadsBpAndWritesSpAndFullEbp() {
+        // Arrange
+        StackCallNode node = new(StackOperation.Leave, BitWidth.DWORD_32);
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Bp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp | CpuValues.Ebp);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -371,7 +414,7 @@ public sealed class IrEffectsVisitorTest {
     }
 
     [Fact]
-    public void StackPopAll32_Writes32BitRegistersAndEsp() {
+    public void StackPopAll32_WritesFullEsp() {
         // Arrange
         StackCallNode node = new(StackOperation.PopAll, BitWidth.DWORD_32);
 

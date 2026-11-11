@@ -348,7 +348,7 @@ public class Spice86DependencyInjection : IDisposable {
         IExecutionAstRewriter executionAstRewriter = configuration.JitGeneratorIr
             ? new GeneratorIrRoundTrip()
             : new IdentityExecutionAstRewriter();
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode, executionAstRewriter, configuration.JitGeneratorIr);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode, executionAstRewriter, configuration.JitGeneratorIr, configuration.JitGeneratorIr);
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
 
         SequentialIdAllocator cfgIdAllocator = new();

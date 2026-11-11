@@ -578,6 +578,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
 
     public IVisitableAstNode VisitInstructionNode(InstructionNode node) => throw Unsupported(node);
 
+    public IVisitableAstNode VisitStackRangeCheckNode(StackRangeCheckNode node) => throw Unsupported(node);
+
     private static MethodCallNode RetCall(CallDistance distance, BitWidth width, IVisitableAstNode bytesToPop) {
         if (bytesToPop is ConstantNode { Value: 0 }) {
             return new ProcedureReturnHelperNode(distance, width);

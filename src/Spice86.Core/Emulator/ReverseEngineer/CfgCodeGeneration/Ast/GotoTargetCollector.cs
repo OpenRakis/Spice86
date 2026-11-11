@@ -165,6 +165,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitThrowNode(ThrowNode node) => GotoTargets.None;
 
+    public GotoTargets VisitStackRangeCheckNode(StackRangeCheckNode node) => GotoTargets.None;
+
     public GotoTargets VisitSetInterruptShadowNode(SetInterruptShadowNode node) => GotoTargets.None;
 
     public GotoTargets VisitCpuFlagNode(CpuFlagNode node) => GotoTargets.None;

@@ -31,4 +31,7 @@ internal static class TestJitSettings {
 
     /// <summary>True when the compiler expands ALU calls inline: with the IR round trip.</summary>
     public static bool ExpandAluCalls { get; } = GeneratorIr;
+
+    /// <summary>True when the compiler expands stack calls inline: with the IR round trip.</summary>
+    public static bool ExpandStackCalls { get; } = GeneratorIr;
 }

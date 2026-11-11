@@ -21,6 +21,7 @@ public interface IAstVisitor<T> {
     public T VisitNearAddressNode(NearAddressNode node);
     public T VisitMethodCallNode(MethodCallNode node);
     public T VisitMethodCallValueNode(MethodCallValueNode node);
+    public T VisitStackRangeCheckNode(StackRangeCheckNode node);
     public T VisitBlockNode(BlockNode node);
     public T VisitIfElseNode(IfElseNode node);
     public T VisitWhileNode(WhileNode node);

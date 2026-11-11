@@ -32,7 +32,7 @@ public class CfgNodeExecutionCompilerTest {
     private static CfgNodeExecutionCompiler CreateCompiler() {
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class CfgNodeExecutionCompilerTest {
         FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x6000, 0), probe);
         ILogger loggerService = Substitute.For<ILogger>();
         using CfgNodeExecutionCompiler compiler = new(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService,
-            JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false);
+            JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false, false);
 
         // Act
         compiler.Compile(node);
@@ -124,7 +124,7 @@ public class CfgNodeExecutionCompilerTest {
         FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x6000, 0), probe);
         ILogger loggerService = Substitute.For<ILogger>();
         using CfgNodeExecutionCompiler compiler = new(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService,
-            JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), true);
+            JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), true, false);
 
         // Act
         compiler.Compile(node);
@@ -164,7 +164,7 @@ public class CfgNodeExecutionCompilerTest {
         // Inline monitor creation so we can observe TotalSwapped for reliable synchronisation.
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
 
         // Act: first Compile() enqueues background task for ast1.
         compiler.Compile(node);

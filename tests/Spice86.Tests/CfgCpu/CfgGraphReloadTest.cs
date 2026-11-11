@@ -426,7 +426,7 @@ public class CfgGraphReloadTest {
     }
 
     private static CfgNodeExecutionCompiler NewCompiler(ILogger loggerService) {
-        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
     }
 
     private static string SerializeDump(CfgReloadDump dump) {

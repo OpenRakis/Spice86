@@ -1,0 +1,46 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:001D",
+  "lastExecutedBlockId": 3,
+  "blocks": [
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:001D",
+      "pred": [
+        2
+      ],
+      "succ": [],
+      "asm": [
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "66BC00103412|mov ESP,0x12341000",
+        "6650|push EAX",
+        "6658|pop EAX",
+        "66C8040000|enterw 4,0",
+        "66C9|leavew",
+        "6689260002|mov dword ptr DS:[0x0200],ESP",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    }
+  ],
+  "truncated": false
+}

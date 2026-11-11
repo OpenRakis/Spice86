@@ -105,6 +105,10 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitThrowNode(ThrowNode node) => false;
 
+    /// <summary>A range check completes normally unless it faults; faulting is not a control
+    /// transfer, like the helper calls.</summary>
+    public bool VisitStackRangeCheckNode(StackRangeCheckNode node) => true;
+
     public bool VisitSetInterruptShadowNode(SetInterruptShadowNode node) => true;
 
     public bool VisitFailAsUntestedNode(FailAsUntestedNode node) => false;

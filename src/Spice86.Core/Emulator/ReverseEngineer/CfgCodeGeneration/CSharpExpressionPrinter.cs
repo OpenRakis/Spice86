@@ -1048,6 +1048,8 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitWhileNode(WhileNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitWhileWithExitNode(WhileWithExitNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitThrowNode(ThrowNode node) => throw NotAnExpression(node);
+
+    public CSharpFragment VisitStackRangeCheckNode(StackRangeCheckNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionNode(InstructionNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitMoveIpNextNode(MoveIpNextNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCallNearNode(CallNearNode node) => throw NotAnExpression(node);

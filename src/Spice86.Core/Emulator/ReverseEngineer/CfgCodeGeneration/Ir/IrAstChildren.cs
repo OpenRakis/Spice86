@@ -175,6 +175,9 @@ internal static class IrAstChildren {
             case MoveIpNextNode moveIp:
                 Add(moveIp.NextIp);
                 break;
+            case StackRangeCheckNode rangeCheck:
+                Add(rangeCheck.Offset);
+                break;
             case RegisterWriteBackNode writeBack:
                 Add(writeBack.Register); Add(writeBack.Local);
                 break;
@@ -282,6 +285,8 @@ internal static class IrAstChildren {
             parameters => instruction with { Parameters = parameters }),
         MoveIpNextNode moveIp => Map(node, map, [moveIp.NextIp],
             c => moveIp with { NextIp = Child<IVisitableAstNode>(c[0]) }),
+        StackRangeCheckNode rangeCheck => Map(node, map, [rangeCheck.Offset],
+            c => rangeCheck with { Offset = Child<ValueNode>(c[0]) }),
         InstructionFieldNode or ConstantNode or CpuFlagNode or FlagRegisterNode or RegisterNode
             or VariableReferenceNode or InstructionPointerNode or LoadOffsetParameterNode
             or SegmentVariableNode or OffsetLiteralNode or SignatureFieldNode or CommentNode

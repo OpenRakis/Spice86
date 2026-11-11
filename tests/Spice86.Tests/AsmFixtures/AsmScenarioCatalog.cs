@@ -470,6 +470,9 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("multimisalignedcall", AsmFixtureCatalog.MultiMisalignedCall),
             AsmScenario.FromFixture("redirectedreturn", AsmFixtureCatalog.RedirectedReturn),
             AsmScenario.FromFixture("stalestackframes", AsmFixtureCatalog.StaleStackFrames),
+            // stack_esp_high_bits proves the 32-bit stack helpers write only the low 16 bits of
+            // ESP: the mov esp write of the high half must survive push/pop/leave in both modes.
+            AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
