@@ -21,10 +21,7 @@
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="Spectre.Console.Cli" />
-        <Reference Include="FastExpressionCompiler">
-            <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
-            <Private>true</Private>
-        </Reference>
+        <PackageReference Include="FastExpressionCompiler" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
@@ -46,7 +43,6 @@
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="..\..\3rdparty\Release\FastExpressionCompiler.dll" Pack="true" PackagePath="lib\$(TargetFramework)\" Visible="false" />
         <None Update="Resources\2MGM.license">
             <Link>2MGM.license</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
