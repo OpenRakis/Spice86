@@ -91,11 +91,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0015 mov AX,word ptr CS:[SI]
             ax1 = UInt16[CS, SI];
             // F000:0018 mov DX,word ptr CS:[SI+2]
-            DX = UInt16[CS, (ushort)(SI + 2)];
+            DX = UInt16[CS, SI + 2];
             // F000:001C mov BP,word ptr CS:[SI+4]
-            BP = UInt16[CS, (ushort)(SI + 4)];
+            BP = UInt16[CS, SI + 4];
             // F000:0020 mov CX,word ptr CS:[SI+6]
-            CX = UInt16[CS, (ushort)(SI + 6)];
+            CX = UInt16[CS, SI + 6];
             // F000:0024 cmp DX,CX
             // F000:0026 jl short 0x0033
             if ((int)((uint)ax1 | (uint)DX << 16) < (int)((uint)BP | (uint)CX << 16)) {
@@ -112,11 +112,11 @@ public partial class CfgGeneratedOverrides {
             // F000:003A jb short 0x0048
             if (((uint)ax1 | (uint)DX << 16) < ((uint)BP | (uint)CX << 16)) {
                 // F000:0048 mov byte ptr DS:[BX+1],1
-                UInt8[DS, (ushort)(BX + 1)] = 1;
+                UInt8[DS, BX + 1] = 1;
             }
             else {
                 // F000:0042 mov byte ptr DS:[BX+1],0
-                UInt8[DS, (ushort)(BX + 1)] = 0;
+                UInt8[DS, BX + 1] = 0;
                 // F000:0046 jmp short 0x004C
             }
             // F000:004C cmp DI,DI
@@ -124,11 +124,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0050 jne short 0x005C
             if (((uint)ax1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
                 // F000:005C mov byte ptr DS:[BX+2],1
-                UInt8[DS, (ushort)(BX + 2)] = 1;
+                UInt8[DS, BX + 2] = 1;
             }
             else {
                 // F000:0056 mov byte ptr DS:[BX+2],0
-                UInt8[DS, (ushort)(BX + 2)] = 0;
+                UInt8[DS, BX + 2] = 0;
                 // F000:005A jmp short 0x0060
             }
             // F000:0060 cmp DI,DI
@@ -136,11 +136,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0064 jne short 0x0070
             if (((uint)ax1 | (uint)DX << 16) != ((uint)BP | (uint)CX << 16)) {
                 // F000:0070 mov byte ptr DS:[BX+3],0
-                UInt8[DS, (ushort)(BX + 3)] = 0;
+                UInt8[DS, BX + 3] = 0;
             }
             else {
                 // F000:006A mov byte ptr DS:[BX+3],1
-                UInt8[DS, (ushort)(BX + 3)] = 1;
+                UInt8[DS, BX + 3] = 1;
                 // F000:006E jmp short 0x0074
             }
             // F000:0074 cmp DI,DI
@@ -148,11 +148,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0079 jl short 0x0088
             if ((int)((uint)ax1 | (uint)DX << 16) < (int)0x00010001) {
                 // F000:0088 mov byte ptr DS:[BX+4],1
-                UInt8[DS, (ushort)(BX + 4)] = 1;
+                UInt8[DS, BX + 4] = 1;
             }
             else {
                 // F000:0082 mov byte ptr DS:[BX+4],0
-                UInt8[DS, (ushort)(BX + 4)] = 0;
+                UInt8[DS, BX + 4] = 0;
                 // F000:0086 jmp short 0x008C
             }
             // F000:008C cmp DI,DI
@@ -160,11 +160,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0090 je short 0x0098
             if ((ax1 | DX) == 0) {
                 // F000:0098 mov byte ptr DS:[BX+5],1
-                UInt8[DS, (ushort)(BX + 5)] = 1;
+                UInt8[DS, BX + 5] = 1;
             }
             else {
                 // F000:0092 mov byte ptr DS:[BX+5],0
-                UInt8[DS, (ushort)(BX + 5)] = 0;
+                UInt8[DS, BX + 5] = 0;
                 // F000:0096 jmp short 0x009C
             }
             // F000:009C mov AX,word ptr CS:[SI]
@@ -177,11 +177,11 @@ public partial class CfgGeneratedOverrides {
             // F000:00A8 ja short 0x00B0
             if (rangeOperand_00A4 is < 0x61 or > 0x7A) {
                 // F000:00B0 mov byte ptr DS:[BX+6],1
-                UInt8[DS, (ushort)(BX + 6)] = 1;
+                UInt8[DS, BX + 6] = 1;
             }
             else {
                 // F000:00AA mov byte ptr DS:[BX+6],0
-                UInt8[DS, (ushort)(BX + 6)] = 0;
+                UInt8[DS, BX + 6] = 0;
                 // F000:00AE jmp short 0x00B4
             }
             // F000:00B4 cmp DI,DI
@@ -191,11 +191,11 @@ public partial class CfgGeneratedOverrides {
             // F000:00BB jb short 0x00C7
             if (al1 is < 0x61 or > 0x7A) {
                 // F000:00C7 mov byte ptr DS:[BX+7],0
-                UInt8[DS, (ushort)(BX + 7)] = 0;
+                UInt8[DS, BX + 7] = 0;
             }
             else {
                 // F000:00C1 mov byte ptr DS:[BX+7],1
-                UInt8[DS, (ushort)(BX + 7)] = 1;
+                UInt8[DS, BX + 7] = 1;
                 // F000:00C5 jmp short 0x00CB
             }
             // F000:00CB cmp DI,DI
@@ -205,16 +205,16 @@ public partial class CfgGeneratedOverrides {
             // F000:00D2 jb short 0x00DA
             if (al2 == 0) {
                 // F000:00DA mov byte ptr DS:[BX+8],1
-                UInt8[DS, (ushort)(BX + 8)] = 1;
+                UInt8[DS, BX + 8] = 1;
             }
             else {
                 // F000:00D4 mov byte ptr DS:[BX+8],0
-                UInt8[DS, (ushort)(BX + 8)] = 0;
+                UInt8[DS, BX + 8] = 0;
                 // F000:00D8 jmp short 0x00DE
             }
             // F000:00DE cmp DI,DI
             // F000:00E0 mov byte ptr DS:[BX+0x0A],0
-            UInt8[DS, (ushort)(BX + 0x0A)] = 0;
+            UInt8[DS, BX + 0x0A] = 0;
             // F000:00E4 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:00E7 cmp DX,CX
@@ -223,7 +223,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:00EB ja short 0x00F5
                 if (DX <= CX) {
                     // F000:00ED mov byte ptr DS:[BX+0x0A],1
-                    UInt8[DS, (ushort)(BX + 0x0A)] = 1;
+                    UInt8[DS, BX + 0x0A] = 1;
                     // F000:00F1 cmp AX,BP
                     // F000:00F3 jb short 0x00FB
                     if (AX < BP) {
@@ -231,13 +231,13 @@ public partial class CfgGeneratedOverrides {
                     }
                 }
                 // F000:00F5 mov byte ptr DS:[BX+9],0
-                UInt8[DS, (ushort)(BX + 9)] = 0;
+                UInt8[DS, BX + 9] = 0;
                 // F000:00F9 jmp short 0x00FF
                 goto L_00FF;
             }
         L_00FB:
             // F000:00FB mov byte ptr DS:[BX+9],1
-            UInt8[DS, (ushort)(BX + 9)] = 1;
+            UInt8[DS, BX + 9] = 1;
         L_00FF:
             // F000:00FF cmp DI,DI
             // F000:0101 mov AL,byte ptr CS:[DI]
@@ -247,20 +247,20 @@ public partial class CfgGeneratedOverrides {
             // F000:0108 ja short 0x0110
             if (al3 > 0x19) {
                 // F000:0110 mov byte ptr DS:[BX+0x0B],1
-                UInt8[DS, (ushort)(BX + 0x0B)] = 1;
+                UInt8[DS, BX + 0x0B] = 1;
             }
             else {
                 // F000:010A mov byte ptr DS:[BX+0x0B],0
-                UInt8[DS, (ushort)(BX + 0x0B)] = 0;
+                UInt8[DS, BX + 0x0B] = 0;
                 // F000:010E jmp short 0x0114
             }
             // F000:0114 mov byte ptr DS:[BX+0x0C],AL
-            UInt8[DS, (ushort)(BX + 0x0C)] = al3;
+            UInt8[DS, BX + 0x0C] = al3;
             // F000:0117 cmp DI,DI
             // F000:0119 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:011C mov byte ptr DS:[BX+0x0E],0
-            UInt8[DS, (ushort)(BX + 0x0E)] = 0;
+            UInt8[DS, BX + 0x0E] = 0;
             // F000:0120 cmp DX,CX
             // F000:0122 jb short 0x0134
             if (DX >= CX) {
@@ -271,31 +271,31 @@ public partial class CfgGeneratedOverrides {
                     // F000:0128 lahf
                     AH = (byte)FlagRegister16;
                     // F000:0129 mov byte ptr DS:[BX+0x0E],AH
-                    UInt8[DS, (ushort)(BX + 0x0E)] = AH;
+                    UInt8[DS, BX + 0x0E] = AH;
                     // F000:012C jb short 0x0134
                     if (CarryFlag) {
                         goto L_0134;
                     }
                 }
                 // F000:012E mov byte ptr DS:[BX+0x0D],0
-                UInt8[DS, (ushort)(BX + 0x0D)] = 0;
+                UInt8[DS, BX + 0x0D] = 0;
                 // F000:0132 jmp short 0x0138
                 goto L_0138;
             }
         L_0134:
             // F000:0134 mov byte ptr DS:[BX+0x0D],1
-            UInt8[DS, (ushort)(BX + 0x0D)] = 1;
+            UInt8[DS, BX + 0x0D] = 1;
         L_0138:
             // F000:0138 cmp DI,DI
             // F000:013A cmp DX,0x8000
             // F000:013E jl short 0x014D
             if ((int)((uint)AX | (uint)DX << 16) < (int)-0x7FFFFFFF) {
                 // F000:014D mov byte ptr DS:[BX+0x0F],1
-                UInt8[DS, (ushort)(BX + 0x0F)] = 1;
+                UInt8[DS, BX + 0x0F] = 1;
             }
             else {
                 // F000:0147 mov byte ptr DS:[BX+0x0F],0
-                UInt8[DS, (ushort)(BX + 0x0F)] = 0;
+                UInt8[DS, BX + 0x0F] = 0;
                 // F000:014B jmp short 0x0151
             }
             // F000:0151 cmp DI,DI
@@ -303,11 +303,11 @@ public partial class CfgGeneratedOverrides {
             // F000:0156 jl short 0x0165
             if ((int)((uint)AX | (uint)DX << 16) < (int)-0x00008000) {
                 // F000:0165 mov byte ptr DS:[BX+0x10],1
-                UInt8[DS, (ushort)(BX + 0x10)] = 1;
+                UInt8[DS, BX + 0x10] = 1;
             }
             else {
                 // F000:015F mov byte ptr DS:[BX+0x10],0
-                UInt8[DS, (ushort)(BX + 0x10)] = 0;
+                UInt8[DS, BX + 0x10] = 0;
                 // F000:0163 jmp short 0x0169
             }
             // F000:0169 cmp DI,DI

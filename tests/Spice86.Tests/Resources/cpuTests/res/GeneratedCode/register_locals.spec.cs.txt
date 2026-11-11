@@ -95,7 +95,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_01D4_F01D4() {
         CheckExternalEvents(biosSegment, 0x01D4);
         // F000:01D4 mov word ptr DS:[DI+2],AX
-        UInt16[DS, (ushort)(DI + 2)] = AX;
+        UInt16[DS, DI + 2] = AX;
         // F000:01D7 iret
         return InterruptRet();
     }
@@ -104,7 +104,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_01D8_F01D8() {
         CheckExternalEvents(biosSegment, 0x01D8);
         // F000:01D8 mov word ptr DS:[DI+0x3E],AX
-        UInt16[DS, (ushort)(DI + 0x3E)] = AX;
+        UInt16[DS, DI + 0x3E] = AX;
         // F000:01DB iret
         return InterruptRet();
     }

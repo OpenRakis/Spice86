@@ -214,13 +214,13 @@ public partial class CfgGeneratedOverrides {
                         // 016D:0143 mov ES,word ptr DS:[0x01CE]
                         ES = ImageMinus0003Globals.Word01CE;
                         // 016D:0147 mov AL,byte ptr ES:[SI+0x18]
-                        AL = UInt8[ES, (ushort)(SI + 0x18)];
+                        AL = UInt8[ES, SI + 0x18];
                         // 016D:014B mov BX,0x2000
                         BX = 0x2000;
                         // 016D:014E mov ES,BX
                         ES = 0x2000;
                         // 016D:0150 cmp AL,byte ptr ES:[SI+0x18]
-                        flagOperand_0150 = UInt8[ES, (ushort)(SI + 0x18)];
+                        flagOperand_0150 = UInt8[ES, SI + 0x18];
                         Alu8.Sub(AL, flagOperand_0150);
                         // 016D:0154 jne short 0x01B4
                         if (AL != flagOperand_0150) {

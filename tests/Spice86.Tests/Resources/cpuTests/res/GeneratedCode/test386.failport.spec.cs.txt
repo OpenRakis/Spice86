@@ -2135,9 +2135,9 @@ public partial class CfgGeneratedOverrides {
         // F000:13F8 mov word ptr DS:[SI],0x13C5
         UInt16[DS, SI] = 0x13C5;
         // F000:13FC mov word ptr DS:[SI+2],0xF000
-        UInt16[DS, (ushort)(SI + 2)] = 0xF000;
+        UInt16[DS, SI + 2] = 0xF000;
         // F000:1401 call far dword ptr DS:[SI]
-        ushort targetSegment_1401 = UInt16[DS, (ushort)(SI + 2)];
+        ushort targetSegment_1401 = UInt16[DS, SI + 2];
         ushort targetOffset_1401 = UInt16[DS, SI];
         if (targetSegment_1401 != biosSegment || targetOffset_1401 != 0x13C5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1401:X4}:{targetOffset_1401:X4} at F000:1401");
@@ -2152,9 +2152,9 @@ public partial class CfgGeneratedOverrides {
         // F000:1408 mov dword ptr DS:[SI],0x000013E5
         UInt32[DS, SI] = 0x000013E5;
         // F000:140F mov word ptr DS:[SI+4],0xF000
-        UInt16[DS, (ushort)(SI + 4)] = 0xF000;
+        UInt16[DS, SI + 4] = 0xF000;
         // F000:1414 call far dword ptr DS:[SI]
-        ushort targetSegment_1414 = UInt16[DS, (ushort)(SI + 4)];
+        ushort targetSegment_1414 = UInt16[DS, SI + 4];
         ushort targetOffset_1414 = (ushort)UInt32[DS, SI];
         if (targetSegment_1414 != biosSegment || targetOffset_1414 != 0x13E5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");

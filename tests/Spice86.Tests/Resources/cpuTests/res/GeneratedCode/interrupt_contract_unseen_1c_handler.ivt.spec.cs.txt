@@ -79,7 +79,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_sar);
         // F000:0006 sar byte ptr DS:[SI+0x1000],1
-        UInt8[DS, (ushort)(SI + 0x1000)] = Alu8.Sar(UInt8[DS, (ushort)(SI + 0x1000)], 1);
+        UInt8[DS, SI + 0x1000] = Alu8.Sar(UInt8[DS, SI + 0x1000], 1);
         return unknown_F000_000A_F000A(0x0000);
     }
 

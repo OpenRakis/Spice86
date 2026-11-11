@@ -5,6 +5,7 @@ using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.Memory.Mmu;
 
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     private readonly uint _accessSize;
@@ -42,6 +43,20 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     public virtual T this[ushort segment, ushort offset] {
         get => this[segment, (uint)offset];
         set => this[segment, (uint)offset] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the data at the specified segment and offset in the memory.
+    /// Non-constant 16-bit offset arithmetic prints as C# <see cref="int"/>; the offset wraps
+    /// at 64 KiB here before the MMU access check. The lower overload resolution priority keeps
+    /// integer constants bound to the ushort and uint overloads.
+    /// </summary>
+    /// <param name="segment">The segment of the element to get or set.</param>
+    /// <param name="offset">The offset of the element to get or set.</param>
+    [OverloadResolutionPriority(-1)]
+    public T this[ushort segment, int offset] {
+        get => this[segment, (ushort)offset];
+        set => this[segment, (ushort)offset] = value;
     }
 
     /// <summary>

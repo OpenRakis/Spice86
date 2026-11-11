@@ -186,14 +186,14 @@ public partial class CfgGeneratedOverrides {
             return unknown_016D_0124_017F4(0x0000);
         }
         // 016D:0112 cmp byte ptr ES:[DI+1],0x3A
-        flagOperand_0112 = UInt8[ES, (ushort)(DI + 1)];
+        flagOperand_0112 = UInt8[ES, DI + 1];
         Alu8.Sub(flagOperand_0112, 0x3A);
         // 016D:0117 jne short 0x0124
         if (flagOperand_0112 != 0x3A) {
             return unknown_016D_0124_017F4(0x0000);
         }
         // 016D:0119 cmp byte ptr ES:[DI+2],0x5C
-        flagOperand_0119 = UInt8[ES, (ushort)(DI + 2)];
+        flagOperand_0119 = UInt8[ES, DI + 2];
         Alu8.Sub(flagOperand_0119, 0x5C);
         // 016D:011E jne short 0x0124
         if (flagOperand_0119 != 0x5C) {
@@ -246,7 +246,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:0145 jne short 0x014E
             // 016D:0147 cmp byte ptr ES:[DI+1],0
             // 016D:014C je short 0x0151
-            if (UInt8[ES, DI] == 0 && UInt8[ES, (ushort)(DI + 1)] == 0) {
+            if (UInt8[ES, DI] == 0 && UInt8[ES, DI + 1] == 0) {
                 break;
             }
             // 016D:014E inc DI

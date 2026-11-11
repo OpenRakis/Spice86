@@ -437,10 +437,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         CSharpFragment offset = Expr(node.Offset);
         if (node.Segment is SegmentRegisterNode
                 { RegisterIndex: (int)SegmentRegisterIndex.SsIndex }) {
-            return Atomic($"Ss{indexer}[{MemoryOffset(offset)}]", node.DataType);
+            return Atomic($"Ss{indexer}[{MemoryOffset(node.Offset, offset)}]", node.DataType);
         }
         string segment = Expr(node.Segment);
-        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset)}]", node.DataType);
+        return Atomic($"{indexer}[{segment}, {MemoryOffset(node.Offset, offset)}]", node.DataType);
     }
 
     public CSharpFragment VisitAbsolutePointerNode(AbsolutePointerNode node) =>
@@ -986,17 +986,60 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     /// <summary>
     /// Renders a memory-indexer offset. An atomic offset (a constant or a single register/variable)
-    /// is emitted directly; a compound offset is wrapped in an explicit cast: <c>(ushort)(...)</c>
-    /// when it is 16-bit address arithmetic that must wrap at 64 KiB, <c>(uint)(...)</c> when its
-    /// type is wider than 16 bits so the offset keeps its full value and binds the indexer's
-    /// <c>uint</c> overload (which performs the CPU's segment-limit check).
+    /// is emitted directly so constants keep binding the indexer's <c>ushort</c>/<c>uint</c>
+    /// overloads. A compound offset is emitted bare when the node tree proves every leaf prints as
+    /// a C# type that promotes to <see cref="int"/> (byte, sbyte, short, ushort or int): the
+    /// result is <c>int</c>-typed and binds the wrapping <c>int</c> overload, which truncates to
+    /// 16 bits before the MMU access check. The offset keeps <c>(ushort)(...)</c> when any leaf
+    /// could make the expression <c>uint</c>-typed — otherwise it would bind the non-wrapping
+    /// <c>uint</c> overload — and <c>(uint)(...)</c> when its type is wider than 16 bits so the
+    /// offset keeps its full value and binds the <c>uint</c> overload (which performs the CPU's
+    /// segment-limit check). A 32-bit address-size offset therefore never prints as a
+    /// non-constant <c>int</c>.
     /// </summary>
-    private static string MemoryOffset(CSharpFragment offset) {
+    private static string MemoryOffset(ValueNode offsetNode, CSharpFragment offset) {
         if (offset.Precedence >= CSharpFragment.AtomicPrecedence) {
             return offset.Text;
         }
-        string type = offset.Type?.BitWidth > BitWidth.WORD_16 ? "uint" : "ushort";
-        return $"({type})({offset.Text})";
+        if (offset.Type?.BitWidth > BitWidth.WORD_16) {
+            return $"(uint)({offset.Text})";
+        }
+        if (OffsetPrintsAsInt(offsetNode)) {
+            return offset.Text;
+        }
+        return $"(ushort)({offset.Text})";
+    }
+
+    /// <summary>True when every leaf of the offset prints as a C# type that promotes to
+    /// <see cref="int"/>, making the whole expression <c>int</c>-typed.</summary>
+    private static bool OffsetPrintsAsInt(ValueNode node) {
+        return node switch {
+            BinaryOperationNode binary => OffsetPrintsAsInt(binary.Left) && OffsetPrintsAsInt(binary.Right),
+            UnaryOperationNode unary => OffsetPrintsAsInt(unary.Value),
+            InstructionFieldNode field => OffsetPrintsAsInt(field.ResolvedNode),
+            ConstantNode constant => ConstantPrintsAsInt(constant),
+            _ => LeafPromotesToInt(node.DataType)
+        };
+    }
+
+    /// <summary>True when the literal a constant prints is <see cref="int"/>-typed: no
+    /// <c>u</c>/<c>L</c> suffix and a value that fits.</summary>
+    private static bool ConstantPrintsAsInt(ConstantNode node) {
+        if (node.DataType == DataType.BOOL || node.DataType.BitWidth == BitWidth.QWORD_64) {
+            return false;
+        }
+        return node.DataType.Signed || node.DataType.BitWidth != BitWidth.DWORD_32
+            || node.Value <= int.MaxValue;
+    }
+
+    /// <summary>True when a node's printed C# type promotes to <see cref="int"/> in binary
+    /// arithmetic: every 8/16-bit type and signed 32-bit.</summary>
+    private static bool LeafPromotesToInt(DataType dataType) {
+        return dataType.BitWidth switch {
+            BitWidth.BYTE_8 or BitWidth.WORD_16 => true,
+            BitWidth.DWORD_32 => dataType.Signed,
+            _ => false
+        };
     }
 
     /// <summary>

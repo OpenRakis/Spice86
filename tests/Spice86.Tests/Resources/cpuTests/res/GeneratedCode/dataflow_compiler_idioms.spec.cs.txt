@@ -70,7 +70,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_0141_F0141() {
         CheckExternalEvents(biosSegment, 0x0141);
         // F000:0141 mov word ptr DS:[BX+0x22],DX
-        UInt16[DS, (ushort)(BX + 0x22)] = DX;
+        UInt16[DS, BX + 0x22] = DX;
         // F000:0144 iret
         return InterruptRet();
     }
@@ -120,28 +120,28 @@ public partial class CfgGeneratedOverrides {
             // F000:003A or AX,0x000F
             AX = (ushort)(UInt16[CS, SI] | 0x00FF);
             // F000:003D mov word ptr DS:[BX+2],AX
-            UInt16[DS, (ushort)(BX + 2)] = AX;
+            UInt16[DS, BX + 2] = AX;
             // F000:0040 cmp DI,DI
             // F000:0042 mov AX,word ptr CS:[SI]
             // F000:0045 xor AX,0xAA55
             // F000:0048 xor AX,0xAA55
             ax = UInt16[CS, SI];
             // F000:004B mov word ptr DS:[BX+4],AX
-            UInt16[DS, (ushort)(BX + 4)] = ax;
+            UInt16[DS, BX + 4] = ax;
             // F000:004E cmp DI,DI
             // F000:0050 mov AX,word ptr CS:[SI]
             // F000:0053 not AX
             // F000:0055 not AX
             AX = UInt16[CS, SI];
             // F000:0057 mov word ptr DS:[BX+6],AX
-            UInt16[DS, (ushort)(BX + 6)] = AX;
+            UInt16[DS, BX + 6] = AX;
             // F000:005A cmp DI,DI
             // F000:005C mov AX,word ptr CS:[SI]
             // F000:005F shl AX,4
             // F000:0062 shr AX,4
             ax = (ushort)(UInt16[CS, SI] & 0x0FFF);
             // F000:0065 mov word ptr DS:[BX+8],AX
-            UInt16[DS, (ushort)(BX + 8)] = ax;
+            UInt16[DS, BX + 8] = ax;
             // F000:0068 cmp DI,DI
             // F000:006A mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
@@ -149,7 +149,7 @@ public partial class CfgGeneratedOverrides {
             // F000:006F mov DH,0
             dx = (ushort)(AL | 0);
             // F000:0071 mov word ptr DS:[BX+0x0A],DX
-            UInt16[DS, (ushort)(BX + 0x0A)] = dx;
+            UInt16[DS, BX + 0x0A] = dx;
             // F000:0074 cmp DI,DI
             // F000:0076 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
@@ -157,7 +157,7 @@ public partial class CfgGeneratedOverrides {
             // F000:007B mov AL,0
             ax = (ushort)(AL << 8);
             // F000:007D mov word ptr DS:[BX+0x0C],AX
-            UInt16[DS, (ushort)(BX + 0x0C)] = ax;
+            UInt16[DS, BX + 0x0C] = ax;
             // F000:0080 cmp DI,DI
             // F000:0082 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
@@ -165,20 +165,20 @@ public partial class CfgGeneratedOverrides {
             // F000:0087 mov DH,0
             DX = (ushort)((byte)(AX >> 8) | 0);
             // F000:0089 mov word ptr DS:[BX+0x0E],DX
-            UInt16[DS, (ushort)(BX + 0x0E)] = DX;
+            UInt16[DS, BX + 0x0E] = DX;
             // F000:008C cmp DI,DI
             // F000:008E mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:0091 mov DX,word ptr CS:[SI+2]
-            DX = UInt16[CS, (ushort)(SI + 2)];
+            DX = UInt16[CS, SI + 2];
             // F000:0095 xor AX,DX
             // F000:0097 xor DX,AX
             // F000:0099 xor AX,DX
             (AX, DX) = (DX, AX);
             // F000:009B mov word ptr DS:[BX+0x10],AX
-            UInt16[DS, (ushort)(BX + 0x10)] = AX;
+            UInt16[DS, BX + 0x10] = AX;
             // F000:009E mov word ptr DS:[BX+0x12],DX
-            UInt16[DS, (ushort)(BX + 0x12)] = DX;
+            UInt16[DS, BX + 0x12] = DX;
             // F000:00A1 cmp DI,DI
             // F000:00A3 mov DX,0xABCD
             DX = 0xABCD;
@@ -187,25 +187,25 @@ public partial class CfgGeneratedOverrides {
             // F000:00A9 mov DL,AL
             DL = AL;
             // F000:00AB mov word ptr DS:[BX+0x14],DX
-            UInt16[DS, (ushort)(BX + 0x14)] = DX;
+            UInt16[DS, BX + 0x14] = DX;
             // F000:00AE mov DH,0
             DH = 0;
             // F000:00B0 mov word ptr DS:[BX+0x16],DX
-            UInt16[DS, (ushort)(BX + 0x16)] = DX;
+            UInt16[DS, BX + 0x16] = DX;
             // F000:00B3 cmp DI,DI
             // F000:00B5 mov AX,word ptr CS:[SI]
             // F000:00B8 mov DX,0x5678
             // F000:00BB xor AX,DX
             ax = (ushort)(UInt16[CS, SI] ^ 0x5678);
             // F000:00BD mov word ptr DS:[BX+0x18],AX
-            UInt16[DS, (ushort)(BX + 0x18)] = ax;
+            UInt16[DS, BX + 0x18] = ax;
             // F000:00C0 xor DX,AX
             dx = (ushort)(0x5678 ^ ax);
             // F000:00C2 xor AX,DX
             AX = ax;
             AX ^= dx;
             // F000:00C4 mov word ptr DS:[BX+0x1A],AX
-            UInt16[DS, (ushort)(BX + 0x1A)] = AX;
+            UInt16[DS, BX + 0x1A] = AX;
             // F000:00C7 cmp DI,DI
             CarryFlag = false;
             ParityFlag = true;
@@ -224,7 +224,7 @@ public partial class CfgGeneratedOverrides {
             // F000:00D3 mov DH,0
             DH = 0;
             // F000:00D5 mov word ptr DS:[BX+0x24],DX
-            UInt16[DS, (ushort)(BX + 0x24)] = DX;
+            UInt16[DS, BX + 0x24] = DX;
             // F000:00D8 cmp DI,DI
             // F000:00DA mov AX,word ptr CS:[SI]
             // F000:00DD mov DX,0x5678
@@ -232,7 +232,7 @@ public partial class CfgGeneratedOverrides {
             AX = (ushort)(UInt16[CS, SI] ^ 0x5678);
             // F000:00E2 setb CL
             // F000:00E5 mov byte ptr DS:[BX+0x1C],CL
-            UInt8[DS, (ushort)(BX + 0x1C)] = 0;
+            UInt8[DS, BX + 0x1C] = 0;
             // F000:00E8 xor DX,AX
             dx = (ushort)(0x5678 ^ AX);
             // F000:00EA xor AX,DX
@@ -244,7 +244,7 @@ public partial class CfgGeneratedOverrides {
             // F000:00EE and CX,1
             CX &= 1;
             // F000:00F1 mov word ptr DS:[BX+0x1E],CX
-            UInt16[DS, (ushort)(BX + 0x1E)] = CX;
+            UInt16[DS, BX + 0x1E] = CX;
             // F000:00F4 cmp DI,DI
             // F000:00F6 mov CX,word ptr CS:[SI]
             CX = UInt16[CS, SI];
@@ -255,12 +255,12 @@ public partial class CfgGeneratedOverrides {
             // F000:00FF mov AH,CH
             ax = (ushort)(0x34 | (byte)(CX >> 8) << 8);
             // F000:0101 mov word ptr DS:[BX+0x26],AX
-            UInt16[DS, (ushort)(BX + 0x26)] = ax;
+            UInt16[DS, BX + 0x26] = ax;
             // F000:0104 cmp DI,DI
             // F000:0106 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:0109 mov DX,word ptr CS:[SI+2]
-            DX = UInt16[CS, (ushort)(SI + 2)];
+            DX = UInt16[CS, SI + 2];
             // F000:010D xor AX,DX
             // F000:010F xor DX,AX
             // F000:0111 xor AX,DX
@@ -270,9 +270,9 @@ public partial class CfgGeneratedOverrides {
             // F000:0117 xor DX,AX
             (DX, AX) = (AX, DX);
             // F000:0119 mov word ptr DS:[BX+0x28],AX
-            UInt16[DS, (ushort)(BX + 0x28)] = AX;
+            UInt16[DS, BX + 0x28] = AX;
             // F000:011C mov word ptr DS:[BX+0x2A],DX
-            UInt16[DS, (ushort)(BX + 0x2A)] = DX;
+            UInt16[DS, BX + 0x2A] = DX;
             // F000:011F cmp DI,DI
             // F000:0121 mov AX,word ptr CS:[SI]
             // F000:0124 mov DX,0x5678
@@ -283,9 +283,9 @@ public partial class CfgGeneratedOverrides {
             // F000:012B xor AX,DX
             AX ^= DX;
             // F000:012D mov word ptr DS:[BX+0x2C],AX
-            UInt16[DS, (ushort)(BX + 0x2C)] = AX;
+            UInt16[DS, BX + 0x2C] = AX;
             // F000:0130 mov word ptr DS:[BX+0x2E],DX
-            UInt16[DS, (ushort)(BX + 0x2E)] = DX;
+            UInt16[DS, BX + 0x2E] = DX;
             // F000:0133 cmp DI,DI
             // F000:0135 add BX,0x0040
             BX += 0x0040;

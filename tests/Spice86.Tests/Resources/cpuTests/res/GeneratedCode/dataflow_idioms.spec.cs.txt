@@ -95,13 +95,13 @@ public partial class CfgGeneratedOverrides {
             // F000:0018 mov CX,word ptr CS:[SI]
             CX = UInt16[CS, SI];
             // F000:001B mov DX,word ptr CS:[SI+2]
-            DX = UInt16[CS, (ushort)(SI + 2)];
+            DX = UInt16[CS, SI + 2];
             // F000:001F xchg CX,DX
             (CX, DX) = (DX, CX);
             // F000:0021 mov word ptr DS:[BX],CX
             UInt16[DS, BX] = CX;
             // F000:0023 mov word ptr DS:[BX+2],DX
-            UInt16[DS, (ushort)(BX + 2)] = DX;
+            UInt16[DS, BX + 2] = DX;
             // F000:0026 mov CX,word ptr CS:[SI]
             cx = UInt16[CS, SI];
             // F000:0029 push CX
@@ -109,27 +109,27 @@ public partial class CfgGeneratedOverrides {
             // F000:002A pop DI
             di = Stack.Pop16();
             // F000:002B mov word ptr DS:[BX+4],DI
-            UInt16[DS, (ushort)(BX + 4)] = di;
+            UInt16[DS, BX + 4] = di;
             // F000:002E mov AL,byte ptr CS:[SI+4]
             // F000:0032 cbw
-            ax = (ushort)(short)(sbyte)UInt8[CS, (ushort)(SI + 4)];
+            ax = (ushort)(short)(sbyte)UInt8[CS, SI + 4];
             // F000:0033 mov word ptr DS:[BX+6],AX
-            UInt16[DS, (ushort)(BX + 6)] = ax;
+            UInt16[DS, BX + 6] = ax;
             // F000:0036 mov AX,word ptr CS:[SI+4]
-            AX = UInt16[CS, (ushort)(SI + 4)];
+            AX = UInt16[CS, SI + 4];
             // F000:003A cwd
             dx = (ushort)((short)AX >> 15);
             // F000:003B mov word ptr DS:[BX+8],DX
-            UInt16[DS, (ushort)(BX + 8)] = dx;
+            UInt16[DS, BX + 8] = dx;
             // F000:003E mov word ptr DS:[BX+0x0A],AX
-            UInt16[DS, (ushort)(BX + 0x0A)] = AX;
+            UInt16[DS, BX + 0x0A] = AX;
             // F000:0041 les DX,word ptr CS:[SI+6]
-            DX = UInt16[CS, (ushort)(SI + 6)];
-            es = UInt16[CS, (ushort)(SI + 8)];
+            DX = UInt16[CS, SI + 6];
+            es = UInt16[CS, SI + 8];
             // F000:0045 mov word ptr DS:[BX+0x0C],DX
-            UInt16[DS, (ushort)(BX + 0x0C)] = DX;
+            UInt16[DS, BX + 0x0C] = DX;
             // F000:0048 mov word ptr DS:[BX+0x0E],ES
-            UInt16[DS, (ushort)(BX + 0x0E)] = es;
+            UInt16[DS, BX + 0x0E] = es;
             // F000:004B push DS
             Stack.Push16(DS);
             // F000:004C pop ES
@@ -155,27 +155,27 @@ public partial class CfgGeneratedOverrides {
             // F000:0068 mov DS,AX
             DS = 0x2000;
             // F000:006A mov word ptr DS:[BX+0x10],DX
-            UInt16[DS, (ushort)(BX + 0x10)] = dx;
+            UInt16[DS, BX + 0x10] = dx;
             // F000:006D mov CX,word ptr CS:[SI+2]
-            CX = UInt16[CS, (ushort)(SI + 2)];
+            CX = UInt16[CS, SI + 2];
             // F000:0071 xor CX,CX
             CX = 0;
             // F000:0073 mov word ptr DS:[BX+0x12],CX
-            UInt16[DS, (ushort)(BX + 0x12)] = 0;
+            UInt16[DS, BX + 0x12] = 0;
             // F000:0076 mov DX,word ptr CS:[SI+2]
             // F000:007A and DX,DX
-            DX = UInt16[CS, (ushort)(SI + 2)];
+            DX = UInt16[CS, SI + 2];
             // F000:007C mov word ptr DS:[BX+0x14],DX
-            UInt16[DS, (ushort)(BX + 0x14)] = DX;
+            UInt16[DS, BX + 0x14] = DX;
             // F000:007F sub DX,DX
             // F000:0081 mov word ptr DS:[BX+0x16],DX
-            UInt16[DS, (ushort)(BX + 0x16)] = 0;
+            UInt16[DS, BX + 0x16] = 0;
             // F000:0084 mov DI,word ptr CS:[SI]
             DI = UInt16[CS, SI];
             // F000:0087 lea DX,DI+5
             DX = (ushort)(DI + 5);
             // F000:008A mov word ptr DS:[BX+0x18],DX
-            UInt16[DS, (ushort)(BX + 0x18)] = DX;
+            UInt16[DS, BX + 0x18] = DX;
             // F000:008D add BX,0x0040
             BX += 0x0040;
             // F000:0090 add SI,0x000A

@@ -721,7 +721,7 @@ public partial class CfgGeneratedOverrides {
         // F000:1005 mov SI,SP
         // F000:1007 add SI,4
         // F000:100A mov SI,word ptr DS:[SI]
-        SI = UInt16[DS, (ushort)(SP + 4)];
+        SI = UInt16[DS, SP + 4];
         // F000:100C mov word ptr SS:[BP],SI
         SsUInt16[BP] = SI;
         // F000:100F add SI,AX

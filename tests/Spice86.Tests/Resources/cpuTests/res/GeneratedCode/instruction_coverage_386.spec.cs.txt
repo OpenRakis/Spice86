@@ -249,7 +249,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0107 mov BP,SP
         bp = SP;
         // F000:0109 mov AX,word ptr SS:[BP+6]
-        ax = SsUInt16[(ushort)(bp + 6)];
+        ax = SsUInt16[bp + 6];
         // F000:010C mov word ptr DS:[BX+0x3C],AX
         Segment2000Globals.Word003C = ax;
         // F000:010F xor AX,AX
@@ -258,13 +258,13 @@ public partial class CfgGeneratedOverrides {
         // F000:0115 popa
         Stack.PopAll16();
         // F000:0116 mov word ptr DS:[BX+0x36],AX
-        UInt16[DS, (ushort)(BX + 0x36)] = AX;
+        UInt16[DS, BX + 0x36] = AX;
         // F000:0119 mov word ptr DS:[BX+0x38],CX
-        UInt16[DS, (ushort)(BX + 0x38)] = CX;
+        UInt16[DS, BX + 0x38] = CX;
         // F000:011C mov word ptr DS:[BX+0x3A],DX
-        UInt16[DS, (ushort)(BX + 0x3A)] = DX;
+        UInt16[DS, BX + 0x3A] = DX;
         // F000:011F mov word ptr DS:[BX+0x3E],BP
-        UInt16[DS, (ushort)(BX + 0x3E)] = BP;
+        UInt16[DS, BX + 0x3E] = BP;
         // F000:0122 mov AX,1
         AX = 1;
         // F000:0125 mov CX,2
@@ -277,52 +277,52 @@ public partial class CfgGeneratedOverrides {
         SignFlag = true;
         OverflowFlag = false;
         // F000:012A setb byte ptr DS:[BX+0x40]
-        UInt8[DS, (ushort)(BX + 0x40)] = 1;
+        UInt8[DS, BX + 0x40] = 1;
         // F000:012E setae byte ptr DS:[BX+0x41]
-        UInt8[DS, (ushort)(BX + 0x41)] = 0;
+        UInt8[DS, BX + 0x41] = 0;
         // F000:0132 setbe byte ptr DS:[BX+0x42]
-        UInt8[DS, (ushort)(BX + 0x42)] = 1;
+        UInt8[DS, BX + 0x42] = 1;
         // F000:0136 seta byte ptr DS:[BX+0x43]
-        UInt8[DS, (ushort)(BX + 0x43)] = 0;
+        UInt8[DS, BX + 0x43] = 0;
         // F000:013A setl byte ptr DS:[BX+0x44]
-        UInt8[DS, (ushort)(BX + 0x44)] = 1;
+        UInt8[DS, BX + 0x44] = 1;
         // F000:013E setge byte ptr DS:[BX+0x45]
-        UInt8[DS, (ushort)(BX + 0x45)] = 0;
+        UInt8[DS, BX + 0x45] = 0;
         // F000:0142 setle byte ptr DS:[BX+0x46]
-        UInt8[DS, (ushort)(BX + 0x46)] = 1;
+        UInt8[DS, BX + 0x46] = 1;
         // F000:0146 setg byte ptr DS:[BX+0x47]
-        UInt8[DS, (ushort)(BX + 0x47)] = 0;
+        UInt8[DS, BX + 0x47] = 0;
         // F000:014A sets byte ptr DS:[BX+0x48]
-        UInt8[DS, (ushort)(BX + 0x48)] = 1;
+        UInt8[DS, BX + 0x48] = 1;
         // F000:014E setns byte ptr DS:[BX+0x49]
-        UInt8[DS, (ushort)(BX + 0x49)] = 0;
+        UInt8[DS, BX + 0x49] = 0;
         // F000:0152 seto byte ptr DS:[BX+0x4A]
         if (OverflowFlag) {
-            UInt8[DS, (ushort)(BX + 0x4A)] = 1;
+            UInt8[DS, BX + 0x4A] = 1;
         }
         else {
-            UInt8[DS, (ushort)(BX + 0x4A)] = 0;
+            UInt8[DS, BX + 0x4A] = 0;
         }
         // F000:0156 setno byte ptr DS:[BX+0x4B]
         if (!OverflowFlag) {
-            UInt8[DS, (ushort)(BX + 0x4B)] = 1;
+            UInt8[DS, BX + 0x4B] = 1;
         }
         else {
-            UInt8[DS, (ushort)(BX + 0x4B)] = 0;
+            UInt8[DS, BX + 0x4B] = 0;
         }
         // F000:015A setp byte ptr DS:[BX+0x4C]
         if (ParityFlag) {
-            UInt8[DS, (ushort)(BX + 0x4C)] = 1;
+            UInt8[DS, BX + 0x4C] = 1;
         }
         else {
-            UInt8[DS, (ushort)(BX + 0x4C)] = 0;
+            UInt8[DS, BX + 0x4C] = 0;
         }
         // F000:015E setnp byte ptr DS:[BX+0x4D]
         if (!ParityFlag) {
-            UInt8[DS, (ushort)(BX + 0x4D)] = 1;
+            UInt8[DS, BX + 0x4D] = 1;
         }
         else {
-            UInt8[DS, (ushort)(BX + 0x4D)] = 0;
+            UInt8[DS, BX + 0x4D] = 0;
         }
         // F000:0162 hlt
         return Hlt();

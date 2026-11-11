@@ -163,7 +163,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0032 mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
         // F000:0034 mov word ptr DS:[DI+2],0x1000
-        UInt16[ds, (ushort)(di + 2)] = 0x1000;
+        UInt16[ds, di + 2] = 0x1000;
         // F000:0039 add DI,4
         DI = Alu16.Add(DI, 4);
         // F000:003C ret far
@@ -188,7 +188,7 @@ public partial class CfgGeneratedOverrides {
         // F000:013F mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
         // F000:0141 mov word ptr DS:[DI+2],0x3000
-        UInt16[ds, (ushort)(di + 2)] = 0x3000;
+        UInt16[ds, di + 2] = 0x3000;
         // F000:0146 add DI,4
         DI = Alu16.Add(DI, 4);
         // F000:0149 ret far
@@ -228,8 +228,8 @@ public partial class CfgGeneratedOverrides {
             // F000:0014 shl BX,2
             BX = Alu16.Shl(BX, 2);
             // F000:0017 call far dword ptr CS:[BX+0x3D]
-            ushort targetSegment_0017 = UInt16[CS, (ushort)(BX + 0x003F)];
-            ushort targetOffset_0017 = UInt16[CS, (ushort)(BX + 0x3D)];
+            ushort targetSegment_0017 = UInt16[CS, BX + 0x003F];
+            ushort targetOffset_0017 = UInt16[CS, BX + 0x3D];
             switch ((uint)(targetSegment_0017 << 16 | targetOffset_0017)) {
                 case 0xF000_001E:
                     FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_001E_F001E_AsmEntry);
@@ -293,7 +293,7 @@ public partial class CfgGeneratedOverrides {
         // F001:012F mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
         // F001:0131 mov word ptr DS:[DI+2],0x3000
-        UInt16[ds, (ushort)(di + 2)] = 0x3000;
+        UInt16[ds, di + 2] = 0x3000;
         // F001:0136 add DI,4
         DI = Alu16.Add(DI, 4);
         // F001:0139 ret far
@@ -334,7 +334,7 @@ public partial class CfgGeneratedOverrides {
         // F010:0032 mov word ptr DS:[DI],AX
         UInt16[ds, di] = AX;
         // F010:0034 mov word ptr DS:[DI+2],0x2000
-        UInt16[ds, (ushort)(di + 2)] = 0x2000;
+        UInt16[ds, di + 2] = 0x2000;
         // F010:0039 add DI,4
         DI = Alu16.Add(DI, 4);
         // F010:003C ret far

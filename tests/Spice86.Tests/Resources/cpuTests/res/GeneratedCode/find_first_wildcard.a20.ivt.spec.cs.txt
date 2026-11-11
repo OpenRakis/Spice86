@@ -203,7 +203,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_012A;
             }
             // 016D:0122 cmp byte ptr DS:[SI+2],0
-            flagOperand_0122 = UInt8[DS, (ushort)(SI + 2)];
+            flagOperand_0122 = UInt8[DS, SI + 2];
             Alu8.Sub(flagOperand_0122, 0);
             // 016D:0126 jne short 0x0136
             if (flagOperand_0122 != 0) {
@@ -213,7 +213,7 @@ public partial class CfgGeneratedOverrides {
             goto L_0130;
         L_012A:
             // 016D:012A cmp byte ptr DS:[SI+2],1
-            flagOperand_012A = UInt8[DS, (ushort)(SI + 2)];
+            flagOperand_012A = UInt8[DS, SI + 2];
             Alu8.Sub(flagOperand_012A, 1);
             // 016D:012E jne short 0x0136
             if (flagOperand_012A != 1) {

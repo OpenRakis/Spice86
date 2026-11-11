@@ -164,7 +164,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0103 int 0x21
         (BX, ES) = ServiceCall(cs1, 0x0105, Dos, () => Dos.ReadListOfListsAddress());
         // 016D:0105 cmp word ptr ES:[BX+0x66],0x9FFF
-        flagOperand_0105 = UInt16[ES, (ushort)(BX + 0x66)];
+        flagOperand_0105 = UInt16[ES, BX + 0x66];
         Alu16.Sub(flagOperand_0105, 0x9FFF);
         // 016D:010B jne short 0x0127
         if (flagOperand_0105 == 0x9FFF) {

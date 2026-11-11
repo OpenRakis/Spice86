@@ -191,7 +191,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:0114 push SI
             Stack.Push16(SI);
             // 016D:0115 mov AL,byte ptr DS:[SI+4]
-            al1 = UInt8[DS, (ushort)(SI + 4)];
+            al1 = UInt8[DS, SI + 4];
             // 016D:0118 test AL,AL
             Alu8.And(al1, al1);
             // 016D:011A jne short 0x0127
@@ -219,7 +219,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_0149;
             }
             // 016D:012F mov DI,word ptr DS:[SI+2]
-            DI = UInt16[DS, (ushort)(SI + 2)];
+            DI = UInt16[DS, SI + 2];
             // 016D:0132 mov BX,0x02A6
             BX = 0x02A6;
             while (true) {

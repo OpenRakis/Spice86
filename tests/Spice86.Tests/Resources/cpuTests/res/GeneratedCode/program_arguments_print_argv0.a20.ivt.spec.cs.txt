@@ -236,7 +236,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:013C jne short 0x0145
             // 016D:013E cmp byte ptr ES:[DI+1],0
             // 016D:0143 je short 0x0148
-            if (UInt8[ES, DI] == 0 && UInt8[ES, (ushort)(DI + 1)] == 0) {
+            if (UInt8[ES, DI] == 0 && UInt8[ES, DI + 1] == 0) {
                 break;
             }
             // 016D:0145 inc DI

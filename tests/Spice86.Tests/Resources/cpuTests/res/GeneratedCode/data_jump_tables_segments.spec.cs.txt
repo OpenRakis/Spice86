@@ -105,13 +105,13 @@ public partial class CfgGeneratedOverrides {
                         break;
                     }
                     // F000:101C jmp near word ptr ES:[SI+0x1035]
-                    switch (UInt16[ES, (ushort)(SI + 0x1035)]) {
+                    switch (UInt16[ES, SI + 0x1035]) {
                         case 0x1025:
                             break;
                         case 0x1027:
                             goto L_1027;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x1035)]:X4} at F000:101C");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x1035]:X4} at F000:101C");
                     }
                 }
                 // F000:1025 jmp short 0x1029
@@ -209,13 +209,13 @@ public partial class CfgGeneratedOverrides {
                         break;
                     }
                     // F100:101C jmp near word ptr ES:[SI+0x1035]
-                    switch (UInt16[ES, (ushort)(SI + 0x1035)]) {
+                    switch (UInt16[ES, SI + 0x1035]) {
                         case 0x1025:
                             break;
                         case 0x1027:
                             goto L_1027;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x1035)]:X4} at F100:101C");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x1035]:X4} at F100:101C");
                     }
                 }
                 // F100:1025 jmp short 0x1029

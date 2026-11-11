@@ -197,13 +197,13 @@ public partial class CfgGeneratedOverrides {
             // 016D:0113 int 0x21
             (BX, ES) = ServiceCall(cs1, 0x0115, Dos, () => Dos.ReadListOfListsAddress());
             // 016D:0115 mov DX,word ptr ES:[BX-2]
-            DX = UInt16[ES, (ushort)(BX - 2)];
+            DX = UInt16[ES, BX - 2];
             // 016D:0119 cmp DX,0x015F
             Alu16.Sub(DX, 0x015F);
             // 016D:011D jne near 0x022C
             if (DX == 0x015F) {
                 // 016D:0121 cmp word ptr ES:[BX+0x68],DX
-                flagOperand_0121 = UInt16[ES, (ushort)(BX + 0x68)];
+                flagOperand_0121 = UInt16[ES, BX + 0x68];
                 Alu16.Sub(flagOperand_0121, DX);
                 // 016D:0125 jne near 0x022C
                 if (flagOperand_0121 == DX) {
@@ -228,12 +228,12 @@ public partial class CfgGeneratedOverrides {
                     // 016D:0140 int 0x21
                     (BX, ES) = ServiceCall(cs1, 0x0142, Dos, () => Dos.ReadListOfListsAddress());
                     // 016D:0142 cmp word ptr ES:[BX+0x66],0x9FFF
-                    flagOperand_0142 = UInt16[ES, (ushort)(BX + 0x66)];
+                    flagOperand_0142 = UInt16[ES, BX + 0x66];
                     Alu16.Sub(flagOperand_0142, 0x9FFF);
                     // 016D:0148 jne near 0x022C
                     if (flagOperand_0142 == 0x9FFF) {
                         // 016D:014C test byte ptr ES:[BX+0x63],1
-                        flagOperand_014C = UInt8[ES, (ushort)(BX + 0x63)];
+                        flagOperand_014C = UInt8[ES, BX + 0x63];
                         Alu8.And(flagOperand_014C, 1);
                         // 016D:0151 jne near 0x022C
                         if ((flagOperand_014C & 1) != 0) {
@@ -345,7 +345,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01D9 int 0x21
                         (BX, ES) = ServiceCall(cs1, 0x01DB, Dos, () => Dos.ReadListOfListsAddress());
                         // 016D:01DB mov AX,word ptr ES:[BX-2]
-                        AX = UInt16[ES, (ushort)(BX - 2)];
+                        AX = UInt16[ES, BX - 2];
                         // 016D:01DF mov ES,AX
                         ES = AX;
                         // 016D:01E1 mov CX,0x0020

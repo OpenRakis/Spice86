@@ -625,13 +625,13 @@ public partial class CfgGeneratedOverrides {
         // 016D:028B mov byte ptr DS:[DI],0x2E
         UInt8[ds, DI] = 0x2E;
         // 016D:028E mov byte ptr DS:[DI+1],0x30
-        UInt8[ds, (ushort)(DI + 1)] = 0x30;
+        UInt8[ds, DI + 1] = 0x30;
         // 016D:0292 mov byte ptr DS:[DI+2],0x30
-        UInt8[ds, (ushort)(DI + 2)] = 0x30;
+        UInt8[ds, DI + 2] = 0x30;
         // 016D:0296 mov byte ptr DS:[DI+3],0x30
-        UInt8[ds, (ushort)(DI + 3)] = 0x30;
+        UInt8[ds, DI + 3] = 0x30;
         // 016D:029A mov byte ptr DS:[DI+4],0
-        UInt8[ds, (ushort)(DI + 4)] = 0;
+        UInt8[ds, DI + 4] = 0;
         // 016D:029E ret near
         NearReturn();
         return (EAX, ECX, ESI, EDI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);

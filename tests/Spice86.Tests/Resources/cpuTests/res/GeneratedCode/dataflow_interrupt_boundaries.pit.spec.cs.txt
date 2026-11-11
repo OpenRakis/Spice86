@@ -108,19 +108,19 @@ public partial class CfgGeneratedOverrides {
         // F000:006C mov word ptr DS:[BX],AX
         UInt16[DS, BX] = AX;
         // F000:006E mov word ptr DS:[BX+2],DX
-        UInt16[DS, (ushort)(BX + 2)] = DX;
+        UInt16[DS, BX + 2] = DX;
         // F000:0071 mov word ptr DS:[BX+4],CX
-        UInt16[DS, (ushort)(BX + 4)] = CX;
+        UInt16[DS, BX + 4] = CX;
         // F000:0074 mov AX,word ptr DS:[0x0E00]
         ax = DsGlobals.Word0E00;
         // F000:0077 mov word ptr DS:[BX+6],AX
-        UInt16[DS, (ushort)(BX + 6)] = ax;
+        UInt16[DS, BX + 6] = ax;
         // F000:007A mov CX,3
         CX = 3;
         // F000:007D mov DI,0x0E10
         di1 = 0x0E10;
         // F000:0080 mov AX,word ptr CS:[SI+4]
-        AX = UInt16[CS, (ushort)(SI + 4)];
+        AX = UInt16[CS, SI + 4];
         while (true) {
             CheckExternalEvents(biosSegment, 0x0084);
             // F000:0084 cmp byte ptr DS:[0x0E02],0
@@ -142,27 +142,27 @@ public partial class CfgGeneratedOverrides {
             }
         }
         // F000:0096 mov word ptr DS:[BX+8],DI
-        UInt16[DS, (ushort)(BX + 8)] = di1;
+        UInt16[DS, BX + 8] = di1;
         // F000:0099 mov word ptr DS:[BX+0x0A],AX
-        UInt16[DS, (ushort)(BX + 0x0A)] = AX;
+        UInt16[DS, BX + 0x0A] = AX;
         // F000:009C mov word ptr DS:[BX+0x0C],CX
-        UInt16[DS, (ushort)(BX + 0x0C)] = CX;
+        UInt16[DS, BX + 0x0C] = CX;
         // F000:009F mov DX,word ptr DS:[0x0E10]
         dx = DsGlobals.Word0E10;
         // F000:00A3 mov word ptr DS:[BX+0x0E],DX
-        UInt16[DS, (ushort)(BX + 0x0E)] = dx;
+        UInt16[DS, BX + 0x0E] = dx;
         // F000:00A6 mov DX,word ptr DS:[0x0E14]
         DX = DsGlobals.Word0E14;
         // F000:00AA mov word ptr DS:[BX+0x10],DX
-        UInt16[DS, (ushort)(BX + 0x10)] = DX;
+        UInt16[DS, BX + 0x10] = DX;
         // F000:00AD mov AH,byte ptr CS:[SI+6]
-        AH = UInt8[CS, (ushort)(SI + 6)];
+        AH = UInt8[CS, SI + 6];
         // F000:00B1 mov AL,3
         AL = 3;
         // F000:00B3 int 0x60
         InterruptCall(biosSegment, 0x00B5, 0x60, biosSegment, 0x011E, unknown_F000_011E_F011EEntry);
         // F000:00B5 mov word ptr DS:[BX+0x12],AX
-        UInt16[DS, (ushort)(BX + 0x12)] = AX;
+        UInt16[DS, BX + 0x12] = AX;
         // F000:00B8 std
         DirectionFlag = true;
         // F000:00B9 pushf
@@ -174,12 +174,12 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00BC);
         // F000:00BC mov DI,0x0E20
         // F000:00BF mov AX,word ptr CS:[SI+8]
-        AX = UInt16[CS, (ushort)(SI + 8)];
+        AX = UInt16[CS, SI + 8];
         // F000:00C3 stos word ptr ES:[DI],AX
         EsGlobals.Word0E20 = AX;
         DI = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
         // F000:00C4 mov word ptr DS:[BX+0x14],DI
-        UInt16[DS, (ushort)(BX + 0x14)] = DI;
+        UInt16[DS, BX + 0x14] = DI;
         // F000:00C7 cld
         DirectionFlag = false;
         // F000:00C8 call near 0x0123
@@ -189,7 +189,7 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Word0E30 = AX;
         di = 0x0E2E;
         // F000:00CF mov word ptr DS:[BX+0x16],DI
-        UInt16[DS, (ushort)(BX + 0x16)] = di;
+        UInt16[DS, BX + 0x16] = di;
         // F000:00D2 cld
         DirectionFlag = false;
         // F000:00D3 push SI
@@ -212,11 +212,11 @@ public partial class CfgGeneratedOverrides {
         // F000:00E0 pop SI
         SI = Stack.Pop16();
         // F000:00E1 mov word ptr DS:[BX+0x18],DI
-        UInt16[DS, (ushort)(BX + 0x18)] = di2;
+        UInt16[DS, BX + 0x18] = di2;
         // F000:00E4 mov DX,word ptr DS:[0x0E40]
         DX = DsGlobals.Word0E40;
         // F000:00E8 mov word ptr DS:[BX+0x1A],DX
-        UInt16[DS, (ushort)(BX + 0x1A)] = DX;
+        UInt16[DS, BX + 0x1A] = DX;
         // F000:00EB add BX,0x0040
         BX += 0x0040;
         // F000:00EE add SI,0x000A
@@ -378,7 +378,7 @@ public partial class CfgGeneratedOverrides {
         // F000:005E mov AX,word ptr CS:[SI]
         AX = UInt16[CS, SI];
         // F000:0061 mov CX,word ptr CS:[SI+2]
-        CX = UInt16[CS, (ushort)(SI + 2)];
+        CX = UInt16[CS, SI + 2];
         // F000:0065 xor DX,DX
         DX = 0;
         // F000:0067 add AX,1

@@ -89,8 +89,8 @@ public partial class CfgGeneratedOverrides {
         // F000:0071 mov SI,3
         SI = 3;
         // F000:0074 call near word ptr SS:[BX+SI-4]
-        if (SsUInt16[(ushort)(5 - 1)] != 0x1200) {
-            throw FailAsUntested($"Untested near call target 0x{SsUInt16[(ushort)(BX + SI - 4)]:X4} at F000:0074");
+        if (SsUInt16[5 - 1] != 0x1200) {
+            throw FailAsUntested($"Untested near call target 0x{SsUInt16[BX + SI - 4]:X4} at F000:0074");
         }
         NearCall(biosSegment, 0x0079, unknown_F000_1200_F1200Entry);
         throw FailAsUntested("Untested return from call at F000:0074");

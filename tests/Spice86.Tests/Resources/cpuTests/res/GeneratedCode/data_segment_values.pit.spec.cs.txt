@@ -144,7 +144,7 @@ public partial class CfgGeneratedOverrides {
         // F000:02AE call near 0x02B9
         (BP, DS) = NearCall(biosSegment, 0x02B1, () => unknown_F000_02B9_F02B9(BP, DS));
         // F000:02B1 mov AL,byte ptr SS:[BP-2]
-        AL = SsUInt8[(ushort)(BP - 2)];
+        AL = SsUInt8[BP - 2];
         // F000:02B4 add SP,2
         SP = Alu16.Add(SP, 2);
         // F000:02B7 pop BP
@@ -574,7 +574,7 @@ public partial class CfgGeneratedOverrides {
             // F000:0120 mov AL,byte ptr ES:[0x0062]
             al = EsGlobals.Byte0062;
             // F000:0124 mov byte ptr DS:[DI+0x48],AL
-            UInt8[DS, (ushort)(DI + 0x48)] = al;
+            UInt8[DS, DI + 0x48] = al;
             // F000:0127 inc DI
             DI++;
             // F000:0128 mov AX,ES

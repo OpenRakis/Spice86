@@ -94,19 +94,19 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x0018);
             // F000:0018 mov EAX,dword ptr CS:[SI+4]
-            eax = UInt32[CS, (ushort)(SI + 4)];
+            eax = UInt32[CS, SI + 4];
             // F000:001D mov dword ptr DS:[BX],EAX
             UInt32[DS, BX] = eax;
             // F000:0020 mov dword ptr DS:[BX+0x0080],EAX
-            UInt32[DS, (ushort)(BX + 0x0080)] = eax;
+            UInt32[DS, BX + 0x0080] = eax;
             // F000:0025 mov EAX,0
             EAX = 0;
             // F000:002B mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:002E mov dword ptr DS:[BX+4],EAX
-            UInt32[DS, (ushort)(BX + 4)] = EAX;
+            UInt32[DS, BX + 4] = EAX;
             // F000:0032 mov DX,word ptr CS:[SI+8]
-            DX = UInt16[CS, (ushort)(SI + 8)];
+            DX = UInt16[CS, SI + 8];
             // F000:0036 test DL,1
             // F000:0039 je short 0x0052
             if ((DL & 1) == 0) {
@@ -133,15 +133,15 @@ public partial class CfgGeneratedOverrides {
                 // F000:0050 jmp short 0x0058
             }
             // F000:0058 mov word ptr DS:[BX+8],AX
-            UInt16[DS, (ushort)(BX + 8)] = AX;
+            UInt16[DS, BX + 8] = AX;
             // F000:005B mov byte ptr DS:[BX+0x0A],AH
-            UInt8[DS, (ushort)(BX + 0x0A)] = AH;
+            UInt8[DS, BX + 0x0A] = AH;
             // F000:005E mov AX,word ptr CS:[SI+0x0A]
-            ax1 = UInt16[CS, (ushort)(SI + 0x0A)];
+            ax1 = UInt16[CS, SI + 0x0A];
             // F000:0062 mov BP,word ptr CS:[SI+0x0C]
-            bp1 = UInt16[CS, (ushort)(SI + 0x0C)];
+            bp1 = UInt16[CS, SI + 0x0C];
             // F000:0066 mov CX,word ptr CS:[SI+0x0E]
-            CX = UInt16[CS, (ushort)(SI + 0x0E)];
+            CX = UInt16[CS, SI + 0x0E];
             do {
                 CheckExternalEvents(biosSegment, 0x006A);
                 // F000:006A test DH,4
@@ -170,17 +170,17 @@ public partial class CfgGeneratedOverrides {
                 goto L_0085;
             }
             // F000:007E mov word ptr DS:[BX+0x0C],0
-            UInt16[DS, (ushort)(BX + 0x0C)] = 0;
+            UInt16[DS, BX + 0x0C] = 0;
             // F000:0083 jmp short 0x008A
             goto L_008A;
         L_0085:
             // F000:0085 mov word ptr DS:[BX+0x0C],1
-            UInt16[DS, (ushort)(BX + 0x0C)] = 1;
+            UInt16[DS, BX + 0x0C] = 1;
         L_008A:
             // F000:008A mov AX,word ptr CS:[SI+0x10]
-            AX = UInt16[CS, (ushort)(SI + 0x10)];
+            AX = UInt16[CS, SI + 0x10];
             // F000:008E mov BP,word ptr CS:[SI+0x12]
-            BP = UInt16[CS, (ushort)(SI + 0x12)];
+            BP = UInt16[CS, SI + 0x12];
             // F000:0092 test DL,2
             // F000:0095 jne short 0x009C
             // F000:0097 cmp AX,1
@@ -191,12 +191,12 @@ public partial class CfgGeneratedOverrides {
                 goto L_00A8;
             }
             // F000:00A1 mov word ptr DS:[BX+0x0E],1
-            UInt16[DS, (ushort)(BX + 0x0E)] = 1;
+            UInt16[DS, BX + 0x0E] = 1;
             // F000:00A6 jmp short 0x00AD
             goto L_00AD;
         L_00A8:
             // F000:00A8 mov word ptr DS:[BX+0x0E],0
-            UInt16[DS, (ushort)(BX + 0x0E)] = 0;
+            UInt16[DS, BX + 0x0E] = 0;
         L_00AD:
             // F000:00AD add BX,0x0040
             BX += 0x0040;

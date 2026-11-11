@@ -205,7 +205,7 @@ public partial class CfgGeneratedOverrides {
         DS = 0x1000;
         // F000:80C7 jmp near word ptr DS:[DI+2]
         if (Segment1000Globals.WordFFFE != 0x80FF) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(DI + 2)]:X4} at F000:80C7");
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI + 2]:X4} at F000:80C7");
         }
         // F000:80FF mov DI,0x2002
         // F000:8102 mov ES,CX
@@ -251,7 +251,7 @@ public partial class CfgGeneratedOverrides {
         DI = 0x2002;
         // F000:8017 jmp near word ptr DS:[DI+2]
         if (Segment1000Globals.Word2004 != 0xD000) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(DI + 2)]:X4} at F000:8017");
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI + 2]:X4} at F000:8017");
         }
         // F000:D000 mov DX,0
         DX = 0;

@@ -133,7 +133,7 @@ public partial class CfgGeneratedOverrides {
         if (SI <= 6) {
             // F000:0023 jmp near word ptr ES:[SI+0x02ED]
             if (SegmentF000Globals.Word02ED != 0x021D) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02ED)]:X4} at F000:0023");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:0023");
             }
             // F000:021D jmp short 0x0225
             // F000:0225 inc word ptr DS:[0x0056]
@@ -154,7 +154,7 @@ public partial class CfgGeneratedOverrides {
         if (SI <= 6) {
             // F000:0040 jmp near word ptr ES:[SI+0x02ED]
             if (SegmentF000Globals.Word02EF != 0x021F) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02ED)]:X4} at F000:0040");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:0040");
             }
             // F000:021F jmp short 0x022C
             // F000:022C inc word ptr DS:[0x0058]
@@ -175,7 +175,7 @@ public partial class CfgGeneratedOverrides {
         if (SI <= 6) {
             // F000:005D jmp near word ptr ES:[SI+0x02ED]
             if (SegmentF000Globals.Word02F1 != 0x0221) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02ED)]:X4} at F000:005D");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:005D");
             }
             // F000:0221 jmp short 0x0233
             // F000:0233 inc word ptr DS:[0x005A]
@@ -196,7 +196,7 @@ public partial class CfgGeneratedOverrides {
         if (SI <= 6) {
             // F000:007A jmp near word ptr ES:[SI+0x02ED]
             if (SegmentF000Globals.Word02F3 != 0x0223) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02ED)]:X4} at F000:007A");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:007A");
             }
             // F000:0223 jmp short 0x023A
             // F000:023A inc word ptr DS:[0x005C]
@@ -219,7 +219,7 @@ public partial class CfgGeneratedOverrides {
         if (SI is >= 4 and <= 8) {
             // F000:009C jmp near word ptr ES:[SI+0x02F5]
             if (SegmentF000Globals.Word02F9 != 0x0241) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:009C");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:009C");
             }
             // F000:0241 jmp short 0x0247
             // F000:0247 mov word ptr DS:[0x0064],1
@@ -241,7 +241,7 @@ public partial class CfgGeneratedOverrides {
             if (SI is >= 4 and <= 8) {
                 // F000:00BE jmp near word ptr ES:[SI+0x02F5]
                 if (SegmentF000Globals.Word02FB != 0x0243) {
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:00BE");
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:00BE");
                 }
                 // F000:0243 jmp short 0x0250
                 // F000:0250 mov word ptr DS:[0x0066],1
@@ -263,7 +263,7 @@ public partial class CfgGeneratedOverrides {
                 if (SI is >= 4 and <= 8) {
                     // F000:00E0 jmp near word ptr ES:[SI+0x02F5]
                     if (SegmentF000Globals.Word02FD != 0x0245) {
-                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02F5)]:X4} at F000:00E0");
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:00E0");
                     }
                     // F000:0245 jmp short 0x0259
                     // F000:0259 mov word ptr DS:[0x0078],1
@@ -296,13 +296,13 @@ public partial class CfgGeneratedOverrides {
                         break;
                     }
                     // F000:0105 jmp near word ptr ES:[SI+0x02FF]
-                    switch (UInt16[ES, (ushort)(SI + 0x02FF)]) {
+                    switch (UInt16[ES, SI + 0x02FF]) {
                         case 0x0262:
                             break;
                         case 0x0264:
                             goto L_0264;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x02FF)]:X4} at F000:0105");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FF]:X4} at F000:0105");
                     }
                 }
                 // F000:0262 jmp short 0x0266
@@ -335,7 +335,7 @@ public partial class CfgGeneratedOverrides {
         if (SI <= 4) {
             // F000:0125 jmp near word ptr ES:[SI+0x0347]
             if (SegmentF000Globals.Word0349 != 0x028C) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x0347)]:X4} at F000:0125");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0347]:X4} at F000:0125");
             }
             // F000:028C jmp short 0x02A1
             // F000:02A1 mov word ptr DS:[0x006A],0x1111
@@ -357,7 +357,7 @@ public partial class CfgGeneratedOverrides {
         if (SI is >= 8 and <= 0x000C) {
             // F000:0147 jmp near word ptr ES:[SI+0x0347]
             if (SegmentF000Globals.Word0351 != 0x0294) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x0347)]:X4} at F000:0147");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0347]:X4} at F000:0147");
             }
             // F000:0294 jmp short 0x02C5
             // F000:02C5 mov word ptr DS:[0x0074],0x1155
@@ -381,7 +381,7 @@ public partial class CfgGeneratedOverrides {
                 // F000:0158 shl SI,1
                 SI = (ushort)(BX << 1);
                 // F000:015A jmp near word ptr CS:[SI+0x02E5]
-                switch (UInt16[CS, (ushort)(SI + 0x02E5)]) {
+                switch (UInt16[CS, SI + 0x02E5]) {
                     case 0x015F:
                         // F000:015F mov word ptr DS:[0x0040],0x1111
                         Segment2000Globals.Word0040 = 0x1111;
@@ -403,7 +403,7 @@ public partial class CfgGeneratedOverrides {
                         // F000:017D jmp short 0x0185
                         break;
                     default:
-                        throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, (ushort)(SI + 0x02E5)]:X4} at F000:015A");
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, SI + 0x02E5]:X4} at F000:015A");
                 }
             }
             // F000:0185 inc BX
@@ -419,7 +419,7 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x0196);
             // F000:0196 jmp near word ptr DS:[BX+0x0100]
-            switch (UInt16[DS, (ushort)(BX + 0x0100)]) {
+            switch (UInt16[DS, BX + 0x0100]) {
                 case 0x019A:
                     // F000:019A mov word ptr DS:[0x004A],0xAAAA
                     Segment2000Globals.Word004A = 0xAAAA;
@@ -431,7 +431,7 @@ public partial class CfgGeneratedOverrides {
                     // F000:01A8 jmp short 0x01AA
                     break;
                 default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(BX + 0x0100)]:X4} at F000:0196");
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0100]:X4} at F000:0196");
             }
             // F000:01AA add BX,2
             BX += 2;
@@ -444,7 +444,7 @@ public partial class CfgGeneratedOverrides {
         BX = 0;
         // F000:01BA jmp near word ptr DS:[BX+0x0104]
         if (Segment2000Globals.Word0104 != 0x01BE) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(BX + 0x0104)]:X4} at F000:01BA");
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01BA");
         }
         // F000:01BE mov word ptr DS:[0x004E],1
         Segment2000Globals.Word004E = 1;
@@ -452,7 +452,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0104 = 0x01CE;
         // F000:01CA jmp near word ptr DS:[BX+0x0104]
         if (Segment2000Globals.Word0104 != 0x01CE) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(BX + 0x0104)]:X4} at F000:01CA");
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01CA");
         }
         // F000:01CE mov word ptr DS:[0x0050],2
         Segment2000Globals.Word0050 = 2;
@@ -469,14 +469,14 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         // F000:01E2 call near word ptr DS:[BX+0x0106]
         if (Segment2000Globals.Word0106 != 0x02D7) {
-            throw FailAsUntested($"Untested near call target 0x{UInt16[DS, (ushort)(BX + 0x0106)]:X4} at F000:01E2");
+            throw FailAsUntested($"Untested near call target 0x{UInt16[DS, BX + 0x0106]:X4} at F000:01E2");
         }
         NearCall(biosSegment, 0x01E6, unknown_F000_02D7_F02D7_AsmEntry);
         // F000:01E6 mov BX,2
         BX = 2;
         // F000:01E9 call near word ptr DS:[BX+0x0106]
         if (Segment2000Globals.Word0108 != 0x02DE) {
-            throw FailAsUntested($"Untested near call target 0x{UInt16[DS, (ushort)(BX + 0x0106)]:X4} at F000:01E9");
+            throw FailAsUntested($"Untested near call target 0x{UInt16[DS, BX + 0x0106]:X4} at F000:01E9");
         }
         NearCall(biosSegment, 0x01ED, unknown_F000_02DE_F02DE_AsmEntry);
         // F000:01ED mov word ptr DS:[0x0080],0x8000
@@ -504,13 +504,13 @@ public partial class CfgGeneratedOverrides {
                     // F000:020C mov ES,AX
                     ES = 0xF000;
                     // F000:020E jmp near word ptr ES:[BX+0x0343]
-                    switch (UInt16[ES, (ushort)(BX + 0x0343)]) {
+                    switch (UInt16[ES, BX + 0x0343]) {
                         case 0x0276:
                             break;
                         case 0x0278:
                             goto L_0278;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(BX + 0x0343)]:X4} at F000:020E");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, BX + 0x0343]:X4} at F000:020E");
                     }
                 }
                 // F000:0276 jmp short 0x027A

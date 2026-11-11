@@ -174,7 +174,7 @@ public partial class CfgGeneratedOverrides {
         // F100:0050 pop AX
         AX = Stack.Pop16();
         // F100:0051 mov word ptr DS:[BX+0x0C],AX
-        UInt16[ds, (ushort)(bx + 0x0C)] = AX;
+        UInt16[ds, bx + 0x0C] = AX;
         // F100:0054 ret near
         NearReturn();
         return;

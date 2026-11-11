@@ -107,8 +107,8 @@ public partial class CfgGeneratedOverrides {
         // E342:EC02 mov BP,0x2506
         BP = 0x2506;
         // E342:EC05 jmp near word ptr SS:[BP+DI-22]
-        if (SsUInt16[(ushort)(0x2506 + DI - 0x16)] != 0xFBE1) {
-            throw FailAsUntested($"Untested near jump target 0x{SsUInt16[(ushort)(BP + DI - 0x16)]:X4} at E342:EC05");
+        if (SsUInt16[0x2506 + DI - 0x16] != 0xFBE1) {
+            throw FailAsUntested($"Untested near jump target 0x{SsUInt16[BP + DI - 0x16]:X4} at E342:EC05");
         }
         // E342:FBE1 mov DX,0xF100
         // E342:FBE4 mov AX,0x2536

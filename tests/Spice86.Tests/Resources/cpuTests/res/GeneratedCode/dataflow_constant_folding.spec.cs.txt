@@ -261,14 +261,14 @@ public partial class CfgGeneratedOverrides {
             // F000:004F mov DI,word ptr CS:[SI]
             di1 = UInt16[CS, SI];
             // F000:0052 mov AX,word ptr ES:[DI+3]
-            ax = UInt16[ES, (ushort)(di1 + 3)];
+            ax = UInt16[ES, di1 + 3];
             // F000:0056 mov word ptr DS:[BX],AX
             UInt16[DS, BX] = ax;
             // F000:0058 mov DI,0xFFFE
             // F000:005B mov AX,word ptr ES:[DI+3]
             AX = Segment2300Globals.Word0001;
             // F000:005F mov word ptr DS:[BX+0x0C],AX
-            UInt16[DS, (ushort)(BX + 0x0C)] = AX;
+            UInt16[DS, BX + 0x0C] = AX;
             // F000:0062 push DS
             Stack.Push16(DS);
             // F000:0063 pop ES
@@ -277,64 +277,64 @@ public partial class CfgGeneratedOverrides {
             // F000:0067 mov AX,word ptr DS:[DI-26956]
             ax = Segment2000Globals.Word96B4;
             // F000:006B mov word ptr DS:[BX+0x0E],AX
-            UInt16[DS, (ushort)(BX + 0x0E)] = ax;
+            UInt16[DS, BX + 0x0E] = ax;
             // F000:006E mov AX,word ptr DS:[DI-2]
             AX = Segment2000Globals.WordFFFE;
             // F000:0071 mov word ptr DS:[BX+0x10],AX
-            UInt16[DS, (ushort)(BX + 0x10)] = AX;
+            UInt16[DS, BX + 0x10] = AX;
             // F000:0074 mov DX,word ptr CS:[SI+2]
             // F000:0078 add DX,-1
-            dx1 = (ushort)(UInt16[CS, (ushort)(SI + 2)] - 1);
+            dx1 = (ushort)(UInt16[CS, SI + 2] - 1);
             // F000:007B mov word ptr DS:[BX+2],DX
-            UInt16[DS, (ushort)(BX + 2)] = dx1;
+            UInt16[DS, BX + 2] = dx1;
             // F000:007E mov AX,word ptr CS:[SI+2]
-            AX = UInt16[CS, (ushort)(SI + 2)];
+            AX = UInt16[CS, SI + 2];
             // F000:0082 mov byte ptr DS:[BX+4],1
-            UInt8[DS, (ushort)(BX + 4)] = 1;
+            UInt8[DS, BX + 4] = 1;
             // F000:0086 cmp AL,0xF0
             // F000:0088 jl short 0x008E
             if ((sbyte)AL >= -0x10) {
                 // F000:008A mov byte ptr DS:[BX+4],2
-                UInt8[DS, (ushort)(BX + 4)] = 2;
+                UInt8[DS, BX + 4] = 2;
             }
             // F000:008E mov byte ptr DS:[BX+5],1
-            UInt8[DS, (ushort)(BX + 5)] = 1;
+            UInt8[DS, BX + 5] = 1;
             // F000:0092 cmp AL,0xF0
             // F000:0094 jb short 0x009A
             if (AL >= 0xF0) {
                 // F000:0096 mov byte ptr DS:[BX+5],2
-                UInt8[DS, (ushort)(BX + 5)] = 2;
+                UInt8[DS, BX + 5] = 2;
             }
             // F000:009A mov DX,word ptr CS:[SI+2]
-            dx2 = UInt16[CS, (ushort)(SI + 2)];
+            dx2 = UInt16[CS, SI + 2];
             // F000:009E mov byte ptr DS:[BX+6],1
-            UInt8[DS, (ushort)(BX + 6)] = 1;
+            UInt8[DS, BX + 6] = 1;
             // F000:00A2 cmp DX,-2
             // F000:00A5 jg short 0x00AB
             if ((short)dx2 <= -2) {
                 // F000:00A7 mov byte ptr DS:[BX+6],2
-                UInt8[DS, (ushort)(BX + 6)] = 2;
+                UInt8[DS, BX + 6] = 2;
             }
             // F000:00AB mov byte ptr DS:[BX+7],1
-            UInt8[DS, (ushort)(BX + 7)] = 1;
+            UInt8[DS, BX + 7] = 1;
             // F000:00AF cmp DX,-2
             // F000:00B2 ja short 0x00B8
             if (dx2 <= 0xFFFE) {
                 // F000:00B4 mov byte ptr DS:[BX+7],2
-                UInt8[DS, (ushort)(BX + 7)] = 2;
+                UInt8[DS, BX + 7] = 2;
             }
             // F000:00B8 mov word ptr DS:[0x0E3D],0x1357
             // F000:00BE mov word ptr DS:[0x0E3F],0x2468
             Segment2000Globals.Dword0E3D = 0x24681357;
             // F000:00C4 mov DI,word ptr CS:[SI+4]
-            DI = UInt16[CS, (ushort)(SI + 4)];
+            DI = UInt16[CS, SI + 4];
             // F000:00C8 les DX,word ptr DS:[DI+0x3D]
-            DX = UInt16[DS, (ushort)(DI + 0x3D)];
-            es = UInt16[DS, (ushort)(DI + 0x003F)];
+            DX = UInt16[DS, DI + 0x3D];
+            es = UInt16[DS, DI + 0x003F];
             // F000:00CB mov word ptr DS:[BX+8],DX
-            UInt16[DS, (ushort)(BX + 8)] = DX;
+            UInt16[DS, BX + 8] = DX;
             // F000:00CE mov word ptr DS:[BX+0x0A],ES
-            UInt16[DS, (ushort)(BX + 0x0A)] = es;
+            UInt16[DS, BX + 0x0A] = es;
             // F000:00D1 push DS
             Stack.Push16(DS);
             // F000:00D2 pop ES

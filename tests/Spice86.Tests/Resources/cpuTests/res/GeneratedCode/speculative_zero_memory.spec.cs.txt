@@ -88,7 +88,7 @@ public partial class CfgGeneratedOverrides {
         if (al1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0030, Signature_0030_add);
             // F000:0030 add byte ptr DS:[BX+SI],AL
-            UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], al1);
+            UInt8[DS, BX + SI] = Alu8.Add(UInt8[DS, BX + SI], al1);
             VerifySpeculativeEntryOrFail(biosSegment, 0x0032, Signature_0032_mov);
             // F000:0032 mov byte ptr DS:[0x0403],0x77
             DsGlobals.Byte0403 = 0x77;

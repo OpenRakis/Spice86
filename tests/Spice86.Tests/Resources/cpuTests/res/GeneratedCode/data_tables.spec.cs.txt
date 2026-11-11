@@ -233,7 +233,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0100 pop BX
         bx = Stack.Pop16();
         // F000:0101 mov AL,byte ptr DS:[BX+0x60]
-        AL = UInt8[DS, (ushort)(bx + 0x60)];
+        AL = UInt8[DS, bx + 0x60];
         // F000:0104 mov byte ptr DS:[0x0049],AL
         Segment2000Globals.Byte0049 = AL;
         // F000:0107 mov byte ptr DS:[0x004A],0

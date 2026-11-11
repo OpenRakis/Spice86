@@ -82,7 +82,7 @@ public partial class CfgGeneratedOverrides {
             // F000:0010 shl BX,1
             BX = Alu16.Shl(BX, 1);
             // F000:0012 jmp near word ptr CS:[BX+0x23]
-            switch (UInt16[CS, (ushort)(BX + 0x23)]) {
+            switch (UInt16[CS, BX + 0x23]) {
                 case 0x0016:
                     // F000:0016 add DX,1
                     DX = Alu16.Add(DX, 1);
@@ -96,7 +96,7 @@ public partial class CfgGeneratedOverrides {
                 case 0x0020:
                     break;
                 default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, (ushort)(BX + 0x23)]:X4} at F000:0012");
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x23]:X4} at F000:0012");
             }
             // F000:0020 loop 0x000D
             CX--;

@@ -149,7 +149,7 @@ public partial class CfgGeneratedOverrides {
         // F000:004D and AL,0x7F
         AL &= 0x7F;
         // F000:004F mov byte ptr DS:[BX+4],AL
-        UInt8[DS, (ushort)(BX + 4)] = AL;
+        UInt8[DS, BX + 4] = AL;
         // F000:0052 mov AL,0x34
         // F000:0054 out 0x43,AL
         // F000:0056 mov AL,5
@@ -165,7 +165,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0064 and AL,0x3F
         AL &= 0x3F;
         // F000:0066 mov byte ptr DS:[BX+5],AL
-        UInt8[DS, (ushort)(BX + 5)] = AL;
+        UInt8[DS, BX + 5] = AL;
         // F000:0069 mov AL,0xB6
         // F000:006B out 0x43,AL
         // F000:006D mov AL,0x34
@@ -181,7 +181,7 @@ public partial class CfgGeneratedOverrides {
         // F000:007B and AL,0x3F
         AL &= 0x3F;
         // F000:007D mov byte ptr DS:[BX+6],AL
-        UInt8[DS, (ushort)(BX + 6)] = AL;
+        UInt8[DS, BX + 6] = AL;
         // F000:0080 mov DX,0x03C8
         // F000:0083 mov AL,0x10
         // F000:0085 out DX,AL
@@ -204,15 +204,15 @@ public partial class CfgGeneratedOverrides {
         // F000:009E in AL,DX
         al = VgaPorts.ReadDacData();
         // F000:009F mov byte ptr DS:[BX+7],AL
-        UInt8[DS, (ushort)(BX + 7)] = al;
+        UInt8[DS, BX + 7] = al;
         // F000:00A2 in AL,DX
         AL = VgaPorts.ReadDacData();
         // F000:00A3 mov byte ptr DS:[BX+8],AL
-        UInt8[DS, (ushort)(BX + 8)] = AL;
+        UInt8[DS, BX + 8] = AL;
         // F000:00A6 in AL,DX
         al = VgaPorts.ReadDacData();
         // F000:00A7 mov byte ptr DS:[BX+9],AL
-        UInt8[DS, (ushort)(BX + 9)] = al;
+        UInt8[DS, BX + 9] = al;
         // F000:00AA mov DX,0x03C7
         // F000:00AD mov AL,0x11
         // F000:00AF out DX,AL
@@ -221,7 +221,7 @@ public partial class CfgGeneratedOverrides {
         // F000:00B3 in AL,DX
         AL = VgaPorts.ReadDacData();
         // F000:00B4 mov byte ptr DS:[BX+0x0A],AL
-        UInt8[DS, (ushort)(BX + 0x0A)] = AL;
+        UInt8[DS, BX + 0x0A] = AL;
         // F000:00B7 mov DX,0x03C4
         // F000:00BA mov AL,2
         // F000:00BC out DX,AL
@@ -237,7 +237,7 @@ public partial class CfgGeneratedOverrides {
         // F000:00CC in AL,DX
         al = VgaPorts.ReadSequencerData();
         // F000:00CD mov byte ptr DS:[BX+0x0B],AL
-        UInt8[DS, (ushort)(BX + 0x0B)] = al;
+        UInt8[DS, BX + 0x0B] = al;
         // F000:00D0 mov AX,0x4005
         AX = 0x4005;
         // F000:00D3 mov DX,0x03CE
@@ -251,7 +251,7 @@ public partial class CfgGeneratedOverrides {
         // F000:00E0 in AL,DX
         al = VgaPorts.ReadGraphicsControllerData();
         // F000:00E1 mov byte ptr DS:[BX+0x0C],AL
-        UInt8[DS, (ushort)(BX + 0x0C)] = al;
+        UInt8[DS, BX + 0x0C] = al;
         // F000:00E4 mov DX,0x0388
         // F000:00E7 mov AL,0x20
         // F000:00E9 out DX,AL
@@ -264,7 +264,7 @@ public partial class CfgGeneratedOverrides {
         // F000:00F3 in AL,DX
         AL = Opl3Ports.ReadAdlibAddress0();
         // F000:00F4 mov byte ptr DS:[BX+0x0D],AL
-        UInt8[DS, (ushort)(BX + 0x0D)] = AL;
+        UInt8[DS, BX + 0x0D] = AL;
         // F000:00F7 mov DX,0x038A
         // F000:00FA mov AL,4
         // F000:00FC out DX,AL
@@ -279,7 +279,7 @@ public partial class CfgGeneratedOverrides {
         // F000:0107 and AL,0xC0
         AL = Alu8.And(AL, 0xC0);
         // F000:0109 mov byte ptr DS:[BX+0x0E],AL
-        UInt8[DS, (ushort)(BX + 0x0E)] = AL;
+        UInt8[DS, BX + 0x0E] = AL;
         // F000:010C hlt
         return Hlt();
     }

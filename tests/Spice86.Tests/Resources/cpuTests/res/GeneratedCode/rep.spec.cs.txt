@@ -374,7 +374,7 @@ public partial class CfgGeneratedOverrides {
         // F000:2026 mov BP,DI
         BP = di1;
         // F000:2028 mov word ptr SS:[BP+SI],AX
-        SsUInt16[(ushort)(BP + si1)] = AX;
+        SsUInt16[BP + si1] = AX;
         // F000:202A jcxz short 0x202D
         if (cx2 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x202C, Signature_202C_hlt);
@@ -415,7 +415,7 @@ public partial class CfgGeneratedOverrides {
         // F000:3024 mov BP,DI
         BP = di1;
         // F000:3026 mov word ptr SS:[BP+SI],AX
-        SsUInt16[(ushort)(BP + si1)] = AX;
+        SsUInt16[BP + si1] = AX;
         // F000:3028 jcxz short 0x302B
         if (cx3 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x302A, Signature_302A_hlt);
