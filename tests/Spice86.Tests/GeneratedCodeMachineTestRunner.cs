@@ -303,6 +303,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
             ?? throw new InvalidOperationException($"No directory for path: {path}");
     }
 
+    private static readonly object GeneratedSourceFileLock = new();
+
     private static void WriteGeneratedSource(string fileKey, GeneratedCSharpProgram generatedProgram) {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         Directory.CreateDirectory(outputDirectory);
@@ -310,7 +312,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         foreach (char invalidChar in Path.GetInvalidFileNameChars()) {
             fileName = fileName.Replace(invalidChar, '_');
         }
-        File.WriteAllText(Path.Join(outputDirectory, fileName + ".generated.cs"), generatedProgram.SourceText);
+        lock (GeneratedSourceFileLock) {
+            File.WriteAllText(Path.Join(outputDirectory, fileName + ".generated.cs"), generatedProgram.SourceText);
+        }
     }
 
     private static readonly object MetricsFileLock = new();
