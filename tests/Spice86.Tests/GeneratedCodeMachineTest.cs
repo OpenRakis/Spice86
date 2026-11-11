@@ -45,7 +45,9 @@ public sealed class GeneratedCodeMachineTest {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.FlashbackVideoPanning(panning, splitScreen, alternatePage));
     }
 
-    [Fact]
+    // Deletes and re-reads the shared add.spec.generated.cs file that the catalogue "add" case
+    // writes concurrently in parallel mode.
+    [Fact(DisableParallelization = true)]
     public void AddGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         string outputFile = Path.Join(outputDirectory, "add.spec.generated.cs");

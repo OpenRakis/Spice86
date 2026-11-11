@@ -548,6 +548,9 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
 
     private void CloseAudioDevice() {
         _threadShouldQuit = true;
+        foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
+            notifier.NotifyLockMixer();
+        }
         _audioPlayer.MuteOutput();
         if (_mixerThread.IsAlive) {
             _mixerThread.Join(TimeSpan.FromSeconds(2));

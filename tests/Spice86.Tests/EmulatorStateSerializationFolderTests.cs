@@ -13,6 +13,8 @@ using System.Security.Cryptography;
 
 using Xunit;
 
+// Several tests mutate the process-wide SPICE86_DUMPS_FOLDER variable; they must not run in parallel.
+[TestClass(DisableParallelization = true)]
 public class EmulatorStateSerializationFolderTests {
     private readonly EmulatorStateSerializationFolderFactory _factory = new(Substitute.For<ILogger>());
 

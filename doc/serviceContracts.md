@@ -81,13 +81,6 @@ A fixed `Setup` hook per case pins inputs needed to reach a deterministic path
 `ServiceContractCoverageTest` checks that the declared non-`Unknown` contracts
 and the test cases cover exactly the same set of services, and the per-vector
 `*ServiceContractTest` classes supply the cases.
-`ServiceContractStubTest.ServicesMatchRecordedBaseline` freezes each case's
-stub-run machine — every output field, the frame FLAGS and a SHA-256 of the
-whole memory — in `tests/Spice86.Tests/Resources/service-contract-baseline.tsv`;
-the baseline is recorded once and asserts the stubs keep byte-identical
-behavior across helper refactors. The baseline was captured from master
-commit 3f45b7d1 before applying the typed-service refactor, including the
-INT 8 register-preservation and DOS allocation-info fixes.
 
 ## Typed service helpers
 
@@ -204,7 +197,6 @@ The C16 regression tests cover these specific behaviors:
 
 | Test | Behavior checked |
 |------|------------------|
-| `ServiceContractStubTest.ServicesMatchRecordedBaseline` | Registers, flags and memory still match the pre-refactor capture. |
 | `ServiceHelperEquivalenceTest.A20UnwrittenOutputsArePreserved` | Each A20 subfunction preserves fields it does not write, including CF for an unknown subfunction. |
 | `ServiceHelperEquivalenceTest.VerifySectorsUnwrittenOutputsArePreserved` | Successful fixed-disk verification writes AH=0 and clears CF. |
 | `ServiceHelperEquivalenceTest.DisketteOrHddTypeUnwrittenOutputsArePreserved` | Disk-type queries preserve CX/DX outside the fixed-disk success path. |
