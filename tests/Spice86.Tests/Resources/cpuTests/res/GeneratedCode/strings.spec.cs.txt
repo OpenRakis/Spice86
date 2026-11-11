@@ -57,6 +57,7 @@ public partial class CfgGeneratedOverrides {
         ushort si1 = 0;
         ushort si2 = 0;
         ushort si3 = 0;
+        ushort ax;
         ushort flagOperand_1304 = 0;
         byte flagOperand_E078 = 0;
         CheckExternalEvents(biosSegment, 0x0883);
@@ -121,9 +122,9 @@ public partial class CfgGeneratedOverrides {
         DX = 0;
         DS = 0;
         Segment0000Globals.Word0002 = 0x1234;
-        AX = CS;
-        DS = AX;
-        AX = Alu16.Xor(AX, AX);
+        ax = CS;
+        DS = ax;
+        AX = 0;
         ES = 0;
         DirectionFlag = false;
         SI = 0xE319;

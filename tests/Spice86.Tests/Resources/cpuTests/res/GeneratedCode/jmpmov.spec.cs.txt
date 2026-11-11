@@ -44,7 +44,7 @@ public partial class CfgGeneratedOverrides {
         Segment1000Globals.Byte2504 = 0xF0;
         SI = 3;
         ushort targetSegment_FC06 = SsUInt16[0x24F3];
-        ushort targetOffset_FC06 = 0x4001;
+        ushort targetOffset_FC06 = SsUInt16[0x24F1];
         if (targetSegment_FC06 != biosSegment || targetOffset_FC06 != 0x4001) {
             throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
         }

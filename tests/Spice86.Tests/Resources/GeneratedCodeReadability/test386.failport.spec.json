@@ -27,7 +27,7 @@
       "serviceCalls.Video": 0
     },
     "maximum": {
-      "AluCalls": 190,
+      "AluCalls": 214,
       "BookkeepingCalls": 0,
       "Casts": 20,
       "CheckExternalEvents": 18,
@@ -41,9 +41,9 @@
       "PortWrapperCalls": 0,
       "RawIoCalls": 8,
       "RawMemoryAccesses": 74,
-      "RegisterReads": 742,
+      "RegisterReads": 776,
       "RegisterWrites": 611,
-      "Statements": 1772,
+      "Statements": 1820,
       "StatusFlagReads": 137,
       "WriteBacks": 16
     }

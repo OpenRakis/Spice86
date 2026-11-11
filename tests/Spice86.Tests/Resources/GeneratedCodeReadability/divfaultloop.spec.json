@@ -31,7 +31,7 @@
       "Casts": 5,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
-      "LocalReads": 4,
+      "LocalReads": 5,
       "LocalVariables": 3,
       "LocalWrites": 4,
       "PlainRegisterAssignments": 8,
@@ -39,7 +39,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 9,
       "RegisterWrites": 10,
-      "Statements": 36,
+      "Statements": 37,
       "WriteBacks": 0
     }
   },

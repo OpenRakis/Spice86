@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_017D_0010_017E0() {
         ushort ax;
         ushort bp1 = 0;
@@ -62,7 +62,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_017D_004E_0181E() {
         ushort dx;
         CheckExternalEvents(cs1, 0x004E);
@@ -134,15 +134,13 @@ public partial class CfgGeneratedOverrides {
                 ax3 = 1;
             }
             Stack.Push16(ax3);
-            AX = CX;
-            AX = Alu16.Sub(0, AX);
-            CarryFlag = AX != 0;
+            AX = (ushort)-CX;
             NearCall(cs1, 0x00BE, unknown_017D_004E_0181EEntry);
             Stack.Push16(AX);
             AX = DI;
             DX = SI;
             BX = 0x000A;
-            CX = Alu16.Xor(CX, CX);
+            CX = 0;
             NearCall(cs1, 0x00CB, unknown_017D_01B1_01981Entry);
             Stack.Push16(DX);
             Stack.Push16(AX);
@@ -714,14 +712,15 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, BP, SI. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, BP, SI. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_04FC_01CCC() {
         CheckExternalEvents(cs1, 0x04FC);
         Stack.Push16(BX);
         BX = AX;
         AL = DL;
         DX = UInt16[DS, BX];
-        AH = Alu8.Xor(AH, AH);
+        CarryFlag = false;
+        AH = 0;
         NearCall(cs1, 0x0508, unknown_017D_093E_0210EEntry);
         UInt16[DS, BX + 0x0A] = Alu16.Inc(UInt16[DS, BX + 0x0A]);
         BX = Stack.Pop16();
@@ -732,7 +731,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_050D_01CDD() {
         ushort ax1 = 0;
         ushort ax;
-        ushort flagOperand_0544 = 0;
         byte flagOperand_0554 = 0;
         unknown_017D_050D_01CDDFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x050D);
@@ -765,9 +763,7 @@ public partial class CfgGeneratedOverrides {
         AL &= 0x30;
         UInt8[DS, SI + 6] &= 0xCF;
         frame.Local12 = AX;
-        flagOperand_0544 = UInt16[DS, BX + 4];
-        Alu16.Sub(flagOperand_0544, 0);
-        if (flagOperand_0544 == 0) {
+        if (UInt16[DS, BX + 4] == 0) {
             AX = SI;
             NearCall(cs1, 0x054F, unknown_017D_09E4_021B4Entry);
         }
@@ -1211,7 +1207,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_017D_0776_01F46() {
         ushort bp;
         ushort ax;
@@ -1230,7 +1226,7 @@ public partial class CfgGeneratedOverrides {
         frame.Local12 = CX;
         CX = (ushort)(bp - 0x0C);
         DX = DI;
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
         BP = bp;
         NearCall(cs1, 0x078F, unknown_017D_069B_01E6BEntry);
         CX = (ushort)(SsUInt16[BP - 0x0C] - DI);
@@ -1239,7 +1235,7 @@ public partial class CfgGeneratedOverrides {
         ax = (ushort)((AX + 1 << 1) + 2);
         CL &= 0xFE;
         AX = (ushort)(ax + CX + 1);
-        AL = Alu8.And(AL, 0xFE);
+        AL &= 0xFE;
         NearCall(cs1, 0x07AA, unknown_017D_1684_02E54Entry);
         SI = AX;
         SsUInt16[BP - 8] = AX;
@@ -1259,7 +1255,7 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, bx] = ax;
             AX = SsUInt16[BP - 0x0E];
             BX = bx;
-            BX = Alu16.Add(BX, 2);
+            BX += 2;
             NearCall(cs1, 0x07F3, unknown_017D_069B_01E6BEntry);
             AX++;
             BX = (ushort)(AX << 1);
@@ -1286,7 +1282,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_017D_0801_01FD1() {
         ushort ax;
         CheckExternalEvents(cs1, 0x0801);
@@ -1400,7 +1396,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 017D:08B0");
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_08C4_02094() {
         ushort dx;
         ushort bx1 = 0;
@@ -1432,23 +1428,12 @@ public partial class CfgGeneratedOverrides {
             BX = UInt16[DS, bx1 + 2];
             AL = UInt8[DS, BX + 7];
             DX = 1;
-            Alu8.And(AL, 0x40);
-            if ((AL & 0x40) == 0) {
-                Alu8.And(AL, 8);
-                if ((AL & 8) == 0) {
-                    if (BX < SsUInt16[BP - 2]) {
-                        goto L_0904;
-                    }
-                    Alu16.Sub(BX, 0x0226);
-                    if (BX < 0x0226) {
-                        DX = 0;
-                        CarryFlag = false;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                    }
+            if ((AL & 0x40) == 0 && (AL & 8) == 0) {
+                if (BX < SsUInt16[BP - 2]) {
+                    goto L_0904;
+                }
+                if (BX < 0x0226) {
+                    DX = 0;
                 }
             }
             AX = BX;
@@ -1484,12 +1469,12 @@ public partial class CfgGeneratedOverrides {
         public ushort Local14 { get => _slots.GetWord(-0x000E); set => _slots.SetWord(-0x000E, value); }
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, flags.</summary>
     public virtual Action unknown_017D_0936_02106() {
         ushort bx1 = 0;
         ushort ax;
         CheckExternalEvents(cs1, 0x0936);
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         NearCall(cs1, 0x093B, unknown_017D_08C4_02094Entry);
         Stack.Push16(BX);
         while (true) {
@@ -1509,12 +1494,10 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, BP, SI, DS. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, BP, SI. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_093E_0210E() {
         ushort flagOperand_0969 = 0;
         ushort flagOperand_0996 = 0;
-        ushort flagOperand_09B1 = 0;
-        ushort flagOperand_09B9 = 0;
         CheckExternalEvents(cs1, 0x093E);
         Stack.Push16(BX);
         Stack.Push16(CX);
@@ -1571,13 +1554,9 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, DI] = CL;
             UInt16[DS, BX] += 1;
             UInt16[DS, BX + 2] += 1;
-            flagOperand_09B1 = UInt16[DS, BX + 6];
-            Alu16.And(flagOperand_09B1, SI);
-            if ((flagOperand_09B1 & SI) == 0) {
+            if ((UInt16[DS, BX + 6] & SI) == 0) {
                 AX = UInt16[DS, BX + 2];
-                flagOperand_09B9 = UInt16[DS, BX + 0x0A];
-                Alu16.Sub(AX, flagOperand_09B9);
-                if (AX != flagOperand_09B9) {
+                if (AX != UInt16[DS, BX + 0x0A]) {
                     goto L_09DE;
                 }
             }
@@ -1616,20 +1595,15 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_09E4_021B4() {
         ushort si;
         ushort si1 = 0;
-        ushort flagOperand_09EB = 0;
         CheckExternalEvents(cs1, 0x09E4);
         Stack.Push16(BX);
         Stack.Push16(SI);
         BX = AX;
         NearCall(cs1, 0x09EB, unknown_017D_191D_030EDEntry);
-        flagOperand_09EB = UInt16[DS, BX + 0x0A];
-        Alu16.Sub(flagOperand_09EB, 0);
-        if (flagOperand_09EB == 0) {
+        if (UInt16[DS, BX + 0x0A] == 0) {
             AL = UInt8[DS, BX + 7];
-            Alu8.And(AL, 2);
             if ((AL & 2) == 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x0A38, SpeculativeRun_0A38);
-                Alu8.And(AL, 4);
                 if ((AL & 4) == 0) {
                     VerifySpeculativeEntryOrFail(cs1, 0x0A43, Signature_0A43_mov);
                     UInt16[DS, BX + 0x0A] = 0x0200;
@@ -1759,7 +1733,6 @@ public partial class CfgGeneratedOverrides {
         cx1 = DX;
         DX = BX;
         UInt8[DS, BX + 0x19] = 0x20;
-        CX = cx1;
         NearCall(cs1, 0x0AAE, unknown_017D_0A50_02220Entry);
         di1 = AX;
         UInt16[DS, BX + 6] = 0;
@@ -2427,11 +2400,10 @@ public partial class CfgGeneratedOverrides {
                     goto L_11C8;
                 }
             L_1256:
-                BX = frame.Local26;
                 CX = frame.Local22;
                 AX = frame.Local10;
                 DX = frame.Local8;
-                BX = Alu16.Add(BX, UInt16[DS, SI + 0x0C]);
+                BX = (ushort)(frame.Local26 + UInt16[DS, SI + 0x0C]);
                 NearCall(cs1, 0x1268, unknown_017D_1B32_03302Entry);
                 flagOperand_11FE = UInt8[DS, SI + 0x18];
                 Alu8.Sub(flagOperand_11FE, 0x58);
@@ -2584,10 +2556,8 @@ public partial class CfgGeneratedOverrides {
         ushort bx;
         byte al2 = 0;
         byte al;
-        ushort flagOperand_1479 = 0;
         byte flagOperand_14C2 = 0;
         ushort flagOperand_14C8 = 0;
-        ushort flagOperand_1506 = 0;
         ushort flagOperand_1556 = 0;
         unknown_017D_136B_02B3BFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x136B);
@@ -2613,7 +2583,6 @@ public partial class CfgGeneratedOverrides {
                 goto L_13F0;
             }
             CX = (ushort)(BX + 1);
-            Alu8.Sub(al1, 0x25);
             if (al1 == 0x25) {
                 goto L_13AC;
             }
@@ -2735,15 +2704,13 @@ public partial class CfgGeneratedOverrides {
             BX = (ushort)(BP - 0x6A);
             while (true) {
                 CheckExternalEvents(cs1, 0x1479);
-                flagOperand_1479 = SsUInt16[BP - 0x16];
-                Alu16.Sub(flagOperand_1479, 0);
-                if ((short)flagOperand_1479 <= 0) {
+                if ((short)SsUInt16[BP - 0x16] <= 0) {
                     break;
                 }
                 ax = (ushort)(short)(sbyte)UInt8[DS, BX];
                 DX = ax;
                 AX = (ushort)(BP - 0x22);
-                BX = Alu16.Inc(BX);
+                BX++;
                 if (DI != 0x04FC) {
                     throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017D:1488");
                 }
@@ -2778,16 +2745,14 @@ public partial class CfgGeneratedOverrides {
             }
             while (true) {
                 CheckExternalEvents(cs1, 0x1506);
-                flagOperand_1506 = SsUInt16[BP - 0x12];
-                Alu16.Sub(flagOperand_1506, 0);
-                if ((short)flagOperand_1506 <= 0) {
+                if ((short)SsUInt16[BP - 0x12] <= 0) {
                     break;
                 }
                 ES = SsUInt16[BP - 6];
                 ax = (ushort)(short)(sbyte)UInt8[ES, SI];
                 DX = ax;
                 AX = (ushort)(BP - 0x22);
-                SI = Alu16.Inc(SI);
+                SI++;
                 if (DI != 0x04FC) {
                     throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017D:1519");
                 }
@@ -2889,11 +2854,10 @@ public partial class CfgGeneratedOverrides {
         public byte Local8Byte { get => _slots.GetByte(-0x0008); set => _slots.SetByte(-0x0008, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CL, EBX, BP, DS. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CL, EBX, BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, flags.</summary>
     public virtual Action unknown_017D_156F_02D3F() {
         ushort bx1 = 0;
         ushort ax1 = 0;
-        ushort flagOperand_1613 = 0;
         ushort flagOperand_158D = 0;
         byte flagOperand_1597 = 0;
         ushort flagOperand_15DB = 0;
@@ -2962,12 +2926,7 @@ public partial class CfgGeneratedOverrides {
                     CX = UInt16[DS, SI + 2];
                     while (true) {
                         CheckExternalEvents(cs1, 0x160F);
-                        if (CX == 0) {
-                            break;
-                        }
-                        flagOperand_1613 = SsUInt16[BP - 2];
-                        Alu16.Sub(flagOperand_1613, 0);
-                        if (flagOperand_1613 != 0) {
+                        if (CX == 0 || SsUInt16[BP - 2] != 0) {
                             break;
                         }
                         BX = CX;
@@ -3094,7 +3053,6 @@ public partial class CfgGeneratedOverrides {
                     }
                     CX = UInt16[DS, SI + 0x0A];
                     DsGlobals.Word0302 = SI;
-                    Alu16.Sub(CX, DI);
                     if (CX >= DI) {
                         DX = DS;
                         BX = SI;
@@ -3228,7 +3186,6 @@ public partial class CfgGeneratedOverrides {
             if (SI != 0) {
                 if (SI <= AX) {
                     DX = (ushort)(UInt16[DS, SI] + SI);
-                    Alu16.Sub(AX, DX);
                     if (AX < DX) {
                         goto L_17B8;
                     }
@@ -3242,7 +3199,6 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x1782, SpeculativeRun_1782);
                         DX = UInt16[DS, SI];
                         DX += SI;
-                        Alu16.Sub(AX, DX);
                         if (AX < DX) {
                             goto L_17B8;
                         }
@@ -3260,7 +3216,6 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x1795, SpeculativeRun_1795);
                         DX = UInt16[DS, SI];
                         DX += SI;
-                        Alu16.Sub(AX, DX);
                         if (AX < DX) {
                             goto L_17EE;
                         }
@@ -3274,7 +3229,6 @@ public partial class CfgGeneratedOverrides {
                     VerifySpeculativeRunOrFail(cs1, 0x17BE, SpeculativeRun_17BE);
                     DX = UInt16[DS, SI];
                     DX += SI;
-                    Alu16.Sub(AX, DX);
                     if (AX < DX) {
                         goto L_17EE;
                     }
@@ -3288,7 +3242,6 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x17D3, SpeculativeRun_17D3);
                         DX = UInt16[DS, SI];
                         DX += SI;
-                        Alu16.Sub(AX, DX);
                         if (AX < DX) {
                             goto L_17EE;
                         }
@@ -3302,7 +3255,6 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x17E6, SpeculativeRun_17E6);
                         DX = UInt16[DS, SI];
                         DX += SI;
-                        Alu16.Sub(AX, DX);
                         if (AX < DX) {
                             goto L_17EE;
                         }
@@ -3318,7 +3270,6 @@ public partial class CfgGeneratedOverrides {
                 }
                 if (SI <= AX) {
                     DX = (ushort)(UInt16[DS, SI] + SI);
-                    Alu16.Sub(AX, DX);
                     if (AX < DX) {
                         break;
                     }
@@ -3364,7 +3315,6 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_182C = 0;
         byte flagOperand_1834 = 0;
         ushort flagOperand_1857 = 0;
-        byte flagOperand_1865 = 0;
         unknown_017D_181D_02FEDFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x181D);
         Stack.Push16(BX);
@@ -3415,9 +3365,7 @@ public partial class CfgGeneratedOverrides {
                 NearCall(cs1, 0x1863, unknown_017D_2035_03805Entry);
                 throw FailAsUntested("Untested return from call at 017D:1860");
             }
-            flagOperand_1865 = UInt8[DS, SI + 6];
-            Alu8.And(flagOperand_1865, 8);
-            if ((flagOperand_1865 & 8) != 0) {
+            if ((UInt8[DS, SI + 6] & 8) != 0) {
                 BX = UInt16[DS, SI + 4];
                 AX = UInt16[DS, BX + 4];
                 NearCall(cs1, 0x1874, unknown_017D_175A_02F2AEntry);
@@ -3870,38 +3818,34 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, EDX, EBX, BP, ESI, EDI, DS, DF. Outputs: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, flags. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, BP, ESI, EDI, DS, DF. Outputs: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, flags. Changes: EAX, ECX, EDX, EBX, BP, ESI, EDI, ES, DS, flags.</summary>
     public virtual Action unknown_017D_1BB5_03385() {
         CheckExternalEvents(cs1, 0x1BB5);
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         Stack.Push16(BX);
         Stack.Push16(DX);
         DX = 0;
         NearCall(cs1, 0x20DE, unknown_017D_2084_03854Entry);
-        Alu16.Sub(DX, 0xFFFF);
-        if (DX != 0xFFFF) {
-            Alu16.Sub(DX, 0xFFFE);
-            if (DX != 0xFFFE) {
-                if (DX == 0xFFFD) {
-                    goto L_2136;
-                }
-                Alu16.Sub(DX, 0xFFFC);
-                if (DX == 0xFFFC) {
-                    VerifySpeculativeRunOrFail(cs1, 0x20F2, SpeculativeRun_20F2);
-                    BX = 0x001F;
-                    DX = 1;
-                    AX = 0x0412;
-                    NearCall(cs1, 0x20FE, unknown_017D_223C_03A0C_AsmEntry);
-                    throw FailAsUntested("Untested return from call at 017D:20FB");
-                }
-                Alu16.And(DX, DX);
-                if (DX != 0) {
-                    VerifySpeculativeRunOrFail(cs1, 0x211C, SpeculativeRun_211C);
-                    AX = 1;
-                    DX = Stack.Pop16();
-                    BX = Stack.Pop16();
-                    return NearRet();
-                }
+        if (DX != 0xFFFF && DX != 0xFFFE) {
+            if (DX == 0xFFFD) {
+                goto L_2136;
+            }
+            Alu16.Sub(DX, 0xFFFC);
+            if (DX == 0xFFFC) {
+                VerifySpeculativeRunOrFail(cs1, 0x20F2, SpeculativeRun_20F2);
+                BX = 0x001F;
+                DX = 1;
+                AX = 0x0412;
+                NearCall(cs1, 0x20FE, unknown_017D_223C_03A0C_AsmEntry);
+                throw FailAsUntested("Untested return from call at 017D:20FB");
+            }
+            Alu16.And(DX, DX);
+            if (DX != 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x211C, SpeculativeRun_211C);
+                AX = 1;
+                DX = Stack.Pop16();
+                BX = Stack.Pop16();
+                return NearRet();
             }
         }
         NearCall(cs1, 0x2125, unknown_017D_2257_03A27Entry);
@@ -3945,28 +3889,9 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 017D:1BCF");
     }
 
-}
-
-// ==== file: CfgGeneratedOverrides.017D.2.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CX, BP, SI, DI. Changes: EAX, CX, DX, BX, BP, SI, DI, flags.</summary>
     public virtual Action unknown_017D_1BF2_033C2() {
         ushort bp1 = 0;
-        ushort si1 = 0;
         ushort di1 = 0;
         ushort dx1 = 0;
         ushort ax1 = 0;
@@ -3978,24 +3903,23 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DI);
         Stack.Push16(BP);
         bp1 = SP;
-        SP = Alu16.Sub(SP, 2);
-        si1 = AX;
+        SP -= 2;
+        SI = AX;
         frame.Local10 = DX;
         di1 = BX;
-        BP = bp1;
-        SI = si1;
-        DI = di1;
         AX = NearCall(cs1, 0x1C05, () => unknown_017D_2194_03964(AX, DS));
         Alu8.And(AL, 0x80);
         if ((AL & 0x80) == 0) {
             dx1 = frame.Local10;
             CX = di1;
-            BX = si1;
+            BX = SI;
             (ax1, CarryFlag) = ServiceCall(cs1, 0x1C28, Dos, () => Dos.WriteFile(BX, CX, DS, dx1), r => CarryOnInterruptStack(r.carryFlag));
             dx2 = (ushort)(CarryFlag ? 0xFFFF : 0);
             Alu16.And(dx2, dx2);
             if ((short)dx2 < 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1C43, Signature_1C43_call);
+                BP = bp1;
+                DI = di1;
                 AX = ax1;
                 DX = dx2;
                 NearCall(cs1, 0x1C46, unknown_017D_213B_0390B_AsmEntry);
@@ -4017,10 +3941,12 @@ public partial class CfgGeneratedOverrides {
         }
         VerifySpeculativeRunOrFail(cs1, 0x1C09, SpeculativeRun_1C09);
         AL = 2;
-        BX = si1;
+        BX = SI;
         DX = 0;
         CX = Alu16.Xor(CX, CX);
         AH = 0x42;
+        BP = bp1;
+        DI = di1;
         InterruptCall(cs1, 0x1C15, 0x21);
         throw FailAsUntested("Untested return from call at 017D:1C13");
     }
@@ -4046,6 +3972,24 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 017D:21D2");
     }
 
+}
+
+// ==== file: CfgGeneratedOverrides.017D.2.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, DX, EBX, BP, SI, DI, DS. Outputs: EAX, ECX, EBX, BP, SI, DI, DS. Changes: EAX, ECX, DX, EBX, BP, SI, DI, DS, flags.</summary>
     public virtual Action unknown_017D_1C50_03420() {
         ushort bp1 = 0;
@@ -4523,16 +4467,17 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX, BX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_1F1D_036ED() {
+        ushort bx1 = 0;
         ushort ax1 = 0;
         CheckExternalEvents(cs1, 0x1F1D);
         Stack.Push16(BX);
         Stack.Push16(DX);
-        BX = AX;
-        ax1 = UInt16[DS, BX];
+        bx1 = AX;
+        ax1 = UInt16[DS, bx1];
         DX = (ushort)(ax1 + 3);
         DL &= 0xFE;
-        Alu16.Sub(DX, ax1);
         if (DX >= ax1) {
+            BX = bx1;
             AX = ax1;
             AX = NearCall(cs1, 0x1F37, () => unknown_017D_1EFB_036CB(DS));
             if (AX < DX) {
@@ -4550,7 +4495,7 @@ public partial class CfgGeneratedOverrides {
                     DX = ax1;
                     DL &= 0xFE;
                 }
-                UInt16[DS, BX] = DX;
+                UInt16[DS, bx1] = DX;
                 Alu16.And(DX, DX);
                 if (DX != 0) {
                     AX = 1;
@@ -4572,8 +4517,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_1F62_03732() {
         ushort bx1 = 0;
         ushort ax;
-        ushort flagOperand_1F70 = 0;
-        ushort flagOperand_1F90 = 0;
         ushort flagOperand_1FC5 = 0;
         unknown_017D_1F62_03732Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1F62);
@@ -4586,17 +4529,13 @@ public partial class CfgGeneratedOverrides {
         AX = DsGlobals.Word034E;
         Alu16.And(AX, AX);
         if (AX != 0) {
-            flagOperand_1F70 = DsGlobals.Word01B6;
-            Alu16.Sub(flagOperand_1F70, 0xFFFE);
-            if (flagOperand_1F70 != 0xFFFE) {
+            if (DsGlobals.Word01B6 != 0xFFFE) {
                 AX = (ushort)(BP - 2);
                 NearCall(cs1, 0x1F85, unknown_017D_1F1D_036EDEntry);
                 Alu16.And(AX, AX);
                 if (AX != 0) {
                     bx1 = (ushort)(frame.Local10 + DsGlobals.Word01B6);
-                    flagOperand_1F90 = DsGlobals.Word01B6;
-                    Alu16.Sub(bx1, flagOperand_1F90);
-                    if (bx1 < flagOperand_1F90) {
+                    if (bx1 < DsGlobals.Word01B6) {
                         VerifySpeculativeEntryOrFail(cs1, 0x1F96, Signature_1F96_mov);
                         bx1 = 0xFFFE;
                     }
@@ -4609,13 +4548,13 @@ public partial class CfgGeneratedOverrides {
                             goto L_1F77;
                         }
                         BX -= AX;
-                        SsUInt16[BP - 2] = BX;
+                        frame.Local10 = BX;
                         AX = (ushort)(BX - 2);
                         if (AX > BX) {
                             goto L_1F77;
                         }
                         BX = DsGlobals.Word0300;
-                        SsUInt16[BP - 2] = AX;
+                        frame.Local10 = AX;
                         while (true) {
                             CheckExternalEvents(cs1, 0x1FC1);
                             if (BX == 0) {
@@ -4653,12 +4592,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_201D;
                         }
                         VerifySpeculativeEntryOrFail(cs1, 0x1FDA, Signature_1FDA_add);
-                        SsUInt16[BP - 2] += 2;
+                        frame.Local10 += 2;
                         VerifySpeculativeRunOrFail(cs1, 0x1FDE, SpeculativeRun_1FDE);
-                        ax = SsUInt16[BP - 2];
+                        ax = frame.Local10;
                         UInt16[DS, BX] += ax;
                         VerifySpeculativeRunOrFail(cs1, 0x1FE3, SpeculativeRun_1FE3);
-                        AX = SsUInt16[BP - 2];
+                        AX = frame.Local10;
                         SI = AX;
                         SI += DI;
                         UInt16[DS, DI] = AX;
@@ -4666,7 +4605,7 @@ public partial class CfgGeneratedOverrides {
                         UInt16[DS, SI] = 0xFFFF;
                         goto L_1FF0;
                     L_201D:
-                        AX = SsUInt16[BP - 2];
+                        AX = frame.Local10;
                         Alu16.Sub(AX, 0x001C);
                         if (AX >= 0x001C) {
                             goto L_2028;

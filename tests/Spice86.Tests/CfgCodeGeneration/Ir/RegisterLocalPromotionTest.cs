@@ -460,10 +460,10 @@ public sealed class RegisterLocalPromotionTest {
             new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(partitioned);
 
         // Assert
-        program.SourceText.Should().Contain("ushort bx1 = 0;");
-        program.SourceText.Should().Contain("bx1 = DsGlobals.Word0200;");
-        program.SourceText.Should().Contain("BX = bx1;");
-        program.SourceText.Should().Contain("CX = bx1;");
+        program.SourceText.Should().Contain("ushort bx;");
+        program.SourceText.Should().Contain("bx = DsGlobals.Word0200;");
+        program.SourceText.Should().Contain("BX = bx;");
+        program.SourceText.Should().Contain("CX = bx;");
         AssertCompiles(program);
     }
 

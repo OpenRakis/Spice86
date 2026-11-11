@@ -13,7 +13,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX, flags.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_00AB_F00AB(ushort ax, ushort bx) {
         AX = ax;
@@ -30,7 +30,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX. Outputs: CF. Changes: flags.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_00AE_F00AE(ushort ax) {
         AX = ax;
@@ -46,7 +46,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, BX. Outputs: AX, DX. Changes: AX, DX, CF, ZF, OF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort ax, ushort dx) unknown_F000_00B2_F00B2(ushort ax, ushort bx) {
         AX = ax;
@@ -111,7 +111,6 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte0100 = 0x5A;
         ES = 0x1000;
         Segment1000Globals.Byte0100 = 0x66;
-        ES = 0x2000;
         AX = 3;
         BX = 4;
         AX = NearCall(biosSegment, 0x0029, () => unknown_F000_00AB_F00AB(AX, BX));
@@ -126,9 +125,8 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0044 = 0x11;
         }
         else {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0046, Signature_0046_mov);
+            VerifySpeculativeRunOrFail(biosSegment, 0x0046, SpeculativeRun_0046);
             Segment2000Globals.Byte0044 = 0xEE;
-            VerifySpeculativeEntryOrFail(biosSegment, 0x004B, Signature_004B_jmp);
         }
         AX = 0x0020;
         CarryFlag = NearCall(biosSegment, 0x0058, () => unknown_F000_00AE_F00AE(AX));
@@ -142,8 +140,7 @@ public partial class CfgGeneratedOverrides {
         AX = 0x8000;
         BX = 4;
         (AX, DX) = NearCall(biosSegment, 0x006F, () => unknown_F000_00B2_F00B2(AX, BX));
-        Segment2000Globals.Word0046 = AX;
-        Segment2000Globals.Word0048 = DX;
+        Segment2000Globals.Dword0046 = (uint)AX | (uint)DX << 16;
         AX = 0x1000;
         ES = 0x1000;
         (BX, ES) = NearCall(biosSegment, 0x007E, () => unknown_F000_00B5_F00B5());
@@ -154,13 +151,12 @@ public partial class CfgGeneratedOverrides {
         SI = 0x1111;
         DI = 0x2222;
         NearCall(biosSegment, 0x0092, unknown_F000_00BE_F00BEEntry);
-        Segment2000Globals.Word004C = SI;
-        Segment2000Globals.Word004E = DI;
+        Segment2000Globals.Dword004C = 0x22221111;
         BP = 0x3333;
         CX = 0x4444;
         NearCall(biosSegment, 0x00A3, unknown_F000_00C9_F00C9Entry);
         CX = 0x5555;
-        Segment2000Globals.Word0050 = BP;
+        Segment2000Globals.Word0050 = 0x3333;
         return Hlt();
     }
 
@@ -209,15 +205,11 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public byte Byte0045 { get => _memory.UInt8[Segment, 0x0045]; set => _memory.UInt8[Segment, 0x0045] = value; }
 
-    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
-
-    public ushort Word0048 { get => _memory.UInt16[Segment, 0x0048]; set => _memory.UInt16[Segment, 0x0048] = value; }
+    public uint Dword0046 { get => _memory.UInt32[Segment, 0x0046]; set => _memory.UInt32[Segment, 0x0046] = value; }
 
     public byte Byte004A { get => _memory.UInt8[Segment, 0x004A]; set => _memory.UInt8[Segment, 0x004A] = value; }
 
-    public ushort Word004C { get => _memory.UInt16[Segment, 0x004C]; set => _memory.UInt16[Segment, 0x004C] = value; }
-
-    public ushort Word004E { get => _memory.UInt16[Segment, 0x004E]; set => _memory.UInt16[Segment, 0x004E] = value; }
+    public uint Dword004C { get => _memory.UInt32[Segment, 0x004C]; set => _memory.UInt32[Segment, 0x004C] = value; }
 
     public ushort Word0050 { get => _memory.UInt16[Segment, 0x0050]; set => _memory.UInt16[Segment, 0x0050] = value; }
 
@@ -291,6 +283,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0046_mov = [0xC6, 0x06, 0x44, 0x00, 0xEE];
     private static readonly byte?[] Signature_004B_jmp = [0xEB, 0x05];
     private static readonly byte?[] Signature_0061_mov = [0xC6, 0x06, 0x45, 0x00, 0xEE];
+
+    private static readonly byte?[][] SpeculativeRun_0046 = [Signature_0046_mov, Signature_004B_jmp];
 
 }
 

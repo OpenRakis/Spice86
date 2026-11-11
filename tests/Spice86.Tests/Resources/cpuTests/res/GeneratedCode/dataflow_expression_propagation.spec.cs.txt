@@ -13,7 +13,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_015A_F015A() {
         CheckExternalEvents(biosSegment, 0x015A);
         AX = 0x1111;
@@ -27,7 +27,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_015E_F015E() {
         CheckExternalEvents(biosSegment, 0x015E);
         AX = 0x2222;
@@ -42,11 +42,13 @@ public partial class CfgGeneratedOverrides {
         byte al;
         byte cl;
         ushort cx;
+        ushort dx1 = 0;
         ushort cx1 = 0;
-        ushort di1 = 0;
         ushort cx2 = 0;
-        ushort ax2 = 0;
+        ushort di1 = 0;
         ushort cx3 = 0;
+        ushort ax2 = 0;
+        ushort cx4 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -54,7 +56,6 @@ public partial class CfgGeneratedOverrides {
         ES = 0;
         Segment0000Globals.Dword0184 = 0x0000015E | (uint)CS << 16;
         ax1 = DS;
-        ES = ax1;
         DirectionFlag = false;
         BX = 0;
         SI = 0x0162;
@@ -81,7 +82,6 @@ public partial class CfgGeneratedOverrides {
             CX = ax;
             UInt16[DS, BX + 0x0C] = CX;
             UInt16[DS, BX + 0x0E] = DX;
-            DI = 0x0E00;
             BP = 0x0E00;
             AX = UInt16[CS, SI];
             Segment2000Globals.Word0E00 = AX;
@@ -95,15 +95,14 @@ public partial class CfgGeneratedOverrides {
             CX = UInt16[CS, SI];
             ax = CX;
             Stack.Push16(0x7777);
-            DX = ax;
-            CX = Stack.Pop16();
-            UInt16[DS, BX + 0x14] = DX;
-            UInt16[DS, BX + 0x16] = CX;
-            AX = UInt16[CS, SI];
-            AX = Alu16.Add(AX, 3);
+            dx1 = ax;
+            cx1 = Stack.Pop16();
+            UInt16[DS, BX + 0x14] = dx1;
+            UInt16[DS, BX + 0x16] = cx1;
+            AX = (ushort)(UInt16[CS, SI] + 3);
             AX = NearCall(biosSegment, 0x00AE, () => unknown_F000_015A_F015A());
-            cx1 = AX;
-            UInt16[DS, BX + 0x18] = cx1;
+            cx2 = AX;
+            UInt16[DS, BX + 0x18] = cx2;
             AX = UInt16[CS, SI];
             AX = Alu16.Add(AX, 3);
             InterruptCall(biosSegment, 0x00BB, 0x61, biosSegment, 0x015E, unknown_F000_015E_F015EEntry);
@@ -129,9 +128,9 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(DS);
             ES = Stack.Pop16();
             DS = 0x2200;
-            cx2 = Segment2200Globals.Word0000;
+            cx3 = Segment2200Globals.Word0000;
             DS = 0x2000;
-            UInt16[DS, BX + 0x24] = cx2;
+            UInt16[DS, BX + 0x24] = cx3;
             UInt16[DS, BX + 0x26] = 0x2200;
             DX = (ushort)(UInt16[CS, SI + 4] + 1);
             UInt8[DS, BX + 0x28] = 1;
@@ -142,8 +141,8 @@ public partial class CfgGeneratedOverrides {
             }
             UInt16[DS, BX + 0x2A] = DX;
             ax2 = (ushort)(UInt16[CS, SI] + 2);
-            cx3 = UInt16[CS, SI + 6];
-            if (cx3 != 0) {
+            cx4 = UInt16[CS, SI + 6];
+            if (cx4 != 0) {
                 DX = 5;
             }
             DI = ax2;

@@ -58,10 +58,13 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0166");
     }
 
-    /// <summary>Inputs: none. Outputs: flags, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_016D_0168_01838() {
+        byte flagOperand_0168 = 0;
         CheckExternalEvents(cs1, 0x0168);
-        if (CsGlobals.Byte0185 != 0) {
+        flagOperand_0168 = CsGlobals.Byte0185;
+        Alu8.Sub(flagOperand_0168, 0);
+        if (flagOperand_0168 != 0) {
             CsGlobals.Byte0185 = 0;
             Stack.Push16(AX);
             KeyboardControllerPorts.WriteCommand(0xD2);

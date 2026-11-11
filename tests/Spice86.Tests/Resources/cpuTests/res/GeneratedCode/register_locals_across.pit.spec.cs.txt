@@ -170,7 +170,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: AX, DS. Outputs: AX, DX, BP, ES, flags, DF. Changes: AX, DX, BP, ES, flags, DF.</summary>
+    /// <summary>Inputs: AX, DS, flags, DF. Outputs: AX, DX, BP, ES, flags, DF. Changes: AX, DX, BP, ES, flags, DF.</summary>
     public virtual Action unknown_F000_01F1_F01F1() {
         CheckExternalEvents(biosSegment, 0x01F1);
         DsGlobals.Word0E64 = AX;
@@ -187,16 +187,19 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ECX, EDX, EBX, EBP, EDI, ES, FS, GS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort bx1 = 0;
-        ushort dx1 = 0;
+        ushort bx2 = 0;
+        ushort bx3 = 0;
         byte al;
+        ushort bx4 = 0;
         ushort cx1 = 0;
+        ushort cx2 = 0;
+        ushort cx3 = 0;
         ushort ax;
         ushort bx;
         ushort dx;
         ushort di1 = 0;
-        ushort cx2 = 0;
+        ushort cx4 = 0;
         byte flagOperand_0094 = 0;
-        byte flagOperand_0115 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -217,15 +220,15 @@ public partial class CfgGeneratedOverrides {
         } while (SI != 6);
         Segment2000Globals.Dword0042 = (uint)AX | (uint)SI << 16;
         SI = 0x0218;
-        BX = SegmentF000Globals.Word0220;
+        bx2 = SegmentF000Globals.Word0220;
         (AX, DX, BP, ES) = NearCall(biosSegment, 0x0047, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
-        UInt16[DS, DI + 6] = BX;
-        BX = UInt16[CS, SI + 0x0A];
+        Segment2000Globals.Word0046 = bx2;
+        BX = SegmentF000Globals.Word0222;
         (AX, DX, BP, ES) = NearCall(biosSegment, 0x0051, () => unknown_F000_01D8_F01D8(AX, DX, BX, BP, DI, ES, DS));
-        BX = UInt16[CS, SI + 0x0C];
+        BX = SegmentF000Globals.Word0224;
         (AX, DX, BX, BP, ES) = NearCall(biosSegment, 0x0058, () => unknown_F000_01E6_F01E6(AX, DX, BP, ES));
-        UInt16[DS, DI + 0x0A] = BX;
-        BX = UInt16[CS, SI + 0x0E];
+        Segment2000Globals.Word004A = BX;
+        BX = SegmentF000Globals.Word0226;
         if (!NearCallReturnedElsewhere(biosSegment, 0x0062, unknown_F000_01EA_F01EAEntry, [new(biosSegment, 0x0063)])) {
             throw FailAsUntested("Untested return from call at F000:005F");
         }
@@ -261,24 +264,23 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, DI + 0x14] = DX;
         InterruptFlag = false;
         DX = 0;
-        BX = 0x0040;
+        bx3 = 0x0040;
         (AX, DX, BP, ES) = NearCall(biosSegment, 0x00B9, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x00BC);
+            BX = bx3;
             NearCall(biosSegment, 0x00BF, () => unknown_F000_01DC_F01DC(BX, DI, DS));
-            Stack.Push16(BX);
+            Stack.Push16(bx3);
             AX = Stack.Pop16();
             AX = Alu16.Add(AX, 1);
-            BX = AX;
+            bx3 = AX;
             CX = Alu16.Dec(CX);
         } while (CX != 0);
         BP = 0xF000;
         ES = 0xF000;
-        CX = ES;
-        dx1 = UInt16[CS, SI];
-        Alu16.Sub(dx1, 1);
-        if (dx1 == 1) {
+        DX = UInt16[CS, SI];
+        if (DX == 1) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00DF, Signature_00DF_mov);
             AL = SegmentF000Globals.Byte0041;
         }
@@ -292,30 +294,27 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(0x0040);
         AX = Stack.Pop16();
         UInt16[DS, DI + 0x54] = AX;
-        DX = dx1;
         (AX, DX, BP, ES) = NearCall(biosSegment, 0x00F5, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
         (AX, DX, BX, BP, ES) = NearCall(biosSegment, 0x00F8, () => unknown_F000_01E6_F01E6(AX, DX, BP, ES));
         AX = BX;
-        BX = AX;
-        Stack.Push16(BX);
-        CX = Stack.Pop16();
-        UInt16[DS, DI + 0x56] = CX;
+        bx4 = AX;
+        Stack.Push16(bx4);
+        cx1 = Stack.Pop16();
+        UInt16[DS, DI + 0x56] = cx1;
         (AX, DX, BP, ES) = NearCall(biosSegment, 0x0104, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
         AX = 0x0040;
         Stack.Push16(0x0040);
-        cx1 = Stack.Pop16();
-        UInt16[DS, DI + 0x5A] = cx1;
+        cx2 = Stack.Pop16();
+        UInt16[DS, DI + 0x5A] = cx2;
         UInt16[DS, DI + 0x5C] = 0x0040;
         DsGlobals.Byte0E60 = 0;
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0x0115);
-            flagOperand_0115 = DsGlobals.Byte0E60;
-            Alu8.Sub(flagOperand_0115, 0);
-        } while (flagOperand_0115 == 0);
+        } while (DsGlobals.Byte0E60 == 0);
         InterruptFlag = false;
-        CX = AX;
-        AX = CX;
+        cx3 = AX;
+        AX = cx3;
         Stack.Push16(AX);
         DX = Stack.Pop16();
         UInt16[DS, DI + 0x5E] = DX;
@@ -354,7 +353,7 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, DI + 0x10] = AX;
         UInt16[DS, DI + 0x12] = BX;
         SI = 0x0218;
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         NearCall(biosSegment, 0x017B, unknown_F000_019A_F019AEntry);
         UInt16[DS, DI + 0x26] = BX;
         DI = Alu16.Add(DI, 8);
@@ -363,12 +362,12 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, DI + 0x26] = BX;
         AX = 0x5555;
         di1 = 0x0058;
-        for (cx2 = 5; cx2 != 0; cx2--) {
+        for (cx4 = 5; cx4 != 0; cx4--) {
             UInt16[ES, di1] = AX;
             di1 += (ushort)(DirectionFlag ? -2 : 2);
         }
         DI = di1;
-        CX = cx2;
+        CX = cx4;
         return Hlt();
     }
 
@@ -459,6 +458,10 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
 
     public uint Dword0042 { get => _memory.UInt32[Segment, 0x0042]; set => _memory.UInt32[Segment, 0x0042] = value; }
+
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+
+    public ushort Word004A { get => _memory.UInt16[Segment, 0x004A]; set => _memory.UInt16[Segment, 0x004A] = value; }
 }
 
 // ==== file: SegmentF000Globals.cs ====
@@ -484,6 +487,12 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
     public ushort Word021A { get => _memory.UInt16[Segment, 0x021A]; set => _memory.UInt16[Segment, 0x021A] = value; }
 
     public ushort Word0220 { get => _memory.UInt16[Segment, 0x0220]; set => _memory.UInt16[Segment, 0x0220] = value; }
+
+    public ushort Word0222 { get => _memory.UInt16[Segment, 0x0222]; set => _memory.UInt16[Segment, 0x0222] = value; }
+
+    public ushort Word0224 { get => _memory.UInt16[Segment, 0x0224]; set => _memory.UInt16[Segment, 0x0224] = value; }
+
+    public ushort Word0226 { get => _memory.UInt16[Segment, 0x0226]; set => _memory.UInt16[Segment, 0x0226] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

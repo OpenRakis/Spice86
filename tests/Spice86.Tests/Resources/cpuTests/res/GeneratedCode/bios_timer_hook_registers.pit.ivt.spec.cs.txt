@@ -95,11 +95,11 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: none. Outputs: AX, DX, DS, flags, DF. Changes: AX, DX, DS, flags, DF.</summary>
+    /// <summary>Inputs: AX. Outputs: AX, DX, DS, flags, DF. Changes: AX, DX, DS, flags, DF.</summary>
     public virtual Action unknown_016E_0180_01860() {
         CheckExternalEvents(cs1, 0x0180);
         ImageMinus0002Globals.Word0190 += 1;
-        AX = 0;
+        AX = Alu16.Xor(AX, AX);
         DX = 0x1234;
         DS = 0x1234;
         DirectionFlag = false;

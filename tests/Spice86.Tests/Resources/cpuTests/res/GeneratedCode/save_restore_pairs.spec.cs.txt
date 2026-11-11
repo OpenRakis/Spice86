@@ -43,11 +43,9 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort di1 = 0;
         ushort ax;
         ushort bx;
         ushort ax1 = 0;
-        ushort cx1 = 0;
         ushort bx1 = 0;
         ushort cx;
         ushort bp1 = 0;
@@ -56,7 +54,7 @@ public partial class CfgGeneratedOverrides {
         ushort es;
         ushort di;
         ushort ax2 = 0;
-        ushort cx2 = 0;
+        ushort cx1 = 0;
         ushort bx3 = 0;
         ushort ax3 = 0;
         ushort bx4 = 0;
@@ -76,8 +74,7 @@ public partial class CfgGeneratedOverrides {
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        di1 = 0x0040;
-        SI = 0x01B0;
+        DI = 0x0040;
         ax = 0x1111;
         bx = BX;
         Segment2000Globals.Word0040 = ax;
@@ -89,19 +86,14 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0042 = AX;
         Stack.Push16(0x3333);
         ax1 = 0x5555;
-        cx1 = SegmentF000Globals.Word01B0;
-        Alu16.And(cx1, cx1);
-        if (cx1 != 0) {
+        CX = SegmentF000Globals.Word01B0;
+        if (CX != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x003C, Signature_003C_pop);
             ax1 = Stack.Pop16();
         }
         bx1 = Stack.Pop16();
         Segment2000Globals.Dword0044 = (uint)bx1 | (uint)ax1 << 16;
-        AX = 0x4444;
         Stack.Push16(0x4444);
-        DI = di1;
-        CX = cx1;
-        BX = bx1;
         NearCall(biosSegment, 0x004B, () => unknown_F000_01A7_F01A7(DI, DS));
         AX = Stack.Pop16();
         BX = bx1;
@@ -109,20 +101,20 @@ public partial class CfgGeneratedOverrides {
         bx = SP;
         AX = Stack.Pop16();
         CX = CX;
-        UInt16[DS, di1 + 0x0A] = bx;
+        Segment2000Globals.Word004A = bx;
         Stack.Push16(0x6666);
         cx = Segment2000Globals.Word0FFE;
         AX = Stack.Pop16();
         BX = bx;
-        UInt16[DS, di1 + 0x0C] = cx;
+        Segment2000Globals.Word004C = cx;
         bp1 = SP;
         Stack.Push16(0x7777);
         AX = Stack.Pop16();
         dx1 = SsUInt16[bp1 - 2];
-        UInt16[DS, di1 + 0x0E] = dx1;
+        Segment2000Globals.Word004E = dx1;
         bx2 = 0x8888;
         CX = 0x7777;
-        UInt16[DS, di1 + 0x10] = bx2;
+        Segment2000Globals.Word0050 = bx2;
         es = 0x1111;
         Stack.Push16(es);
         FlagRegister16 = Stack.Pop16();
@@ -142,7 +134,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0056 = cx;
         Stack.Push16(0x9999);
         bx = SP;
-        cx2 = Stack.Pop16();
+        cx1 = Stack.Pop16();
         DX = dx1;
         Segment2000Globals.Word0058 = bx;
         bx3 = (ushort)(SP - 2);
@@ -155,7 +147,7 @@ public partial class CfgGeneratedOverrides {
             ax3 = 0xBAD0;
         }
         SI = Stack.Pop16();
-        CX = cx2;
+        CX = cx1;
         Segment2000Globals.Word005A = ax3;
         bx4 = (ushort)(SP - 2);
         Stack.Push16(0x2222);
@@ -267,6 +259,14 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
 
     public uint Dword0044 { get => _memory.UInt32[Segment, 0x0044]; set => _memory.UInt32[Segment, 0x0044] = value; }
+
+    public ushort Word004A { get => _memory.UInt16[Segment, 0x004A]; set => _memory.UInt16[Segment, 0x004A] = value; }
+
+    public ushort Word004C { get => _memory.UInt16[Segment, 0x004C]; set => _memory.UInt16[Segment, 0x004C] = value; }
+
+    public ushort Word004E { get => _memory.UInt16[Segment, 0x004E]; set => _memory.UInt16[Segment, 0x004E] = value; }
+
+    public ushort Word0050 { get => _memory.UInt16[Segment, 0x0050]; set => _memory.UInt16[Segment, 0x0050] = value; }
 
     public ushort Word0052 { get => _memory.UInt16[Segment, 0x0052]; set => _memory.UInt16[Segment, 0x0052] = value; }
 

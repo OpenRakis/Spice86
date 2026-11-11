@@ -55,7 +55,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, BX, DS. Outputs: EAX, BX, flags, DF. Changes: EAX, BX, flags, DF.</summary>
+    /// <summary>Inputs: AX, BX, DS, DF. Outputs: EAX, BX, flags, DF. Changes: EAX, BX, flags, DF.</summary>
     public virtual Action unknown_F000_0300_F0300() {
         ushort ax1 = 0;
         byte al;
@@ -72,8 +72,9 @@ public partial class CfgGeneratedOverrides {
         AL = (byte)(ax1 == 0x1000 ? 1 : 0);
         AH = (byte)(DsGlobals.Word0410 == 0x8FFA ? 1 : 0);
         al = (byte)((AL & AH | BL) ^ 1);
+        CarryFlag = false;
         DsGlobals.Byte040D |= al;
-        DsGlobals.Byte040C += 1;
+        DsGlobals.Byte040C = Alu8.Inc(DsGlobals.Byte040C);
         PicPorts.WritePrimaryData(0xFF);
         PicPorts.WritePrimaryCommand(0x20);
         BX = Stack.Pop16();

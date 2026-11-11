@@ -27,18 +27,20 @@ internal sealed class IrLifter(
     InstructionLowerer lowerer,
     AstInstructionRenderer assemblyRenderer) {
 
-    /// <summary>No return-exit effect overrides: the first prepare round lifts as before.</summary>
-    public static readonly IReadOnlyDictionary<ICfgNode, IrEffects> NoExitEffects =
+    /// <summary>No effect overrides: the first prepare round lifts as before.</summary>
+    public static readonly IReadOnlyDictionary<ICfgNode, IrEffects> NoEffects =
         new Dictionary<ICfgNode, IrEffects>();
 
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order.</summary>
-    public IrMethod Lift(MethodPlan method) => Lift(method, NoExitEffects);
+    public IrMethod Lift(MethodPlan method) => Lift(method, NoEffects, NoEffects);
 
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order; an exit
     /// whose origin is a key of <paramref name="exitEffects"/> gets that entry's effect instead of
-    /// the transfer's own.</summary>
-    public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects) {
-        IrFlattener flattener = new(false, exitEffects);
+    /// the transfer's own, and the call statement of an origin in <paramref name="callEffects"/>
+    /// gets that summary instead of <see cref="IrEffects.Unknown"/>.</summary>
+    public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects) {
+        IrFlattener flattener = new(false, exitEffects, callEffects);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, IrBlock> startBlocks = [];
         Dictionary<ICfgNode, IrInstructionShape> shapes = [];

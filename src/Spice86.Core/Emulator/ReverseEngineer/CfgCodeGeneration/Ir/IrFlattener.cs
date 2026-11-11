@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using System.Linq;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
@@ -19,6 +20,7 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 internal sealed class IrFlattener {
     private readonly bool _raw;
     private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _exitEffects;
+    private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _callEffects;
     private readonly List<IrBlock> _blocks = [];
     private readonly Stack<Func<IrBlock>> _breakTargets = new();
     private readonly List<PendingJump> _pendingJumps = [];
@@ -28,13 +30,31 @@ internal sealed class IrFlattener {
     /// (<paramref name="raw"/> true): in raw mode the runtime transfer nodes become
     /// <see cref="IrExit"/>s and <see cref="WhileWithExitNode"/> lowers to a header branch plus an
     /// exit-condition branch at the body tail.</summary>
-    public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects) {
+    /// <param name="exitEffects">Return-exit effect overrides by instruction origin.</param>
+    /// <param name="callEffects">Resolved-call effect summaries by instruction origin, applied to
+    /// the statement that carries the call.</param>
+    public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects) {
         _raw = raw;
         _exitEffects = exitEffects;
+        _callEffects = callEffects;
     }
 
     private IrEffects? ExitEffectsOf(ICfgNode origin) =>
         _exitEffects.TryGetValue(origin, out IrEffects effects) ? effects : null;
+
+    private IrStatement CreateStatement(IVisitableAstNode node, ICfgNode origin, string localSuffix) {
+        IVisitableAstNode typed = IrNodeTyper.TypeStatement(node, localSuffix);
+        if (_callEffects.TryGetValue(origin, out IrEffects effects)) {
+            typed = AttachSummary(typed, effects);
+        }
+        return IrStatement.Create(typed, origin);
+    }
+
+    private static IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>
+        node is ProcedureCallHelperNode call
+            ? call with { Summary = effects }
+            : IrAstChildren.MapChildren(node, child => AttachSummary(child, effects));
 
     /// <summary>The blocks created so far, in creation order (instruction layout order).</summary>
     public List<IrBlock> Blocks => _blocks;
@@ -82,7 +102,7 @@ internal sealed class IrFlattener {
         if (_current == null || _current.HasTerminator) {
             throw new InvalidOperationException($"Statement added after the block of {origin.Address} was closed.");
         }
-        _editor.Append(_current, IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+        _editor.Append(_current, CreateStatement(statement, origin, localSuffix));
     }
 
     /// <summary>Flattens the statements of <paramref name="node"/> into blocks starting at the current one.</summary>
@@ -153,7 +173,7 @@ internal sealed class IrFlattener {
                 or CallbackNode:
                 throw new NotSupportedException($"Lowered node {statement.GetType().Name} cannot appear inside an instruction at {origin.Address}.");
             default:
-                _editor.Append(_current, IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+                _editor.Append(_current, CreateStatement(statement, origin, localSuffix));
                 break;
         }
     }

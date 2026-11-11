@@ -225,12 +225,6 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0050 = 2;
         Segment2000Globals.Dword0106 = 0x02DE02D7;
         BX = 0;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = true;
-        SignFlag = false;
-        OverflowFlag = false;
         if (Segment2000Globals.Word0106 != 0x02D7) {
             throw FailAsUntested($"Untested near call target 0x{UInt16[DS, BX + 0x0106]:X4} at F000:01E2");
         }

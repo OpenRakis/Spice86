@@ -96,7 +96,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
     }
 
-    /// <summary>Inputs: none. Outputs: BX, flags, DF. Changes: BX, flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: BX, flags, DF. Changes: BX, flags, DF.</summary>
     public virtual Action unknown_F000_0184_F0184() {
         CheckExternalEvents(biosSegment, 0x0184);
         BX = 0x0120;
@@ -171,7 +171,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(DS);
             ES = Stack.Pop16();
             BX += 0x0040;
-            SI = Alu16.Add(SI, 6);
+            SI += 6;
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
         DX = 0x0021;
@@ -186,10 +186,9 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte00D6 = 2;
         Segment2000Globals.Byte00D6 = 1;
         Segment2000Globals.Word0200 = 0xABCD;
-        AX = Segment2000Globals.Word0200;
-        Segment2000Globals.Word00D8 = AX;
+        Segment2000Globals.Word00D8 = 0xABCD;
         Segment2000Globals.Word0120 = 0x9999;
-        AX = Alu16.Xor(AX, AX);
+        AX = Alu16.Xor(0xABCD, 0xABCD);
         DS = 0;
         Segment0000Globals.Dword0034 = 0x00000184 | (uint)CS << 16;
         AX = 0x2000;

@@ -28,11 +28,11 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: BX, SI, DS. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
     public virtual Action unknown_F000_0022_F0022() {
         unknown_F000_0022_F0022Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0022);
-        SI++;
+        SI = Alu16.Add(SI, 1);
         DsGlobals.Word0000 = 0x0035;
         Stack.Push16(BP);
         frame.ReturnIp = 0x001A;
@@ -47,11 +47,11 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: SI. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
+    /// <summary>Inputs: SI, DF. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
     public virtual Action unknown_F000_0035_F0035() {
         unknown_F000_0035_F0035Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0035);
-        SI += 0x0010;
+        SI = Alu16.Add(SI, 0x0010);
         BX = 5;
         Stack.Push16(BP);
         frame.ReturnIp = 0x001A;

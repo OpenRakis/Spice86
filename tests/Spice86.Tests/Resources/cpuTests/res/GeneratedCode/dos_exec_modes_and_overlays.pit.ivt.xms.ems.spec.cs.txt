@@ -39,8 +39,8 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested return from call at 016D:0123");
         }
         AL = 0x53;
-        DS = ds1;
         NearCall(cs1, 0x011F, unknown_016D_02E0_019B0Entry);
+        DS = ds1;
         bx1 = ImageMinus0003Globals.Word002C;
         Alu16.Sub(bx1, 0);
         if (bx1 != 0) {
@@ -322,7 +322,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: AL, DF. Changes: AL, flags, DF.</summary>
+    /// <summary>Inputs: DF. Outputs: AL, DF. Changes: AL, flags, DF.</summary>
     public virtual Action unknown_01D6_0118_01E78() {
         CheckExternalEvents(cs2, 0x0118);
         AL = 0x5A;

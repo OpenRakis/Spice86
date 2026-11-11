@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, BX, DS. Outputs: CF, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: AX, BX, DS, CF, DF. Outputs: CF, DF. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual Action unknown_F000_0143_F0143() {
         CheckExternalEvents(biosSegment, 0x0143);

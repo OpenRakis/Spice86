@@ -47,54 +47,54 @@ public partial class CfgGeneratedOverrides {
         RealTimeClockPorts.WriteAddress(0x8B);
         CL = Segment0000Globals.Byte0000;
         AL = RealTimeClockPorts.ReadData();
-        AL = Alu8.And(AL, 0x7F);
+        AL &= 0x7F;
         Segment0000Globals.Byte0003 = AL;
         AL = 0x8B;
         RealTimeClockPorts.WriteAddress(0x8B);
         NearCall(biosSegment, 0x004B, unknown_F000_010D_F010DEntry);
         AL = RealTimeClockPorts.ReadData();
         AL &= 0x7F;
-        UInt8[DS, BX + 4] = AL;
+        Segment0000Globals.Byte0004 = AL;
         Pit.ProgramChannel(0, 0x34, 5);
         PitPorts.WriteControlWord(0xC2);
         AL = PitPorts.ReadChannel0Data();
         AL &= 0x3F;
-        UInt8[DS, BX + 5] = AL;
+        Segment0000Globals.Byte0005 = AL;
         Pit.ProgramChannel(2, 0xB6, 0x1234);
         PitPorts.WriteControlWord(0xC8);
         AL = PitPorts.ReadChannel2Data();
         AL &= 0x3F;
-        UInt8[DS, BX + 6] = AL;
+        Segment0000Globals.Byte0006 = AL;
         Vga.SetPaletteEntry(0x10, 1, 2, 3);
         VgaPorts.WriteDacData(0x3F);
         VgaPorts.WriteDacReadIndex(0x10);
         al = VgaPorts.ReadDacData();
-        UInt8[DS, BX + 7] = al;
+        Segment0000Globals.Byte0007 = al;
         AL = VgaPorts.ReadDacData();
-        UInt8[DS, BX + 8] = AL;
+        Segment0000Globals.Byte0008 = AL;
         al = VgaPorts.ReadDacData();
-        UInt8[DS, BX + 9] = al;
+        Segment0000Globals.Byte0009 = al;
         VgaPorts.WriteDacReadIndex(0x11);
         AL = VgaPorts.ReadDacData();
-        UInt8[DS, BX + 0x0A] = AL;
+        Segment0000Globals.Byte000A = AL;
         Vga.WriteSequencerRegister(2, 0x0F);
         VgaPorts.WriteSequencerAddress(2);
         al = VgaPorts.ReadSequencerData();
-        UInt8[DS, BX + 0x0B] = al;
+        Segment0000Globals.Byte000B = al;
         AX = 0x4005;
         Vga.WriteGraphicsControllerRegister(5, 0x40);
         VgaPorts.WriteGraphicsControllerAddress(5);
         al = VgaPorts.ReadGraphicsControllerData();
-        UInt8[DS, BX + 0x0C] = al;
+        Segment0000Globals.Byte000C = al;
         Opl3Ports.WriteAdlibAddress0(0x20);
         Opl3Ports.WriteAdlibData0(0xF1);
         AL = Opl3Ports.ReadAdlibAddress0();
-        UInt8[DS, BX + 0x0D] = AL;
+        Segment0000Globals.Byte000D = AL;
         Opl.WriteRegister(0x038A, 4, 0x21);
         DX = 0x038A;
         AL = Opl3Ports.ReadAdlibAddress1();
         AL = Alu8.And(AL, 0xC0);
-        UInt8[DS, BX + 0x0E] = AL;
+        Segment0000Globals.Byte000E = AL;
         return Hlt();
     }
 
@@ -123,6 +123,28 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
     public byte Byte0002 { get => _memory.UInt8[Segment, 0x0002]; set => _memory.UInt8[Segment, 0x0002] = value; }
 
     public byte Byte0003 { get => _memory.UInt8[Segment, 0x0003]; set => _memory.UInt8[Segment, 0x0003] = value; }
+
+    public byte Byte0004 { get => _memory.UInt8[Segment, 0x0004]; set => _memory.UInt8[Segment, 0x0004] = value; }
+
+    public byte Byte0005 { get => _memory.UInt8[Segment, 0x0005]; set => _memory.UInt8[Segment, 0x0005] = value; }
+
+    public byte Byte0006 { get => _memory.UInt8[Segment, 0x0006]; set => _memory.UInt8[Segment, 0x0006] = value; }
+
+    public byte Byte0007 { get => _memory.UInt8[Segment, 0x0007]; set => _memory.UInt8[Segment, 0x0007] = value; }
+
+    public byte Byte0008 { get => _memory.UInt8[Segment, 0x0008]; set => _memory.UInt8[Segment, 0x0008] = value; }
+
+    public byte Byte0009 { get => _memory.UInt8[Segment, 0x0009]; set => _memory.UInt8[Segment, 0x0009] = value; }
+
+    public byte Byte000A { get => _memory.UInt8[Segment, 0x000A]; set => _memory.UInt8[Segment, 0x000A] = value; }
+
+    public byte Byte000B { get => _memory.UInt8[Segment, 0x000B]; set => _memory.UInt8[Segment, 0x000B] = value; }
+
+    public byte Byte000C { get => _memory.UInt8[Segment, 0x000C]; set => _memory.UInt8[Segment, 0x000C] = value; }
+
+    public byte Byte000D { get => _memory.UInt8[Segment, 0x000D]; set => _memory.UInt8[Segment, 0x000D] = value; }
+
+    public byte Byte000E { get => _memory.UInt8[Segment, 0x000E]; set => _memory.UInt8[Segment, 0x000E] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

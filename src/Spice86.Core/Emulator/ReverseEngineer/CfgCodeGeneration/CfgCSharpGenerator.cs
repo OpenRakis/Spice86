@@ -92,7 +92,6 @@ internal sealed class CfgCSharpGenerator {
         if (program.Partitions.Count == 0) {
             throw new InvalidOperationException("Cannot generate C# for an empty CFG partitioned program.");
         }
-
         progress.BeginPhase(DumpPhase.CodeAnalysis);
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
         GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic);
@@ -143,41 +142,96 @@ internal sealed class CfgCSharpGenerator {
             program.Inputs.ProgramImages, progress);
 
         // A return exit reads only the outputs of its method's entries (plus every value the
-        // convention model does not describe and both tokens): methods where that set is smaller
-        // than the universal read of a first-round exit are prepared a second time with it, so the
-        // pipeline sees the real demand from the start.
+        // convention model does not describe and both tokens), and a resolved call reads and may
+        // write only what its target's convention and the hardware contract describe: methods where
+        // either set is smaller than a first-round universal effect are prepared a second time with
+        // them, so the pipeline sees the real demand from the start.
         int reprepared = 0;
+        Dictionary<IrCallingConventions.CallSummarySkip, int> callSkips = new();
+        int summarizedCalls = 0;
+        UsedFacts?[] used = new UsedFacts?[prepared.Count];
+        List<IReadOnlyDictionary<ICfgNode, IrEffects>> callEffectsByMethod = new(prepared.Count);
         for (int i = 0; i < prepared.Count; i++) {
-            IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects =
-                ReturnExitEffectsOf(prepared[i], analysis.ObservedConventions);
-            if (exitEffects.Count == 0) {
+            IReadOnlyDictionary<ICfgNode, CpuValues> exitReads =
+                ReturnExitReadsOf(prepared[i], analysis.ObservedConventions);
+            IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects = ExitEffectsFromReads(exitReads);
+            IReadOnlyDictionary<ICfgNode, IrEffects> callEffects =
+                CallEffectsOf(prepared[i], analysis.ObservedConventions,
+                    lowerer.HardwareInterruptEffect, callSkips);
+            callEffectsByMethod.Add(callEffects);
+            summarizedCalls += callEffects.Count;
+            if (exitEffects.Count == 0 && callEffects.Count == 0) {
                 continue;
             }
+            UsedFacts facts = new();
+            foreach ((ICfgNode origin, CpuValues reads) in exitReads) {
+                facts.ExitReads[origin] = reads;
+            }
+            foreach ((ICfgNode origin, IrEffects summary) in callEffects) {
+                facts.CallSummaries[origin] = summary;
+                facts.CallReads[origin] = summary.Reads;
+                facts.CallMayWrite[origin] = summary.MayWrite;
+            }
+            used[i] = facts;
             reprepared++;
             GenerationStepTimer timer = timers[i];
             MethodPlan methodPlan = plan.Methods[i];
             prepared[i] = timer.Measure("round 2 prepare",
-                () => methodEmitter.Prepare(methodPlan, timer, exitEffects));
+                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects));
         }
+        progress.Detail($"Resolved calls summarized: {summarizedCalls}; kept Unknown: "
+            + string.Join(", ", callSkips
+                .OrderBy(pair => pair.Key.ToString())
+                .Select(pair => $"{pair.Key}={pair.Value}")));
+        int rounds = 1;
         if (reprepared > 0) {
+            // The conventions over the re-prepared methods can demand a byte a used set did not
+            // cover: a demand that was killed by a universal call effect now passes through the
+            // summary. The soundness condition is on the consumed facts, not on printed sets:
+            // every exit and summarized call must read and may write a superset of what the final
+            // conventions demand of it. A method that violates it is prepared again with the
+            // union of what every round demanded; the unions only grow over a finite lattice, so
+            // this terminates - the round cap is a bug detector, not a tolerance.
             progress.Detail("Preparation round 2");
-            ProgramAnalysis second = ProgramAnalysis.Compute(prepared, context, effectBuilder,
+            ProgramAnalysis current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
                 program.Inputs.ProgramImages, progress);
-            IrCallingConventions.VerifySubset(analysis.CallingConventions.OutputsSnapshot(),
-                second.CallingConventions.OutputsSnapshot(), "outputs");
-            IrCallingConventions.VerifySubset(analysis.CallingConventions.ReadsSnapshot(),
-                second.CallingConventions.ReadsSnapshot(), "entry reads");
-            IrCallingConventions.VerifySubset(analysis.ObservedConventions.OutputsSnapshot(),
-                second.ObservedConventions.OutputsSnapshot(), "observed outputs");
-            IrCallingConventions.VerifySubset(analysis.ObservedConventions.ReadsSnapshot(),
-                second.ObservedConventions.ReadsSnapshot(), "observed entry reads");
-            analysis = second;
+            rounds = 2;
+            while (true) {
+                List<(int Index, string Reason)> violated = ConsumeViolations(prepared, used,
+                    current.ObservedConventions, lowerer.HardwareInterruptEffect);
+                if (violated.Count == 0) {
+                    analysis = current;
+                    break;
+                }
+                if (rounds >= 8) {
+                    throw new InvalidOperationException(
+                        $"Round-two conventions did not converge in {rounds} rounds: "
+                        + string.Join("; ", violated.Select(violation =>
+                            $"{prepared[violation.Index].Method.MethodName}: {violation.Reason}")));
+                }
+                rounds++;
+                foreach ((int index, _) in violated) {
+                    UsedFacts facts = used[index]!;
+                    IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects =
+                        ExitEffectsFromReads(facts.ExitReads);
+                    IReadOnlyDictionary<ICfgNode, IrEffects> callEffects =
+                        CallEffectsFromUsed(facts);
+                    callEffectsByMethod[index] = callEffects;
+                    GenerationStepTimer timer = timers[index];
+                    prepared[index] = timer.Measure($"round {rounds} prepare",
+                        () => methodEmitter.Prepare(plan.Methods[index], timer,
+                            exitEffects, callEffects));
+                }
+                progress.Detail($"Preparation round {rounds}");
+                current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
+                    program.Inputs.ProgramImages, progress);
+            }
             if (_verify) {
                 VerifyObservedExitReads(prepared, analysis.ObservedConventions);
+                VerifyObservedCallReads(prepared, callEffectsByMethod, analysis.ObservedConventions);
             }
-            progress.Detail($"Round-two conventions computed over {reprepared} re-prepared methods in {second.CallingConventions.Iterations} iterations");
+            progress.Detail($"Round-two conventions computed over {reprepared} re-prepared methods in {rounds} rounds");
         }
-
         RewritePreparedBodies(prepared, program, analysis);
 
         IReadOnlyList<SpeculativeRunFieldPlan> speculativeRunFields = NameSpeculativeRunFields(prepared);
@@ -269,15 +323,30 @@ internal sealed class CfgCSharpGenerator {
     /// the code demand, so a value only the final machine state reads is still written back at the
     /// exit without becoming a signature parameter or output. Empty when no return exit
     /// shrinks.</summary>
-    private static IReadOnlyDictionary<ICfgNode, IrEffects> ReturnExitEffectsOf(
+    /// <summary>The facts a prepare round consumed for a method: the read set every return exit
+    /// was given, and the reads and may-write every summarized call was given. Rounds after the
+    /// second widen these with anything the recomputed conventions demand of them.</summary>
+    private sealed class UsedFacts {
+        public Dictionary<ICfgNode, CpuValues> ExitReads { get; } = new();
+        public Dictionary<ICfgNode, CpuValues> CallReads { get; } = new();
+        public Dictionary<ICfgNode, CpuValues> CallMayWrite { get; } = new();
+        public Dictionary<ICfgNode, IrEffects> CallSummaries { get; } = new();
+    }
+
+    /// <summary>The reads every return exit of <paramref name="prepared"/> demands under
+    /// <paramref name="conventions"/>: the union of its method entries' observed
+    /// <see cref="IrCallingConventions.OutputsOf"/> plus every value the conventions do not
+    /// describe plus the landing inputs the method changed. Includes exits that still demand
+    /// every value - the fixed point needs the full demand to detect growth back to it.</summary>
+    private static IReadOnlyDictionary<ICfgNode, CpuValues> ReturnExitReadsOf(
         PreparedMethod prepared, IrCallingConventions conventions) {
         string methodName = prepared.Method.MethodName;
         List<IrExit> returnExits = prepared.IrMethod.Blocks
             .Where(block => block.HasTerminator && block.Terminator is IrExit exit
-                && exit.Effects == IrEffects.ExitUse && conventions.IsReturnExit(methodName, exit))
+                && conventions.IsReturnExit(methodName, exit))
             .Select(block => (IrExit)block.Terminator).ToList();
         if (returnExits.Count == 0) {
-            return IrLifter.NoExitEffects;
+            return new Dictionary<ICfgNode, CpuValues>();
         }
         CpuValues outputs = CpuValues.None;
         CpuValues changes = CpuValues.None;
@@ -286,17 +355,158 @@ internal sealed class CfgCSharpGenerator {
             changes |= conventions.EffectOf(entry).Writes;
         }
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
-        Dictionary<ICfgNode, IrEffects> effects = new();
+        Dictionary<ICfgNode, CpuValues> reads = new();
         foreach (IrExit exit in returnExits) {
-            CpuValues reads = outputs | nonReportable
+            reads[exit.Origin] = outputs | nonReportable
                 | (conventions.LandingInputsOf(methodName, exit) & changes);
+        }
+        return reads;
+    }
+
+    /// <summary>The effects to give return exits in a prepare round: both tokens read, nothing
+    /// written, no fault. Exits whose demand is every value keep
+    /// <see cref="IrEffects.ExitUse"/>.</summary>
+    private static IReadOnlyDictionary<ICfgNode, IrEffects> ExitEffectsFromReads(
+        IReadOnlyDictionary<ICfgNode, CpuValues> readsByExit) {
+        Dictionary<ICfgNode, IrEffects> effects = new();
+        foreach ((ICfgNode origin, CpuValues reads) in readsByExit) {
             if (reads == CpuValues.All) {
                 continue;
             }
-            effects[exit.Origin] = new IrEffects(reads, CpuValues.None, CpuValues.None,
+            effects[origin] = new IrEffects(reads, CpuValues.None, CpuValues.None,
                 IrTokens.All, IrTokens.None, false, false);
         }
-        return effects.Count == 0 ? IrLifter.NoExitEffects : effects;
+        return effects.Count == 0 ? IrLifter.NoEffects : effects;
+    }
+
+    /// <summary>The effects to give summarized calls in a prepare round after the second: the
+    /// union of what every earlier round demanded of them, over the last summary's shape
+    /// (tokens, fault, interrupt delivery).</summary>
+    private static IReadOnlyDictionary<ICfgNode, IrEffects> CallEffectsFromUsed(UsedFacts facts) {
+        Dictionary<ICfgNode, IrEffects> effects = new();
+        foreach ((ICfgNode origin, IrEffects summary) in facts.CallSummaries) {
+            effects[origin] = new IrEffects(facts.CallReads[origin], CpuValues.None,
+                facts.CallMayWrite[origin], IrTokens.All, IrTokens.All, summary.MayFault, true);
+        }
+        return effects.Count == 0 ? IrLifter.NoEffects : effects;
+    }
+
+    /// <summary>Every method whose consumed facts are below what <paramref name="conventions"/>
+    /// demands of them: a return exit whose reads grew, or a summarized call whose target inputs
+    /// or changes grew - or that the conventions no longer summarize at all, which drops the
+    /// summary so the call goes back to <see cref="IrEffects.Unknown"/>. The used sets are
+    /// widened in place with the new demands.</summary>
+    private static List<(int Index, string Reason)> ConsumeViolations(
+        List<PreparedMethod> prepared, UsedFacts?[] used,
+        IrCallingConventions conventions, CallEffect contract) {
+        List<(int Index, string Reason)> violated = new();
+        for (int i = 0; i < prepared.Count; i++) {
+            UsedFacts? facts = used[i];
+            if (facts is null) {
+                continue;
+            }
+            List<string> reasons = new();
+            foreach ((ICfgNode origin, CpuValues demand) in
+                     ReturnExitReadsOf(prepared[i], conventions)) {
+                CpuValues was = facts.ExitReads.GetValueOrDefault(origin, CpuValues.All);
+                CpuValues grew = demand & ~was;
+                if (grew != CpuValues.None) {
+                    facts.ExitReads[origin] = was | demand;
+                    reasons.Add($"exit {origin.Address} reads grew by {grew}");
+                }
+            }
+            if (facts.CallSummaries.Count > 0) {
+                string methodName = prepared[i].Method.MethodName;
+                Dictionary<ICfgNode, IrStatement> callStatements = new();
+                foreach (IrBlock block in prepared[i].IrMethod.Blocks) {
+                    foreach (IrStatement statement in block.Statements) {
+                        if (statement.Origin is CfgInstruction { IsCall: true }) {
+                            callStatements.TryAdd(statement.Origin, statement);
+                        }
+                    }
+                }
+                foreach (ICfgNode origin in facts.CallSummaries.Keys.ToList()) {
+                    if (!callStatements.TryGetValue(origin, out IrStatement? statement)) {
+                        continue;
+                    }
+                    (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
+                        conventions.CallSummaryOf(methodName, statement, contract);
+                    if (effect is null) {
+                        facts.CallSummaries.Remove(origin);
+                        facts.CallReads.Remove(origin);
+                        facts.CallMayWrite.Remove(origin);
+                        reasons.Add($"call {origin.Address} is no longer summarized ({skip})");
+                        continue;
+                    }
+                    CpuValues readsGrew = effect.Value.Reads & ~facts.CallReads[origin];
+                    CpuValues mayGrew = effect.Value.MayWrite & ~facts.CallMayWrite[origin];
+                    if (readsGrew != CpuValues.None || mayGrew != CpuValues.None) {
+                        facts.CallReads[origin] |= effect.Value.Reads;
+                        facts.CallMayWrite[origin] |= effect.Value.MayWrite;
+                        reasons.Add($"call {origin.Address} summary grew reads {readsGrew}, may-write {mayGrew}");
+                    }
+                }
+            }
+            if (reasons.Count > 0) {
+                violated.Add((i, string.Join("; ", reasons)));
+            }
+        }
+        return violated;
+    }
+
+    /// <summary>The effects to give the method's call statements in a second prepare round: the
+    /// summary the observed conventions compute for every resolved call whose target returns,
+    /// lands nowhere redirected and cannot reach a fault edge. Call sites that keep
+    /// <see cref="IrEffects.Unknown"/> are counted by reason in <paramref name="skips"/>.</summary>
+    private static IReadOnlyDictionary<ICfgNode, IrEffects> CallEffectsOf(
+        PreparedMethod prepared, IrCallingConventions conventions, CallEffect contract,
+        Dictionary<IrCallingConventions.CallSummarySkip, int> skips) {
+        Dictionary<ICfgNode, IrEffects> effects = new();
+        string methodName = prepared.Method.MethodName;
+        foreach (IrBlock block in prepared.IrMethod.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (statement.Origin is not CfgInstruction { IsCall: true }) {
+                    continue;
+                }
+                (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
+                    conventions.CallSummaryOf(methodName, statement, contract);
+                if (effect is { } summary) {
+                    effects[statement.Origin] = summary;
+                } else {
+                    skips[skip] = skips.GetValueOrDefault(skip) + 1;
+                }
+            }
+        }
+        return effects.Count == 0 ? IrLifter.NoEffects : effects;
+    }
+
+    /// <summary>Verify mode: every summarized call statement's reads cover the observed inputs of
+    /// its targets - a target input the summary missed could sit in a promoted local whose
+    /// write-back the caller then never emits before the call.</summary>
+    private static void VerifyObservedCallReads(List<PreparedMethod> prepared,
+        IReadOnlyList<IReadOnlyDictionary<ICfgNode, IrEffects>> callEffectsByMethod,
+        IrCallingConventions conventions) {
+        for (int i = 0; i < prepared.Count; i++) {
+            if (callEffectsByMethod[i].Count == 0) {
+                continue;
+            }
+            string methodName = prepared[i].Method.MethodName;
+            foreach (IrBlock block in prepared[i].IrMethod.Blocks) {
+                foreach (IrStatement statement in block.Statements) {
+                    if (!callEffectsByMethod[i].ContainsKey(statement.Origin)
+                        || !IrAstChildren.Descendants(statement.Node).OfType<ProcedureCallHelperNode>()
+                            .Any(call => call.Summary is not null)) {
+                        continue;
+                    }
+                    CpuValues inputs = conventions.CallTargetsInputsOf(methodName, statement);
+                    if ((inputs & ~statement.Effects.Reads) != CpuValues.None) {
+                        throw new InvalidOperationException(
+                            $"Resolved call of {methodName} reads {statement.Effects.Reads}," +
+                            $" below its targets' observed inputs {inputs}.");
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>Verify mode: every return exit's reads cover the promotable part of its observed

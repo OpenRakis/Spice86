@@ -19,9 +19,11 @@ public partial class CfgGeneratedOverrides {
         ushort ax;
         ushort di1 = 0;
         ushort dx;
+        ushort dx1 = 0;
+        ushort di2 = 0;
         ushort di;
         ushort si1 = 0;
-        ushort di2 = 0;
+        ushort di3 = 0;
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x006A);
         try {
@@ -57,8 +59,8 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, BX + 0x0C] = CX;
         dx = DsGlobals.Word0E10;
         UInt16[DS, BX + 0x0E] = dx;
-        DX = DsGlobals.Word0E14;
-        UInt16[DS, BX + 0x10] = DX;
+        dx1 = DsGlobals.Word0E14;
+        UInt16[DS, BX + 0x10] = dx1;
         AH = UInt8[CS, SI + 6];
         AL = 3;
         InterruptCall(biosSegment, 0x00B5, 0x60, biosSegment, 0x011E, unknown_F000_011E_F011EEntry);
@@ -70,8 +72,8 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00BC);
         AX = UInt16[CS, SI + 8];
         EsGlobals.Word0E20 = AX;
-        DI = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
-        UInt16[DS, BX + 0x14] = DI;
+        di2 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[DS, BX + 0x14] = di2;
         DirectionFlag = false;
         (AX, BP, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_0123_F0123(AX, BP));
         EsGlobals.Word0E30 = AX;
@@ -80,23 +82,23 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         Stack.Push16(SI);
         si1 = 0x0E20;
-        di2 = 0x0E40;
+        di3 = 0x0E40;
         CX = 2;
         do {
             CheckExternalEvents(biosSegment, 0x00DD);
-            UInt8[ES, di2] = UInt8[DS, si1];
+            UInt8[ES, di3] = UInt8[DS, si1];
             si1++;
-            di2++;
+            di3++;
             CX--;
         } while (CX != 0);
         SI = Stack.Pop16();
-        UInt16[DS, BX + 0x18] = di2;
+        UInt16[DS, BX + 0x18] = di3;
         DX = DsGlobals.Word0E40;
         UInt16[DS, BX + 0x1A] = DX;
         BX += 0x0040;
         SI = Alu16.Add(SI, 0x000A);
         DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
-        DI = di2;
+        DI = di3;
         if (!ZeroFlag) {
             if (JumpDispatcher.Jump(unknown_F000_0058_F0058Entry, 0x0000)) {
                 goto entrydispatcher;
@@ -104,18 +106,18 @@ public partial class CfgGeneratedOverrides {
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
         InterruptFlag = false;
-        DI = di2;
+        DI = di3;
         return Hlt();
     }
 
-    /// <summary>Inputs: AX, BP, DS. Outputs: AX, CX, BP, flags, DF. Changes: AX, CX, BP, flags, DF.</summary>
+    /// <summary>Inputs: AX, BP, DS, DF. Outputs: AX, CX, BP, flags, DF. Changes: AX, CX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_00FB_F00FB() {
         unknown_F000_00FB_F00FBFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x00FB);
         Stack.Push16(BP);
         DsGlobals.Word0E00 = AX;
         CX = 7;
-        AX += 0x0010;
+        AX = Alu16.Add(AX, 0x0010);
         frame.ReturnIp = 0x006A;
         BP = Stack.Pop16();
         return InterruptRet();
@@ -128,7 +130,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: AX, CX, BP, DS. Outputs: AX, CX, BP, flags, DF. Changes: AX, CX, BP, flags, DF.</summary>
+    /// <summary>Inputs: AX, CX, BP, DS, flags. Outputs: AX, CX, BP, flags, DF. Changes: AX, CX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_010E_F010E() {
         CheckExternalEvents(biosSegment, 0x010E);
         Stack.Push16(AX);
@@ -143,7 +145,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BP. Outputs: AX, BP, flags. Changes: AX, CX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_011E_F011E() {
         CheckExternalEvents(biosSegment, 0x011E);
-        AL += AH;
+        AL = Alu8.Add(AL, AH);
         AH = 0x77;
         return InterruptRet();
     }

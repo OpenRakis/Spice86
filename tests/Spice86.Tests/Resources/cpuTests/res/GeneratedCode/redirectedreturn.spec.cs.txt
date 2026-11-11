@@ -63,7 +63,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: none. Outputs: flags, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0057_F0057() {
         CheckExternalEvents(biosSegment, 0x0057);
         return InterruptRet();

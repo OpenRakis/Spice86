@@ -13,6 +13,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: CF. Changes: AX, CF.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_0377_F0377() {
         CheckExternalEvents(biosSegment, 0x0377);
@@ -27,14 +28,14 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: CX. Outputs: CX. Changes: AX, CX, flags, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000.
+    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     public virtual Action unknown_F000_0379_F0379() {
         CheckExternalEvents(biosSegment, 0x0379);
-        CX++;
+        CX = Alu16.Add(CX, 1);
         return InterruptRet();
     }
 
-    /// <summary>Inputs: AX, DS. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: AX, DS, flags. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_F000_037D_F037D() {
         CheckExternalEvents(biosSegment, 0x037D);
         Stack.Push16(AX);
@@ -45,7 +46,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: AX, BP, DS. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: AX, BP, DS, flags, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_F000_038A_F038A() {
         CheckExternalEvents(biosSegment, 0x038A);
         DsGlobals.Word0E08 = BP;
@@ -63,13 +64,14 @@ public partial class CfgGeneratedOverrides {
         ushort di;
         ushort cx1 = 0;
         ushort ax1 = 0;
-        ushort es;
         ushort cx2 = 0;
+        ushort es;
+        ushort cx3 = 0;
         ushort ax2 = 0;
         ushort si1 = 0;
         ushort es1 = 0;
         ushort es2 = 0;
-        ushort cx3 = 0;
+        ushort cx4 = 0;
         byte al;
         ushort flagOperand_0091 = 0;
         ushort flagOperand_0246 = 0;
@@ -85,7 +87,6 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Dword0184 = 0x00000379 | (uint)CS << 16;
         Segment0000Globals.Dword0020 = 0x0000037D | (uint)CS << 16;
         AX = 0x2000;
-        ES = 0x2000;
         do {
             CheckExternalEvents(biosSegment, 0x003A);
             ax = UInt16[CS, SI + 2];
@@ -102,10 +103,9 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x18] = di;
             EDX = 0;
             AX = UInt16[CS, SI + 0x0A];
-            DsGlobals.Word0F30 = AX;
-            dx = DsGlobals.Word0F30;
-            DsGlobals.Word0F30 = 9;
-            cx1 = dx;
+            Segment2000Globals.Word0F30 = AX;
+            Segment2000Globals.Word0F30 = 9;
+            cx1 = AX;
             UInt16[DS, BX + 4] = cx1;
             EDX = 0;
             DI = UInt16[CS, SI + 0x1E];
@@ -136,8 +136,9 @@ public partial class CfgGeneratedOverrides {
             }
             UInt16[DS, BX + 0x0E] = DX;
             AX = UInt16[CS, SI + 0x14];
-            CX = UInt16[CS, SI + 0x16];
-            AX = Alu16.Sub(AX, CX);
+            cx2 = UInt16[CS, SI + 0x16];
+            CarryFlag = AX < cx2;
+            AX -= cx2;
             CarryFlag = NearCall(biosSegment, 0x00CE, () => unknown_F000_0377_F0377());
             if (!CarryFlag) {
                 VerifySpeculativeEntryOrFail(biosSegment, 0x00D7, Signature_00D7_mov);
@@ -146,15 +147,14 @@ public partial class CfgGeneratedOverrides {
             else {
                 UInt16[DS, BX + 0x10] = 1;
             }
-            DsGlobals.Word0F60 = 0xAAAA;
-            DsGlobals.Word0F62 = 0xBEEF;
-            ushort lxsValue_00EB = DsGlobals.Word0F60;
-            ushort lxsSegment_00EB = DsGlobals.Word0F62;
+            Segment2000Globals.Dword0F60 = 0xBEEFAAAAu;
+            ushort lxsValue_00EB = Segment2000Globals.Word0F60;
+            ushort lxsSegment_00EB = Segment2000Globals.Word0F62;
             DI = lxsValue_00EB;
             es = lxsSegment_00EB;
             Stack.Push16(es);
-            cx2 = Stack.Pop16();
-            UInt16[DS, BX + 0x12] = cx2;
+            cx3 = Stack.Pop16();
+            UInt16[DS, BX + 0x12] = cx3;
             ES = 0x2000;
             ax2 = UInt16[CS, SI + 0x18];
             BP = UInt16[CS, SI + 0x1A];
@@ -175,13 +175,14 @@ public partial class CfgGeneratedOverrides {
                 EAX = 0x00001105;
             }
             UInt8[DS, BX + 0x16] = AH;
-            AX = UInt16[CS, SI + 0x32];
-            DsGlobals.Word0F40 = AX;
+            ax = UInt16[CS, SI + 0x32];
+            Segment2000Globals.Word0F40 = ax;
             CX = UInt16[CS, SI + 0x34];
-            ushort sum_0141 = (ushort)(CX + DsGlobals.Word0F40);
-            CX = DsGlobals.Word0F40;
-            DsGlobals.Word0F40 = sum_0141;
+            ushort sum_0141 = (ushort)(CX + ax);
+            CX = ax;
+            Segment2000Globals.Word0F40 = sum_0141;
             UInt16[DS, BX + 6] = CX;
+            AX = ax;
             AX = Alu16.Or(AX, 1);
             UInt16[DS, BX + 0x1A] = 0xBBBB;
             AX = UInt16[CS, SI + 0x2A];
@@ -217,8 +218,8 @@ public partial class CfgGeneratedOverrides {
             CX = 0x0041;
             InterruptCall(biosSegment, 0x01AF, 0x61, biosSegment, 0x0379, unknown_F000_0379_F0379Entry);
             UInt16[DS, BX + 0x28] = CX;
-            DsGlobals.Byte0E60 = 0xA5;
-            DsGlobals.Byte0E06 = 0;
+            Segment2000Globals.Byte0E60 = 0xA5;
+            Segment2000Globals.Byte0E06 = 0;
             Pit.ProgramChannel(0, 0x36, 0x2251);
             AL = 0xFE;
             PicPorts.WritePrimaryData(0xFE);
@@ -226,21 +227,21 @@ public partial class CfgGeneratedOverrides {
             InterruptFlag = true;
             do {
                 CheckExternalEvents(biosSegment, 0x01CE);
-            } while (DsGlobals.Byte0E06 == 0);
+            } while (Segment2000Globals.Byte0E06 == 0);
             InterruptFlag = false;
             Stack.Push16(SI);
-            Segment2000Globals.Byte0E70 = DsGlobals.Byte0E60;
+            Segment2000Globals.Byte0E70 = Segment2000Globals.Byte0E60;
             SI = 0x0E5F;
             DI = 0x0E6F;
             si1 = Stack.Pop16();
             DirectionFlag = false;
             UInt16[DS, BX + 0x2A] = 0x0E6F;
-            DL = DsGlobals.Byte0E70;
+            DL = Segment2000Globals.Byte0E70;
             DH = 0;
             UInt16[DS, BX + 0x2C] = DX;
             PicPorts.WritePrimaryData(0xFF);
-            DsGlobals.Word0E08 = 0;
-            DsGlobals.Byte0E0A = 0;
+            Segment2000Globals.Word0E08 = 0;
+            Segment2000Globals.Byte0E0A = 0;
             Stack.Push16(ES);
             AX = 0;
             ES = 0;
@@ -252,10 +253,10 @@ public partial class CfgGeneratedOverrides {
             InterruptFlag = true;
             do {
                 CheckExternalEvents(biosSegment, 0x0214);
-            } while (DsGlobals.Byte0E0A == 0);
+            } while (Segment2000Globals.Byte0E0A == 0);
             EBP = 0;
             InterruptFlag = false;
-            UInt16[DS, BX + 0x2E] = DsGlobals.Word0E08;
+            UInt16[DS, BX + 0x2E] = Segment2000Globals.Word0E08;
             PicPorts.WritePrimaryData(0xFF);
             Stack.Push16(es1);
             ES = 0;
@@ -264,11 +265,11 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x3A] = 7;
             Stack.Push16(0x1234);
             flagOperand_0246 = UInt16[DS, BX + 0x3A];
-            cx3 = Stack.Pop16();
+            cx4 = Stack.Pop16();
             if (flagOperand_0246 == 7) {
-                UInt16[DS, BX + 0x38] = cx3;
+                UInt16[DS, BX + 0x38] = cx4;
             }
-            EAX = CsGlobals.Dword0406;
+            EAX = SegmentF000Globals.Dword0406;
             CX = 2;
             do {
                 CheckExternalEvents(biosSegment, 0x0258);
@@ -277,9 +278,9 @@ public partial class CfgGeneratedOverrides {
             } while (CX != 0);
             UInt32[DS, BX + 0x3C] = EAX;
             EAX = 0;
-            EDX = CsGlobals.Dword0406;
+            EDX = SegmentF000Globals.Dword0406;
             EDX = 0xAABBCCDDu;
-            DX = CsGlobals.Word040A;
+            DX = SegmentF000Globals.Word040A;
             UInt32[DS, BX + 0x30] = EDX;
             EDX = 0;
             Stack.Push16(es2);
@@ -346,7 +347,7 @@ public partial class CfgGeneratedOverrides {
             BX += 0x0040;
             SI = si1;
             SI = Alu16.Add(SI, 0x0036);
-            DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
+            Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
         return Hlt();
     }
@@ -379,52 +380,6 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
 
     /// DS:0x0E0A, whatever DS holds at the access.
     public byte Byte0E0A { get => _memory.UInt8[Segment, 0x0E0A]; set => _memory.UInt8[Segment, 0x0E0A] = value; }
-
-    /// DS:0x0E60, whatever DS holds at the access.
-    public byte Byte0E60 { get => _memory.UInt8[Segment, 0x0E60]; set => _memory.UInt8[Segment, 0x0E60] = value; }
-
-    /// DS:0x0E70, whatever DS holds at the access.
-    public byte Byte0E70 { get => _memory.UInt8[Segment, 0x0E70]; set => _memory.UInt8[Segment, 0x0E70] = value; }
-
-    /// DS:0x0F00, whatever DS holds at the access.
-    public ushort Word0F00 { get => _memory.UInt16[Segment, 0x0F00]; set => _memory.UInt16[Segment, 0x0F00] = value; }
-
-    /// DS:0x0F30, whatever DS holds at the access.
-    public ushort Word0F30 { get => _memory.UInt16[Segment, 0x0F30]; set => _memory.UInt16[Segment, 0x0F30] = value; }
-
-    /// DS:0x0F40, whatever DS holds at the access.
-    public ushort Word0F40 { get => _memory.UInt16[Segment, 0x0F40]; set => _memory.UInt16[Segment, 0x0F40] = value; }
-
-    /// DS:0x0F60, whatever DS holds at the access.
-    public ushort Word0F60 { get => _memory.UInt16[Segment, 0x0F60]; set => _memory.UInt16[Segment, 0x0F60] = value; }
-
-    /// DS:0x0F62, whatever DS holds at the access.
-    public ushort Word0F62 { get => _memory.UInt16[Segment, 0x0F62]; set => _memory.UInt16[Segment, 0x0F62] = value; }
-}
-
-// ==== file: CsGlobals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
-
-namespace Spice86.Generated;
-
-public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
-    private readonly IMemory _memory;
-    private readonly SegmentRegisters _segmentRegisters;
-
-    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex];
-
-    public CsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
-        _memory = memory;
-        _segmentRegisters = segmentRegisters;
-    }
-
-    /// CS:0x0406, whatever CS holds at the access.
-    public uint Dword0406 { get => _memory.UInt32[Segment, 0x0406]; set => _memory.UInt32[Segment, 0x0406] = value; }
-
-    /// CS:0x040A, whatever CS holds at the access.
-    public ushort Word040A { get => _memory.UInt16[Segment, 0x040A]; set => _memory.UInt16[Segment, 0x040A] = value; }
 }
 
 // ==== file: Segment0000Globals.cs ====
@@ -466,9 +421,27 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
         Segment = 0x2000;
     }
 
+    public byte Byte0E06 { get => _memory.UInt8[Segment, 0x0E06]; set => _memory.UInt8[Segment, 0x0E06] = value; }
+
+    public ushort Word0E08 { get => _memory.UInt16[Segment, 0x0E08]; set => _memory.UInt16[Segment, 0x0E08] = value; }
+
+    public byte Byte0E0A { get => _memory.UInt8[Segment, 0x0E0A]; set => _memory.UInt8[Segment, 0x0E0A] = value; }
+
+    public byte Byte0E60 { get => _memory.UInt8[Segment, 0x0E60]; set => _memory.UInt8[Segment, 0x0E60] = value; }
+
     public byte Byte0E70 { get => _memory.UInt8[Segment, 0x0E70]; set => _memory.UInt8[Segment, 0x0E70] = value; }
 
     public ushort Word0F00 { get => _memory.UInt16[Segment, 0x0F00]; set => _memory.UInt16[Segment, 0x0F00] = value; }
+
+    public ushort Word0F30 { get => _memory.UInt16[Segment, 0x0F30]; set => _memory.UInt16[Segment, 0x0F30] = value; }
+
+    public ushort Word0F40 { get => _memory.UInt16[Segment, 0x0F40]; set => _memory.UInt16[Segment, 0x0F40] = value; }
+
+    public ushort Word0F60 { get => _memory.UInt16[Segment, 0x0F60]; set => _memory.UInt16[Segment, 0x0F60] = value; }
+
+    public uint Dword0F60 { get => _memory.UInt32[Segment, 0x0F60]; set => _memory.UInt32[Segment, 0x0F60] = value; }
+
+    public ushort Word0F62 { get => _memory.UInt16[Segment, 0x0F62]; set => _memory.UInt16[Segment, 0x0F62] = value; }
 }
 
 // ==== file: SegmentA000Globals.cs ====
@@ -496,6 +469,27 @@ public sealed class SegmentA000Globals : MemoryBasedDataStructure {
     public byte Byte0010 { get => _memory.UInt8[Segment, 0x0010]; set => _memory.UInt8[Segment, 0x0010] = value; }
 }
 
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public uint Dword0406 { get => _memory.UInt32[Segment, 0x0406]; set => _memory.UInt32[Segment, 0x0406] = value; }
+
+    public ushort Word040A { get => _memory.UInt16[Segment, 0x040A]; set => _memory.UInt16[Segment, 0x040A] = value; }
+}
+
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -519,18 +513,18 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
-    protected readonly CsGlobals CsGlobals;
     protected readonly Segment0000Globals Segment0000Globals;
     protected readonly Segment2000Globals Segment2000Globals;
     protected readonly SegmentA000Globals SegmentA000Globals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
-        CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         SegmentA000Globals = new SegmentA000Globals(Memory, programStartSegment);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
         unknown_F000_0377_F0377_AsmEntry = _ => unknown_F000_0377_F0377_Asm();
         unknown_F000_0379_F0379Entry = _ => unknown_F000_0379_F0379();

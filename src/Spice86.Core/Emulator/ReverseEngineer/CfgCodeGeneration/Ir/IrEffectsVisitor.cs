@@ -162,6 +162,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         BoundCheckCallNode => IrEffects.None,
         InterruptServiceCallNode service => ServiceContractEffects.Of(service),
         InterruptCallHelperNode call => ServiceContractEffects.Of(call),
+        ProcedureCallHelperNode call => call.Summary ?? IrEffects.Unknown,
         FpuControlCallNode => WriteFpuControlWord,
         _ => IrEffects.Unknown
     };

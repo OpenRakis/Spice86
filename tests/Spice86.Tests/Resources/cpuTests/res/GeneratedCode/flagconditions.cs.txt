@@ -13,6 +13,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS. Outputs: AX, CX, BX, BP, SI, ES, DS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
     public virtual (ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds, bool carryFlag) unknown_F000_02F5_F02F5(ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds) {
         AX = ax;
         CX = cx;
@@ -33,6 +34,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS, CF. Outputs: AX, CX, BX, BP, SI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// Direction flag at entry, from every call site: clear.
     public virtual (ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds) unknown_F000_02F8_F02F8(ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds, bool carryFlag) {
         AX = ax;
         CX = cx;
@@ -302,8 +304,8 @@ public partial class CfgGeneratedOverrides {
             cx1 = 2;
             while (cx1 != 0) {
                 Alu8.Sub(UInt8[DS, si1], UInt8[ES, di1]);
-                si1 += (ushort)(DirectionFlag ? -1 : 1);
-                di1 += (ushort)(DirectionFlag ? -1 : 1);
+                si1++;
+                di1++;
                 cx1--;
                 if (!ZeroFlag) {
                     break;
@@ -317,7 +319,7 @@ public partial class CfgGeneratedOverrides {
             cx2 = 2;
             while (cx2 != 0) {
                 Alu8.Sub(AL, UInt8[ES, di2]);
-                di2 += (ushort)(DirectionFlag ? -1 : 1);
+                di2++;
                 cx2--;
                 if (ZeroFlag) {
                     break;
@@ -333,8 +335,8 @@ public partial class CfgGeneratedOverrides {
             cx3 = 2;
             while (cx3 != 0) {
                 bool equal_028A = UInt8[DS, si2] == UInt8[ES, di3];
-                si2 += (ushort)(DirectionFlag ? -1 : 1);
-                di3 += (ushort)(DirectionFlag ? -1 : 1);
+                si2++;
+                di3++;
                 cx3--;
                 if (!equal_028A) {
                     break;

@@ -44,7 +44,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: DS. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: DS, CF, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_F000_005A_F005A() {
         unknown_F000_005A_F005AFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x005A);
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
         AX = DsGlobals.Word0004;
         frame.ReturnIp = AX;
         BP = Stack.Pop16();
-        DsGlobals.Word0000 += 1;
+        DsGlobals.Word0000 = Alu16.Inc(DsGlobals.Word0000);
         return InterruptRet();
     }
 

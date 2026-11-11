@@ -35,13 +35,13 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: DS. Outputs: flags, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: DS, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_003D_F003D() {
         unknown_F000_003D_F003DFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x003D);
         DsGlobals.Word0040 += 1;
         Stack.Push16(BP);
-        frame.ReturnIp += 6;
+        frame.ReturnIp = Alu16.Add(frame.ReturnIp, 6);
         BP = Stack.Pop16();
         return InterruptRet();
     }

@@ -13,6 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX. Outputs: CF. Changes: flags.</summary>
+    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_00BD_F00BD(ushort ax, ushort cx) {
         AX = ax;
         CX = cx;
@@ -87,9 +89,9 @@ public partial class CfgGeneratedOverrides {
             }
             UInt16[DS, BX + 6] = ax1;
             ax2 = UInt16[CS, SI];
-            DsGlobals.Word0E00 = ax2;
-            flagOperand_006A = DsGlobals.Byte0E00;
-            DsGlobals.Byte0E00 = 9;
+            Segment2000Globals.Word0E00 = ax2;
+            flagOperand_006A = Segment2000Globals.Byte0E00;
+            Segment2000Globals.Byte0E00 = 9;
             UInt8[DS, BX + 8] = 1;
             if (flagOperand_006A != 5) {
                 UInt8[DS, BX + 8] = 2;
@@ -98,7 +100,8 @@ public partial class CfgGeneratedOverrides {
             Alu16.Sub(ax2, CX);
             Stack.Push16(FlagRegister16);
             DX = Stack.Pop16();
-            DX = Alu16.And(DX, 0x08D5);
+            CarryFlag = false;
+            DX &= 0x08D5;
             UInt16[DS, BX + 0x0A] = DX;
             AX = ax2;
             CarryFlag = NearCall(biosSegment, 0x0090, () => unknown_F000_00BD_F00BD(AX, CX));
@@ -116,39 +119,11 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x10] = AX;
             BX += 0x0040;
             SI = Alu16.Add(SI, 8);
-            DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
+            Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
         return Hlt();
     }
 
-}
-
-// ==== file: DsGlobals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
-
-namespace Spice86.Generated;
-
-public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
-    private readonly IMemory _memory;
-    private readonly SegmentRegisters _segmentRegisters;
-
-    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
-
-    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
-        _memory = memory;
-        _segmentRegisters = segmentRegisters;
-    }
-
-    /// DS:0x0E00, whatever DS holds at the access.
-    public byte Byte0E00 { get => _memory.UInt8[Segment, 0x0E00]; set => _memory.UInt8[Segment, 0x0E00] = value; }
-
-    /// DS:0x0E00, whatever DS holds at the access.
-    public ushort Word0E00 { get => _memory.UInt16[Segment, 0x0E00]; set => _memory.UInt16[Segment, 0x0E00] = value; }
-
-    /// DS:0x0F00, whatever DS holds at the access.
-    public ushort Word0F00 { get => _memory.UInt16[Segment, 0x0F00]; set => _memory.UInt16[Segment, 0x0F00] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====
@@ -166,6 +141,10 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
         _memory = memory;
         Segment = 0x2000;
     }
+
+    public byte Byte0E00 { get => _memory.UInt8[Segment, 0x0E00]; set => _memory.UInt8[Segment, 0x0E00] = value; }
+
+    public ushort Word0E00 { get => _memory.UInt16[Segment, 0x0E00]; set => _memory.UInt16[Segment, 0x0E00] = value; }
 
     public ushort Word0F00 { get => _memory.UInt16[Segment, 0x0F00]; set => _memory.UInt16[Segment, 0x0F00] = value; }
 }
@@ -189,12 +168,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00BD_F00BD_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
-    protected readonly DsGlobals DsGlobals;
     protected readonly Segment2000Globals Segment2000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
-        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
 
         unknown_F000_00BD_F00BD_AsmEntry = _ => unknown_F000_00BD_F00BD_Asm();

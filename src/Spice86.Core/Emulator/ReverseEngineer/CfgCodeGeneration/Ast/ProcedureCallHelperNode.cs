@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -33,10 +34,15 @@ internal sealed record ProcedureCallHelperNode : MethodCallNode {
     /// <summary>Whether a continuation was observed after the call during discovery.</summary>
     public bool ObservedContinuation { get; init; }
 
+    /// <summary>The callee-convention summary the call provably has, or
+    /// <see langword="null"/> when the call must keep <see cref="IrEffects.Unknown"/>.</summary>
+    public IrEffects? Summary { get; init; }
+
     /// <inheritdoc />
     public override MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
         new ProcedureCallHelperNode(Distance, Width, arguments) {
             SingleObservedTarget = SingleObservedTarget,
-            ObservedContinuation = ObservedContinuation
+            ObservedContinuation = ObservedContinuation,
+            Summary = Summary
         };
 }

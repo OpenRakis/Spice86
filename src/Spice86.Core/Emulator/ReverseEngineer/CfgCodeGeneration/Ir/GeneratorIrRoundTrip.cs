@@ -47,7 +47,7 @@ internal sealed class GeneratorIrRoundTrip : IExecutionAstRewriter {
 
     private static IVisitableAstNode RewriteInstruction(CfgInstruction instruction,
         IVisitableAstNode executionAst) {
-        IrFlattener flattener = new(true, IrLifter.NoExitEffects);
+        IrFlattener flattener = new(true, IrLifter.NoEffects, IrLifter.NoEffects);
         IrBlock start = flattener.StartBlock(instruction, true, null);
         flattener.Flatten(executionAst, instruction, string.Empty, _ => false);
         if (flattener.PendingJumps.Count > 0) {

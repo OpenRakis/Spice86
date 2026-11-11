@@ -63,11 +63,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_F000_06A8_F06A8() {
-        byte al1 = 0;
-        ushort ax1 = 0;
-        byte al2 = 0;
-        ushort ax2 = 0;
-        uint eax1 = 0;
         ushort flagOperand_06B6 = 0;
         byte flagOperand_06F8 = 0;
         byte flagOperand_0754 = 0;
@@ -137,6 +132,10 @@ public partial class CfgGeneratedOverrides {
         if (0x78 != flagOperand_0754) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFF;
         EDI = 0x0001FFFF;
         Segment2100Globals.ByteFFFF = 0x78;
@@ -150,14 +149,25 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_077F != 0x78) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFF;
         Segment6100Globals.ByteFFFF = 0x78;
         EAX = 0;
-        al1 = Segment2100Globals.ByteFFFF;
+        AL = Segment2100Globals.ByteFFFF;
         SI = 0;
-        Alu8.Sub(al1, 0x78);
-        AL = al1;
-        if (al1 != 0x78) {
+        Alu8.Sub(AL, 0x78);
+        if (AL != 0x78) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = false;
@@ -192,6 +202,10 @@ public partial class CfgGeneratedOverrides {
         if (0x5678 != flagOperand_0835) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFE;
         EDI = 0x0001FFFE;
         Segment2100Globals.WordFFFE = 0x5678;
@@ -205,14 +219,25 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0863 != 0x5678) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFE;
         Segment6100Globals.WordFFFE = 0x5678;
         EAX = 0;
-        ax1 = Segment2100Globals.WordFFFE;
+        AX = Segment2100Globals.WordFFFE;
         SI = 0;
-        Alu16.Sub(ax1, 0x5678);
-        AX = ax1;
-        if (ax1 != 0x5678) {
+        Alu16.Sub(AX, 0x5678);
+        if (AX != 0x5678) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = false;
@@ -247,6 +272,10 @@ public partial class CfgGeneratedOverrides {
         if (0x12345678 != flagOperand_092D) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFC;
         EDI = 0x0001FFFC;
         Segment2100Globals.DwordFFFC = 0x12345678;
@@ -260,12 +289,24 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0968 != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (EDI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x0001FFFC;
         Segment6100Globals.DwordFFFC = 0x12345678;
         EAX = Segment2100Globals.DwordFFFC;
         SI = 0;
         Alu32.Sub(EAX, 0x12345678);
         if (EAX != 0x12345678) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x00010000, 0x00010000);
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = true;
@@ -300,6 +341,10 @@ public partial class CfgGeneratedOverrides {
         if (0x78 != flagOperand_0A24) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFF, 0x0001FFFF);
+        if (EDI != 0x0001FFFF) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         EDI = 0x00010000;
         Segment2100Globals.Byte0000 = 0x78;
@@ -313,14 +358,25 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0A4F != 0x78) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFF, 0x0001FFFF);
+        if (EDI != 0x0001FFFF) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFF, 0x0001FFFF);
+        if (ESI != 0x0001FFFF) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         Segment6100Globals.Byte0000 = 0x78;
         EAX = 0;
-        al2 = Segment2100Globals.Byte0000;
+        AL = Segment2100Globals.Byte0000;
         SI = 0xFFFF;
-        Alu8.Sub(al2, 0x78);
-        AL = al2;
-        if (al2 != 0x78) {
+        Alu8.Sub(AL, 0x78);
+        if (AL != 0x78) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFF, 0x0001FFFF);
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = true;
@@ -355,6 +411,10 @@ public partial class CfgGeneratedOverrides {
         if (0x5678 != flagOperand_0B05) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFE, 0x0001FFFE);
+        if (EDI != 0x0001FFFE) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         EDI = 0x00010000;
         Segment2100Globals.Word0000 = 0x5678;
@@ -368,14 +428,25 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0B33 != 0x5678) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFE, 0x0001FFFE);
+        if (EDI != 0x0001FFFE) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFE, 0x0001FFFE);
+        if (ESI != 0x0001FFFE) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         Segment6100Globals.Word0000 = 0x5678;
         EAX = 0;
-        ax2 = Segment2100Globals.Word0000;
+        AX = Segment2100Globals.Word0000;
         SI = 0xFFFE;
-        Alu16.Sub(ax2, 0x5678);
-        AX = ax2;
-        if (ax2 != 0x5678) {
+        Alu16.Sub(AX, 0x5678);
+        if (AX != 0x5678) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFE, 0x0001FFFE);
+        if (ESI != 0x0001FFFE) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = true;
@@ -410,6 +481,10 @@ public partial class CfgGeneratedOverrides {
         if (0x12345678 != flagOperand_0BFD) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFC, 0x0001FFFC);
+        if (EDI != 0x0001FFFC) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         EDI = 0x00010000;
         Segment2100Globals.Dword0000 = 0x12345678;
@@ -423,13 +498,24 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0C38 != 0x12345678) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(0x0001FFFC, 0x0001FFFC);
+        if (EDI != 0x0001FFFC) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFC, 0x0001FFFC);
+        if (ESI != 0x0001FFFC) {
+            return unknown_F000_15C7_F15C7();
+        }
         ESI = 0x00010000;
         Segment6100Globals.Dword0000 = 0x12345678;
-        eax1 = Segment2100Globals.Dword0000;
+        EAX = Segment2100Globals.Dword0000;
         SI = 0xFFFC;
-        Alu32.Sub(eax1, 0x12345678);
-        EAX = eax1;
-        if (eax1 != 0x12345678) {
+        Alu32.Sub(EAX, 0x12345678);
+        if (EAX != 0x12345678) {
+            return unknown_F000_15C7_F15C7();
+        }
+        Alu32.Sub(0x0001FFFC, 0x0001FFFC);
+        if (ESI != 0x0001FFFC) {
             return unknown_F000_15C7_F15C7();
         }
         DirectionFlag = false;

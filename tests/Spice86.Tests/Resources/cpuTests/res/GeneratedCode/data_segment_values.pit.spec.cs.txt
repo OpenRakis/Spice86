@@ -26,7 +26,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x02A3);
         Stack.Push16(BP);
         BP = SP;
-        SP = Alu16.Sub(SP, 2);
+        SP -= 2;
         frame.Local4 = 0xD4D4;
         (BP, DS) = NearCall(biosSegment, 0x02B1, () => unknown_F000_02B9_F02B9(BP, DS));
         AL = SsUInt8[BP - 2];
@@ -316,7 +316,6 @@ public partial class CfgGeneratedOverrides {
         ES = DsGlobals.Word006C;
         al = EsGlobals.Byte0062;
         DsGlobals.Byte0047 = al;
-        CarryFlag = false;
         DI = 0;
         AX = 0x2000;
         ES = 0x2000;
@@ -326,8 +325,7 @@ public partial class CfgGeneratedOverrides {
             al = EsGlobals.Byte0062;
             UInt8[DS, DI + 0x48] = al;
             DI++;
-            AX = ES;
-            AX = Alu16.Inc(AX);
+            AX = (ushort)(ES + 1);
             ES = AX;
             CX--;
         } while (CX != 0);
@@ -448,12 +446,11 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0E60 = 0;
         Pit.ProgramChannel(0, 0x36, 0x2251);
         AL = 0;
-        CarryFlag = false;
         PicPorts.WritePrimaryData(0);
         CX = 0xFFFF;
         do {
             CheckExternalEvents(biosSegment, 0x026D);
-            CX = Alu16.Dec(CX);
+            CX--;
         } while (CX != 0);
         NearCall(biosSegment, 0x0273, unknown_F000_02A3_F02A3Entry);
         DsGlobals.Byte0083 = AL;

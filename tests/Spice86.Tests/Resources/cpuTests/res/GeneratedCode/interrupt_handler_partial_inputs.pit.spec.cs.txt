@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AH, CH, BH, DS. Outputs: EAX, ECX, EBX, flags, DF. Changes: EAX, ECX, EBX, flags, DF.</summary>
+    /// <summary>Inputs: AH, ECX, BH, DS, DF. Outputs: EAX, ECX, EBX, flags, DF. Changes: EAX, ECX, EBX, flags, DF.</summary>
     public virtual Action unknown_F000_0046_F0046() {
         CheckExternalEvents(biosSegment, 0x0046);
         DsGlobals.Byte0050 += 1;
@@ -35,7 +35,7 @@ public partial class CfgGeneratedOverrides {
         }
         EAX = 0;
         EBX = 0;
-        ECX = 0;
+        ECX = Alu32.Xor(ECX, ECX);
         return InterruptRet();
     }
 

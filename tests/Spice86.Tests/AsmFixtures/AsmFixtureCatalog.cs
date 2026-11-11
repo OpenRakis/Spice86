@@ -1108,6 +1108,24 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs convention_resolved_calls: the stored results prove a resolved call gets the
+    /// callee's convention as its summary - needed reads and flag writes survive, dead writes go -
+    /// while a call that can reach a fault edge stays conservative, and the hardware contract
+    /// keeps a register the callee's event checks read for the interrupt handler.</summary>
+    public static AsmFixture ConventionResolvedCalls() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_resolved_calls", MaxCycles = 1000000, EnablePit = true }, result => {
+            result.Memory.UInt16[0x2000, 0x0300].Should().Be(0x1111, "the callee reads BX, so the caller's write survives");
+            result.Memory.UInt16[0x2000, 0x0302].Should().Be(9, "the callee does not read CX and the caller overwrites it: the earlier write is dead");
+            result.Memory.UInt8[0x2000, 0x030A].Should().Be(1, "the callee's stc stays observable through the call's may-write, so jc sees it");
+            result.Memory.UInt16[0x2000, 0x0306].Should().Be(0xBEEF,
+                "the faulting callee keeps the call Unknown, so the caller's BP write reaches the divide-error handler");
+            result.Memory.UInt16[0x2000, 0x0304].Should().Be(1,
+                "the faulting callee keeps the call Unknown, so the divide-error handler's CX write reaches the caller");
+            result.Memory.UInt16[0x2000, 0x0308].Should().Be(0x5555,
+                "the timer handler reads SI through the callee's event checks, so the caller's SI write survives");
+        });
+    }
+
     /// <summary>Runs stack_esp_high_bits: the dword stored at 2000:0200 keeps the ESP high half
     /// <c>mov esp</c> set, with the low half back at 1000h after balanced 32-bit stack ops.</summary>
     public static AsmFixture StackEspHighBits() {

@@ -10,9 +10,11 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -135,27 +137,6 @@ internal sealed class IrCallingConventions {
             ? LandingInputs(site)
             : Reportable;
 
-    /// <summary>The <see cref="OutputsOf"/> value of every entry, for the round-two subset check.</summary>
-    internal IReadOnlyDictionary<CfgCodePartitionEntry, CpuValues> OutputsSnapshot() =>
-        _states.ToDictionary(pair => pair.Key, pair => pair.Value.Outputs);
-
-    /// <summary>The <see cref="EffectOf"/> reads of every entry, for the round-two subset check.</summary>
-    internal IReadOnlyDictionary<CfgCodePartitionEntry, CpuValues> ReadsSnapshot() =>
-        _states.ToDictionary(pair => pair.Key, pair => pair.Value.Inputs);
-
-    /// <summary>Throws when <paramref name="later"/> holds a value bit <paramref name="earlier"/>
-    /// does not: round two of the prepare only removes writes justified by round one, so its
-    /// convention sets can only shrink.</summary>
-    internal static void VerifySubset<TKey>(IReadOnlyDictionary<TKey, CpuValues> earlier,
-        IReadOnlyDictionary<TKey, CpuValues> later, string label) where TKey : notnull {
-        foreach ((TKey key, CpuValues value) in later) {
-            CpuValues before = earlier.GetValueOrDefault(key, Reportable);
-            if ((value & ~before) != CpuValues.None) {
-                throw new InvalidOperationException(
-                    $"Round-two {label} of {key} grew beyond the round-one set: {value} not a subset of {before}.");
-            }
-        }
-    }
 
     /// <summary>Whether the method of <paramref name="entry"/> has a return exit or a resolved
     /// exit to another partition.</summary>
@@ -177,6 +158,129 @@ internal sealed class IrCallingConventions {
             }
         }
         return true;
+    }
+
+    /// <summary>Why a call site did not get a summary: its target or continuation is not fully
+    /// observed (<see cref="CallSummarySkip.Unresolved"/>), it may return to a redirected address
+    /// (<see cref="CallSummarySkip.RedirectedReturn"/>), a method reachable from its target through
+    /// calls has an observed fault edge (<see cref="CallSummarySkip.FaultReachable"/>) or its
+    /// target never returns (<see cref="CallSummarySkip.NonReturning"/>).</summary>
+    internal enum CallSummarySkip { NotCallSite, Unresolved, RedirectedReturn, FaultReachable, NonReturning }
+
+    /// <summary>The effect a resolved call statement gets in round two: the union of its target's
+    /// inputs and changes (under this conventions instance) plus the stack reads and the hardware
+    /// contract's <paramref name="contract"/> reads and writes - the callee's event checks can
+    /// deliver hardware interrupts. Both tokens are read and written and interrupts delivered, as
+    /// any call. <see langword="null"/> - the call keeps <see cref="IrEffects.Unknown"/> - when the
+    /// site is not a modelled call, the single target form is not observed, a redirected return is
+    /// possible, the target never returns, or a fault edge is reachable from it: a fault handler
+    /// observes every register at the fault point, which no summary covers.</summary>
+    internal (IrEffects? Effect, CallSummarySkip Skip) CallSummaryOf(
+        string methodName, IrStatement statement, CallEffect contract) {
+        if (!_methodByName.TryGetValue(methodName, out MethodData? data)
+            || !data.CallByStatement.TryGetValue(statement, out CallSite? call)) {
+            return (null, CallSummarySkip.NotCallSite);
+        }
+        if (!call.Resolved || call.Targets.Count != 1 || !call.ObservedContinuation) {
+            return (null, CallSummarySkip.Unresolved);
+        }
+        if (call.RedirectedReturn) {
+            return (null, CallSummarySkip.RedirectedReturn);
+        }
+        CfgCodePartitionEntry target = call.Targets[0];
+        if (!Returns(target)) {
+            return (null, CallSummarySkip.NonReturning);
+        }
+        if (ReachesFaultEdge(target)) {
+            return (null, CallSummarySkip.FaultReachable);
+        }
+        EntryState state = _states[target];
+        IrEffects effect = new(
+            state.Inputs | CpuValues.Sp | CpuValues.Ss | CpuValues.Cs | contract.Reads
+                | PushedBytesReachable(target),
+            CpuValues.None, state.Changes | CpuValues.Sp | contract.Writes,
+            IrTokens.All, IrTokens.All, statement.Effects.MayFault, true);
+        return (effect, CallSummarySkip.NotCallSite);
+    }
+
+    /// <summary>The bytes the resolved targets of <paramref name="statement"/>'s call site input;
+    /// <see cref="Reportable"/> when the site is not a modelled call.</summary>
+    internal CpuValues CallTargetsInputsOf(string methodName, IrStatement statement) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.CallByStatement.TryGetValue(statement, out CallSite? call)
+        && call.Resolved
+            ? TargetsInputs(call)
+            : Reportable;
+
+    /// <summary>Whether a method with an observed fault edge - a statement of an instruction that
+    /// can fault into a handler - is reachable from <paramref name="entry"/>'s method through
+    /// resolved calls and resolved partition transfers, transitively.</summary>
+    private bool ReachesFaultEdge(CfgCodePartitionEntry entry) {
+        if (!_methodByEntry.TryGetValue(entry, out MethodData? start)) {
+            return true;
+        }
+        HashSet<MethodData> seen = [start];
+        Queue<MethodData> work = new([start]);
+        while (work.Count > 0) {
+            MethodData method = work.Dequeue();
+            if (method.HasFaultEdge || method.HasUnresolvedTransfer) {
+                return true;
+            }
+            foreach (CallSite call in method.Calls.Where(call => call.Resolved)) {
+                foreach (CfgCodePartitionEntry target in call.Targets) {
+                    if (_methodByEntry.TryGetValue(target, out MethodData? next) && seen.Add(next)) {
+                        work.Enqueue(next);
+                    }
+                }
+            }
+            foreach (CfgCodePartitionEntry target in method.TransferTargets) {
+                if (_methodByEntry.TryGetValue(target, out MethodData? next) && seen.Add(next)) {
+                    work.Enqueue(next);
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>The register bytes a method reachable from <paramref name="entry"/> through
+    /// resolved calls and resolved partition transfers pushes onto the stack. A pushed value
+    /// lands in RAM and stays observable in the final machine state even when a complete
+    /// pop-restore reads the slot back - the convention's save/restore narrowing correctly
+    /// reports the register preserved but says nothing about the bytes left in memory, so the
+    /// caller's register must still hold the pushed version when the call runs.</summary>
+    private CpuValues PushedBytesReachable(CfgCodePartitionEntry entry) {
+        if (!_methodByEntry.TryGetValue(entry, out MethodData? start)) {
+            return Reportable;
+        }
+        CpuValues pushed = CpuValues.None;
+        HashSet<MethodData> seen = [start];
+        Queue<MethodData> work = new([start]);
+        while (work.Count > 0) {
+            MethodData method = work.Dequeue();
+            foreach (IrStatement statement in method.Source.IrMethod.Blocks
+                     .SelectMany(block => block.Statements)) {
+                foreach (StackCallNode node in IrAstChildren.Descendants(statement.Node)
+                         .OfType<StackCallNode>()) {
+                    if (node.Operation == StackOperation.Push
+                        && node.Arguments is [RegisterNode register]) {
+                        pushed |= IrValueSets.Of(register);
+                    }
+                }
+            }
+            foreach (CallSite call in method.Calls.Where(call => call.Resolved)) {
+                foreach (CfgCodePartitionEntry target in call.Targets) {
+                    if (_methodByEntry.TryGetValue(target, out MethodData? next) && seen.Add(next)) {
+                        work.Enqueue(next);
+                    }
+                }
+            }
+            foreach (CfgCodePartitionEntry target in method.TransferTargets) {
+                if (_methodByEntry.TryGetValue(target, out MethodData? next) && seen.Add(next)) {
+                    work.Enqueue(next);
+                }
+            }
+        }
+        return pushed;
     }
 
     /// <summary>The stack slots the preprocess computed for <paramref name="methodName"/>;
@@ -272,6 +376,10 @@ internal sealed class IrCallingConventions {
         public required int[] DefinedVersions { get; init; }
         public required List<CfgCodePartitionEntry> Targets { get; init; }
         public required bool Resolved { get; init; }
+        /// <summary>Whether a continuation was observed after the call during discovery.</summary>
+        public required bool ObservedContinuation { get; init; }
+        /// <summary>Whether the call has an observed redirected-return landing.</summary>
+        public required bool RedirectedReturn { get; init; }
     }
 
     private enum ExitKind { Return, Abort, TransferResolved, TransferUnresolved }
@@ -298,6 +406,16 @@ internal sealed class IrCallingConventions {
         public required Dictionary<IrStatement, CallSite> CallByStatement { get; init; }
         public required Dictionary<IrExit, ExitSite> ExitByTerminator { get; init; }
         public required Dictionary<int, CfgCodePartitionEntry> EntryByLoadOffset { get; init; }
+        /// <summary>The partition entries the method's terminators (exits and conditional
+        /// branches alike) hand control to, resolved or not.</summary>
+        public required List<CfgCodePartitionEntry> TransferTargets { get; init; }
+        /// <summary>Whether a terminator transfers to a target that maps to no partition
+        /// entry - an edge into unmodelled code.</summary>
+        public bool HasUnresolvedTransfer { get; set; }
+        /// <summary>Whether any statement of the method's instructions can fault into a handler.</summary>
+        public bool HasFaultEdge => Source.IrMethod.Blocks
+            .SelectMany(block => block.Statements)
+            .Any(statement => statement.Effects.MayFault);
         public bool Returns { get; set; }
         /// <summary><see langword="true"/> when a state the memos were computed under changed and
         /// they must be cleared before the next <see cref="Needed"/> or <see cref="Preservation"/> call.</summary>
@@ -322,6 +440,7 @@ internal sealed class IrCallingConventions {
                 CallByStatement = [],
                 ExitByTerminator = [],
                 EntryByLoadOffset = [],
+                TransferTargets = [],
                 Preservation = CreatePreservation(source, slots)
             };
         }
@@ -371,7 +490,12 @@ internal sealed class IrCallingConventions {
                         defined[(int)value] = version;
                     }
                 }
-                CallSite site = new() { DefinedVersions = defined, Targets = targets, Resolved = resolved };
+                CallContinuation continuation = _context.ResolveCallContinuation(instruction);
+                CallSite site = new() {
+                    DefinedVersions = defined, Targets = targets, Resolved = resolved,
+                    ObservedContinuation = continuation.ObservedContinuationEdge is not null,
+                    RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0
+                };
                 method.Calls.Add(site);
                 method.CallByStatement[statement] = site;
                 if (resolved) {
@@ -383,6 +507,13 @@ internal sealed class IrCallingConventions {
                         callers.Add((method, site));
                         AddReader(target, method);
                     }
+                }
+            }
+            if (block.HasTerminator) {
+                foreach (IVisitableAstNode root in IrAstChildren.TerminatorNodes(block.Terminator)) {
+                    (bool found, bool resolved) = CollectTransferNodes(root, method.TransferTargets,
+                        TransferTargetOf);
+                    method.HasUnresolvedTransfer |= found && !resolved;
                 }
             }
             if (block.HasTerminator && block.Terminator is IrExit exit) {
@@ -414,39 +545,7 @@ internal sealed class IrCallingConventions {
             };
         }
         List<CfgCodePartitionEntry> targets = [];
-        bool foundTransfer = false;
-        bool resolved = true;
-        foreach (IVisitableAstNode node in IrAstChildren.Descendants(exit.Transfer)) {
-            switch (node) {
-                case MethodCallNode { PropertyPath: null } call
-                    when call.GetType() == typeof(MethodCallNode): {
-                    foundTransfer = true;
-                    int? loadOffset = call.Arguments switch {
-                        [] => 0,
-                        [OffsetLiteralNode literal] => literal.Value,
-                        _ => null
-                    };
-                    if (loadOffset is { } resolvedOffset
-                        && _methodByName.TryGetValue(call.MethodName, out MethodData? target)
-                        && target.EntryByLoadOffset.TryGetValue(resolvedOffset, out CfgCodePartitionEntry? entry)) {
-                        targets.Add(entry);
-                    } else {
-                        resolved = false;
-                    }
-                    break;
-                }
-                case CyclicJumpNode cyclic: {
-                    foundTransfer = true;
-                    if (_methodByName.TryGetValue(cyclic.MethodName, out MethodData? target)
-                        && target.EntryByLoadOffset.TryGetValue(cyclic.LoadOffset, out CfgCodePartitionEntry? entry)) {
-                        targets.Add(entry);
-                    } else {
-                        resolved = false;
-                    }
-                    break;
-                }
-            }
-        }
+        (bool foundTransfer, bool resolved) = CollectTransferNodes(exit.Transfer, targets, ExitTargetOf);
         if (foundTransfer) {
             return new ExitSite {
                 Exit = exit, Block = block, Iret = false,
@@ -463,6 +562,82 @@ internal sealed class IrCallingConventions {
             Exit = exit, Block = block, Iret = false,
             Kind = kind
         };
+    }
+
+    /// <summary>The partition entry an exit's method call or cyclic jump reaches: a name in the
+    /// method table whose <paramref name="loadOffset"/> (<see langword="null"/> for no arguments)
+    /// maps to an entry.</summary>
+    private bool ExitTargetOf(string methodName, int? loadOffset,
+        [NotNullWhen(true)] out CfgCodePartitionEntry? entry) {
+        if (!_methodByName.TryGetValue(methodName, out MethodData? target)) {
+            entry = null;
+            return false;
+        }
+        return target.EntryByLoadOffset.TryGetValue(loadOffset ?? 0, out entry);
+    }
+
+    private delegate bool TransferResolver(string methodName, int? loadOffset,
+        [NotNullWhen(true)] out CfgCodePartitionEntry? entry);
+
+    /// <summary>The partition entries <paramref name="transfer"/> hands control to: the resolved
+    /// targets of its method calls and cyclic jumps. <c>Found</c> is false when the node transfers
+    /// nowhere, <c>Resolved</c> false when a transfer's target cannot be mapped to an entry - the
+    /// hand-off then reaches unmodelled code.</summary>
+    private (bool Found, bool Resolved) CollectTransferNodes(IVisitableAstNode transfer,
+        List<CfgCodePartitionEntry> targets, TransferResolver resolver) {
+        bool foundTransfer = false;
+        bool resolved = true;
+        foreach (IVisitableAstNode node in IrAstChildren.Descendants(transfer)) {
+            switch (node) {
+                case MethodCallNode { PropertyPath: null } call
+                    when call.GetType() == typeof(MethodCallNode): {
+                    foundTransfer = true;
+                    bool offsetKnown = call.Arguments is [] or [OffsetLiteralNode];
+                    int? loadOffset = call.Arguments is [OffsetLiteralNode literal]
+                        ? literal.Value
+                        : null;
+                    if (offsetKnown
+                        && resolver(call.MethodName, loadOffset,
+                            out CfgCodePartitionEntry? entry)) {
+                        targets.Add(entry);
+                    } else {
+                        resolved = false;
+                    }
+                    break;
+                }
+                case CyclicJumpNode cyclic: {
+                    foundTransfer = true;
+                    if (resolver(cyclic.MethodName, cyclic.LoadOffset,
+                            out CfgCodePartitionEntry? entry)) {
+                        targets.Add(entry);
+                    } else {
+                        resolved = false;
+                    }
+                    break;
+                }
+            }
+        }
+        return (foundTransfer, resolved);
+    }
+
+    /// <summary>The partition entry <paramref name="methodName"/>'s transfer at
+    /// <paramref name="loadOffset"/> reaches; a <see langword="null"/> offset is the method's
+    /// primary entry, and an <c>_Asm</c> wrapper name resolves to the typed method it wraps.</summary>
+    private bool TransferTargetOf(string methodName, int? loadOffset,
+        [NotNullWhen(true)] out CfgCodePartitionEntry? entry) {
+        const string AsmSuffix = "_Asm";
+        string resolvedName = methodName.EndsWith(AsmSuffix, StringComparison.Ordinal)
+            ? methodName[..^AsmSuffix.Length]
+            : methodName;
+        if (!_methodByName.TryGetValue(resolvedName, out MethodData? target)) {
+            entry = null;
+            return false;
+        }
+        if (loadOffset is null) {
+            entry = target.Source.Method.PrimaryEntry;
+            return true;
+        }
+        return target.EntryByLoadOffset.TryGetValue(loadOffset.Value, out entry);
     }
 
     /// <summary>Fills <paramref name="targets"/> with the partition entries the return

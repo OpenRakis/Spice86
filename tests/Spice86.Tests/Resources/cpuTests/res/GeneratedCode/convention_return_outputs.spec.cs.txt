@@ -135,9 +135,8 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0202 = 1;
         }
         else {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x001E, Signature_001E_mov);
+            VerifySpeculativeRunOrFail(biosSegment, 0x001E, SpeculativeRun_001E);
             Segment2000Globals.Byte0202 = 0;
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0023, Signature_0023_jmp);
         }
         DX = NearCall(biosSegment, 0x002D, () => unknown_F000_005D_F005D());
         Segment2000Globals.Word0204 = DX;
@@ -279,6 +278,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_001E_mov = [0xC6, 0x06, 0x02, 0x02, 0x00];
     private static readonly byte?[] Signature_0023_jmp = [0xEB, 0x05];
+
+    private static readonly byte?[][] SpeculativeRun_001E = [Signature_001E_mov, Signature_0023_jmp];
 
 }
 

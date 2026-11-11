@@ -481,6 +481,9 @@ internal static class AsmScenarioCatalog {
             // convention_return_outputs proves a return exit reads the method's outputs and its
             // landings' inputs: dead flags and writes go, needed ones stay (G8.1).
             AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs),
+            // convention_resolved_calls proves a resolved call takes the callee's convention as its
+            // summary; a fault-reachable or redirected call keeps Unknown (G8.2).
+            AsmScenario.FromFixture("convention_resolved_calls", AsmFixtureCatalog.ConventionResolvedCalls),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt)
                 .WithoutGeneratedExecution("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing point is timing-dependent"),
