@@ -479,8 +479,9 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("multimisalignedcall", AsmFixtureCatalog.MultiMisalignedCall),
             AsmScenario.FromFixture("redirectedreturn", AsmFixtureCatalog.RedirectedReturn),
             AsmScenario.FromFixture("stalestackframes", AsmFixtureCatalog.StaleStackFrames),
-            // stack_esp_high_bits proves the 32-bit stack helpers write only the low 16 bits of
-            // ESP: the mov esp write of the high half must survive push/pop/leave in both modes.
+            // stack_esp_high_bits proves the stack helpers write only the low 16 bits of ESP:
+            // the mov esp write of the high half must survive push/pop and 16-bit and 32-bit
+            // enter/leave pairs.
             AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits),
             // convention_conditional_flag_input proves a may-write does not kill demand: the
             // callee reads the caller's CF through shl's conditional write (G1.6).

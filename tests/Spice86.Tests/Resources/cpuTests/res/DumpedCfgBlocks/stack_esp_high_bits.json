@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:001D",
+  "lastExecutedAddress": "F000:003F",
   "lastExecutedBlockId": 3,
   "blocks": [
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:001D",
+      "term": "F000:003F",
       "pred": [
         2
       ],
@@ -26,6 +26,14 @@
         "66C8040000|enterw 4,0",
         "66C9|leavew",
         "6689260002|mov dword ptr DS:[0x0200],ESP",
+        "66BC00503412|mov ESP,0x12345000",
+        "C8000000|enter 0,0",
+        "C9|leave",
+        "6689260402|mov dword ptr DS:[0x0204],ESP",
+        "66BC00703412|mov ESP,0x12347000",
+        "66C8000000|enterw 0,0",
+        "66C9|leavew",
+        "6689260802|mov dword ptr DS:[0x0208],ESP",
         "F4|hlt"
       ]
     },

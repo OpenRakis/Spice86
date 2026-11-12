@@ -182,14 +182,16 @@ internal static partial class IrConstantFolder {
         return removed;
     }
 
-    /// <summary>Whether the folded statement is a plain <c>R = R</c> with no observable effect: the
-    /// identity rules can leave a self-assignment (e.g. <c>or ax,ax</c>), which reads and writes the
-    /// same register and can be removed outright.</summary>
+    /// <summary>Whether the folded statement is a plain <c>x = x</c> with no observable effect: the
+    /// identity rules can leave a self-assignment (e.g. <c>or ax,ax</c>, or <c>enter 0,0</c>'s
+    /// <c>spIndex - 0</c> folded to <c>spIndex</c>), which reads and writes the same register or
+    /// local and can be removed outright.</summary>
     private static bool IsDeadSelfAssign(IVisitableAstNode node, IrStatement statement) =>
         node is BinaryOperationNode {
-            BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode left,
-            Right: RegisterNode right }
-        && left.Equals(right)
+            BinaryOperation: BinaryOperation.ASSIGN,
+            Left: RegisterNode or VariableReferenceNode,
+            Right: RegisterNode or VariableReferenceNode } assign
+        && assign.Left.Equals(assign.Right)
         && !statement.Effects.MayFault && !statement.Effects.DeliversInterrupts
         && (statement.Effects.TokenReads | statement.Effects.TokenWrites) == IrTokens.None;
 

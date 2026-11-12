@@ -46,6 +46,56 @@ public partial class CfgGeneratedOverrides {
         SP = spIndex_0011;
         Stack.Leave32();
         Segment2000Globals.Dword0200 = ESP;
+        ESP = 0x12345000;
+        byte level_0023 = 0;
+        ushort oldBasePointer_0023 = BP;
+        ushort spIndex_0023 = (ushort)(SP - 2);
+        SsUInt16[spIndex_0023] = oldBasePointer_0023;
+        ushort framePtr_0023 = spIndex_0023;
+        if (level_0023 != 0) {
+            ushort bpIndex_0023 = oldBasePointer_0023;
+            int i_0023 = 1;
+            while (true) {
+                if (i_0023 >= (int)level_0023) {
+                    break;
+                }
+                bpIndex_0023 -= 2;
+                spIndex_0023 -= 2;
+                SsUInt16[spIndex_0023] = SsUInt16[bpIndex_0023];
+                i_0023 += 1;
+            }
+            spIndex_0023 -= 2;
+            SsUInt16[spIndex_0023] = framePtr_0023;
+        }
+        BP = framePtr_0023;
+        SP = spIndex_0023;
+        Stack.Leave16();
+        Segment2000Globals.Dword0204 = ESP;
+        ESP = 0x12347000;
+        byte level_0033 = 0;
+        uint oldBasePointer_0033 = EBP;
+        ushort spIndex_0033 = (ushort)(SP - 4);
+        SsUInt32[spIndex_0033] = oldBasePointer_0033;
+        ushort framePtr_0033 = spIndex_0033;
+        if (level_0033 != 0) {
+            ushort bpIndex_0033 = (ushort)oldBasePointer_0033;
+            int i_0033 = 1;
+            while (true) {
+                if (i_0033 >= (int)level_0033) {
+                    break;
+                }
+                bpIndex_0033 -= 4;
+                spIndex_0033 -= 4;
+                SsUInt32[spIndex_0033] = SsUInt32[bpIndex_0033];
+                i_0033 += 1;
+            }
+            spIndex_0033 -= 4;
+            SsUInt32[spIndex_0033] = (uint)framePtr_0033;
+        }
+        EBP = (uint)framePtr_0033;
+        SP = spIndex_0033;
+        Stack.Leave32();
+        Segment2000Globals.Dword0208 = ESP;
         return Hlt();
     }
 
@@ -68,6 +118,10 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     }
 
     public uint Dword0200 { get => _memory.UInt32[Segment, 0x0200]; set => _memory.UInt32[Segment, 0x0200] = value; }
+
+    public uint Dword0204 { get => _memory.UInt32[Segment, 0x0204]; set => _memory.UInt32[Segment, 0x0204] = value; }
+
+    public uint Dword0208 { get => _memory.UInt32[Segment, 0x0208]; set => _memory.UInt32[Segment, 0x0208] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

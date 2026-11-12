@@ -1200,12 +1200,16 @@ internal static class AsmFixtureCatalog {
         });
     }
 
-    /// <summary>Runs stack_esp_high_bits: the dword stored at 2000:0200 keeps the ESP high half
-    /// <c>mov esp</c> set, with the low half back at 1000h after balanced 32-bit stack ops.</summary>
+    /// <summary>Runs stack_esp_high_bits: the dwords stored at 2000:0200/0204/0208 keep the ESP
+    /// high half <c>mov esp</c> set, with the low half back where the balanced stack ops left it.</summary>
     public static AsmFixture StackEspHighBits() {
         return ResultFixture(new AsmRunSettings { BinName = "stack_esp_high_bits", MaxCycles = 1000 }, result => {
             result.Memory.UInt32[0x2000, 0x0200].Should().Be(0x12341000,
                 "stack_esp_high_bits: 32-bit push/pop/leave change only the low 16 bits of ESP");
+            result.Memory.UInt32[0x2000, 0x0204].Should().Be(0x12345000,
+                "stack_esp_high_bits: 16-bit enter 0,0 / leave change only the low 16 bits of ESP");
+            result.Memory.UInt32[0x2000, 0x0208].Should().Be(0x12347000,
+                "stack_esp_high_bits: 32-bit enter 0,0 / leave change only the low 16 bits of ESP");
         });
     }
 

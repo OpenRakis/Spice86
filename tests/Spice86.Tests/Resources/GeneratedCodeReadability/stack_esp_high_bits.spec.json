@@ -1,5 +1,5 @@
 {
-  "sourceSha256": "348e62e246a2d5fb267512bfc99fef1cafeab2d08dce68172d1661896ecf07d2",
+  "sourceSha256": "7e58770ff21e288bc51909611c7fc639fb8c9b2edd3a143e89b50bca4e0cf283",
   "program": {
     "minimum": {
       "StringServiceCalls": 0,
@@ -28,19 +28,19 @@
     },
     "maximum": {
       "BookkeepingCalls": 0,
-      "Casts": 5,
+      "Casts": 12,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
-      "LocalReads": 18,
-      "LocalVariables": 6,
-      "LocalWrites": 11,
-      "PlainRegisterAssignments": 7,
+      "LocalReads": 52,
+      "LocalVariables": 18,
+      "LocalWrites": 31,
+      "PlainRegisterAssignments": 13,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 4,
-      "RegisterWrites": 7,
-      "Statements": 32,
-      "WriteBacks": 2
+      "RegisterReads": 10,
+      "RegisterWrites": 13,
+      "Statements": 76,
+      "WriteBacks": 6
     }
   },
   "support": {
