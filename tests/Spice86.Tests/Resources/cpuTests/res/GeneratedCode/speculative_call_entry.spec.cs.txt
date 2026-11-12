@@ -35,7 +35,6 @@ public partial class CfgGeneratedOverrides {
         }
         DsGlobals.Byte0401 = 0xDD;
         DsGlobals.Byte0402 = 0xAA;
-        AL = byte1;
         return Hlt();
     }
 

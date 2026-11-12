@@ -12,135 +12,90 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort fileHandle = 0;
         ushort previousAx = 0;
         byte byte1 = 0;
-        ushort flagOperand_0184 = 0;
         ushort flagOperand_018D = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         DS = Stack.Pop16();
-        fileHandle = 0xFFFF;
         AH = 0x68;
         (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0xFFFF, AX));
-        if (CarryFlag) {
-            Alu16.Sub(previousAx, 6);
-            if (previousAx == 6) {
-                CX = Alu16.Xor(CX, CX);
-                DX = 0x01CB;
-                (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CreateFile(Dos.StringDecoder.GetDosString(DS, 0x01CB, '\0', "COMMIT.DAT"), 0));
+        if (CarryFlag && previousAx == 6) {
+            (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CreateFile(Dos.StringDecoder.GetDosString(DS, 0x01CB, '\0', "COMMIT.DAT"), 0));
+            if (!CarryFlag) {
+                ImageMinus0003Globals.Word01C9 = previousAx;
+                BX = previousAx;
+                // DOS 40h write "DATA"
+                (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(BX, 4, DS, 0x01D6));
                 if (!CarryFlag) {
-                    ImageMinus0003Globals.Word01C9 = previousAx;
-                    fileHandle = previousAx;
-                    CX = 4;
-                    DX = 0x01D6;
-                    // DOS 40h write "DATA"
-                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 4, DS, 0x01D6));
-                    if (!CarryFlag) {
-                        Alu16.Sub(previousAx, 4);
-                        if (previousAx != 4) {
-                            goto L_01C2;
-                        }
-                        CX = 0x000A;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ForceDuplicateHandle(fileHandle, 0x000A));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        fileHandle = 0x000A;
-                        AX = previousAx;
-                        AH = 0x68;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        CX = 0;
-                        DX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 0x000A, 0, 0));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        Alu16.Sub(previousAx, 4);
-                        if (previousAx != 4) {
-                            goto L_01C2;
-                        }
-                        DX = Alu16.Or(DX, DX);
-                        if (DX != 0) {
-                            goto L_01C2;
-                        }
-                        (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 0x000A, 0, DX));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        CX = 4;
-                        DX = 0x01DA;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0x000A, 4, DS, 0x01DA));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        Alu16.Sub(previousAx, 4);
-                        if (previousAx != 4) {
-                            goto L_01C2;
-                        }
-                        previousAx = ImageMinus0003Globals.Word01DA;
-                        flagOperand_0184 = ImageMinus0003Globals.Word01D6;
-                        Alu16.Sub(previousAx, flagOperand_0184);
-                        if (previousAx != flagOperand_0184) {
-                            goto L_01C2;
-                        }
-                        previousAx = ImageMinus0003Globals.Word01DC;
-                        flagOperand_018D = ImageMinus0003Globals.Word01D8;
-                        Alu16.Sub(previousAx, flagOperand_018D);
-                        if (previousAx != flagOperand_018D) {
-                            goto L_01C2;
-                        }
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(0x000A, 0x3E));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        AX = previousAx;
-                        AH = 0x68;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
-                        if (!CarryFlag) {
-                            goto L_01C2;
-                        }
-                        Alu16.Sub(previousAx, 6);
-                        if (previousAx != 6) {
-                            goto L_01C2;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word01C9;
-                        AX = previousAx;
-                        AH = 0x68;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(fileHandle, AX));
-                        if (!CarryFlag) {
-                            goto L_01C2;
-                        }
-                        Alu16.Sub(previousAx, 6);
-                        if (previousAx != 6) {
-                            goto L_01C2;
-                        }
-                        fileHandle = 1;
-                        AX = previousAx;
-                        AH = 0x68;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(1, AX));
-                        if (CarryFlag) {
-                            goto L_01C2;
-                        }
-                        AX = previousAx;
-                        byte1 = 0;
-                        goto L_01C4;
+                    if (previousAx != 4) {
+                        goto L_01C2;
                     }
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ForceDuplicateHandle(BX, 0x000A));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    AX = previousAx;
+                    AH = 0x68;
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 0x000A, 0, 0));
+                    if (CarryFlag || ((uint)DX | (uint)previousAx << 16) != 0x00040000) {
+                        goto L_01C2;
+                    }
+                    (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 0x000A, 0, DX));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0x000A, 4, DS, 0x01DA));
+                    if (CarryFlag || previousAx != 4) {
+                        goto L_01C2;
+                    }
+                    previousAx = ImageMinus0003Globals.Word01DA;
+                    if (previousAx != ImageMinus0003Globals.Word01D6) {
+                        goto L_01C2;
+                    }
+                    previousAx = ImageMinus0003Globals.Word01DC;
+                    flagOperand_018D = ImageMinus0003Globals.Word01D8;
+                    Alu16.Sub(previousAx, flagOperand_018D);
+                    if (previousAx != flagOperand_018D) {
+                        goto L_01C2;
+                    }
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(0x000A, 0x3E));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    AX = previousAx;
+                    AH = 0x68;
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
+                    if (!CarryFlag || previousAx != 6) {
+                        goto L_01C2;
+                    }
+                    BX = ImageMinus0003Globals.Word01C9;
+                    AX = previousAx;
+                    AH = 0x68;
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(BX, AX));
+                    if (!CarryFlag || previousAx != 6) {
+                        goto L_01C2;
+                    }
+                    AX = previousAx;
+                    AH = 0x68;
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(1, AX));
+                    if (CarryFlag) {
+                        goto L_01C2;
+                    }
+                    AX = previousAx;
+                    byte1 = 0;
+                    goto L_01C4;
                 }
             }
         }
@@ -149,10 +104,7 @@ public partial class CfgGeneratedOverrides {
         AX = previousAx;
         byte1 = 0xFF;
     L_01C4:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = fileHandle;
-        AL = byte1;
         return Hlt();
     }
 
@@ -478,7 +430,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, DX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

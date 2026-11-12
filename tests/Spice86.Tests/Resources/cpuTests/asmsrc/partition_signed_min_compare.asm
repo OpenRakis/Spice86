@@ -15,6 +15,10 @@ below1:
     add dx, 10h
 below2:
     xor ax, ax
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
+    mov word [ss:604h], ax
     hlt
 
 rb 65520-$

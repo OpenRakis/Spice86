@@ -102,6 +102,8 @@ popped:
     add si, 10h
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 read_parameter:

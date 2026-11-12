@@ -28,7 +28,7 @@
     },
     "maximum": {
       "BookkeepingCalls": 0,
-      "Casts": 0,
+      "Casts": 3,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
       "LocalReads": 0,
@@ -37,9 +37,9 @@
       "PlainRegisterAssignments": 11,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 5,
+      "RegisterReads": 9,
       "RegisterWrites": 11,
-      "Statements": 35,
+      "Statements": 38,
       "WriteBacks": 0
     }
   },

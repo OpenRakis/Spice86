@@ -426,7 +426,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: AX, CX, DX, BX, ES. Changes: AX, CX, DX, BX, ES.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: none. Changes: AX, CX, DX, BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_017D_024A_01A1A() {
         ushort word1 = 0;

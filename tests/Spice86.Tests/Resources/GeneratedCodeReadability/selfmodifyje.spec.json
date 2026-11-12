@@ -40,10 +40,10 @@
       "PlainRegisterAssignments": 2,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RawMemoryAccesses": 1,
-      "RegisterReads": 1,
+      "RawMemoryAccesses": 4,
+      "RegisterReads": 2,
       "RegisterWrites": 2,
-      "Statements": 18,
+      "Statements": 20,
       "StatusFlagReads": 0,
       "WriteBacks": 1
     }

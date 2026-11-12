@@ -15,7 +15,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort flagOperand_015A = 0;
         CheckExternalEvents(cs1, 0x0100);
         InterruptFlag = false;
         Stack.Push16(CS);
@@ -37,22 +36,12 @@ public partial class CfgGeneratedOverrides {
             InterruptCall(cs1, 0x012E, 8);
             Stack.Push16(FlagRegister16);
             BP = Stack.Pop16();
-            Alu16.Sub(AX, 0x0098);
-            if (AX != 0x0098) {
-                goto L_0178;
-            }
-            Alu16.Sub(DX, 0xABCD);
-            if (DX != 0xABCD) {
+            if (((uint)DX | (uint)AX << 16) != 0x0098ABCD) {
                 goto L_0178;
             }
             BX = DS;
             AX = CS;
-            Alu16.Sub(BX, AX);
-            if (BX != AX) {
-                goto L_0178;
-            }
-            Alu16.Sub(SP, SI);
-            if (SP != SI) {
+            if (((uint)SP | (uint)BX << 16) != ((uint)SI | (uint)AX << 16)) {
                 goto L_0178;
             }
             BP &= 0x0401;
@@ -63,24 +52,11 @@ public partial class CfgGeneratedOverrides {
             CX--;
         } while (CX != 0);
         DirectionFlag = false;
-        DX = 0x0998;
-        AL = 1;
         Out8(0x0998, 1);
-        flagOperand_015A = DsGlobals.Word0190;
-        Alu16.Sub(flagOperand_015A, 3);
-        if (flagOperand_015A == 3) {
+        if (DsGlobals.Word0190 == 3) {
             AX = (ushort)(EsGlobals.Word006C - DsGlobals.Word018E);
-            Alu16.Sub(AX, 3);
             if (AX == 3) {
                 Out8(0x0998, 2);
-                DX = 0x0999;
-                AL = 0;
-                CarryFlag = false;
-                ParityFlag = true;
-                AuxiliaryFlag = false;
-                ZeroFlag = true;
-                SignFlag = false;
-                OverflowFlag = false;
                 Out8(0x0999, 0);
                 return Hlt();
             }
@@ -88,8 +64,6 @@ public partial class CfgGeneratedOverrides {
     L_0178:
         VerifySpeculativeRunOrFail(cs1, 0x0178, SpeculativeRun_0178);
         DirectionFlag = false;
-        DX = 0x0999;
-        AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x017F, Signature_017F_hlt);
         return Hlt();

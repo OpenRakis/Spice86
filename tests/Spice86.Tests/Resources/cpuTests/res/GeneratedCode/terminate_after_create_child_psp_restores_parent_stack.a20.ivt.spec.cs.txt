@@ -18,11 +18,7 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         ushort word2;
         byte byte1 = 0;
-        ushort flagOperand_0159 = 0;
         ushort flagOperand_015F = 0;
-        ushort flagOperand_0169 = 0;
-        ushort flagOperand_0177 = 0;
-        ushort flagOperand_0181 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         word1 = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
@@ -57,28 +53,20 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CS);
             DS = Stack.Pop16();
             AX = SS;
-            flagOperand_0159 = DsGlobals.Word0194;
-            Alu16.Sub(AX, flagOperand_0159);
-            if (AX == flagOperand_0159) {
+            if (AX == DsGlobals.Word0194) {
                 flagOperand_015F = DsGlobals.Word0196;
                 Alu16.Sub(SP, flagOperand_015F);
                 if (SP == flagOperand_015F) {
                     AH = 0x62;
                     BX = ServiceCall(cs1, 0x0169, () => Dos.ReadPspAddress());
-                    flagOperand_0169 = DsGlobals.Word0192;
-                    Alu16.Sub(BX, flagOperand_0169);
-                    if (BX == flagOperand_0169) {
+                    if (BX == DsGlobals.Word0192) {
                         ES = 0;
                         AX = Segment0000Globals.Word0000;
-                        flagOperand_0177 = DsGlobals.Word0198;
-                        Alu16.Sub(AX, flagOperand_0177);
-                        if (AX != flagOperand_0177) {
+                        if (AX != DsGlobals.Word0198) {
                             goto L_018B;
                         }
                         AX = Segment0000Globals.Word0002;
-                        flagOperand_0181 = DsGlobals.Word019A;
-                        Alu16.Sub(AX, flagOperand_0181);
-                        if (AX != flagOperand_0181) {
+                        if (AX != DsGlobals.Word019A) {
                             goto L_018B;
                         }
                         byte1 = 0;
@@ -91,9 +79,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x018B, Signature_018B_mov);
         byte1 = 0xFF;
     L_018D:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

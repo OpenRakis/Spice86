@@ -18,7 +18,6 @@ public partial class CfgGeneratedOverrides {
         DS = 0x1000;
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x0006);
-        AX = 0x1234;
         InterruptFlag = false;
         UInt16[DS, SI] = 0x1234;
         return Hlt();

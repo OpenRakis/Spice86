@@ -14,7 +14,7 @@ internal sealed class AsmFixtureRun : IDisposable {
         _creator = creator;
         DependencyInjection = creator.Create();
         Machine = DependencyInjection.Machine;
-        Result = new AsmFixtureResult(Machine.Memory, Machine.CpuState,
+        Result = new AsmFixtureResult(Machine.Memory,
             (Renderer)Machine.VgaRenderer, Machine.VgaRegisters, scope.Observations);
     }
 

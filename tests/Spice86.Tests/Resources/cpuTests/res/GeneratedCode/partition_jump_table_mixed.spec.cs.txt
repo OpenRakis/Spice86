@@ -15,30 +15,31 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0x1000;
         SS = 0x1000;
         SP = 0x0100;
         DX = 0;
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x000D);
-            BX = CX;
-            BX = Alu16.Dec(BX);
-            BX = Alu16.Shl(BX, 1);
-            switch (UInt16[CS, BX + 0x23]) {
+            BX = (ushort)(CX - 1 << 1);
+            switch (UInt16[CS, BX + 0x3C]) {
                 case 0x0016:
-                    DX = Alu16.Add(DX, 1);
+                    DX++;
                     break;
                 case 0x001B:
-                    DX = Alu16.Add(DX, 0x0010);
+                    DX += 0x0010;
                     break;
                 case 0x0020:
                     break;
                 default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x23]:X4} at F000:0012");
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x3C]:X4} at F000:0012");
             }
             CX--;
         } while (CX != 0);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
+        SsUInt16[0x060A] = DX;
+        SsUInt16[0x0608] = CX;
+        SsUInt16[0x0606] = BX;
         return Hlt();
     }
 

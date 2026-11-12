@@ -15,15 +15,15 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DI, DS. Outputs: none. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_F000_01D4_F01D4() {
-        CheckExternalEvents(biosSegment, 0x01D4);
+    public virtual Action unknown_F000_01DE_F01DE() {
+        CheckExternalEvents(biosSegment, 0x01DE);
         UInt16[DS, DI + 2] = AX;
         return InterruptRet();
     }
 
     /// <summary>Inputs: AX, DI, DS. Outputs: none. Changes: flags, DF.</summary>
-    public virtual Action unknown_F000_01D8_F01D8() {
-        CheckExternalEvents(biosSegment, 0x01D8);
+    public virtual Action unknown_F000_01E2_F01E2() {
+        CheckExternalEvents(biosSegment, 0x01E2);
         UInt16[DS, DI + 0x3E] = AX;
         return InterruptRet();
     }
@@ -34,17 +34,15 @@ public partial class CfgGeneratedOverrides {
         ushort word2;
         ushort word3 = 0;
         ushort word4 = 0;
-        short word5 = 0;
-        ushort word6;
+        ushort word5;
+        short word6 = 0;
         ushort word7;
-        ushort word8 = 0;
+        ushort word8;
         ushort word9 = 0;
         ushort word10 = 0;
         ushort word11 = 0;
         ushort word12 = 0;
         ushort word13 = 0;
-        ushort word14 = 0;
-        ushort word15 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -57,64 +55,63 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         ES = 0;
-        Segment0000Globals.Dword0184 = 0x000001D4 | (uint)CS << 16;
-        Segment0000Globals.Dword0188 = 0x000001D8 | (uint)CS << 16;
+        Segment0000Globals.Dword0184 = 0x000001DE | (uint)CS << 16;
+        Segment0000Globals.Dword0188 = 0x000001E2 | (uint)CS << 16;
         DirectionFlag = false;
         DI = 0x0040;
-        SI = 0x01DC;
-        word1 = SegmentF000Globals.Word01DC;
+        word1 = SegmentF000Globals.Word01E6;
         word2 = word1;
         word3 = word1;
         Segment2000Globals.Word0040 = word2;
         Segment2000Globals.Word004C = word3;
-        AX = SegmentF000Globals.Word01DE;
+        AX = SegmentF000Globals.Word01E8;
         word4 = AX;
-        InterruptCall(biosSegment, 0x0041, 0x61, biosSegment, 0x01D4, unknown_F000_01D4_F01D4Entry);
+        InterruptCall(biosSegment, 0x0041, 0x61, biosSegment, 0x01DE, unknown_F000_01DE_F01DEEntry);
         Segment2000Globals.Word004E = word4;
-        AX = SegmentF000Globals.Word01E0;
+        AX = SegmentF000Globals.Word01EA;
         word2 = AX;
         Segment2000Globals.Byte0044 = AL;
         Segment2000Globals.Word0050 = word2;
-        word1 = (ushort)(SegmentF000Globals.Word01E2 + 1);
+        word1 = (ushort)(SegmentF000Globals.Word01EC + 1);
         Segment2000Globals.Word0045 = word1;
-        AX = SegmentF000Globals.Word01E4;
+        AX = SegmentF000Globals.Word01EE;
         CX = AX;
-        BX = SegmentF000Globals.Word01E6;
+        BX = SegmentF000Globals.Word01F0;
         (BX, AX) = (AX, BX);
         Segment2000Globals.Word0047 = AX;
         Segment2000Globals.Word0052 = CX;
         Segment2000Globals.Word0056 = BX;
-        word1 = SegmentF000Globals.Word01E8;
+        word1 = SegmentF000Globals.Word01F2;
         word2 = word1;
         AX = word1;
         Segment2000Globals.Byte0054 = AL;
         (AX, DX) = Div16(divisor: word2, dividend: (uint)word1);
         Segment2000Globals.Word0049 = AX;
-        word1 = SegmentF000Globals.Word01EC;
+        word1 = SegmentF000Globals.Word01F6;
         DS = word1;
         DsGlobals.Byte0080 = 0x77;
-        AX = SegmentF000Globals.Word01EA;
+        AX = SegmentF000Globals.Word01F4;
         DS = AX;
         DsGlobals.Byte0080 = 0x11;
-        word1 = SegmentF000Globals.Word01EC;
+        word1 = SegmentF000Globals.Word01F6;
         DS = word1;
         CX = DsGlobals.Word0080;
-        AX = SegmentF000Globals.Word01EA;
+        AX = SegmentF000Globals.Word01F4;
         DS = AX;
         DsGlobals.Byte004B = CL;
-        word1 = SegmentF000Globals.Word01DC;
+        word1 = SegmentF000Globals.Word01E6;
         DsGlobals.Word0058 = word1;
-        AX = SegmentF000Globals.Word01E2;
+        AX = SegmentF000Globals.Word01EC;
         DsGlobals.Word005A = AX;
         Stack.Push16(AX);
         Stack.Push16(ES);
         DsGlobals.Word005C = 1;
-        ES = Stack.Pop16();
+        word5 = Stack.Pop16();
         word1 = Stack.Pop16();
         DsGlobals.Word005E = word1;
-        DsGlobals.Word0060 = ES;
-        word5 = (short)(sbyte)SegmentF000Globals.Byte01EE;
-        if (word5 < -5) {
+        DsGlobals.Word0060 = word5;
+        word6 = (short)(sbyte)SegmentF000Globals.Byte01F8;
+        if (word6 < -5) {
             DsGlobals.Byte0062 = 1;
         }
         else {
@@ -122,7 +119,7 @@ public partial class CfgGeneratedOverrides {
             DsGlobals.Byte0062 = 0;
             VerifySpeculativeEntryOrFail(biosSegment, 0x00D8, Signature_00D8_jmp);
         }
-        if (word5 <= -5) {
+        if (word6 <= -5) {
             DsGlobals.Byte0063 = 1;
         }
         else {
@@ -130,35 +127,35 @@ public partial class CfgGeneratedOverrides {
             DsGlobals.Byte0063 = 0;
             VerifySpeculativeEntryOrFail(biosSegment, 0x00E4, Signature_00E4_jmp);
         }
-        if (word5 > -5) {
+        if (word6 > -5) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_mov);
             DsGlobals.Byte0064 = 1;
         }
         else {
             DsGlobals.Byte0064 = 0;
         }
-        if (word5 >= -5) {
+        if (word6 >= -5) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00FE, Signature_00FE_mov);
             DsGlobals.Byte0065 = 1;
         }
         else {
             DsGlobals.Byte0065 = 0;
         }
-        if (word5 < -0x0014) {
+        if (word6 < -0x0014) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x010D, Signature_010D_mov);
             DsGlobals.Byte0066 = 1;
         }
         else {
             DsGlobals.Byte0066 = 0;
         }
-        if (word5 <= -0x0014) {
+        if (word6 <= -0x0014) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0119, Signature_0119_mov);
             DsGlobals.Byte0067 = 1;
         }
         else {
             DsGlobals.Byte0067 = 0;
         }
-        if (word5 > -0x0014) {
+        if (word6 > -0x0014) {
             DsGlobals.Byte0068 = 1;
         }
         else {
@@ -166,76 +163,73 @@ public partial class CfgGeneratedOverrides {
             DsGlobals.Byte0068 = 0;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0123, Signature_0123_jmp);
         }
-        if ((ushort)word5 < 3) {
+        if ((ushort)word6 < 3) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0134, Signature_0134_mov);
             DsGlobals.Byte0069 = 0;
         }
         else {
             DsGlobals.Byte0069 = 1;
         }
-        BX = (ushort)word5;
+        BX = (ushort)word6;
         BX = (ushort)((short)BX >> 1);
         DsGlobals.Word006A = BX;
-        Stack.Push16((ushort)word5);
+        Stack.Push16((ushort)word6);
         CX = Stack.Pop16();
         CX >>= 1;
         DsGlobals.Word006C = CX;
-        word1 = SegmentF000Globals.Word01DC;
-        (AX, word6) = Mul16(word1, 3);
+        word1 = SegmentF000Globals.Word01E6;
+        (AX, word7) = Mul16(word1, 3);
         word2 = AX;
-        word7 = word6;
+        word8 = word7;
         DsGlobals.Word0070 = word2;
-        DsGlobals.Word0072 = word7;
-        DsGlobals.Word008C = word6;
+        DsGlobals.Word0072 = word8;
+        DsGlobals.Word008C = word7;
         DsGlobals.Word0090 = AX;
         AH = 0x12;
         DsGlobals.Word0074 = AX;
         DsGlobals.Byte0076 = AL;
-        word1 = SegmentF000Globals.Word01E8;
-        DX = word6;
+        word1 = SegmentF000Globals.Word01F2;
+        DX = word7;
         DX = Alu16.Xor(DX, DX);
-        (AX, word8) = Div16(divisor: 5, dividend: (uint)word1);
-        word9 = AX;
-        word10 = word8;
-        DsGlobals.Word0078 = word9;
-        DsGlobals.Word007A = word10;
+        (AX, word9) = Div16(divisor: 5, dividend: (uint)word1);
+        word10 = AX;
+        word11 = word9;
+        DsGlobals.Word0078 = word10;
+        DsGlobals.Word007A = word11;
         DsGlobals.Byte007C = AL;
-        DsGlobals.Word008E = word8;
-        InterruptCall(biosSegment, 0x0183, 0x62, biosSegment, 0x01D8, unknown_F000_01D8_F01D8Entry);
-        word1 = (ushort)(short)(sbyte)SegmentF000Globals.Byte01EE;
-        (word11, word12) = IMul16((short)word1, (short)3);
-        word13 = word11;
-        word14 = word12;
-        DsGlobals.Word0080 = word13;
-        DsGlobals.Word0082 = word14;
-        if ((short)word11 < -0x0030) {
+        DsGlobals.Word008E = word9;
+        InterruptCall(biosSegment, 0x0183, 0x62, biosSegment, 0x01E2, unknown_F000_01E2_F01E2Entry);
+        word1 = (ushort)(short)(sbyte)SegmentF000Globals.Byte01F8;
+        (word12, word13) = IMul16((short)word1, (short)3);
+        word2 = word12;
+        word8 = word13;
+        DsGlobals.Word0080 = word2;
+        DsGlobals.Word0082 = word8;
+        if ((short)word12 < -0x0030) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x01A2, Signature_01A2_mov);
             DsGlobals.Byte0084 = 0;
         }
         else {
             DsGlobals.Byte0084 = 1;
         }
-        if ((short)word12 < -1) {
+        if ((short)word13 < -1) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x01B1, Signature_01B1_mov);
             DsGlobals.Byte0085 = 0;
         }
         else {
             DsGlobals.Byte0085 = 1;
         }
-        (word15, DX) = IDiv16(divisor: 3, dividend: (int)((uint)word12 << 16 | (uint)word11));
-        CX = word15;
-        BX = DX;
-        DsGlobals.Word0086 = CX;
-        DsGlobals.Word0088 = BX;
-        Alu16.Sub(word15, 0xFFF0);
-        if ((short)word15 < -0x0010) {
+        (word1, word7) = IDiv16(divisor: 3, dividend: (int)((uint)word13 << 16 | (uint)word12));
+        DsGlobals.Word0086 = word1;
+        DsGlobals.Word0088 = word7;
+        if ((short)word1 < -0x0010) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x01CF, Signature_01CF_mov);
             DsGlobals.Byte008A = 0;
         }
         else {
             DsGlobals.Byte008A = 1;
         }
-        AX = word15;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -438,16 +432,6 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public ushort Word01DC { get => _memory.UInt16[Segment, 0x01DC]; set => _memory.UInt16[Segment, 0x01DC] = value; }
-
-    public ushort Word01DE { get => _memory.UInt16[Segment, 0x01DE]; set => _memory.UInt16[Segment, 0x01DE] = value; }
-
-    public ushort Word01E0 { get => _memory.UInt16[Segment, 0x01E0]; set => _memory.UInt16[Segment, 0x01E0] = value; }
-
-    public ushort Word01E2 { get => _memory.UInt16[Segment, 0x01E2]; set => _memory.UInt16[Segment, 0x01E2] = value; }
-
-    public ushort Word01E4 { get => _memory.UInt16[Segment, 0x01E4]; set => _memory.UInt16[Segment, 0x01E4] = value; }
-
     public ushort Word01E6 { get => _memory.UInt16[Segment, 0x01E6]; set => _memory.UInt16[Segment, 0x01E6] = value; }
 
     public ushort Word01E8 { get => _memory.UInt16[Segment, 0x01E8]; set => _memory.UInt16[Segment, 0x01E8] = value; }
@@ -456,7 +440,17 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
 
     public ushort Word01EC { get => _memory.UInt16[Segment, 0x01EC]; set => _memory.UInt16[Segment, 0x01EC] = value; }
 
-    public byte Byte01EE { get => _memory.UInt8[Segment, 0x01EE]; set => _memory.UInt8[Segment, 0x01EE] = value; }
+    public ushort Word01EE { get => _memory.UInt16[Segment, 0x01EE]; set => _memory.UInt16[Segment, 0x01EE] = value; }
+
+    public ushort Word01F0 { get => _memory.UInt16[Segment, 0x01F0]; set => _memory.UInt16[Segment, 0x01F0] = value; }
+
+    public ushort Word01F2 { get => _memory.UInt16[Segment, 0x01F2]; set => _memory.UInt16[Segment, 0x01F2] = value; }
+
+    public ushort Word01F4 { get => _memory.UInt16[Segment, 0x01F4]; set => _memory.UInt16[Segment, 0x01F4] = value; }
+
+    public ushort Word01F6 { get => _memory.UInt16[Segment, 0x01F6]; set => _memory.UInt16[Segment, 0x01F6] = value; }
+
+    public byte Byte01F8 { get => _memory.UInt8[Segment, 0x01F8]; set => _memory.UInt8[Segment, 0x01F8] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -475,8 +469,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_01D4_F01D4Entry;
-    private readonly Func<int, Action> unknown_F000_01D8_F01D8Entry;
+    private readonly Func<int, Action> unknown_F000_01DE_F01DEEntry;
+    private readonly Func<int, Action> unknown_F000_01E2_F01E2Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -491,11 +485,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_01D4_F01D4Entry = _ => unknown_F000_01D4_F01D4();
-        unknown_F000_01D8_F01D8Entry = _ => unknown_F000_01D8_F01D8();
+        unknown_F000_01DE_F01DEEntry = _ => unknown_F000_01DE_F01DE();
+        unknown_F000_01E2_F01E2Entry = _ => unknown_F000_01E2_F01E2();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D4, unknown_F000_01D4_F01D4Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D8, unknown_F000_01D8_F01D8Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DE, unknown_F000_01DE_F01DEEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01E2, unknown_F000_01E2_F01E2Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

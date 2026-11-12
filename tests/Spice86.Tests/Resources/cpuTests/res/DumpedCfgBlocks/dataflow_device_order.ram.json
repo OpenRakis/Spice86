@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:00CA",
+  "lastExecutedAddress": "F000:00D4",
   "lastExecutedBlockId": 3,
   "blocks": [
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:00CA",
+      "term": "F000:00D4",
       "pred": [
         2
       ],
@@ -84,6 +84,8 @@
         "88444B|mov byte ptr DS:[SI\u002B0x4B],AL",
         "B8060E|mov AX,0x0E06",
         "EF|out DX,AX",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },

@@ -26,7 +26,6 @@ public partial class CfgGeneratedOverrides {
         while (true) {
             CheckExternalEvents(cs1, 0x010D);
             BX = UInt16[DS, SI];
-            Alu16.And(BX, BX);
             if (BX == 0) {
                 goto L_015B;
             }
@@ -52,7 +51,6 @@ public partial class CfgGeneratedOverrides {
                 CheckExternalEvents(cs1, 0x0135);
                 AL = UInt8[DS, BX];
                 DL = UInt8[DS, DI];
-                Alu8.Sub(AL, DL);
                 if (AL != DL) {
                     goto L_0145;
                 }
@@ -72,10 +70,9 @@ public partial class CfgGeneratedOverrides {
     L_0149:
         VerifySpeculativeRunOrFail(cs1, 0x0149, SpeculativeRun_0149);
         AL = CL;
-        AL = Alu8.Or(AL, 0x80);
+        AL |= 0x80;
     L_014D:
         VerifySpeculativeRunOrFail(cs1, 0x014D, SpeculativeRun_014D);
-        DX = 0x0998;
         Out8(0x0998, AL);
         VerifySpeculativeRunOrFail(cs1, 0x0151, SpeculativeRun_0151);
         byte2 = 0xFF;
@@ -83,9 +80,7 @@ public partial class CfgGeneratedOverrides {
     L_015B:
         byte2 = 0;
     L_015D:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

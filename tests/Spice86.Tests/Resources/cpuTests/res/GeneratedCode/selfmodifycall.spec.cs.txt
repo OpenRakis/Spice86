@@ -12,41 +12,46 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
-    public virtual ushort unknown_F000_0017_F0017(ushort word1) {
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, ES, flags.</summary>
+    public virtual void unknown_F000_0017_F0017(ushort word1) {
         DS = word1;
         byte flagOperand_0017 = 0;
         CheckExternalEvents(biosSegment, 0x0017);
-        flagOperand_0017 = DsGlobals.Byte002B;
+        flagOperand_0017 = DsGlobals.Byte0045;
         Alu8.Sub(flagOperand_0017, 0);
         if (flagOperand_0017 == 0) {
             NearReturn();
-            return DS;
+            return;
         }
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x0610] = word1;
+        SsUInt16[0x0612] = 0x0045;
+        AX = SP;
+        AX = Alu16.Add(AX, 2);
+        SsUInt16[0x0600] = AX;
         AX = 0xF000;
         ES = 0xF000;
         SegmentF000Globals.Byte0010 = 0xF4;
         NearReturn();
-        return DS;
+        return;
     }
 
     public virtual Action unknown_F000_0017_F0017_Asm() {
-        DS = unknown_F000_0017_F0017(DS);
+        unknown_F000_0017_F0017(DS);
         return Returned;
     }
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0;
         SS = 0;
         SP = 0x0100;
-        DsGlobals.Byte002B = 0;
+        DsGlobals.Byte0045 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x000D);
-            DS = NearCall(biosSegment, 0x0010, () => unknown_F000_0017_F0017(DS));
+            NearCall(biosSegment, 0x0010, () => unknown_F000_0017_F0017(DS));
             if (SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_nop)) {
-                goto L_0010_26;
+                goto L_0010_32;
             }
             if (SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_hlt)) {
                 break;
@@ -54,8 +59,8 @@ public partial class CfgGeneratedOverrides {
             else {
                 throw FailAsUntested("Untested code variant at F000:0010");
             }
-        L_0010_26:
-            DsGlobals.Byte002B = Alu8.Inc(DsGlobals.Byte002B);
+        L_0010_32:
+            DsGlobals.Byte0045 += 1;
         }
         return Hlt();
     }
@@ -80,8 +85,8 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
         _segmentRegisters = segmentRegisters;
     }
 
-    /// DS:0x002B, whatever DS holds at the access.
-    public byte Byte002B { get => _memory.UInt8[Segment, 0x002B]; set => _memory.UInt8[Segment, 0x002B] = value; }
+    /// DS:0x0045, whatever DS holds at the access.
+    public byte Byte0045 { get => _memory.UInt8[Segment, 0x0045]; set => _memory.UInt8[Segment, 0x0045] = value; }
 }
 
 // ==== file: SegmentF000Globals.cs ====

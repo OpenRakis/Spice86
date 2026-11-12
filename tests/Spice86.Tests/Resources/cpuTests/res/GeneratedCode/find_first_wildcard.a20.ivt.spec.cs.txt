@@ -18,8 +18,6 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         byte byte1;
         byte byte2 = 0;
-        byte flagOperand_0122 = 0;
-        byte flagOperand_012A = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
         word1 = 0x0258;
@@ -29,7 +27,6 @@ public partial class CfgGeneratedOverrides {
         while (true) {
             CheckExternalEvents(cs1, 0x010D);
             BX = UInt16[DS, SI];
-            Alu16.And(BX, BX);
             if (BX == 0) {
                 goto L_0140;
             }
@@ -42,16 +39,12 @@ public partial class CfgGeneratedOverrides {
             if (CarryFlag) {
                 goto L_012A;
             }
-            flagOperand_0122 = UInt8[DS, SI + 2];
-            Alu8.Sub(flagOperand_0122, 0);
-            if (flagOperand_0122 != 0) {
+            if (UInt8[DS, SI + 2] != 0) {
                 break;
             }
             goto L_0130;
         L_012A:
-            flagOperand_012A = UInt8[DS, SI + 2];
-            Alu8.Sub(flagOperand_012A, 1);
-            if (flagOperand_012A != 1) {
+            if (UInt8[DS, SI + 2] != 1) {
                 break;
             }
         L_0130:
@@ -60,7 +53,6 @@ public partial class CfgGeneratedOverrides {
         }
         VerifySpeculativeRunOrFail(cs1, 0x0136, SpeculativeRun_0136);
         byte1 = CL;
-        word1 = 0x0998;
         Out8(0x0998, byte1);
         VerifySpeculativeRunOrFail(cs1, 0x013C, SpeculativeRun_013C);
         byte2 = 0xFF;
@@ -68,9 +60,7 @@ public partial class CfgGeneratedOverrides {
     L_0140:
         byte2 = 0;
     L_0142:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

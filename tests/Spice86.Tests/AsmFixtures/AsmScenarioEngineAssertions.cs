@@ -168,6 +168,7 @@ internal static class AsmScenarioEngineAssertions {
         //   0006: je selfmodify   (2 bytes)
         //   0008: hlt             (1 byte)
         //   0009: mov ax, 1234    (3 bytes)  <- selfmodify label
+        //   (selfmodify body grew by two result stores; internal offsets shifted)
         CfgInstruction? je = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0006));
         CfgInstruction? hlt = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0008));
         CfgInstruction? selfModify = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0009));

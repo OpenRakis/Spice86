@@ -30,14 +30,12 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0026, Signature_0026_jmp);
             throw FailAsUntested("Untested jump at F000:0026");
         }
-        Alu8.And(byte1, byte1);
         if (byte1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x002B, Signature_002B_call);
             throw FailAsUntested("Untested call at F000:002B");
         }
         DsGlobals.Byte0401 = 0xDD;
         DsGlobals.Byte0402 = 0xEE;
-        AL = byte1;
         return Hlt();
     }
 

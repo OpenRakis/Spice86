@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -29,47 +29,27 @@ public partial class CfgGeneratedOverrides {
         else {
             ImageMinus0003Globals.Word0177 = AX;
             fileHandle = ImageMinus0003Globals.Word0177;
-            CX = Alu16.Xor(CX, CX);
             (word2, word1, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 0x0200));
-            if (!CarryFlag) {
-                Alu16.Sub(word1, 0);
-                if (word1 == 0) {
-                    Alu16.Sub(word2, 0x0200);
-                    if (word2 == 0x0200) {
-                        fileHandle = ImageMinus0003Globals.Word0177;
-                        CX = 0xFFFF;
-                        (word2, word1, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0xFFFF, 0xFFFF));
-                        if (CarryFlag) {
-                            goto L_0162;
-                        }
-                        Alu16.Sub(word1, 0);
-                        if (word1 != 0) {
-                            goto L_0162;
-                        }
-                        Alu16.Sub(word2, 0x01FF);
-                        if (word2 != 0x01FF) {
-                            goto L_0162;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word0177;
-                        CX = 1;
-                        word1 = 0x0179;
-                        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(fileHandle, 1, DS, 0x0179));
-                        if (CarryFlag) {
-                            goto L_0162;
-                        }
-                        Alu16.Sub(word2, 1);
-                        if (word2 != 1) {
-                            goto L_0162;
-                        }
-                        flagOperand_0157 = ImageMinus0003Globals.Byte0179;
-                        Alu8.Sub(flagOperand_0157, 0xFF);
-                        if (flagOperand_0157 != 0xFF) {
-                            goto L_0162;
-                        }
-                        AX = word2;
-                        AL = 0;
-                        goto L_0164;
+            if (!CarryFlag && ((uint)word2 | (uint)word1 << 16) == 0x00000200) {
+                fileHandle = ImageMinus0003Globals.Word0177;
+                (word2, word1, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0xFFFF, 0xFFFF));
+                if (!CarryFlag) {
+                    if (((uint)word2 | (uint)word1 << 16) != 0x000001FF) {
+                        goto L_0162;
                     }
+                    fileHandle = ImageMinus0003Globals.Word0177;
+                    (word2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(fileHandle, 1, DS, 0x0179));
+                    if (CarryFlag || word2 != 1) {
+                        goto L_0162;
+                    }
+                    flagOperand_0157 = ImageMinus0003Globals.Byte0179;
+                    Alu8.Sub(flagOperand_0157, 0xFF);
+                    if (flagOperand_0157 != 0xFF) {
+                        goto L_0162;
+                    }
+                    AX = word2;
+                    AL = 0;
+                    goto L_0164;
                 }
             }
         L_0162:
@@ -82,7 +62,6 @@ public partial class CfgGeneratedOverrides {
             (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
         }
-        DX = 0x0999;
         Out8(0x0999, AL);
         return Hlt();
     }

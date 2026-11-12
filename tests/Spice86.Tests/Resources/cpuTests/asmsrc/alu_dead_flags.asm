@@ -213,6 +213,8 @@ shr_zero_end:
     add si, 0Ah
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; per pass: v, CL count, carry in (bit 0), w (32 bits)

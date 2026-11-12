@@ -126,7 +126,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: none. Outputs: AX, CX, DX, SI, DI, DS, flags. Changes: AX, CX, DX, SI, DI, DS, flags.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: AX, CX, DX, SI, DI, DS, flags.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;

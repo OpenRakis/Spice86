@@ -280,6 +280,8 @@ start:
     push bx
     pop bx
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 reader4:

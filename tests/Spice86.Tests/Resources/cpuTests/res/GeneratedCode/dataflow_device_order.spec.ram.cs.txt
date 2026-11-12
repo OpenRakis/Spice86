@@ -12,16 +12,16 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: SI. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         uint dword1;
         byte byte1;
+        byte byte2;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        SI = Alu16.Xor(SI, SI);
         Vga.WriteSequencerRegister(2, 0x0F);
         Vga.WriteSequencerRegister(4, 6);
         Vga.WriteGraphicsControllerRegister(6, 0);
@@ -40,33 +40,30 @@ public partial class CfgGeneratedOverrides {
         SegmentA000Globals.Byte0000 = 0x88;
         SegmentA000Globals.Byte0001 = 0x99;
         Vga.WriteSequencerRegister(2, 0x0F);
-        DX = 0x03CE;
         Vga.WriteGraphicsControllerRegister(5, 1);
         dword1 = SegmentA000Globals.Dword0000;
-        CL = SegmentA000Globals.Byte0001;
+        byte1 = SegmentA000Globals.Byte0001;
         Segment2000Globals.Dword0040 = dword1;
-        EBX = 0;
         SegmentA000Globals.Byte0002 = 0;
-        Segment2000Globals.Byte0044 = CL;
+        Segment2000Globals.Byte0044 = byte1;
         Vga.WriteGraphicsControllerRegister(5, 0);
         AX = 4;
         Vga.WriteGraphicsControllerRegister(4, 0);
-        byte1 = SegmentA000Globals.Byte0002;
-        Segment2000Globals.Byte0048 = byte1;
+        byte2 = SegmentA000Globals.Byte0002;
+        Segment2000Globals.Byte0048 = byte2;
         AX = 0x0104;
         Vga.WriteGraphicsControllerRegister(4, 1);
-        byte1 = SegmentA000Globals.Byte0002;
-        Segment2000Globals.Byte0049 = byte1;
+        byte2 = SegmentA000Globals.Byte0002;
+        Segment2000Globals.Byte0049 = byte2;
         AX = 0x0204;
         Vga.WriteGraphicsControllerRegister(4, 2);
-        byte1 = SegmentA000Globals.Byte0002;
-        Segment2000Globals.Byte004A = byte1;
+        byte2 = SegmentA000Globals.Byte0002;
+        Segment2000Globals.Byte004A = byte2;
         AX = 0x0304;
         Vga.WriteGraphicsControllerRegister(4, 3);
-        byte1 = SegmentA000Globals.Byte0002;
-        Segment2000Globals.Byte004B = byte1;
-        AX = 0x0E06;
+        Segment2000Globals.Byte004B = SegmentA000Globals.Byte0002;
         Vga.WriteGraphicsControllerRegister(6, 0x0E);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

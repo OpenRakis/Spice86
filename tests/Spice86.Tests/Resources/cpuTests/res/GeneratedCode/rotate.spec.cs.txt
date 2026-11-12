@@ -28,7 +28,6 @@ public partial class CfgGeneratedOverrides {
         word2 = Alu16.Rcl(0xC8A7, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0022 = word2;
-        CX = 0xFFFF;
         DX = word2;
         DX = Alu16.Rcl(DX, 0xFF);
         Stack.Push16(FlagRegister16);
@@ -63,7 +62,6 @@ public partial class CfgGeneratedOverrides {
         word2 = Alu16.Rcr(0x8307, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word002E = word2;
-        CX = 0xFFFF;
         DX = word2;
         DX = Alu16.Rcr(DX, 0xFF);
         Stack.Push16(FlagRegister16);
@@ -100,7 +98,6 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Rol(0x8D5A, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word003A = 0x8D5A;
-        CX = 0xFFFF;
         DX = Alu16.Rol(0x8D5A, 0xFF);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word003C = 0x46AD;
@@ -109,8 +106,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word003E = 0xD5A8;
         DsGlobals.Word0012 = Alu16.Rol(DsGlobals.Word0012, 4);
         Stack.Push16(FlagRegister16);
-        DX = 0x9D09;
-        AX = 0xC948;
         DsGlobals.Word0014 = 0x0B80;
         DsGlobals.Word0016 = 0x48E8;
         AH = 0x93;
@@ -137,7 +132,6 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Ror(0x2EB5, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0046 = 0x2EB5;
-        CX = 0xFFFF;
         DX = Alu16.Ror(0x2EB5, 0xFF);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0048 = 0x5D6A;
@@ -146,8 +140,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word004A = 0x52EB;
         DsGlobals.Word001A = Alu16.Ror(DsGlobals.Word001A, 4);
         Stack.Push16(FlagRegister16);
-        DX = 0x4288;
-        AX = 0x8BAB;
         DsGlobals.Word001C = 0x5DD9;
         DsGlobals.Word001E = 0xC7F7;
         AH = 0xC5;
@@ -157,7 +149,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word004C = 0xC5AB;
         DsGlobals.Byte001D = Alu8.Ror(DsGlobals.Byte001D, 1);
         Stack.Push16(FlagRegister16);
-        CL = 7;
         DL = Alu8.Ror(0x88, 7);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word004E = 0x4211;

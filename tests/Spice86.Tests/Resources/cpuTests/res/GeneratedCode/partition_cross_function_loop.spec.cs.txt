@@ -13,28 +13,28 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0015_F0015() {
+    public virtual Action unknown_F000_0028_F0028() {
     entrydispatcher:
-        CheckExternalEvents(biosSegment, 0x0015);
+        CheckExternalEvents(biosSegment, 0x0028);
         CX = Alu16.Dec(CX);
         if (CX == 0) {
             return NearRet();
         }
-        if (JumpDispatcher.Jump(unknown_F000_001B_F001BEntry, 0x0000)) {
+        if (JumpDispatcher.Jump(unknown_F000_002E_F002EEntry, 0x0000)) {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_001B_F001B() {
+    public virtual Action unknown_F000_002E_F002E() {
     entrydispatcher:
-        CheckExternalEvents(biosSegment, 0x001B);
+        CheckExternalEvents(biosSegment, 0x002E);
         CX = Alu16.Dec(CX);
         if (CX == 0) {
             return NearRet();
         }
-        if (JumpDispatcher.Jump(unknown_F000_0015_F0015Entry, 0x0000)) {
+        if (JumpDispatcher.Jump(unknown_F000_0028_F0028Entry, 0x0000)) {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
@@ -47,9 +47,13 @@ public partial class CfgGeneratedOverrides {
         SS = 0x1000;
         SP = 0x0100;
         CX = 2;
-        NearCall(biosSegment, 0x000E, unknown_F000_0015_F0015Entry, [new(new(biosSegment, 0x0015), unknown_F000_0015_F0015Entry), new(new(biosSegment, 0x001B), unknown_F000_001B_F001BEntry)]);
+        NearCall(biosSegment, 0x000E, unknown_F000_0028_F0028Entry, [new(new(biosSegment, 0x0028), unknown_F000_0028_F0028Entry), new(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry)]);
         CX = 2;
-        NearCall(biosSegment, 0x0014, unknown_F000_001B_F001BEntry, [new(new(biosSegment, 0x0015), unknown_F000_0015_F0015Entry), new(new(biosSegment, 0x001B), unknown_F000_001B_F001BEntry)]);
+        NearCall(biosSegment, 0x0014, unknown_F000_002E_F002EEntry, [new(new(biosSegment, 0x0028), unknown_F000_0028_F0028Entry), new(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry)]);
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x0604] = AX;
+        SsUInt16[0x0608] = CX;
         return Hlt();
     }
 
@@ -71,18 +75,18 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0015_F0015Entry;
-    private readonly Func<int, Action> unknown_F000_001B_F001BEntry;
+    private readonly Func<int, Action> unknown_F000_0028_F0028Entry;
+    private readonly Func<int, Action> unknown_F000_002E_F002EEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
 
-        unknown_F000_0015_F0015Entry = _ => unknown_F000_0015_F0015();
-        unknown_F000_001B_F001BEntry = _ => unknown_F000_001B_F001B();
+        unknown_F000_0028_F0028Entry = _ => unknown_F000_0028_F0028();
+        unknown_F000_002E_F002EEntry = _ => unknown_F000_002E_F002E();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0015, unknown_F000_0015_F0015Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001B, unknown_F000_001B_F001BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0028, unknown_F000_0028_F0028Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002E, unknown_F000_002E_F002EEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

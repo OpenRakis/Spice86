@@ -21,12 +21,8 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         BX = 4;
         (byte1, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(4, DX));
-        Alu8.Sub(byte1, 0);
         if (byte1 == 0) {
-            CX = word1;
-            word1 = CX;
             byte1 = ServiceCall(Ems, () => Ems.DeallocatePages(word1));
-            Alu8.Sub(byte1, 0);
             if (byte1 != 0) {
                 goto L_011D;
             }
@@ -39,9 +35,7 @@ public partial class CfgGeneratedOverrides {
         AH = byte1;
         byte2 = 0xFF;
     L_011F:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

@@ -5,19 +5,24 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:001C",
-  "lastExecutedBlockId": 62,
+  "lastExecutedAddress": "F000:0034",
+  "lastExecutedBlockId": 63,
   "blocks": [
     {
-      "id": 62,
+      "id": 63,
       "entry": "F000:001C",
-      "term": "F000:001C",
+      "term": "F000:0034",
       "pred": [
         19,
         57
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "36A30406|mov word ptr SS:[0x0604],AX",
+        "36891E0606|mov word ptr SS:[0x0606],BX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
         "F4|hlt"
       ]
     },
@@ -35,8 +40,8 @@
     },
     {
       "id": 19,
-      "entry": "F000:0033",
-      "term": "F000:0036",
+      "entry": "F000:004B",
+      "term": "F000:004E",
       "pred": [
         12,
         17
@@ -45,7 +50,7 @@
         36,
         44,
         57,
-        62
+        63
       ],
       "asm": [
         "B933C3|mov CX,0xC333",
@@ -62,11 +67,11 @@
       ],
       "succ": [
         46,
-        62
+        63
       ],
       "asm": [
         "B001|mov AL,1",
-        "E80700|call near 0x0023"
+        "E81F00|call near 0x003B"
       ]
     },
     {
@@ -85,7 +90,7 @@
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
         "B000|mov AL,0",
-        "E81000|call near 0x001D"
+        "E82800|call near 0x0035"
       ]
     },
     {
@@ -102,7 +107,7 @@
       ],
       "asm": [
         "B001|mov AL,1",
-        "E80B00|call near 0x001D"
+        "E82300|call near 0x0035"
       ]
     },
     {
@@ -119,13 +124,13 @@
       ],
       "asm": [
         "B000|mov AL,0",
-        "E80C00|call near 0x0023"
+        "E82400|call near 0x003B"
       ]
     },
     {
       "id": 12,
-      "entry": "F000:0029",
-      "term": "F000:002C",
+      "entry": "F000:0041",
+      "term": "F000:0044",
       "pred": [
         9,
         46
@@ -135,13 +140,13 @@
       ],
       "asm": [
         "BB11A1|mov BX,0xA111",
-        "EB05|jmp short 0x0033"
+        "EB05|jmp short 0x004B"
       ]
     },
     {
       "id": 17,
-      "entry": "F000:002E",
-      "term": "F000:0031",
+      "entry": "F000:0046",
+      "term": "F000:0049",
       "pred": [
         14,
         50
@@ -151,13 +156,13 @@
       ],
       "asm": [
         "BB22B2|mov BX,0xB222",
-        "EB00|jmp short 0x0033"
+        "EB00|jmp short 0x004B"
       ]
     },
     {
       "id": 46,
-      "entry": "F000:0023",
-      "term": "F000:0025",
+      "entry": "F000:003B",
+      "term": "F000:003D",
       "pred": [
         44,
         57
@@ -168,13 +173,13 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7402|je short 0x0029"
+        "7402|je short 0x0041"
       ]
     },
     {
       "id": 9,
-      "entry": "F000:001D",
-      "term": "F000:001F",
+      "entry": "F000:0035",
+      "term": "F000:0037",
       "pred": [
         3,
         36
@@ -185,13 +190,13 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7408|je short 0x0029"
+        "7408|je short 0x0041"
       ]
     },
     {
       "id": 14,
-      "entry": "F000:0021",
-      "term": "F000:0021",
+      "entry": "F000:0039",
+      "term": "F000:0039",
       "pred": [
         9
       ],
@@ -199,13 +204,13 @@
         17
       ],
       "asm": [
-        "EB0B|jmp short 0x002E"
+        "EB0B|jmp short 0x0046"
       ]
     },
     {
       "id": 50,
-      "entry": "F000:0027",
-      "term": "F000:0027",
+      "entry": "F000:003F",
+      "term": "F000:003F",
       "pred": [
         46
       ],
@@ -213,7 +218,7 @@
         17
       ],
       "asm": [
-        "EB05|jmp short 0x002E"
+        "EB05|jmp short 0x0046"
       ]
     }
   ],

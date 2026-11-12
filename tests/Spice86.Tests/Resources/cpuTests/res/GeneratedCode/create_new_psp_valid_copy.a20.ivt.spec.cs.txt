@@ -19,11 +19,6 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         byte byte1 = 0;
-        byte flagOperand_0119 = 0;
-        byte flagOperand_0121 = 0;
-        ushort flagOperand_0129 = 0;
-        ushort flagOperand_0130 = 0;
-        ushort flagOperand_0137 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         word1 = Dos.ReadPspAddress();
@@ -35,39 +30,18 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x0114, 0x21);
         AX = 0x2000;
         ES = 0x2000;
-        flagOperand_0119 = Segment2000Globals.Byte0000;
-        Alu8.Sub(flagOperand_0119, 0xCD);
-        if (flagOperand_0119 == 0xCD) {
-            flagOperand_0121 = Segment2000Globals.Byte0001;
-            Alu8.Sub(flagOperand_0121, 0x20);
-            if (flagOperand_0121 == 0x20) {
-                flagOperand_0129 = Segment2000Globals.Word0016;
-                Alu16.Sub(flagOperand_0129, word2);
-                if (flagOperand_0129 == word2) {
-                    flagOperand_0130 = Segment2000Globals.Word002C;
-                    Alu16.Sub(flagOperand_0130, word3);
-                    if (flagOperand_0130 == word3) {
-                        flagOperand_0137 = Segment2000Globals.Word000A;
-                        Alu16.Sub(flagOperand_0137, 0);
-                        if (flagOperand_0137 == 0) {
-                            goto L_0143;
-                        }
-                        byte1 = 0;
-                        goto L_0145;
-                    }
-                }
+        if (Segment2000Globals.Byte0000 == 0xCD && (Segment2000Globals.Byte0001 == 0x20 && (Segment2000Globals.Word0016 == word2 && Segment2000Globals.Word002C == word3))) {
+            if (Segment2000Globals.Word000A == 0) {
+                goto L_0143;
             }
+            byte1 = 0;
+            goto L_0145;
         }
     L_0143:
         VerifySpeculativeEntryOrFail(cs1, 0x0143, Signature_0143_mov);
         byte1 = 0xFF;
     L_0145:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = word1;
-        BP = word2;
-        DI = word3;
-        AL = byte1;
         return Hlt();
     }
 

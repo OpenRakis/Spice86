@@ -4,28 +4,30 @@
   "totalEntryPoints": 2,
   "entryPointAddresses": [
     "F000:FFF0",
-    "F000:02BC"
+    "F000:02C6"
   ],
-  "lastExecutedAddress": "F000:02A2",
-  "lastExecutedBlockId": 639,
+  "lastExecutedAddress": "F000:02AC",
+  "lastExecutedBlockId": 641,
   "blocks": [
     {
-      "id": 639,
+      "id": 641,
       "entry": "F000:02A2",
-      "term": "F000:02A2",
+      "term": "F000:02AC",
       "pred": [
         607,
-        636
+        638
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
     {
       "id": 587,
-      "entry": "F000:02BC",
-      "term": "F000:02C8",
+      "entry": "F000:02C6",
+      "term": "F000:02D2",
       "pred": [],
       "succ": [],
       "asm": [
@@ -56,8 +58,8 @@
         606
       ],
       "succ": [
-        636,
-        639
+        638,
+        641
       ],
       "asm": [
         "FA|cli",
@@ -65,9 +67,9 @@
         "8EC0|mov ES,AX",
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C7063000C902|mov word ptr ES:[0x0030],0x02C9",
+        "26C7063000D302|mov word ptr ES:[0x0030],0x02D3",
         "268C0E3200|mov word ptr ES:[0x0032],CS",
-        "26C7063400D502|mov word ptr ES:[0x0034],0x02D5",
+        "26C7063400DF02|mov word ptr ES:[0x0034],0x02DF",
         "268C0E3600|mov word ptr ES:[0x0036],CS",
         "8CD8|mov AX,DS",
         "8EC0|mov ES,AX",
@@ -76,14 +78,14 @@
       ]
     },
     {
-      "id": 636,
-      "entry": "F000:02C9",
-      "term": "F000:02D4",
+      "id": 638,
+      "entry": "F000:02D3",
+      "term": "F000:02DE",
       "pred": [
         607
       ],
       "succ": [
-        639
+        641
       ],
       "asm": [
         "89E5|mov BP,SP",
@@ -205,8 +207,8 @@
     },
     {
       "id": 598,
-      "entry": "F000:02B1",
-      "term": "F000:02B8",
+      "entry": "F000:02BB",
+      "term": "F000:02C2",
       "pred": [
         547,
         555
@@ -233,7 +235,7 @@
         606
       ],
       "asm": [
-        "E83000|call near 0x02A3"
+        "E83A00|call near 0x02AD"
       ]
     },
     {
@@ -289,8 +291,8 @@
     },
     {
       "id": 555,
-      "entry": "F000:02BA",
-      "term": "F000:02BB",
+      "entry": "F000:02C4",
+      "term": "F000:02C5",
       "pred": [
         553
       ],
@@ -304,8 +306,8 @@
     },
     {
       "id": 547,
-      "entry": "F000:02A3",
-      "term": "F000:02AE",
+      "entry": "F000:02AD",
+      "term": "F000:02B8",
       "pred": [
         545
       ],
@@ -318,7 +320,7 @@
         "89E5|mov BP,SP",
         "83EC02|sub SP,2",
         "C746FED4D4|mov word ptr SS:[BP-2],0xD4D4",
-        "E80800|call near 0x02B9"
+        "E80800|call near 0x02C3"
       ]
     },
     {
@@ -360,8 +362,8 @@
     },
     {
       "id": 553,
-      "entry": "F000:02B9",
-      "term": "F000:02B9",
+      "entry": "F000:02C3",
+      "term": "F000:02C3",
       "pred": [
         547
       ],
@@ -389,7 +391,7 @@
         "8EC0|mov ES,AX",
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C7062000BC02|mov word ptr ES:[0x0020],0x02BC",
+        "26C7062000C602|mov word ptr ES:[0x0020],0x02C6",
         "268C0E2200|mov word ptr ES:[0x0022],CS",
         "8CD8|mov AX,DS",
         "8EC0|mov ES,AX",
@@ -429,8 +431,8 @@
     },
     {
       "id": 467,
-      "entry": "F000:0323",
-      "term": "F000:0323",
+      "entry": "F000:032D",
+      "term": "F000:032D",
       "pred": [
         462
       ],
@@ -456,7 +458,7 @@
       "asm": [
         "A25B00|mov byte ptr DS:[0x005B],AL",
         "B90100|mov CX,1",
-        "E8DE00|call near 0x0317"
+        "E8E800|call near 0x0321"
       ]
     },
     {
@@ -471,13 +473,13 @@
         208
       ],
       "asm": [
-        "E8AF01|call near 0x02E1"
+        "E8B901|call near 0x02EB"
       ]
     },
     {
       "id": 462,
-      "entry": "F000:031E",
-      "term": "F000:0321",
+      "entry": "F000:0328",
+      "term": "F000:032B",
       "pred": [
         460,
         471
@@ -488,13 +490,13 @@
       ],
       "asm": [
         "83F900|cmp CX,0",
-        "740B|je short 0x032E"
+        "740B|je short 0x0338"
       ]
     },
     {
       "id": 510,
-      "entry": "F000:0317",
-      "term": "F000:031C",
+      "entry": "F000:0321",
+      "term": "F000:0326",
       "pred": [
         507
       ],
@@ -504,13 +506,13 @@
       "asm": [
         "B80040|mov AX,0x4000",
         "8EC0|mov ES,AX",
-        "EB06|jmp short 0x0324"
+        "EB06|jmp short 0x032E"
       ]
     },
     {
       "id": 476,
-      "entry": "F000:032D",
-      "term": "F000:032D",
+      "entry": "F000:0337",
+      "term": "F000:0337",
       "pred": [
         471
       ],
@@ -552,13 +554,13 @@
         "B80020|mov AX,0x2000",
         "8EC0|mov ES,AX",
         "B90000|mov CX,0",
-        "E8E500|call near 0x0315"
+        "E8EF00|call near 0x031F"
       ]
     },
     {
       "id": 107,
-      "entry": "F000:02E1",
-      "term": "F000:02E6",
+      "entry": "F000:02EB",
+      "term": "F000:02F0",
       "pred": [
         105
       ],
@@ -589,13 +591,13 @@
         "8EC3|mov ES,BX",
         "26A24B00|mov byte ptr ES:[0x004B],AL",
         "8EDB|mov DS,BX",
-        "E8A401|call near 0x02E7"
+        "E8AE01|call near 0x02F1"
       ]
     },
     {
       "id": 465,
-      "entry": "F000:032E",
-      "term": "F000:0333",
+      "entry": "F000:0338",
+      "term": "F000:033D",
       "pred": [
         462
       ],
@@ -605,13 +607,13 @@
       "asm": [
         "B80030|mov AX,0x3000",
         "8EC0|mov ES,AX",
-        "EBEF|jmp short 0x0324"
+        "EBEF|jmp short 0x032E"
       ]
     },
     {
       "id": 460,
-      "entry": "F000:0315",
-      "term": "F000:0315",
+      "entry": "F000:031F",
+      "term": "F000:031F",
       "pred": [
         441
       ],
@@ -619,13 +621,13 @@
         462
       ],
       "asm": [
-        "EB07|jmp short 0x031E"
+        "EB07|jmp short 0x0328"
       ]
     },
     {
       "id": 471,
-      "entry": "F000:0324",
-      "term": "F000:032B",
+      "entry": "F000:032E",
+      "term": "F000:0335",
       "pred": [
         465,
         510
@@ -637,13 +639,13 @@
       "asm": [
         "26A06200|mov AL,byte ptr ES:[0x0062]",
         "83F901|cmp CX,1",
-        "74F1|je short 0x031E"
+        "74F1|je short 0x0328"
       ]
     },
     {
       "id": 359,
-      "entry": "F000:030C",
-      "term": "F000:0314",
+      "entry": "F000:0316",
+      "term": "F000:031E",
       "pred": [
         355,
         426
@@ -680,13 +682,13 @@
         "B80020|mov AX,0x2000",
         "8ED8|mov DS,AX",
         "8EC0|mov ES,AX",
-        "E80C01|call near 0x030C"
+        "E81601|call near 0x0316"
       ]
     },
     {
       "id": 214,
-      "entry": "F000:02E7",
-      "term": "F000:02EA",
+      "entry": "F000:02F1",
+      "term": "F000:02F4",
       "pred": [
         208,
         225
@@ -716,13 +718,13 @@
         "A24C00|mov byte ptr DS:[0x004C],AL",
         "B80120|mov AX,0x2001",
         "8ED8|mov DS,AX",
-        "E89901|call near 0x02E7"
+        "E8A301|call near 0x02F1"
       ]
     },
     {
       "id": 423,
-      "entry": "F000:030B",
-      "term": "F000:030B",
+      "entry": "F000:0315",
+      "term": "F000:0315",
       "pred": [
         355,
         359
@@ -736,8 +738,8 @@
     },
     {
       "id": 355,
-      "entry": "F000:0304",
-      "term": "F000:0308",
+      "entry": "F000:030E",
+      "term": "F000:0312",
       "pred": [
         340
       ],
@@ -748,7 +750,7 @@
       "asm": [
         "8CD8|mov AX,DS",
         "8EC0|mov ES,AX",
-        "E80100|call near 0x030C"
+        "E80100|call near 0x0316"
       ]
     },
     {
@@ -776,7 +778,7 @@
         "8EC0|mov ES,AX",
         "1E|push DS",
         "C51E9400|lds BX,word ptr DS:[0x0094]",
-        "E81401|call near 0x0304"
+        "E81E01|call near 0x030E"
       ]
     },
     {
@@ -795,7 +797,7 @@
         "BB0020|mov BX,0x2000",
         "8EDB|mov DS,BX",
         "A24D00|mov byte ptr DS:[0x004D],AL",
-        "E89201|call near 0x02EB"
+        "E89C01|call near 0x02F5"
       ]
     },
     {
@@ -821,8 +823,8 @@
     },
     {
       "id": 238,
-      "entry": "F000:02EB",
-      "term": "F000:02EE",
+      "entry": "F000:02F5",
+      "term": "F000:02F8",
       "pred": [
         234
       ],
@@ -848,7 +850,7 @@
       ],
       "asm": [
         "A24E00|mov byte ptr DS:[0x004E],AL",
-        "E89001|call near 0x02EF"
+        "E89A01|call near 0x02F9"
       ]
     },
     {
@@ -901,8 +903,8 @@
     },
     {
       "id": 249,
-      "entry": "F000:02EF",
-      "term": "F000:02FB",
+      "entry": "F000:02F9",
+      "term": "F000:0305",
       "pred": [
         247
       ],
@@ -935,7 +937,7 @@
         "A24F00|mov byte ptr DS:[0x004F],AL",
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C7068001FC02|mov word ptr ES:[0x0180],0x02FC",
+        "26C70680010603|mov word ptr ES:[0x0180],0x0306",
         "268C0E8201|mov word ptr ES:[0x0182],CS",
         "B80020|mov AX,0x2000",
         "8EC0|mov ES,AX",
@@ -959,8 +961,8 @@
     },
     {
       "id": 282,
-      "entry": "F000:02FC",
-      "term": "F000:0303",
+      "entry": "F000:0306",
+      "term": "F000:030D",
       "pred": [
         264
       ],

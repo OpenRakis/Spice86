@@ -67,5 +67,7 @@ F000:00A9 out DX,AX
 F000:00AA mov AX,0x2000
 F000:00AD mov SS,AX
 F000:00AF mov SP,0x1000
-F000:00B2 hlt
+F000:00B2 mov word ptr SS:[0x0600],SP
+F000:00B7 mov word ptr SS:[0x0602],SS
+F000:00BC hlt
 F000:FFF0 jmp short 0

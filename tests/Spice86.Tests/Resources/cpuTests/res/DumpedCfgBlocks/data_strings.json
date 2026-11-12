@@ -1,6 +1,6 @@
 {
   "currentContextDepth": 1,
-  "currentContextEntryPoint": "016E:0100",
+  "currentContextEntryPoint": "016D:0100",
   "totalEntryPoints": 11,
   "entryPointAddresses": [
     "F000:0006",
@@ -13,15 +13,15 @@
     "F000:007C",
     "F000:0081",
     "F000:0086",
-    "016E:0100"
+    "016D:0100"
   ],
-  "lastExecutedAddress": "016E:0168",
+  "lastExecutedAddress": "016D:0172",
   "lastExecutedBlockId": 161,
   "blocks": [
     {
       "id": 64,
-      "entry": "016E:0100",
-      "term": "016E:010F",
+      "entry": "016D:0100",
+      "term": "016D:010F",
       "pred": [],
       "succ": [
         78,
@@ -32,15 +32,15 @@
         "8ED0|mov SS,AX",
         "BC0010|mov SP,0x1000",
         "8EC0|mov ES,AX",
-        "BA6901|mov DX,0x0169",
+        "BA7301|mov DX,0x0173",
         "B409|mov AH,9",
         "CD21|int 0x21"
       ]
     },
     {
       "id": 161,
-      "entry": "016E:015D",
-      "term": "016E:0168",
+      "entry": "016D:015D",
+      "term": "016D:0172",
       "pred": [
         103,
         141
@@ -48,8 +48,10 @@
       "succ": [],
       "asm": [
         "26A34800|mov word ptr ES:[0x0048],AX",
-        "A07B01|mov AL,byte ptr DS:[0x017B]",
+        "A08501|mov AL,byte ptr DS:[0x0185]",
         "26A24900|mov byte ptr ES:[0x0049],AL",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -205,8 +207,8 @@
     },
     {
       "id": 113,
-      "entry": "016E:0111",
-      "term": "016E:0120",
+      "entry": "016D:0111",
+      "term": "016D:0120",
       "pred": [
         64,
         103
@@ -219,7 +221,7 @@
         "26A34000|mov word ptr ES:[0x0040],AX",
         "BB0100|mov BX,1",
         "B90400|mov CX,4",
-        "BA7A01|mov DX,0x017A",
+        "BA8401|mov DX,0x0184",
         "B440|mov AH,0x40",
         "CD21|int 0x21"
       ]
@@ -243,8 +245,8 @@
     },
     {
       "id": 141,
-      "entry": "016E:0139",
-      "term": "016E:015B",
+      "entry": "016D:0139",
+      "term": "016D:015B",
       "pred": [
         103,
         125
@@ -258,10 +260,10 @@
         "B80000|mov AX,0",
         "83D000|adc AX,0",
         "26A24700|mov byte ptr ES:[0x0047],AL",
-        "C6067E0148|mov byte ptr DS:[0x017E],0x48",
-        "C6067F0169|mov byte ptr DS:[0x017F],0x69",
-        "C606800124|mov byte ptr DS:[0x0180],0x24",
-        "BA7E01|mov DX,0x017E",
+        "C606880148|mov byte ptr DS:[0x0188],0x48",
+        "C606890169|mov byte ptr DS:[0x0189],0x69",
+        "C6068A0124|mov byte ptr DS:[0x018A],0x24",
+        "BA8801|mov DX,0x0188",
         "B409|mov AH,9",
         "CD21|int 0x21"
       ]
@@ -453,8 +455,8 @@
     },
     {
       "id": 125,
-      "entry": "016E:0122",
-      "term": "016E:0137",
+      "entry": "016D:0122",
+      "term": "016D:0137",
       "pred": [
         103,
         113
@@ -468,7 +470,7 @@
         "B80000|mov AX,0",
         "83D000|adc AX,0",
         "26A24400|mov byte ptr ES:[0x0044],AL",
-        "BA6F01|mov DX,0x016F",
+        "BA7901|mov DX,0x0179",
         "B000|mov AL,0",
         "B43D|mov AH,0x3D",
         "CD21|int 0x21"

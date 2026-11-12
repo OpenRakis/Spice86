@@ -5,7 +5,7 @@ F000:0007 mov SP,0x1000
 F000:000A xor BX,BX
 F000:000C xor AX,AX
 F000:000E mov ES,AX
-F000:0010 mov word ptr ES:[0x0034],0x0038
+F000:0010 mov word ptr ES:[0x0034],0x0042
 F000:0017 mov word ptr ES:[0x0036],0xF000
 F000:001E mov AX,0x1FFF
 F000:0021 mov ES,AX
@@ -13,11 +13,13 @@ F000:0023 mov byte ptr ES:[0x0010],0x11
 F000:0029 mov word ptr DS:[0xFFFF],0x2233
 F000:002F mov CL,byte ptr ES:[0x0010]
 F000:0034 mov byte ptr DS:[BX+0x56],CL
-F000:0037 hlt
-F000:0038 inc byte ptr DS:[0x0057]
-F000:003C push BP
-F000:003D mov BP,SP
-F000:003F add word ptr SS:[BP+2],6
-F000:0043 pop BP
-F000:0044 iret
+F000:0037 mov word ptr SS:[0x0600],SP
+F000:003C mov word ptr SS:[0x0602],SS
+F000:0041 hlt
+F000:0042 inc byte ptr DS:[0x0057]
+F000:0046 push BP
+F000:0047 mov BP,SP
+F000:0049 add word ptr SS:[BP+2],6
+F000:004D pop BP
+F000:004E iret
 F000:FFF0 jmp short 0

@@ -5,7 +5,7 @@ F000:0007 mov SS,AX
 F000:0009 mov SP,0x1000
 F000:000C cld
 F000:000D xor BX,BX
-F000:000F mov SI,0x00C5
+F000:000F mov SI,0x00CF
 F000:0012 mov word ptr DS:[0x0F00],4
 F000:0018 mov AX,word ptr CS:[SI]
 F000:001B mov CX,word ptr CS:[SI+2]
@@ -47,7 +47,7 @@ F000:0084 pushf
 F000:0085 pop DX
 F000:0086 and DX,0x08D5
 F000:008A mov word ptr DS:[BX+0x0A],DX
-F000:008D call near 0x00BD
+F000:008D call near 0x00C7
 F000:0090 mov byte ptr DS:[BX+0x0C],1
 F000:0094 jb short 0x009A
 F000:0096 mov byte ptr DS:[BX+0x0C],2
@@ -62,11 +62,13 @@ F000:00AE add BX,0x0040
 F000:00B1 add SI,8
 F000:00B4 dec word ptr DS:[0x0F00]
 F000:00B8 jne near 0x0018
-F000:00BC hlt
-F000:00BD cmp AX,CX
-F000:00BF jb short 0x00C3
-F000:00C1 clc
-F000:00C2 ret near
-F000:00C3 stc
-F000:00C4 ret near
+F000:00BC mov word ptr SS:[0x0600],SP
+F000:00C1 mov word ptr SS:[0x0602],SS
+F000:00C6 hlt
+F000:00C7 cmp AX,CX
+F000:00C9 jb short 0x00CD
+F000:00CB clc
+F000:00CC ret near
+F000:00CD stc
+F000:00CE ret near
 F000:FFF0 jmp short 0

@@ -15,26 +15,21 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort word1 = 0;
         byte byte1 = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = Dos.ReadPspAddress();
-        ES = BX;
+        word1 = Dos.ReadPspAddress();
+        ES = word1;
         byte1 = EsGlobals.Byte0018;
-        DX = 0x0998;
         Out8(0x0998, byte1);
-        Alu8.Sub(byte1, 0);
         if (byte1 == 0) {
             byte1 = EsGlobals.Byte0019;
-            DX = 0x0998;
             Out8(0x0998, byte1);
-            Alu8.Sub(byte1, 1);
             if (byte1 == 1) {
                 byte1 = EsGlobals.Byte001A;
-                DX = 0x0998;
                 Out8(0x0998, byte1);
-                Alu8.Sub(byte1, 2);
                 if (byte1 != 2) {
                     goto L_012E;
                 }
@@ -46,9 +41,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x012E, Signature_012E_mov);
         byte2 = 0xFF;
     L_0130:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

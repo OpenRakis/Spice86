@@ -19,19 +19,19 @@ public partial class CfgGeneratedOverrides {
         word1 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0003);
-            Alu16.Sub(word1, 0);
             if (word1 != 0) {
                 break;
             }
             AX = UInt16[0x000F000A];
             SegmentF000Globals.Word000A = 0x162E;
             word1 = 1;
+            SegmentF000Globals.Word0604 = AX;
+            SegmentF000Globals.Word0608 = 1;
             if (AX == 0x162E) {
                 continue;
             }
             word1 = 0;
         }
-        CX = word1;
         return Hlt();
     }
 
@@ -54,6 +54,10 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
     }
 
     public ushort Word000A { get => _memory.UInt16[Segment, 0x000A]; set => _memory.UInt16[Segment, 0x000A] = value; }
+
+    public ushort Word0604 { get => _memory.UInt16[Segment, 0x0604]; set => _memory.UInt16[Segment, 0x0604] = value; }
+
+    public ushort Word0608 { get => _memory.UInt16[Segment, 0x0608]; set => _memory.UInt16[Segment, 0x0608] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

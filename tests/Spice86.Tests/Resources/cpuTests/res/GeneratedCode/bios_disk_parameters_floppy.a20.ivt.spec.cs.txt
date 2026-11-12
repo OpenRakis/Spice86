@@ -21,29 +21,16 @@ public partial class CfgGeneratedOverrides {
         ushort word3 = 0;
         byte byte2 = 0;
         byte flagOperand_013C = 0;
-        ushort flagOperand_018D = 0;
-        ushort flagOperand_0198 = 0;
-        ushort flagOperand_01A3 = 0;
-        ushort flagOperand_01AC = 0;
-        ushort flagOperand_01B5 = 0;
-        ushort flagOperand_01BE = 0;
         ushort flagOperand_01D7 = 0;
         ushort flagOperand_01E4 = 0;
         ushort flagOperand_01F1 = 0;
         ushort flagOperand_01FE = 0;
         ushort flagOperand_020B = 0;
-        ushort flagOperand_025C = 0;
-        ushort flagOperand_0269 = 0;
-        ushort flagOperand_0273 = 0;
-        ushort flagOperand_027E = 0;
-        ushort flagOperand_0289 = 0;
         ushort flagOperand_021A = 0;
         ushort flagOperand_0227 = 0;
         ushort flagOperand_0233 = 0;
         ushort flagOperand_0240 = 0;
         ushort flagOperand_024D = 0;
-        ushort flagOperand_02D8 = 0;
-        ushort flagOperand_02E5 = 0;
         CheckExternalEvents(cs1, 0x0100);
         SI = 0x0081;
         while (true) {
@@ -60,7 +47,6 @@ public partial class CfgGeneratedOverrides {
             DL = 0;
             if (AL != 0x66) {
                 VerifySpeculativeRunOrFail(cs1, 0x011C, SpeculativeRun_011C);
-                Alu8.Sub(AL, 0x61);
                 if (AL == 0x61) {
                     goto L_0125;
                 }
@@ -104,32 +90,11 @@ public partial class CfgGeneratedOverrides {
                 ImageMinus0003Globals.Word0316 = CX;
                 ImageMinus0003Globals.Word0318 = DX;
                 AL = 3;
-                flagOperand_018D = ImageMinus0003Globals.Word0304;
-                Alu16.Sub(SP, flagOperand_018D);
-                if (SP == flagOperand_018D) {
+                if (SP == ImageMinus0003Globals.Word0304) {
                     AX = DS;
-                    flagOperand_0198 = ImageMinus0003Globals.Word0306;
-                    Alu16.Sub(AX, flagOperand_0198);
-                    if (AX == flagOperand_0198) {
+                    if (AX == ImageMinus0003Globals.Word0306) {
                         AX = ES;
-                        flagOperand_01A3 = ImageMinus0003Globals.Word0308;
-                        Alu16.Sub(AX, flagOperand_01A3);
-                        if (AX != flagOperand_01A3) {
-                            goto L_02F0;
-                        }
-                        flagOperand_01AC = ImageMinus0003Globals.Word030A;
-                        Alu16.Sub(SI, flagOperand_01AC);
-                        if (SI != flagOperand_01AC) {
-                            goto L_02F0;
-                        }
-                        flagOperand_01B5 = ImageMinus0003Globals.Word030C;
-                        Alu16.Sub(DI, flagOperand_01B5);
-                        if (DI != flagOperand_01B5) {
-                            goto L_02F0;
-                        }
-                        flagOperand_01BE = ImageMinus0003Globals.Word030E;
-                        Alu16.Sub(BP, flagOperand_01BE);
-                        if (BP != flagOperand_01BE) {
+                        if (AX != ImageMinus0003Globals.Word0308 || SI != ImageMinus0003Globals.Word030A || DI != ImageMinus0003Globals.Word030C || BP != ImageMinus0003Globals.Word030E) {
                             goto L_02F0;
                         }
                         byte1 = ImageMinus0003Globals.Byte02FB;
@@ -142,35 +107,30 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x01D5, SpeculativeRun_01D5);
                         AL = 4;
                         flagOperand_01D7 = ImageMinus0003Globals.Word0310;
-                        Alu16.And(flagOperand_01D7, 1);
                         if ((flagOperand_01D7 & 1) == 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x01E2, SpeculativeRun_01E2);
                         AL = 5;
                         flagOperand_01E4 = ImageMinus0003Globals.Word0312;
-                        Alu16.Sub(flagOperand_01E4, 0x805A);
                         if (flagOperand_01E4 != 0x805A) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x01EF, SpeculativeRun_01EF);
                         AL = 6;
                         flagOperand_01F1 = ImageMinus0003Globals.Word0314;
-                        Alu16.Sub(flagOperand_01F1, 0xA5C3);
                         if (flagOperand_01F1 != 0xA5C3) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x01FC, SpeculativeRun_01FC);
                         AL = 7;
                         flagOperand_01FE = ImageMinus0003Globals.Word0316;
-                        Alu16.Sub(flagOperand_01FE, 0x1234);
                         if (flagOperand_01FE != 0x1234) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0209, SpeculativeRun_0209);
                         AL = 8;
                         flagOperand_020B = ImageMinus0003Globals.Word0318;
-                        Alu16.Sub(flagOperand_020B, 0x5600);
                         if (flagOperand_020B != 0x5600) {
                             goto L_02F0;
                         }
@@ -178,33 +138,23 @@ public partial class CfgGeneratedOverrides {
                         goto L_0292;
                     L_025A:
                         AL = 0x0E;
-                        flagOperand_025C = ImageMinus0003Globals.Word0310;
-                        Alu16.And(flagOperand_025C, 1);
-                        if ((flagOperand_025C & 1) != 0) {
+                        if ((ImageMinus0003Globals.Word0310 & 1) != 0) {
                             goto L_02F0;
                         }
                         AL = 0x0F;
-                        flagOperand_0269 = ImageMinus0003Globals.Word0312;
-                        Alu16.Sub(flagOperand_0269, 0);
-                        if (flagOperand_0269 != 0) {
+                        if (ImageMinus0003Globals.Word0312 != 0) {
                             goto L_02F0;
                         }
                         AL = 0x10;
-                        flagOperand_0273 = ImageMinus0003Globals.Word0314;
-                        Alu16.Sub(flagOperand_0273, 0xA504);
-                        if (flagOperand_0273 != 0xA504) {
+                        if (ImageMinus0003Globals.Word0314 != 0xA504) {
                             goto L_02F0;
                         }
                         AL = 0x11;
-                        flagOperand_027E = ImageMinus0003Globals.Word0316;
-                        Alu16.Sub(flagOperand_027E, 0x4F12);
-                        if (flagOperand_027E != 0x4F12) {
+                        if (ImageMinus0003Globals.Word0316 != 0x4F12) {
                             goto L_02F0;
                         }
                         AL = 0x12;
-                        flagOperand_0289 = ImageMinus0003Globals.Word0318;
-                        Alu16.Sub(flagOperand_0289, 0x0101);
-                        if (flagOperand_0289 != 0x0101) {
+                        if (ImageMinus0003Globals.Word0318 != 0x0101) {
                             goto L_02F0;
                         }
                         else {
@@ -214,35 +164,30 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeRunOrFail(cs1, 0x0218, SpeculativeRun_0218);
                         AL = 9;
                         flagOperand_021A = ImageMinus0003Globals.Word0310;
-                        Alu16.And(flagOperand_021A, 1);
                         if ((flagOperand_021A & 1) != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0225, SpeculativeRun_0225);
                         AL = 0x0A;
                         flagOperand_0227 = ImageMinus0003Globals.Word0312;
-                        Alu16.Sub(flagOperand_0227, 0x005A);
                         if (flagOperand_0227 != 0x005A) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0231, SpeculativeRun_0231);
                         AL = 0x0B;
                         flagOperand_0233 = ImageMinus0003Globals.Word0314;
-                        Alu16.Sub(flagOperand_0233, 0xA5C3);
                         if (flagOperand_0233 != 0xA5C3) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x023E, SpeculativeRun_023E);
                         AL = 0x0C;
                         flagOperand_0240 = ImageMinus0003Globals.Word0316;
-                        Alu16.Sub(flagOperand_0240, 0xFE3F);
                         if (flagOperand_0240 != 0xFE3F) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x024B, SpeculativeRun_024B);
                         AL = 0x0D;
                         flagOperand_024D = ImageMinus0003Globals.Word0318;
-                        Alu16.Sub(flagOperand_024D, 0xFF01);
                         if (flagOperand_024D != 0xFF01) {
                             goto L_02F0;
                         }
@@ -256,12 +201,10 @@ public partial class CfgGeneratedOverrides {
                         EDX = (uint)(int)(short)word3;
                         EAX = 0;
                         AL = 0x13;
-                        Alu32.Sub(ECX, 5);
                         if (ECX != 5) {
                             goto L_02F0;
                         }
                         AL = 0x14;
-                        Alu32.Sub(EDX, 5);
                         if (EDX != 5) {
                             goto L_02F0;
                         }
@@ -270,15 +213,11 @@ public partial class CfgGeneratedOverrides {
                         AX = ImageMinus0003Globals.Word0030;
                         ImageMinus0003Globals.Word0302 = AX;
                         AX = ImageMinus0003Globals.Word02FC;
-                        flagOperand_02D8 = ImageMinus0003Globals.Word0300;
-                        Alu16.Sub(flagOperand_02D8, AX);
-                        if (flagOperand_02D8 != AX) {
+                        if (ImageMinus0003Globals.Word0300 != AX) {
                             goto L_02F0;
                         }
                         AX = ImageMinus0003Globals.Word02FE;
-                        flagOperand_02E5 = ImageMinus0003Globals.Word0302;
-                        Alu16.Sub(flagOperand_02E5, AX);
-                        if (flagOperand_02E5 != AX) {
+                        if (ImageMinus0003Globals.Word0302 != AX) {
                             goto L_02F0;
                         }
                         byte2 = 0;
@@ -289,14 +228,11 @@ public partial class CfgGeneratedOverrides {
         }
     L_02F0:
         VerifySpeculativeRunOrFail(cs1, 0x02F0, SpeculativeRun_02F0);
-        DX = 0x0998;
         Out8(0x0998, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x02F4, Signature_02F4_mov);
         byte2 = 0xFF;
     L_02F6:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

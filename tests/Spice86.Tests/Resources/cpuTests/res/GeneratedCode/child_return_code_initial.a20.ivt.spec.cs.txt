@@ -21,7 +21,6 @@ public partial class CfgGeneratedOverrides {
         AH = 0x4D;
         AX = ServiceCall(Dos, () => Dos.ReadReturnCode());
         byte1 = AH;
-        Alu8.Sub(byte1, 0);
         if (byte1 != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x010E, Signature_010E_mov);
             byte2 = 0xFF;
@@ -29,9 +28,7 @@ public partial class CfgGeneratedOverrides {
         else {
             byte2 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

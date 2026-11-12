@@ -17,13 +17,15 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_012B_F012B() {
         CheckExternalEvents(biosSegment, 0x012B);
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
         return Hlt();
     }
 
     /// <summary>Inputs: BX, BP, DS, flags, DF. Outputs: BP, flags, DF. Changes: BP, flags, DF.</summary>
-    public virtual Action unknown_F000_012C_F012C() {
-        unknown_F000_012C_F012CFrame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x012C);
+    public virtual Action unknown_F000_0136_F0136() {
+        unknown_F000_0136_F0136Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0136);
         Stack.Push16(BP);
         DsGlobals.Byte004A = 1;
         DsGlobals.Word004B = BX;
@@ -32,7 +34,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    public readonly struct unknown_F000_012C_F012CFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_0136_F0136Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0000].</summary>
@@ -61,9 +63,8 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0041 = 0x2222;
         Segment2000Globals.Dword0070 = 0x56781234;
         Segment2000Globals.Dword0074 = 0xDEF09ABCu;
-        DI = Segment2000Globals.Word0070;
         segment = Segment2000Globals.Word0072;
-        word1 = DI;
+        word1 = Segment2000Globals.Word0070;
         Segment2000Globals.Word0043 = word1;
         AX = segment;
         Segment2000Globals.Word0045 = AX;
@@ -99,16 +100,14 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte004A = 0;
         AX = Alu16.Xor(AX, AX);
         ES = 0;
-        Segment0000Globals.Dword0030 = 0x0000012C | (uint)CS << 16;
-        AX = 0x2000;
-        ES = 0x2000;
+        Segment0000Globals.Dword0030 = 0x00000136 | (uint)CS << 16;
         BX = 0x1234;
         try {
             AL = SsUInt8[0x00010000];
             throw FailAsUntested("Untested fallthrough after F000:0124");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0124, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x012C), unknown_F000_012C_F012C)], [new SegmentedAddress(biosSegment, 0x012B)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0124, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0136), unknown_F000_0136_F0136)], [new SegmentedAddress(biosSegment, 0x012B)]);
         }
     }
 
@@ -281,7 +280,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_F000_012B_F012BEntry;
-    private readonly Func<int, Action> unknown_F000_012C_F012CEntry;
+    private readonly Func<int, Action> unknown_F000_0136_F0136Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -297,10 +296,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment3005Globals = new Segment3005Globals(Memory, programStartSegment);
 
         unknown_F000_012B_F012BEntry = _ => unknown_F000_012B_F012B();
-        unknown_F000_012C_F012CEntry = _ => unknown_F000_012C_F012C();
+        unknown_F000_0136_F0136Entry = _ => unknown_F000_0136_F0136();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x012B, unknown_F000_012B_F012BEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x012C, unknown_F000_012C_F012CEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0136, unknown_F000_0136_F0136Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

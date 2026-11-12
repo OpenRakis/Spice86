@@ -12,18 +12,15 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: SI. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        BX = 0;
-        SI = Alu16.Xor(SI, SI);
         Segment2000Globals.Word0020 = 0x1234;
         Segment2000Globals.Word0040 = 0x1234;
-        AX = 0xA000;
         ES = 0xA000;
         SegmentA000Globals.Word0030 = 0xBEEF;
         SegmentA000Globals.Word0030 = 0x1234;
@@ -32,12 +29,11 @@ public partial class CfgGeneratedOverrides {
         ES = Segment2000Globals.Word0062;
         EsGlobals.Byte0020 = 0xAA;
         EsGlobals.Byte0021 = 0xBB;
-        CX = EsGlobals.Word0020;
-        Segment2000Globals.Word0042 = CX;
+        Segment2000Globals.Word0042 = EsGlobals.Word0020;
         EsGlobals.Byte0022 = 0x77;
         EsGlobals.Byte0023 = 0x88;
-        AX = 0x8877;
         Segment2000Globals.Word0044 = 0x8877;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

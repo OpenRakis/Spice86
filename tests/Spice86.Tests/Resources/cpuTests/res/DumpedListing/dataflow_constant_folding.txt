@@ -5,7 +5,7 @@ F000:0007 mov SS,AX
 F000:0009 mov SP,0x1000
 F000:000C cld
 F000:000D xor BX,BX
-F000:000F mov SI,0x0188
+F000:000F mov SI,0x0192
 F000:0012 mov word ptr DS:[0x0F00],4
 F000:0018 mov word ptr DS:[0x96B4],0x5A5A
 F000:001E mov word ptr DS:[0xFFFE],0x6B6B
@@ -72,7 +72,7 @@ F000:00E7 in AL,DX
 F000:00E8 mov byte ptr DS:[0x00D2],AL
 F000:00EB mov AX,0x7777
 F000:00EE push AX
-F000:00EF call near 0x017C
+F000:00EF call near 0x0186
 F000:00F2 add SP,2
 F000:00F5 mov word ptr DS:[0x00D4],AX
 F000:00F8 mov byte ptr DS:[0x00D6],2
@@ -88,7 +88,7 @@ F000:0118 mov word ptr DS:[0x00D8],AX
 F000:011B mov word ptr DS:[0x0120],0x9999
 F000:0121 xor AX,AX
 F000:0123 mov DS,AX
-F000:0125 mov word ptr DS:[0x0034],0x0184
+F000:0125 mov word ptr DS:[0x0034],0x018E
 F000:012B mov word ptr DS:[0x0036],CS
 F000:012F mov AX,0x2000
 F000:0132 mov DS,AX
@@ -123,12 +123,14 @@ F000:0172 shl BX,2
 F000:0175 pushf
 F000:0176 pop DX
 F000:0177 mov word ptr DS:[0x00E6],DX
-F000:017B hlt
-F000:017C push BP
-F000:017D mov BP,SP
-F000:017F mov AX,word ptr SS:[BP+4]
-F000:0182 pop BP
-F000:0183 ret near
-F000:0184 mov BX,0x0120
-F000:0187 iret
+F000:017B mov word ptr SS:[0x0600],SP
+F000:0180 mov word ptr SS:[0x0602],SS
+F000:0185 hlt
+F000:0186 push BP
+F000:0187 mov BP,SP
+F000:0189 mov AX,word ptr SS:[BP+4]
+F000:018C pop BP
+F000:018D ret near
+F000:018E mov BX,0x0120
+F000:0191 iret
 F000:FFF0 jmp short 0

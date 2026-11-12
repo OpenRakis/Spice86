@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort fileHandle = 0;
@@ -21,244 +21,106 @@ public partial class CfgGeneratedOverrides {
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         fileHandle = 1;
-        CX = Alu16.Xor(CX, CX);
         (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7));
-        if (!CarryFlag) {
-            Alu16.Sub(word2, 0);
-            if (word2 == 0) {
-                Alu16.Sub(word1, 7);
-                if (word1 == 7) {
-                    word2 = 0x02C7;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
-                    if (!CarryFlag) {
-                        ImageMinus0003Globals.Word02BF = word1;
-                        fileHandle = ImageMinus0003Globals.Word02BF;
-                        CX = 0;
-                        DX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 0);
-                        if (word1 != 0) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02BF;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.DuplicateHandle(fileHandle));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        ImageMinus0003Globals.Word02C1 = word1;
-                        fileHandle = ImageMinus0003Globals.Word02C1;
-                        CX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 4));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 4);
-                        if (word1 != 4) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02BF;
-                        CX = 0;
-                        DX = word2;
-                        DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 4);
-                        if (word1 != 4) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02BF;
-                        CX = 2;
-                        word2 = 0x02CF;
-                        // DOS 40h write "xy"
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 2, DS, 0x02CF));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 2);
-                        if (word1 != 2) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C1;
-                        CX = 0;
-                        DX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 6);
-                        if (word1 != 6) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02BF;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C1;
-                        CX = 0;
-                        DX = word2;
-                        DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 6);
-                        if (word1 != 6) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C1;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        word2 = 0x02C7;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        ImageMinus0003Globals.Word02C3 = word1;
-                        fileHandle = ImageMinus0003Globals.Word02C3;
-                        CX = 0;
-                        DX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 0);
-                        if (word1 != 0) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C3;
-                        CX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, fileHandle, 0, 3));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 3);
-                        if (word1 != 3) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C3;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        word2 = 0x02CB;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        ImageMinus0003Globals.Word02C5 = word1;
-                        fileHandle = ImageMinus0003Globals.Word02C5;
-                        CX = 5;
-                        word2 = 0x02CF;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 5, DS, 0x02CF));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 5);
-                        if (word1 != 5) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C5;
-                        CX = 0;
-                        DX = 0;
-                        ParityFlag = true;
-                        AuxiliaryFlag = false;
-                        ZeroFlag = true;
-                        SignFlag = false;
-                        OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word2, 0);
-                        if (word2 != 0) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 5);
-                        if (word1 != 5) {
-                            goto L_02B8;
-                        }
-                        fileHandle = ImageMinus0003Globals.Word02C5;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
-                        if (CarryFlag) {
-                            goto L_02B8;
-                        }
-                        fileHandle = 1;
-                        CX = 0;
-                        DX = word2;
-                        DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0));
-                        if (!CarryFlag) {
-                            goto L_02B8;
-                        }
-                        Alu16.Sub(word1, 1);
-                        if (word1 != 1) {
-                            goto L_02B8;
-                        }
-                        AX = word1;
-                        byte1 = 0;
-                        goto L_02BA;
+        if (!CarryFlag && ((uint)word1 | (uint)word2 << 16) == 7) {
+            (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
+            if (!CarryFlag) {
+                ImageMinus0003Globals.Word02BF = word1;
+                fileHandle = ImageMinus0003Globals.Word02BF;
+                (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                if (!CarryFlag) {
+                    if (((uint)word1 | (uint)word2 << 16) != 0) {
+                        goto L_02B8;
                     }
+                    fileHandle = ImageMinus0003Globals.Word02BF;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.DuplicateHandle(fileHandle));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    ImageMinus0003Globals.Word02C1 = word1;
+                    fileHandle = ImageMinus0003Globals.Word02C1;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 4));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 4) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02BF;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 4) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02BF;
+                    // DOS 40h write "xy"
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 2, DS, 0x02CF));
+                    if (CarryFlag || word1 != 2) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C1;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 6) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02BF;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C1;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 6) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C1;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    ImageMinus0003Globals.Word02C3 = word1;
+                    fileHandle = ImageMinus0003Globals.Word02C3;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 0) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C3;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, fileHandle, 0, 3));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 3) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C3;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    ImageMinus0003Globals.Word02C5 = word1;
+                    fileHandle = ImageMinus0003Globals.Word02C5;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 5, DS, 0x02CF));
+                    if (CarryFlag || word1 != 5) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C5;
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
+                    if (CarryFlag || ((uint)word1 | (uint)word2 << 16) != 5) {
+                        goto L_02B8;
+                    }
+                    fileHandle = ImageMinus0003Globals.Word02C5;
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
+                    if (CarryFlag) {
+                        goto L_02B8;
+                    }
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0));
+                    if (!CarryFlag || word1 != 1) {
+                        goto L_02B8;
+                    }
+                    AX = word1;
+                    byte1 = 0;
+                    goto L_02BA;
                 }
             }
         }
@@ -267,10 +129,7 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         byte1 = 0xFF;
     L_02BA:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = fileHandle;
-        AL = byte1;
         return Hlt();
     }
 

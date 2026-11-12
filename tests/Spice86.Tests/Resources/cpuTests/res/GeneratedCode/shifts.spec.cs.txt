@@ -31,7 +31,6 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Shl(0xB1A8, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0022 = 0xB1A8;
-        CX = 0xFFFF;
         DX = Alu16.Shl(0xB1A8, 0xFF);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0024 = 0;
@@ -40,8 +39,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0026 = 0xA800;
         DsGlobals.Byte0002 = Alu8.Shl(DsGlobals.Byte0002, 4);
         Stack.Push16(FlagRegister16);
-        DX = 0x956F;
-        AX = 0x4293;
         DsGlobals.Word0004 = 0x33C0;
         DsGlobals.Word0006 = 0x64FF;
         AH = 0x84;
@@ -74,7 +71,6 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Sar(0xDFB9, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word002E = 0xDFB9;
-        CX = 0xFFFF;
         DX = Alu16.Sar(0xDFB9, 0xFF);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0030 = 0xFFFF;
@@ -83,8 +79,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0032 = 0xFEFD;
         DsGlobals.Byte000A = Alu8.Sar(DsGlobals.Byte000A, 4);
         Stack.Push16(FlagRegister16);
-        DX = 0x93B8;
-        AX = 0x6688;
         DsGlobals.Word000C = 0xCAD4;
         DsGlobals.Word000E = 0x6EC9;
         AH = 0x33;
@@ -117,7 +111,6 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Shr(0x54E8, 0);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word003A = 0x54E8;
-        CX = 0xFFFF;
         DX = Alu16.Shr(0x54E8, 0xFF);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word003C = 0;
@@ -126,8 +119,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word003E = 0x054E;
         DsGlobals.Byte0012 = Alu8.Shr(DsGlobals.Byte0012, 4);
         Stack.Push16(FlagRegister16);
-        DX = 0x0410;
-        AX = 0x1628;
         DsGlobals.Word0014 = 0x3B26;
         DsGlobals.Word0016 = 0x8D0D;
         AH = 0x0B;
@@ -140,7 +131,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0040 = 0x0B28;
         DsGlobals.Byte0015 = Alu8.Shr(DsGlobals.Byte0015, 1);
         Stack.Push16(FlagRegister16);
-        CL = 7;
         DL = Alu8.Shr(0x10, 7);
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0042 = 0x0400;

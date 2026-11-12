@@ -17,14 +17,8 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
         SP = 0x0100;
-        AX = 1;
-        CarryFlag = false;
-        ParityFlag = false;
-        AuxiliaryFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
-        CX = 2;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
+        SsUInt16[0x0608] = 2;
         return Hlt();
     }
 

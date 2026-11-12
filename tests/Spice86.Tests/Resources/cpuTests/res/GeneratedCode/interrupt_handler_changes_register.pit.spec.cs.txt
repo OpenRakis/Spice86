@@ -37,15 +37,12 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort word1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
-        SS = 0x2000;
         SP = 0x1000;
         ES = 0;
         Segment0000Globals.Dword0020 = 0x00000031 | (uint)CS << 16;
-        word1 = DS;
-        ES = word1;
+        AX = DS;
         DirectionFlag = false;
         Pit.ProgramChannel(0, 0x36, 0x2251);
         PicPorts.WritePrimaryData(0);
@@ -53,7 +50,6 @@ public partial class CfgGeneratedOverrides {
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0x0041);
-            Alu16.Sub(AX, 5);
         } while (AX != 5);
         Segment2000Globals.Word0080 = AX;
         InterruptFlag = false;

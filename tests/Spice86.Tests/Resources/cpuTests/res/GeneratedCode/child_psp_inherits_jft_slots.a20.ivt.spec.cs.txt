@@ -17,19 +17,15 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort segment = 0;
         byte byte1 = 0;
-        byte flagOperand_0150 = 0;
-        byte flagOperand_0170 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         BX = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ImageMinus0003Globals.Word01CE = BX;
         DX = 0x01D1;
         NearCall(cs1, 0x010E, unknown_016D_01BB_0188BEntry);
-        Alu16.Sub(AX, 5);
         if (AX == 5) {
             DX = 0x01D7;
             NearCall(cs1, 0x011B, unknown_016D_01BB_0188BEntry);
-            Alu16.Sub(AX, 6);
             if (AX == 6) {
                 DX = 0x01DD;
                 NearCall(cs1, 0x0128, unknown_016D_01BB_0188BEntry);
@@ -49,26 +45,15 @@ public partial class CfgGeneratedOverrides {
                         AL = UInt8[ES, SI + 0x18];
                         BX = 0x2000;
                         ES = 0x2000;
-                        flagOperand_0150 = UInt8[ES, SI + 0x18];
-                        Alu8.Sub(AL, flagOperand_0150);
-                        if (AL != flagOperand_0150) {
+                        if (AL != UInt8[ES, SI + 0x18]) {
                             goto L_01B4;
                         }
                         SI++;
                         Alu16.Sub(SI, 8);
                     } while (SI != 8);
-                    BX = 5;
-                    CX = 1;
-                    DX = 0x01D0;
                     (AX, CarryFlag) = ServiceCall(cs1, 0x0169, Dos, () => Dos.ReadFile(5, 1, DS, 0x01D0), r => CarryOnInterruptStack(r.carryFlag));
                     if (!CarryFlag) {
-                        Alu16.Sub(AX, 1);
-                        if (AX != 1) {
-                            goto L_01B4;
-                        }
-                        flagOperand_0170 = ImageMinus0003Globals.Byte01D0;
-                        Alu8.Sub(flagOperand_0170, 0x41);
-                        if (flagOperand_0170 != 0x41) {
+                        if (AX != 1 || ImageMinus0003Globals.Byte01D0 != 0x41) {
                             goto L_01B4;
                         }
                         DX = 0x01E3;
@@ -115,9 +100,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x01B4, Signature_01B4_mov);
         byte1 = 0xFF;
     L_01B6:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

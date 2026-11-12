@@ -59,7 +59,6 @@ public partial class CfgGeneratedOverrides {
         ushort index3 = 0;
         ushort word1;
         ushort flagOperand_1304 = 0;
-        byte flagOperand_E078 = 0;
         CheckExternalEvents(biosSegment, 0x0883);
         AH = 0x10;
         DirectionFlag = true;
@@ -73,7 +72,6 @@ public partial class CfgGeneratedOverrides {
         if (AX != 0xC200) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:10C3");
         }
-        DX = 0x1000;
         ES = 0x1000;
         Segment1000Globals.ByteFFFF = UInt8[DS, index2];
         index3 = (ushort)(index2 - 1);
@@ -102,7 +100,6 @@ public partial class CfgGeneratedOverrides {
         Segment1000Globals.Word2003 = AX;
         ES = 0x1000;
         flagOperand_1304 = AX;
-        Alu16.Sub(AX, flagOperand_1304);
         DI = 0x2005;
         if (AX != flagOperand_1304) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x1307, Signature_1307_hlt);
@@ -162,9 +159,7 @@ public partial class CfgGeneratedOverrides {
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0xE078);
-            flagOperand_E078 = EsGlobals.Byte0300;
-            Alu8.Sub(flagOperand_E078, 0);
-        } while (flagOperand_E078 == 0);
+        } while (EsGlobals.Byte0300 == 0);
         InterruptFlag = false;
         PicPorts.WritePrimaryData(0xFF);
         AX = 0xE200;
@@ -261,7 +256,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, FS, GS, DF. Outputs: none. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         CX = 0xF000;

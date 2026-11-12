@@ -485,8 +485,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0040 = 0x7FFF;
         DsGlobals.Word0042 = 0;
         Stack.Push16(FlagRegister16);
-        AX = 0x43F1;
-        DX = 0;
         DsGlobals.Word0044 = 0x43F1;
         DsGlobals.Word0046 = 0;
         Stack.Push16(FlagRegister16);

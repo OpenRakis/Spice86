@@ -61,13 +61,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0x2000;
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
         FarCall(biosSegment, 0x0010, biosSegment, () => unknown_F000_1000_F1000(DS));
         FarCall(biosSegment, 0x0015, cs1, () => unknown_F100_1000_F2000(DS));
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

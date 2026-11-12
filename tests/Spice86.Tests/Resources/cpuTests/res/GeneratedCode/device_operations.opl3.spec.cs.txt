@@ -13,7 +13,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: none. Changes: AL.</summary>
-    /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x0000.
+    /// Segment values at entry, from every call site: DS = 0x0000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_010D_F010D() {
         CheckExternalEvents(biosSegment, 0x010D);
@@ -28,11 +28,9 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
         DS = 0;
-        ES = 0;
         SS = 0;
         SP = 0x0100;
         DirectionFlag = false;
-        BX = 0;
         AL = Cmos.ReadRegister(0x8B);
         AL &= 0x7F;
         Segment0000Globals.Byte0000 = AL;
@@ -91,10 +89,8 @@ public partial class CfgGeneratedOverrides {
         AL = Opl3Ports.ReadAdlibAddress0();
         Segment0000Globals.Byte000D = AL;
         Opl.WriteRegister(0x038A, 4, 0x21);
-        DX = 0x038A;
-        AL = Opl3Ports.ReadAdlibAddress1();
-        AL = Alu8.And(AL, 0xC0);
-        Segment0000Globals.Byte000E = AL;
+        byte1 = Opl3Ports.ReadAdlibAddress1();
+        Segment0000Globals.Byte000E = (byte)(byte1 & 0xC0);
         return Hlt();
     }
 

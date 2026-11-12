@@ -6,6 +6,11 @@ start:
     mov sp, 0100h
     call function_a
     call function_b
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:606h], bx
+    mov word [ss:608h], cx
     hlt
 
 function_a:

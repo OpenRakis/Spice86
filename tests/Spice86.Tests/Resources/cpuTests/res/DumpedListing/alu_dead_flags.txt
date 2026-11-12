@@ -5,7 +5,7 @@ F000:0007 mov SS,AX
 F000:0009 mov SP,0x1000
 F000:000C cld
 F000:000D xor BX,BX
-F000:000F mov SI,0x01DF
+F000:000F mov SI,0x01E9
 F000:0012 mov word ptr DS:[0x0F00],4
 F000:0018 mov DX,word ptr CS:[SI]
 F000:001B shl DX,1
@@ -173,5 +173,7 @@ F000:01CF add BX,0x0080
 F000:01D3 add SI,0x000A
 F000:01D6 dec word ptr DS:[0x0F00]
 F000:01DA jne near 0x0018
-F000:01DE hlt
+F000:01DE mov word ptr SS:[0x0600],SP
+F000:01E3 mov word ptr SS:[0x0602],SS
+F000:01E8 hlt
 F000:FFF0 jmp short 0

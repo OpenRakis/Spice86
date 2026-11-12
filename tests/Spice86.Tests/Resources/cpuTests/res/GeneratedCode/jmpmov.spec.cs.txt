@@ -14,6 +14,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0xF000;
         AX = SegmentF000Globals.WordFFF2;
@@ -35,24 +36,18 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near jump target 0x{SsUInt16[BP + DI - 0x16]:X4} at E342:EC05");
         }
         Out16(0xF100 /* no device */, 0x2536);
-        BX = 0x2501;
         Segment1000Globals.Word2501 = 0x4001;
-        DI = 2;
         Segment1000Globals.Byte2503 = 0;
-        CX = 0x0404;
-        CH = 0;
         Segment1000Globals.Byte2504 = 0xF0;
-        SI = 3;
         ushort targetSegment_FC06 = SsUInt16[0x24F3];
         ushort targetOffset_FC06 = SsUInt16[0x24F1];
         if (targetSegment_FC06 != biosSegment || targetOffset_FC06 != 0x4001) {
             throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
         }
         CS = biosSegment;
-        AX = Segment1000Globals.Word2501;
-        DX = 0;
+        word1 = Segment1000Globals.Word2501;
         DS = 0;
-        Segment0000Globals.Word0000 = AX;
+        Segment0000Globals.Word0000 = word1;
         return Hlt();
     }
 

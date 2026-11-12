@@ -24,6 +24,8 @@ ret_b:
 ; a constant jmp far -> F100 whose first CS read is a near call to a routine that pushes it
     jmp 0F100h:seg_c - 1000h
 ret_c:
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 jump_ptr:

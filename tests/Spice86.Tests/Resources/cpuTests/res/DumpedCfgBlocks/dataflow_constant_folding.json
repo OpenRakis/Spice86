@@ -5,15 +5,15 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:017B",
-  "lastExecutedBlockId": 257,
+  "lastExecutedAddress": "F000:0185",
+  "lastExecutedBlockId": 259,
   "blocks": [
     {
-      "id": 257,
+      "id": 259,
       "entry": "F000:0139",
-      "term": "F000:017B",
+      "term": "F000:0185",
       "pred": [
-        259
+        261
       ],
       "succ": [],
       "asm": [
@@ -46,6 +46,8 @@
         "9C|pushf",
         "5A|pop DX",
         "8916E600|mov word ptr DS:[0x00E6],DX",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -62,18 +64,18 @@
       ]
     },
     {
-      "id": 259,
+      "id": 261,
       "entry": "F000:0137",
       "term": "F000:0137",
       "pred": [
         187,
-        256,
-        259
+        258,
+        261
       ],
       "succ": [
-        256,
-        257,
-        259
+        258,
+        259,
+        261
       ],
       "asm": [
         "8B07|mov AX,word ptr DS:[BX]"
@@ -97,21 +99,21 @@
         "BC0010|mov SP,0x1000",
         "FC|cld",
         "31DB|xor BX,BX",
-        "BE8801|mov SI,0x0188",
+        "BE9201|mov SI,0x0192",
         "C706000F0400|mov word ptr DS:[0x0F00],4",
         "C706B4965A5A|mov word ptr DS:[0x96B4],0x5A5A",
         "C706FEFF6B6B|mov word ptr DS:[0xFFFE],0x6B6B"
       ]
     },
     {
-      "id": 256,
-      "entry": "F000:0184",
-      "term": "F000:0187",
+      "id": 258,
+      "entry": "F000:018E",
+      "term": "F000:0191",
       "pred": [
-        259
+        261
       ],
       "succ": [
-        259
+        261
       ],
       "asm": [
         "BB2001|mov BX,0x0120",
@@ -127,7 +129,7 @@
         189
       ],
       "succ": [
-        259
+        261
       ],
       "asm": [
         "C7060002CDAB|mov word ptr DS:[0x0200],0xABCD",
@@ -138,7 +140,7 @@
         "C70620019999|mov word ptr DS:[0x0120],0x9999",
         "31C0|xor AX,AX",
         "8ED8|mov DS,AX",
-        "C70634008401|mov word ptr DS:[0x0034],0x0184",
+        "C70634008E01|mov word ptr DS:[0x0034],0x018E",
         "8C0E3600|mov word ptr DS:[0x0036],CS",
         "B80020|mov AX,0x2000",
         "8ED8|mov DS,AX",
@@ -286,8 +288,8 @@
     },
     {
       "id": 94,
-      "entry": "F000:017C",
-      "term": "F000:0183",
+      "entry": "F000:0186",
+      "term": "F000:018D",
       "pred": [
         85
       ],
@@ -321,7 +323,7 @@
         "A2D200|mov byte ptr DS:[0x00D2],AL",
         "B87777|mov AX,0x7777",
         "50|push AX",
-        "E88A00|call near 0x017C"
+        "E89400|call near 0x0186"
       ]
     },
     {

@@ -11,7 +11,7 @@
       "entries": [
         {
           "block": 11,
-          "address": "F000:0021",
+          "address": "F000:0039",
           "kind": "functionEntry"
         }
       ]
@@ -27,7 +27,7 @@
       "entries": [
         {
           "block": 61,
-          "address": "F000:0027",
+          "address": "F000:003F",
           "kind": "functionEntry"
         }
       ]
@@ -41,7 +41,7 @@
         48,
         59,
         73,
-        78,
+        79,
         2
       ],
       "entries": [
@@ -63,7 +63,7 @@
       "entries": [
         {
           "block": 14,
-          "address": "F000:002D",
+          "address": "F000:0045",
           "kind": "sharedEntry"
         }
       ]
@@ -79,7 +79,7 @@
       "entries": [
         {
           "block": 19,
-          "address": "F000:0033",
+          "address": "F000:004B",
           "kind": "sharedEntry"
         }
       ]
@@ -94,7 +94,7 @@
       "entries": [
         {
           "block": 21,
-          "address": "F000:0039",
+          "address": "F000:0051",
           "kind": "sharedEntry"
         }
       ]
@@ -109,7 +109,7 @@
       "entries": [
         {
           "block": 27,
-          "address": "F000:003D",
+          "address": "F000:0055",
           "kind": "sharedEntry"
         }
       ]
@@ -122,8 +122,8 @@
       "toPartition": 4,
       "fromBlock": 11,
       "toBlock": 14,
-      "from": "F000:0023",
-      "target": "F000:002D"
+      "from": "F000:003B",
+      "target": "F000:0045"
     },
     {
       "kind": "crossPartitionFlow",
@@ -131,8 +131,8 @@
       "toPartition": 5,
       "fromBlock": 16,
       "toBlock": 19,
-      "from": "F000:0025",
-      "target": "F000:0033"
+      "from": "F000:003D",
+      "target": "F000:004B"
     },
     {
       "kind": "crossPartitionFlow",
@@ -140,8 +140,8 @@
       "toPartition": 4,
       "fromBlock": 61,
       "toBlock": 14,
-      "from": "F000:0029",
-      "target": "F000:002D"
+      "from": "F000:0041",
+      "target": "F000:0045"
     },
     {
       "kind": "crossPartitionFlow",
@@ -149,8 +149,8 @@
       "toPartition": 5,
       "fromBlock": 65,
       "toBlock": 19,
-      "from": "F000:002B",
-      "target": "F000:0033"
+      "from": "F000:0043",
+      "target": "F000:004B"
     },
     {
       "kind": "callOut",
@@ -159,7 +159,7 @@
       "fromBlock": 3,
       "toBlock": 11,
       "from": "F000:000E",
-      "target": "F000:0021",
+      "target": "F000:0039",
       "callContinuationBlock": 48,
       "callContinuationAddress": "F000:0011"
     },
@@ -170,7 +170,7 @@
       "fromBlock": 48,
       "toBlock": 11,
       "from": "F000:0013",
-      "target": "F000:0021",
+      "target": "F000:0039",
       "callContinuationBlock": 59,
       "callContinuationAddress": "F000:0016"
     },
@@ -181,7 +181,7 @@
       "fromBlock": 59,
       "toBlock": 61,
       "from": "F000:0018",
-      "target": "F000:0027",
+      "target": "F000:003F",
       "callContinuationBlock": 73,
       "callContinuationAddress": "F000:001B"
     },
@@ -192,8 +192,8 @@
       "fromBlock": 73,
       "toBlock": 61,
       "from": "F000:001D",
-      "target": "F000:0027",
-      "callContinuationBlock": 78,
+      "target": "F000:003F",
+      "callContinuationBlock": 79,
       "callContinuationAddress": "F000:0020"
     },
     {
@@ -202,8 +202,8 @@
       "toPartition": 6,
       "fromBlock": 14,
       "toBlock": 21,
-      "from": "F000:002F",
-      "target": "F000:0039"
+      "from": "F000:0047",
+      "target": "F000:0051"
     },
     {
       "kind": "crossPartitionFlow",
@@ -211,8 +211,8 @@
       "toPartition": 7,
       "fromBlock": 23,
       "toBlock": 27,
-      "from": "F000:0031",
-      "target": "F000:003D"
+      "from": "F000:0049",
+      "target": "F000:0055"
     },
     {
       "kind": "crossPartitionFlow",
@@ -220,8 +220,8 @@
       "toPartition": 6,
       "fromBlock": 19,
       "toBlock": 21,
-      "from": "F000:0035",
-      "target": "F000:0039"
+      "from": "F000:004D",
+      "target": "F000:0051"
     },
     {
       "kind": "crossPartitionFlow",
@@ -229,8 +229,8 @@
       "toPartition": 7,
       "fromBlock": 30,
       "toBlock": 27,
-      "from": "F000:0037",
-      "target": "F000:003D"
+      "from": "F000:004F",
+      "target": "F000:0055"
     },
     {
       "kind": "alignedReturn",
@@ -238,7 +238,7 @@
       "toPartition": 3,
       "fromBlock": 21,
       "toBlock": 48,
-      "from": "F000:003C",
+      "from": "F000:0054",
       "target": "F000:0011"
     },
     {
@@ -247,7 +247,7 @@
       "toPartition": 3,
       "fromBlock": 21,
       "toBlock": 73,
-      "from": "F000:003C",
+      "from": "F000:0054",
       "target": "F000:001B"
     },
     {
@@ -256,7 +256,7 @@
       "toPartition": 3,
       "fromBlock": 27,
       "toBlock": 59,
-      "from": "F000:0040",
+      "from": "F000:0058",
       "target": "F000:0016"
     },
     {
@@ -264,8 +264,8 @@
       "fromPartition": 7,
       "toPartition": 3,
       "fromBlock": 27,
-      "toBlock": 78,
-      "from": "F000:0040",
+      "toBlock": 79,
+      "from": "F000:0058",
       "target": "F000:0020"
     }
   ]

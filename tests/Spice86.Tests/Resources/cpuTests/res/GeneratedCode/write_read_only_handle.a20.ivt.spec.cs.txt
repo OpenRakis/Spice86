@@ -26,49 +26,37 @@ public partial class CfgGeneratedOverrides {
         if (!CarryFlag) {
             ImageMinus0003Globals.Word0177 = word1;
             fileHandle = ImageMinus0003Globals.Word0177;
-            CX = 1;
-            DX = 0x0179;
             // DOS 40h write "x"
             (word2, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 1, DS, 0x0179));
-            if (CarryFlag) {
-                Alu16.Sub(word2, 5);
-                if (word2 == 5) {
-                    BX = ImageMinus0003Globals.Word0177;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
-                    if (!CarryFlag) {
-                        DX = 0x017E;
-                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
-                        if (CarryFlag) {
-                            goto L_0170;
-                        }
-                        ImageMinus0003Globals.Word0177 = word1;
-                        fileHandle = ImageMinus0003Globals.Word0177;
-                        CX = 4;
-                        DX = 0x017A;
-                        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(fileHandle, 4, DS, 0x017A));
-                        if (CarryFlag) {
-                            goto L_0162;
-                        }
-                        Alu16.Sub(word2, 4);
-                        if (word2 != 4) {
-                            goto L_0162;
-                        }
-                        flagOperand_014E = ImageMinus0003Globals.Word017A;
-                        Alu16.Sub(flagOperand_014E, 0x6164);
-                        if (flagOperand_014E != 0x6164) {
-                            goto L_0162;
-                        }
-                        flagOperand_0156 = ImageMinus0003Globals.Word017C;
-                        Alu16.Sub(flagOperand_0156, 0x6174);
-                        if (flagOperand_0156 != 0x6174) {
-                            goto L_0162;
-                        }
-                        AX = word2;
-                        AL = 0;
-                        goto L_0164;
+            if (CarryFlag && word2 == 5) {
+                BX = ImageMinus0003Globals.Word0177;
+                (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+                if (!CarryFlag) {
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
+                    if (CarryFlag) {
+                        goto L_0170;
                     }
-                    goto L_0170;
+                    ImageMinus0003Globals.Word0177 = word1;
+                    fileHandle = ImageMinus0003Globals.Word0177;
+                    (word2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(fileHandle, 4, DS, 0x017A));
+                    if (CarryFlag || word2 != 4) {
+                        goto L_0162;
+                    }
+                    flagOperand_014E = ImageMinus0003Globals.Word017A;
+                    Alu16.Sub(flagOperand_014E, 0x6164);
+                    if (flagOperand_014E != 0x6164) {
+                        goto L_0162;
+                    }
+                    flagOperand_0156 = ImageMinus0003Globals.Word017C;
+                    Alu16.Sub(flagOperand_0156, 0x6174);
+                    if (flagOperand_0156 != 0x6174) {
+                        goto L_0162;
+                    }
+                    AX = word2;
+                    AL = 0;
+                    goto L_0164;
                 }
+                goto L_0170;
             }
         L_0162:
             VerifySpeculativeEntryOrFail(cs1, 0x0162, Signature_0162_mov);
@@ -86,7 +74,6 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         AL = 0xFF;
     L_0172:
-        DX = 0x0999;
         Out8(0x0999, AL);
         return Hlt();
     }

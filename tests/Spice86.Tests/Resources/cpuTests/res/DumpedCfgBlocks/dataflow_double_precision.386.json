@@ -5,18 +5,20 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:01A0",
+  "lastExecutedAddress": "F000:01AA",
   "lastExecutedBlockId": 133,
   "blocks": [
     {
       "id": 133,
       "entry": "F000:01A0",
-      "term": "F000:01A0",
+      "term": "F000:01AA",
       "pred": [
         131
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -135,8 +137,8 @@
         "89572E|mov word ptr DS:[BX\u002B0x2E],DX",
         "8B3E000F|mov DI,word ptr DS:[0x0F00]",
         "83E703|and DI,3",
-        "2E8B85A101|mov AX,word ptr CS:[DI\u002B0x01A1]",
-        "2E8B95A301|mov DX,word ptr CS:[DI\u002B0x01A3]",
+        "2E8B85AB01|mov AX,word ptr CS:[DI\u002B0x01AB]",
+        "2E8B95AD01|mov DX,word ptr CS:[DI\u002B0x01AD]",
         "2E8B4C04|mov CX,word ptr CS:[SI\u002B4]",
         "2E8B6C06|mov BP,word ptr CS:[SI\u002B6]",
         "01C8|add AX,CX",
@@ -177,7 +179,7 @@
         "BC0010|mov SP,0x1000",
         "FC|cld",
         "31DB|xor BX,BX",
-        "BEA101|mov SI,0x01A1",
+        "BEAB01|mov SI,0x01AB",
         "C706000F0400|mov word ptr DS:[0x0F00],4",
         "C70600033412|mov word ptr DS:[0x0300],0x1234",
         "C70602037856|mov word ptr DS:[0x0302],0x5678",

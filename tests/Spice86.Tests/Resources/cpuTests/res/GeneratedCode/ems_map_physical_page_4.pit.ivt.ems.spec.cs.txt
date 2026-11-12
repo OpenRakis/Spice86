@@ -15,36 +15,25 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        byte byte1 = 0;
         ushort word1 = 0;
-        byte byte2 = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         BX = 4;
-        (byte1, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(4, DX));
-        Alu8.Sub(byte1, 0);
-        if (byte1 == 0) {
-            CX = word1;
-            AH = byte1;
+        (AH, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(4, DX));
+        if (AH == 0) {
             AL = 4;
-            BX = 0;
-            word1 = CX;
-            byte1 = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(0, 4, word1));
-            Alu8.Sub(byte1, 0x8B);
-            if (byte1 != 0x8B) {
+            AH = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(0, 4, word1));
+            if (AH != 0x8B) {
                 goto L_011E;
             }
-            AH = byte1;
-            byte2 = 0;
+            byte1 = 0;
             goto L_0124;
         }
     L_011E:
         VerifySpeculativeRunOrFail(cs1, 0x011E, SpeculativeRun_011E);
-        AH = byte1;
-        byte2 = 0xFF;
+        byte1 = 0xFF;
     L_0124:
-        DX = 0x0999;
-        Out8(0x0999, byte2);
-        AL = byte2;
+        Out8(0x0999, byte1);
         return Hlt();
     }
 

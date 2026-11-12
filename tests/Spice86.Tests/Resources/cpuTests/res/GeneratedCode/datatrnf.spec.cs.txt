@@ -87,18 +87,14 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Dword0012 = (uint)BX | (uint)CX << 16;
         DS = word2;
         UInt16[DS, BX + DI] = segment2;
-        BX = 0xB800;
         AX = 0xA0A1;
         AL = Segment1000Globals.ByteB8A1;
         (AH, AL) = (AL, AH);
         AL = UInt8[DS, 0xB800 + (ushort)AL];
         DS = 0;
         Segment0000Globals.Word0016 = AX;
-        DX = 0x00B7;
         AL = 0xF1;
         Segment0000Globals.Word0018 = AX;
-        SI = index;
-        ES = segment2;
         return Hlt();
     }
 

@@ -14,8 +14,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, DS, CF, DF. Outputs: CF, DF. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
-    public virtual Action unknown_F000_0143_F0143() {
-        CheckExternalEvents(biosSegment, 0x0143);
+    public virtual Action unknown_F000_014D_F014D() {
+        CheckExternalEvents(biosSegment, 0x014D);
         UInt16[DS, BX + 0x20] = AX;
         return InterruptRet();
     }
@@ -33,11 +33,10 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         word1 = 0;
         ES = 0;
-        Segment0000Globals.Dword0190 = 0x00000143 | (uint)CS << 16;
+        Segment0000Globals.Dword0190 = 0x0000014D | (uint)CS << 16;
         DirectionFlag = false;
         BX = 0;
-        DI = 0;
-        SI = 0x0150;
+        SI = 0x0160;
         BP = 8;
         do {
             CheckExternalEvents(biosSegment, 0x0027);
@@ -88,7 +87,7 @@ public partial class CfgGeneratedOverrides {
             AX = UInt16[CS, SI];
             AX = Alu16.Sub(0, AX);
             CarryFlag = AX != 0;
-            InterruptCall(biosSegment, 0x0107, 0x64, biosSegment, 0x0143, unknown_F000_0143_F0143Entry);
+            InterruptCall(biosSegment, 0x0107, 0x64, biosSegment, 0x014D, unknown_F000_014D_F014DEntry);
             AX = (ushort)(CarryFlag ? 0xFFFF : 0);
             AX++;
             UInt16[DS, BX + 0x22] = AX;
@@ -103,10 +102,10 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, BX + 0x28] = DX;
             DX = 0;
             BX += 0x0080;
-            SI = Alu16.Add(SI, 2);
-            BP = Alu16.Dec(BP);
+            SI += 2;
+            BP--;
         } while (BP != 0);
-        AX = word1;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -147,7 +146,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0143_F0143Entry;
+    private readonly Func<int, Action> unknown_F000_014D_F014DEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
@@ -156,9 +155,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
-        unknown_F000_0143_F0143Entry = _ => unknown_F000_0143_F0143();
+        unknown_F000_014D_F014DEntry = _ => unknown_F000_014D_F014D();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0143, unknown_F000_0143_F0143Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x014D, unknown_F000_014D_F014DEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

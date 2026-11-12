@@ -16,8 +16,6 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
-        byte flagOperand_017D = 0;
-        byte flagOperand_0184 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         InterruptCall(cs1, 0x0104, 0x21);
@@ -75,14 +73,9 @@ public partial class CfgGeneratedOverrides {
                     InterruptCall(cs1, 0x0175, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
                     DS = Stack.Pop16();
                     AL = DsGlobals.Byte01D2;
-                    DX = 0x0998;
                     Out8(0x0998, AL);
-                    flagOperand_017D = DsGlobals.Byte01D2;
-                    Alu8.Sub(flagOperand_017D, 0x13);
-                    if (flagOperand_017D == 0x13) {
-                        flagOperand_0184 = DsGlobals.Byte01D3;
-                        Alu8.Sub(flagOperand_0184, 0x90);
-                        if (flagOperand_0184 != 0x90) {
+                    if (DsGlobals.Byte01D2 == 0x13) {
+                        if (DsGlobals.Byte01D3 != 0x90) {
                             goto L_018F;
                         }
                         byte1 = 0;
@@ -95,9 +88,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x018F, Signature_018F_mov);
         byte1 = 0xFF;
     L_0191:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

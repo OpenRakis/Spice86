@@ -18,12 +18,10 @@ public partial class CfgGeneratedOverrides {
         byte byte2;
         byte flagOperand_0054 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0x2000;
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        BX = 0;
         DmaPorts.WriteChannel1Page(2);
         DmaPorts.WritePrimaryClearFlipFlop(2);
         DmaPorts.WriteChannel1Address(0);
@@ -31,7 +29,6 @@ public partial class CfgGeneratedOverrides {
         DmaPorts.WriteChannel1Count(0);
         DmaPorts.WriteChannel1Count(0);
         DmaPorts.WritePrimaryMode(0x45);
-        DX = 0x022C;
         SoundBlasterPorts.WriteDspData(0xE2);
         SoundBlasterPorts.WriteDspData(0);
         Segment2000Globals.Byte0300 = 0x11;
@@ -50,17 +47,10 @@ public partial class CfgGeneratedOverrides {
         if (flagOperand_0054 == 0x22) {
             Segment2000Globals.Byte0041 = 0x33;
         }
-        AX = 0;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = true;
-        SignFlag = false;
-        OverflowFlag = false;
         byte2 = Segment2000Globals.Byte0300;
         Segment2000Globals.Byte0042 = byte2;
-        CL = Segment2000Globals.Byte0301;
-        Segment2000Globals.Byte0043 = CL;
+        Segment2000Globals.Byte0043 = Segment2000Globals.Byte0301;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

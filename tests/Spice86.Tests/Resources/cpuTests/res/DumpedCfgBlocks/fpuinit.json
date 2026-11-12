@@ -5,19 +5,21 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:00C3",
+  "lastExecutedAddress": "F000:00CE",
   "lastExecutedBlockId": 87,
   "blocks": [
     {
       "id": 87,
-      "entry": "F000:00C0",
-      "term": "F000:00C3",
+      "entry": "F000:00C2",
+      "term": "F000:00CE",
       "pred": [
         78
       ],
       "succ": [],
       "asm": [
         "B80D60|mov AX,0x600D",
+        "36A30406|mov word ptr SS:[0x0604],AX",
+        "36891E0606|mov word ptr SS:[0x0606],BX",
         "F4|hlt"
       ]
     },
@@ -35,8 +37,8 @@
     },
     {
       "id": 78,
-      "entry": "F000:00AC",
-      "term": "F000:00BE",
+      "entry": "F000:00AE",
+      "term": "F000:00C0",
       "pred": [
         72
       ],
@@ -51,7 +53,7 @@
         "9B|fwait",
         "D93E0201|fnstcw word ptr DS:[0x0102]",
         "813E0201FF03|cmp word ptr DS:[0x0102],0x03FF",
-        "7504|jne short 0x00C4"
+        "750D|jne short 0x00CF"
       ]
     },
     {
@@ -76,9 +78,9 @@
     },
     {
       "id": 26,
-      "entry": "F000:00C4",
+      "entry": "F000:00CF",
       "dead": true,
-      "term": "F000:00C7",
+      "term": "F000:00D2",
       "pred": [
         20,
         28,
@@ -97,8 +99,8 @@
     },
     {
       "id": 72,
-      "entry": "F000:009E",
-      "term": "F000:00AA",
+      "entry": "F000:00A0",
+      "term": "F000:00AC",
       "pred": [
         62
       ],
@@ -110,7 +112,7 @@
         "DBE3|fninit",
         "D93E0201|fnstcw word ptr DS:[0x0102]",
         "813E0201FF03|cmp word ptr DS:[0x0102],0x03FF",
-        "7518|jne short 0x00C4"
+        "7521|jne short 0x00CF"
       ]
     },
     {
@@ -145,7 +147,7 @@
         "A10001|mov AX,word ptr DS:[0x0100]",
         "80E40F|and AH,0x0F",
         "80FC03|cmp AH,3",
-        "0F859A00|jne near 0x00C4"
+        "0F85A500|jne near 0x00CF"
       ]
     },
     {
@@ -172,13 +174,13 @@
         "D93E0001|fnstcw word ptr DS:[0x0100]",
         "9B|fwait",
         "F606000180|test byte ptr DS:[0x0100],0x80",
-        "747A|je short 0x00C4"
+        "0F848300|je near 0x00CF"
       ]
     },
     {
       "id": 44,
-      "entry": "F000:004A",
-      "term": "F000:0066",
+      "entry": "F000:004C",
+      "term": "F000:0068",
       "pred": [
         28
       ],
@@ -192,13 +194,13 @@
         "66D92E0001|fldcw word ptr DS:[0x0100]",
         "66D93E0201|fnstcw word ptr DS:[0x0102]",
         "813E02017F0B|cmp word ptr DS:[0x0102],0x0B7F",
-        "755C|jne short 0x00C4"
+        "7565|jne short 0x00CF"
       ]
     },
     {
       "id": 52,
-      "entry": "F000:0068",
-      "term": "F000:006E",
+      "entry": "F000:006A",
+      "term": "F000:0070",
       "pred": [
         44
       ],
@@ -208,13 +210,13 @@
       ],
       "asm": [
         "813E04015AA5|cmp word ptr DS:[0x0104],0xA55A",
-        "7554|jne short 0x00C4"
+        "755D|jne short 0x00CF"
       ]
     },
     {
       "id": 56,
-      "entry": "F000:0070",
-      "term": "F000:007C",
+      "entry": "F000:0072",
+      "term": "F000:007E",
       "pred": [
         52
       ],
@@ -226,13 +228,13 @@
         "DBE1|fndisi",
         "D93E0201|fnstcw word ptr DS:[0x0102]",
         "813E0201FF0B|cmp word ptr DS:[0x0102],0x0BFF",
-        "7546|jne short 0x00C4"
+        "754F|jne short 0x00CF"
       ]
     },
     {
       "id": 62,
-      "entry": "F000:007E",
-      "term": "F000:009C",
+      "entry": "F000:0080",
+      "term": "F000:009E",
       "pred": [
         56
       ],
@@ -248,7 +250,7 @@
         "2667D92F|fldcw word ptr ES:[EDI]",
         "D93E0201|fnstcw word ptr DS:[0x0102]",
         "813E02017F07|cmp word ptr DS:[0x0102],0x077F",
-        "7526|jne short 0x00C4"
+        "752F|jne short 0x00CF"
       ]
     },
     {

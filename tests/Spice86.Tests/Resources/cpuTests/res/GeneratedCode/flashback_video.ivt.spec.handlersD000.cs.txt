@@ -87,7 +87,7 @@ public partial class CfgGeneratedOverrides {
             } while (BX < 0x00E1);
             BP <<= 1;
         } while (BP < 0x0010);
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         DS = 0;
         AH = Segment0000Globals.Byte0503;
         AL = 0x0C;
@@ -104,15 +104,12 @@ public partial class CfgGeneratedOverrides {
         AL = 7;
         VgaPorts.WriteCrtControllerIndexAndData(AX);
         AL = VgaPorts.ReadInputStatus1();
-        DX = 0x03C0;
         VgaPorts.WriteAttributeAddress(0x30);
         VgaPorts.WriteAttributeAddress(0x61);
         VgaPorts.WriteAttributeAddress(0x33);
         byte1 = Segment0000Globals.Byte0500;
         VgaPorts.WriteAttributeAddress(byte1);
-        AL = 0x20;
         VgaPorts.WriteAttributeAddress(0x20);
-        DI = index;
         return Hlt();
     }
 

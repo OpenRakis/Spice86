@@ -21,6 +21,8 @@ start:
     mov word [0FFFFh], 2233h
     mov cl, [es:10h]
     mov [bx+56h], cl
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; #GP handler: counts the fault at DS:57h and resumes past the 6-byte

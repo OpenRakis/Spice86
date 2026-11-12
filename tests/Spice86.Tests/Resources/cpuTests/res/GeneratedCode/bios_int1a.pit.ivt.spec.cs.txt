@@ -72,15 +72,8 @@ public partial class CfgGeneratedOverrides {
                         AL = DL;
                         CarryFlag = NearCall(cs1, 0x0177, () => unknown_016D_0199_01869(AL));
                         if (!CarryFlag) {
-                            DX = 0x0998;
-                            AL = 6;
                             Out8(0x0998, 6);
-                            AH = 5;
-                            CX = 0x2024;
-                            DH = 0x11;
                             CarryFlag = ServiceCall(Clock, () => Clock.SetRTCDate());
-                            DX = 0x0999;
-                            AL = 0;
                             Out8(0x0999, 0);
                             return Hlt();
                         }
@@ -90,8 +83,6 @@ public partial class CfgGeneratedOverrides {
         }
     L_0192:
         VerifySpeculativeRunOrFail(cs1, 0x0192, SpeculativeRun_0192);
-        DX = 0x0999;
-        AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0198, Signature_0198_hlt);
         return Hlt();

@@ -28,23 +28,21 @@ public partial class CfgGeneratedOverrides {
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
-        DI = 0x0040;
-        SI = 0x00B9;
-        word1 = SegmentF000Globals.Word00B9;
-        flagOperand_0013 = SegmentF000Globals.Word00BB;
+        word1 = SegmentF000Globals.Word00C3;
+        flagOperand_0013 = SegmentF000Globals.Word00C5;
         CL = (byte)(word1 < flagOperand_0013 ? 1 : 0);
         CH = (byte)(word1 > flagOperand_0013 ? 1 : 0);
         Segment2000Globals.Word0040 = CX;
-        DX = SegmentF000Globals.Word00BD;
+        DX = SegmentF000Globals.Word00C7;
         DL = (byte)(DX == word1 ? 1 : 0);
         Segment2000Globals.Word0042 = DX;
         AX = word1;
-        byte1 = (byte)(word1 < SegmentF000Globals.Word00BB ? 0xFF : 0);
+        byte1 = (byte)(word1 < SegmentF000Globals.Word00C5 ? 0xFF : 0);
         Segment2000Globals.Byte0044 = byte1;
-        AX = SegmentF000Globals.Word00BB;
-        byte2 = (byte)(AX < SegmentF000Globals.Word00B9 ? 0xFF : 0);
+        AX = SegmentF000Globals.Word00C5;
+        byte2 = (byte)(AX < SegmentF000Globals.Word00C3 ? 0xFF : 0);
         Segment2000Globals.Byte0045 = byte2;
-        word2 = SegmentF000Globals.Word00BF;
+        word2 = SegmentF000Globals.Word00C9;
         word3 = 0xFFFF;
         if (word2 != 0) {
             word3 = BitScanForward16(word2);
@@ -60,7 +58,7 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0046 = 0;
         }
         Segment2000Globals.Word0047 = word3;
-        word4 = SegmentF000Globals.Word00C1;
+        word4 = SegmentF000Globals.Word00CB;
         word5 = 0xFFFF;
         if (word4 != 0) {
             word5 = BitScanForward16(word4);
@@ -76,8 +74,8 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0049 = 0;
         }
         Segment2000Globals.Word004A = word5;
-        AL = SegmentF000Globals.Byte00C3;
-        AL = Alu8.Add(AL, SegmentF000Globals.Byte00C4);
+        AL = SegmentF000Globals.Byte00CD;
+        AL = Alu8.Add(AL, SegmentF000Globals.Byte00CE);
         byte initialAl_0068 = AL;
         bool initialCf_0068 = CarryFlag;
         bool finalAuxiliaryFlag_0068 = false;
@@ -98,8 +96,8 @@ public partial class CfgGeneratedOverrides {
         CarryFlag = finalCarryFlag_0068;
         AH = (byte)(CarryFlag ? 1 : 0);
         Segment2000Globals.Word004C = AX;
-        AL = SegmentF000Globals.Byte00C5;
-        AL = Alu8.Add(AL, SegmentF000Globals.Byte00C6);
+        AL = SegmentF000Globals.Byte00CF;
+        AL = Alu8.Add(AL, SegmentF000Globals.Byte00D0);
         byte initialAl_0077 = AL;
         bool initialCf_0077 = CarryFlag;
         bool finalAuxiliaryFlag_0077 = false;
@@ -120,9 +118,9 @@ public partial class CfgGeneratedOverrides {
         CarryFlag = finalCarryFlag_0077;
         AH = (byte)(CarryFlag ? 1 : 0);
         Segment2000Globals.Word004E = AX;
-        AX = SegmentF000Globals.Word00B9;
-        BX = SegmentF000Globals.Word00B9;
-        word6 = SegmentF000Globals.Word00BB;
+        AX = SegmentF000Globals.Word00C3;
+        BX = SegmentF000Globals.Word00C3;
+        word6 = SegmentF000Globals.Word00C5;
         if (BX == AX) {
             ZeroFlag = true;
             BX = word6;
@@ -138,7 +136,7 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0050 = 0;
         }
         Segment2000Globals.Dword0051 = (uint)BX | (uint)AX << 16;
-        BX = SegmentF000Globals.Word00BD;
+        BX = SegmentF000Globals.Word00C7;
         if (BX == AX) {
             ZeroFlag = true;
             BX = word6;
@@ -154,8 +152,7 @@ public partial class CfgGeneratedOverrides {
             Segment2000Globals.Byte0055 = 0;
         }
         Segment2000Globals.Dword0056 = (uint)BX | (uint)AX << 16;
-        AX = SegmentF000Globals.Word00B9;
-        Alu8.And(AL, 1);
+        AX = SegmentF000Globals.Word00C3;
         if ((AL & 1) == 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00B2, Signature_00B2_mov);
             word7 = 2;
@@ -164,7 +161,7 @@ public partial class CfgGeneratedOverrides {
             word7 = 1;
         }
         Segment2000Globals.Word005A = word7;
-        CX = word7;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -233,23 +230,23 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public ushort Word00B9 { get => _memory.UInt16[Segment, 0x00B9]; set => _memory.UInt16[Segment, 0x00B9] = value; }
+    public ushort Word00C3 { get => _memory.UInt16[Segment, 0x00C3]; set => _memory.UInt16[Segment, 0x00C3] = value; }
 
-    public ushort Word00BB { get => _memory.UInt16[Segment, 0x00BB]; set => _memory.UInt16[Segment, 0x00BB] = value; }
+    public ushort Word00C5 { get => _memory.UInt16[Segment, 0x00C5]; set => _memory.UInt16[Segment, 0x00C5] = value; }
 
-    public ushort Word00BD { get => _memory.UInt16[Segment, 0x00BD]; set => _memory.UInt16[Segment, 0x00BD] = value; }
+    public ushort Word00C7 { get => _memory.UInt16[Segment, 0x00C7]; set => _memory.UInt16[Segment, 0x00C7] = value; }
 
-    public ushort Word00BF { get => _memory.UInt16[Segment, 0x00BF]; set => _memory.UInt16[Segment, 0x00BF] = value; }
+    public ushort Word00C9 { get => _memory.UInt16[Segment, 0x00C9]; set => _memory.UInt16[Segment, 0x00C9] = value; }
 
-    public ushort Word00C1 { get => _memory.UInt16[Segment, 0x00C1]; set => _memory.UInt16[Segment, 0x00C1] = value; }
+    public ushort Word00CB { get => _memory.UInt16[Segment, 0x00CB]; set => _memory.UInt16[Segment, 0x00CB] = value; }
 
-    public byte Byte00C3 { get => _memory.UInt8[Segment, 0x00C3]; set => _memory.UInt8[Segment, 0x00C3] = value; }
+    public byte Byte00CD { get => _memory.UInt8[Segment, 0x00CD]; set => _memory.UInt8[Segment, 0x00CD] = value; }
 
-    public byte Byte00C4 { get => _memory.UInt8[Segment, 0x00C4]; set => _memory.UInt8[Segment, 0x00C4] = value; }
+    public byte Byte00CE { get => _memory.UInt8[Segment, 0x00CE]; set => _memory.UInt8[Segment, 0x00CE] = value; }
 
-    public byte Byte00C5 { get => _memory.UInt8[Segment, 0x00C5]; set => _memory.UInt8[Segment, 0x00C5] = value; }
+    public byte Byte00CF { get => _memory.UInt8[Segment, 0x00CF]; set => _memory.UInt8[Segment, 0x00CF] = value; }
 
-    public byte Byte00C6 { get => _memory.UInt8[Segment, 0x00C6]; set => _memory.UInt8[Segment, 0x00C6] = value; }
+    public byte Byte00D0 { get => _memory.UInt8[Segment, 0x00D0]; set => _memory.UInt8[Segment, 0x00D0] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

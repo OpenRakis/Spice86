@@ -31,7 +31,6 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte0044 = byte1;
         Vga.WriteGraphicsControllerRegister(6, 0x0C);
         Vga.WriteGraphicsControllerRegister(8, 0xFF);
-        DX = 0x03C5;
         Vga.WriteSequencerRegister(2, 0x0F);
         ES = 0xB800;
         AX = SegmentB800Globals.Word0000;
@@ -42,14 +41,11 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte0045 = byte1;
         AL = SegmentB800Globals.Byte0001;
         Segment2000Globals.Byte0046 = AL;
-        AX = DS;
-        AX = Alu16.Add(AX, 0x0100);
-        ES = AX;
+        word1 = (ushort)(DS + 0x0100);
+        ES = word1;
         EsGlobals.Word0010 = 0xABCD;
-        word1 = EsGlobals.Word0010;
-        Segment2000Globals.Word0047 = word1;
-        AX = 0x2000;
-        ES = 0x2000;
+        Segment2000Globals.Word0047 = EsGlobals.Word0010;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

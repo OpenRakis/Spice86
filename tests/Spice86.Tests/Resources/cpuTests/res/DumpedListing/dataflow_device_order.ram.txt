@@ -65,5 +65,7 @@ F000:00BF mov AL,byte ptr ES:[2]
 F000:00C3 mov byte ptr DS:[SI+0x4B],AL
 F000:00C6 mov AX,0x0E06
 F000:00C9 out DX,AX
-F000:00CA hlt
+F000:00CA mov word ptr SS:[0x0600],SP
+F000:00CF mov word ptr SS:[0x0602],SS
+F000:00D4 hlt
 F000:FFF0 jmp short 0

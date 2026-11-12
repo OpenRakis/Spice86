@@ -32,53 +32,48 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             BX = AX;
-            CX = 8;
-            DX = 0x0178;
             (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(BX, 8, DS, 0x0178));
-            if (!CarryFlag) {
-                Alu16.Sub(AX, 8);
-                if (AX == 8) {
-                    flagOperand_011D = ImageMinus0003Globals.Byte0178;
-                    Alu8.Sub(flagOperand_011D, 0x53);
-                    if (flagOperand_011D == 0x53) {
-                        flagOperand_0124 = ImageMinus0003Globals.Byte0179;
-                        Alu8.Sub(flagOperand_0124, 0x50);
-                        if (flagOperand_0124 != 0x50) {
-                            goto L_015D;
-                        }
-                        flagOperand_012B = ImageMinus0003Globals.Byte017A;
-                        Alu8.Sub(flagOperand_012B, 0x49);
-                        if (flagOperand_012B != 0x49) {
-                            goto L_015D;
-                        }
-                        flagOperand_0132 = ImageMinus0003Globals.Byte017B;
-                        Alu8.Sub(flagOperand_0132, 0x43);
-                        if (flagOperand_0132 != 0x43) {
-                            goto L_015D;
-                        }
-                        flagOperand_0139 = ImageMinus0003Globals.Byte017C;
-                        Alu8.Sub(flagOperand_0139, 0x45);
-                        if (flagOperand_0139 != 0x45) {
-                            goto L_015D;
-                        }
-                        flagOperand_0140 = ImageMinus0003Globals.Byte017D;
-                        Alu8.Sub(flagOperand_0140, 0x38);
-                        if (flagOperand_0140 != 0x38) {
-                            goto L_015D;
-                        }
-                        flagOperand_0147 = ImageMinus0003Globals.Byte017E;
-                        Alu8.Sub(flagOperand_0147, 0x36);
-                        if (flagOperand_0147 != 0x36) {
-                            goto L_015D;
-                        }
-                        flagOperand_014E = ImageMinus0003Globals.Byte017F;
-                        Alu8.Sub(flagOperand_014E, 0x21);
-                        if (flagOperand_014E != 0x21) {
-                            goto L_015D;
-                        }
-                        AL = 0;
-                        goto L_015F;
+            if (!CarryFlag && AX == 8) {
+                flagOperand_011D = ImageMinus0003Globals.Byte0178;
+                Alu8.Sub(flagOperand_011D, 0x53);
+                if (flagOperand_011D == 0x53) {
+                    flagOperand_0124 = ImageMinus0003Globals.Byte0179;
+                    Alu8.Sub(flagOperand_0124, 0x50);
+                    if (flagOperand_0124 != 0x50) {
+                        goto L_015D;
                     }
+                    flagOperand_012B = ImageMinus0003Globals.Byte017A;
+                    Alu8.Sub(flagOperand_012B, 0x49);
+                    if (flagOperand_012B != 0x49) {
+                        goto L_015D;
+                    }
+                    flagOperand_0132 = ImageMinus0003Globals.Byte017B;
+                    Alu8.Sub(flagOperand_0132, 0x43);
+                    if (flagOperand_0132 != 0x43) {
+                        goto L_015D;
+                    }
+                    flagOperand_0139 = ImageMinus0003Globals.Byte017C;
+                    Alu8.Sub(flagOperand_0139, 0x45);
+                    if (flagOperand_0139 != 0x45) {
+                        goto L_015D;
+                    }
+                    flagOperand_0140 = ImageMinus0003Globals.Byte017D;
+                    Alu8.Sub(flagOperand_0140, 0x38);
+                    if (flagOperand_0140 != 0x38) {
+                        goto L_015D;
+                    }
+                    flagOperand_0147 = ImageMinus0003Globals.Byte017E;
+                    Alu8.Sub(flagOperand_0147, 0x36);
+                    if (flagOperand_0147 != 0x36) {
+                        goto L_015D;
+                    }
+                    flagOperand_014E = ImageMinus0003Globals.Byte017F;
+                    Alu8.Sub(flagOperand_014E, 0x21);
+                    if (flagOperand_014E != 0x21) {
+                        goto L_015D;
+                    }
+                    AL = 0;
+                    goto L_015F;
                 }
             }
         L_015D:
@@ -89,7 +84,6 @@ public partial class CfgGeneratedOverrides {
             (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
         }
-        DX = 0x0999;
         Out8(0x0999, AL);
         return Hlt();
     }

@@ -19,10 +19,6 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         ushort word2 = 0;
         byte byte1 = 0;
-        byte flagOperand_0130 = 0;
-        byte flagOperand_0138 = 0;
-        ushort flagOperand_0140 = 0;
-        ushort flagOperand_0147 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         segment = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
@@ -43,25 +39,12 @@ public partial class CfgGeneratedOverrides {
                 ServiceCall(cs1, 0x012B, () => Dos.SetCurrentPsp(segment));
                 AX = 0x2000;
                 ES = 0x2000;
-                flagOperand_0130 = Segment2000Globals.Byte0000;
-                Alu8.Sub(flagOperand_0130, 0xCD);
-                if (flagOperand_0130 == 0xCD) {
-                    flagOperand_0138 = Segment2000Globals.Byte0001;
-                    Alu8.Sub(flagOperand_0138, 0x20);
-                    if (flagOperand_0138 == 0x20) {
-                        flagOperand_0140 = Segment2000Globals.Word0016;
-                        Alu16.Sub(flagOperand_0140, word1);
-                        if (flagOperand_0140 != word1) {
-                            goto L_0152;
-                        }
-                        flagOperand_0147 = Segment2000Globals.Word002C;
-                        Alu16.Sub(flagOperand_0147, word2);
-                        if (flagOperand_0147 != word2) {
-                            goto L_0152;
-                        }
-                        byte1 = 0;
-                        goto L_0154;
+                if (Segment2000Globals.Byte0000 == 0xCD && Segment2000Globals.Byte0001 == 0x20) {
+                    if (Segment2000Globals.Word0016 != word1 || Segment2000Globals.Word002C != word2) {
+                        goto L_0152;
                     }
+                    byte1 = 0;
+                    goto L_0154;
                 }
             }
         }
@@ -69,12 +52,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0152, Signature_0152_mov);
         byte1 = 0xFF;
     L_0154:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = segment;
-        BP = word1;
-        DI = word2;
-        AL = byte1;
         return Hlt();
     }
 

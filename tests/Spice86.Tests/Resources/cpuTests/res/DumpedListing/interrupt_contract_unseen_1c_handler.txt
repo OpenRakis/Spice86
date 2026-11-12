@@ -5,7 +5,7 @@ F000:0006 sar byte ptr DS:[SI+0x1000],1
 F000:0007 mov SP,0x1000
 F000:000A xor AX,AX
 F000:000C mov ES,AX
-F000:000E mov word ptr ES:[0x0070],0x0032
+F000:000E mov word ptr ES:[0x0070],0x003C
 F000:0015 mov word ptr ES:[0x0072],CS
 F000:0017 push CS
 F000:0018 jb short 0x001A
@@ -19,5 +19,7 @@ F000:0028 mov word ptr DS:[DI],BX
 F000:002A add DI,2
 F000:002D loop 0x0028
 F000:002F mov word ptr DS:[DI],BX
-F000:0031 hlt
+F000:0031 mov word ptr SS:[0x0600],SP
+F000:0036 mov word ptr SS:[0x0602],SS
+F000:003B hlt
 F000:FFF0 jmp short 0

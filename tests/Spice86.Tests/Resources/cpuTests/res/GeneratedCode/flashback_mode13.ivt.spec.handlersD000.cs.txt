@@ -39,9 +39,7 @@ public partial class CfgGeneratedOverrides {
                 CX--;
             } while (CX != 0);
             BX++;
-            Alu16.Sub(BX, 0x00C8);
         } while (BX < 0x00C8);
-        DI = index;
         return Hlt();
     }
 

@@ -18,6 +18,10 @@ indirect_target:
     ret
 
 jump_target:
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:606h], bx
     hlt
 
 rb 65520-$

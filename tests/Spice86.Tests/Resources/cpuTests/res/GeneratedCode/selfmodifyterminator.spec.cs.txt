@@ -39,22 +39,18 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0;
         SP = 4;
-        AX = 0xFFFF;
+        word1 = 0xFFFF;
         DsGlobals.Byte0040 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0010);
-            Stack.Push16(AX);
+            Stack.Push16(word1);
+            AX = word1;
             NearCall(biosSegment, 0x0014, () => unknown_F000_0022_F0022(DS));
-            AX = 0x0042;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = false;
-            SignFlag = false;
-            OverflowFlag = false;
+            word1 = 0x0042;
             if (SelectorSignatureMatches(biosSegment, 0x0019, Signature_0019_jne)) {
                 goto L_0019_36;
             }

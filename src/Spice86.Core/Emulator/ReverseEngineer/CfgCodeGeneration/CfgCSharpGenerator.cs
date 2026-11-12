@@ -152,7 +152,6 @@ internal sealed class CfgCSharpGenerator {
             timers.Add(timer);
             MethodCensus methodCensus = preparedMethod.Emission.Census;
             constantMemoryAccesses.Merge(preparedMethod.Emission.ConstantMemoryAccesses);
-            flagReadCensus.Merge(methodCensus.FlagReads);
             webCensus.Merge(methodCensus.Webs);
         }
         progress.EndPhase();
@@ -294,6 +293,10 @@ internal sealed class CfgCSharpGenerator {
                 preparedMethod.Method.MethodName, instructionLines));
             MethodCensus methodCensus = preparedMethod.Emission.Census;
             census.Merge(methodCensus.Gotos);
+            if (_collectCensuses) {
+                flagReadCensus.Merge(IrFlagReadCensusClassifier.Classify(preparedMethod.IrMethod,
+                    preparedMethod.Ssa, analyzed.Body));
+            }
             if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
                 MethodPlan method = preparedMethod.Method;
                 progress.Detail(SlowMethodLine(i + 1, prepared.Count, method.MethodName,

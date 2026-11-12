@@ -18,14 +18,12 @@ public partial class CfgGeneratedOverrides {
         uint dword1;
         byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0x2000;
         DS = 0x2000;
-        ES = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
         BX = 0;
-        SI = 0x0114;
+        SI = 0x011E;
         Segment2000Globals.Word0F00 = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
@@ -78,9 +76,10 @@ public partial class CfgGeneratedOverrides {
             DX = (ushort)(word1 >> (CL & 0x1F) >> 1);
             UInt16[DS, BX + 0x28] = DX;
             BX += 0x0040;
-            SI = Alu16.Add(SI, 5);
+            SI += 5;
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

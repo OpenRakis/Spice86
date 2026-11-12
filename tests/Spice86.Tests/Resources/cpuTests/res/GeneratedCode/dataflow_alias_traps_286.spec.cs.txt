@@ -16,16 +16,19 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, ES, DS. Does not return.</summary>
     public virtual Action unknown_F000_002F_F002F() {
+        byte byte1;
         CheckExternalEvents(biosSegment, 0x002F);
-        CL = EsGlobals.Byte0010;
-        UInt8[DS, BX + 0x56] = CL;
+        byte1 = EsGlobals.Byte0010;
+        UInt8[DS, BX + 0x56] = byte1;
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
         return Hlt();
     }
 
     /// <summary>Inputs: BP, DS, DF. Outputs: BP, flags, DF. Changes: BP, flags, DF.</summary>
-    public virtual Action unknown_F000_0038_F0038() {
-        unknown_F000_0038_F0038Frame frame = new(Memory, State.SegmentRegisters, SP);
-        CheckExternalEvents(biosSegment, 0x0038);
+    public virtual Action unknown_F000_0042_F0042() {
+        unknown_F000_0042_F0042Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0042);
         DsGlobals.Byte0057 += 1;
         Stack.Push16(BP);
         frame.ReturnIp = Alu16.Add(frame.ReturnIp, 6);
@@ -33,7 +36,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    public readonly struct unknown_F000_0038_F0038Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+    public readonly struct unknown_F000_0042_F0042Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
 
         /// <summary>Word at SS:[entry SP + 0x0000].</summary>
@@ -55,8 +58,7 @@ public partial class CfgGeneratedOverrides {
         SignFlag = false;
         OverflowFlag = false;
         ES = 0;
-        Segment0000Globals.Dword0034 = 0xF0000038u;
-        AX = 0x1FFF;
+        Segment0000Globals.Dword0034 = 0xF0000042u;
         ES = 0x1FFF;
         Segment1FFFGlobals.Byte0010 = 0x11;
         try {
@@ -64,7 +66,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested fallthrough after F000:0029");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0029, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0038), unknown_F000_0038_F0038)], [new SegmentedAddress(biosSegment, 0x002F)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0029, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x0042), unknown_F000_0042_F0042)], [new SegmentedAddress(biosSegment, 0x002F)]);
         }
     }
 
@@ -188,7 +190,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_F000_002F_F002FEntry;
-    private readonly Func<int, Action> unknown_F000_0038_F0038Entry;
+    private readonly Func<int, Action> unknown_F000_0042_F0042Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -206,10 +208,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
 
         unknown_F000_002F_F002FEntry = _ => unknown_F000_002F_F002F();
-        unknown_F000_0038_F0038Entry = _ => unknown_F000_0038_F0038();
+        unknown_F000_0042_F0042Entry = _ => unknown_F000_0042_F0042();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002F, unknown_F000_002F_F002FEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0038, unknown_F000_0038_F0038Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0042, unknown_F000_0042_F0042Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

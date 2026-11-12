@@ -19,8 +19,8 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs 8087 startup detection and control-word load, store and reset checks.</summary>
     public static AsmFixture FpuInit() {
         return ResultFixture(new AsmRunSettings { BinName = "fpuinit", MaxCycles = 1000 }, result => {
-            result.State.AX.Should().Be(0x600D);
-            result.State.BX.Should().Be(1);
+            result.Memory.UInt16[0x1000, 0x604].Should().Be(0x600D);
+            result.Memory.UInt16[0x1000, 0x606].Should().Be(1);
         });
     }
 
@@ -37,12 +37,12 @@ internal static class AsmFixtureCatalog {
         };
         return ResultFixture(settings, result => {
             result.Memory.ReadRam((uint)originalRom.Length, VgaRom.Segment << 4).Should().Equal(originalRom);
-            result.State.SI.Should().Be(0x0104);
-            result.State.DI.Should().Be(0x9194);
-            result.State.CX.Should().Be(0);
-            result.State.DS.Should().Be(0x1000);
-            result.State.ES.Should().Be(0xB800);
-            result.State.AX.Should().Be(0x600D);
+            result.Memory.UInt16[0xF000, 0x60C].Should().Be(0x0104);
+            result.Memory.UInt16[0xF000, 0x60E].Should().Be(0x9194);
+            result.Memory.UInt16[0xF000, 0x608].Should().Be(0);
+            result.Memory.UInt16[0xF000, 0x610].Should().Be(0x1000);
+            result.Memory.UInt16[0xF000, 0x612].Should().Be(0xB800);
+            result.Memory.UInt16[0xF000, 0x604].Should().Be(0x600D);
         });
     }
 
@@ -233,17 +233,19 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs selfmodifyje: the patched immediate landed in AX and the loop ran once more.</summary>
     public static AsmFixture SelfModifyJe() {
         return ResultFixture(new AsmRunSettings { BinName = "selfmodifyje" }, result => {
-            result.State.AX.Should().Be(5678, "selfmodifyje: mov ax, 1234 was patched to mov ax, 5678");
-            result.State.CX.Should().Be(1, "selfmodifyje: CX is 1 after the patched comparison ends the loop");
+            result.Memory.UInt16[0xF000, 0x604].Should().Be(5678, "selfmodifyje: mov ax, 1234 was patched to mov ax, 5678");
+            result.Memory.UInt16[0xF000, 0x608].Should().Be(1, "selfmodifyje: CX is 1 after the patched comparison ends the loop");
         });
     }
 
     /// <summary>Runs selfmodifycall: the counter was bumped once and the stack is back where start set it.</summary>
     public static AsmFixture SelfModifyCall() {
         return ResultFixture(new AsmRunSettings { BinName = "selfmodifycall" }, result => {
-            result.Memory.UInt8[result.State.DS, 0x002B].Should().Be(1, "selfmodifycall: the counter byte was incremented once");
-            result.State.SS.Should().Be(0, "selfmodifycall: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "selfmodifycall: start sets SP to 0x0100");
+            ushort counterSegment = result.Memory.UInt16[0, 0x610];
+            ushort counterOffset = result.Memory.UInt16[0, 0x612];
+            result.Memory.UInt8[counterSegment, counterOffset].Should().Be(1, "selfmodifycall: the counter byte was incremented once");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "selfmodifycall: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "selfmodifycall: start sets SP to 0x0100");
         });
     }
 
@@ -520,94 +522,94 @@ internal static class AsmFixtureCatalog {
         switch (binName) {
             case "partition_jump_into_function_middle":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: routine sets AX");
-                    result.State.BX.Should().Be(0x2222, $"{binName}: routine_middle sets BX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: routine sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x2222, $"{binName}: routine_middle sets BX");
                 });
             case "partition_shared_tail":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: function_a sets AX");
-                    result.State.BX.Should().Be(0x2222, $"{binName}: function_b sets BX");
-                    result.State.CX.Should().Be(0x3333, $"{binName}: shared_tail sets CX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: function_a sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x2222, $"{binName}: function_b sets BX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x3333, $"{binName}: shared_tail sets CX");
                 });
             case "partition_multi_entry_dominated_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
-                    result.State.BX.Should().Be(0xB222, $"{binName}: the shared region sets BX");
-                    result.State.CX.Should().Be(0xC333, $"{binName}: the shared region sets CX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0xB222, $"{binName}: the shared region sets BX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0xC333, $"{binName}: the shared region sets CX");
                 });
             case "partition_multi_entry_irreducible_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.BX.Should().Be(0x0001, $"{binName}: the cycle resumes at the secondary shared entry");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the cycle uses neither original return path");
-                    result.State.DX.Should().Be(0x0000, $"{binName}: the cycle finishes all three iterations");
-                    result.State.SI.Should().Be(0x0004, $"{binName}: the shared handler runs through an interrupt, a return, a call and a tail jump");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0001, $"{binName}: the cycle resumes at the secondary shared entry");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the cycle uses neither original return path");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0000, $"{binName}: the cycle finishes all three iterations");
+                    result.Memory.UInt16[0x1000, 0x60C].Should().Be(0x0004, $"{binName}: the shared handler runs through an interrupt, a return, a call and a tail jump");
                 });
             case "partition_multi_entry_disconnected_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
-                    result.State.BX.Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
-                    result.State.CX.Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
                 });
             case "partition_cross_function_loop":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the cross-function loop burns CX down to 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the cross-function loop burns CX down to 0");
                 });
             case "partition_mixed_activation_cycle":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the activation cycle burns CX down to 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the activation cycle burns CX down to 0");
                 });
             case "partition_indirect_call_jump":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: indirect_target sets AX");
-                    result.State.BX.Should().Be(0x0016, $"{binName}: BX holds the address of jump_target");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: indirect_target sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0016, $"{binName}: BX holds the address of jump_target");
                 });
             case "partition_jump_table":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
-                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
                 });
             case "partition_untested_indirect":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
                 });
             case "partition_jump_table_mixed":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
-                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
                 });
             case "partition_far_dispatch":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: both loops run their two table entries");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: both loops run their two table entries");
                 });
             case "partition_far_call_chain":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 2000 }, result => {
@@ -616,8 +618,8 @@ internal static class AsmFixtureCatalog {
                         (0x04, 2, 0xF000), (0x06, 2, 0x3000),
                         (0x08, 2, 0xF010), (0x0A, 2, 0x2000),
                         (0x0C, 2, 0xF000), (0x0E, 2, 0x1000)));
-                    result.State.DX.Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
+                    result.Memory.UInt16[0x2000, 0x60A].Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
+                    result.Memory.UInt16[0x2000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
                 });
             case "partition_far_jump_segment_change":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x40,
@@ -626,49 +628,49 @@ internal static class AsmFixtureCatalog {
                     (0x0C, 2, 0xF100)));
             case "partition_sign_conditions":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
                 });
             case "partition_untested_far_indirect":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
                 });
             case "partition_untaken_cpuid":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: cpuid is never executed");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: cpuid is never executed");
                 });
             case "partition_signed_min_compare":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
-                    result.State.AX.Should().Be(0x0000, $"{binName}: the end clears AX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x0000, $"{binName}: the end clears AX");
                 });
             case "partition_back_edge_fallthrough":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0003, $"{binName}: the loop body runs three times");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0003, $"{binName}: the loop body runs three times");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
                 });
             case "partition_jump_to_next":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
                 });
             case "partition_two_fault_handlers":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: each handler returns with iret");
-                    result.State.SI.Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
-                    result.State.AX.Should().Be(0x0002, $"{binName}: the third division succeeds");
-                    result.State.BX.Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: each handler returns with iret");
+                    result.Memory.UInt16[0x1000, 0x60C].Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x0002, $"{binName}: the third division succeeds");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
                 });
             case "cc_register_leaf":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x52,
@@ -1253,19 +1255,21 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs ownerlesscallcycle: the rescued cycle turned the counter byte and AL to 3.</summary>
     public static AsmFixture OwnerlessCallCycle() {
         return ResultFixture(new AsmRunSettings { BinName = "ownerlesscallcycle", MaxCycles = 1000 }, result => {
-            result.Memory.UInt8[0xF000, 0x0025].Should().Be(3, "ownerlesscallcycle: the counter byte in the code segment counts the loop runs");
-            result.State.AL.Should().Be(3, "ownerlesscallcycle: AL holds the last counter value read");
-            result.State.SS.Should().Be(0, "ownerlesscallcycle: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "ownerlesscallcycle: start sets SP to 0x0100");
+            result.Memory.UInt8[0xF000, result.Memory.UInt16[0, 0x612]].Should().Be(3,
+                "ownerlesscallcycle: the counter byte in the code segment counts the loop runs");
+            result.Memory.UInt8[0, 0x604].Should().Be(3, "ownerlesscallcycle: AL holds the last counter value read");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "ownerlesscallcycle: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "ownerlesscallcycle: start sets SP to 0x0100");
         });
     }
 
     /// <summary>Runs sameretloop: the same-address return loop ran four times and the hlt ended the run.</summary>
     public static AsmFixture SameretLoop() {
         return ResultFixture(new AsmRunSettings { BinName = "sameretloop", MaxCycles = 1000 }, result => {
-            result.Memory.UInt8[0xF000, 0x0024].Should().Be(4, "sameretloop: the counter byte counts the same-address returns");
-            result.State.SS.Should().Be(0, "sameretloop: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
+            result.Memory.UInt8[0xF000, result.Memory.UInt16[0, 0x612]].Should().Be(4,
+                "sameretloop: the counter byte counts the same-address returns");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "sameretloop: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
         });
     }
 
@@ -1312,8 +1316,8 @@ internal static class AsmFixtureCatalog {
         result.Memory.UInt8[TailCountAddress].Should().Be(3);
         result.Memory.UInt8[ObserverCountAddress].Should().Be(1);
         result.Memory.UInt8[CompletedAddress].Should().Be(0xA5);
-        result.State.SS.Should().Be(0);
-        result.State.SP.Should().Be(0x8000);
+        result.Memory.UInt16[0, 0x602].Should().Be(0);
+        result.Memory.UInt16[0, 0x600].Should().Be(0x8000);
         result.Memory.UInt8[BadStackAddress].Should().Be(0,
             $"the IRQ must see a complete stack; observed SS:SP was {result.Memory.UInt16[ObservedSsAddress]:X4}:{result.Memory.UInt16[ObservedSpAddress]:X4}");
     }
@@ -1335,8 +1339,8 @@ internal static class AsmFixtureCatalog {
     private static AsmFixture ResultRegionFixture(AsmRunSettings settings, byte[] expectedRegion) {
         return ResultFixture(settings, result => {
             AssertResultRegion(result, settings.BinName, expectedRegion);
-            result.State.SS.Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
-            result.State.SP.Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
+            result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
+            result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
         });
     }
 
@@ -1550,7 +1554,10 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture DataJumpTablesPatched() {
         AsmRunSettings settings = new() {
             BinName = "data_jump_tables",
-            ConfigureMachine = machine => machine.Memory.UInt16[0xF000, 0x02FF] = 0x0264,
+            // The image's anchor words at F000:FFEC/FFEE hold j2_table's and j2_h1's addresses.
+            ConfigureMachine = machine =>
+                machine.Memory.UInt16[0xF000, machine.Memory.UInt16[0xF000, 0xFFEC]] =
+                    machine.Memory.UInt16[0xF000, 0xFFEE],
             VariantName = "patched"
         };
         return ResultRegionFixture(settings, DataJumpTablesRegion(true));

@@ -22,32 +22,30 @@ public partial class CfgGeneratedOverrides {
         SS = 0x2000;
         SP = 0x1000;
         ES = 0x2000;
-        DX = 0x0169;
+        DX = 0x0173;
         AH = 9;
         // DOS 09h print "HELLO$"
         InterruptCall(cs1, 0x0111, 0x21);
         Segment2000Globals.Word0040 = 0x0900;
-        BX = 1;
-        CX = 4;
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 4, DS, 0x017A));
+        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 4, DS, 0x0184));
         Segment2000Globals.Word0042 = word1;
         AX = (ushort)(CarryFlag ? 1 : 0);
         Segment2000Globals.Byte0044 = AL;
         AL = 0;
-        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")));
+        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0179, '\0', "NOFILE.TXT")));
         Segment2000Globals.Word0045 = word2;
         AX = Alu16.Adc(0, 0);
         Segment2000Globals.Byte0047 = AL;
-        ImageMinus0003Globals.Byte017E = 0x48;
-        ImageMinus0003Globals.Byte017F = 0x69;
-        ImageMinus0003Globals.Byte0180 = 0x24;
-        DX = 0x017E;
+        ImageMinus0003Globals.Byte0188 = 0x48;
+        ImageMinus0003Globals.Byte0189 = 0x69;
+        ImageMinus0003Globals.Byte018A = 0x24;
+        DX = 0x0188;
         AH = 9;
         InterruptCall(cs1, 0x015D, 0x21);
         Segment2000Globals.Word0048 = AX;
-        AL = ImageMinus0003Globals.Byte017B;
-        Segment2000Globals.Byte0049 = AL;
+        Segment2000Globals.Byte0049 = ImageMinus0003Globals.Byte0185;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -91,13 +89,13 @@ public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
         Segment = (ushort)(programStartSegment - 0x0003);
     }
 
-    public byte Byte017B { get => _memory.UInt8[Segment, 0x017B]; set => _memory.UInt8[Segment, 0x017B] = value; }
+    public byte Byte0185 { get => _memory.UInt8[Segment, 0x0185]; set => _memory.UInt8[Segment, 0x0185] = value; }
 
-    public byte Byte017E { get => _memory.UInt8[Segment, 0x017E]; set => _memory.UInt8[Segment, 0x017E] = value; }
+    public byte Byte0188 { get => _memory.UInt8[Segment, 0x0188]; set => _memory.UInt8[Segment, 0x0188] = value; }
 
-    public byte Byte017F { get => _memory.UInt8[Segment, 0x017F]; set => _memory.UInt8[Segment, 0x017F] = value; }
+    public byte Byte0189 { get => _memory.UInt8[Segment, 0x0189]; set => _memory.UInt8[Segment, 0x0189] = value; }
 
-    public byte Byte0180 { get => _memory.UInt8[Segment, 0x0180]; set => _memory.UInt8[Segment, 0x0180] = value; }
+    public byte Byte018A { get => _memory.UInt8[Segment, 0x018A]; set => _memory.UInt8[Segment, 0x018A] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

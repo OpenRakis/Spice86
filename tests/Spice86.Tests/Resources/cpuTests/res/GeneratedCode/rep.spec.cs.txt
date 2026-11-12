@@ -18,22 +18,28 @@ public partial class CfgGeneratedOverrides {
         ushort count = 0;
         ushort index = 0;
         ushort index2 = 0;
+        ushort word2 = 0;
+        ushort index3 = 0;
         ushort count2 = 0;
+        ushort word3 = 0;
+        ushort index4;
         ushort count3 = 0;
         ushort count4 = 0;
         ushort count5 = 0;
-        ushort word2 = 0;
+        ushort word4 = 0;
+        ushort word5 = 0;
         ushort count6 = 0;
-        ushort index3 = 0;
-        ushort index4 = 0;
-        ushort word3 = 0;
         ushort index5 = 0;
         ushort index6 = 0;
+        ushort word6 = 0;
+        ushort index7 = 0;
+        ushort index8 = 0;
         ushort count7 = 0;
         ushort count8 = 0;
         ushort count9 = 0;
-        ushort index7 = 0;
-        ushort index8 = 0;
+        ushort index9 = 0;
+        ushort index10 = 0;
+        ushort word7 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SP = 0x1000;
         SS = SP;
@@ -136,7 +142,6 @@ public partial class CfgGeneratedOverrides {
             DI += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
         }
-        BX = 0x0040;
         Stack.Push16(0x0040);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0023);
@@ -223,7 +228,6 @@ public partial class CfgGeneratedOverrides {
         if (CX != 0x110A) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:100E");
         }
-        DX = 0;
         Stack.Push16(0);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x1112);
@@ -248,14 +252,11 @@ public partial class CfgGeneratedOverrides {
             count--;
         }
         DS = 0x1000;
-        AX = Segment1000Globals.Word0000;
-        BP = index2;
-        SsUInt16[BP + index] = AX;
+        word2 = Segment1000Globals.Word0000;
+        index3 = index2;
+        SsUInt16[index3 + index] = word2;
         if (count != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x202C, Signature_202C_hlt);
-            CX = count;
-            SI = index;
-            DI = index2;
             return Hlt();
         }
         if (Segment1000Globals.Word3004 != 0x0809) {
@@ -273,14 +274,11 @@ public partial class CfgGeneratedOverrides {
             count2--;
         }
         DS = 0x1000;
-        AX = Segment1000Globals.Word0002;
-        BP = index2;
-        SsUInt16[BP + index] = AX;
+        word3 = Segment1000Globals.Word0002;
+        index4 = index2;
+        SsUInt16[index4 + index] = word3;
         if (count2 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x302A, Signature_302A_hlt);
-            SI = index;
-            DI = index2;
-            CX = count2;
             return Hlt();
         }
         if (Segment1000Globals.Word3008 != 0x0607) {
@@ -308,43 +306,39 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:304B");
         }
         count5 = 2;
-        word2 = 0x4000;
+        word4 = 0x4000;
         while (count5 != 0) {
-            UInt16[ES, index2] = word2;
+            UInt16[ES, index2] = word4;
             index2 += (ushort)(DirectionFlag ? -2 : 2);
             count5--;
         }
-        AX = 0x1000;
+        word5 = 0x1000;
         DS = 0x1000;
         if (Segment1000Globals.Word0006 != 0x4000) {
             throw FailAsUntested($"Untested near jump target 0x{Segment1000Globals.Word0006:X4} at F000:305A");
         }
-        BX = 0;
         Stack.Push16(0);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4005);
         for (count6 = 4; count6 != 0; count6--) {
-            UInt16[ES, index2] = AX;
+            UInt16[ES, index2] = word5;
             index2 += (ushort)(DirectionFlag ? -2 : 2);
         }
         if (count6 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x400C, Signature_400C_hlt);
-            SI = index;
-            DI = index2;
-            CX = count6;
             return Hlt();
         }
         Stack.Push16(0x0040);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4012);
         CX = 0x1234;
-        index3 = 0x3000;
-        index4 = 0;
+        index5 = 0x3000;
+        index6 = 0;
         DS = 0xF000;
         while (CX != 0) {
-            bool equal_4020 = UInt8[DS, index3] == UInt8[ES, index4];
-            index3 += (ushort)(DirectionFlag ? -1 : 1);
-            index4 += (ushort)(DirectionFlag ? -1 : 1);
+            bool equal_4020 = UInt8[DS, index5] == UInt8[ES, index6];
+            index5 += (ushort)(DirectionFlag ? -1 : 1);
+            index6 += (ushort)(DirectionFlag ? -1 : 1);
             CX--;
             if (!equal_4020) {
                 break;
@@ -356,10 +350,10 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(0x0040);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x4029);
-        word3 = 0x0040;
+        word6 = 0x0040;
         while (CX != 0) {
-            bool equal_402C = word3 == UInt16[ES, index4];
-            index4 += (ushort)(DirectionFlag ? -2 : 2);
+            bool equal_402C = word6 == UInt16[ES, index6];
+            index6 += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
             if (!equal_402C) {
                 break;
@@ -371,42 +365,41 @@ public partial class CfgGeneratedOverrides {
         AX = 0x0607;
         CX = 0x5004;
         while (CX != 0) {
-            bool equal_4036 = UInt16[DS, index3] == UInt16[ES, index4];
-            index3 += (ushort)(DirectionFlag ? -2 : 2);
-            index4 += (ushort)(DirectionFlag ? -2 : 2);
+            bool equal_4036 = UInt16[DS, index5] == UInt16[ES, index6];
+            index5 += (ushort)(DirectionFlag ? -2 : 2);
+            index6 += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
             if (!equal_4036) {
                 break;
             }
         }
         while (CX != 0) {
-            bool equal_4038 = AX == UInt16[ES, index4];
-            index4 += (ushort)(DirectionFlag ? -2 : 2);
+            bool equal_4038 = AX == UInt16[ES, index6];
+            index6 += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
             if (!equal_4038) {
                 break;
             }
         }
-        BX = 0x0040;
         Stack.Push16(0x0040);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x403F);
-        index5 = 0x3000;
-        index6 = 0;
+        index7 = 0x3000;
+        index8 = 0;
         while (CX != 0) {
-            Alu16.Sub(UInt16[DS, index5], UInt16[ES, index6]);
-            index5 += (ushort)(DirectionFlag ? -2 : 2);
-            index6 += (ushort)(DirectionFlag ? -2 : 2);
+            bool equal_4045 = UInt16[DS, index7] == UInt16[ES, index8];
+            index7 += (ushort)(DirectionFlag ? -2 : 2);
+            index8 += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
-            if (ZeroFlag) {
+            if (equal_4045) {
                 break;
             }
         }
         while (CX != 0) {
-            Alu16.Sub(AX, UInt16[ES, index6]);
-            index6 += (ushort)(DirectionFlag ? -2 : 2);
+            bool equal_4047 = AX == UInt16[ES, index8];
+            index8 += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
-            if (ZeroFlag) {
+            if (equal_4047) {
                 break;
             }
         }
@@ -414,37 +407,28 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4049");
         }
         for (count7 = 2; count7 != 0; count7--) {
-            UInt8[ES, index6] = UInt8[DS, index5];
-            index5 += (ushort)(DirectionFlag ? -1 : 1);
-            index6 += (ushort)(DirectionFlag ? -1 : 1);
+            UInt8[ES, index8] = UInt8[DS, index7];
+            index7 += (ushort)(DirectionFlag ? -1 : 1);
+            index8 += (ushort)(DirectionFlag ? -1 : 1);
         }
         if (count7 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x5007, Signature_5007_hlt);
-            SI = index5;
-            DI = index6;
-            CX = count7;
             return Hlt();
         }
         for (count8 = 2; count8 != 0; count8--) {
-            AL = UInt8[DS, index5];
-            index5 += (ushort)(DirectionFlag ? -1 : 1);
+            AL = UInt8[DS, index7];
+            index7 += (ushort)(DirectionFlag ? -1 : 1);
         }
         if (count8 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x500F, Signature_500F_hlt);
-            SI = index5;
-            DI = index6;
-            CX = count8;
             return Hlt();
         }
         for (count9 = 2; count9 != 0; count9--) {
-            UInt8[ES, index6] = AL;
-            index6 += (ushort)(DirectionFlag ? -1 : 1);
+            UInt8[ES, index8] = AL;
+            index8 += (ushort)(DirectionFlag ? -1 : 1);
         }
         if (count9 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x5017, Signature_5017_hlt);
-            SI = index5;
-            DI = index6;
-            CX = count9;
             return Hlt();
         }
         Stack.Push16(0);
@@ -452,39 +436,35 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x501D);
         CX = 0x6023;
         DirectionFlag = true;
-        index7 = 6;
-        index8 = 0x3006;
+        index9 = 6;
+        index10 = 0x3006;
         while (CX != 0) {
-            bool equal_5027 = UInt16[DS, index8] == UInt16[ES, index7];
-            index8 -= 2;
-            index7 -= 2;
+            bool equal_5027 = UInt16[DS, index10] == UInt16[ES, index9];
+            index10 -= 2;
+            index9 -= 2;
             CX--;
             if (equal_5027) {
                 break;
             }
         }
-        AX = 0x1000;
-        BX = 0;
+        word7 = 0x1000;
         Stack.Push16(0);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x5031);
         DirectionFlag = false;
         while (CX != 0) {
-            Alu16.Sub(AX, UInt16[ES, index7]);
-            index7 += 2;
+            bool equal_5032 = word7 == UInt16[ES, index9];
+            index9 += 2;
             CX--;
-            if (ZeroFlag) {
+            if (equal_5032) {
                 break;
             }
         }
         if (CX != 0x601B) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:5034");
         }
-        DX = 0;
         DS = 0;
         Segment0000Globals.Word0004 = 0x1234;
-        DI = index7;
-        SI = index8;
         return Hlt();
     }
 

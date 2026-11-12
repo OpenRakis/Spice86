@@ -13,7 +13,7 @@
       "entry": "F000:0008",
       "term": "F000:0008",
       "pred": [
-        15
+        17
       ],
       "succ": [],
       "asm": [
@@ -33,13 +33,13 @@
       ]
     },
     {
-      "id": 15,
+      "id": 17,
       "entry": "F000:0003",
       "term": "F000:0006",
       "pred": [
         3,
         7,
-        17
+        19
       ],
       "succ": [
         7,
@@ -58,7 +58,7 @@
         2
       ],
       "succ": [
-        15
+        17
       ],
       "asm": [
         "B90000|mov CX,0"
@@ -67,35 +67,37 @@
     {
       "id": 7,
       "entry": "F000:0009",
-      "term": "F000:0019",
+      "term": "F000:0022",
       "pred": [
-        15
+        17
       ],
       "succ": [
-        15,
-        17
+        17,
+        19
       ],
       "asm": [
         "B8____|mov AX,word ptr [0x000F000A]",
         "2EC7060A002E16|mov word ptr CS:[0x000A],0x162E",
         "B90100|mov CX,1",
+        "2EA30406|mov word ptr CS:[0x0604],AX",
+        "2E890E0806|mov word ptr CS:[0x0608],CX",
         "3D2E16|cmp AX,0x162E",
-        "74E8|je short 3"
+        "74DF|je short 3"
       ]
     },
     {
-      "id": 17,
-      "entry": "F000:001B",
-      "term": "F000:001E",
+      "id": 19,
+      "entry": "F000:0024",
+      "term": "F000:0027",
       "pred": [
         7
       ],
       "succ": [
-        15
+        17
       ],
       "asm": [
         "B90000|mov CX,0",
-        "EBE3|jmp short 3"
+        "EBDA|jmp short 3"
       ]
     }
   ],

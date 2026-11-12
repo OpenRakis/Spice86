@@ -1,4 +1,4 @@
-F000:0000 mov word ptr DS:[0],0x00CE
+F000:0000 mov word ptr DS:[0],0x00D8
 F000:0006 mov word ptr DS:[2],CS
 F000:000A mov word ptr CS:[0x0100],0
 F000:0011 mov AX,0x2000
@@ -26,7 +26,7 @@ F000:005F mov AX,word ptr DS:[0x0026]
 F000:0062 mov word ptr DS:[0x0026],0x2222
 F000:0068 mov word ptr DS:[BX+0x46],AX
 F000:006B mov word ptr DS:[0x0028],0x1111
-F000:0071 call near 0x00C7
+F000:0071 call near 0x00D1
 F000:0074 mov word ptr DS:[0x0028],0x2222
 F000:007A mov AX,word ptr DS:[0x0028]
 F000:007D mov word ptr DS:[BX+0x4C],AX
@@ -47,16 +47,18 @@ F000:00B8 out 0x80,AL
 F000:00BA mov word ptr DS:[0x0032],0x2222
 F000:00C0 mov AX,word ptr DS:[0x0032]
 F000:00C3 mov word ptr DS:[BX+0x50],AX
-F000:00C6 hlt
-F000:00C7 mov AX,word ptr DS:[0x0028]
-F000:00CA mov word ptr DS:[BX+0x48],AX
-F000:00CD ret near
-F000:00CE push BP
-F000:00CF mov BP,SP
-F000:00D1 mov AX,word ptr DS:[0x002A]
-F000:00D4 mov word ptr DS:[BX+0x4A],AX
-F000:00D7 mov word ptr CS:[0x0100],1
-F000:00DE mov word ptr SS:[BP+2],0x0091
-F000:00E3 pop BP
-F000:00E4 iret
+F000:00C6 mov word ptr SS:[0x0600],SP
+F000:00CB mov word ptr SS:[0x0602],SS
+F000:00D0 hlt
+F000:00D1 mov AX,word ptr DS:[0x0028]
+F000:00D4 mov word ptr DS:[BX+0x48],AX
+F000:00D7 ret near
+F000:00D8 push BP
+F000:00D9 mov BP,SP
+F000:00DB mov AX,word ptr DS:[0x002A]
+F000:00DE mov word ptr DS:[BX+0x4A],AX
+F000:00E1 mov word ptr CS:[0x0100],1
+F000:00E8 mov word ptr SS:[BP+2],0x0091
+F000:00ED pop BP
+F000:00EE iret
 F000:FFF0 jmp short 0

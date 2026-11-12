@@ -18,7 +18,6 @@ public partial class CfgGeneratedOverrides {
         SS = 0;
         SP = 8;
         Stack.Push16(0x1111);
-        AX = 0x2222;
         Stack.Push16(0x2222);
         return Hlt();
     }

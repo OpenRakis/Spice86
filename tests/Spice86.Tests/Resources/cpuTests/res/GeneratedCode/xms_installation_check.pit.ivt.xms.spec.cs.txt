@@ -20,7 +20,6 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4300;
         (byte1, BX, ES, CarryFlag) = ServiceCall(DosMultiplex, () => DosMultiplex.XmsServices(0, BX, ES));
-        Alu8.Sub(byte1, 0x80);
         if (byte1 != 0x80) {
             VerifySpeculativeEntryOrFail(cs1, 0x010D, Signature_010D_mov);
             byte2 = 0xFF;
@@ -28,9 +27,7 @@ public partial class CfgGeneratedOverrides {
         else {
             byte2 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

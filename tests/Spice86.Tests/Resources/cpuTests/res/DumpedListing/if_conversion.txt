@@ -3,7 +3,7 @@ F000:0003 mov DS,AX
 F000:0005 mov SS,AX
 F000:0007 mov SP,0x1000
 F000:000A mov DI,0x0040
-F000:000D mov SI,0x00B9
+F000:000D mov SI,0x00C3
 F000:0010 mov AX,word ptr CS:[SI]
 F000:0013 cmp AX,word ptr CS:[SI+2]
 F000:0017 setb CL
@@ -59,5 +59,7 @@ F000:00AD mov CX,1
 F000:00B0 jmp short 0x00B5
 F000:00B2 mov CX,2
 F000:00B5 mov word ptr DS:[DI+0x1A],CX
-F000:00B8 hlt
+F000:00B8 mov word ptr SS:[0x0600],SP
+F000:00BD mov word ptr SS:[0x0602],SS
+F000:00C2 hlt
 F000:FFF0 jmp short 0

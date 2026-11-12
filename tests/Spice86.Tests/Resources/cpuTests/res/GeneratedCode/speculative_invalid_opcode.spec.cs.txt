@@ -14,17 +14,15 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte byte1 = 0;
+        byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Byte0400 = 1;
         byte1 = DsGlobals.Byte0500;
-        Alu8.And(byte1, byte1);
         if (byte1 != 0) {
             throw FailAsUntested("Untested jump at F000:000A");
         }
         DsGlobals.Byte0401 = 0xDD;
         DsGlobals.Byte0402 = 0xEE;
-        AL = byte1;
         return Hlt();
     }
 

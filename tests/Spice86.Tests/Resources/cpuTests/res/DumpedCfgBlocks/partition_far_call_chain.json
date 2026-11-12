@@ -5,18 +5,22 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:001D",
+  "lastExecutedAddress": "F000:0031",
   "lastExecutedBlockId": 42,
   "blocks": [
     {
       "id": 42,
       "entry": "F000:001D",
-      "term": "F000:001D",
+      "term": "F000:0031",
       "pred": [
         39
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "3689160A06|mov word ptr SS:[0x060A],DX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
         "F4|hlt"
       ]
     },
@@ -39,13 +43,13 @@
       "pred": [
         27,
         40,
-        45,
-        57,
-        69,
-        81,
+        49,
+        61,
+        73,
         85,
         89,
-        93
+        93,
+        97
       ],
       "succ": [
         40,
@@ -86,25 +90,25 @@
       "succ": [
         27,
         39,
-        45,
-        57,
-        69,
-        81,
+        49,
+        61,
+        73,
         85,
         89,
-        93
+        93,
+        97
       ],
       "asm": [
         "89CB|mov BX,CX",
         "4B|dec BX",
         "C1E302|shl BX,2",
-        "2EFF5F3D|call far dword ptr CS:[BX\u002B0x3D]"
+        "2EFF5F51|call far dword ptr CS:[BX\u002B0x51]"
       ]
     },
     {
       "id": 27,
-      "entry": "F001:012D",
-      "term": "F001:0139",
+      "entry": "F001:0141",
+      "term": "F001:014D",
       "pred": [
         40
       ],
@@ -121,9 +125,9 @@
       ]
     },
     {
-      "id": 45,
-      "entry": "F000:013D",
-      "term": "F000:0149",
+      "id": 49,
+      "entry": "F000:0151",
+      "term": "F000:015D",
       "pred": [
         40
       ],
@@ -140,9 +144,9 @@
       ]
     },
     {
-      "id": 57,
-      "entry": "F010:0030",
-      "term": "F010:003C",
+      "id": 61,
+      "entry": "F010:0044",
+      "term": "F010:0050",
       "pred": [
         40
       ],
@@ -159,9 +163,9 @@
       ]
     },
     {
-      "id": 69,
-      "entry": "F000:0030",
-      "term": "F000:003C",
+      "id": 73,
+      "entry": "F000:0044",
+      "term": "F000:0050",
       "pred": [
         40
       ],
@@ -178,9 +182,9 @@
       ]
     },
     {
-      "id": 81,
-      "entry": "F000:002B",
-      "term": "F000:002F",
+      "id": 85,
+      "entry": "F000:003F",
+      "term": "F000:0043",
       "pred": [
         40
       ],
@@ -193,9 +197,9 @@
       ]
     },
     {
-      "id": 85,
-      "entry": "F000:0026",
-      "term": "F000:002A",
+      "id": 89,
+      "entry": "F000:003A",
+      "term": "F000:003E",
       "pred": [
         40
       ],
@@ -208,9 +212,9 @@
       ]
     },
     {
-      "id": 89,
-      "entry": "F000:0022",
-      "term": "F000:0025",
+      "id": 93,
+      "entry": "F000:0036",
+      "term": "F000:0039",
       "pred": [
         40
       ],
@@ -223,9 +227,9 @@
       ]
     },
     {
-      "id": 93,
-      "entry": "F000:001E",
-      "term": "F000:0021",
+      "id": 97,
+      "entry": "F000:0032",
+      "term": "F000:0035",
       "pred": [
         40
       ],

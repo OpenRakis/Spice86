@@ -372,8 +372,8 @@ public partial class CfgGeneratedOverrides {
             DX = BP;
             UInt8[DS, BX + 0x3F] = DL;
             BX += 0x0040;
-            SI = Alu16.Add(SI, 4);
-            BP = Alu16.Dec(BP);
+            SI += 4;
+            BP--;
         } while (BP != 0);
         return Hlt();
     }

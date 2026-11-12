@@ -62,7 +62,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x000A);
         AX = 0;
         ES = 0;
-        Segment0000Globals.Dword0070 = 0x00000032 | (uint)CS << 16;
+        Segment0000Globals.Dword0070 = 0x0000003C | (uint)CS << 16;
     L_001A:
         CheckExternalEvents(biosSegment, 0x001A);
         AX = DS;
@@ -75,10 +75,12 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x0028);
             UInt16[DS, DI] = BX;
-            DI = Alu16.Add(DI, 2);
+            DI += 2;
             CX--;
         } while (CX != 0);
         UInt16[DS, DI] = BX;
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
         return Hlt();
     }
 

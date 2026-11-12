@@ -9,5 +9,7 @@ F000:0013 mov EBX,dword ptr DS:[0x0808]
 F000:0018 mov dword ptr DS:[0x0100],EBX
 F000:001D mov EAX,0xA5A5A5A5
 F000:0023 mov EBX,0x5A5A5A5A
-F000:0029 hlt
+F000:0029 mov word ptr SS:[0x0600],SP
+F000:002E mov word ptr SS:[0x0602],SS
+F000:0033 hlt
 F000:FFF0 jmp short 0

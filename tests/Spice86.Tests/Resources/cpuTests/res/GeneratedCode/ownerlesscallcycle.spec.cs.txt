@@ -13,34 +13,38 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
-    public virtual Action unknown_F000_0024_F0024() {
-        CheckExternalEvents(biosSegment, 0x0024);
+    public virtual Action unknown_F000_0039_F0039() {
+        CheckExternalEvents(biosSegment, 0x0039);
         return NearRet();
     }
 
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: AX.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0;
         SP = 0x0100;
-        SegmentF000Globals.Byte0025 = 0;
+        SegmentF000Globals.Byte003A = 0;
         AX = 0x0016;
         Stack.Push16(0x0016);
         return NearRet();
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
+    /// <summary>Inputs: AH. Does not return.</summary>
     public virtual Action unknown_F000_0016_F0016() {
         while (true) {
             CheckExternalEvents(biosSegment, 0x0016);
-            SegmentF000Globals.Byte0025 += 1;
-            AL = SegmentF000Globals.Byte0025;
+            SegmentF000Globals.Byte003A += 1;
+            AL = SegmentF000Globals.Byte003A;
             Alu8.Sub(AL, 3);
             if (!CarryFlag) {
                 break;
             }
-            NearCall(biosSegment, 0x0016, unknown_F000_0024_F0024Entry);
+            NearCall(biosSegment, 0x0016, unknown_F000_0039_F0039Entry);
         }
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x0604] = AX;
+        SsUInt16[0x0612] = 0x003A;
         return Hlt();
     }
 
@@ -62,7 +66,7 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public byte Byte0025 { get => _memory.UInt8[Segment, 0x0025]; set => _memory.UInt8[Segment, 0x0025] = value; }
+    public byte Byte003A { get => _memory.UInt8[Segment, 0x003A]; set => _memory.UInt8[Segment, 0x003A] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -81,7 +85,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0024_F0024Entry;
+    private readonly Func<int, Action> unknown_F000_0039_F0039Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
     private readonly Func<int, Action> unknown_F000_0016_F0016Entry;
 
@@ -91,10 +95,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_0024_F0024Entry = _ => unknown_F000_0024_F0024();
+        unknown_F000_0039_F0039Entry = _ => unknown_F000_0039_F0039();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         unknown_F000_0016_F0016Entry = _ => unknown_F000_0016_F0016();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0024, unknown_F000_0024_F0024Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0039, unknown_F000_0039_F0039Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0016, unknown_F000_0016_F0016Entry, "unknown");
     }

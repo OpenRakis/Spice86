@@ -48,5 +48,7 @@ F000:0065 mov CL,byte ptr DS:[0x0300]
 F000:0069 mov byte ptr DS:[BX+0x42],CL
 F000:006C mov CL,byte ptr DS:[0x0301]
 F000:0070 mov byte ptr DS:[BX+0x43],CL
-F000:0073 hlt
+F000:0073 mov word ptr SS:[0x0600],SP
+F000:0078 mov word ptr SS:[0x0602],SS
+F000:007D hlt
 F000:FFF0 jmp short 0

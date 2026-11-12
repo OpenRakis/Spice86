@@ -15,24 +15,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort index = 0;
         byte byte1 = 0;
-        ushort flagOperand_0105 = 0;
-        byte flagOperand_0112 = 0;
-        ushort flagOperand_011A = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x5200;
-        (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
-        flagOperand_0105 = UInt16[ES, BX + 0x66];
-        Alu16.Sub(flagOperand_0105, 0x9FFF);
-        if (flagOperand_0105 == 0x9FFF) {
+        (index, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
+        if (UInt16[ES, index + 0x66] == 0x9FFF) {
             AX = 0xD000;
             ES = 0xD000;
-            flagOperand_0112 = SegmentD000Globals.Byte0000;
-            Alu8.Sub(flagOperand_0112, 0x5A);
-            if (flagOperand_0112 == 0x5A) {
-                flagOperand_011A = SegmentD000Globals.Word0003;
-                Alu16.Sub(flagOperand_011A, 0x0FFF);
-                if (flagOperand_011A != 0x0FFF) {
+            if (SegmentD000Globals.Byte0000 == 0x5A) {
+                if (SegmentD000Globals.Word0003 != 0x0FFF) {
                     goto L_0127;
                 }
                 byte1 = 0;
@@ -43,9 +35,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0127, Signature_0127_mov);
         byte1 = 0xFF;
     L_0129:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

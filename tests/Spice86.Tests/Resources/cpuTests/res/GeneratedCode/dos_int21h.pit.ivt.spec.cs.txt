@@ -20,148 +20,92 @@ public partial class CfgGeneratedOverrides {
         AL = 1;
         Out8(0x0998, 1);
         (AX, CX, DX) = ServiceCall(Dos, () => Dos.ReadDate(0x2A));
-        Alu16.Sub(CX, 0x07BC);
-        if (CX >= 0x07BC) {
-            Alu8.Sub(DH, 1);
-            if (DH != 0) {
-                Alu8.Sub(DH, 0x0C);
-                if (DH <= 0x0C) {
-                    Alu8.Sub(DL, 1);
-                    if (DL != 0) {
-                        Alu8.Sub(DL, 0x1F);
-                        if (DL > 0x1F) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 2;
-                        Out8(0x0998, 2);
-                        AH = 0x2B;
-                        CX = 0x07E8;
-                        DX = 0x0B0E;
-                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0B, 0x0E));
-                        Alu8.Sub(AL, 0);
-                        if (AL != 0) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 3;
-                        Out8(0x0998, 3);
-                        AH = 0x2B;
-                        CX = 0x07BB;
-                        DX = 0x0101;
-                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07BB, 1, 1));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 4;
-                        Out8(0x0998, 4);
-                        AH = 0x2B;
-                        CX = 0x07E8;
-                        DX = 0x0D01;
-                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0D, 1));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 5;
-                        Out8(0x0998, 5);
-                        AH = 0x2B;
-                        CX = 0x07E8;
-                        DX = 0x0120;
-                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 1, 0x20));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        AL = 6;
-                        Out8(0x0998, 6);
-                        AH = 0x2C;
-                        (CX, DX) = ServiceCall(Dos, () => Dos.ReadTime());
-                        Alu8.Sub(CH, 0x17);
-                        if (CH > 0x17) {
-                            goto L_021F;
-                        }
-                        Alu8.Sub(CL, 0x3B);
-                        if (CL > 0x3B) {
-                            goto L_021F;
-                        }
-                        Alu8.Sub(DH, 0x3B);
-                        if (DH > 0x3B) {
-                            goto L_021F;
-                        }
-                        Alu8.Sub(DL, 0x63);
-                        if (DL > 0x63) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 7;
-                        Out8(0x0998, 7);
-                        AH = 0x2D;
-                        CX = 0x0C22;
-                        DX = 0x384E;
-                        AL = ServiceCall(Dos, () => Dos.SetTime(0x0C, 0x22, 0x38, 0x4E));
-                        Alu8.Sub(AL, 0);
-                        if (AL != 0) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 8;
-                        Out8(0x0998, 8);
-                        AH = 0x2D;
-                        CX = 0x1800;
-                        DX = 0;
-                        AL = ServiceCall(Dos, () => Dos.SetTime(0x18, 0, 0, 0));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 9;
-                        Out8(0x0998, 9);
-                        AH = 0x2D;
-                        CX = 0x003C;
-                        DX = 0;
-                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0x3C, 0, 0));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 0x0A;
-                        Out8(0x0998, 0x0A);
-                        AH = 0x2D;
-                        CX = 0;
-                        DX = 0x3C00;
-                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0x3C, 0));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL != 0xFF) {
-                            goto L_021F;
-                        }
-                        DX = 0x0998;
-                        AL = 0x0B;
-                        Out8(0x0998, 0x0B);
-                        AH = 0x2D;
-                        CX = 0;
-                        DX = 0x0064;
-                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0, 0x64));
-                        Alu8.Sub(AL, 0xFF);
-                        if (AL == 0xFF) {
-                            DX = 0x0999;
-                            AL = 0;
-                            Out8(0x0999, 0);
-                            return Hlt();
-                        }
-                    }
-                }
+        if (CX >= 0x07BC && (DH != 0 && (DH <= 0x0C && DL != 0))) {
+            if (DL > 0x1F) {
+                goto L_021F;
+            }
+            DX = 0x0998;
+            AL = 2;
+            Out8(0x0998, 2);
+            AH = 0x2B;
+            DH = 0x0B;
+            AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0B, 0x0E));
+            if (AL != 0) {
+                goto L_021F;
+            }
+            DX = 0x0998;
+            AL = 3;
+            Out8(0x0998, 3);
+            AH = 0x2B;
+            DH = 1;
+            AL = ServiceCall(Dos, () => Dos.SetDate(0x07BB, 1, 1));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            DX = 0x0998;
+            AL = 4;
+            Out8(0x0998, 4);
+            AH = 0x2B;
+            DH = 0x0D;
+            AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0D, 1));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            DX = 0x0998;
+            AL = 5;
+            Out8(0x0998, 5);
+            AH = 0x2B;
+            DH = 1;
+            AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 1, 0x20));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            AL = 6;
+            Out8(0x0998, 6);
+            AH = 0x2C;
+            (CX, DX) = ServiceCall(Dos, () => Dos.ReadTime());
+            if (CH > 0x17 || CL > 0x3B || DH > 0x3B || DL > 0x63) {
+                goto L_021F;
+            }
+            AL = 7;
+            Out8(0x0998, 7);
+            AH = 0x2D;
+            AL = ServiceCall(Dos, () => Dos.SetTime(0x0C, 0x22, 0x38, 0x4E));
+            if (AL != 0) {
+                goto L_021F;
+            }
+            AL = 8;
+            Out8(0x0998, 8);
+            AH = 0x2D;
+            AL = ServiceCall(Dos, () => Dos.SetTime(0x18, 0, 0, 0));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            AL = 9;
+            Out8(0x0998, 9);
+            AH = 0x2D;
+            AL = ServiceCall(Dos, () => Dos.SetTime(0, 0x3C, 0, 0));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            AL = 0x0A;
+            Out8(0x0998, 0x0A);
+            AH = 0x2D;
+            AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0x3C, 0));
+            if (AL != 0xFF) {
+                goto L_021F;
+            }
+            AL = 0x0B;
+            Out8(0x0998, 0x0B);
+            AH = 0x2D;
+            AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0, 0x64));
+            if (AL == 0xFF) {
+                Out8(0x0999, 0);
+                return Hlt();
             }
         }
     L_021F:
         VerifySpeculativeRunOrFail(cs1, 0x021F, SpeculativeRun_021F);
-        DX = 0x0999;
-        AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0225, Signature_0225_hlt);
         return Hlt();

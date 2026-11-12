@@ -5,7 +5,9 @@ F000:0007 mov SP,0x1000
 F000:000A cld
 F000:000B call far F000:1000
 F000:0010 call far F100:1000
-F000:0015 hlt
+F000:0015 mov word ptr SS:[0x0600],SP
+F000:001A mov word ptr SS:[0x0602],SS
+F000:001F hlt
 F000:1000 mov CX,4
 F000:1003 cmp CX,4
 F000:1006 je short 0x1027

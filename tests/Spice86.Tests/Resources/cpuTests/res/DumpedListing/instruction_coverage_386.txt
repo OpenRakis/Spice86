@@ -109,5 +109,7 @@ F000:0152 seto byte ptr DS:[BX+0x4A]
 F000:0156 setno byte ptr DS:[BX+0x4B]
 F000:015A setp byte ptr DS:[BX+0x4C]
 F000:015E setnp byte ptr DS:[BX+0x4D]
-F000:0162 hlt
+F000:0162 mov word ptr SS:[0x0600],SP
+F000:0167 mov word ptr SS:[0x0602],SS
+F000:016C hlt
 F000:FFF0 jmp short 0

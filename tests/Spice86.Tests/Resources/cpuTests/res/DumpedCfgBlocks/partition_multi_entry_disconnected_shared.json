@@ -5,19 +5,24 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0020",
-  "lastExecutedBlockId": 78,
+  "lastExecutedAddress": "F000:0038",
+  "lastExecutedBlockId": 79,
   "blocks": [
     {
-      "id": 78,
+      "id": 79,
       "entry": "F000:0020",
-      "term": "F000:0020",
+      "term": "F000:0038",
       "pred": [
         27,
         73
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "36A30406|mov word ptr SS:[0x0604],AX",
+        "36891E0606|mov word ptr SS:[0x0606],BX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
         "F4|hlt"
       ]
     },
@@ -35,15 +40,15 @@
     },
     {
       "id": 27,
-      "entry": "F000:003D",
-      "term": "F000:0040",
+      "entry": "F000:0055",
+      "term": "F000:0058",
       "pred": [
         23,
         30
       ],
       "succ": [
         59,
-        78
+        79
       ],
       "asm": [
         "83C110|add CX,0x0010",
@@ -60,11 +65,11 @@
       ],
       "succ": [
         61,
-        78
+        79
       ],
       "asm": [
         "B001|mov AL,1",
-        "E80700|call near 0x0027"
+        "E81F00|call near 0x003F"
       ]
     },
     {
@@ -85,7 +90,7 @@
         "31DB|xor BX,BX",
         "31C9|xor CX,CX",
         "B000|mov AL,0",
-        "E81000|call near 0x0021"
+        "E82800|call near 0x0039"
       ]
     },
     {
@@ -102,13 +107,13 @@
       ],
       "asm": [
         "B000|mov AL,0",
-        "E80C00|call near 0x0027"
+        "E82400|call near 0x003F"
       ]
     },
     {
       "id": 23,
-      "entry": "F000:0031",
-      "term": "F000:0031",
+      "entry": "F000:0049",
+      "term": "F000:0049",
       "pred": [
         14
       ],
@@ -116,13 +121,13 @@
         27
       ],
       "asm": [
-        "EB0A|jmp short 0x003D"
+        "EB0A|jmp short 0x0055"
       ]
     },
     {
       "id": 30,
-      "entry": "F000:0037",
-      "term": "F000:0037",
+      "entry": "F000:004F",
+      "term": "F000:004F",
       "pred": [
         19
       ],
@@ -130,13 +135,13 @@
         27
       ],
       "asm": [
-        "EB04|jmp short 0x003D"
+        "EB04|jmp short 0x0055"
       ]
     },
     {
       "id": 61,
-      "entry": "F000:0027",
-      "term": "F000:0029",
+      "entry": "F000:003F",
+      "term": "F000:0041",
       "pred": [
         59,
         73
@@ -147,13 +152,13 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7502|jne short 0x002D"
+        "7502|jne short 0x0045"
       ]
     },
     {
       "id": 21,
-      "entry": "F000:0039",
-      "term": "F000:003C",
+      "entry": "F000:0051",
+      "term": "F000:0054",
       "pred": [
         14,
         19
@@ -169,8 +174,8 @@
     },
     {
       "id": 11,
-      "entry": "F000:0021",
-      "term": "F000:0023",
+      "entry": "F000:0039",
+      "term": "F000:003B",
       "pred": [
         3,
         48
@@ -181,7 +186,7 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7408|je short 0x002D"
+        "7408|je short 0x0045"
       ]
     },
     {
@@ -198,13 +203,13 @@
       ],
       "asm": [
         "B001|mov AL,1",
-        "E80B00|call near 0x0021"
+        "E82300|call near 0x0039"
       ]
     },
     {
       "id": 14,
-      "entry": "F000:002D",
-      "term": "F000:002F",
+      "entry": "F000:0045",
+      "term": "F000:0047",
       "pred": [
         11,
         61
@@ -215,13 +220,13 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7408|je short 0x0039"
+        "7408|je short 0x0051"
       ]
     },
     {
       "id": 19,
-      "entry": "F000:0033",
-      "term": "F000:0035",
+      "entry": "F000:004B",
+      "term": "F000:004D",
       "pred": [
         16,
         65
@@ -232,13 +237,13 @@
       ],
       "asm": [
         "3C00|cmp AL,0",
-        "7402|je short 0x0039"
+        "7402|je short 0x0051"
       ]
     },
     {
       "id": 65,
-      "entry": "F000:002B",
-      "term": "F000:002B",
+      "entry": "F000:0043",
+      "term": "F000:0043",
       "pred": [
         61
       ],
@@ -246,13 +251,13 @@
         19
       ],
       "asm": [
-        "EB06|jmp short 0x0033"
+        "EB06|jmp short 0x004B"
       ]
     },
     {
       "id": 16,
-      "entry": "F000:0025",
-      "term": "F000:0025",
+      "entry": "F000:003D",
+      "term": "F000:003D",
       "pred": [
         11
       ],
@@ -260,7 +265,7 @@
         19
       ],
       "asm": [
-        "EB0C|jmp short 0x0033"
+        "EB0C|jmp short 0x004B"
       ]
     }
   ],

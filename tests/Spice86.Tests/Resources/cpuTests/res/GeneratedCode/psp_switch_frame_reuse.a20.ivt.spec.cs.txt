@@ -154,17 +154,13 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x01E2);
         Stack.Push16(FlagRegister16);
         word1 = Stack.Pop16();
-        BX = 0x5000;
         ES = 0x5000;
         Segment5000Globals.Word000A = word1;
         AX = SS;
         Segment5000Globals.Dword000C = (uint)AX | (uint)SP << 16;
         word1 = ImageMinus0003Globals.Word0219;
         Segment5000Globals.Word0010 = word1;
-        AX = ImageMinus0003Globals.Word021B;
-        Segment5000Globals.Word0012 = AX;
-        AL = 0;
-        DX = 0x0999;
+        Segment5000Globals.Word0012 = ImageMinus0003Globals.Word021B;
         Out8(0x0999, 0);
         return Hlt();
     }

@@ -148,6 +148,8 @@ start:
 ; kill the shift's flag results so the shr expands to a plain >> (a call reader cannot merge)
     xor ax, ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

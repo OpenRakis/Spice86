@@ -13,9 +13,9 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: CX, BX, DI, DS, DF. Outputs: DF. Changes: flags, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
-    public virtual Action unknown_F000_017D_F017D() {
-        CheckExternalEvents(biosSegment, 0x017D);
+    /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
+    public virtual Action unknown_F000_0187_F0187() {
+        CheckExternalEvents(biosSegment, 0x0187);
         UInt16[DS, DI + 0x30] = BX;
         UInt16[DS, DI + 0x32] = CX;
         return InterruptRet();
@@ -42,12 +42,11 @@ public partial class CfgGeneratedOverrides {
         SS = 0x2000;
         SP = 0x1000;
         ES = 0;
-        Segment0000Globals.Dword0190 = 0x0000017D | (uint)CS << 16;
+        Segment0000Globals.Dword0190 = 0x00000187 | (uint)CS << 16;
         word1 = 0x2000;
-        ES = 0x2000;
         DirectionFlag = false;
         DI = 0;
-        SI = 0x0188;
+        SI = 0x0190;
         do {
             CheckExternalEvents(biosSegment, 0x0027);
             word2 = UInt16[CS, SI];
@@ -126,7 +125,7 @@ public partial class CfgGeneratedOverrides {
             DI = index;
             BX = (ushort)dword1;
             CX = (ushort)(dword1 >> 16);
-            InterruptCall(biosSegment, 0x0102, 0x64, biosSegment, 0x017D, unknown_F000_017D_F017DEntry);
+            InterruptCall(biosSegment, 0x0102, 0x64, biosSegment, 0x0187, unknown_F000_0187_F0187Entry);
             UInt16[DS, index + 0x18] = (ushort)dword1;
             UInt16[DS, index + 0x1A] = (ushort)(dword1 >> 16);
             UInt8[DS, index + 0x2E] = BL;
@@ -171,9 +170,8 @@ public partial class CfgGeneratedOverrides {
             DI += 0x0080;
             SI = index2;
             SI += 8;
-            Alu16.Sub(DI, 0x0200);
         } while (DI < 0x0200);
-        AX = word1;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -214,7 +212,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_017D_F017DEntry;
+    private readonly Func<int, Action> unknown_F000_0187_F0187Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
@@ -223,9 +221,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
-        unknown_F000_017D_F017DEntry = _ => unknown_F000_017D_F017D();
+        unknown_F000_0187_F0187Entry = _ => unknown_F000_0187_F0187();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x017D, unknown_F000_017D_F017DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0187, unknown_F000_0187_F0187Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

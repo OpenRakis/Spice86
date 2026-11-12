@@ -5,13 +5,12 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
-/// <summary>Registers and RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
-/// <param name="Registers">Registers and their values when the run ended.</param>
+/// <summary>RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
 /// <param name="Ram">The first megabyte of RAM when the run ended.</param>
 /// <param name="ExtendedRegions">Named byte regions beyond the first megabyte the settings enable:
 /// the high memory area and <c>XmsRam</c> with A20 or XMS, every allocated EMS logical page with
 /// EMS.</param>
-internal sealed record AsmFinalState(IReadOnlyList<(string Name, uint Value)> Registers, byte[] Ram,
+internal sealed record AsmFinalState(byte[] Ram,
     IReadOnlyList<(string Name, byte[] Bytes)> ExtendedRegions) {
     /// <summary>Number of captured RAM bytes: the first megabyte.</summary>
     public const uint ComparedRamLength = 0x100000;
@@ -20,31 +19,12 @@ internal sealed record AsmFinalState(IReadOnlyList<(string Name, uint Value)> Re
     /// interrupt the run executed, recorded by <see cref="SoftwareInterruptRecorder"/>.</summary>
     public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> SoftwareInterrupts { get; init; } = [];
 
-    /// <summary>Captures the registers and the RAM of a finished run.</summary>
+    /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
+    /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
     /// <param name="run">The finished run.</param>
     /// <param name="settings">Settings of the run, deciding which extended regions are compared.</param>
     /// <returns>The captured state.</returns>
     public static AsmFinalState Capture(AsmFixtureRun run, AsmRunSettings settings) {
-        State state = run.Result.State;
-        (string Name, uint Value)[] registers = [
-            ("EAX", state.EAX),
-            ("EBX", state.EBX),
-            ("ECX", state.ECX),
-            ("EDX", state.EDX),
-            ("ESI", state.ESI),
-            ("EDI", state.EDI),
-            ("EBP", state.EBP),
-            ("ESP", state.ESP),
-            ("CS", state.CS),
-            ("DS", state.DS),
-            ("ES", state.ES),
-            ("FS", state.FS),
-            ("GS", state.GS),
-            ("SS", state.SS),
-            ("FLAGS", state.Flags.FlagRegister)
-        ];
-        // IP is not compared: the generated run ends at the override's hlt while the interpreted
-        // run ends at the program's own, so CS:IP legitimately differs at the stopping point.
         byte[] ram = run.Result.Memory.ReadRam(ComparedRamLength, 0);
         List<(string Name, byte[] Bytes)> regions = [];
         if (settings.EnableA20Gate || settings.EnableXms) {
@@ -64,7 +44,7 @@ internal sealed record AsmFinalState(IReadOnlyList<(string Name, uint Value)> Re
                 }
             }
         }
-        return new AsmFinalState(registers, ram, regions) {
+        return new AsmFinalState(ram, regions) {
             SoftwareInterrupts = run.Result.Observations
                 .Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation).Interrupts
         };

@@ -23,7 +23,6 @@ public partial class CfgGeneratedOverrides {
         ushort word6;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
-        ES = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
@@ -120,13 +119,7 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, BX + 0x38] = CX;
         UInt16[DS, BX + 0x3A] = DX;
         UInt16[DS, BX + 0x3E] = BP;
-        AX = 1;
-        CX = 2;
-        CarryFlag = true;
         ParityFlag = true;
-        AuxiliaryFlag = true;
-        ZeroFlag = false;
-        SignFlag = true;
         OverflowFlag = false;
         UInt8[DS, BX + 0x40] = 1;
         UInt8[DS, BX + 0x41] = 0;
@@ -162,6 +155,7 @@ public partial class CfgGeneratedOverrides {
         else {
             UInt8[DS, BX + 0x4D] = 0;
         }
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

@@ -15,22 +15,20 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, ES. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort preservedEs = 0;
+        ushort preservedBx = 0;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4310;
-        (AL, BX, ES, CarryFlag) = ServiceCall(DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES));
-        AX = ES;
-        AX = Alu16.Or(AX, BX);
-        if (AX == 0) {
+        (AL, preservedBx, preservedEs, CarryFlag) = ServiceCall(DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES));
+        if ((preservedEs | preservedBx) == 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x010F, Signature_010F_mov);
             byte1 = 0xFF;
         }
         else {
             byte1 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

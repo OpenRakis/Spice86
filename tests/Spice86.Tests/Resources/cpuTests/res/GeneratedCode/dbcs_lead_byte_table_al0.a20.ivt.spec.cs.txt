@@ -16,19 +16,15 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
+        ushort previousSi = 0;
         byte byte2 = 0;
-        ushort flagOperand_0112 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x6300;
-        (byte1, SI, DS, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag));
-        Alu8.Sub(byte1, 0);
+        (byte1, previousSi, DS, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag));
         if (byte1 == 0 && byte1 >= 0) {
             DX = DS;
-            Alu16.Sub(DX, 0);
             if (DX != 0) {
-                flagOperand_0112 = UInt16[DS, SI];
-                Alu16.Sub(flagOperand_0112, 0);
-                if (flagOperand_0112 != 0) {
+                if (UInt16[DS, previousSi] != 0) {
                     goto L_011B;
                 }
                 byte2 = 0;
@@ -39,9 +35,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
         byte2 = 0xFF;
     L_011D:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

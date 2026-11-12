@@ -21,42 +21,34 @@ public partial class CfgGeneratedOverrides {
         AL = Cmos.ReadRegister(0);
         CarryFlag = NearCall(cs1, 0x010F, () => unknown_016D_0185_01855(AL));
         if (!CarryFlag) {
-            DX = 0x0998;
             Out8(0x0998, 2);
             AL = Cmos.ReadRegister(2);
             CarryFlag = NearCall(cs1, 0x0120, () => unknown_016D_0185_01855(AL));
             if (!CarryFlag) {
-                DX = 0x0998;
                 Out8(0x0998, 3);
                 AL = Cmos.ReadRegister(4);
                 CarryFlag = NearCall(cs1, 0x0131, () => unknown_016D_0185_01855(AL));
                 if (!CarryFlag) {
-                    DX = 0x0998;
                     Out8(0x0998, 4);
                     AL = Cmos.ReadRegister(6);
                     CarryFlag = NearCall(cs1, 0x0142, () => unknown_016D_0185_01855(AL));
                     if (!CarryFlag) {
-                        DX = 0x0998;
                         Out8(0x0998, 5);
                         AL = Cmos.ReadRegister(7);
                         CarryFlag = NearCall(cs1, 0x0153, () => unknown_016D_0185_01855(AL));
                         if (CarryFlag) {
                             goto L_017E;
                         }
-                        DX = 0x0998;
                         Out8(0x0998, 6);
                         AL = Cmos.ReadRegister(8);
                         CarryFlag = NearCall(cs1, 0x0164, () => unknown_016D_0185_01855(AL));
                         if (CarryFlag) {
                             goto L_017E;
                         }
-                        DX = 0x0998;
                         Out8(0x0998, 7);
                         AL = Cmos.ReadRegister(9);
                         CarryFlag = NearCall(cs1, 0x0175, () => unknown_016D_0185_01855(AL));
                         if (!CarryFlag) {
-                            DX = 0x0999;
-                            AL = 0;
                             Out8(0x0999, 0);
                             return Hlt();
                         }
@@ -66,8 +58,6 @@ public partial class CfgGeneratedOverrides {
         }
     L_017E:
         VerifySpeculativeRunOrFail(cs1, 0x017E, SpeculativeRun_017E);
-        DX = 0x0999;
-        AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0184, Signature_0184_hlt);
         return Hlt();

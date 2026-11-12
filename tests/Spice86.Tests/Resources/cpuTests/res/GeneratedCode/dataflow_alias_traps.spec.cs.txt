@@ -16,17 +16,17 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte byte1;
         ushort word1;
+        ushort word2;
         byte byte2;
-        ushort word2 = 0;
         ushort index = 0;
         ushort index2 = 0;
         ushort count = 0;
+        ushort word3;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        BX = 0;
         ES = 0x1FFF;
         Segment2000Globals.WordFFFF = 0x2233;
         byte1 = Segment1FFFGlobals.Byte0010;
@@ -39,17 +39,16 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0040 = DI;
         Segment2000Globals.Byte0002 = 0x55;
         Segment2000Globals.Byte0003 = 0;
-        BP = Segment2000Globals.Word0002;
+        word1 = Segment2000Globals.Word0002;
         Segment2000Globals.Word0001 = 0x1234;
-        BP >>= 1;
-        Segment2000Globals.Word0042 = BP;
+        Segment2000Globals.Word0042 = (ushort)(word1 >> 1);
         ES = 0;
         Segment0000Globals.Byte8000 = 0x55;
         Segment0000Globals.Byte8001 = 0;
-        word1 = Segment0000Globals.Word8000;
+        word2 = Segment0000Globals.Word8000;
         ES = 0xFFFF;
         SegmentFFFFGlobals.Word8010 = 0x1234;
-        Segment2000Globals.Word0054 = word1;
+        Segment2000Globals.Word0054 = word2;
         Stack.Push16(ES);
         Vga.WriteSequencerRegister(2, 0x0F);
         Vga.WriteSequencerRegister(4, 6);
@@ -92,8 +91,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word004C = 0x3333;
         Segment2000Globals.Word0006 = 0x1111;
         Segment2000Globals.Word0070 = 0x2222;
-        word2 = DS;
-        ES = word2;
+        ES = DS;
         index = 0x0070;
         index2 = 6;
         for (count = 2; count != 0; count--) {
@@ -101,24 +99,14 @@ public partial class CfgGeneratedOverrides {
             index++;
             index2++;
         }
-        CX = Segment2000Globals.Word0006;
-        Segment2000Globals.Word004A = CX;
+        Segment2000Globals.Word004A = Segment2000Globals.Word0006;
         Segment2000Globals.Byte0010 = 0x55;
         Segment2000Globals.Byte0011 = 0;
         ES = 0x2001;
-        DX = Segment2000Globals.Word0010;
+        word3 = Segment2000Globals.Word0010;
         Segment2001Globals.Word0000 = 0x1234;
-        DX >>= 1;
-        Segment2000Globals.Word0044 = DX;
-        AX = 0;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = true;
-        SignFlag = false;
-        OverflowFlag = false;
-        SI = index;
-        DI = index2;
+        Segment2000Globals.Word0044 = (ushort)(word3 >> 1);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

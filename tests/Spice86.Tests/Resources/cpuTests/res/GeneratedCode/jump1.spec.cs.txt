@@ -15,8 +15,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, ZF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        CX = 0;
-        BX = 0x0040;
         SP = 0x1000;
         SS = SP;
         Stack.Push16(0x0040);
@@ -59,21 +57,18 @@ public partial class CfgGeneratedOverrides {
                         if (!ZeroFlag) {
                             goto L_0037;
                         }
-                        DX = 0x08C0;
                         Stack.Push16(0x08C0);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x003E);
                         if (!ZeroFlag && SignFlag == OverflowFlag) {
                             goto L_0037;
                         }
-                        DX = 0x0880;
                         Stack.Push16(0x0880);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x0045);
                         if (ZeroFlag || SignFlag != OverflowFlag) {
                             goto L_0047;
                         }
-                        DX = 0x0080;
                         Stack.Push16(0x0080);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x004E);
@@ -86,7 +81,6 @@ public partial class CfgGeneratedOverrides {
                         if (SignFlag != OverflowFlag || SignFlag != OverflowFlag) {
                             goto L_0054;
                         }
-                        DX = 0x0800;
                         Stack.Push16(0x0800);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x005D);
@@ -105,28 +99,24 @@ public partial class CfgGeneratedOverrides {
                         if (!ZeroFlag && SignFlag == OverflowFlag || !ZeroFlag) {
                             goto L_0069;
                         }
-                        DX = 0x0CBF;
                         Stack.Push16(0x0CBF);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x0072);
                         if (ZeroFlag) {
                             goto L_0074;
                         }
-                        DX = 0x0800;
                         Stack.Push16(0x0800);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x007C);
                         if (!OverflowFlag) {
                             goto L_0074;
                         }
-                        DX = 0x06FF;
                         Stack.Push16(0x06FF);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x0083);
                         if (OverflowFlag) {
                             goto L_0085;
                         }
-                        DX = 4;
                         Stack.Push16(4);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x008D);
@@ -139,7 +129,6 @@ public partial class CfgGeneratedOverrides {
                         if (ParityFlag) {
                             goto L_0093;
                         }
-                        DX = 0x0EFF;
                         Stack.Push16(0x0EFF);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x009B);
@@ -152,21 +141,18 @@ public partial class CfgGeneratedOverrides {
                         if (SignFlag || OverflowFlag) {
                             goto L_00A1;
                         }
-                        DX = 0x0800;
                         Stack.Push16(0x0800);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x00AB);
                         if (!OverflowFlag || ParityFlag) {
                             goto L_00AD;
                         }
-                        DX = 0x0804;
                         Stack.Push16(0x0804);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x00B7);
                         if (!ParityFlag || SignFlag) {
                             goto L_00B9;
                         }
-                        DX = 0x0884;
                         Stack.Push16(0x0884);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x00C3);

@@ -14,10 +14,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte flagOperand_0022 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0;
-        SS = 0;
         SP = 0x0100;
         DS = 0;
         ES = 0;
@@ -48,9 +46,7 @@ public partial class CfgGeneratedOverrides {
                 }
             }
             DsGlobals.Byte0020 += 1;
-            flagOperand_0022 = DsGlobals.Byte0020;
-            Alu8.Sub(flagOperand_0022, 2);
-            if (flagOperand_0022 == 2) {
+            if (DsGlobals.Byte0020 == 2) {
                 break;
             }
             CsGlobals.Byte001D = 0xA4;

@@ -503,9 +503,6 @@ public class Spice86DependencyInjection : IDisposable {
         if (configuration.GeneratedCodeAssumeUnknownMemoryIsRam) {
             relaxations |= GenerationRelaxation.UnknownMemoryIsRam;
         }
-        if (configuration.GeneratedCodeTerminalStateUnobserved) {
-            relaxations |= GenerationRelaxation.TerminalStateUnobserved;
-        }
         GenerationPolicy generationPolicy = new(relaxations);
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(false, false,
             configuration.GeneratedCodeAsmComments, generationPolicy), loggerService);

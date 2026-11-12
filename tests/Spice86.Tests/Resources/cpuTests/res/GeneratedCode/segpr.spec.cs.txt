@@ -59,7 +59,6 @@ public partial class CfgGeneratedOverrides {
         SI = (ushort)(0x0200 + (ushort)(DirectionFlag ? -1 : 1));
         DI = (ushort)(0x0E01 + (ushort)(DirectionFlag ? -1 : 1));
         Stack.Push16(FlagRegister16);
-        AX = 1;
         ES = 1;
         index = 6;
         index2 = 0x1400;
@@ -68,9 +67,6 @@ public partial class CfgGeneratedOverrides {
             index2 += (ushort)(DirectionFlag ? -1 : 1);
             index += (ushort)(DirectionFlag ? -1 : 1);
         }
-        DI = index;
-        SI = index2;
-        CX = count;
         return Hlt();
     }
 
@@ -93,8 +89,7 @@ public partial class CfgGeneratedOverrides {
         DX = segment;
         DsGlobals.Word0006 = DX;
         DI = 5;
-        SI = (ushort)(BP + 0x001C);
-        DsGlobals.Word0008 = SI;
+        DsGlobals.Word0008 = (ushort)(BP + 0x001C);
         BX = 5;
         AX = 5;
         DsGlobals.Word000A = 0x2345;

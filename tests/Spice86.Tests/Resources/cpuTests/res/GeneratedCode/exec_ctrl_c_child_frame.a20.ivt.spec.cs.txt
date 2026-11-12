@@ -48,7 +48,6 @@ public partial class CfgGeneratedOverrides {
             InterruptCall(cs1, 0x0132, 0x21);
             Stack.Push16(FlagRegister16);
             word1 = Stack.Pop16();
-            BX = 0x5000;
             ES = 0x5000;
             Segment5000Globals.Word0000 = word1;
             AX = SS;
@@ -59,9 +58,7 @@ public partial class CfgGeneratedOverrides {
             Segment5000Globals.Word0008 = AX;
             byte1 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

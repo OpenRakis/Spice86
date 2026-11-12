@@ -110,5 +110,7 @@ F000:0151 mov word ptr ES:[0],0x1234
 F000:0158 shr DX,1
 F000:015A mov word ptr DS:[BX+0x44],DX
 F000:015D xor AX,AX
-F000:015F hlt
+F000:015F mov word ptr SS:[0x0600],SP
+F000:0164 mov word ptr SS:[0x0602],SS
+F000:0169 hlt
 F000:FFF0 jmp short 0

@@ -90,28 +90,28 @@ F000:0128 mov AX,ES
 F000:012A inc AX
 F000:012B mov ES,AX
 F000:012D loop 0x0120
-F000:012F call near 0x02E1
+F000:012F call near 0x02EB
 F000:0132 mov AL,byte ptr DS:[0x0063]
 F000:0135 mov BX,0x2000
 F000:0138 mov ES,BX
 F000:013A mov byte ptr ES:[0x004B],AL
 F000:013E mov DS,BX
-F000:0140 call near 0x02E7
+F000:0140 call near 0x02F1
 F000:0143 mov byte ptr DS:[0x004C],AL
 F000:0146 mov AX,0x2001
 F000:0149 mov DS,AX
-F000:014B call near 0x02E7
+F000:014B call near 0x02F1
 F000:014E mov BX,0x2000
 F000:0151 mov DS,BX
 F000:0153 mov byte ptr DS:[0x004D],AL
-F000:0156 call near 0x02EB
+F000:0156 call near 0x02F5
 F000:0159 mov byte ptr DS:[0x004E],AL
-F000:015C call near 0x02EF
+F000:015C call near 0x02F9
 F000:015F mov AL,byte ptr DS:[0x0067]
 F000:0162 mov byte ptr DS:[0x004F],AL
 F000:0165 xor AX,AX
 F000:0167 mov ES,AX
-F000:0169 mov word ptr ES:[0x0180],0x02FC
+F000:0169 mov word ptr ES:[0x0180],0x0306
 F000:0170 mov word ptr ES:[0x0182],CS
 F000:0175 mov AX,0x2000
 F000:0178 mov ES,AX
@@ -164,14 +164,14 @@ F000:01E3 mov AX,0x2000
 F000:01E6 mov ES,AX
 F000:01E8 push DS
 F000:01E9 lds BX,word ptr DS:[0x0094]
-F000:01ED call near 0x0304
+F000:01ED call near 0x030E
 F000:01F0 pop DS
 F000:01F1 mov BX,0x0057
 F000:01F4 mov byte ptr DS:[BX],AL
 F000:01F6 mov AX,0x2000
 F000:01F9 mov DS,AX
 F000:01FB mov ES,AX
-F000:01FD call near 0x030C
+F000:01FD call near 0x0316
 F000:0200 mov BX,0x0058
 F000:0203 mov byte ptr DS:[BX],AL
 F000:0205 mov AL,byte ptr DS:[0x0062]
@@ -190,16 +190,16 @@ F000:0222 mov byte ptr DS:[0x005A],AL
 F000:0225 mov AX,0x2000
 F000:0228 mov ES,AX
 F000:022A mov CX,0
-F000:022D call near 0x0315
+F000:022D call near 0x031F
 F000:0230 mov byte ptr DS:[0x005B],AL
 F000:0233 mov CX,1
-F000:0236 call near 0x0317
+F000:0236 call near 0x0321
 F000:0239 mov byte ptr DS:[0x005C],AL
 F000:023C mov AX,0x2000
 F000:023F mov ES,AX
 F000:0241 xor AX,AX
 F000:0243 mov ES,AX
-F000:0245 mov word ptr ES:[0x0020],0x02BC
+F000:0245 mov word ptr ES:[0x0020],0x02C6
 F000:024C mov word ptr ES:[0x0022],CS
 F000:0251 mov AX,DS
 F000:0253 mov ES,AX
@@ -215,83 +215,85 @@ F000:0268 out 0x21,AL
 F000:026A mov CX,0xFFFF
 F000:026D dec CX
 F000:026E jne short 0x026D
-F000:0270 call near 0x02A3
+F000:0270 call near 0x02AD
 F000:0273 mov byte ptr DS:[0x0083],AL
 F000:0276 cli
 F000:0277 mov AX,0x2000
 F000:027A mov ES,AX
 F000:027C xor AX,AX
 F000:027E mov ES,AX
-F000:0280 mov word ptr ES:[0x0030],0x02C9
+F000:0280 mov word ptr ES:[0x0030],0x02D3
 F000:0287 mov word ptr ES:[0x0032],CS
-F000:028C mov word ptr ES:[0x0034],0x02D5
+F000:028C mov word ptr ES:[0x0034],0x02DF
 F000:0293 mov word ptr ES:[0x0036],CS
 F000:0298 mov AX,DS
 F000:029A mov ES,AX
 F000:029C mov BP,0xFFFF
 F000:029F mov AX,word ptr SS:[BP]
-F000:02A2 hlt
-F000:02A3 push BP
-F000:02A4 mov BP,SP
-F000:02A6 sub SP,2
-F000:02A9 mov word ptr SS:[BP-2],0xD4D4
-F000:02AE call near 0x02B9
-F000:02B1 mov AL,byte ptr SS:[BP-2]
-F000:02B4 add SP,2
-F000:02B7 pop BP
-F000:02B8 ret near
-F000:02B9 sti
-F000:02BA nop
-F000:02BB ret near
-F000:02BC mov BP,0x0064
-F000:02BF mov byte ptr DS:[0x0E60],1
-F000:02C4 mov AL,0x20
-F000:02C6 out 0x20,AL
-F000:02C8 iret
-F000:02C9 mov BP,SP
-F000:02CB add word ptr SS:[BP],3
-F000:02CF mov byte ptr DS:[0x0084],0x0C
-F000:02D4 iret
-F000:02E1 mov AX,0x2001
-F000:02E4 mov DS,AX
-F000:02E6 ret near
-F000:02E7 mov AL,byte ptr DS:[0x0064]
-F000:02EA ret near
-F000:02EB mov AL,byte ptr DS:[0x0065]
-F000:02EE ret near
-F000:02EF push DS
-F000:02F0 mov AX,0x2001
-F000:02F3 mov DS,AX
-F000:02F5 mov byte ptr DS:[0x0067],0xCC
-F000:02FA pop DS
-F000:02FB ret near
-F000:02FC push AX
-F000:02FD mov AX,0x2001
-F000:0300 mov ES,AX
-F000:0302 pop AX
-F000:0303 iret
-F000:0304 mov AX,DS
-F000:0306 mov ES,AX
-F000:0308 call near 0x030C
-F000:030B ret near
-F000:030C mov AL,byte ptr ES:[0x0063]
-F000:0310 push DS
-F000:0311 push ES
-F000:0312 pop DS
-F000:0313 pop ES
-F000:0314 ret near
-F000:0315 jmp short 0x031E
-F000:0317 mov AX,0x4000
-F000:031A mov ES,AX
-F000:031C jmp short 0x0324
-F000:031E cmp CX,0
-F000:0321 je short 0x032E
-F000:0323 ret near
-F000:0324 mov AL,byte ptr ES:[0x0062]
-F000:0328 cmp CX,1
-F000:032B je short 0x031E
+F000:02A2 mov word ptr SS:[0x0600],SP
+F000:02A7 mov word ptr SS:[0x0602],SS
+F000:02AC hlt
+F000:02AD push BP
+F000:02AE mov BP,SP
+F000:02B0 sub SP,2
+F000:02B3 mov word ptr SS:[BP-2],0xD4D4
+F000:02B8 call near 0x02C3
+F000:02BB mov AL,byte ptr SS:[BP-2]
+F000:02BE add SP,2
+F000:02C1 pop BP
+F000:02C2 ret near
+F000:02C3 sti
+F000:02C4 nop
+F000:02C5 ret near
+F000:02C6 mov BP,0x0064
+F000:02C9 mov byte ptr DS:[0x0E60],1
+F000:02CE mov AL,0x20
+F000:02D0 out 0x20,AL
+F000:02D2 iret
+F000:02D3 mov BP,SP
+F000:02D5 add word ptr SS:[BP],3
+F000:02D9 mov byte ptr DS:[0x0084],0x0C
+F000:02DE iret
+F000:02EB mov AX,0x2001
+F000:02EE mov DS,AX
+F000:02F0 ret near
+F000:02F1 mov AL,byte ptr DS:[0x0064]
+F000:02F4 ret near
+F000:02F5 mov AL,byte ptr DS:[0x0065]
+F000:02F8 ret near
+F000:02F9 push DS
+F000:02FA mov AX,0x2001
+F000:02FD mov DS,AX
+F000:02FF mov byte ptr DS:[0x0067],0xCC
+F000:0304 pop DS
+F000:0305 ret near
+F000:0306 push AX
+F000:0307 mov AX,0x2001
+F000:030A mov ES,AX
+F000:030C pop AX
+F000:030D iret
+F000:030E mov AX,DS
+F000:0310 mov ES,AX
+F000:0312 call near 0x0316
+F000:0315 ret near
+F000:0316 mov AL,byte ptr ES:[0x0063]
+F000:031A push DS
+F000:031B push ES
+F000:031C pop DS
+F000:031D pop ES
+F000:031E ret near
+F000:031F jmp short 0x0328
+F000:0321 mov AX,0x4000
+F000:0324 mov ES,AX
+F000:0326 jmp short 0x032E
+F000:0328 cmp CX,0
+F000:032B je short 0x0338
 F000:032D ret near
-F000:032E mov AX,0x3000
-F000:0331 mov ES,AX
-F000:0333 jmp short 0x0324
+F000:032E mov AL,byte ptr ES:[0x0062]
+F000:0332 cmp CX,1
+F000:0335 je short 0x0328
+F000:0337 ret near
+F000:0338 mov AX,0x3000
+F000:033B mov ES,AX
+F000:033D jmp short 0x032E
 F000:FFF0 jmp short 0

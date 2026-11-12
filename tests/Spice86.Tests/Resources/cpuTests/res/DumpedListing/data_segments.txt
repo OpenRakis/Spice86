@@ -49,5 +49,7 @@ F000:007F mov AX,word ptr ES:[0x0010]
 F000:0083 mov word ptr DS:[0x0047],AX
 F000:0086 mov AX,0x2000
 F000:0089 mov ES,AX
-F000:008B hlt
+F000:008B mov word ptr SS:[0x0600],SP
+F000:0090 mov word ptr SS:[0x0602],SS
+F000:0095 hlt
 F000:FFF0 jmp short 0

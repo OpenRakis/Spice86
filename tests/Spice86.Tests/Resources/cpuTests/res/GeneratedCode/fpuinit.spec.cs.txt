@@ -14,13 +14,6 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte flagOperand_0043 = 0;
-        ushort flagOperand_0060 = 0;
-        ushort flagOperand_0068 = 0;
-        ushort flagOperand_0076 = 0;
-        ushort flagOperand_0096 = 0;
-        ushort flagOperand_00A4 = 0;
-        ushort flagOperand_00B8 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         DS = 0x1000;
@@ -38,71 +31,49 @@ public partial class CfgGeneratedOverrides {
             CheckExternalEvents(biosSegment, 0x0019);
             CX--;
         } while (CX != 0);
-        BX = 0;
         AX = Segment1000Globals.Word0100;
         AH &= 0x0F;
-        Alu8.Sub(AH, 3);
         if (AH == 3) {
             Segment1000Globals.Word0100 = State.FpuControlWord;
-            BX = 1;
             Segment1000Globals.Byte0100 &= 0x7F;
             State.FpuControlWord = Segment1000Globals.Word0100;
             State.DisableFpuInterrupts();
             Segment1000Globals.Word0100 = State.FpuControlWord;
-            flagOperand_0043 = Segment1000Globals.Byte0100;
-            Alu8.And(flagOperand_0043, 0x80);
-            if ((flagOperand_0043 & 0x80) != 0) {
+            if ((Segment1000Globals.Byte0100 & 0x80) != 0) {
                 Segment1000Globals.Word0100 = 0x0B7F;
                 Segment1000Globals.Word0104 = 0xA55A;
                 State.FpuControlWord = 0x0B7F;
                 Segment1000Globals.Word0102 = State.FpuControlWord;
-                flagOperand_0060 = Segment1000Globals.Word0102;
-                Alu16.Sub(flagOperand_0060, 0x0B7F);
-                if (flagOperand_0060 == 0x0B7F) {
-                    flagOperand_0068 = Segment1000Globals.Word0104;
-                    Alu16.Sub(flagOperand_0068, 0xA55A);
-                    if (flagOperand_0068 == 0xA55A) {
-                        State.DisableFpuInterrupts();
-                        Segment1000Globals.Word0102 = State.FpuControlWord;
-                        flagOperand_0076 = Segment1000Globals.Word0102;
-                        Alu16.Sub(flagOperand_0076, 0x0BFF);
-                        if (flagOperand_0076 != 0x0BFF) {
-                            goto L_00C4;
-                        }
-                        AX = 0x2000;
-                        ES = 0x2000;
-                        EDI = 0x00000100;
-                        Segment2000Globals.Word0100 = 0x077F;
-                        State.FpuControlWord = Segment2000Globals.Word0100;
-                        Segment1000Globals.Word0102 = State.FpuControlWord;
-                        flagOperand_0096 = Segment1000Globals.Word0102;
-                        Alu16.Sub(flagOperand_0096, 0x077F);
-                        if (flagOperand_0096 != 0x077F) {
-                            goto L_00C4;
-                        }
-                        State.InitializeFpu();
-                        Segment1000Globals.Word0102 = State.FpuControlWord;
-                        flagOperand_00A4 = Segment1000Globals.Word0102;
-                        Alu16.Sub(flagOperand_00A4, 0x03FF);
-                        if (flagOperand_00A4 != 0x03FF) {
-                            goto L_00C4;
-                        }
-                        State.FpuControlWord = Segment1000Globals.Word0100;
-                        State.InitializeFpu();
-                        Segment1000Globals.Word0102 = State.FpuControlWord;
-                        flagOperand_00B8 = Segment1000Globals.Word0102;
-                        Alu16.Sub(flagOperand_00B8, 0x03FF);
-                        if (flagOperand_00B8 == 0x03FF) {
-                            AX = 0x600D;
-                            return Hlt();
-                        }
+                if (Segment1000Globals.Word0102 == 0x0B7F && Segment1000Globals.Word0104 == 0xA55A) {
+                    State.DisableFpuInterrupts();
+                    Segment1000Globals.Word0102 = State.FpuControlWord;
+                    if (Segment1000Globals.Word0102 != 0x0BFF) {
+                        goto L_00CF;
+                    }
+                    ES = 0x2000;
+                    Segment2000Globals.Word0100 = 0x077F;
+                    State.FpuControlWord = Segment2000Globals.Word0100;
+                    Segment1000Globals.Word0102 = State.FpuControlWord;
+                    if (Segment1000Globals.Word0102 != 0x077F) {
+                        goto L_00CF;
+                    }
+                    State.InitializeFpu();
+                    Segment1000Globals.Word0102 = State.FpuControlWord;
+                    if (Segment1000Globals.Word0102 != 0x03FF) {
+                        goto L_00CF;
+                    }
+                    State.FpuControlWord = Segment1000Globals.Word0100;
+                    State.InitializeFpu();
+                    Segment1000Globals.Word0102 = State.FpuControlWord;
+                    if (Segment1000Globals.Word0102 == 0x03FF) {
+                        SsUInt32[0x0604] = 0x0001600D;
+                        return Hlt();
                     }
                 }
             }
         }
-    L_00C4:
-        VerifySpeculativeRunOrFail(biosSegment, 0x00C4, SpeculativeRun_00C4);
-        AX = 0x0BAD;
+    L_00CF:
+        VerifySpeculativeRunOrFail(biosSegment, 0x00CF, SpeculativeRun_00CF);
         return Hlt();
     }
 
@@ -204,10 +175,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_00C4_mov = [0xB8, 0xAD, 0x0B];
-    private static readonly byte?[] Signature_00C7_hlt = [0xF4];
+    private static readonly byte?[] Signature_00CF_mov = [0xB8, 0xAD, 0x0B];
+    private static readonly byte?[] Signature_00D2_hlt = [0xF4];
 
-    private static readonly byte?[][] SpeculativeRun_00C4 = [Signature_00C4_mov, Signature_00C7_hlt];
+    private static readonly byte?[][] SpeculativeRun_00CF = [Signature_00CF_mov, Signature_00D2_hlt];
 
 }
 

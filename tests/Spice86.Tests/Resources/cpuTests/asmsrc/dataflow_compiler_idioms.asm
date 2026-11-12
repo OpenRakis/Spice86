@@ -167,6 +167,8 @@ pass_loop:
     add si, 4
     dec bp
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 observe_dx_iret:

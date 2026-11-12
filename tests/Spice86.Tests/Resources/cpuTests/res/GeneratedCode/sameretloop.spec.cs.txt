@@ -17,8 +17,8 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_0018 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0013);
-            SegmentF000Globals.Byte0024 += 1;
-            flagOperand_0018 = SegmentF000Globals.Byte0024;
+            SegmentF000Globals.Byte0035 += 1;
+            flagOperand_0018 = SegmentF000Globals.Byte0035;
             Alu8.Sub(flagOperand_0018, 4);
             if (flagOperand_0018 >= 4) {
                 break;
@@ -26,15 +26,18 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(0x0013);
             return NearRet();
         }
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x0612] = 0x0035;
         return Hlt();
     }
 
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: AX.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0;
         SP = 0x0100;
-        SegmentF000Globals.Byte0024 = 0;
+        SegmentF000Globals.Byte0035 = 0;
         AX = 0x0013;
         Stack.Push16(0x0013);
         return NearRet();
@@ -58,7 +61,7 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public byte Byte0024 { get => _memory.UInt8[Segment, 0x0024]; set => _memory.UInt8[Segment, 0x0024] = value; }
+    public byte Byte0035 { get => _memory.UInt8[Segment, 0x0035]; set => _memory.UInt8[Segment, 0x0035] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

@@ -108,7 +108,6 @@ public partial class CfgGeneratedOverrides {
         DS = 0;
         SS = 0;
         SP = 0x0100;
-        AX = 0xF000;
         ES = 0xF000;
         NearCall(biosSegment, 0x0012, () => unknown_F000_0040_F0040(ES));
         FarCall(biosSegment, 0x0017, biosSegment, () => unknown_23_F000_0028_F0028(DS));

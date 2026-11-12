@@ -20,7 +20,6 @@ public partial class CfgGeneratedOverrides {
         AH = 7;
         InterruptCall(cs1, 0x0104, 0x21);
         Out8(0x0998, AL);
-        Alu8.Sub(AL, 0x41);
         if (AL != 0x41) {
             VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_mov);
             byte1 = 0xFF;
@@ -28,9 +27,7 @@ public partial class CfgGeneratedOverrides {
         else {
             byte1 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

@@ -17,10 +17,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         byte byte1 = 0;
-        byte flagOperand_0145 = 0;
-        byte flagOperand_014F = 0;
         byte flagOperand_0157 = 0;
-        byte flagOperand_0168 = 0;
         byte flagOperand_018D = 0;
         byte flagOperand_01A4 = 0;
         CheckExternalEvents(cs1, 0x0100);
@@ -36,23 +33,16 @@ public partial class CfgGeneratedOverrides {
         ServiceCall(cs1, 0x011A, () => Dos.SetCurrentPsp(BX));
         DX = 0x01ED;
         NearCall(cs1, 0x0120, unknown_016D_01D8_018A8Entry);
-        Alu16.Sub(AX, 5);
         if (AX == 5) {
             DX = 0x01F3;
             NearCall(cs1, 0x012D, unknown_016D_01D8_018A8Entry);
-            Alu16.Sub(AX, 6);
             if (AX == 6) {
                 DX = 0x01F9;
                 NearCall(cs1, 0x013A, unknown_016D_01D8_018A8Entry);
-                Alu16.Sub(AX, 7);
                 if (AX == 7) {
                     ES = ImageMinus0003Globals.Word01EB;
-                    flagOperand_0145 = EsGlobals.Byte001D;
-                    Alu8.Sub(flagOperand_0145, 0xFF);
-                    if (flagOperand_0145 != 0xFF) {
-                        flagOperand_014F = EsGlobals.Byte001E;
-                        Alu8.Sub(flagOperand_014F, 0xFF);
-                        if (flagOperand_014F == 0xFF) {
+                    if (EsGlobals.Byte001D != 0xFF) {
+                        if (EsGlobals.Byte001E == 0xFF) {
                             goto L_01D1;
                         }
                         flagOperand_0157 = EsGlobals.Byte001F;
@@ -60,14 +50,8 @@ public partial class CfgGeneratedOverrides {
                         if (flagOperand_0157 == 0xFF) {
                             goto L_01D1;
                         }
-                        BX = 6;
                         (AX, CarryFlag) = ServiceCall(cs1, 0x0166, Dos, () => Dos.CloseFile(6, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
-                        if (CarryFlag) {
-                            goto L_01D1;
-                        }
-                        flagOperand_0168 = EsGlobals.Byte001E;
-                        Alu8.Sub(flagOperand_0168, 0xFF);
-                        if (flagOperand_0168 != 0xFF) {
+                        if (CarryFlag || EsGlobals.Byte001E != 0xFF) {
                             goto L_01D1;
                         }
                         DX = 0x01FF;
@@ -76,13 +60,8 @@ public partial class CfgGeneratedOverrides {
                         if (AX != 6) {
                             goto L_01D1;
                         }
-                        BX = 5;
                         (AX, CarryFlag) = ServiceCall(cs1, 0x0182, Dos, () => Dos.DuplicateHandle(5), r => CarryOnInterruptStack(r.carryFlag));
-                        if (CarryFlag) {
-                            goto L_01D1;
-                        }
-                        Alu16.Sub(AX, 8);
-                        if (AX != 8) {
+                        if (CarryFlag || AX != 8) {
                             goto L_01D1;
                         }
                         AL = EsGlobals.Byte001D;
@@ -91,8 +70,6 @@ public partial class CfgGeneratedOverrides {
                         if (AL != flagOperand_018D) {
                             goto L_01D1;
                         }
-                        BX = 5;
-                        CX = 7;
                         (AX, CarryFlag) = ServiceCall(cs1, 0x019E, Dos, () => Dos.ForceDuplicateHandle(5, 7), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01D1;
@@ -134,9 +111,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x01D1, Signature_01D1_mov);
         byte1 = 0xFF;
     L_01D3:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

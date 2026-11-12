@@ -17,18 +17,14 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         byte byte1 = 0;
-        ushort flagOperand_010F = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         word1 = Dos.ReadPspAddress();
         ES = word1;
         AH = 0x67;
-        BX = 0x0030;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ResizeHandleTable(0x0030, AX));
         if (!CarryFlag) {
-            flagOperand_010F = EsGlobals.Word0032;
-            Alu16.Sub(flagOperand_010F, 0x0030);
-            if (flagOperand_010F != 0x0030) {
+            if (EsGlobals.Word0032 != 0x0030) {
                 goto L_011B;
             }
             byte1 = 0;
@@ -38,9 +34,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
         byte1 = 0xFF;
     L_011D:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

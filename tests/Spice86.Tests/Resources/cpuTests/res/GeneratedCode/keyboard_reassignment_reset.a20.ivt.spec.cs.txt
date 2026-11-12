@@ -31,8 +31,6 @@ public partial class CfgGeneratedOverrides {
         AH = 8;
         InterruptCall(cs1, 0x011D, 0x21);
         Out8(0x0998, AL);
-        AL = 0;
-        DX = 0x0999;
         Out8(0x0999, 0);
         return Hlt();
     }

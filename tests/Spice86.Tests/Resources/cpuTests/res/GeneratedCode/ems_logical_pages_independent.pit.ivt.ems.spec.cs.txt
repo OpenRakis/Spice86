@@ -20,33 +20,25 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         BX = 2;
         (AH, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(2, DX));
-        Alu8.Sub(AH, 0);
         if (AH == 0) {
             SI = word1;
             AX = 0xE000;
             ES = 0xE000;
             AL = 0;
-            BX = 0;
             word1 = SI;
             AH = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
-            Alu8.Sub(AH, 0);
             if (AH == 0) {
                 SegmentE000Globals.Byte0000 = 0x11;
                 AL = 0;
-                BX = 1;
                 word1 = SI;
                 AH = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(1, 0, word1));
-                Alu8.Sub(AH, 0);
                 if (AH == 0) {
                     SegmentE000Globals.Byte0000 = 0x22;
                     AL = 0;
-                    BX = 0;
                     word1 = SI;
                     AH = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
-                    Alu8.Sub(AH, 0);
                     if (AH == 0) {
                         AL = SegmentE000Globals.Byte0000;
-                        Alu8.Sub(AL, 0x11);
                         if (AL != 0x11) {
                             goto L_015B;
                         }
@@ -60,9 +52,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x015B, Signature_015B_mov);
         byte1 = 0xFF;
     L_015D:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

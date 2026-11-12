@@ -25,8 +25,7 @@ public partial class CfgGeneratedOverrides {
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x0029, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x003B), unknown_F000_003B_F003B)], [new SegmentedAddress(biosSegment, 0x001D)]);
         }
-        BX = SegmentF000Globals.Word0100;
-        DsGlobals.Word0000 = BX;
+        DsGlobals.Word0000 = SegmentF000Globals.Word0100;
         DsGlobals.Word0002 = AX;
         return Hlt();
     }
@@ -56,7 +55,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: AX, DX, DS. Outputs: BP. Changes: BP.</summary>
+    /// <summary>Inputs: AX, DX, DS. Outputs: none. Changes: BP.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = AX;

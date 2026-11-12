@@ -37,9 +37,9 @@
       "PlainRegisterAssignments": 6,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 2,
+      "RegisterReads": 6,
       "RegisterWrites": 6,
-      "Statements": 23,
+      "Statements": 27,
       "WriteBacks": 0
     }
   },

@@ -20,11 +20,8 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         DX = 0;
         byte1 = ServiceCall(Ems, () => Ems.SavePageMap(0));
-        Alu8.Sub(byte1, 0);
         if (byte1 == 0) {
-            DX = 0;
             byte1 = ServiceCall(Ems, () => Ems.RestorePageMap(0));
-            Alu8.Sub(byte1, 0);
             if (byte1 != 0) {
                 goto L_011C;
             }
@@ -37,9 +34,7 @@ public partial class CfgGeneratedOverrides {
         AH = byte1;
         byte2 = 0xFF;
     L_011E:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

@@ -23,11 +23,9 @@ public partial class CfgGeneratedOverrides {
         word1 = Dos.ReadPspAddress();
         ES = word1;
         word2 = EsGlobals.Word0016;
-        Alu16.Sub(word2, 0x0060);
         if (word2 == 0x0060) {
             ES = word2;
             word2 = EsGlobals.Word0016;
-            Alu16.Sub(word2, 0x0060);
             if (word2 != 0x0060) {
                 goto L_0120;
             }
@@ -38,10 +36,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0120, Signature_0120_mov);
         byte1 = 0xFF;
     L_0122:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = word2;
-        AL = byte1;
         return Hlt();
     }
 

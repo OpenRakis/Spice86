@@ -84,7 +84,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         AX = 0;
@@ -127,20 +126,18 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Byte0403 = 1;
         Segment0000Globals.Dword0404 = 0x90001000u;
         Pit.ProgramChannel(0, 0x30, 0x04A9);
-        byte1 = 0x0A;
+        AL = 0x0A;
         PicPorts.WritePrimaryCommand(0x0A);
         do {
             CheckExternalEvents(biosSegment, 0x00C1);
-            AL = byte1;
-            byte1 = PicPorts.ReadPrimaryCommand();
-            Alu8.And(byte1, 1);
-        } while ((byte1 & 1) == 0);
-        AL = byte1;
+            AL = PicPorts.ReadPrimaryCommand();
+        } while ((AL & 1) == 0);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00C8);
         NearCall(biosSegment, 0x00CC, unknown_F000_0200_F0200);
         InterruptFlag = false;
         Segment0000Globals.Byte0402 = 0xA5;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

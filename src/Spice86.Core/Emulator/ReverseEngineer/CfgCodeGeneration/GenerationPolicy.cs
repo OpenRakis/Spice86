@@ -11,10 +11,7 @@ internal enum GenerationRelaxation {
     /// <summary>No relaxation: strict mode, the baseline.</summary>
     None = 0,
     /// <summary>Memory the alias analysis cannot prove is treated as ordinary RAM.</summary>
-    UnknownMemoryIsRam = 1,
-    /// <summary>A machine-leaving exit reads no register or flag: final CPU state is
-    /// unspecified; memory and device effects stay observed.</summary>
-    TerminalStateUnobserved = 2
+    UnknownMemoryIsRam = 1
 }
 
 /// <summary>The immutable set of relaxations the whole generation run shares: effects, SSA,
@@ -28,10 +25,6 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
     public bool AssumeUnknownMemoryIsRam =>
         Relaxations.HasFlag(GenerationRelaxation.UnknownMemoryIsRam);
 
-    /// <summary>Whether a machine-leaving exit reads no register or flag.</summary>
-    public bool TerminalStateUnobserved =>
-        Relaxations.HasFlag(GenerationRelaxation.TerminalStateUnobserved);
-
     /// <summary>The policy name the differential report and the golden key record: the relaxation
     /// names joined, or <c>strict</c> when none is enabled.</summary>
     public string Name => Relaxations == GenerationRelaxation.None
@@ -42,20 +35,8 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
             .Select(relaxation => relaxation.ToString()));
 
     /// <summary>The golden-key suffix of the policy: <c>.ram</c> for
-    /// <see cref="GenerationRelaxation.UnknownMemoryIsRam"/>, <c>.term</c> for
-    /// <see cref="GenerationRelaxation.TerminalStateUnobserved"/>, empty in strict mode.</summary>
-    public string GoldenSuffix {
-        get {
-            string suffix = "";
-            if (AssumeUnknownMemoryIsRam) {
-                suffix += ".ram";
-            }
-            if (TerminalStateUnobserved) {
-                suffix += ".term";
-            }
-            return suffix;
-        }
-    }
+    /// <see cref="GenerationRelaxation.UnknownMemoryIsRam"/>, empty in strict mode.</summary>
+    public string GoldenSuffix => AssumeUnknownMemoryIsRam ? ".ram" : "";
 
     /// <summary>The generated header line listing the enabled relaxations.</summary>
     public string HeaderLine => $"// Relaxations: {(Relaxations == GenerationRelaxation.None

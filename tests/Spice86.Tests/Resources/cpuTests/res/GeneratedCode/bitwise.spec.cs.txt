@@ -309,9 +309,8 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0050 = DX;
         DsGlobals.Word0016 = (ushort)~DsGlobals.Word0016;
         Stack.Push16(FlagRegister16);
-        DL = (byte)~DL;
         Stack.Push16(FlagRegister16);
-        DsGlobals.Byte0052 = DL;
+        DsGlobals.Byte0052 = (byte)~DL;
         DsGlobals.Byte0018 = (byte)~DsGlobals.Byte0018;
         Stack.Push16(FlagRegister16);
         return Hlt();

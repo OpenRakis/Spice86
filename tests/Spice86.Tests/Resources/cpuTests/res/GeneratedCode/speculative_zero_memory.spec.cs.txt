@@ -21,10 +21,9 @@ public partial class CfgGeneratedOverrides {
         if (byte1 != 0) {
             throw FailAsUntested("Untested jump at F000:000A");
         }
-        Alu8.And(byte1, byte1);
         if (byte1 != 0) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0030, Signature_0030_add);
-            UInt8[DS, BX + SI] = Alu8.Add(UInt8[DS, BX + SI], byte1);
+            UInt8[DS, BX + SI] += byte1;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0032, Signature_0032_mov);
             DsGlobals.Byte0403 = 0x77;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0037, Signature_0037_jmp);
@@ -38,7 +37,6 @@ public partial class CfgGeneratedOverrides {
             DsGlobals.Byte0401 = 0xDD;
         }
         DsGlobals.Byte0402 = 0xEE;
-        AL = byte1;
         return Hlt();
     }
 

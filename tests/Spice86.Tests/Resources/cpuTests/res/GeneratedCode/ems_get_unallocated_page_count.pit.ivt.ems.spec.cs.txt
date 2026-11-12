@@ -21,26 +21,18 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x42;
         (AH, word2, word1) = ServiceCall(Ems, () => Ems.GetUnallocatedPageCount());
-        Alu8.Sub(AH, 0);
-        if (AH == 0) {
-            Alu16.Sub(word2, 0);
-            if (word2 != 0) {
-                Alu16.Sub(word1, word2);
-                if (word1 > word2) {
-                    goto L_0116;
-                }
-                byte1 = 0;
-                goto L_0118;
+        if (AH == 0 && word2 != 0) {
+            if (word1 > word2) {
+                goto L_0116;
             }
+            byte1 = 0;
+            goto L_0118;
         }
     L_0116:
         VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_mov);
         byte1 = 0xFF;
     L_0118:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = word1;
-        AL = byte1;
         return Hlt();
     }
 

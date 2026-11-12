@@ -215,6 +215,8 @@ start:
     add sp, 2
     mov [6Ah], ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 f1_callee:

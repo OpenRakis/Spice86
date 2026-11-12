@@ -76,6 +76,8 @@ resume_after_div:
     mov ax, [32h]
     mov [bx+50h], ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 read_28h:

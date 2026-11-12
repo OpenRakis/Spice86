@@ -23,8 +23,7 @@ public partial class CfgGeneratedOverrides {
         dword1 = Segment2000Globals.Dword0800;
         Segment2000Globals.Dword0808 = dword1;
         Segment2000Globals.Dword0100 = dword1;
-        EAX = 0xA5A5A5A5u;
-        EBX = 0x5A5A5A5A;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

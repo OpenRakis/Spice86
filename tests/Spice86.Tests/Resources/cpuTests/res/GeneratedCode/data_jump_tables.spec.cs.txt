@@ -15,36 +15,36 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_02D7_F02D7(ushort word1) {
+    public virtual void unknown_F000_02E6_F02E6(ushort word1) {
         DS = word1;
-        CheckExternalEvents(biosSegment, 0x02D7);
+        CheckExternalEvents(biosSegment, 0x02E6);
         Segment2000Globals.Word0052 = 0xF0F0;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_02D7_F02D7_Asm() {
-        unknown_F000_02D7_F02D7(DS);
+    public virtual Action unknown_F000_02E6_F02E6_Asm() {
+        unknown_F000_02E6_F02E6(DS);
         return Returned;
     }
 
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_02DE_F02DE(ushort word1) {
+    public virtual void unknown_F000_02ED_F02ED(ushort word1) {
         DS = word1;
-        CheckExternalEvents(biosSegment, 0x02DE);
+        CheckExternalEvents(biosSegment, 0x02ED);
         Segment2000Globals.Word0054 = 0xF1F1;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_02DE_F02DE_Asm() {
-        unknown_F000_02DE_F02DE(DS);
+    public virtual Action unknown_F000_02ED_F02ED_Asm() {
+        unknown_F000_02ED_F02ED(DS);
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -55,8 +55,8 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 0;
         if (SI <= 6) {
-            if (SegmentF000Globals.Word02ED != 0x021D) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:0023");
+            if (SegmentF000Globals.Word02FC != 0x022B) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0023");
             }
             Segment2000Globals.Word0056 += 1;
         }
@@ -64,8 +64,8 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 2;
         if (SI <= 6) {
-            if (SegmentF000Globals.Word02EF != 0x021F) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:0040");
+            if (SegmentF000Globals.Word02FE != 0x022D) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0040");
             }
             Segment2000Globals.Word0058 += 1;
         }
@@ -73,8 +73,8 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 4;
         if (SI <= 6) {
-            if (SegmentF000Globals.Word02F1 != 0x0221) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:005D");
+            if (SegmentF000Globals.Word0300 != 0x022F) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:005D");
             }
             Segment2000Globals.Word005A += 1;
         }
@@ -82,39 +82,36 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 6;
         if (SI <= 6) {
-            if (SegmentF000Globals.Word02F3 != 0x0223) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02ED]:X4} at F000:007A");
+            if (SegmentF000Globals.Word0302 != 0x0231) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:007A");
             }
             Segment2000Globals.Word005C += 1;
         }
         Segment2000Globals.Word0080 = 2;
         BX = 2;
-        AX = 0xF000;
         ES = 0xF000;
         SI = 4;
         if (SI is >= 4 and <= 8) {
-            if (SegmentF000Globals.Word02F9 != 0x0241) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:009C");
+            if (SegmentF000Globals.Word0308 != 0x024F) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:009C");
             }
             Segment2000Globals.Word0064 = 1;
             Segment2000Globals.Word0080 = 3;
             BX = 3;
-            AX = 0xF000;
             ES = 0xF000;
             SI = 6;
             if (SI is >= 4 and <= 8) {
-                if (SegmentF000Globals.Word02FB != 0x0243) {
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:00BE");
+                if (SegmentF000Globals.Word030A != 0x0251) {
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:00BE");
                 }
                 Segment2000Globals.Word0066 = 1;
                 Segment2000Globals.Word0080 = 4;
                 BX = 4;
-                AX = 0xF000;
                 ES = 0xF000;
                 SI = 8;
                 if (SI is >= 4 and <= 8) {
-                    if (SegmentF000Globals.Word02FD != 0x0245) {
-                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02F5]:X4} at F000:00E0");
+                    if (SegmentF000Globals.Word030C != 0x0253) {
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:00E0");
                     }
                     Segment2000Globals.Word0078 = 1;
                 }
@@ -126,24 +123,23 @@ public partial class CfgGeneratedOverrides {
             if (CX != 4) {
                 if (CX != 3) {
                     SI = (ushort)(CX - 1 << 1);
-                    AX = 0xF000;
                     ES = 0xF000;
                     if (SI > 2) {
                         break;
                     }
-                    switch (UInt16[ES, SI + 0x02FF]) {
-                        case 0x0262:
+                    switch (UInt16[ES, SI + 0x030E]) {
+                        case 0x0270:
                             break;
-                        case 0x0264:
-                            goto L_0264;
+                        case 0x0272:
+                            goto L_0272;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FF]:X4} at F000:0105");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x030E]:X4} at F000:0105");
                     }
                 }
                 Segment2000Globals.Word0060 += 1;
                 goto L_010A;
             }
-        L_0264:
+        L_0272:
             Segment2000Globals.Word0062 = 1;
         L_010A:
             CX--;
@@ -152,18 +148,17 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 2;
         if (SI <= 4) {
-            if (SegmentF000Globals.Word0349 != 0x028C) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0347]:X4} at F000:0125");
+            if (SegmentF000Globals.Word0358 != 0x029B) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0125");
             }
             Segment2000Globals.Word006A = 0x1111;
         }
         Segment2000Globals.Word0080 = 5;
-        AX = 0xF000;
         ES = 0xF000;
         SI = 0x000A;
         if (SI is >= 8 and <= 0x000C) {
-            if (SegmentF000Globals.Word0351 != 0x0294) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0347]:X4} at F000:0147");
+            if (SegmentF000Globals.Word0360 != 0x02A3) {
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0147");
             }
             Segment2000Globals.Word0074 = 0x1155;
         }
@@ -176,7 +171,7 @@ public partial class CfgGeneratedOverrides {
             }
             else {
                 SI = (ushort)(BX << 1);
-                switch (UInt16[CS, SI + 0x02E5]) {
+                switch (UInt16[CS, SI + 0x02F4]) {
                     case 0x015F:
                         Segment2000Globals.Word0040 = 0x1111;
                         break;
@@ -190,7 +185,7 @@ public partial class CfgGeneratedOverrides {
                         Segment2000Globals.Word0046 = 0x4444;
                         break;
                     default:
-                        throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, SI + 0x02E5]:X4} at F000:015A");
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, SI + 0x02F4]:X4} at F000:015A");
                 }
             }
             BX++;
@@ -223,48 +218,44 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01CA");
         }
         Segment2000Globals.Word0050 = 2;
-        Segment2000Globals.Dword0106 = 0x02DE02D7;
+        Segment2000Globals.Dword0106 = 0x02ED02E6;
         BX = 0;
-        if (Segment2000Globals.Word0106 != 0x02D7) {
+        if (Segment2000Globals.Word0106 != 0x02E6) {
             throw FailAsUntested($"Untested near call target 0x{UInt16[DS, BX + 0x0106]:X4} at F000:01E2");
         }
-        NearCall(biosSegment, 0x01E6, unknown_F000_02D7_F02D7_AsmEntry);
+        NearCall(biosSegment, 0x01E6, unknown_F000_02E6_F02E6_AsmEntry);
         BX = 2;
-        if (Segment2000Globals.Word0108 != 0x02DE) {
+        if (Segment2000Globals.Word0108 != 0x02ED) {
             throw FailAsUntested($"Untested near call target 0x{UInt16[DS, BX + 0x0106]:X4} at F000:01E9");
         }
-        NearCall(biosSegment, 0x01ED, unknown_F000_02DE_F02DE_AsmEntry);
+        NearCall(biosSegment, 0x01ED, unknown_F000_02ED_F02ED_AsmEntry);
         Segment2000Globals.Word0080 = 0x8000;
         CX = 2;
         do {
             CheckExternalEvents(biosSegment, 0x01F6);
-            Alu16.Sub(CX, 3);
             if (CX != 3) {
-                Alu16.Sub(CX, 4);
                 if (CX != 4) {
                     BX = (ushort)((short)Segment2000Globals.Word0080 >> 9);
-                    CarryFlag = DX < DX;
-                    DX = 0;
-                    AX = 0xF000;
                     ES = 0xF000;
-                    switch (UInt16[ES, BX + 0x0343]) {
-                        case 0x0276:
+                    switch (UInt16[ES, BX + 0x0352]) {
+                        case 0x0284:
                             break;
-                        case 0x0278:
-                            goto L_0278;
+                        case 0x0286:
+                            goto L_0286;
                         default:
-                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, BX + 0x0343]:X4} at F000:020E");
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, BX + 0x0352]:X4} at F000:0212");
                     }
                 }
                 Segment2000Globals.Word007A = 1;
-                goto L_0213;
+                goto L_0217;
             }
-        L_0278:
+        L_0286:
             Segment2000Globals.Word007C = 1;
-        L_0213:
+        L_0217:
             Segment2000Globals.Word0080 = 0x0400;
-            CX = Alu16.Dec(CX);
+            CX--;
         } while (CX != 0);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 
@@ -363,23 +354,23 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public ushort Word02ED { get => _memory.UInt16[Segment, 0x02ED]; set => _memory.UInt16[Segment, 0x02ED] = value; }
+    public ushort Word02FC { get => _memory.UInt16[Segment, 0x02FC]; set => _memory.UInt16[Segment, 0x02FC] = value; }
 
-    public ushort Word02EF { get => _memory.UInt16[Segment, 0x02EF]; set => _memory.UInt16[Segment, 0x02EF] = value; }
+    public ushort Word02FE { get => _memory.UInt16[Segment, 0x02FE]; set => _memory.UInt16[Segment, 0x02FE] = value; }
 
-    public ushort Word02F1 { get => _memory.UInt16[Segment, 0x02F1]; set => _memory.UInt16[Segment, 0x02F1] = value; }
+    public ushort Word0300 { get => _memory.UInt16[Segment, 0x0300]; set => _memory.UInt16[Segment, 0x0300] = value; }
 
-    public ushort Word02F3 { get => _memory.UInt16[Segment, 0x02F3]; set => _memory.UInt16[Segment, 0x02F3] = value; }
+    public ushort Word0302 { get => _memory.UInt16[Segment, 0x0302]; set => _memory.UInt16[Segment, 0x0302] = value; }
 
-    public ushort Word02F9 { get => _memory.UInt16[Segment, 0x02F9]; set => _memory.UInt16[Segment, 0x02F9] = value; }
+    public ushort Word0308 { get => _memory.UInt16[Segment, 0x0308]; set => _memory.UInt16[Segment, 0x0308] = value; }
 
-    public ushort Word02FB { get => _memory.UInt16[Segment, 0x02FB]; set => _memory.UInt16[Segment, 0x02FB] = value; }
+    public ushort Word030A { get => _memory.UInt16[Segment, 0x030A]; set => _memory.UInt16[Segment, 0x030A] = value; }
 
-    public ushort Word02FD { get => _memory.UInt16[Segment, 0x02FD]; set => _memory.UInt16[Segment, 0x02FD] = value; }
+    public ushort Word030C { get => _memory.UInt16[Segment, 0x030C]; set => _memory.UInt16[Segment, 0x030C] = value; }
 
-    public ushort Word0349 { get => _memory.UInt16[Segment, 0x0349]; set => _memory.UInt16[Segment, 0x0349] = value; }
+    public ushort Word0358 { get => _memory.UInt16[Segment, 0x0358]; set => _memory.UInt16[Segment, 0x0358] = value; }
 
-    public ushort Word0351 { get => _memory.UInt16[Segment, 0x0351]; set => _memory.UInt16[Segment, 0x0351] = value; }
+    public ushort Word0360 { get => _memory.UInt16[Segment, 0x0360]; set => _memory.UInt16[Segment, 0x0360] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -398,8 +389,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_02D7_F02D7_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_02DE_F02DE_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02E6_F02E6_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02ED_F02ED_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment2000Globals Segment2000Globals;
@@ -410,11 +401,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_02D7_F02D7_AsmEntry = _ => unknown_F000_02D7_F02D7_Asm();
-        unknown_F000_02DE_F02DE_AsmEntry = _ => unknown_F000_02DE_F02DE_Asm();
+        unknown_F000_02E6_F02E6_AsmEntry = _ => unknown_F000_02E6_F02E6_Asm();
+        unknown_F000_02ED_F02ED_AsmEntry = _ => unknown_F000_02ED_F02ED_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02D7, unknown_F000_02D7_F02D7_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02DE, unknown_F000_02DE_F02DE_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02E6, unknown_F000_02E6_F02E6_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02ED, unknown_F000_02ED_F02ED_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

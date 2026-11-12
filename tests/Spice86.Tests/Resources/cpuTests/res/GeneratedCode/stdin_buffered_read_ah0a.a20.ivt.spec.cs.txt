@@ -24,14 +24,10 @@ public partial class CfgGeneratedOverrides {
         AH = 0x0A;
         InterruptCall(cs1, 0x0111, 0x21);
         byte1 = DsGlobals.Byte0081;
-        DX = 0x0998;
         Out8(0x0998, byte1);
-        Alu8.Sub(byte1, 5);
         if (byte1 == 5) {
             byte1 = DsGlobals.Byte0082;
-            DX = 0x0998;
             Out8(0x0998, byte1);
-            Alu8.Sub(byte1, 0x48);
             if (byte1 != 0x48) {
                 goto L_012B;
             }
@@ -42,9 +38,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x012B, Signature_012B_mov);
         byte2 = 0xFF;
     L_012D:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        AL = byte2;
         return Hlt();
     }
 

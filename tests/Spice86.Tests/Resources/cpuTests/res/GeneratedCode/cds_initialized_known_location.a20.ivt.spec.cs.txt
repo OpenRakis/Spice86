@@ -17,6 +17,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort index = 0;
         ushort index2;
+        ushort segment;
         byte byte1 = 0;
         ushort index3 = 0;
         byte byte2 = 0;
@@ -24,24 +25,20 @@ public partial class CfgGeneratedOverrides {
         AH = 0x52;
         (index, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
         index2 = UInt16[ES, index + 0x16];
-        ES = UInt16[ES, index + 0x0018];
-        Stack.Push16(ES);
+        segment = UInt16[ES, index + 0x0018];
+        Stack.Push16(segment);
         DS = Stack.Pop16();
         byte1 = UInt8[DS, index2];
         index3 = (ushort)(index2 + (ushort)(DirectionFlag ? -1 : 1));
-        Alu8.Sub(byte1, 0x43);
         if (byte1 == 0x43) {
             byte1 = UInt8[DS, index3];
             index3 += (ushort)(DirectionFlag ? -1 : 1);
-            Alu8.Sub(byte1, 0x3A);
             if (byte1 == 0x3A) {
                 byte1 = UInt8[DS, index3];
                 index3 += (ushort)(DirectionFlag ? -1 : 1);
-                Alu8.Sub(byte1, 0x5C);
                 if (byte1 == 0x5C) {
                     byte1 = UInt8[DS, index3];
                     index3 += (ushort)(DirectionFlag ? -1 : 1);
-                    Alu8.Sub(byte1, 0);
                     if (byte1 != 0) {
                         goto L_0122;
                     }
@@ -54,11 +51,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_mov);
         byte2 = 0xFF;
     L_0124:
-        DX = 0x0999;
         Out8(0x0999, byte2);
-        BX = index;
-        SI = index3;
-        AL = byte2;
         return Hlt();
     }
 

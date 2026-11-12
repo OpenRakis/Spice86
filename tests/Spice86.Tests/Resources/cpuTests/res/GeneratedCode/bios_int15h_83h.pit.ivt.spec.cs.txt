@@ -16,71 +16,47 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort callbackSegment = 0;
+        byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0998;
         AL = 1;
         Out8(0x0998, 1);
         AX = 0x8300;
-        CX = 0;
-        DX = 0x1000;
-        BX = 0;
         Stack.Push16(CS);
         callbackSegment = Stack.Pop16();
-        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
+        (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
         if (!CarryFlag) {
+            AH = byte1;
             AL = 2;
             Out8(0x0998, 2);
             AX = 0x8300;
-            CX = 0;
-            DX = 0x1000;
-            BX = 0;
             Stack.Push16(CS);
             callbackSegment = Stack.Pop16();
-            (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
-            if (CarryFlag) {
-                Alu8.Sub(AH, 0x80);
-                if (AH == 0x80) {
-                    DX = 0x0998;
-                    AL = 3;
-                    Out8(0x0998, 3);
-                    AX = 0x8301;
-                    (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
+            (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
+            if (CarryFlag && byte1 == 0x80) {
+                Out8(0x0998, 3);
+                (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
+                if (!CarryFlag) {
+                    Out8(0x0998, 4);
+                    Stack.Push16(CS);
+                    callbackSegment = Stack.Pop16();
+                    (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83));
+                    if (CarryFlag) {
+                        goto L_0173;
+                    }
+                    Out8(0x0998, 5);
+                    (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
                     if (!CarryFlag) {
-                        AL = 4;
-                        Out8(0x0998, 4);
-                        AX = 0x8300;
-                        CX = 0;
-                        DX = 0x2000;
-                        BX = 0;
-                        Stack.Push16(CS);
-                        callbackSegment = Stack.Pop16();
-                        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83));
-                        if (CarryFlag) {
-                            goto L_0173;
-                        }
-                        DX = 0x0998;
-                        AL = 5;
-                        Out8(0x0998, 5);
-                        AX = 0x8301;
-                        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
-                        if (!CarryFlag) {
-                            DX = 0x0999;
-                            AL = 0;
-                            Out8(0x0999, 0);
-                            ES = callbackSegment;
-                            return Hlt();
-                        }
+                        Out8(0x0999, 0);
+                        return Hlt();
                     }
                 }
             }
         }
     L_0173:
         VerifySpeculativeRunOrFail(cs1, 0x0173, SpeculativeRun_0173);
-        DX = 0x0999;
-        AL = 0xFF;
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0179, Signature_0179_hlt);
-        ES = callbackSegment;
         return Hlt();
     }
 

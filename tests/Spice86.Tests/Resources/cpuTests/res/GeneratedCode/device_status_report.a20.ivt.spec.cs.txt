@@ -38,8 +38,6 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             CX--;
         } while (CX != 0);
-        AL = 0;
-        DX = 0x0999;
         Out8(0x0999, 0);
         return Hlt();
     }

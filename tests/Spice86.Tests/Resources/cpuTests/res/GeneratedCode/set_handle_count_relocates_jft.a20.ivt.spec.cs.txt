@@ -15,81 +15,66 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
-        ushort word1 = 0;
         ushort previousAx = 0;
         byte byte1 = 0;
-        ushort flagOperand_011A = 0;
         ushort flagOperand_0126 = 0;
-        ushort flagOperand_0142 = 0;
         ushort flagOperand_014C = 0;
         ushort flagOperand_0166 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        word1 = Dos.ReadPspAddress();
-        ImageMinus0003Globals.Word0186 = word1;
-        ES = word1;
+        BX = Dos.ReadPspAddress();
+        ImageMinus0003Globals.Word0186 = BX;
+        ES = BX;
         AX = EsGlobals.Word002C;
         ImageMinus0003Globals.Word0188 = AX;
         AH = 0x67;
-        BX = 0x001E;
         (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ResizeHandleTable(0x001E, AX));
-        if (!CarryFlag) {
-            flagOperand_011A = EsGlobals.Word0032;
-            Alu16.Sub(flagOperand_011A, 0x001E);
-            if (flagOperand_011A == 0x001E) {
-                previousAx = EsGlobals.Word0036;
-                flagOperand_0126 = ImageMinus0003Globals.Word0186;
-                Alu16.Sub(previousAx, flagOperand_0126);
-                if (previousAx != flagOperand_0126) {
-                    ImageMinus0003Globals.Word018A = 5;
+        if (!CarryFlag && EsGlobals.Word0032 == 0x001E) {
+            previousAx = EsGlobals.Word0036;
+            flagOperand_0126 = ImageMinus0003Globals.Word0186;
+            Alu16.Sub(previousAx, flagOperand_0126);
+            if (previousAx != flagOperand_0126) {
+                ImageMinus0003Globals.Word018A = 5;
+                do {
+                    CheckExternalEvents(cs1, 0x0132);
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")));
+                    if (CarryFlag) {
+                        goto L_017F;
+                    }
+                    Stack.Push16(previousAx);
+                    AX = previousAx;
+                    Out8(0x0998, AL);
+                    previousAx = Stack.Pop16();
+                    if (previousAx != ImageMinus0003Globals.Word018A) {
+                        goto L_017F;
+                    }
+                    ImageMinus0003Globals.Word018A += 1;
+                    flagOperand_014C = ImageMinus0003Globals.Word018A;
+                    Alu16.Sub(flagOperand_014C, 0x001E);
+                } while (flagOperand_014C != 0x001E);
+                (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")));
+                if (CarryFlag) {
+                    if (previousAx != 4) {
+                        goto L_017F;
+                    }
+                    previousAx = EsGlobals.Word002C;
+                    flagOperand_0166 = ImageMinus0003Globals.Word0188;
+                    Alu16.Sub(previousAx, flagOperand_0166);
+                    if (previousAx != flagOperand_0166) {
+                        goto L_017F;
+                    }
+                    BX = 5;
                     do {
-                        CheckExternalEvents(cs1, 0x0132);
-                        DX = 0x018C;
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")));
+                        CheckExternalEvents(cs1, 0x016F);
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
                         if (CarryFlag) {
                             goto L_017F;
                         }
-                        Stack.Push16(previousAx);
-                        DX = 0x0998;
-                        AX = previousAx;
-                        Out8(0x0998, AL);
-                        previousAx = Stack.Pop16();
-                        flagOperand_0142 = ImageMinus0003Globals.Word018A;
-                        Alu16.Sub(previousAx, flagOperand_0142);
-                        if (previousAx != flagOperand_0142) {
-                            goto L_017F;
-                        }
-                        ImageMinus0003Globals.Word018A += 1;
-                        flagOperand_014C = ImageMinus0003Globals.Word018A;
-                        Alu16.Sub(flagOperand_014C, 0x001E);
-                    } while (flagOperand_014C != 0x001E);
-                    DX = 0x018C;
-                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x018C, '\0', "A.TXT")));
-                    if (CarryFlag) {
-                        Alu16.Sub(previousAx, 4);
-                        if (previousAx != 4) {
-                            goto L_017F;
-                        }
-                        previousAx = EsGlobals.Word002C;
-                        flagOperand_0166 = ImageMinus0003Globals.Word0188;
-                        Alu16.Sub(previousAx, flagOperand_0166);
-                        if (previousAx != flagOperand_0166) {
-                            goto L_017F;
-                        }
-                        BX = 5;
-                        do {
-                            CheckExternalEvents(cs1, 0x016F);
-                            (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
-                            if (CarryFlag) {
-                                goto L_017F;
-                            }
-                            BX++;
-                            Alu16.Sub(BX, 0x001E);
-                        } while (BX != 0x001E);
-                        AX = previousAx;
-                        byte1 = 0;
-                        goto L_0181;
-                    }
+                        BX++;
+                    } while (BX != 0x001E);
+                    AX = previousAx;
+                    byte1 = 0;
+                    goto L_0181;
                 }
             }
         }
@@ -98,9 +83,7 @@ public partial class CfgGeneratedOverrides {
         AX = previousAx;
         byte1 = 0xFF;
     L_0181:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

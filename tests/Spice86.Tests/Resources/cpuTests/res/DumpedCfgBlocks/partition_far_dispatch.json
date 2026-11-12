@@ -5,18 +5,22 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0028",
+  "lastExecutedAddress": "F000:003C",
   "lastExecutedBlockId": 52,
   "blocks": [
     {
       "id": 52,
       "entry": "F000:0028",
-      "term": "F000:0028",
+      "term": "F000:003C",
       "pred": [
         48
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "3689160A06|mov word ptr SS:[0x060A],DX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
         "F4|hlt"
       ]
     },
@@ -38,7 +42,7 @@
       "term": "F000:0026",
       "pred": [
         46,
-        57
+        61
       ],
       "succ": [
         50,
@@ -76,19 +80,19 @@
       ],
       "succ": [
         46,
-        57
+        61
       ],
       "asm": [
         "89CB|mov BX,CX",
         "4B|dec BX",
         "C1E302|shl BX,2",
-        "2EFF6F45|jmp far dword ptr CS:[BX\u002B0x45]"
+        "2EFF6F59|jmp far dword ptr CS:[BX\u002B0x59]"
       ]
     },
     {
       "id": 46,
-      "entry": "F000:0037",
-      "term": "F000:003B",
+      "entry": "F000:004B",
+      "term": "F000:004F",
       "pred": [
         50
       ],
@@ -97,13 +101,13 @@
       ],
       "asm": [
         "81C20010|add DX,0x1000",
-        "EBE9|jmp short 0x0026"
+        "EBD5|jmp short 0x0026"
       ]
     },
     {
-      "id": 57,
-      "entry": "F000:0031",
-      "term": "F000:0035",
+      "id": 61,
+      "entry": "F000:0045",
+      "term": "F000:0049",
       "pred": [
         50
       ],
@@ -112,7 +116,7 @@
       ],
       "asm": [
         "81C20001|add DX,0x0100",
-        "EBEF|jmp short 0x0026"
+        "EBDB|jmp short 0x0026"
       ]
     },
     {
@@ -132,7 +136,7 @@
         "89CB|mov BX,CX",
         "4B|dec BX",
         "C1E302|shl BX,2",
-        "2EFF5F3D|call far dword ptr CS:[BX\u002B0x3D]"
+        "2EFF5F51|call far dword ptr CS:[BX\u002B0x51]"
       ]
     },
     {
@@ -151,8 +155,8 @@
     },
     {
       "id": 23,
-      "entry": "F000:002D",
-      "term": "F000:0030",
+      "entry": "F000:0041",
+      "term": "F000:0044",
       "pred": [
         28
       ],
@@ -183,8 +187,8 @@
     },
     {
       "id": 37,
-      "entry": "F000:0029",
-      "term": "F000:002C",
+      "entry": "F000:003D",
+      "term": "F000:0040",
       "pred": [
         28
       ],

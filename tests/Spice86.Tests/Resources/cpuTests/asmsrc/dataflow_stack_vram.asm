@@ -87,6 +87,8 @@ start:
     mov ss, ax
     mov sp, 1000h
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

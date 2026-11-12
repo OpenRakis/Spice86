@@ -17,21 +17,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
         ushort flagOperand_0105 = 0;
-        ushort flagOperand_0121 = 0;
         byte flagOperand_012B = 0;
         byte flagOperand_0133 = 0;
-        ushort flagOperand_0142 = 0;
-        byte flagOperand_014C = 0;
-        byte flagOperand_015A = 0;
-        ushort flagOperand_0164 = 0;
-        ushort flagOperand_016E = 0;
-        byte flagOperand_0179 = 0;
-        byte flagOperand_0183 = 0;
-        byte flagOperand_018D = 0;
-        byte flagOperand_019C = 0;
-        ushort flagOperand_01A6 = 0;
         ushort flagOperand_01AE = 0;
-        byte flagOperand_01EB = 0;
         byte flagOperand_0201 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x0040;
@@ -42,152 +30,90 @@ public partial class CfgGeneratedOverrides {
             AX = 0x5200;
             (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
             DX = UInt16[ES, BX - 2];
-            Alu16.Sub(DX, 0x015F);
-            if (DX == 0x015F) {
-                flagOperand_0121 = UInt16[ES, BX + 0x68];
-                Alu16.Sub(flagOperand_0121, DX);
-                if (flagOperand_0121 == DX) {
-                    ES = DX;
-                    flagOperand_012B = EsGlobals.Byte0000;
-                    Alu8.Sub(flagOperand_012B, 0x4D);
-                    if (flagOperand_012B != 0x4D) {
-                        VerifySpeculativeRunOrFail(cs1, 0x0133, SpeculativeRun_0133);
-                        flagOperand_0133 = EsGlobals.Byte0000;
-                        Alu8.Sub(flagOperand_0133, 0x5A);
-                        if (flagOperand_0133 != 0x5A) {
-                            goto L_022C;
-                        }
-                    }
-                    AX = 0x5200;
-                    (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
-                    flagOperand_0142 = UInt16[ES, BX + 0x66];
-                    Alu16.Sub(flagOperand_0142, 0x9FFF);
-                    if (flagOperand_0142 == 0x9FFF) {
-                        flagOperand_014C = UInt8[ES, BX + 0x63];
-                        Alu8.And(flagOperand_014C, 1);
-                        if ((flagOperand_014C & 1) != 0) {
-                            goto L_022C;
-                        }
-                        AX = 0x9FFF;
-                        ES = 0x9FFF;
-                        flagOperand_015A = Segment9FFFGlobals.Byte0000;
-                        Alu8.Sub(flagOperand_015A, 0x4D);
-                        if (flagOperand_015A != 0x4D) {
-                            goto L_022C;
-                        }
-                        flagOperand_0164 = Segment9FFFGlobals.Word0001;
-                        Alu16.Sub(flagOperand_0164, 8);
-                        if (flagOperand_0164 != 8) {
-                            goto L_022C;
-                        }
-                        flagOperand_016E = Segment9FFFGlobals.Word0003;
-                        Alu16.Sub(flagOperand_016E, 0x3000);
-                        if (flagOperand_016E != 0x3000) {
-                            goto L_022C;
-                        }
-                        flagOperand_0179 = Segment9FFFGlobals.Byte0008;
-                        Alu8.Sub(flagOperand_0179, 0x53);
-                        if (flagOperand_0179 != 0x53) {
-                            goto L_022C;
-                        }
-                        flagOperand_0183 = Segment9FFFGlobals.Byte0009;
-                        Alu8.Sub(flagOperand_0183, 0x43);
-                        if (flagOperand_0183 != 0x43) {
-                            goto L_022C;
-                        }
-                        flagOperand_018D = Segment9FFFGlobals.Byte000F;
-                        Alu8.Sub(flagOperand_018D, 0x20);
-                        if (flagOperand_018D != 0x20) {
-                            goto L_022C;
-                        }
-                        AX = 0xD000;
-                        ES = 0xD000;
-                        flagOperand_019C = SegmentD000Globals.Byte0000;
-                        Alu8.Sub(flagOperand_019C, 0x5A);
-                        if (flagOperand_019C != 0x5A) {
-                            goto L_022C;
-                        }
-                        flagOperand_01A6 = SegmentD000Globals.Word0001;
-                        Alu16.Sub(flagOperand_01A6, 0);
-                        if (flagOperand_01A6 != 0) {
-                            goto L_022C;
-                        }
-                        flagOperand_01AE = SegmentD000Globals.Word0003;
-                        Alu16.Sub(flagOperand_01AE, 0x1FFF);
-                        if (flagOperand_01AE != 0x1FFF) {
-                            goto L_022C;
-                        }
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
-                        Alu16.Sub(AX, 0);
-                        if (AX != 0) {
-                            goto L_022C;
-                        }
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
-                        if (CarryFlag) {
-                            goto L_022C;
-                        }
-                        Alu8.Sub(AL, 0);
-                        if (AL != 0) {
-                            goto L_022C;
-                        }
-                        BX = 1;
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 1));
-                        if (CarryFlag) {
-                            goto L_022C;
-                        }
-                        (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
-                        AX = UInt16[ES, BX - 2];
-                        ES = AX;
-                        CX = 0x0020;
-                        do {
-                            CheckExternalEvents(cs1, 0x01E4);
-                            AX = ES;
-                            if (AX == 0x9FFF) {
-                                goto L_0201;
-                            }
-                            flagOperand_01EB = EsGlobals.Byte0000;
-                            Alu8.Sub(flagOperand_01EB, 0x4D);
-                            if (flagOperand_01EB != 0x4D) {
-                                goto L_022C;
-                            }
-                            DX = ES;
-                            DX = Alu16.Add(DX, EsGlobals.Word0003);
-                            DX = Alu16.Inc(DX);
-                            ES = DX;
-                            CX--;
-                        } while (CX != 0);
-                        VerifySpeculativeEntryOrFail(cs1, 0x01FF, Signature_01FF_jmp);
+            if (DX == 0x015F && UInt16[ES, BX + 0x68] == DX) {
+                ES = DX;
+                flagOperand_012B = EsGlobals.Byte0000;
+                Alu8.Sub(flagOperand_012B, 0x4D);
+                if (flagOperand_012B != 0x4D) {
+                    VerifySpeculativeRunOrFail(cs1, 0x0133, SpeculativeRun_0133);
+                    flagOperand_0133 = EsGlobals.Byte0000;
+                    Alu8.Sub(flagOperand_0133, 0x5A);
+                    if (flagOperand_0133 != 0x5A) {
                         goto L_022C;
-                    L_0201:
-                        flagOperand_0201 = EsGlobals.Byte0000;
-                        Alu8.Sub(flagOperand_0201, 0x4D);
-                        if (flagOperand_0201 != 0x4D) {
-                            goto L_022C;
-                        }
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
-                        if (CarryFlag) {
-                            goto L_022C;
-                        }
-                        Alu8.Sub(AL, 1);
-                        if (AL != 1) {
-                            goto L_022C;
-                        }
-                        BX = Alu16.Xor(BX, BX);
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 0));
-                        if (CarryFlag) {
-                            goto L_022C;
-                        }
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, 0));
-                        if (CarryFlag) {
-                            goto L_022C;
-                        }
-                        Alu8.Sub(AL, 0);
-                        if (AL != 0) {
-                            goto L_022C;
-                        }
-                        byte1 = 0;
-                        goto L_022E;
                     }
+                }
+                AX = 0x5200;
+                (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
+                if (UInt16[ES, BX + 0x66] == 0x9FFF) {
+                    if ((UInt8[ES, BX + 0x63] & 1) != 0) {
+                        goto L_022C;
+                    }
+                    AX = 0x9FFF;
+                    ES = 0x9FFF;
+                    if (Segment9FFFGlobals.Byte0000 != 0x4D || Segment9FFFGlobals.Word0001 != 8 || Segment9FFFGlobals.Word0003 != 0x3000 || Segment9FFFGlobals.Byte0008 != 0x53 || Segment9FFFGlobals.Byte0009 != 0x43 || Segment9FFFGlobals.Byte000F != 0x20) {
+                        goto L_022C;
+                    }
+                    AX = 0xD000;
+                    ES = 0xD000;
+                    if (SegmentD000Globals.Byte0000 != 0x5A || SegmentD000Globals.Word0001 != 0) {
+                        goto L_022C;
+                    }
+                    flagOperand_01AE = SegmentD000Globals.Word0003;
+                    Alu16.Sub(flagOperand_01AE, 0x1FFF);
+                    if (flagOperand_01AE != 0x1FFF) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
+                    if (AX != 0) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
+                    if (CarryFlag || AL != 0) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 1));
+                    if (CarryFlag) {
+                        goto L_022C;
+                    }
+                    (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
+                    AX = UInt16[ES, BX - 2];
+                    ES = AX;
+                    CX = 0x0020;
+                    do {
+                        CheckExternalEvents(cs1, 0x01E4);
+                        AX = ES;
+                        if (AX == 0x9FFF) {
+                            goto L_0201;
+                        }
+                        if (EsGlobals.Byte0000 != 0x4D) {
+                            goto L_022C;
+                        }
+                        DX = (ushort)(ES + EsGlobals.Word0003 + 1);
+                        ES = DX;
+                        CX--;
+                    } while (CX != 0);
+                    VerifySpeculativeEntryOrFail(cs1, 0x01FF, Signature_01FF_jmp);
+                    goto L_022C;
+                L_0201:
+                    flagOperand_0201 = EsGlobals.Byte0000;
+                    Alu8.Sub(flagOperand_0201, 0x4D);
+                    if (flagOperand_0201 != 0x4D) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
+                    if (CarryFlag || AL != 1) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 0));
+                    if (CarryFlag) {
+                        goto L_022C;
+                    }
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, 0));
+                    if (CarryFlag || AL != 0) {
+                        goto L_022C;
+                    }
+                    byte1 = 0;
+                    goto L_022E;
                 }
             }
         }
@@ -195,9 +121,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x022C, Signature_022C_mov);
         byte1 = 0xFF;
     L_022E:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

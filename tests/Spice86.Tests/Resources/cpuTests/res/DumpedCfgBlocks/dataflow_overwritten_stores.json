@@ -5,16 +5,16 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:00C6",
-  "lastExecutedBlockId": 105,
+  "lastExecutedAddress": "F000:00D0",
+  "lastExecutedBlockId": 107,
   "blocks": [
     {
-      "id": 105,
+      "id": 107,
       "entry": "F000:0091",
-      "term": "F000:00C6",
+      "term": "F000:00D0",
       "pred": [
         70,
-        98
+        100
       ],
       "succ": [],
       "asm": [
@@ -31,6 +31,8 @@
         "C70632002222|mov word ptr DS:[0x0032],0x2222",
         "A13200|mov AX,word ptr DS:[0x0032]",
         "894750|mov word ptr DS:[BX\u002B0x50],AX",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -55,8 +57,8 @@
         33
       ],
       "succ": [
-        98,
-        105
+        100,
+        107
       ],
       "asm": [
         "C70628002222|mov word ptr DS:[0x0028],0x2222",
@@ -69,14 +71,14 @@
       ]
     },
     {
-      "id": 98,
-      "entry": "F000:00CE",
-      "term": "F000:00E4",
+      "id": 100,
+      "entry": "F000:00D8",
+      "term": "F000:00EE",
       "pred": [
         70
       ],
       "succ": [
-        105
+        107
       ],
       "asm": [
         "55|push BP",
@@ -101,7 +103,7 @@
         70
       ],
       "asm": [
-        "C7060000CE00|mov word ptr DS:[0],0x00CE",
+        "C7060000D800|mov word ptr DS:[0],0x00D8",
         "8C0E0200|mov word ptr DS:[2],CS",
         "2EC70600010000|mov word ptr CS:[0x0100],0",
         "B80020|mov AX,0x2000",
@@ -129,13 +131,13 @@
         "C70626002222|mov word ptr DS:[0x0026],0x2222",
         "894746|mov word ptr DS:[BX\u002B0x46],AX",
         "C70628001111|mov word ptr DS:[0x0028],0x1111",
-        "E85300|call near 0x00C7"
+        "E85D00|call near 0x00D1"
       ]
     },
     {
       "id": 33,
-      "entry": "F000:00C7",
-      "term": "F000:00CD",
+      "entry": "F000:00D1",
+      "term": "F000:00D7",
       "pred": [
         3
       ],

@@ -5,13 +5,13 @@ F000:0007 mov SS,AX
 F000:0009 mov SP,0x1000
 F000:000C xor AX,AX
 F000:000E mov ES,AX
-F000:0010 mov word ptr ES:[0x0190],0x017D
+F000:0010 mov word ptr ES:[0x0190],0x0187
 F000:0017 mov word ptr ES:[0x0192],CS
 F000:001C mov AX,0x2000
 F000:001F mov ES,AX
 F000:0021 cld
 F000:0022 xor DI,DI
-F000:0024 mov SI,0x0188
+F000:0024 mov SI,0x0190
 F000:0027 mov AX,word ptr CS:[SI]
 F000:002A mov DX,word ptr CS:[SI+2]
 F000:002E mov BX,word ptr CS:[SI+4]
@@ -140,8 +140,10 @@ F000:016D add DI,0x0080
 F000:0171 add SI,8
 F000:0174 cmp DI,0x0200
 F000:0178 jb near 0x0027
-F000:017C hlt
-F000:017D mov word ptr DS:[DI+0x30],BX
-F000:0180 mov word ptr DS:[DI+0x32],CX
-F000:0183 iret
+F000:017C mov word ptr SS:[0x0600],SP
+F000:0181 mov word ptr SS:[0x0602],SS
+F000:0186 hlt
+F000:0187 mov word ptr DS:[DI+0x30],BX
+F000:018A mov word ptr DS:[DI+0x32],CX
+F000:018D iret
 F000:FFF0 jmp short 0

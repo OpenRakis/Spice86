@@ -26,9 +26,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(word1);
             SegmentF000Globals.Word000E = BX;
             BX--;
-            Alu16.Sub(word1, 0);
         } while (word1 != 0);
-        AX = word1;
         return Hlt();
     }
 

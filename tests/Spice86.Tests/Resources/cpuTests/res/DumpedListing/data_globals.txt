@@ -29,8 +29,8 @@ F000:0061 pop ES
 F000:0062 mov word ptr DS:[0x0030],0x7777
 F000:0068 mov AX,word ptr ES:[0x0030]
 F000:006C mov word ptr DS:[0x004E],AX
-F000:006F call near 0x008C
-F000:0072 call near 0x0093
+F000:006F call near 0x0096
+F000:0072 call near 0x009D
 F000:0075 mov AX,0x2001
 F000:0078 mov DS,AX
 F000:007A mov byte ptr DS:[0x0020],0x99
@@ -38,12 +38,14 @@ F000:007F mov AL,byte ptr DS:[0x0020]
 F000:0082 mov BX,0x2000
 F000:0085 mov ES,BX
 F000:0087 mov byte ptr ES:[0x0052],AL
-F000:008B hlt
-F000:008C mov word ptr DS:[0x0032],0x5555
-F000:0092 ret near
-F000:0093 mov AX,word ptr DS:[0x0032]
-F000:0096 mov BX,0x2000
-F000:0099 mov ES,BX
-F000:009B mov word ptr ES:[0x0050],AX
-F000:009F ret near
+F000:008B mov word ptr SS:[0x0600],SP
+F000:0090 mov word ptr SS:[0x0602],SS
+F000:0095 hlt
+F000:0096 mov word ptr DS:[0x0032],0x5555
+F000:009C ret near
+F000:009D mov AX,word ptr DS:[0x0032]
+F000:00A0 mov BX,0x2000
+F000:00A3 mov ES,BX
+F000:00A5 mov word ptr ES:[0x0050],AX
+F000:00A9 ret near
 F000:FFF0 jmp short 0

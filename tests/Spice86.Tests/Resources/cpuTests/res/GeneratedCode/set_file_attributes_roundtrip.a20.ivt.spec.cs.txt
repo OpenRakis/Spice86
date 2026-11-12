@@ -20,13 +20,10 @@ public partial class CfgGeneratedOverrides {
         DX = 0x012D;
         (AX, CX, CarryFlag) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4301, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), 0x0021));
         if (!CarryFlag) {
-            DX = 0x012D;
             (AX, CX, CarryFlag) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4300, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), CX));
             if (!CarryFlag) {
                 AL = CL;
-                DX = 0x0998;
                 Out8(0x0998, AL);
-                Alu8.And(CL, 1);
                 if ((CL & 1) == 0) {
                     goto L_0126;
                 }
@@ -38,9 +35,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0126, Signature_0126_mov);
         byte1 = 0xFF;
     L_0128:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

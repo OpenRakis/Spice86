@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SP = 0x00A0;
         BX = 2;
@@ -127,8 +128,8 @@ public partial class CfgGeneratedOverrides {
         word1 = Alu16.Sbb(0x8000, 0xFFFF);
         DsGlobals.Word0031 = word1;
         Stack.Push16(FlagRegister16);
-        SI = Alu16.Sbb(0x52C3, 0xE248);
-        DsGlobals.Word0033 = SI;
+        word2 = Alu16.Sbb(0x52C3, 0xE248);
+        DsGlobals.Word0033 = word2;
         Stack.Push16(FlagRegister16);
         DsGlobals.Word0035 = 0xE74C;
         DsGlobals.Word0035 = Alu16.Sbb(DsGlobals.Word0035, 0x22C0);

@@ -29,9 +29,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested($"Untested far call target {targetSegment_0112:X4}:{targetOffset_0112:X4} at 016D:0112");
         }
         FarCall(cs1, 0x0116, cs2, unknown_C8AB_0010_C8AC0Entry);
-        Alu16.Sub(AX, 0);
         if (AX == 0) {
-            Alu8.Sub(BL, 0x80);
             if (BL != 0x80) {
                 goto L_0124;
             }
@@ -42,9 +40,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0124, Signature_0124_mov);
         byte1 = 0xFF;
     L_0126:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

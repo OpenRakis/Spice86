@@ -17,7 +17,7 @@ internal static class GeneratedCodeDifferentialReport {
     public const string StrictPolicy = "strict";
 
     /// <summary>Line written as the first line of the report.</summary>
-    public const string Header = "fixture | policy | registers | ram | extended";
+    public const string Header = "fixture | policy | ram | extended";
 
     private const int MaxWrittenRanges = 10;
 
@@ -32,13 +32,12 @@ internal static class GeneratedCodeDifferentialReport {
     /// <returns>One line describing the differences.</returns>
     public static string Describe(string goldenKey, string policy, AsmFinalState emulated,
         AsmFinalState generated) {
-        string registers = DescribeRegisters(emulated, generated);
         string ram = DescribeRam(emulated.Ram, generated.Ram);
         string extended = DescribeExtended(emulated, generated);
-        if (registers == "none" && ram == "none" && extended == "none") {
+        if (ram == "none" && extended == "none") {
             return $"{goldenKey} | {policy} | identical";
         }
-        return $"{goldenKey} | {policy} | registers: {registers} | ram: {ram} | extended: {extended}";
+        return $"{goldenKey} | {policy} | ram: {ram} | extended: {extended}";
     }
 
     /// <summary>Appends one described line to the report, which starts with a header on the first write.</summary>
@@ -65,9 +64,8 @@ internal static class GeneratedCodeDifferentialReport {
         Check(goldenKey, GenerationPolicy.Strict, emulated, generated);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
-    /// to the report and fails when their compared final states differ. Under
-    /// <see cref="GenerationRelaxation.TerminalStateUnobserved"/> the register comparison is
-    /// skipped - the policy declares final CPU state unspecified - and only memory decides.</summary>
+    /// to the report and fails when their compared final states differ. Final registers are not
+    /// compared: a program-ending <c>hlt</c> observes memory only.</summary>
     /// <param name="goldenKey">Key of the fixture that produced both states.</param>
     /// <param name="policy">The generation policy the comparison ran under.</param>
     /// <param name="emulated">Final state of the interpreted run.</param>
@@ -80,7 +78,7 @@ internal static class GeneratedCodeDifferentialReport {
     /// to the report and fails when their compared final states differ, excluding from the RAM
     /// comparison only the six bytes below the recorded caller stack pointer of every software
     /// interrupt whose address is a generated frameless service call site: those are exactly the
-    /// bytes the typed call's omitted interrupt frame would have occupied. Registers, extended
+    /// bytes the typed call's omitted interrupt frame would have occupied. Extended
     /// regions and every other RAM byte still decide.</summary>
     /// <param name="goldenKey">Key of the fixture that produced both states.</param>
     /// <param name="policy">The generation policy the comparison ran under.</param>
@@ -111,21 +109,11 @@ internal static class GeneratedCodeDifferentialReport {
         string excludedText = excluded.Count == 0
             ? string.Empty
             : $" | excluded frame bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
-        string line;
-        if (policy.TerminalStateUnobserved) {
-            string ram = DescribeRam(emulated.Ram, generatedRam);
-            string extended = DescribeExtended(emulated, generated);
-            line = ram == "none" && extended == "none"
-                ? $"{goldenKey} | {policy.Name} | registers: unobserved{excludedText} | identical"
-                : $"{goldenKey} | {policy.Name} | registers: unobserved{excludedText} | ram: {ram} | extended: {extended}";
-        } else {
-            string registers = DescribeRegisters(emulated, generated);
-            string ram = DescribeRam(emulated.Ram, generatedRam);
-            string extended = DescribeExtended(emulated, generated);
-            line = registers == "none" && ram == "none" && extended == "none"
-                ? $"{goldenKey} | {policy.Name}{excludedText} | identical"
-                : $"{goldenKey} | {policy.Name}{excludedText} | registers: {registers} | ram: {ram} | extended: {extended}";
-        }
+        string ram = DescribeRam(emulated.Ram, generatedRam);
+        string extended = DescribeExtended(emulated, generated);
+        string line = ram == "none" && extended == "none"
+            ? $"{goldenKey} | {policy.Name}{excludedText} | identical"
+            : $"{goldenKey} | {policy.Name}{excludedText} | ram: {ram} | extended: {extended}";
         AppendLine(line);
         line.Should().EndWith("| identical", "the generated run must end in the interpreted run's " +
             "final state: {0}", line);
@@ -151,22 +139,6 @@ internal static class GeneratedCodeDifferentialReport {
             }
             File.AppendAllText(reportPath, line + Environment.NewLine);
         }
-    }
-
-    private static string DescribeRegisters(AsmFinalState emulated, AsmFinalState generated) {
-        List<string> differences = new();
-        for (int i = 0; i < emulated.Registers.Count; i++) {
-            string name = emulated.Registers[i].Name;
-            uint emulatedValue = emulated.Registers[i].Value;
-            uint generatedValue = generated.Registers[i].Value;
-            if (emulatedValue != generatedValue) {
-                differences.Add($"{name} 0x{emulatedValue:X8}->0x{generatedValue:X8}");
-            }
-        }
-        if (differences.Count == 0) {
-            return "none";
-        }
-        return string.Join(", ", differences);
     }
 
     private static string DescribeRam(byte[] emulated, byte[] generated) {

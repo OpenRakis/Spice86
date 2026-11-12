@@ -17,47 +17,26 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         byte byte1 = 0;
-        byte flagOperand_0110 = 0;
-        byte flagOperand_0118 = 0;
-        byte flagOperand_0120 = 0;
-        byte flagOperand_0128 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = Dos.ReadPspAddress();
-        ES = BX;
-        word1 = EsGlobals.Word002C;
-        Alu16.And(word1, word1);
-        if (word1 != 0) {
-            ES = word1;
-            flagOperand_0110 = EsGlobals.Byte0000;
-            Alu8.Sub(flagOperand_0110, 0x42);
-            if (flagOperand_0110 == 0x42) {
-                flagOperand_0118 = EsGlobals.Byte0001;
-                Alu8.Sub(flagOperand_0118, 0x4C);
-                if (flagOperand_0118 == 0x4C) {
-                    flagOperand_0120 = EsGlobals.Byte0016;
-                    Alu8.Sub(flagOperand_0120, 0x60);
-                    if (flagOperand_0120 != 0x60) {
-                        flagOperand_0128 = EsGlobals.Byte002C;
-                        Alu8.Sub(flagOperand_0128, 0x60);
-                        if (flagOperand_0128 == 0x60) {
-                            goto L_0134;
-                        }
-                        AX = word1;
-                        byte1 = 0;
-                        goto L_0136;
-                    }
+        word1 = Dos.ReadPspAddress();
+        ES = word1;
+        AX = EsGlobals.Word002C;
+        if (AX != 0) {
+            ES = AX;
+            if (EsGlobals.Byte0000 == 0x42 && (EsGlobals.Byte0001 == 0x4C && EsGlobals.Byte0016 != 0x60)) {
+                if (EsGlobals.Byte002C == 0x60) {
+                    goto L_0134;
                 }
+                byte1 = 0;
+                goto L_0136;
             }
         }
     L_0134:
         VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_mov);
-        AX = word1;
         byte1 = 0xFF;
     L_0136:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

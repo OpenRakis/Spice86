@@ -113,8 +113,8 @@ public sealed class GeneratedCodeMachineTest {
                         programStartAddress) {
                 }
 
-                public override ushort unknown_F000_00AB_F00AB(ushort ax, ushort bx) =>
-                    base.unknown_F000_00AB_F00AB(ax, bx);
+                public override ushort unknown_F000_00B5_F00B5(ushort ax, ushort bx) =>
+                    base.unknown_F000_00B5_F00B5(ax, bx);
             }
             """];
         using CompiledGeneratedOverride compiled =
@@ -192,8 +192,8 @@ public sealed class GeneratedCodeMachineTest {
         machine.Stack.Push16(0x1234);
         machine.CpuState.AX = 3;
         machine.CpuState.BX = 5;
-        MethodInfo method = overridesType.GetMethod("unknown_F000_00AB_F00AB")
-            ?? throw new InvalidOperationException("unknown_F000_00AB_F00AB method missing");
+        MethodInfo method = overridesType.GetMethod("unknown_F000_00B5_F00B5")
+            ?? throw new InvalidOperationException("unknown_F000_00B5_F00B5 method missing");
         return (machine, overrides, method);
     }
 
@@ -522,15 +522,15 @@ public sealed class GeneratedCodeMachineTest {
     /// checked at run time: bytes that changed since discovery throw instead of silently opening
     /// another name, whether a filename byte or the terminator changed.</summary>
     [Theory]
-    [InlineData((ushort)0x016F)]
     [InlineData((ushort)0x0179)]
+    [InlineData((ushort)0x0183)]
     public void DataStringsCheckedLiteralFailsOnMutatedBytes(ushort offset) {
         // Arrange
         GeneratedScenarioCase scenarioCase = GeneratedScenarioCatalog.Case("data_strings.ivt.spec");
         using AsmRunScope discovery = scenarioCase.DiscoveryScenario.Prepare();
         GeneratedCodeMachineTestRunner runner = new();
         GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(discovery);
-        generatedProgram.SourceText.Should().Contain("GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\")");
+        generatedProgram.SourceText.Should().Contain("GetDosString(DS, 0x0179, '\\0', \"NOFILE.TXT\")");
         using CompiledGeneratedOverride compiled =
             runner.CompileGeneratedProgram(discovery.Fixture.Settings, generatedProgram);
 

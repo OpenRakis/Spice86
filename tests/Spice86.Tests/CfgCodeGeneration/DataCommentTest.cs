@@ -303,7 +303,7 @@ public class DataCommentTest {
         golden.Should().Contain("InterruptCall(cs1, 0x0111, 0x21)");
         golden.Should().Contain("Dos.WriteFile(");
         golden.Should().Contain("// DOS 40h write handle 1 \"");
-        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\"))");
+        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0179, '\\0', \"NOFILE.TXT\"))");
         golden.Should().NotContain("// DOS 3Dh");
     }
 

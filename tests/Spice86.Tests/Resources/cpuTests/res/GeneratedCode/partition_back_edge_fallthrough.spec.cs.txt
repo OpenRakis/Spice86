@@ -15,16 +15,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0x1000;
         SS = 0x1000;
         SP = 0x0100;
         DX = 0;
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x0012);
-            DX = Alu16.Add(DX, 1);
-            CX = Alu16.Dec(CX);
+            DX++;
+            CX--;
         } while (CX != 0);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
+        SsUInt16[0x060A] = DX;
+        SsUInt16[0x0608] = CX;
         return Hlt();
     }
 

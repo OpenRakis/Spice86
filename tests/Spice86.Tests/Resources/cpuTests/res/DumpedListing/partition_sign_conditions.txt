@@ -18,5 +18,8 @@ F000:002B mov AX,1
 F000:002E test AX,AX
 F000:0030 jns short 0x0036
 F000:0032 add DX,0x1000
-F000:0036 hlt
+F000:0036 mov word ptr SS:[0x0600],SP
+F000:003B mov word ptr SS:[0x0602],SS
+F000:0040 mov word ptr SS:[0x060A],DX
+F000:0045 hlt
 F000:FFF0 jmp short 0

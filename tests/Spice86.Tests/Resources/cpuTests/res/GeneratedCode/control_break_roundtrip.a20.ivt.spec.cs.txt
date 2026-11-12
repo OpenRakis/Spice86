@@ -25,14 +25,12 @@ public partial class CfgGeneratedOverrides {
         (AL, DX, previousBx) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
         AH = 0x33;
         (AL, DX, previousBx2) = ServiceCall(Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx));
-        Alu8.Sub(DL, 1);
         if (DL == 1) {
             AH = 0x33;
             DL = 0;
             (AL, DX, previousBx3) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 0, DH, previousBx2));
             AH = 0x33;
             (AL, DX, previousBx2) = ServiceCall(Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx3));
-            Alu8.Sub(DL, 0);
             if (DL != 0) {
                 goto L_012A;
             }
@@ -43,10 +41,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x012A, Signature_012A_mov);
         byte1 = 0xFF;
     L_012C:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = previousBx2;
-        AL = byte1;
         return Hlt();
     }
 

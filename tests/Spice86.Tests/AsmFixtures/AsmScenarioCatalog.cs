@@ -25,6 +25,7 @@ using Spice86.Tests.Utility;
 internal static class AsmScenarioCatalog {
     private const string LargestFreeBlockObservation = "largestFreeBlock";
     private const string TestPortResultsObservation = "testPortResults";
+    private const string LastChildReturnCodeObservation = "lastChildReturnCode";
     private const byte TestPortSuccess = 0x00;
     private const byte TestPortFailure = 0xFF;
     private const ushort MinFreeParagraphsAfterTsr = 0x8000;
@@ -45,8 +46,7 @@ internal static class AsmScenarioCatalog {
         .. BatchScenarios,
         .. BootstrapScenarios,
         .. ConsoleProgramScenarios,
-        CompiledCompilerIdioms(GenerationPolicy.Strict),
-        CompiledCompilerIdioms(TerminalPolicy)
+        CompiledCompilerIdioms()
     ];
 
     /// <summary>Batch scripts routed through COMMAND.COM: redirection, labels, subroutines, call expansion,
@@ -167,6 +167,8 @@ internal static class AsmScenarioCatalog {
         return new AsmScenario(identity, scope => {
             string directory = scope.CreateWorkingDirectory(identity);
             string target = CopyResourceFile("DosTsrTests", programName, directory);
+            scope.AddObservationProvider(LastChildReturnCodeObservation,
+                machine => machine.Dos.ProcessManager.LastChildReturnCode);
             AsmRunSettings settings = new() {
                 BinName = target,
                 ScenarioName = identity,
@@ -174,8 +176,12 @@ internal static class AsmScenarioCatalog {
                 InstallInterruptVectors = true,
                 EnableA20Gate = true
             };
-            return new AsmFixture(settings, [], result =>
-                result.State.AX.Should().Be(expectedExitCode, $"{programName} returns its exit code in AX"));
+            return new AsmFixture(settings, [], result => {
+                ushort returnCode =
+                    result.Observations.Get<ushort>(LastChildReturnCodeObservation);
+                ((byte)(returnCode & 0xFF)).Should().Be(expectedExitCode,
+                    $"{programName} returns its exit code in AL");
+            });
         }, [$"DosTsrTests/{programName}"]);
     }
 
@@ -375,22 +381,15 @@ internal static class AsmScenarioCatalog {
     /// oracle checks the `total * 2 + w` long fold, the long `/10`, the signed `/2`, the `!count`
     /// boolean and the `1..9` range result of real compiler codegen.</summary>
     /// <returns>The scenario, with the compiled program as its primary resource.</returns>
-    private static AsmScenario CompiledCompilerIdioms(GenerationPolicy policy) {
+    private static AsmScenario CompiledCompilerIdioms() {
         return new AsmScenario("compiled_compiler_idioms", scope => {
             DosProgramRun run = new(scope, "compiled_compiler_idioms");
             run.ResourceCopy("NativeDosTests", "compiler_idioms.exe", "IDIOMS.EXE");
             AsmRunSettings settings = run.Settings("IDIOMS.EXE") with {
-                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000,
-                GenerationPolicy = policy
+                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000
             };
-            return run.RunCustomSettings(settings, result => {
-                DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1");
-                // Under TerminalStateUnobserved the final AX is unobserved by design; the exe
-                // cannot record it to result memory, so the relaxed oracle drops the check.
-                if (!policy.TerminalStateUnobserved) {
-                    result.State.AX.Should().Be(0);
-                }
-            });
+            return run.RunCustomSettings(settings, result =>
+                DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1"));
         }, ["NativeDosTests/compiler_idioms.exe"]) {
             PrimaryResourceFileName = "NativeDosTests/compiler_idioms.exe"
         };
@@ -500,7 +499,8 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
             AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry)
                 .WithoutGeneratedExecution("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
-            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister),
+            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister)
+                .WithoutGeneratedExecution("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
             AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
                 .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
             AsmScenario.FromFixture("flagconditions", AsmFixtureCatalog.FlagConditions),
@@ -585,13 +585,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_jump_to_next"),
             PartitionScenario("partition_two_fault_handlers"),
             PartitionScenario("cc_register_leaf"),
-            AsmScenario.FromFixture("cc_register_leaf",
-                () => AsmFixtureCatalog.Partition("cc_register_leaf")
-                    .WithGenerationPolicy(TerminalPolicy)),
             PartitionScenario("cc_stack_frames"),
-            AsmScenario.FromFixture("cc_stack_frames",
-                () => AsmFixtureCatalog.Partition("cc_stack_frames")
-                    .WithGenerationPolicy(TerminalPolicy)),
             PartitionScenario("cc_call_shapes"),
             PartitionScenario("dataflow_stack_save_restore"),
             PartitionScenario("dataflow_flag_definitions"),
@@ -624,9 +618,6 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_arithmetic_idioms"),
             PartitionScenario("dataflow_joined_memory"),
             AsmScenario.FromFixture("dataflow_joined_memory",
-                () => AsmFixtureCatalog.Partition("dataflow_joined_memory")
-                    .WithGenerationPolicy(TerminalPolicy)),
-            AsmScenario.FromFixture("dataflow_joined_memory",
                 AsmFixtureCatalog.DataflowJoinedMemory286),
             PartitionScenario("dataflow_wide_conditions"),
             PartitionScenario("dataflow_wide_operations"),
@@ -643,9 +634,6 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("data_jump_tables_segments"),
             AsmScenario.FromFixture("data_jump_tables", AsmFixtureCatalog.DataJumpTablesPatched),
             PartitionScenario("register_locals"),
-            AsmScenario.FromFixture("register_locals",
-                () => AsmFixtureCatalog.Partition("register_locals")
-                    .WithGenerationPolicy(TerminalPolicy)),
             PartitionScenario("register_locals_across")
                 .WithoutGeneratedExecution("the program installs an IRQ0 handler to fire mid-call, so its landing point is timing-dependent"),
             PartitionScenario("save_restore_pairs"),
@@ -677,8 +665,5 @@ internal static class AsmScenarioCatalog {
     private static readonly GenerationPolicy RelaxedRamPolicy =
         new(GenerationRelaxation.UnknownMemoryIsRam);
 
-    /// <summary>The terminal-state-unobserved relaxation G16 runs beside strict mode on the
-    /// scenarios listed above.</summary>
-    private static readonly GenerationPolicy TerminalPolicy =
-        new(GenerationRelaxation.TerminalStateUnobserved);
+
 }

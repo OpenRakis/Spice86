@@ -48,6 +48,8 @@ start:
     mov ah, [es:23h]
     mov [bx+44h], ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

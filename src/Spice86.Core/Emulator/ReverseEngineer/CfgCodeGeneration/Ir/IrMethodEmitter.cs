@@ -500,16 +500,15 @@ internal sealed class IrMethodEmitter(
         GotoCensus gotos, BlockNode body, int liftedBlocks, int liftedStatements,
         ConstantMemoryAccessTable constantMemoryAccesses, FrameSlotPlan? framePlan) {
         if (!collectCensuses) {
-            return new MethodEmission(new MethodCensus(gotos, new FlagReadCensus(),
+            return new MethodEmission(new MethodCensus(gotos,
                 new WebCensus(), liftedBlocks, liftedStatements), constantMemoryAccesses);
         }
         IrSsa ssa = pipeline.Ssa;
-        FlagReadCensus flagReads = IrFlagReadCensusClassifier.Classify(irMethod, ssa, body);
         HashSet<ICfgNode> midBlockEntryNodes = irMethod.Entries
             .Where(entry => !entry.Node.Equals(entry.Block.EntryOrigin))
             .Select(entry => entry.Node).ToHashSet();
         WebCensus webCensus = IrWebCensusClassifier.Classify(ssa, pipeline.Webs!, midBlockEntryNodes);
-        return new MethodEmission(new MethodCensus(gotos, flagReads, webCensus,
+        return new MethodEmission(new MethodCensus(gotos, webCensus,
             liftedBlocks, liftedStatements), constantMemoryAccesses);
     }
 

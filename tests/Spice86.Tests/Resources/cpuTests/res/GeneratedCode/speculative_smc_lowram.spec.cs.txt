@@ -15,15 +15,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        byte byte1;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0;
         DS = 0;
         Segment0000Globals.Byte0400 = 1;
-        AL = Segment0000Globals.Byte0500;
-        Alu8.And(AL, AL);
-        if (AL != 0) {
+        byte1 = Segment0000Globals.Byte0500;
+        if (byte1 != 0) {
             VerifySpeculativeRunOrFail(cs1, 0x0118, SpeculativeRun_0118);
-            AX = 0x016E;
             DS = 0x016E;
             Segment016EGlobals.Byte0123 = 0xEE;
             VerifySpeculativeRunOrFail(cs1, 0x0122, SpeculativeRun_0122);
@@ -32,7 +31,6 @@ public partial class CfgGeneratedOverrides {
         else {
             Segment0000Globals.Byte0401 = 0xDD;
         }
-        AX = 0;
         DS = 0;
         Segment0000Globals.Byte0402 = 0xAA;
         return Hlt();

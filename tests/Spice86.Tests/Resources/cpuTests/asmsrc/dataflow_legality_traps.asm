@@ -385,6 +385,8 @@ wait_df:
     add si, 54
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 set_carry_flag:

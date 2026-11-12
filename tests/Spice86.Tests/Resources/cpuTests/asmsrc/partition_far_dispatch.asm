@@ -19,6 +19,10 @@ jump_again:
     jmp dword [cs:jump_table+bx]
 back:
     loop jump_again
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
+    mov word [ss:608h], cx
     hlt
 far_a:
     add dx, 1

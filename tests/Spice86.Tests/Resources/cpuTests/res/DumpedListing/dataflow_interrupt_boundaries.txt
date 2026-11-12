@@ -4,11 +4,11 @@ F000:0005 mov SS,AX
 F000:0007 mov SP,0x1000
 F000:000A xor AX,AX
 F000:000C mov ES,AX
-F000:000E mov word ptr ES:[0],0x00FB
+F000:000E mov word ptr ES:[0],0x0105
 F000:0015 mov word ptr ES:[2],CS
-F000:001A mov word ptr ES:[0x0020],0x010E
+F000:001A mov word ptr ES:[0x0020],0x0118
 F000:0021 mov word ptr ES:[0x0022],CS
-F000:0026 mov word ptr ES:[0x0180],0x011E
+F000:0026 mov word ptr ES:[0x0180],0x0128
 F000:002D mov word ptr ES:[0x0182],CS
 F000:0032 mov AX,DS
 F000:0034 mov ES,AX
@@ -24,7 +24,7 @@ F000:0048 mov AL,0
 F000:004A out 0x21,AL
 F000:004C sti
 F000:004D xor BX,BX
-F000:004F mov SI,0x0125
+F000:004F mov SI,0x012F
 F000:0052 mov word ptr DS:[0x0F00],2
 F000:0058 mov word ptr DS:[0x0E00],0
 F000:005E mov AX,word ptr CS:[SI]
@@ -66,7 +66,7 @@ F000:00BF mov AX,word ptr CS:[SI+8]
 F000:00C3 stos word ptr ES:[DI],AX
 F000:00C4 mov word ptr DS:[BX+0x14],DI
 F000:00C7 cld
-F000:00C8 call near 0x0123
+F000:00C8 call near 0x012D
 F000:00CB mov DI,0x0E30
 F000:00CE stos word ptr ES:[DI],AX
 F000:00CF mov word ptr DS:[BX+0x16],DI
@@ -86,26 +86,28 @@ F000:00EE add SI,0x000A
 F000:00F1 dec word ptr DS:[0x0F00]
 F000:00F5 jne near 0x0058
 F000:00F9 cli
-F000:00FA hlt
-F000:00FB push BP
-F000:00FC mov BP,SP
-F000:00FE mov word ptr DS:[0x0E00],AX
-F000:0101 mov CX,7
-F000:0104 add AX,0x0010
-F000:0107 mov word ptr SS:[BP+2],0x006A
-F000:010C pop BP
-F000:010D iret
-F000:010E push AX
-F000:010F mov byte ptr DS:[0x0E02],1
-F000:0114 mov AX,0xDEAD
-F000:0117 std
-F000:0118 mov AL,0x20
-F000:011A out 0x20,AL
-F000:011C pop AX
-F000:011D iret
-F000:011E add AL,AH
-F000:0120 mov AH,0x77
-F000:0122 iret
-F000:0123 std
-F000:0124 ret near
+F000:00FA mov word ptr SS:[0x0600],SP
+F000:00FF mov word ptr SS:[0x0602],SS
+F000:0104 hlt
+F000:0105 push BP
+F000:0106 mov BP,SP
+F000:0108 mov word ptr DS:[0x0E00],AX
+F000:010B mov CX,7
+F000:010E add AX,0x0010
+F000:0111 mov word ptr SS:[BP+2],0x006A
+F000:0116 pop BP
+F000:0117 iret
+F000:0118 push AX
+F000:0119 mov byte ptr DS:[0x0E02],1
+F000:011E mov AX,0xDEAD
+F000:0121 std
+F000:0122 mov AL,0x20
+F000:0124 out 0x20,AL
+F000:0126 pop AX
+F000:0127 iret
+F000:0128 add AL,AH
+F000:012A mov AH,0x77
+F000:012C iret
+F000:012D std
+F000:012E ret near
 F000:FFF0 jmp short 0

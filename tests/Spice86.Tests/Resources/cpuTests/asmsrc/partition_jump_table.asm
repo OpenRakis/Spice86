@@ -26,6 +26,11 @@ case_two:
 
 join:
     loop next_case
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
+    mov word [ss:608h], cx
+    mov word [ss:606h], bx
     hlt
 
 table:

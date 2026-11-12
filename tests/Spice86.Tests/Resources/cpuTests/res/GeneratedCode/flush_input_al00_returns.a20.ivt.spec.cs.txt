@@ -18,8 +18,6 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x0C00;
         InterruptCall(cs1, 0x0105, 0x21);
-        AL = 0;
-        DX = 0x0999;
         Out8(0x0999, 0);
         return Hlt();
     }

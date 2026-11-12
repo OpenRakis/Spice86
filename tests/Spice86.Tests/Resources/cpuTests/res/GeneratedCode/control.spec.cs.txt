@@ -14,6 +14,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
         SP = 0x1000;
@@ -23,8 +25,7 @@ public partial class CfgGeneratedOverrides {
         CarryFlag = false;
         DirectionFlag = false;
         InterruptFlag = false;
-        AX = FlagRegister16;
-        DX = 1;
+        word1 = FlagRegister16;
         Stack.Push16(1);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x0018);
@@ -33,10 +34,9 @@ public partial class CfgGeneratedOverrides {
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x001C);
         Stack.Push16(FlagRegister16);
-        BX = Stack.Pop16();
-        CX = 0;
+        word2 = Stack.Pop16();
         DS = 0;
-        Segment0000Globals.Dword0000 = (uint)AX | (uint)BX << 16;
+        Segment0000Globals.Dword0000 = (uint)word1 | (uint)word2 << 16;
         return Hlt();
     }
 

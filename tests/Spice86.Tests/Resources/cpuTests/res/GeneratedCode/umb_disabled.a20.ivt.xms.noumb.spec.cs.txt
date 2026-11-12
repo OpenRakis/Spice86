@@ -17,33 +17,22 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort index = 0;
         byte byte1 = 0;
-        ushort flagOperand_0105 = 0;
         byte flagOperand_010C = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x5200;
         (index, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
-        flagOperand_0105 = UInt16[ES, index + 0x66];
-        Alu16.Sub(flagOperand_0105, 0xFFFF);
-        if (flagOperand_0105 == 0xFFFF) {
+        if (UInt16[ES, index + 0x66] == 0xFFFF) {
             flagOperand_010C = UInt8[ES, index + 0x63];
             Alu8.And(flagOperand_010C, 1);
             if ((flagOperand_010C & 1) == 0) {
-                index = 1;
                 (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 1));
-                if (CarryFlag) {
-                    Alu16.Sub(AX, 1);
-                    if (AX == 1) {
-                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, 1));
-                        if (CarryFlag) {
-                            goto L_0131;
-                        }
-                        Alu8.Sub(AL, 0);
-                        if (AL != 0) {
-                            goto L_0131;
-                        }
-                        byte1 = 0;
-                        goto L_0133;
+                if (CarryFlag && AX == 1) {
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, 1));
+                    if (CarryFlag || AL != 0) {
+                        goto L_0131;
                     }
+                    byte1 = 0;
+                    goto L_0133;
                 }
             }
         }
@@ -51,10 +40,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_mov);
         byte1 = 0xFF;
     L_0133:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = index;
-        AL = byte1;
         return Hlt();
     }
 

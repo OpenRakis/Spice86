@@ -22,13 +22,12 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
-        ES = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
         BX = 0;
-        SI = 0x0180;
-        DI = 0x01B8;
+        SI = 0x0188;
+        DI = 0x01C0;
         do {
             CheckExternalEvents(biosSegment, 0x0015);
             word1 = UInt16[CS, SI];
@@ -148,8 +147,8 @@ public partial class CfgGeneratedOverrides {
             BX += 0x0040;
             SI += 8;
             DI++;
-            Alu16.Sub(BX, 0x01C0);
         } while (BX < 0x01C0);
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
 

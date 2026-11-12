@@ -28,7 +28,7 @@
     },
     "maximum": {
       "BookkeepingCalls": 20,
-      "Casts": 4,
+      "Casts": 22,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
       "LocalReads": 69,

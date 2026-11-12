@@ -20,9 +20,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x4B;
         (AH, word1) = ServiceCall(Ems, () => Ems.GetEmmHandleCount());
-        Alu8.Sub(AH, 0);
         if (AH == 0) {
-            Alu16.Sub(word1, 0);
             if (word1 == 0) {
                 goto L_0112;
             }
@@ -33,10 +31,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_mov);
         byte1 = 0xFF;
     L_0114:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        BX = word1;
-        AL = byte1;
         return Hlt();
     }
 

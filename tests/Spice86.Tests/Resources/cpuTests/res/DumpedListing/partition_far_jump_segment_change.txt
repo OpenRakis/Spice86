@@ -4,9 +4,11 @@ F000:0005 mov SS,AX
 F000:0007 mov SP,0x1000
 F000:000A xor BX,BX
 F000:000C jmp far F100:0000
-F000:0011 jmp far dword ptr CS:[0x001C]
+F000:0011 jmp far dword ptr CS:[0x0026]
 F000:0016 jmp far F100:0047
-F000:001B hlt
+F000:001B mov word ptr SS:[0x0600],SP
+F000:0020 mov word ptr SS:[0x0602],SS
+F000:0025 hlt
 F100:0000 mov word ptr CS:[0x8000],0xAAAA
 F100:0007 mov AX,word ptr CS:[0x8000]
 F100:000B mov word ptr DS:[BX],AX

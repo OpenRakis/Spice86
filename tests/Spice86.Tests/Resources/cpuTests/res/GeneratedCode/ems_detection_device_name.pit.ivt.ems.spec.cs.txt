@@ -15,11 +15,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort word1;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
-        DS = Stack.Pop16();
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x011E, '\0', "EMMXXXX0")));
+        word1 = Stack.Pop16();
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(word1, 0x011E, '\0', "EMMXXXX0")));
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_mov);
             byte1 = 0xFF;
@@ -29,9 +30,7 @@ public partial class CfgGeneratedOverrides {
             (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             byte1 = 0;
         }
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 

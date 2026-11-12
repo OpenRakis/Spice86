@@ -3,26 +3,31 @@ F000:0003 mov SS,AX
 F000:0005 mov SP,0x0100
 F000:0008 xor AX,AX
 F000:000A mov DS,AX
-F000:000C mov word ptr DS:[0],0x0022
+F000:000C mov word ptr DS:[0],0x003A
 F000:0012 mov word ptr DS:[2],CS
 F000:0016 xor SI,SI
 F000:0018 xor BX,BX
 F000:001A mov AX,0x000A
 F000:001D xor DX,DX
 F000:001F div BX
-F000:0021 hlt
-F000:0022 add SI,1
-F000:0025 mov word ptr DS:[0],0x0035
-F000:002B push BP
-F000:002C mov BP,SP
-F000:002E mov word ptr SS:[BP+2],0x001A
-F000:0033 pop BP
-F000:0034 iret
-F000:0035 add SI,0x0010
-F000:0038 mov BX,5
-F000:003B push BP
-F000:003C mov BP,SP
-F000:003E mov word ptr SS:[BP+2],0x001A
-F000:0043 pop BP
-F000:0044 iret
+F000:0021 mov word ptr SS:[0x0600],SP
+F000:0026 mov word ptr SS:[0x0602],SS
+F000:002B mov word ptr SS:[0x060C],SI
+F000:0030 mov word ptr SS:[0x0604],AX
+F000:0034 mov word ptr SS:[0x0606],BX
+F000:0039 hlt
+F000:003A add SI,1
+F000:003D mov word ptr DS:[0],0x004D
+F000:0043 push BP
+F000:0044 mov BP,SP
+F000:0046 mov word ptr SS:[BP+2],0x001A
+F000:004B pop BP
+F000:004C iret
+F000:004D add SI,0x0010
+F000:0050 mov BX,5
+F000:0053 push BP
+F000:0054 mov BP,SP
+F000:0056 mov word ptr SS:[BP+2],0x001A
+F000:005B pop BP
+F000:005C iret
 F000:FFF0 jmp short 0

@@ -16,7 +16,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SP = 0x0060;
-        BX = 2;
         CarryFlag = true;
         ParityFlag = true;
         AuxiliaryFlag = true;
@@ -26,17 +25,14 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0000 = 1;
         DsGlobals.Word0002 = 2;
         Stack.Push16(FlagRegister16);
-        DX = 0xFFFF;
         DsGlobals.Word0004 = 0xFFFF;
         Alu16.Sub(DsGlobals.Word0004, 0xFFFF);
         DsGlobals.Word0006 = 0xFFFF;
         Stack.Push16(FlagRegister16);
-        CX = 0xFFFF;
         DsGlobals.Word0008 = 1;
         Alu16.Sub(DsGlobals.Word0008, 0xFFFF);
         DsGlobals.Word000A = 0xFFFF;
         Stack.Push16(FlagRegister16);
-        AX = 0x8000;
         CarryFlag = false;
         ParityFlag = true;
         AuxiliaryFlag = true;
@@ -53,7 +49,6 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         DsGlobals.Word000E = 0x8000;
         Stack.Push16(FlagRegister16);
-        SI = 0x7F81;
         CarryFlag = true;
         ParityFlag = false;
         AuxiliaryFlag = true;
@@ -71,7 +66,6 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0016 = 1;
         Alu8.Sub(DsGlobals.Byte0016, 2);
         Stack.Push16(FlagRegister16);
-        DH = 0xFF;
         CarryFlag = false;
         ParityFlag = true;
         AuxiliaryFlag = false;
@@ -92,12 +86,10 @@ public partial class CfgGeneratedOverrides {
         Alu8.Sub(1, DsGlobals.Byte001B);
         DsGlobals.Word001C = 0x01FF;
         Stack.Push16(FlagRegister16);
-        BL = 0x80;
         DsGlobals.Byte001E = 0x7F;
         Alu8.Sub(DsGlobals.Byte001E, 0x80);
         DsGlobals.Word001F = 0x0080;
         Stack.Push16(FlagRegister16);
-        AL = 0xBC;
         CarryFlag = true;
         ParityFlag = true;
         AuxiliaryFlag = false;

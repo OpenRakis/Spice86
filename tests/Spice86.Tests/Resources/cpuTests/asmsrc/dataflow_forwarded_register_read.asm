@@ -17,6 +17,8 @@ start:
     mov [0100h], ebx
     mov eax, 0A5A5A5A5h
     mov ebx, 05A5A5A5Ah
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

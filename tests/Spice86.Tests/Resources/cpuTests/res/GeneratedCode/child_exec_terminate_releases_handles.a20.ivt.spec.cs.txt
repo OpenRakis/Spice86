@@ -46,13 +46,10 @@ public partial class CfgGeneratedOverrides {
                     goto L_016E;
                 }
                 AX = ServiceCall(Dos, () => Dos.ReadReturnCode());
-                DX = 0x0998;
                 Out8(0x0998, AL);
-                Alu8.Sub(AL, 0);
                 if (AL != 0) {
                     goto L_016E;
                 }
-                DX = 0x0183;
                 (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0183, '\0')));
                 if (CarryFlag) {
                     goto L_016E;
@@ -80,9 +77,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x016E, Signature_016E_mov);
         byte1 = 0xFF;
     L_0170:
-        DX = 0x0999;
         Out8(0x0999, byte1);
-        AL = byte1;
         return Hlt();
     }
 
