@@ -65,7 +65,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <inheritdoc />
     protected override void TrackWrittenRange(SegmentedAddress start, uint length) {
         ImageRegistry?.RegisterOrExtendContiguous(new LoadedImage(LoadedImageKind.EmulatorRoutines,
-            RoutineImageName, start.Segment, start.Linear, length));
+            RoutineImageName, start.Segment, start.Linear, length, null));
     }
 
     private void WriteCallback(ushort callbackNumber) {

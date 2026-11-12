@@ -12,11 +12,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: CX, DS. Does not return.</summary>
     public virtual Action unknown_F000_0049_F0049() {
         CheckExternalEvents(biosSegment, 0x0049);
         DsGlobals.Word020A = CX;
-        if (!NearCallReturnedElsewhere(biosSegment, 0x0050, unknown_F000_0074_F0074Entry, [new(biosSegment, 0x0051)])) {
+        if (!NearCallReturnedElsewhere(biosSegment, 0x0050, unknown_F000_0074_F0074_AsmEntry, [new(biosSegment, 0x0051)])) {
             throw FailAsUntested("Untested return from call at F000:004D");
         }
         if (CS != biosSegment || IP != 0x0051) {
@@ -110,14 +110,20 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: AX, BX.</summary>
-    public virtual Action unknown_F000_0074_F0074() {
+    /// <summary>Inputs: none. Outputs: BX. Changes: AX, BX.</summary>
+    public virtual ushort unknown_F000_0074_F0074() {
         CheckExternalEvents(biosSegment, 0x0074);
         AX = Stack.Pop16();
         BX = 0x55AA;
         AX = 0x0051;
         Stack.Push16(0x0051);
-        return NearRet();
+        NearReturn();
+        return BX;
+    }
+
+    public virtual Action unknown_F000_0074_F0074_Asm() {
+        BX = unknown_F000_0074_F0074();
+        return Returned;
     }
 
     /// <summary>Inputs: none. Outputs: AX, CX, DX, SI, DI, DS, flags. Changes: AX, CX, DX, SI, DI, DS, flags.</summary>
@@ -229,7 +235,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_0061_F0061Entry;
     private readonly Func<int, Action> unknown_F000_0065_F0065_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0069_F0069_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0074_F0074Entry;
+    private readonly Func<int, Action> unknown_F000_0074_F0074_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -247,7 +253,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0061_F0061Entry = _ => unknown_F000_0061_F0061();
         unknown_F000_0065_F0065_AsmEntry = _ => unknown_F000_0065_F0065_Asm();
         unknown_F000_0069_F0069_AsmEntry = _ => unknown_F000_0069_F0069_Asm();
-        unknown_F000_0074_F0074Entry = _ => unknown_F000_0074_F0074();
+        unknown_F000_0074_F0074_AsmEntry = _ => unknown_F000_0074_F0074_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0049, unknown_F000_0049_F0049Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0056, unknown_F000_0056_F0056_AsmEntry, "unknown");
@@ -256,7 +262,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0061, unknown_F000_0061_F0061Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0065, unknown_F000_0065_F0065_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0069, unknown_F000_0069_F0069_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0074, unknown_F000_0074_F0074Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0074, unknown_F000_0074_F0074_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

@@ -51,7 +51,12 @@ internal sealed class IrMethodEmitter(
     /// program before any method is printed.</summary>
     /// <returns>The prepared method to hand to <see cref="Print"/>.</returns>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) =>
-        Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads);
+        Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads,
+            NoEntryFacts);
+
+    /// <summary>No entry fact: the behaviour of a first-round prepare.</summary>
+    private static readonly IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> NoEntryFacts =
+        new Dictionary<ICfgNode, IrSegmentEntryFact>();
 
     /// <inheritdoc cref="Prepare(MethodPlan, GenerationStepTimer)" />
     /// <param name="exitEffects">Return-exit effects to apply at lift time, from the first
@@ -60,10 +65,13 @@ internal sealed class IrMethodEmitter(
     /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
     /// <param name="faultReads">Fault-path read sets to apply at lift time, from the first
     /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    /// <param name="entryFacts">The segment entry facts the previous analysis round proved at
+    /// each of the method's entries: the SSA's entry versions resolve through them.</param>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer,
         IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
         IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
-        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts) {
         IrMethod irMethod = timer.Measure("lift",
             () => _lifter.Lift(method, exitEffects, callEffects, faultReads));
         int liftedBlocks = irMethod.Blocks.Count;
@@ -94,7 +102,9 @@ internal sealed class IrMethodEmitter(
                 return (dispatch, lowered, gotos, gotoTargets);
             });
         FrameSlotPlan? framePlan = timer.Measure("frame slots", () => BuildFramePlan(irMethod, pipeline.Ssa, method));
-        SaveRestorePairs.SavedPairPlan savedPairs = SaveRestorePairs.Plan(irMethod, pipeline.Ssa);
+        IrSegmentFacts entryFactSet = EntryFactsOf(irMethod, entryFacts);
+        SaveRestorePairs.SavedPairPlan savedPairs =
+            SaveRestorePairs.Plan(irMethod, pipeline.Ssa, entryFactSet);
         BlockNode body = structured.Body;
         if (savedPairs.Pairs.Count > 0) {
             body = SaveRestorePairs.Apply(body, savedPairs);
@@ -103,7 +113,20 @@ internal sealed class IrMethodEmitter(
             body, liftedBlocks, liftedStatements, constantMemoryAccesses, framePlan);
         return new PreparedMethod(method, irMethod, pipeline.Ssa, pipeline.DosCalls,
             structured.EntryDispatch, body,
-            structured.Targets, emission, framePlan, savedPairs);
+            structured.Targets, emission, framePlan, savedPairs, entryFactSet);
+    }
+
+    /// <summary>The entry facts of <paramref name="irMethod"/>'s own blocks: only entries the
+    /// consumed set covers carry a fact; every other stays symbolic.</summary>
+    private static IrSegmentFacts EntryFactsOf(IrMethod irMethod,
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts) {
+        IrSegmentFacts facts = new();
+        foreach (IrEntry entry in irMethod.Entries) {
+            if (entryFacts.TryGetValue(entry.Node, out IrSegmentEntryFact? fact)) {
+                facts.SetEntry(entry.Block, fact);
+            }
+        }
+        return facts;
     }
 
     /// <summary>The frame slot plan of <paramref name="irMethod"/> when it accesses SS through a

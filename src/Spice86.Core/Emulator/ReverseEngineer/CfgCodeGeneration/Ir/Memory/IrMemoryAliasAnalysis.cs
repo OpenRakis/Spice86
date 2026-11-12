@@ -31,9 +31,14 @@ internal sealed class IrMemoryAliasAnalysis {
     private readonly IrSegmentValueResolver _segmentValues;
 
     /// <summary>Builds the analysis over the SSA of one method.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa) {
+    public IrMemoryAliasAnalysis(IrSsa ssa) : this(ssa, IrSegmentFacts.None) {
+    }
+
+    /// <summary>Builds the analysis over the SSA of one method, resolving entry versions through
+    /// the segment entry facts <paramref name="facts"/> a prepare round consumed.</summary>
+    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts) {
         _ssa = ssa;
-        _segmentValues = new IrSegmentValueResolver(ssa);
+        _segmentValues = new IrSegmentValueResolver(ssa, facts);
     }
 
     /// <summary>The pointer reads of the statement at <paramref name="index"/> in

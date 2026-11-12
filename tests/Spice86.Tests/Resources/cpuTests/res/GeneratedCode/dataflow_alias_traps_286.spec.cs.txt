@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: DS, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: BP, DS, DF. Outputs: BP, flags, DF. Changes: BP, flags, DF.</summary>
     public virtual Action unknown_F000_0038_F0038() {
         unknown_F000_0038_F0038Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0038);

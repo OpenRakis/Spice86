@@ -83,6 +83,14 @@ internal sealed class IrPreservation {
             }
             return result;
         }
+        if (_ssa.DefinitionSite(version) is IrTerminator terminator) {
+            if (info.Kind == IrSsaDefinitionKind.Definition || info.Previous < 0) {
+                return CpuValues.None;
+            }
+            CpuValues terminatorWritten =
+                (terminator.Effects.MustWrite | terminator.Effects.MayWrite) & mask;
+            return Preserved(value, info.Previous) & ~terminatorWritten;
+        }
         if (_ssa.DefiningStatement(version) is not { } definition) {
             if (info.Kind == IrSsaDefinitionKind.Definition || info.Previous < 0) {
                 return CpuValues.None;
@@ -116,7 +124,7 @@ internal sealed class IrPreservation {
             return false;
         }
         foreach (IrStackSlotRead read in reads) {
-            if (!read.Complete) {
+            if (!read.Complete || !read.ProvedRam) {
                 return false;
             }
             foreach (IrStackSlotDefinition definition in read.Definitions) {

@@ -269,7 +269,7 @@ internal sealed class IrSegmentValues {
     private SegmentValue StackValue(IrStatement statement, HashSet<int> visiting) {
         SegmentValue? value = null;
         foreach (IrStackSlotRead read in _slots.ReadsOf(statement)) {
-            if (!read.Complete) {
+            if (!read.Complete || !read.ProvedRam) {
                 return SegmentValue.Unknown.Instance;
             }
             foreach (SegmentValue pushed in read.Definitions

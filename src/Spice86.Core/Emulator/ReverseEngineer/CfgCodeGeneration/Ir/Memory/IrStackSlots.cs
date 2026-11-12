@@ -47,6 +47,7 @@ internal sealed class IrStackSlots {
     private readonly Dictionary<IrStatement, IrStackOffset> _after = [];
     private readonly Dictionary<IrBlock, IrStackOffset> _blockEntry = [];
     private readonly Dictionary<IrBlock, IrStackOffset> _blockEnd = [];
+    private readonly HashSet<IrStackSlotDefinition> _ramProvedDefinitions = [];
     private readonly Dictionary<IrStatement, List<IrStackSlotRead>> _readsByStatement = [];
     private readonly Dictionary<IrStackSlotDefinition, List<IrStackSlotRead>> _readsByDefinition = [];
 
@@ -185,8 +186,13 @@ internal sealed class IrStackSlots {
                         .WithOffset(IrStackOffset.Known(state.Offset.Base, delta))
                         .CopySlots();
                     RemoveSlotsIn(pushed, delta, width);
-                    pushed.Slots[delta] = [new IrStackSlotDefinition(statement, delta)];
+                    IrStackSlotDefinition definition = new(statement, delta);
+                    pushed.Slots[delta] = [definition];
                     pushed.PartialSlots.Remove(delta);
+                    if (alias.IsKnownRam(
+                            SlotAccessAt(block, index, state, delta, width, alias))) {
+                        _ramProvedDefinitions.Add(definition);
+                    }
                     return pushed;
                 }
                 return state;
@@ -200,7 +206,7 @@ internal sealed class IrStackSlots {
         if (stackValues.Count > 0) {
             IrStackOffset before = state.Offset;
             foreach (StackCallValueNode stack in stackValues) {
-                state = ApplyStackValue(stack, statement, state, record);
+                state = ApplyStackValue(block, index, stack, statement, state, record, alias);
             }
             return KillWrittenSlots(block, index, statement, state, before, alias);
         }
@@ -222,13 +228,16 @@ internal sealed class IrStackSlots {
         return KillWrittenSlots(block, index, statement, state, beforeAdjust, alias);
     }
 
-    private IrStackState ApplyStackValue(StackCallValueNode stack, IrStatement statement,
-        IrStackState state, bool record) {
+    private IrStackState ApplyStackValue(IrBlock block, int index, StackCallValueNode stack,
+        IrStatement statement, IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         switch (stack.Operation) {
             case StackOperation.Pop: {
                 int width = (int)stack.Width / 8;
                 if (record) {
-                    RecordRead(statement, state.Offset.Delta, width, state);
+                    IrMemoryAccess popAccess =
+                        SlotAccessAt(block, index, state, state.Offset.Delta, width, alias);
+                    RecordRead(statement, state.Offset.Delta, width, state,
+                        alias.IsKnownRam(popAccess));
                 }
                 if (state.Offset.Kind != IrStackOffsetKind.Known) {
                     return state;
@@ -243,8 +252,10 @@ internal sealed class IrStackSlots {
             case StackOperation.Peek:
                 if (record && ConstantWordOf(stack.CallNode.Arguments
                     .OfType<ValueNode>().FirstOrDefault()) is { } peekDelta) {
-                    RecordRead(statement, state.Offset.Delta + peekDelta,
-                        (int)stack.Width / 8, state);
+                    int delta = state.Offset.Delta + peekDelta;
+                    int width = (int)stack.Width / 8;
+                    RecordRead(statement, delta, width, state,
+                        alias.IsKnownRam(SlotAccessAt(block, index, state, delta, width, alias)));
                 }
                 return state;
             default:
@@ -261,7 +272,8 @@ internal sealed class IrStackSlots {
                 .Where(read => read is { SegmentRegister: IrSsaValue.Ss, OffsetTerms: [
                     { Register: RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
                         RegisterIndex: (int)RegisterIndex.SpIndex } }] })) {
-            RecordRead(statement, state.Offset.Delta + read.OffsetDisplacement, read.Width, state);
+            RecordRead(statement, state.Offset.Delta + read.OffsetDisplacement, read.Width, state,
+                alias.IsKnownRam(read));
         }
     }
 
@@ -362,16 +374,36 @@ internal sealed class IrStackSlots {
         return adjustment > 0 ? state.WithoutSlotsBelow(delta) : state;
     }
 
+    /// <summary>The slot access at <paramref name="delta"/> as the statement at
+    /// <paramref name="index"/> sees it: constant when the offset base leaves a known SP, else
+    /// <c>SS:[SP + delta - beforeDelta]</c> on the statement's SP version.</summary>
+    private static IrMemoryAccess SlotAccessAt(IrBlock block, int index, IrStackState state,
+        int delta, int width, IrMemoryAliasAnalysis alias) {
+        IrMemoryAccess access;
+        if (state.Offset.Base is { } baseStatement
+            && alias.StackPointerConstantAfter(baseStatement) is { } stackPointer) {
+            access = alias.ConstantStackAccess(block, index, stackPointer + delta, width);
+        } else {
+            access = alias.StackAccess(block, index, delta - state.Offset.Delta, width);
+        }
+        return access;
+    }
+
     /// <summary>Records a read of <paramref name="width"/> bytes at <paramref name="delta"/>: only
     /// a slot starting there with the same width supplies it; a slot of another width leaves the
-    /// read unattributed.</summary>
-    private void RecordRead(IrStatement statement, int delta, int width, IrStackState state) {
+    /// read unattributed. <paramref name="accessKnownRam"/> is the shared
+    /// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> decision on the read's own access; the read
+    /// is RAM-proved when its access and every supplying definition's write are.</summary>
+    private void RecordRead(IrStatement statement, int delta, int width, IrStackState state,
+        bool accessKnownRam) {
         HashSet<IrStackSlotDefinition> definitions = new(state.DefinitionsOf(delta));
         if (definitions.Count > 0 && SlotWidth(definitions) != width) {
             definitions = [];
         }
+        bool provedRam = accessKnownRam && definitions.Count > 0
+            && definitions.All(_ramProvedDefinitions.Contains);
         IrStackSlotRead read = new(statement, delta, definitions,
-            definitions.Count > 0 && !state.PartialSlots.Contains(delta));
+            definitions.Count > 0 && !state.PartialSlots.Contains(delta), provedRam);
         if (!_readsByStatement.TryGetValue(statement, out List<IrStackSlotRead>? reads)) {
             reads = [];
             _readsByStatement[statement] = reads;

@@ -62,9 +62,19 @@ internal sealed class IrFlattener {
     }
 
     private static IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>
-        node is ProcedureCallHelperNode call
-            ? call with { Summary = effects }
-            : IrAstChildren.MapChildren(node, child => AttachSummary(child, effects));
+        node switch {
+            ProcedureCallHelperNode call => call with { Summary = effects },
+            ProcedureCallReturnedElsewhereHelperNode returnedElsewhere =>
+                returnedElsewhere with { Summary = effects },
+            _ => IrAstChildren.MapChildren(node, child => AttachSummary(child, effects))
+        };
+
+    private ValueNode TypeCondition(IVisitableAstNode node, ICfgNode origin, string localSuffix) {
+        ValueNode typed = IrNodeTyper.TypeValue((ValueNode)node, localSuffix);
+        return _callEffects.TryGetValue(origin, out IrEffects effects)
+            ? (ValueNode)AttachSummary(typed, effects)
+            : typed;
+    }
 
     /// <summary>The blocks created so far, in creation order (instruction layout order).</summary>
     public List<IrBlock> Blocks => _blocks;
@@ -194,7 +204,7 @@ internal sealed class IrFlattener {
             $"Flatten reached {origin.Address} with no open block.");
         IrBlock? join = null;
         IrBlock Join() => join ??= NewBlock(true);
-        ValueNode condition = IrNodeTyper.TypeValue(node.Condition, localSuffix);
+        ValueNode condition = TypeCondition(node.Condition, origin, localSuffix);
         AstResult<IrBlock> whenTrue = new();
         yield return AstTrampoline.Call(FlattenArmIt(node.TrueCase, origin, localSuffix, isLocalFallthrough, Join, whenTrue));
         AstResult<IrBlock> whenFalse = new();
@@ -234,7 +244,7 @@ internal sealed class IrFlattener {
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
         _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
-        _editor.SetTerminator(header, new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
+        _editor.SetTerminator(header, new IrBranch(origin, TypeCondition(node.Condition, origin, localSuffix),
             new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
@@ -247,7 +257,7 @@ internal sealed class IrFlattener {
             throw new NotSupportedException(
                 $"WhileWithExitNode at {origin.Address} ends its body in a transfer; the exit condition has no block.");
         }
-        _editor.SetTerminator(tail, new IrBranch(origin, IrNodeTyper.TypeValue(node.ExitCondition, localSuffix),
+        _editor.SetTerminator(tail, new IrBranch(origin, TypeCondition(node.ExitCondition, origin, localSuffix),
             new IrEdge(exit, true), new IrEdge(header, true)));
         _current = exit;
     }
@@ -260,7 +270,7 @@ internal sealed class IrFlattener {
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
         _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
-        _editor.SetTerminator(header, new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
+        _editor.SetTerminator(header, new IrBranch(origin, TypeCondition(node.Condition, origin, localSuffix),
             new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
@@ -294,7 +304,7 @@ internal sealed class IrFlattener {
         } finally {
             _breakTargets.Pop();
         }
-        _editor.SetTerminator(from, new IrSwitch(origin, IrNodeTyper.TypeValue(node.Value, localSuffix), cases,
+        _editor.SetTerminator(from, new IrSwitch(origin, TypeCondition(node.Value, origin, localSuffix), cases,
             new IrEdge(defaultBlock.Value!, true)));
         _current = join;
     }

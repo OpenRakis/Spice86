@@ -60,7 +60,7 @@ public sealed class PCBootLoader {
 
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.BootSector, imagePathForLogging,
-            0x07C0, BootSectorLoadAddress, BootSectorSize));
+            0x07C0, BootSectorLoadAddress, BootSectorSize, null));
         PrepareCpuRegistersForBoot(_state, driveNumber);
         if (_loggerService.IsEnabled(LogLevel.Information)) {
             _loggerService.LogInformation("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",

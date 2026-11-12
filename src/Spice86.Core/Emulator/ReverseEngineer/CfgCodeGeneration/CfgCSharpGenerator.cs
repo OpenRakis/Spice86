@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
@@ -163,7 +164,10 @@ internal sealed class CfgCSharpGenerator {
             summarizedCalls += callEffects.Count;
             IReadOnlyDictionary<ICfgNode, CpuValues> faultReads =
                 FaultReadsOf(prepared[i], analysis.ObservedConventions, context);
-            if (exitEffects.Count == 0 && callEffects.Count == 0 && faultReads.Count == 0) {
+            IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts =
+                EntryFactsOf(prepared[i], analysis.SegmentSummaries);
+            if (exitEffects.Count == 0 && callEffects.Count == 0 && faultReads.Count == 0
+                && entryFacts.Count == 0) {
                 continue;
             }
             UsedFacts facts = new();
@@ -178,12 +182,16 @@ internal sealed class CfgCSharpGenerator {
             foreach ((ICfgNode origin, CpuValues reads) in faultReads) {
                 facts.FaultReads[origin] = reads;
             }
+            foreach ((ICfgNode entry, IrSegmentEntryFact fact) in entryFacts) {
+                facts.EntryFacts[entry] = fact;
+            }
             used[i] = facts;
             reprepared++;
             GenerationStepTimer timer = timers[i];
             MethodPlan methodPlan = plan.Methods[i];
             prepared[i] = timer.Measure("round 2 prepare",
-                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects, faultReads));
+                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects,
+                    faultReads, entryFacts));
         }
         progress.Detail($"Resolved calls summarized: {summarizedCalls}; kept Unknown: "
             + string.Join(", ", callSkips
@@ -204,7 +212,8 @@ internal sealed class CfgCSharpGenerator {
             rounds = 2;
             while (true) {
                 List<(int Index, string Reason)> violated = ConsumeViolations(prepared, used,
-                    current.ObservedConventions, lowerer.HardwareInterruptEffect, context);
+                    current.ObservedConventions, current.SegmentSummaries,
+                    lowerer.HardwareInterruptEffect, context);
                 if (violated.Count == 0) {
                     analysis = current;
                     break;
@@ -226,7 +235,7 @@ internal sealed class CfgCSharpGenerator {
                     GenerationStepTimer timer = timers[index];
                     prepared[index] = timer.Measure($"round {rounds} prepare",
                         () => methodEmitter.Prepare(plan.Methods[index], timer,
-                            exitEffects, callEffects, facts.FaultReads));
+                            exitEffects, callEffects, facts.FaultReads, facts.EntryFacts));
                 }
                 progress.Detail($"Preparation round {rounds}");
                 current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
@@ -333,14 +342,33 @@ internal sealed class CfgCSharpGenerator {
     /// exit without becoming a signature parameter or output. Empty when no return exit
     /// shrinks.</summary>
     /// <summary>The facts a prepare round consumed for a method: the read set every return exit
-    /// was given, and the reads and may-write every summarized call was given. Rounds after the
-    /// second widen these with anything the recomputed conventions demand of them.</summary>
+    /// was given, the reads and may-write every summarized call was given, and the segment entry
+    /// facts the method's entry versions resolved through. Rounds after the second widen these
+    /// with anything the recomputed conventions demand of them; the entry facts are replaced by
+    /// what the recomputed summaries still prove.</summary>
     private sealed class UsedFacts {
         public Dictionary<ICfgNode, CpuValues> ExitReads { get; } = new();
         public Dictionary<ICfgNode, CpuValues> CallReads { get; } = new();
         public Dictionary<ICfgNode, CpuValues> CallMayWrite { get; } = new();
         public Dictionary<ICfgNode, IrEffects> CallSummaries { get; } = new();
         public Dictionary<ICfgNode, CpuValues> FaultReads { get; } = new();
+        public Dictionary<ICfgNode, IrSegmentEntryFact> EntryFacts { get; } = new();
+    }
+
+    /// <summary>The segment entry facts the summaries prove at the entries of
+    /// <paramref name="prepared"/>'s method, keyed by the entry node so they survive a
+    /// re-prepare: an entry a non-call way reaches, or whose call sites disagree, carries no
+    /// fact and its entry versions stay symbolic.</summary>
+    private static IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> EntryFactsOf(
+        PreparedMethod prepared, IrSegmentSummaries summaries) {
+        IrSegmentFacts proved = summaries.FactsFor(prepared.Method);
+        Dictionary<ICfgNode, IrSegmentEntryFact> facts = new();
+        foreach (IrEntry entry in prepared.IrMethod.Entries) {
+            if (proved.EntryFactOf(entry.Block) is { } fact) {
+                facts[entry.Node] = fact;
+            }
+        }
+        return facts;
     }
 
     /// <summary>The reads every return or resolved-transfer exit of <paramref name="prepared"/>
@@ -415,7 +443,8 @@ internal sealed class CfgCSharpGenerator {
     /// widened in place with the new demands.</summary>
     private static List<(int Index, string Reason)> ConsumeViolations(
         List<PreparedMethod> prepared, UsedFacts?[] used,
-        IrCallingConventions conventions, CallEffect contract, CfgGeneratorContext context) {
+        IrCallingConventions conventions, IrSegmentSummaries summaries, CallEffect contract,
+        CfgGeneratorContext context) {
         List<(int Index, string Reason)> violated = new();
         for (int i = 0; i < prepared.Count; i++) {
             UsedFacts? facts = used[i];
@@ -434,20 +463,28 @@ internal sealed class CfgCSharpGenerator {
             }
             if (facts.CallSummaries.Count > 0) {
                 string methodName = prepared[i].Method.MethodName;
-                Dictionary<ICfgNode, IrStatement> callStatements = new();
+                Dictionary<ICfgNode, object> callSites = new();
                 foreach (IrBlock block in prepared[i].IrMethod.Blocks) {
                     foreach (IrStatement statement in block.Statements) {
-                        if (statement.Origin is CfgInstruction { IsCall: true }) {
-                            callStatements.TryAdd(statement.Origin, statement);
+                        if (statement.Node is CheckExternalEventsNode
+                            || statement.Origin is not CfgInstruction { IsCall: true }) {
+                            continue;
                         }
+                        callSites.TryAdd(statement.Origin, statement);
+                    }
+                    if (block.HasTerminator && block.Terminator is not IrExit
+                        && block.Terminator.Origin is CfgInstruction { IsCall: true }) {
+                        callSites.TryAdd(block.Terminator.Origin, block.Terminator);
                     }
                 }
                 foreach (ICfgNode origin in facts.CallSummaries.Keys.ToList()) {
-                    if (!callStatements.TryGetValue(origin, out IrStatement? statement)) {
+                    if (!callSites.TryGetValue(origin, out object? site)) {
                         continue;
                     }
                     (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
-                        conventions.CallSummaryOf(methodName, statement, contract);
+                        site is IrStatement statement
+                            ? conventions.CallSummaryOf(methodName, statement, contract)
+                            : conventions.CallSummaryOf(methodName, (IrTerminator)site, contract);
                     if (effect is null) {
                         facts.CallSummaries.Remove(origin);
                         facts.CallReads.Remove(origin);
@@ -480,11 +517,47 @@ internal sealed class CfgCSharpGenerator {
                     reasons.Add($"fault {origin.Address} reads grew by {grew}");
                 }
             }
+            // A method prepared with entry values S is valid only while the recomputed
+            // summaries still prove S at its entries; the consumed set is replaced by what the
+            // summaries prove now, and a lost value re-prepares the method.
+            if (EntryFactsChanged(prepared[i], facts, summaries, out string entryReason)) {
+                reasons.Add(entryReason);
+            }
             if (reasons.Count > 0) {
                 violated.Add((i, string.Join("; ", reasons)));
             }
         }
         return violated;
+    }
+
+    /// <summary>Whether any consumed entry value of <paramref name="prepared"/> is no longer
+    /// proved by <paramref name="summaries"/>: the consumed set is then invalid and the method
+    /// is prepared again. The used set is replaced by the values the summaries prove now, grown
+    /// or shrunk, so the next round consumes exactly what holds.</summary>
+    private static bool EntryFactsChanged(PreparedMethod prepared, UsedFacts facts,
+        IrSegmentSummaries summaries, out string reason) {
+        reason = "";
+        if (facts.EntryFacts.Count == 0) {
+            return false;
+        }
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> proved =
+            EntryFactsOf(prepared, summaries);
+        List<string> lost = [];
+        foreach ((ICfgNode node, IrSegmentEntryFact consumed) in facts.EntryFacts) {
+            if (!proved.TryGetValue(node, out IrSegmentEntryFact? current)
+                || !IrSegmentFacts.FactEquals(consumed, current)) {
+                lost.Add(node.Address.ToString());
+            }
+        }
+        facts.EntryFacts.Clear();
+        foreach ((ICfgNode node, IrSegmentEntryFact fact) in proved) {
+            facts.EntryFacts[node] = fact;
+        }
+        if (lost.Count == 0) {
+            return false;
+        }
+        reason = $"entry segment values at {string.Join(", ", lost)} are no longer proved";
+        return true;
     }
 
     /// <summary>The effects to give the method's call statements in a second prepare round: the
@@ -498,13 +571,24 @@ internal sealed class CfgCSharpGenerator {
         string methodName = prepared.Method.MethodName;
         foreach (IrBlock block in prepared.IrMethod.Blocks) {
             foreach (IrStatement statement in block.Statements) {
-                if (statement.Origin is not CfgInstruction { IsCall: true }) {
+                if (statement.Node is CheckExternalEventsNode
+                    || statement.Origin is not CfgInstruction { IsCall: true }) {
                     continue;
                 }
                 (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
                     conventions.CallSummaryOf(methodName, statement, contract);
                 if (effect is { } summary) {
                     effects[statement.Origin] = summary;
+                } else {
+                    skips[skip] = skips.GetValueOrDefault(skip) + 1;
+                }
+            }
+            if (block.HasTerminator && block.Terminator is not IrExit
+                && block.Terminator.Origin is CfgInstruction { IsCall: true }) {
+                (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
+                    conventions.CallSummaryOf(methodName, block.Terminator, contract);
+                if (effect is { } summary) {
+                    effects[block.Terminator.Origin] = summary;
                 } else {
                     skips[skip] = skips.GetValueOrDefault(skip) + 1;
                 }
@@ -614,6 +698,18 @@ internal sealed class CfgCSharpGenerator {
                     if ((inputs & ~statement.Effects.Reads) != CpuValues.None) {
                         throw new InvalidOperationException(
                             $"Resolved call of {methodName} reads {statement.Effects.Reads}," +
+                            $" below its targets' observed inputs {inputs}.");
+                    }
+                }
+                if (block.HasTerminator
+                    && callEffectsByMethod[i].ContainsKey(block.Terminator.Origin)
+                    && IrAstChildren.TerminatorNodes(block.Terminator).Any(node
+                        => node is ProcedureCallHelperNode { Summary: not null }
+                            or ProcedureCallReturnedElsewhereHelperNode { Summary: not null })) {
+                    CpuValues inputs = conventions.CallTargetsInputsOf(methodName, block.Terminator);
+                    if ((inputs & ~block.Terminator.Effects.Reads) != CpuValues.None) {
+                        throw new InvalidOperationException(
+                            $"Resolved call of {methodName} reads {block.Terminator.Effects.Reads}," +
                             $" below its targets' observed inputs {inputs}.");
                     }
                 }

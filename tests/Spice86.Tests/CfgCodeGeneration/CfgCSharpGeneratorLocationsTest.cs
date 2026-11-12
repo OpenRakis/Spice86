@@ -40,7 +40,14 @@ public class CfgCSharpGeneratorLocationsTest {
     };
 
     private static GeneratedCSharpProgram Generate(params (ushort Offset, byte[] Bytes)[] instructions) {
-        CfgCodePartition partition = PartitionOf(Linear(new TestInstructionHelper(), instructions));
+        // The stack value proofs behind pushed segment values need a known RAM SS; give the
+        // method one in code rather than relying on a loader entry fact it does not get here.
+        (ushort Offset, byte[] Bytes)[] rebased = [
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
+        ];
+        CfgCodePartition partition = PartitionOf(Linear(new TestInstructionHelper(), rebased));
         CfgPartitionedProgram program = new() {
             Partitions = [partition],
             Transfers = [],
@@ -88,17 +95,19 @@ public class CfgCSharpGeneratorLocationsTest {
         // Arrange: entry 0x170, a DOS image [0x160, 0x190), DS proven 0x180 = entry + 0x0010.
         TestInstructionHelper helper = new();
         CfgBlock block = Linear(helper,
-            (0x0000, [0xB8, 0x80, 0x01]),     // mov ax, 0x0180
-            (0x0003, [0x50]),               // push ax
-            (0x0004, [0x1F]),               // pop ds
-            (0x0005, [0xA1, 0x30, 0x00]),   // mov ax, [0x0030]
-            (0x0008, [0xC3]));              // ret
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000 - a known RAM SS for the pop proof
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            (0x0005, [0xB8, 0x80, 0x01]),   // mov ax, 0x0180
+            (0x0008, [0x50]),               // push ax
+            (0x0009, [0x1F]),               // pop ds
+            (0x000A, [0xA1, 0x30, 0x00]),   // mov ax, [0x0030]
+            (0x000D, [0xC3]));              // ret
         CfgPartitionedProgram partitioned = new() {
             Partitions = [PartitionOf(block)],
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200, null)])
             }
         };
 
@@ -130,7 +139,7 @@ public class CfgCSharpGeneratorLocationsTest {
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200, null)])
             }
         };
 

@@ -136,7 +136,7 @@ public class CfgCSharpGeneratorFilesTest {
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x100)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x100, null)])
             }
         };
 

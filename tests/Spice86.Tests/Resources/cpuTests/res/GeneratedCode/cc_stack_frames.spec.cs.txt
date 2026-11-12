@@ -185,25 +185,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: AX. Changes: AX, BP, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01D2_F01D2(ushort word1, ushort arg0) {
-        BP = word1;
+    public virtual Action unknown_F000_01D2_F01D2() {
         unknown_F000_01D2_F01D2Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01D2);
-        Stack.Push16(word1);
+        Stack.Push16(BP);
         BP = SP;
-        AX = (ushort)(arg0 + 5);
+        AX = (ushort)(frame.Arg0 + 5);
         AX = CallWithStackArguments(biosSegment, 0x01DF, () => unknown_F000_01E9_F01E9(AX), AX);
         SP += 2;
-        AX = Alu16.Add(AX, arg0);
+        AX = Alu16.Add(AX, SsUInt16[BP + 4]);
         SP = BP;
         BP = Stack.Pop16();
-        NearReturn();
-        return AX;
-    }
-
-    public virtual Action unknown_F000_01D2_F01D2_Asm() {
-        AX = unknown_F000_01D2_F01D2(BP, new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
-        return Returned;
+        return NearRet();
     }
 
     public readonly struct unknown_F000_01D2_F01D2Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
@@ -477,7 +470,8 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word004C = word1;
         SP += 2;
         AX = 7;
-        AX = CallWithStackArguments(biosSegment, 0x007D, () => unknown_F000_01D2_F01D2(BP, 7), 7);
+        Stack.Push16(7);
+        NearCall(biosSegment, 0x007D, unknown_F000_01D2_F01D2Entry);
         SP += 2;
         Segment2000Globals.Word004E = AX;
         AX = 0x2000;
@@ -652,7 +646,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_01A4_F01A4_AsmEntry;
     private readonly Func<int, Action> unknown_F000_01C1_F01C1_AsmEntry;
     private readonly Func<int, Action> unknown_F000_01C8_F01C8Entry;
-    private readonly Func<int, Action> unknown_F000_01D2_F01D2_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01D2_F01D2Entry;
     private readonly Func<int, Action> unknown_F000_01E9_F01E9_AsmEntry;
     private readonly Func<int, Action> unknown_F000_01F3_F01F3_AsmEntry;
     private readonly Func<int, Action> unknown_F000_01FA_F01FAEntry;
@@ -679,7 +673,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_01A4_F01A4_AsmEntry = _ => unknown_F000_01A4_F01A4_Asm();
         unknown_F000_01C1_F01C1_AsmEntry = _ => unknown_F000_01C1_F01C1_Asm();
         unknown_F000_01C8_F01C8Entry = _ => unknown_F000_01C8_F01C8();
-        unknown_F000_01D2_F01D2_AsmEntry = _ => unknown_F000_01D2_F01D2_Asm();
+        unknown_F000_01D2_F01D2Entry = _ => unknown_F000_01D2_F01D2();
         unknown_F000_01E9_F01E9_AsmEntry = _ => unknown_F000_01E9_F01E9_Asm();
         unknown_F000_01F3_F01F3_AsmEntry = _ => unknown_F000_01F3_F01F3_Asm();
         unknown_F000_01FA_F01FAEntry = _ => unknown_F000_01FA_F01FA();
@@ -699,7 +693,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01A4, unknown_F000_01A4_F01A4_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C1, unknown_F000_01C1_F01C1_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C8, unknown_F000_01C8_F01C8Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D2, unknown_F000_01D2_F01D2_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D2, unknown_F000_01D2_F01D2Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01E9, unknown_F000_01E9_F01E9_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F3, unknown_F000_01F3_F01F3_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01FA, unknown_F000_01FA_F01FAEntry, "unknown");

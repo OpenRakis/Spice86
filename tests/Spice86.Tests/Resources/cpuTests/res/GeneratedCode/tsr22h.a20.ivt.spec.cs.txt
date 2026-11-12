@@ -66,15 +66,15 @@ public partial class CfgGeneratedOverrides {
             index++;
             index2++;
         }
-        word1 = ImageMinus0003Globals.Word03D4;
+        word1 = DsGlobals.Word03D4;
         ES = word1;
         EsGlobals.Word000A = 0x016A;
         Stack.Push16(CS);
         word4 = Stack.Pop16();
         EsGlobals.Word000C = word4;
-        BX = ImageMinus0003Globals.Word03D4;
+        BX = DsGlobals.Word03D4;
         ServiceCall(cs1, 0x0159, Dos, () => Dos.SetCurrentPsp(BX));
-        word1 = ImageMinus0003Globals.Word03D4;
+        word1 = DsGlobals.Word03D4;
         DS = word1;
         ES = word1;
         SS = word1;
@@ -111,7 +111,7 @@ public partial class CfgGeneratedOverrides {
         BX = CS;
         AH = 0x50;
         ServiceCall(cs1, 0x0183, Dos, () => Dos.SetCurrentPsp(BX));
-        AX = ImageMinus0003Globals.Word03D4;
+        AX = DsGlobals.Word03D4;
         ES = AX;
         AH = 0x49;
         (AX, CarryFlag) = ServiceCall(cs1, 0x018C, Dos, () => Dos.FreeMemory(ES, AX), r => CarryOnInterruptStack(r.carryFlag));
@@ -151,6 +151,28 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 01AC:0106");
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x03D4, whatever DS holds at the access.
+    public ushort Word03D4 { get => _memory.UInt16[Segment, 0x03D4]; set => _memory.UInt16[Segment, 0x03D4] = value; }
 }
 
 // ==== file: EsGlobals.cs ====
@@ -254,6 +276,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
+    protected readonly DsGlobals DsGlobals;
     protected readonly EsGlobals EsGlobals;
     protected readonly CsGlobals CsGlobals;
     protected readonly ImageMinus0003Globals ImageMinus0003Globals;
@@ -262,6 +285,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs1 = (ushort)(programStartSegment - 0x0003);
         cs2 = 0x01AC;
         biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
         ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);

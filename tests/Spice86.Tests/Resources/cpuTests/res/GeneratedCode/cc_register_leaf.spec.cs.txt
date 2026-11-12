@@ -151,7 +151,7 @@ public partial class CfgGeneratedOverrides {
         SI = 0x1111;
         DI = 0x2222;
         NearCall(biosSegment, 0x0092, unknown_F000_00BE_F00BEEntry);
-        Segment2000Globals.Dword004C = 0x22221111;
+        Segment2000Globals.Dword004C = (uint)SI | (uint)DI << 16;
         BP = 0x3333;
         CX = 0x4444;
         NearCall(biosSegment, 0x00A3, unknown_F000_00C9_F00C9Entry);

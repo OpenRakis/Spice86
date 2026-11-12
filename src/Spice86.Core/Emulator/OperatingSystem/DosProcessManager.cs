@@ -516,7 +516,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosProgram, hostPath,
             block.DataBlockSegment,
-            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize));
+            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize,
+            (ushort)(exeFile.InitSS + loadImageSegment)));
 
         return exeResult;
     }
@@ -570,7 +571,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loadedImageRegistry.Register(new LoadedImage(imageKind, hostPath,
             comBlock.DataBlockSegment,
             MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize),
-            (uint)fileBytes.Length));
+            (uint)fileBytes.Length, comBlock.DataBlockSegment));
 
         return comResult;
     }
@@ -663,7 +664,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
 
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosOverlay, hostPath,
-            loadSegment, MemoryUtils.ToPhysicalAddress(loadSegment, 0), exeFile.ProgramSize));
+            loadSegment, MemoryUtils.ToPhysicalAddress(loadSegment, 0), exeFile.ProgramSize, null));
 
         // For overlays, DOS doesn't return anything in the parameter block
         // Just return success with AX=0 and DX=0

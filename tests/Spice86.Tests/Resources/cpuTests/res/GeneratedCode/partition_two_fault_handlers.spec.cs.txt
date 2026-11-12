@@ -28,7 +28,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: BX, SI, DS, DF. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
+    /// <summary>Inputs: BX, BP, SI, DS, DF. Outputs: BX, BP, SI, flags, DF. Changes: BX, BP, SI, flags, DF.</summary>
     public virtual Action unknown_F000_0022_F0022() {
         unknown_F000_0022_F0022Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0022);
@@ -47,7 +47,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: SI, DF. Outputs: BX, SI, flags, DF. Changes: BX, SI, flags, DF.</summary>
+    /// <summary>Inputs: BP, SI, DF. Outputs: BX, BP, SI, flags, DF. Changes: BX, BP, SI, flags, DF.</summary>
     public virtual Action unknown_F000_0035_F0035() {
         unknown_F000_0035_F0035Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0035);
@@ -66,7 +66,7 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: DX. Outputs: BX, SI, DS. Changes: BX, SI, DS.</summary>
+    /// <summary>Inputs: DX. Outputs: BX, BP, SI, DS. Changes: BX, BP, SI, DS.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;

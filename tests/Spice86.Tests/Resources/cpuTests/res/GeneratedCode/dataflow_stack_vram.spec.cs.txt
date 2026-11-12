@@ -1,0 +1,194 @@
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: SI. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte byte1;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        DS = 0x2000;
+        SP = 0x1000;
+        DirectionFlag = false;
+        SI = Alu16.Xor(SI, SI);
+        Vga.WriteSequencerRegister(2, 0x0F);
+        Vga.WriteSequencerRegister(4, 6);
+        Vga.WriteGraphicsControllerRegister(6, 0);
+        Vga.WriteGraphicsControllerRegister(8, 0xFF);
+        ES = 0xA000;
+        Vga.WriteSequencerRegister(2, 1);
+        SegmentA000Globals.Byte0000 = 0x55;
+        Vga.WriteSequencerRegister(2, 2);
+        SegmentA000Globals.Byte0000 = 0x66;
+        Vga.WriteSequencerRegister(2, 4);
+        SegmentA000Globals.Byte0000 = 0x77;
+        Vga.WriteSequencerRegister(2, 8);
+        SegmentA000Globals.Byte0000 = 0x99;
+        AX = 0x0F02;
+        Vga.WriteSequencerRegister(2, 0x0F);
+        AL = SegmentA000Globals.Byte0000;
+        DX = 0x03CE;
+        Vga.WriteGraphicsControllerRegister(5, 1);
+        SS = 0xA000;
+        SP = 0x0100;
+        CX = 0x5678;
+        Stack.Push16(0x1234);
+        BX = Stack.Pop16();
+        Stack.Push16(0x5678);
+        Segment2000Globals.Byte0040 = BL;
+        Vga.WriteGraphicsControllerRegister(5, 0);
+        AX = 4;
+        Vga.WriteGraphicsControllerRegister(4, 0);
+        byte1 = SegmentA000Globals.Byte00FE;
+        Segment2000Globals.Byte0041 = byte1;
+        AX = 0x0104;
+        Vga.WriteGraphicsControllerRegister(4, 1);
+        byte1 = SegmentA000Globals.Byte00FE;
+        Segment2000Globals.Byte0042 = byte1;
+        AX = 0x0204;
+        Vga.WriteGraphicsControllerRegister(4, 2);
+        byte1 = SegmentA000Globals.Byte00FE;
+        Segment2000Globals.Byte0043 = byte1;
+        AX = 0x0304;
+        Vga.WriteGraphicsControllerRegister(4, 3);
+        byte1 = SegmentA000Globals.Byte00FE;
+        Segment2000Globals.Byte0044 = byte1;
+        Vga.WriteGraphicsControllerRegister(6, 0x0E);
+        AX = 0x2000;
+        SS = 0x2000;
+        SP = 0x1000;
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public byte Byte0040 { get => _memory.UInt8[Segment, 0x0040]; set => _memory.UInt8[Segment, 0x0040] = value; }
+
+    public byte Byte0041 { get => _memory.UInt8[Segment, 0x0041]; set => _memory.UInt8[Segment, 0x0041] = value; }
+
+    public byte Byte0042 { get => _memory.UInt8[Segment, 0x0042]; set => _memory.UInt8[Segment, 0x0042] = value; }
+
+    public byte Byte0043 { get => _memory.UInt8[Segment, 0x0043]; set => _memory.UInt8[Segment, 0x0043] = value; }
+
+    public byte Byte0044 { get => _memory.UInt8[Segment, 0x0044]; set => _memory.UInt8[Segment, 0x0044] = value; }
+}
+
+// ==== file: SegmentA000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentA000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentA000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xA0000) {
+        _memory = memory;
+        Segment = 0xA000;
+    }
+
+    public byte Byte0000 { get => _memory.UInt8[Segment, 0x0000]; set => _memory.UInt8[Segment, 0x0000] = value; }
+
+    public byte Byte00FE { get => _memory.UInt8[Segment, 0x00FE]; set => _memory.UInt8[Segment, 0x00FE] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+    protected readonly SegmentA000Globals SegmentA000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+        SegmentA000Globals = new SegmentA000Globals(Memory, programStartSegment);
+
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
+        (vectorNumber, target.Segment, target.Offset) switch {
+            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
+        };
+
+    protected override bool ObservedCallLandingsOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

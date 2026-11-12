@@ -208,32 +208,51 @@ internal sealed class IrCallingConventions {
         return true;
     }
 
-    /// <summary>Why a call site did not get a summary: its target or continuation is not fully
-    /// observed (<see cref="CallSummarySkip.Unresolved"/>), it may return to a redirected address
-    /// (<see cref="CallSummarySkip.RedirectedReturn"/>), a method reachable from its target through
-    /// calls has an observed fault edge (<see cref="CallSummarySkip.FaultReachable"/>) or its
-    /// target never returns (<see cref="CallSummarySkip.NonReturning"/>).</summary>
-    internal enum CallSummarySkip { NotCallSite, Unresolved, RedirectedReturn, FaultReachable, NonReturning }
+    /// <summary>Why a call site did not get a summary: it is not a modelled call
+    /// (<see cref="CallSummarySkip.NotCallSite"/>), its target or continuation is not fully
+    /// observed (<see cref="CallSummarySkip.Unresolved"/>), a method reachable from its target
+    /// through calls has an observed fault edge (<see cref="CallSummarySkip.FaultReachable"/>) or
+    /// its target never returns (<see cref="CallSummarySkip.NonReturning"/>).</summary>
+    internal enum CallSummarySkip { NotCallSite, Unresolved, FaultReachable, NonReturning }
 
     /// <summary>The effect a resolved call statement gets in round two: the union of its target's
     /// inputs and changes (under this conventions instance) plus the stack reads and the hardware
     /// contract's <paramref name="contract"/> reads and writes - the callee's event checks can
     /// deliver hardware interrupts. Both tokens are read and written and interrupts delivered, as
     /// any call. <see langword="null"/> - the call keeps <see cref="IrEffects.Unknown"/> - when the
-    /// site is not a modelled call, the single target form is not observed, a redirected return is
-    /// possible, the target never returns, or a fault edge is reachable from it: a fault handler
-    /// observes every register at the fault point, which no summary covers.</summary>
+    /// site is not a modelled call, the single target form is not observed, no return at all was
+    /// observed (neither the normal continuation nor a redirected landing - the callee's effects
+    /// are the same either way), the target never returns, or a fault edge is reachable from it:
+    /// a fault handler observes every register at the fault point, which no summary
+    /// covers.</summary>
     internal (IrEffects? Effect, CallSummarySkip Skip) CallSummaryOf(
-        string methodName, IrStatement statement, CallEffect contract) {
-        if (!_methodByName.TryGetValue(methodName, out MethodData? data)
-            || !data.CallByStatement.TryGetValue(statement, out CallSite? call)) {
+        string methodName, IrStatement statement, CallEffect contract) =>
+        CallSummaryOf(CallSiteOf(methodName, statement), statement.Effects, contract);
+
+    internal (IrEffects? Effect, CallSummarySkip Skip) CallSummaryOf(
+        string methodName, IrTerminator terminator, CallEffect contract) =>
+        CallSummaryOf(CallSiteOf(methodName, terminator), terminator.Effects, contract);
+
+    private CallSite? CallSiteOf(string methodName, IrStatement statement) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+            && data.CallByStatement.TryGetValue(statement, out CallSite? call)
+                ? call
+                : null;
+
+    private CallSite? CallSiteOf(string methodName, IrTerminator terminator) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.CallByTerminator.TryGetValue(terminator, out CallSite? call)
+            ? call
+            : null;
+
+    private (IrEffects? Effect, CallSummarySkip Skip) CallSummaryOf(
+        CallSite? call, IrEffects siteEffects, CallEffect contract) {
+        if (call is null) {
             return (null, CallSummarySkip.NotCallSite);
         }
-        if (!call.Resolved || call.Targets.Count != 1 || !call.ObservedContinuation) {
+        if (!call.Resolved || call.Targets.Count != 1
+            || (!call.ObservedContinuation && !call.RedirectedReturn)) {
             return (null, CallSummarySkip.Unresolved);
-        }
-        if (call.RedirectedReturn) {
-            return (null, CallSummarySkip.RedirectedReturn);
         }
         CfgCodePartitionEntry target = call.Targets[0];
         if (!Returns(target)) {
@@ -247,7 +266,7 @@ internal sealed class IrCallingConventions {
             state.Inputs | CpuValues.Sp | CpuValues.Ss | CpuValues.Cs | contract.Reads
                 | PushedBytesReachable(target),
             CpuValues.None, state.Changes | CpuValues.Sp | contract.Writes,
-            IrTokens.All, IrTokens.All, statement.Effects.MayFault, true);
+            IrTokens.All, IrTokens.All, siteEffects.MayFault, true);
         return (effect, CallSummarySkip.NotCallSite);
     }
 
@@ -256,6 +275,13 @@ internal sealed class IrCallingConventions {
     internal CpuValues CallTargetsInputsOf(string methodName, IrStatement statement) =>
         _methodByName.TryGetValue(methodName, out MethodData? data)
         && data.CallByStatement.TryGetValue(statement, out CallSite? call)
+        && call.Resolved
+            ? TargetsInputs(call)
+            : Reportable;
+
+    internal CpuValues CallTargetsInputsOf(string methodName, IrTerminator terminator) =>
+        _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.CallByTerminator.TryGetValue(terminator, out CallSite? call)
         && call.Resolved
             ? TargetsInputs(call)
             : Reportable;
@@ -452,6 +478,7 @@ internal sealed class IrCallingConventions {
         public required List<CallSite> Calls { get; init; }
         public required List<ExitSite> Exits { get; init; }
         public required Dictionary<IrStatement, CallSite> CallByStatement { get; init; }
+        public required Dictionary<IrTerminator, CallSite> CallByTerminator { get; init; }
         public required Dictionary<IrExit, ExitSite> ExitByTerminator { get; init; }
         public required Dictionary<int, CfgCodePartitionEntry> EntryByLoadOffset { get; init; }
         /// <summary>The partition entries the method's terminators (exits and conditional
@@ -476,7 +503,8 @@ internal sealed class IrCallingConventions {
         foreach (PreparedMethod source in methods) {
             IrStackSlots slots = IrStackSlots.Empty;
             if (NeedsStackSlots(source.IrMethod)) {
-                slots = IrStackSlots.Compute(source.IrMethod, new IrMemoryAliasAnalysis(source.Ssa));
+                slots = IrStackSlots.Compute(source.IrMethod,
+                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts));
             }
             _methodByName[source.Method.MethodName] = new MethodData {
                 Source = source,
@@ -486,6 +514,7 @@ internal sealed class IrCallingConventions {
                 Calls = [],
                 Exits = [],
                 CallByStatement = [],
+                CallByTerminator = [],
                 ExitByTerminator = [],
                 EntryByLoadOffset = [],
                 TransferTargets = [],
@@ -558,6 +587,44 @@ internal sealed class IrCallingConventions {
                 }
             }
             if (block.HasTerminator) {
+                if (block.Terminator is not IrExit
+                    && block.Terminator.Origin is CfgInstruction { IsCall: true } callInstruction) {
+                    List<CfgCodePartitionEntry> targets = [];
+                    bool resolved = true;
+                    foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(callInstruction)) {
+                        if (_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
+                            targets.Add(mapped);
+                        } else {
+                            resolved = false;
+                        }
+                    }
+                    resolved &= targets.Count > 0;
+                    int[] defined = new int[ValueCount];
+                    Array.Fill(defined, -1);
+                    foreach ((IrSsaValue value, int version) in ssa.Definitions(block.Terminator)) {
+                        if ((int)value < ValueCount) {
+                            defined[(int)value] = version;
+                        }
+                    }
+                    CallContinuation continuation = _context.ResolveCallContinuation(callInstruction);
+                    CallSite site = new() {
+                        DefinedVersions = defined, Targets = targets, Resolved = resolved,
+                        ObservedContinuation = continuation.ObservedContinuationEdge is not null,
+                        RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0
+                    };
+                    method.Calls.Add(site);
+                    method.CallByTerminator[block.Terminator] = site;
+                    if (resolved) {
+                        foreach (CfgCodePartitionEntry target in targets) {
+                            if (!_callersOf.TryGetValue(target, out List<(MethodData, CallSite)>? callers)) {
+                                callers = [];
+                                _callersOf[target] = callers;
+                            }
+                            callers.Add((method, site));
+                            AddReader(target, method);
+                        }
+                    }
+                }
                 foreach (IVisitableAstNode root in IrAstChildren.TerminatorNodes(block.Terminator)) {
                     (bool found, bool resolved) = CollectTransferNodes(root, method.TransferTargets,
                         TransferTargetOf);
@@ -963,7 +1030,7 @@ internal sealed class IrCallingConventions {
             return Needed(method, value, phi.Result, visiting);
         }
         if (use.Terminator is { } terminator) {
-            return NeededTerminatorUse(method, value, mask, terminator, visiting);
+            return NeededTerminatorUse(method, value, mask, use, terminator, visiting);
         }
         if (use.Statement is not { } statement) {
             return mask;
@@ -998,9 +1065,25 @@ internal sealed class IrCallingConventions {
     }
 
     private CpuValues NeededTerminatorUse(MethodData method, IrSsaValue value, CpuValues mask,
-        IrTerminator terminator, HashSet<int> visiting) {
+        IrSsaUse use, IrTerminator terminator, HashSet<int> visiting) {
+        if (method.CallByTerminator.TryGetValue(terminator, out CallSite? call)) {
+            if (!call.Resolved) {
+                return mask;
+            }
+            CpuValues result = TargetsInputs(call) & mask;
+            int defined = call.DefinedVersions[(int)value];
+            if (defined >= 0) {
+                result |= Needed(method, value, defined, visiting) & ~TargetsChanges(call);
+            }
+            return result;
+        }
         if (terminator is not IrExit exit) {
-            return terminator.Effects.Reads & mask;
+            CpuValues result = terminator.Effects.Reads & mask;
+            if (use.ConditionalNewVersion >= 0) {
+                result |= Needed(method, value, use.ConditionalNewVersion, visiting)
+                    & ~terminator.Effects.MustWrite & mask;
+            }
+            return result;
         }
         switch (method.ExitByTerminator[exit].Kind) {
             case ExitKind.Return: {
@@ -1084,7 +1167,7 @@ internal sealed class IrCallingConventions {
         CpuValues result = CpuValues.None;
         foreach (IrStackSlotRead read in readers) {
             IrStatement pop = read.Statement;
-            if (!read.Complete || !IrPreservation.IsPopRestore(pop) || !Defines(method.Ssa, pop, value, out int popVersion)) {
+            if (!read.Complete || !read.ProvedRam || !IrPreservation.IsPopRestore(pop) || !Defines(method.Ssa, pop, value, out int popVersion)) {
                 return pushed;
             }
             foreach (IrStackSlotDefinition definition in read.Definitions) {

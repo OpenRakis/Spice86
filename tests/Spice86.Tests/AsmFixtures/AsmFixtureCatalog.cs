@@ -847,6 +847,14 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x4C,
                         (0x40, 4, 0x00005511), (0x44, 1, 0x55),
                         (0x48, 1, 0x55), (0x49, 1, 0x66), (0x4A, 1, 0x77), (0x4B, 1, 0x99)));
+            case "dataflow_stack_vram":
+                // With SS = A000h under write mode 1, push ax stores the latches and pop bx
+                // reads the planes: BX is 5555h, not the pushed 1234h. A pair printed as an
+                // assignment would deliver AX and drop the write's plane effect.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x45,
+                        (0x40, 1, 0x55),
+                        (0x41, 1, 0x55), (0x42, 1, 0x66), (0x43, 1, 0x77), (0x44, 1, 0x99)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());

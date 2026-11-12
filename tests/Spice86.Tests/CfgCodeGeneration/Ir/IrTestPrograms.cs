@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -30,6 +31,22 @@ internal static class IrTestPrograms {
             HardwareVectorNumbers = new HashSet<byte> { 0x08 }
         }
     };
+
+    /// <summary><see cref="StackProgramAt"/> for a program entered at F000:0000.</summary>
+    internal static GeneratorInputs StackProgram { get; } =
+        StackProgramAt(new SegmentedAddress(0xF000, 0x0000));
+
+    /// <summary><see cref="UnknownHardwareHandler"/> plus a DOS-loaded program image entered at
+    /// <paramref name="entryPoint"/>: the loader way then proves DS = ES = the PSP segment and
+    /// SS = 0x2000, an ordinary-RAM stack the stack-slot value proofs may rely on.</summary>
+    internal static GeneratorInputs StackProgramAt(SegmentedAddress entryPoint) {
+        LoadedImage image = new(LoadedImageKind.DosProgram, "test.com",
+            (ushort)(entryPoint.Segment - 0x10), entryPoint.Linear, 0x10000, 0x2000);
+        return UnknownHardwareHandler with {
+            ProgramEntryPoint = entryPoint,
+            ProgramImages = new ProgramImages(entryPoint.Segment, [image], [image])
+        };
+    }
 
     /// <summary>Parses <paramref name="bytes"/> into one instruction at <paramref name="offset"/>.</summary>
     public static CfgInstruction Parse(TestInstructionHelper helper, ushort offset, params byte[] bytes) =>
@@ -139,13 +156,46 @@ internal static class IrTestPrograms {
         return GenerateProgram([partition, .. extraPartitions], transfers(partition));
     }
 
+    /// <summary>Generates the program of a one-partition program with explicit entries and
+    /// inputs.</summary>
+    public static GeneratedCSharpProgram Generate(CfgCodePartitionEntry[] entries,
+        GeneratorInputs inputs, params CfgBlock[] blocks) {
+        CfgCodePartition partition = new() {
+            Id = 1,
+            Kind = CfgCodePartitionKind.Observed,
+            Name = "test",
+            Blocks = blocks,
+            Entries = entries
+        };
+        return GenerateProgram([partition], [], inputs);
+    }
+
+    /// <summary>Generates the program of a main partition followed by
+    /// <paramref name="extraPartitions"/>, over <paramref name="inputs"/>.</summary>
+    public static GeneratedCSharpProgram Generate(CfgCodePartitionEntry[] entries,
+        CfgCodePartition[] extraPartitions, GeneratorInputs inputs, params CfgBlock[] blocks) {
+        CfgCodePartition partition = new() {
+            Id = 1,
+            Kind = CfgCodePartitionKind.Observed,
+            Name = "test",
+            Blocks = blocks,
+            Entries = entries
+        };
+        return GenerateProgram([partition, .. extraPartitions], [], inputs);
+    }
+
     /// <summary>Generates an explicitly partitioned program.</summary>
     public static GeneratedCSharpProgram GenerateProgram(CfgCodePartition[] partitions,
-        CfgCodePartitionTransfer[] transfers) {
+        CfgCodePartitionTransfer[] transfers) =>
+        GenerateProgram(partitions, transfers, UnknownHardwareHandler);
+
+    /// <summary>Generates an explicitly partitioned program over <paramref name="inputs"/>.</summary>
+    public static GeneratedCSharpProgram GenerateProgram(CfgCodePartition[] partitions,
+        CfgCodePartitionTransfer[] transfers, GeneratorInputs inputs) {
         CfgPartitionedProgram program = new() {
             Partitions = partitions,
             Transfers = transfers,
-            Inputs = UnknownHardwareHandler
+            Inputs = inputs
         };
         return new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
     }

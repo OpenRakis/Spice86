@@ -75,7 +75,14 @@ public class DataCommentTest {
     private static GeneratedCSharpProgram Generate(ChangedMemorySnapshot changed, byte[] memory,
         IReadOnlyDictionary<int, InterruptServiceEntry>? dosContracts,
         params (ushort Offset, byte[] Bytes)[] instructions) {
-        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), instructions,
+        // The stack value proofs that feed the string hints need a known RAM SS; give the method
+        // one in code rather than relying on a loader entry fact the generator does not get here.
+        (ushort Offset, byte[] Bytes)[] rebased = [
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
+        ];
+        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), rebased,
             dosContracts is not null);
         CfgCodePartition partition = new() {
             Id = 1,
@@ -424,7 +431,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x000C, 0x21)");
+        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x0011, 0x21)");
         program.SourceText.Should().Contain("// DOS 09h print \"Hi$\"");
         program.SourceText.Should().NotContain("\"Hi\")");
         AssertCompiles(program);

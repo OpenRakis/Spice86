@@ -174,6 +174,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         PortReadCallNode => ReadWriteIo,
         DeviceOperationValueNode => ReadWriteIo,
         BitScanCallNode => IrEffects.None,
+        ProcedureCallReturnedElsewhereHelperNode call => call.Summary ?? IrEffects.Unknown,
         SignatureMatchesHelperNode => ReadMemory,
         FpuControlWordNode => ReadFpuControlWord,
         _ => IrEffects.Unknown

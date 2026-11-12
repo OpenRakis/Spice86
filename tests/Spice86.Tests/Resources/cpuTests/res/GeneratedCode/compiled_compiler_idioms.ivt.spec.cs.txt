@@ -4461,17 +4461,15 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_017D_1F1D_036ED() {
-        ushort index = 0;
         ushort word1 = 0;
         CheckExternalEvents(cs1, 0x1F1D);
         Stack.Push16(BX);
         Stack.Push16(DX);
-        index = AX;
-        word1 = UInt16[DS, index];
+        BX = AX;
+        word1 = UInt16[DS, BX];
         DX = (ushort)(word1 + 3);
         DL &= 0xFE;
         if (DX >= word1) {
-            BX = index;
             AX = word1;
             AX = NearCall(cs1, 0x1F37, () => unknown_017D_1EFB_036CB(DS));
             if (AX < DX) {
@@ -4489,7 +4487,7 @@ public partial class CfgGeneratedOverrides {
                     DX = word1;
                     DL &= 0xFE;
                 }
-                UInt16[DS, index] = DX;
+                UInt16[DS, BX] = DX;
                 Alu16.And(DX, DX);
                 if (DX != 0) {
                     AX = 1;

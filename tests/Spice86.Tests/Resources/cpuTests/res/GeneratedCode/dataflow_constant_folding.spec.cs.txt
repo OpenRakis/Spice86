@@ -41,7 +41,8 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = true;
-        word1 = FlagRegister16;
+        Stack.Push16(FlagRegister16);
+        word1 = Stack.Pop16();
         DsGlobals.Word00E0 = word1;
         AX = 1;
         CarryFlag = true;
@@ -50,12 +51,14 @@ public partial class CfgGeneratedOverrides {
         ZeroFlag = false;
         SignFlag = false;
         OverflowFlag = false;
-        DX = FlagRegister16;
+        Stack.Push16(FlagRegister16);
+        DX = Stack.Pop16();
         DsGlobals.Word00E2 = DX;
         DX = Alu16.Xor(DX, DX);
         CarryFlag = true;
         BX = Alu16.Shl(0x1234, 0);
-        word1 = FlagRegister16;
+        Stack.Push16(FlagRegister16);
+        word1 = Stack.Pop16();
         DsGlobals.Word00E4 = word1;
         BX = 0;
         CarryFlag = false;

@@ -53,7 +53,7 @@ public class BiosLoader : ExecutableFileLoader {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(CodeSegment, 0);
         _memory.LoadData(physicalStartAddress, bios);
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.BiosBinary, file,
-            CodeSegment, physicalStartAddress, (uint)bios.Length));
+            CodeSegment, physicalStartAddress, (uint)bios.Length, null));
         SetEntryPoint(CodeSegment, CodeOffset);
         return bios;
     }

@@ -24,4 +24,5 @@ internal sealed record PreparedMethod(
     GotoTargets Targets,
     MethodEmission Emission,
     Ir.Memory.FrameSlotPlan? FramePlan,
-    SaveRestorePairs.SavedPairPlan SavedPairs);
+    SaveRestorePairs.SavedPairPlan SavedPairs,
+    Ir.Memory.IrSegmentFacts EntryFacts);

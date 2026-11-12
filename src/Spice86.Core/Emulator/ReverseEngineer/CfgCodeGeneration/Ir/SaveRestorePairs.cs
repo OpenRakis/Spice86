@@ -53,12 +53,18 @@ internal static class SaveRestorePairs {
 
     /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
     /// slot analysis of its final IR.</summary>
-    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa) {
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa) =>
+        Plan(method, ssa, IrSegmentFacts.None);
+
+    /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
+    /// slot analysis of its final IR, resolving entry versions through the segment entry facts
+    /// the prepare round consumed.</summary>
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts) {
         if (!method.Blocks.SelectMany(block => block.Statements).Any(statement =>
                 statement.Node is StackCallNode { Operation: StackOperation.Push })) {
             return SavedPairPlan.Empty;
         }
-        IrMemoryAliasAnalysis alias = new(ssa);
+        IrMemoryAliasAnalysis alias = new(ssa, entryFacts);
         IrStackSlots slots = IrStackSlots.Compute(method, alias);
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> dominators = DominatorTreeBuilder.BuildFromEntries(graph);
@@ -193,7 +199,8 @@ internal static class SaveRestorePairs {
         IrStatement? pushStatement = null;
         ValueNode? pushed = null;
         foreach (IrStackSlotRead read in slots.ReadsOf(popStatement)) {
-            if (!read.Complete || read.Delta != popOffset.Delta || read.Definitions.Count != 1
+            if (!read.Complete || !read.ProvedRam || read.Delta != popOffset.Delta
+                || read.Definitions.Count != 1
                 || read.Definitions.Single().Statement is not { } definition
                 || definition.Node is not StackCallNode {
                     Operation: StackOperation.Push } candidate
