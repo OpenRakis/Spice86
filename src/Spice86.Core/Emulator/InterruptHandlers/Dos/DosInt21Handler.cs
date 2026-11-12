@@ -983,6 +983,49 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// INT 21h, AH=60h - Get true name.
+    /// <para>
+    /// Canonicalizes the ASCIIZ path at DS:SI into the fully qualified DOS path and writes it,
+    /// zero terminated, to ES:DI. The drive comes from the path or from the current drive; the
+    /// relative part is resolved against the current directory of that drive, with "." and ".."
+    /// components collapsed. An empty path fails with error 2 (file not found), a drive that is
+    /// not mounted with 15 (invalid drive), and the destination buffer is left unchanged on error.
+    /// </para>
+    /// <b>Returns:</b><br/>
+    /// CF=0 and the destination buffer holds the canonical path on success; <br/>
+    /// CF=1 and AX holds the error code on failure.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    [InterruptService(0x60, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Si | CpuValues.Es | CpuValues.Di | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
+    public void GetTrueNameFromVm(bool calledFromVm) {
+        (ushort ax, bool carryFlag) = GetTrueName(
+            _dosStringDecoder.GetDosString(State.DS, State.SI, '\0'), State.ES, State.DI);
+        State.AX = ax;
+        ApplyCarryFlag(calledFromVm, carryFlag);
+    }
+
+    /// <summary>
+    /// Canonicalizes <paramref name="dosPath"/> and writes the canonical ASCIIZ path to
+    /// <paramref name="es"/>:<paramref name="di"/>; AX is 0 on success and the DOS error code on error.
+    /// </summary>
+    public (ushort ax, bool carryFlag) GetTrueName(string dosPath, ushort es, ushort di) {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("GET TRUE NAME {Path}", dosPath);
+        }
+        DosFileOperationResult result = _dosFileManager.GetTrueName(dosPath, out string? fullDosPath);
+        if (result.IsError || fullDosPath is null) {
+            return FileResult(result, 0);
+        }
+        byte[] bytes = _dosStringDecoder.Encoding.GetBytes(fullDosPath);
+        uint address = MemoryUtils.ToPhysicalAddress(es, di);
+        for (int i = 0; i < bytes.Length; i++) {
+            Memory.UInt8[address + (uint)i] = bytes[i];
+        }
+        Memory.UInt8[address + (uint)bytes.Length] = 0;
+        return (0, false);
+    }
+
+    /// <summary>
     /// INT 21h, AH=0Ah - Buffered Input.
     /// <para>
     /// Reads characters from STDIN into a buffer at DS:DX until CR is received (or buffer is full).

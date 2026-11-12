@@ -120,6 +120,7 @@ internal static class Int21ScenarioCatalog {
                 ]
             }, NoDetailAssertions),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
+        GetTrueName(),
         WithHandleTestFiles("set_handle_count_relocates_jft.com"),
         ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
             new Int21RunSetup { ExeArgs = "h" }, NoDetailAssertions),
@@ -354,6 +355,18 @@ internal static class Int21ScenarioCatalog {
         return ProgramScenario("find_first_short_filename", "find_first_short_filename.com", new Int21RunSetup {
             CreateHostFiles = directory => WriteTestFiles(directory, files)
         }, NoDetailAssertions);
+    }
+
+    /// <summary>The program canonicalizes relative, drive-qualified, slash and dot-dot paths through
+    /// INT 21h AH=60h, then checks the empty path and the unmounted drive, so the details are one byte
+    /// per case: the eight expected canonicalizations first (0 for a match), then the error code of
+    /// the empty path (2, file not found) and of the unmounted drive (15, invalid drive).</summary>
+    private static AsmScenario GetTrueName() {
+        return ProgramScenario("get_true_name", "get_true_name.com", Int21RunSetup.None,
+            testHandler => testHandler.Details.Should().Equal(
+                new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 2, 15 },
+                "AH=60h canonicalizes each path in place, returns error 2 for the empty path " +
+                "and error 15 for the unmounted drive"));
     }
 
     private static AsmScenario ProgramScenario(string identity, string programFileName, Int21RunSetup setup,
