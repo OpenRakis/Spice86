@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0120;
         CX = 1;
         AH = 0x3F;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.ReadFile(0, 1, DS, 0x0120), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0, 1, DS, 0x0120));
         AX = 0xB800;
         ES = 0xB800;
         DI = 0;

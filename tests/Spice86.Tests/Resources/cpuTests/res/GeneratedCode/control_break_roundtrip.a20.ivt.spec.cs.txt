@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort previousBx = 0;
@@ -22,16 +22,16 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x33;
         DL = 1;
-        (AL, DX, previousBx) = ServiceCall(cs1, 0x0108, Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
+        (AL, DX, previousBx) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
         AH = 0x33;
-        (AL, DX, previousBx2) = ServiceCall(cs1, 0x010E, Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx));
+        (AL, DX, previousBx2) = ServiceCall(Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx));
         Alu8.Sub(DL, 1);
         if (DL == 1) {
             AH = 0x33;
             DL = 0;
-            (AL, DX, previousBx3) = ServiceCall(cs1, 0x011B, Dos, () => Dos.GetSetControlBreak(1, 0, DH, previousBx2));
+            (AL, DX, previousBx3) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 0, DH, previousBx2));
             AH = 0x33;
-            (AL, DX, previousBx2) = ServiceCall(cs1, 0x0121, Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx3));
+            (AL, DX, previousBx2) = ServiceCall(Dos, () => Dos.GetSetControlBreak(0, DL, DH, previousBx3));
             Alu8.Sub(DL, 0);
             if (DL != 0) {
                 goto L_012A;

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -23,7 +23,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
         word1 = 0x0258;
-        ServiceCall(cs1, 0x0107, Dos, () => Dos.SetDiskTransferAddress(DS, 0x0258));
+        ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x0258));
         SI = 0x0147;
         CX = 0;
         while (true) {
@@ -36,7 +36,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CX);
             Stack.Push16(SI);
             word1 = BX;
-            (AX, CarryFlag) = ServiceCall(cs1, 0x011E, Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, word1, '\0'), 0), r => CarryOnInterruptStack(r.carryFlag));
+            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, word1, '\0'), 0));
             SI = Stack.Pop16();
             CX = Stack.Pop16();
             if (CarryFlag) {

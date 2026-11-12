@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         BX = 0x1000;
-        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0107, Dos, () => Dos.ModifyMemory(ES, 0x1000), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, 0x1000));
         if (!CarryFlag) {
             ImageMinus0003Globals.Word019F = CS;
             ImageMinus0003Globals.Word01A3 = CS;
@@ -45,7 +45,7 @@ public partial class CfgGeneratedOverrides {
                 if (CarryFlag) {
                     goto L_016E;
                 }
-                AX = ServiceCall(cs1, 0x0142, Dos, () => Dos.ReadReturnCode());
+                AX = ServiceCall(Dos, () => Dos.ReadReturnCode());
                 DX = 0x0998;
                 Out8(0x0998, AL);
                 Alu8.Sub(AL, 0);
@@ -53,7 +53,7 @@ public partial class CfgGeneratedOverrides {
                     goto L_016E;
                 }
                 DX = 0x0183;
-                (AX, CarryFlag) = ServiceCall(cs1, 0x0152, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0183, '\0')), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0183, '\0')));
                 if (CarryFlag) {
                     goto L_016E;
                 }
@@ -66,7 +66,7 @@ public partial class CfgGeneratedOverrides {
                     goto L_016E;
                 }
                 BX = AX;
-                (AX, CarryFlag) = ServiceCall(cs1, 0x0165, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
                 if (CarryFlag) {
                     goto L_016E;
                 }
@@ -132,7 +132,7 @@ public partial class CfgGeneratedOverrides {
         L_0106:
             CheckExternalEvents(cs2, 0x0106);
             AX = 0x3D00;
-            (AX, CarryFlag) = ServiceCall(cs2, 0x010B, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')), r => CarryOnInterruptStack(r.carryFlag));
+            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')));
             if (CarryFlag) {
                 goto L_011C;
             }

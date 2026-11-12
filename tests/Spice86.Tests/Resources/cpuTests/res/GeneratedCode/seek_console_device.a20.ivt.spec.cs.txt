@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         BX = 1;
         CX = Alu16.Xor(CX, CX);
-        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 5), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 5));
         if (!CarryFlag) {
             Alu16.Sub(word2, 0);
             if (word2 == 0) {
@@ -31,7 +31,7 @@ public partial class CfgGeneratedOverrides {
                     CX = 0;
                     DX = word2;
                     DX = Alu16.Xor(DX, DX);
-                    (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0125, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 0));
                     if (!CarryFlag) {
                         Alu16.Sub(word2, 0);
                         if (word2 != 0) {
@@ -45,7 +45,7 @@ public partial class CfgGeneratedOverrides {
                         CX = 3;
                         word2 = 0x0181;
                         // DOS 40h write handle 1 "abc"
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x013E, Dos, () => Dos.WriteFile(1, 3, DS, 0x0181), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 3, DS, 0x0181));
                         if (CarryFlag) {
                             goto L_017A;
                         }
@@ -56,13 +56,12 @@ public partial class CfgGeneratedOverrides {
                         BX = 1;
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0151, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 1, 0, 0));
                         if (CarryFlag) {
                             goto L_017A;
                         }
@@ -76,13 +75,12 @@ public partial class CfgGeneratedOverrides {
                         }
                         BX = 1;
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x016A, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, 1, 0, 2), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, 1, 0, 2));
                         if (CarryFlag) {
                             goto L_017A;
                         }

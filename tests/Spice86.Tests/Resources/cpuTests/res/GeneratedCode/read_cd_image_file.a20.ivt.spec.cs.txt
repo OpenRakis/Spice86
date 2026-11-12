@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte flagOperand_011D = 0;
@@ -25,7 +25,7 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_014E = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x016A;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016A, '\0', "D:\\README.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016A, '\0', "D:\\README.TXT")));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0159, SpeculativeRun_0159);
             AL = 0xFF;
@@ -34,7 +34,7 @@ public partial class CfgGeneratedOverrides {
             BX = AX;
             CX = 8;
             DX = 0x0178;
-            (AX, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.ReadFile(BX, 8, DS, 0x0178), r => CarryOnInterruptStack(r.carryFlag));
+            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(BX, 8, DS, 0x0178));
             if (!CarryFlag) {
                 Alu16.Sub(AX, 8);
                 if (AX == 8) {
@@ -86,7 +86,7 @@ public partial class CfgGeneratedOverrides {
             AL = 0xFF;
         L_015F:
             Stack.Push16(AX);
-            (AX, CarryFlag) = ServiceCall(cs1, 0x0164, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
         }
         DX = 0x0999;

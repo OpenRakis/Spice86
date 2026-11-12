@@ -30,12 +30,12 @@ public partial class CfgGeneratedOverrides {
         BX = 1;
         CX = 4;
         // DOS 40h write handle 1 "\x01\x02\x03\xFF"
-        (word1, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.WriteFile(1, 4, DS, 0x017A), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 4, DS, 0x017A));
         Segment2000Globals.Word0042 = word1;
-        AX = Alu16.Adc(0, 0);
+        AX = (ushort)(CarryFlag ? 1 : 0);
         Segment2000Globals.Byte0044 = AL;
         AL = 0;
-        (word2, CarryFlag) = ServiceCall(cs1, 0x0139, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\0', "NOFILE.TXT")));
         Segment2000Globals.Word0045 = word2;
         AX = Alu16.Adc(0, 0);
         Segment2000Globals.Byte0047 = AL;

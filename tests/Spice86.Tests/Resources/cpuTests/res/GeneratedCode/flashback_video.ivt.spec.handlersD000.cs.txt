@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort index = 0;
         ushort index2 = 0;
@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         SS = 0x1000;
         SP = 0xFFFE;
         AX = 0x0013;
-        AL = ServiceCall(biosSegment, 0x400E, Video, () => Video.SetVideoMode(0x13));
+        AL = ServiceCall(Video, () => Video.SetVideoMode(0x13));
         InterruptFlag = false;
         Vga.WriteSequencerRegister(4, 6);
         Vga.WriteSequencerRegister(1, 1);

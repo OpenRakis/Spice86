@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Text;
 
@@ -75,6 +76,11 @@ internal sealed class GeneratedCSharpProgram {
     /// labels: one per CS global access per code segment that accesses it.
     /// </summary>
     public IReadOnlyList<DataSymbolLabel> DataSymbolLabels { get; init; } = [];
+
+    /// <summary>The addresses of the <c>int</c> instructions whose typed service call writes no
+    /// interrupt frame: the differential gate excludes exactly the six bytes such a frame would
+    /// have occupied below the recorded caller stack pointer.</summary>
+    public IReadOnlyList<SegmentedAddress> FramelessServiceCallSites { get; init; } = [];
 
 
 }

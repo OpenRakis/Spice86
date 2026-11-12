@@ -27,7 +27,7 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x0112, 0x21);
         AH = 5;
         CX = 0x7200;
-        (AL, CarryFlag) = ServiceCall(cs1, 0x0119, Keyboard, () => Keyboard.StoreKeystroke(0x7200), r => CarryOnInterruptStack(r.carryFlag));
+        (AL, CarryFlag) = ServiceCall(Keyboard, () => Keyboard.StoreKeystroke(0x7200));
         AH = 8;
         InterruptCall(cs1, 0x011D, 0x21);
         Out8(0x0998, AL);

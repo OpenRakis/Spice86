@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         ImageMinus0002Globals.Byte0231 = 1;
         AX = 0x4310;
-        (AL, BX, ES, CarryFlag) = ServiceCall(cs1, 0x010A, DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES), r => CarryOnInterruptStack(r.carryFlag));
+        (AL, BX, ES, CarryFlag) = ServiceCall(DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES));
         ImageMinus0002Globals.Word022B = BX;
         ImageMinus0002Globals.Word022D = ES;
         AH = 0x10;
@@ -37,10 +37,10 @@ public partial class CfgGeneratedOverrides {
                 Alu16.Sub(DX, 0x1FFF);
                 if (DX == 0x1FFF) {
                     DsGlobals.Byte0231 = 2;
-                    (AX, CarryFlag) = ServiceCall(cs1, 0x013B, Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX), r => CarryOnInterruptStack(r.carryFlag));
+                    (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
                     Alu16.Sub(AX, 0);
                     if (AX == 0) {
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x0147, Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
                         if (CarryFlag) {
                             goto L_0223;
                         }
@@ -87,12 +87,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         DsGlobals.Byte0231 = 4;
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x019A, Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
                         Alu16.Sub(AX, 0);
                         if (AX != 0) {
                             goto L_0223;
                         }
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x01A6, Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
                         if (CarryFlag) {
                             goto L_0223;
                         }
@@ -113,12 +113,12 @@ public partial class CfgGeneratedOverrides {
                         if (AX != 1) {
                             goto L_0223;
                         }
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x01C5, Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
                         Alu16.Sub(AX, 0);
                         if (AX != 0) {
                             goto L_0223;
                         }
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x01CF, Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
                         if (CarryFlag) {
                             goto L_0223;
                         }
@@ -161,12 +161,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         DsGlobals.Byte0231 = 7;
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x020F, Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5800, BX));
                         Alu16.Sub(AX, 0);
                         if (AX != 0) {
                             goto L_0223;
                         }
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x0219, Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, BX));
                         if (CarryFlag) {
                             goto L_0223;
                         }

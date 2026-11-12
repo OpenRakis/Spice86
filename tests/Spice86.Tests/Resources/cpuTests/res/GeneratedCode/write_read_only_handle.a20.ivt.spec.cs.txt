@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -22,22 +22,22 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0156 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x017E;
-        (word1, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
         if (!CarryFlag) {
             ImageMinus0003Globals.Word0177 = word1;
             fileHandle = ImageMinus0003Globals.Word0177;
             CX = 1;
             DX = 0x0179;
             // DOS 40h write "x"
-            (word2, CarryFlag) = ServiceCall(cs1, 0x011B, Dos, () => Dos.WriteFile(fileHandle, 1, DS, 0x0179), r => CarryOnInterruptStack(r.carryFlag));
+            (word2, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 1, DS, 0x0179));
             if (CarryFlag) {
                 Alu16.Sub(word2, 5);
                 if (word2 == 5) {
                     BX = ImageMinus0003Globals.Word0177;
-                    (word1, CarryFlag) = ServiceCall(cs1, 0x012A, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
                     if (!CarryFlag) {
                         DX = 0x017E;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0134, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
                         if (CarryFlag) {
                             goto L_0170;
                         }
@@ -45,7 +45,7 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word0177;
                         CX = 4;
                         DX = 0x017A;
-                        (word2, CarryFlag) = ServiceCall(cs1, 0x0147, Dos, () => Dos.ReadFile(fileHandle, 4, DS, 0x017A), r => CarryOnInterruptStack(r.carryFlag));
+                        (word2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(fileHandle, 4, DS, 0x017A));
                         if (CarryFlag) {
                             goto L_0162;
                         }
@@ -77,7 +77,7 @@ public partial class CfgGeneratedOverrides {
         L_0164:
             Stack.Push16(AX);
             BX = ImageMinus0003Globals.Word0177;
-            (AX, CarryFlag) = ServiceCall(cs1, 0x016D, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
             goto L_0172;
         }

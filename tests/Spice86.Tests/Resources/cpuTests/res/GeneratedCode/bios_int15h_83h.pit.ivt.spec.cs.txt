@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort callbackSegment = 0;
@@ -26,7 +26,7 @@ public partial class CfgGeneratedOverrides {
         BX = 0;
         Stack.Push16(CS);
         callbackSegment = Stack.Pop16();
-        (AH, CarryFlag) = ServiceCall(cs1, 0x0117, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
         if (!CarryFlag) {
             AL = 2;
             Out8(0x0998, 2);
@@ -36,7 +36,7 @@ public partial class CfgGeneratedOverrides {
             BX = 0;
             Stack.Push16(CS);
             callbackSegment = Stack.Pop16();
-            (AH, CarryFlag) = ServiceCall(cs1, 0x0130, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+            (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
             if (CarryFlag) {
                 Alu8.Sub(AH, 0x80);
                 if (AH == 0x80) {
@@ -44,7 +44,7 @@ public partial class CfgGeneratedOverrides {
                     AL = 3;
                     Out8(0x0998, 3);
                     AX = 0x8301;
-                    (AH, CarryFlag) = ServiceCall(cs1, 0x0143, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                    (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
                     if (!CarryFlag) {
                         AL = 4;
                         Out8(0x0998, 4);
@@ -54,7 +54,7 @@ public partial class CfgGeneratedOverrides {
                         BX = 0;
                         Stack.Push16(CS);
                         callbackSegment = Stack.Pop16();
-                        (AH, CarryFlag) = ServiceCall(cs1, 0x015C, SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83));
                         if (CarryFlag) {
                             goto L_0173;
                         }
@@ -62,7 +62,7 @@ public partial class CfgGeneratedOverrides {
                         AL = 5;
                         Out8(0x0998, 5);
                         AX = 0x8301;
-                        (AH, CarryFlag) = ServiceCall(cs1, 0x016A, SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83), r => CarryOnInterruptStack(r.carryFlag));
+                        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
                         if (!CarryFlag) {
                             DX = 0x0999;
                             AL = 0;

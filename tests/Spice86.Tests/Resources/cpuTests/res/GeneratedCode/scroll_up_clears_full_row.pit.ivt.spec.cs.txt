@@ -12,41 +12,41 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         AX = 3;
-        AL = ServiceCall(cs1, 0x0105, Video, () => Video.SetVideoMode(3));
+        AL = ServiceCall(Video, () => Video.SetVideoMode(3));
         AH = 2;
         BH = 0;
         DX = 0;
-        ServiceCall(cs1, 0x010F, Video, () => Video.SetCursorPosition(0, BX));
+        ServiceCall(Video, () => Video.SetCursorPosition(0, BX));
         AX = 0x0941;
         BX = 0x001F;
         CX = 0x0050;
-        ServiceCall(cs1, 0x011C, Video, () => Video.WriteCharacterAndAttributeAtCursor(0x41, 0x0050, 0x001F));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0x41, 0x0050, 0x001F));
         AH = 2;
         BH = 0;
         DX = 0x0100;
-        ServiceCall(cs1, 0x0126, Video, () => Video.SetCursorPosition(0x0100, 0x001F));
+        ServiceCall(Video, () => Video.SetCursorPosition(0x0100, 0x001F));
         AX = 0x0942;
         BX = 0x001F;
         CX = 0x0050;
-        ServiceCall(cs1, 0x0133, Video, () => Video.WriteCharacterAndAttributeAtCursor(0x42, 0x0050, 0x001F));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0x42, 0x0050, 0x001F));
         AH = 2;
         BH = 0;
         DX = 0x0200;
-        ServiceCall(cs1, 0x013D, Video, () => Video.SetCursorPosition(0x0200, 0x001F));
+        ServiceCall(Video, () => Video.SetCursorPosition(0x0200, 0x001F));
         AX = 0x0943;
         BX = 0x001F;
         CX = 0x0050;
-        ServiceCall(cs1, 0x014A, Video, () => Video.WriteCharacterAndAttributeAtCursor(0x43, 0x0050, 0x001F));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0x43, 0x0050, 0x001F));
         AX = 0x0601;
         BH = 7;
         CX = 0;
         DX = 0x024F;
-        ServiceCall(cs1, 0x015A, Video, () => Video.ScrollPageUp(1, 0, 0x024F, 0x071F));
+        ServiceCall(Video, () => Video.ScrollPageUp(1, 0, 0x024F, 0x071F));
         AX = 0x4C00;
         InterruptCall(cs1, 0x015F, 0x21);
         throw FailAsUntested("Untested return from call at 016E:015D");

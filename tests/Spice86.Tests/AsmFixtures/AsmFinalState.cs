@@ -3,6 +3,7 @@ namespace Spice86.Tests.AsmFixtures;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>Registers and RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
 /// <param name="Registers">Registers and their values when the run ended.</param>
@@ -14,6 +15,10 @@ internal sealed record AsmFinalState(IReadOnlyList<(string Name, uint Value)> Re
     IReadOnlyList<(string Name, byte[] Bytes)> ExtendedRegions) {
     /// <summary>Number of captured RAM bytes: the first megabyte.</summary>
     public const uint ComparedRamLength = 0x100000;
+
+    /// <summary>The <c>int</c> instruction address and pre-push caller SS:SP of every software
+    /// interrupt the run executed, recorded by <see cref="SoftwareInterruptRecorder"/>.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> SoftwareInterrupts { get; init; } = [];
 
     /// <summary>Captures the registers and the RAM of a finished run.</summary>
     /// <param name="run">The finished run.</param>
@@ -59,6 +64,9 @@ internal sealed record AsmFinalState(IReadOnlyList<(string Name, uint Value)> Re
                 }
             }
         }
-        return new AsmFinalState(registers, ram, regions);
+        return new AsmFinalState(registers, ram, regions) {
+            SoftwareInterrupts = run.Result.Observations
+                .Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation).Interrupts
+        };
     }
 }

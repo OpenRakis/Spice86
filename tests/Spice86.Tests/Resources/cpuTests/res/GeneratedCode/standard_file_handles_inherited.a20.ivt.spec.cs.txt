@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
+        BX = Dos.ReadPspAddress();
         ES = BX;
         byte1 = EsGlobals.Byte0018;
         DX = 0x0998;

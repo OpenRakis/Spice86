@@ -347,7 +347,11 @@ internal sealed class CfgCSharpGenerator {
             WebCensus = webCensus,
             ConstantMemoryAccesses = constantMemoryAccesses,
             DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
-            AddressMap = addressMap
+            AddressMap = addressMap,
+            FramelessServiceCallSites = [.. prepared
+                .SelectMany(method => method.IrMethod.Blocks.SelectMany(block => block.Statements))
+                .Where(statement => statement.Node is InterruptServiceCallNode { WritesFrame: false })
+                .Select(statement => statement.Origin.Address)]
         };
     }
 

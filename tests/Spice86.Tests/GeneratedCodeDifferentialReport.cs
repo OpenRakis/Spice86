@@ -3,6 +3,7 @@ namespace Spice86.Tests;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.AsmFixtures;
 
 /// <summary>
@@ -72,16 +73,58 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
     public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
-        AsmFinalState generated) {
+        AsmFinalState generated) =>
+        Check(goldenKey, policy, emulated, generated, new HashSet<SegmentedAddress>());
+
+    /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
+    /// to the report and fails when their compared final states differ, excluding from the RAM
+    /// comparison only the six bytes below the recorded caller stack pointer of every software
+    /// interrupt whose address is a generated frameless service call site: those are exactly the
+    /// bytes the typed call's omitted interrupt frame would have occupied. Registers, extended
+    /// regions and every other RAM byte still decide.</summary>
+    /// <param name="goldenKey">Key of the fixture that produced both states.</param>
+    /// <param name="policy">The generation policy the comparison ran under.</param>
+    /// <param name="emulated">Final state of the interpreted run.</param>
+    /// <param name="generated">Final state of the generated run.</param>
+    /// <param name="framelessServiceCallSites">The generated program's
+    /// <c>FramelessServiceCallSites</c>.</param>
+    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
+        AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites) {
+        List<(int Start, int Length)> excluded = [];
+        foreach ((SegmentedAddress address, SegmentedAddress stackPointer) in emulated.SoftwareInterrupts) {
+            if (!framelessServiceCallSites.Contains(address) || stackPointer.Linear < 6
+                || stackPointer.Linear > emulated.Ram.Length) {
+                continue;
+            }
+            (int Start, int Length) range = ((int)stackPointer.Linear - 6, 6);
+            if (!excluded.Contains(range)) {
+                excluded.Add(range);
+            }
+        }
+        byte[] generatedRam = generated.Ram;
+        if (excluded.Count > 0) {
+            generatedRam = (byte[])generated.Ram.Clone();
+            foreach ((int start, int length) in excluded) {
+                Array.Copy(emulated.Ram, start, generatedRam, start, length);
+            }
+        }
+        string excludedText = excluded.Count == 0
+            ? string.Empty
+            : $" | excluded frame bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
         string line;
         if (policy.TerminalStateUnobserved) {
-            string ram = DescribeRam(emulated.Ram, generated.Ram);
+            string ram = DescribeRam(emulated.Ram, generatedRam);
             string extended = DescribeExtended(emulated, generated);
             line = ram == "none" && extended == "none"
-                ? $"{goldenKey} | {policy.Name} | registers: unobserved | identical"
-                : $"{goldenKey} | {policy.Name} | registers: unobserved | ram: {ram} | extended: {extended}";
+                ? $"{goldenKey} | {policy.Name} | registers: unobserved{excludedText} | identical"
+                : $"{goldenKey} | {policy.Name} | registers: unobserved{excludedText} | ram: {ram} | extended: {extended}";
         } else {
-            line = Describe(goldenKey, policy.Name, emulated, generated);
+            string registers = DescribeRegisters(emulated, generated);
+            string ram = DescribeRam(emulated.Ram, generatedRam);
+            string extended = DescribeExtended(emulated, generated);
+            line = registers == "none" && ram == "none" && extended == "none"
+                ? $"{goldenKey} | {policy.Name}{excludedText} | identical"
+                : $"{goldenKey} | {policy.Name}{excludedText} | registers: {registers} | ram: {ram} | extended: {extended}";
         }
         AppendLine(line);
         line.Should().EndWith("| identical", "the generated run must end in the interpreted run's " +

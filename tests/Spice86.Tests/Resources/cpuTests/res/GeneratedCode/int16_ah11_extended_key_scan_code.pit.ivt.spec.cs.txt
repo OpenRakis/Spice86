@@ -19,7 +19,7 @@ public partial class CfgGeneratedOverrides {
         ushort word1;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x11;
-        (previousAx, ZeroFlag) = ServiceCall(cs1, 0x0104, Keyboard, () => Keyboard.ReadKeystrokeStatus(AX, ZeroFlag), r => ZeroOnInterruptStack(r.zeroFlag));
+        (previousAx, ZeroFlag) = ServiceCall(Keyboard, () => Keyboard.ReadKeystrokeStatus(AX, ZeroFlag));
         word1 = (ushort)((byte)(previousAx >> 8) | 0x0700);
         BX = 0xB800;
         ES = 0xB800;

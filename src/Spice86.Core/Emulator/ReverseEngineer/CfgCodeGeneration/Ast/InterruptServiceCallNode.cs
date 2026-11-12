@@ -55,6 +55,13 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
     /// service entry, so a typed call never consults the live selector register.</summary>
     public bool RunsEntryHook { get; init; } = true;
 
+    /// <summary>Whether the typed call pushes and pops the interrupt frame like a real
+    /// <c>int</c>: it does only when the program set the current PSP itself through DOS
+    /// AH=50h/55h, so a terminate can resume the parent through the frame the call left.
+    /// Otherwise the call writes no frame, only runs the entry hook under a lowered SP when
+    /// <see cref="RunsEntryHook"/>.</summary>
+    public bool WritesFrame { get; init; } = true;
+
     /// <summary>The constant string the call reads at <c>DS:DX</c>, printed as the checked
     /// expected value of the string argument; <see langword="null"/> otherwise.</summary>
     public string? StringLiteral { get; init; }
@@ -77,6 +84,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
         new InterruptServiceCallNode(Vector, Selector, Service,
             PropertyPath ?? string.Empty, arguments) {
             RunsEntryHook = RunsEntryHook,
+            WritesFrame = WritesFrame,
             StringLiteral = StringLiteral,
             Results = Results,
             ReturnSegment = ReturnSegment,
@@ -90,6 +98,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
         new InterruptServiceCallNode(Vector, Selector, Service,
             PropertyPath ?? string.Empty, arguments) {
             RunsEntryHook = RunsEntryHook,
+            WritesFrame = WritesFrame,
             StringLiteral = StringLiteral,
             Results = Results,
             ReturnSegment = returnSegment,

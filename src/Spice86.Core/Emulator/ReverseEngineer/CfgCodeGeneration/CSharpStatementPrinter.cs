@@ -221,33 +221,54 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     }
 
     /// <summary>A typed service call and the assignment of its return value to the contract's
-    /// output lvalues: <c>ServiceCall(cs1, 0x0108, Dos, () => Dos.ReadDosVersion())</c> for a void
-    /// contract, or <c>(AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos,
-    /// () => Dos.OpenFile(0, ...), r => CarryOnInterruptStack(r.carryFlag))</c>. The helper pushes
+    /// output lvalues. When <see cref="InterruptServiceCallNode.WritesFrame"/> the call keeps the
+    /// <c>int</c> frame form: <c>ServiceCall(cs1, 0x0108, Dos, () => Dos.ReadDosVersion())</c> for a
+    /// void contract, or <c>(AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos,
+    /// () => Dos.OpenFile(0, ...), r => CarryOnInterruptStack(r.carryFlag))</c>; the helper pushes
     /// the interrupt frame, runs the handler's entry bookkeeping when
     /// <see cref="InterruptServiceCallNode.RunsEntryHook"/> (the handler argument is printed only
-    /// then), invokes the service and pops the frame back, so no separate
-    /// <c>RecordCallerStack</c> line is printed. Register-local
+    /// then), invokes the service and pops the frame back. A frameless call with entry
+    /// bookkeeping prints <c>ServiceCall(Dos, () => Dos.ReadDosVersion())</c> with plain flag
+    /// outputs, and a call with no bookkeeping prints the bare service call
+    /// <c>AX = Equipment.GetEquipmentList();</c>. Register-local
     /// promotion can turn an output target into a local (<c>ax = call</c>), which the existing
     /// writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
-        string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
-            $"{expressions.Print(call.ReturnOffset).Text}";
         string invocation = expressions.Print(call).Text;
-        string handlerArgument = call.RunsEntryHook ? $"{call.PropertyPath}, " : string.Empty;
-        string helper = $"{HelperCallNames.ServiceCallMethodName}({returnAddress}, " +
-            $"{handlerArgument}() => {invocation}";
+        if (!call.WritesFrame && !call.RunsEntryHook) {
+            if (call.Results.Count == 0) {
+                writer.Line(invocation + ";");
+                return;
+            }
+            writer.Line($"{ResultTargets(call)} = {invocation};");
+            return;
+        }
+        string helper;
+        if (call.WritesFrame) {
+            string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
+                $"{expressions.Print(call.ReturnOffset).Text}";
+            string handlerArgument = call.RunsEntryHook ? $"{call.PropertyPath}, " : string.Empty;
+            helper = $"{HelperCallNames.ServiceCallMethodName}({returnAddress}, " +
+                $"{handlerArgument}() => {invocation}";
+        } else {
+            helper = $"{HelperCallNames.ServiceCallMethodName}({call.PropertyPath}, " +
+                $"() => {invocation}";
+        }
         if (call.Results.Count == 0) {
             writer.Line(helper + ");");
             return;
         }
-        string targets = string.Join(", ",
-            call.Results.Select(result => expressions.Print(result).Text));
-        string left = call.Results.Count == 1 ? targets : $"({targets})";
-        string stackedFlags = expressions.ServiceCallStackedFlags(call) is { } writer_
+        string stackedFlags = call.WritesFrame
+            && expressions.ServiceCallStackedFlags(call) is { } writer_
             ? $", {writer_}"
             : string.Empty;
-        writer.Line($"{left} = {helper}{stackedFlags});");
+        writer.Line($"{ResultTargets(call)} = {helper}{stackedFlags});");
+    }
+
+    private string ResultTargets(InterruptServiceCallNode call) {
+        string targets = string.Join(", ",
+            call.Results.Select(result => expressions.Print(result).Text));
+        return call.Results.Count == 1 ? targets : $"({targets})";
     }
 
     private void PushIfElse(Stack<object> pending, IfElseNode node) {

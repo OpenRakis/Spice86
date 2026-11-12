@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x3301;
         DL = 1;
-        (AL, DX, BX) = ServiceCall(cs1, 0x0108, Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
+        (AL, DX, BX) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
         AL = 0;
         DX = 0x0999;
         Out8(0x0999, 0);
@@ -214,7 +214,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         Stack.Push16(AX);
         Stack.Push16(DX);
-        ServiceCall(biosSegment, 0x000F, UserTimer, () => UserTimer.Tick());
+        ServiceCall(UserTimer, () => UserTimer.Tick());
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);
         DX = Stack.Pop16();

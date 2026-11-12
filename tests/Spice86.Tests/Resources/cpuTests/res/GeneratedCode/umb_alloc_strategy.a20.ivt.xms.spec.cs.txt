@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort blockSegment = 0;
@@ -22,16 +22,16 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         blockSegment = Stack.Pop16();
-        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x010A, Dos, () => Dos.ModifyMemory(blockSegment, 0x1000), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(blockSegment, 0x1000));
         if (!CarryFlag) {
             word2 = 0x0040;
-            (word1, CarryFlag) = ServiceCall(cs1, 0x0116, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040), r => CarryOnInterruptStack(r.carryFlag));
+            (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040));
             if (!CarryFlag) {
-                (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0122, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
+                (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
                 if (CarryFlag) {
                     Alu16.Sub(word2, 0x1FFF);
                     if (word2 == 0x1FFF) {
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0134, Dos, () => Dos.AllocateMemory(0x1FFF), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x1FFF));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
@@ -41,11 +41,11 @@ public partial class CfgGeneratedOverrides {
                         }
                         ImageMinus0003Globals.Word01B1 = word1;
                         word2 = 0x0080;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0146, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0150, Dos, () => Dos.AllocateMemory(0x2000), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
@@ -55,7 +55,7 @@ public partial class CfgGeneratedOverrides {
                         }
                         ImageMinus0003Globals.Word01B3 = word1;
                         word2 = 0x00C3;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0162, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3));
                         if (!CarryFlag) {
                             goto L_01AA;
                         }
@@ -64,11 +64,11 @@ public partial class CfgGeneratedOverrides {
                             goto L_01AA;
                         }
                         word2 = 0x00C0;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0171, Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x017B, Dos, () => Dos.AllocateMemory(0x0100), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0100));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
@@ -78,17 +78,17 @@ public partial class CfgGeneratedOverrides {
                         }
                         ImageMinus0003Globals.Word01B5 = word1;
                         blockSegment = ImageMinus0003Globals.Word01B5;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x018E, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
                         blockSegment = ImageMinus0003Globals.Word01B3;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0199, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
                         if (CarryFlag) {
                             goto L_01AA;
                         }
                         blockSegment = ImageMinus0003Globals.Word01B1;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x01A4, Dos, () => Dos.FreeMemory(blockSegment, 0x4900), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
                         if (CarryFlag) {
                             goto L_01AA;
                         }

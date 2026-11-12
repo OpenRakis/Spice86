@@ -170,6 +170,8 @@ internal static class AsmFixtureRunner {
             // Captured here, after the machine is fully built and its program is loaded but before the
             // program executes anything, so the emulator code it records cannot be the program's own.
             scope.Register(AsmRunScope.EmulatorCodeInventoryObservation, EmulatorCodeInventory.Capture(run.Machine));
+            using SoftwareInterruptRecorder softwareInterrupts = new(run.Machine);
+            scope.Register(AsmRunScope.SoftwareInterruptsObservation, softwareInterrupts);
             beforeProgram(run);
             run.DependencyInjection.ProgramExecutor.Run();
             scope.CollectObservations(run.Machine);

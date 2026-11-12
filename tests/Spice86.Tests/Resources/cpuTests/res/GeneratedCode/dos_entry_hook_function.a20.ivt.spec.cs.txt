@@ -33,9 +33,9 @@ public partial class CfgGeneratedOverrides {
         AH = 0x62;
         InterruptCall(cs1, 0x0110, 0x2F);
         Stack.Push16(BP);
-        (AX, CX, BX) = ServiceCall(cs1, 0x0115, Dos, () => Dos.ReadDosVersion());
+        (AX, CX, BX) = ServiceCall(Dos, () => Dos.ReadDosVersion());
         BP = Stack.Pop16();
-        word1 = ServiceCall(cs1, 0x011A, () => Dos.ReadPspAddress());
+        word1 = Dos.ReadPspAddress();
         ES = word1;
         DS = 0x3000;
         word2 = EsGlobals.Word002E;

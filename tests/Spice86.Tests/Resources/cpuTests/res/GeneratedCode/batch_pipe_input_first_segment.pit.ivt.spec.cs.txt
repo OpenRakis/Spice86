@@ -19,7 +19,7 @@ public partial class CfgGeneratedOverrides {
         DX = UInt16[0x000017D4];
         CX = 1;
         AH = 0x3F;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.ReadFile(0, 1, DS, DX), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0, 1, DS, DX));
         if (SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_123)) {
             AX = 0xB800;
             ES = 0xB800;
@@ -39,7 +39,7 @@ public partial class CfgGeneratedOverrides {
         DX = 0x011F;
         CX = 1;
         AH = 0x40;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x011A, Dos, () => Dos.WriteFile(1, 1, DS, 0x011F), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 1, DS, 0x011F));
         AX = 0x4C00;
         InterruptCall(cs1, 0x011F, 0x21, [new(new(cs1, 0x0100), unknown_016D_0100_017D0Entry)]);
         throw FailAsUntested("Untested return from call at 016D:011D");

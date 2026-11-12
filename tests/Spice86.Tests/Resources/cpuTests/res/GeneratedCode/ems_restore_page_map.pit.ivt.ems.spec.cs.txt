@@ -12,18 +12,18 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         byte byte1 = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0;
-        byte1 = ServiceCall(cs1, 0x0107, Ems, () => Ems.SavePageMap(0));
+        byte1 = ServiceCall(Ems, () => Ems.SavePageMap(0));
         Alu8.Sub(byte1, 0);
         if (byte1 == 0) {
             DX = 0;
-            byte1 = ServiceCall(cs1, 0x0113, Ems, () => Ems.RestorePageMap(0));
+            byte1 = ServiceCall(Ems, () => Ems.RestorePageMap(0));
             Alu8.Sub(byte1, 0);
             if (byte1 != 0) {
                 goto L_011C;

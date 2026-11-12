@@ -165,7 +165,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         Stack.Push16(AX);
         Stack.Push16(DX);
-        ServiceCall(biosSegment, 0x000F, UserTimer, () => UserTimer.Tick());
+        ServiceCall(UserTimer, () => UserTimer.Tick());
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);
         DX = Stack.Pop16();

@@ -83,12 +83,12 @@ public partial class CfgGeneratedOverrides {
             }
             AH = 0x0E;
             BX = 7;
-            ServiceCall(cs1, 0x0180, Video, () => Video.WriteTextInTeletypeMode(AL, 7));
+            ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         }
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, EDX, EBX, DF. Outputs: ECX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: AX, CX, EDX, EBX. Outputs: ECX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0183_01853() {
         CheckExternalEvents(cs1, 0x0183);
@@ -109,7 +109,7 @@ public partial class CfgGeneratedOverrides {
             AL = Alu8.Add(AL, 0x30);
             AH = 0x0E;
             BX = 7;
-            ServiceCall(cs1, 0x019F, Video, () => Video.WriteTextInTeletypeMode(AL, 7));
+            ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
             CX--;
         } while (CX != 0);
         DX = Stack.Pop16();

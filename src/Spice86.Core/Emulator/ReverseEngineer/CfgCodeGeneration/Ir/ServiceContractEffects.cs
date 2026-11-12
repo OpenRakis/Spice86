@@ -24,12 +24,18 @@ internal static class ServiceContractEffects {
     public static IrEffects Of(InterruptServiceCallNode node) {
         CpuValues resultMask = node.Results.Aggregate(CpuValues.None,
             (mask, result) => mask | IrEffectsVisitor.Of(result, false).Reads);
-        // The frame reads SS/SP to push and pop and CS/FLAGS (the pushed image); the popped
-        // FLAGS keeps its pre-call value except where the service wrote a declared flag result
-        // into the frame, so the may-writes stay the contract's writes. Argument reads come
-        // from the call's children, not the contract.
-        CpuValues reads = CpuValues.Ss | CpuValues.Sp | CpuValues.Cs
-            | CpuValues.StatusFlags | CpuValues.Direction;
+        // Argument reads come from the call's children, not the contract. With a frame the call
+        // also reads SS/SP to push and pop and CS/FLAGS (the pushed image); the popped FLAGS keeps
+        // its pre-call value except where the service wrote a declared flag result into the frame.
+        // Without a frame only the entry hook's stack-pointer read remains, and only while the
+        // call runs it.
+        CpuValues reads = CpuValues.None;
+        if (node.WritesFrame) {
+            reads = CpuValues.Ss | CpuValues.Sp | CpuValues.Cs
+                | CpuValues.StatusFlags | CpuValues.Direction;
+        } else if (node.RunsEntryHook) {
+            reads = CpuValues.Ss | CpuValues.Sp;
+        }
         CpuValues mayWrite = node.Contract.Registers.Writes;
         IrTokens tokens = node.Contract.Io ? IrTokens.All : IrTokens.Memory;
         return new IrEffects(reads, resultMask, mayWrite, tokens, tokens, false, false);

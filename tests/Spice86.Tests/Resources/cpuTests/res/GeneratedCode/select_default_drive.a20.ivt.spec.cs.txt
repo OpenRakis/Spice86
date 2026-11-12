@@ -12,30 +12,30 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x0E;
-        byte1 = ServiceCall(cs1, 0x0106, Dos, () => Dos.SelectDefaultDrive(2));
+        byte1 = ServiceCall(Dos, () => Dos.SelectDefaultDrive(2));
         DX = 0x0998;
         Out8(0x0998, byte1);
         Alu8.Sub(byte1, 0x1A);
         if (byte1 == 0x1A) {
             AL = byte1;
             AH = 0x19;
-            byte1 = ServiceCall(cs1, 0x0112, Dos, () => Dos.ReadCurrentDefaultDrive());
+            byte1 = ServiceCall(Dos, () => Dos.ReadCurrentDefaultDrive());
             DX = 0x0998;
             Out8(0x0998, byte1);
             Alu8.Sub(byte1, 2);
             if (byte1 == 2) {
                 AL = byte1;
                 AH = 0x0E;
-                AL = ServiceCall(cs1, 0x0120, Dos, () => Dos.SelectDefaultDrive(0x1A));
+                AL = ServiceCall(Dos, () => Dos.SelectDefaultDrive(0x1A));
                 AH = 0x19;
-                byte1 = ServiceCall(cs1, 0x0124, Dos, () => Dos.ReadCurrentDefaultDrive());
+                byte1 = ServiceCall(Dos, () => Dos.ReadCurrentDefaultDrive());
                 DX = 0x0998;
                 Out8(0x0998, byte1);
                 Alu8.Sub(byte1, 2);

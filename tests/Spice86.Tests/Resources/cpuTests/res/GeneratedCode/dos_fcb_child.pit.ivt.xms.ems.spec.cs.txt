@@ -24,40 +24,39 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0519;
         AuxiliaryFlag = true;
         DX = 0x0051;
-        CarryFlag = true;
         ParityFlag = false;
         ZeroFlag = false;
         SignFlag = false;
         OverflowFlag = false;
         BX = 0x0051;
         AH = 0x4A;
-        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0118, Dos, () => Dos.ModifyMemory(ES, 0x0051), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, 0x0051));
         if (!CarryFlag) {
             AL = 0x53;
             NearCall(cs1, 0x0121, unknown_016E_01C0_018A0Entry);
             DX = 0x01CB;
             AH = 0x16;
-            AL = ServiceCall(cs1, 0x0128, Dos, () => Dos.FcbCreateFile(DS, 0x01CB));
+            AL = ServiceCall(Dos, () => Dos.FcbCreateFile(DS, 0x01CB));
             Alu8.Sub(AL, 0);
             if (AL == 0) {
                 AL = 0x43;
                 NearCall(cs1, 0x0133, unknown_016E_01C0_018A0Entry);
                 DX = 0x01F0;
                 AH = 0x1A;
-                ServiceCall(cs1, 0x013A, Dos, () => Dos.SetDiskTransferAddress(DS, 0x01F0));
+                ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x01F0));
                 DX = 0x01CB;
                 AH = 0x15;
-                AL = ServiceCall(cs1, 0x0141, Dos, () => Dos.FcbSequentialWrite(DS, 0x01CB));
+                AL = ServiceCall(Dos, () => Dos.FcbSequentialWrite(DS, 0x01CB));
                 Alu8.Sub(AL, 0);
                 if (AL == 0) {
                     AL = 0x57;
                     NearCall(cs1, 0x014A, unknown_016E_01C0_018A0Entry);
                     DX = 0x01CB;
                     AH = 0x10;
-                    AL = ServiceCall(cs1, 0x0151, Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
+                    AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
                     DX = 0x01CB;
                     AH = 0x0F;
-                    AL = ServiceCall(cs1, 0x0158, Dos, () => Dos.FcbOpenFile(DS, 0x01CB));
+                    AL = ServiceCall(Dos, () => Dos.FcbOpenFile(DS, 0x01CB));
                     Alu8.Sub(AL, 0);
                     if (AL == 0) {
                         AL = 0x4F;
@@ -74,10 +73,10 @@ public partial class CfgGeneratedOverrides {
                         NearCall(cs1, 0x0173, unknown_016E_01C0_018A0Entry);
                         DX = 0x026F;
                         AH = 0x1A;
-                        ServiceCall(cs1, 0x017A, Dos, () => Dos.SetDiskTransferAddress(DS, 0x026F));
+                        ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x026F));
                         DX = 0x01CB;
                         AH = 0x14;
-                        AL = ServiceCall(cs1, 0x0181, Dos, () => Dos.FcbSequentialRead(DS, 0x01CB));
+                        AL = ServiceCall(Dos, () => Dos.FcbSequentialRead(DS, 0x01CB));
                         Alu8.Sub(AL, 0);
                         if (AL != 0) {
                             goto L_01B0;
@@ -99,10 +98,10 @@ public partial class CfgGeneratedOverrides {
                             NearCall(cs1, 0x0197, unknown_016E_01C0_018A0Entry);
                             DX = 0x01CB;
                             AH = 0x10;
-                            AL = ServiceCall(cs1, 0x019E, Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
+                            AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
                             DX = 0x01CB;
                             AH = 0x13;
-                            AL = ServiceCall(cs1, 0x01A5, Dos, () => Dos.FcbDeleteFile(DS, 0x01CB));
+                            AL = ServiceCall(Dos, () => Dos.FcbDeleteFile(DS, 0x01CB));
                             DX = 0x00E9;
                             AL = 0x50;
                             Out8(0x00E9 /* no device */, 0x50);
@@ -121,14 +120,14 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
-    /// <summary>Inputs: EAX, EBX, flags, DF. Outputs: AL, BX. Changes: AX, BX.</summary>
+    /// <summary>Inputs: EAX, EBX. Outputs: AL, BX. Changes: AX, BX.</summary>
     public virtual Action unknown_016E_01C0_018A0() {
         CheckExternalEvents(cs1, 0x01C0);
         Stack.Push16(AX);
         Stack.Push16(BX);
         AH = 0x0E;
         BH = 0;
-        ServiceCall(cs1, 0x01C8, Video, () => Video.WriteTextInTeletypeMode(AL, BX));
+        ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, BX));
         BX = Stack.Pop16();
         AX = Stack.Pop16();
         return NearRet();
@@ -150,7 +149,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         while (true) {
@@ -177,7 +176,7 @@ public partial class CfgGeneratedOverrides {
             CS = cs2;
             AX = 0x0E58;
             BH = 0;
-            ServiceCall(cs2, 0x0108, Video, () => Video.WriteTextInTeletypeMode(0x58, BX));
+            ServiceCall(Video, () => Video.WriteTextInTeletypeMode(0x58, BX));
             AX = 0x4C00;
             InterruptCall(cs2, 0x010D, 0x21);
             throw FailAsUntested("Untested return from call at 01CD:010B");

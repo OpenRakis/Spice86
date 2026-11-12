@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4409;
         BX = 3;
-        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0109, Dos, () => Dos.IoControl(0x4409, CX, DX, 3, DS), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4409, CX, DX, 3, DS));
         Stack.Push16(word1);
         Stack.Push16(word2);
         AX = 0xB800;

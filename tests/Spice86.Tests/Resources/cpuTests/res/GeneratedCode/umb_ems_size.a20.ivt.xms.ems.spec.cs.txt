@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_011A = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x5200;
-        (BX, ES) = ServiceCall(cs1, 0x0105, Dos, () => Dos.ReadListOfListsAddress());
+        (BX, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
         flagOperand_0105 = UInt16[ES, BX + 0x66];
         Alu16.Sub(flagOperand_0105, 0x9FFF);
         if (flagOperand_0105 == 0x9FFF) {

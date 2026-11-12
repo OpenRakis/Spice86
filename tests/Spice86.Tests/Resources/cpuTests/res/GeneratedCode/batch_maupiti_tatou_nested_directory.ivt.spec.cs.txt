@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         CX = 1;
         AH = 0x40;
         // DOS 40h write handle 1 "M"
-        (AX, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.WriteFile(1, 1, DS, 0x0112), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(1, 1, DS, 0x0112));
         AX = 0x4C00;
         InterruptCall(cs1, 0x0112, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0110");

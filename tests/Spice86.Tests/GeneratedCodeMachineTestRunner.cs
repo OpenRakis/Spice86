@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Tests.AsmFixtures;
@@ -181,14 +182,16 @@ internal sealed class GeneratedCodeMachineTestRunner {
         string? probeReportPath = GeneratedCodeProbes.ReportPath;
         if (probeReportPath is null) {
             RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey,
-                discoveryFinalState, interpretedStates);
+                discoveryFinalState, interpretedStates,
+                new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites));
             return generatedProgram;
         }
 
         InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram);
         using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Sources);
         RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey,
-            discoveryFinalState, interpretedStates);
+            discoveryFinalState, interpretedStates,
+            new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites));
         GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
             GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
         return generatedProgram;
@@ -202,7 +205,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
         IReadOnlyList<(Func<AsmRunScope>? Prepare, string? SkipReason)> executions,
         IOverrideSupplier supplier, AsmRunSettings discoverySettings, string goldenKey,
         AsmFinalState discoveryFinalState,
-        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
+        IReadOnlySet<SegmentedAddress> framelessServiceCallSites) {
         foreach ((Func<AsmRunScope>? prepare, string? skipReason) in executions) {
             if (skipReason is not null) {
                 GeneratedCodeDifferentialReport.AppendSkipped(goldenKey, skipReason);
@@ -223,7 +227,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
                 discoveryFinalState, interpretedStates);
             GeneratedCodeDifferentialReport.Check(goldenKey,
                 execution.Fixture.Settings.GenerationPolicy, baseline,
-                AsmFinalState.Capture(run, execution.Fixture.Settings));
+                AsmFinalState.Capture(run, execution.Fixture.Settings), framelessServiceCallSites);
         }
     }
 

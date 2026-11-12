@@ -1489,6 +1489,36 @@ public class CSharpOverrideHelper {
             () => { invocation(); return 0; }, _ => { });
     }
 
+    /// <summary>
+    /// A typed service call that does not write the interrupt frame: IF is saved and cleared for
+    /// the call, SP is lowered by six around the handler's <see cref="InterruptHandler.OnInterruptEntry"/>
+    /// so the entry bookkeeping sees the stack pointer the frame would have left, and the
+    /// invocation runs frameless. Flag results stay plain outputs; no return address is checked.
+    /// </summary>
+    /// <param name="handler">The installed handler whose entry bookkeeping the call runs.</param>
+    /// <param name="invocation">The typed service implementation to call.</param>
+    /// <returns>The service implementation's return value.</returns>
+    public T ServiceCall<T>(IInterruptHandler handler, Func<T> invocation) =>
+        ServiceCallFramelessCore(handler as InterruptHandler, invocation);
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(IInterruptHandler, Func{T})"/> for a service with no return value.
+    /// </summary>
+    public void ServiceCall(IInterruptHandler handler, Action invocation) {
+        ServiceCall<int>(handler, () => { invocation(); return 0; });
+    }
+
+    private T ServiceCallFramelessCore<T>(InterruptHandler? handler, Func<T> invocation) {
+        bool callerInterruptFlag = State.InterruptFlag;
+        State.InterruptFlag = false;
+        State.SP -= 6;
+        handler?.OnInterruptEntry();
+        State.SP += 6;
+        T result = invocation();
+        State.InterruptFlag = callerInterruptFlag;
+        return result;
+    }
+
     /// <summary>Writes a carry result into the stacked FLAGS of a
     /// <see cref="ServiceCall"/> frame.</summary>
     protected void CarryOnInterruptStack(bool value) =>

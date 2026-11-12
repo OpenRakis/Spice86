@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x52;
-        (index, ES) = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadListOfListsAddress());
+        (index, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
         index2 = UInt16[ES, index + 0x16];
         ES = UInt16[ES, index + 0x0018];
         Stack.Push16(ES);

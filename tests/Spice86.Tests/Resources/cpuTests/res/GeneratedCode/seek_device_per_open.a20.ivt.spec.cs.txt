@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort fileHandle = 0;
@@ -22,26 +22,25 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         fileHandle = 1;
         CX = Alu16.Xor(CX, CX);
-        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7), r => CarryOnInterruptStack(r.carryFlag));
+        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 1, 0, 7));
         if (!CarryFlag) {
             Alu16.Sub(word2, 0);
             if (word2 == 0) {
                 Alu16.Sub(word1, 7);
                 if (word1 == 7) {
                     word2 = 0x02C7;
-                    (word1, CarryFlag) = ServiceCall(cs1, 0x0127, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
+                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
                     if (!CarryFlag) {
                         ImageMinus0003Globals.Word02BF = word1;
                         fileHandle = ImageMinus0003Globals.Word02BF;
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x013B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -54,20 +53,19 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         fileHandle = ImageMinus0003Globals.Word02BF;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0155, Dos, () => Dos.DuplicateHandle(fileHandle), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.DuplicateHandle(fileHandle));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
                         ImageMinus0003Globals.Word02C1 = word1;
                         fileHandle = ImageMinus0003Globals.Word02C1;
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x016A, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 4), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, fileHandle, 0, 4));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -83,7 +81,7 @@ public partial class CfgGeneratedOverrides {
                         CX = 0;
                         DX = word2;
                         DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0189, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -99,7 +97,7 @@ public partial class CfgGeneratedOverrides {
                         CX = 2;
                         word2 = 0x02CF;
                         // DOS 40h write "xy"
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x01A9, Dos, () => Dos.WriteFile(fileHandle, 2, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 2, DS, 0x02CF));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -110,13 +108,12 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word02C1;
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x01C1, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -129,7 +126,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         fileHandle = ImageMinus0003Globals.Word02BF;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x01DB, Dos, () => Dos.CloseFile(fileHandle, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -137,7 +134,7 @@ public partial class CfgGeneratedOverrides {
                         CX = 0;
                         DX = word2;
                         DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x01EC, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -150,12 +147,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         fileHandle = ImageMinus0003Globals.Word02C1;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0206, Dos, () => Dos.CloseFile(fileHandle, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
                         word2 = 0x02C7;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0212, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02C7, '\0', "CON")));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -163,13 +160,12 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word02C3;
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0226, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -183,13 +179,12 @@ public partial class CfgGeneratedOverrides {
                         }
                         fileHandle = ImageMinus0003Globals.Word02C3;
                         CX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x0246, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, fileHandle, 0, 3), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.End, fileHandle, 0, 3));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -202,12 +197,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         fileHandle = ImageMinus0003Globals.Word02C3;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x025A, Dos, () => Dos.CloseFile(fileHandle, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
                         word2 = 0x02CB;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0264, Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(2, Dos.StringDecoder.GetDosString(DS, 0x02CB, '\0', "AUX")));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -215,7 +210,7 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word02C5;
                         CX = 5;
                         word2 = 0x02CF;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x0277, Dos, () => Dos.WriteFile(fileHandle, 5, DS, 0x02CF), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 5, DS, 0x02CF));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -226,13 +221,12 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word02C5;
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x028B, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, fileHandle, 0, 0));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -245,7 +239,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_02B8;
                         }
                         fileHandle = ImageMinus0003Globals.Word02C5;
-                        (word1, CarryFlag) = ServiceCall(cs1, 0x029F, Dos, () => Dos.CloseFile(fileHandle, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_02B8;
                         }
@@ -253,7 +247,7 @@ public partial class CfgGeneratedOverrides {
                         CX = 0;
                         DX = word2;
                         DX = Alu16.Xor(DX, DX);
-                        (word1, word2, CarryFlag) = ServiceCall(cs1, 0x02AD, Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile((global::System.IO.SeekOrigin)3, 1, 0, 0));
                         if (!CarryFlag) {
                             goto L_02B8;
                         }

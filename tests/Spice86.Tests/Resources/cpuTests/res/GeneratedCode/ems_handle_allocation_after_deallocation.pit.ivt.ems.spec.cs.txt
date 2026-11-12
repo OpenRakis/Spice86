@@ -12,33 +12,33 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         ushort word1 = 0;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         BX = 4;
-        (AH, word1) = ServiceCall(cs1, 0x0107, Ems, () => Ems.AllocatePageHandle(4, DX));
+        (AH, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(4, DX));
         Alu8.Sub(AH, 0);
         if (AH == 0) {
             DI = word1;
             BX = 4;
-            (AH, word1) = ServiceCall(cs1, 0x0115, Ems, () => Ems.AllocatePageHandle(4, word1));
+            (AH, word1) = ServiceCall(Ems, () => Ems.AllocatePageHandle(4, word1));
             Alu8.Sub(AH, 0);
             if (AH == 0) {
                 SI = word1;
                 AL = 0;
                 BX = 0;
                 word1 = SI;
-                AH = ServiceCall(cs1, 0x0127, Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
+                AH = ServiceCall(Ems, () => Ems.MapUnmapHandlePage(0, 0, word1));
                 Alu8.Sub(AH, 0);
                 if (AH == 0) {
                     AX = 0xE000;
                     ES = 0xE000;
                     SegmentE000Globals.Byte0000 = 0xAA;
                     word1 = DI;
-                    AH = ServiceCall(cs1, 0x013D, Ems, () => Ems.DeallocatePages(word1));
+                    AH = ServiceCall(Ems, () => Ems.DeallocatePages(word1));
                     Alu8.Sub(AH, 0);
                     if (AH == 0) {
                         AL = SegmentE000Globals.Byte0000;

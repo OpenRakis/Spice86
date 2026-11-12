@@ -369,12 +369,13 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     /// <summary>An <c>int 11h</c> to the installed stub pushes the six-byte interrupt frame in the
-    /// interpreter; the generated typed service call builds the same frame. The program sets known
-    /// entry flags, seeds the six bytes below SP, invokes the service and halts with no instruction
-    /// in between touching flags or the stack. Both runs must show return IP, caller CS and the
-    /// entry FLAGS in the seeded slots; SP, AX and the flags must match the interpreted run's.</summary>
+    /// interpreter; the generated typed service call omits the frame because the program never
+    /// calls DOS 50h or 55h. The program sets known entry flags, seeds the six bytes below SP,
+    /// invokes the service and halts with no instruction in between touching flags or the stack.
+    /// The interpreted run shows the frame in the seeded slots; the generated run leaves the seeds
+    /// untouched, and SP, AX and the flags still match the interpreted run's.</summary>
     [Fact]
-    public void TypedServiceCallWritesTheInterruptFrame() {
+    public void TypedServiceCallLeavesTheSeededFrameBytesUntouched() {
         // mov ax,2000h; mov ss,ax; mov sp,1000h; mov bp,sp; push word 0CD7h; popf;
         // six seeded bytes at [bp-6..bp-1]; int 11h; hlt
         byte[] program = [
@@ -396,10 +397,12 @@ public sealed class GeneratedCodeMachineTest {
         ushort interpretedAx;
         ushort interpretedFlags;
         ushort callerSegment;
+        AsmFinalState emulated;
         CfgPartitionedProgram partitioned;
         using (AsmRunScope interpretedScope = FrameScope(program)) {
             using AsmFixtureRun interpretedRun =
                 AsmFixtureRunner.RunEmulated(interpretedScope, JitMode.InterpretedOnly);
+            emulated = AsmFinalState.Capture(interpretedRun, interpretedScope.Fixture.Settings);
             Machine interpreted = interpretedRun.Machine;
             callerSegment = interpreted.CpuState.CS;
             for (int i = 0; i < 6; i++) {
@@ -445,8 +448,74 @@ public sealed class GeneratedCodeMachineTest {
             "the direct call returns the same AX as the interrupt");
         generatedMachine.CpuState.Flags.FlagRegister16.Should().Be(entryFlags,
             "the direct call leaves the same flags as the interrupt");
-        generatedFrame.Should().Equal(interpretedFrame,
-            "the typed service call writes the same interrupt frame as the interpreted int");
+        generatedFrame.Should().Equal([0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+            "the frameless typed service call leaves the seeded bytes at SS:SP-6 untouched");
+        AsmFinalState generatedState =
+            AsmFinalState.Capture(generatedRun, executionScope.Fixture.Settings);
+        GeneratedCodeDifferentialReport.Check("service_call_frame.ivt.spec",
+            GenerationPolicy.Strict, emulated, generatedState,
+            new HashSet<SegmentedAddress>(generated.FramelessServiceCallSites));
+    }
+
+    /// <summary>The differential gate excludes only the six bytes a frameless typed call omitted:
+    /// when the generated program reads those bytes after the call and stores them to result
+    /// memory, the store lands outside the excluded range and the gate must still fail on the
+    /// differing RAM bytes - the exclusion must never hide a legitimate read of the frame
+    /// area.</summary>
+    [Fact]
+    public void GeneratedRunReadingOmittedFrameBytesFailsTheDifferentialGate() {
+        // mov ax,2000h; mov ss,ax; mov sp,1000h; mov bp,sp; six seeded bytes at [bp-6..bp-1];
+        // int 11h; mov al,[bp-4]; mov [0x0200],al; hlt - AL picks up the byte the interpreted
+        // int's frame put at SS:SP-4 (caller CS low byte), which the generated run left seeded
+        // as 0x33, and the store lands it at DS:0x0200 outside the excluded six bytes.
+        byte[] program = [
+            0xB8, 0x00, 0x20, 0x8E, 0xD0, 0xBC, 0x00, 0x10, 0x89, 0xE5,
+            0xC6, 0x46, 0xFA, 0x11, 0xC6, 0x46, 0xFB, 0x22,
+            0xC6, 0x46, 0xFC, 0x33, 0xC6, 0x46, 0xFD, 0x44,
+            0xC6, 0x46, 0xFE, 0x55, 0xC6, 0x46, 0xFF, 0x66,
+            0xCD, 0x11,
+            0x8A, 0x46, 0xFC,
+            0xA2, 0x00, 0x02,
+            0xF4
+        ];
+
+        AsmFinalState emulated;
+        uint storeAddress;
+        CfgPartitionedProgram partitioned;
+        using (AsmRunScope interpretedScope = FrameScope(program)) {
+            using AsmFixtureRun interpretedRun =
+                AsmFixtureRunner.RunEmulated(interpretedScope, JitMode.InterpretedOnly);
+            emulated = AsmFinalState.Capture(interpretedRun, interpretedScope.Fixture.Settings);
+            storeAddress = (uint)interpretedRun.Machine.CpuState.DS * 16 + 0x0200;
+            CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(
+                interpretedRun.Machine.CfgCpu.ExecutionContextManager, null).Graph;
+            GeneratorInputs inputs = interpretedRun.DependencyInjection
+                .GeneratorInputsCollector.Capture(interpretedRun.Machine.CfgCpu.ExecutionContextManager);
+            partitioned = new CfgFunctionPartitioner().Partition(graph,
+                interpretedRun.Machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
+        }
+
+        GeneratedCSharpProgram generated = new CfgCSharpGenerator(
+            collectCensuses: false, verify: true).Generate(partitioned);
+        generated.SourceText.Should().Contain("ServiceCall(");
+        generated.FramelessServiceCallSites.Should().NotBeEmpty(
+            "the int 11h in a program without DOS 50h/55h is a frameless typed call");
+        AsmFinalState generatedState;
+        using (CompiledGeneratedOverride compiled =
+            new GeneratedOverrideCompiler().CompileSupplier(generated))
+        using (AsmRunScope executionScope = FrameScope(program))
+        using (AsmFixtureRun generatedRun =
+            AsmFixtureRunner.RunWithOverride(executionScope, compiled.Supplier)) {
+            generatedState = AsmFinalState.Capture(generatedRun, executionScope.Fixture.Settings);
+        }
+
+        Action check = () => GeneratedCodeDifferentialReport.Check("frame_read.ivt.spec",
+            GenerationPolicy.Strict, emulated, generatedState,
+            new HashSet<SegmentedAddress>(generated.FramelessServiceCallSites));
+        check.Should().Throw<Xunit.Sdk.XunitException>()
+            .WithMessage($"*ram:*0x{storeAddress:X5}-0x{storeAddress:X5}*",
+                "reading the omitted frame bytes and storing them makes that RAM byte differ " +
+                "and the exclusion of the six frame bytes must not hide it");
     }
 
     /// <summary>The recorded <c>NOFILE.TXT</c> literal of the <c>data_strings</c> open call is

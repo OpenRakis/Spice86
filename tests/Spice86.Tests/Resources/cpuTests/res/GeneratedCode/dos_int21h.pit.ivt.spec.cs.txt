@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0998;
         AL = 1;
         Out8(0x0998, 1);
-        (AX, CX, DX) = ServiceCall(cs1, 0x010A, Dos, () => Dos.ReadDate(0x2A));
+        (AX, CX, DX) = ServiceCall(Dos, () => Dos.ReadDate(0x2A));
         Alu16.Sub(CX, 0x07BC);
         if (CX >= 0x07BC) {
             Alu8.Sub(DH, 1);
@@ -38,7 +38,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2B;
                         CX = 0x07E8;
                         DX = 0x0B0E;
-                        AL = ServiceCall(cs1, 0x013F, Dos, () => Dos.SetDate(0x07E8, 0x0B, 0x0E));
+                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0B, 0x0E));
                         Alu8.Sub(AL, 0);
                         if (AL != 0) {
                             goto L_021F;
@@ -49,7 +49,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2B;
                         CX = 0x07BB;
                         DX = 0x0101;
-                        AL = ServiceCall(cs1, 0x0156, Dos, () => Dos.SetDate(0x07BB, 1, 1));
+                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07BB, 1, 1));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -60,7 +60,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2B;
                         CX = 0x07E8;
                         DX = 0x0D01;
-                        AL = ServiceCall(cs1, 0x016D, Dos, () => Dos.SetDate(0x07E8, 0x0D, 1));
+                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 0x0D, 1));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -71,7 +71,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2B;
                         CX = 0x07E8;
                         DX = 0x0120;
-                        AL = ServiceCall(cs1, 0x0184, Dos, () => Dos.SetDate(0x07E8, 1, 0x20));
+                        AL = ServiceCall(Dos, () => Dos.SetDate(0x07E8, 1, 0x20));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -79,7 +79,7 @@ public partial class CfgGeneratedOverrides {
                         AL = 6;
                         Out8(0x0998, 6);
                         AH = 0x2C;
-                        (CX, DX) = ServiceCall(cs1, 0x0194, Dos, () => Dos.ReadTime());
+                        (CX, DX) = ServiceCall(Dos, () => Dos.ReadTime());
                         Alu8.Sub(CH, 0x17);
                         if (CH > 0x17) {
                             goto L_021F;
@@ -102,7 +102,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2D;
                         CX = 0x0C22;
                         DX = 0x384E;
-                        AL = ServiceCall(cs1, 0x01BC, Dos, () => Dos.SetTime(0x0C, 0x22, 0x38, 0x4E));
+                        AL = ServiceCall(Dos, () => Dos.SetTime(0x0C, 0x22, 0x38, 0x4E));
                         Alu8.Sub(AL, 0);
                         if (AL != 0) {
                             goto L_021F;
@@ -113,7 +113,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2D;
                         CX = 0x1800;
                         DX = 0;
-                        AL = ServiceCall(cs1, 0x01D2, Dos, () => Dos.SetTime(0x18, 0, 0, 0));
+                        AL = ServiceCall(Dos, () => Dos.SetTime(0x18, 0, 0, 0));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -124,7 +124,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2D;
                         CX = 0x003C;
                         DX = 0;
-                        AL = ServiceCall(cs1, 0x01E8, Dos, () => Dos.SetTime(0, 0x3C, 0, 0));
+                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0x3C, 0, 0));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -135,7 +135,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2D;
                         CX = 0;
                         DX = 0x3C00;
-                        AL = ServiceCall(cs1, 0x01FE, Dos, () => Dos.SetTime(0, 0, 0x3C, 0));
+                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0x3C, 0));
                         Alu8.Sub(AL, 0xFF);
                         if (AL != 0xFF) {
                             goto L_021F;
@@ -146,7 +146,7 @@ public partial class CfgGeneratedOverrides {
                         AH = 0x2D;
                         CX = 0;
                         DX = 0x0064;
-                        AL = ServiceCall(cs1, 0x0214, Dos, () => Dos.SetTime(0, 0, 0, 0x64));
+                        AL = ServiceCall(Dos, () => Dos.SetTime(0, 0, 0, 0x64));
                         Alu8.Sub(AL, 0xFF);
                         if (AL == 0xFF) {
                             DX = 0x0999;

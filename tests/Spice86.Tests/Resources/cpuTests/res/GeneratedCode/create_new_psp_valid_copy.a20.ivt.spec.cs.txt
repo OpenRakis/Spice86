@@ -26,7 +26,7 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0137 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        word1 = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
+        word1 = Dos.ReadPspAddress();
         word2 = word1;
         ES = word1;
         word3 = EsGlobals.Word002C;

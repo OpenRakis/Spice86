@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
         DX = 0x0288;
-        ServiceCall(cs1, 0x0107, Dos, () => Dos.SetDiskTransferAddress(DS, 0x0288));
+        ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x0288));
         SI = 0x0162;
         CX = 0;
         while (true) {
@@ -33,14 +33,13 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CX);
             Stack.Push16(SI);
             byte1 = UInt8[DS, SI + 4];
-            Alu8.And(byte1, byte1);
             if (byte1 != 0) {
-                (AX, CarryFlag) = ServiceCall(cs1, 0x012B, Dos, () => Dos.FindNext(), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FindNext());
             }
             else {
                 DX = BX;
                 CX = 0;
-                (AX, CarryFlag) = ServiceCall(cs1, 0x0125, Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, DX, '\0'), 0), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, DX, '\0'), 0));
             }
             SI = Stack.Pop16();
             CX = Stack.Pop16();

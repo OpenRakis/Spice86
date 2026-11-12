@@ -12,41 +12,41 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         AX = 4;
-        AL = ServiceCall(cs1, 0x0105, Video, () => Video.SetVideoMode(4));
+        AL = ServiceCall(Video, () => Video.SetVideoMode(4));
         AH = 2;
         BH = 0;
         DX = 0;
-        ServiceCall(cs1, 0x010F, Video, () => Video.SetCursorPosition(0, BX));
+        ServiceCall(Video, () => Video.SetCursorPosition(0, BX));
         AX = 0x09DB;
         BX = 3;
         CX = 0x0028;
-        ServiceCall(cs1, 0x011C, Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 3));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 3));
         AH = 2;
         BH = 0;
         DX = 0x0100;
-        ServiceCall(cs1, 0x0126, Video, () => Video.SetCursorPosition(0x0100, 3));
+        ServiceCall(Video, () => Video.SetCursorPosition(0x0100, 3));
         AX = 0x0920;
         BX = 0;
         CX = 0x0028;
-        ServiceCall(cs1, 0x0133, Video, () => Video.WriteCharacterAndAttributeAtCursor(0x20, 0x0028, 0));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0x20, 0x0028, 0));
         AH = 2;
         BH = 0;
         DX = 0x0200;
-        ServiceCall(cs1, 0x013D, Video, () => Video.SetCursorPosition(0x0200, 0));
+        ServiceCall(Video, () => Video.SetCursorPosition(0x0200, 0));
         AX = 0x09DB;
         BX = 1;
         CX = 0x0028;
-        ServiceCall(cs1, 0x014A, Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 1));
+        ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 1));
         AX = 0x0601;
         BH = 0;
         CX = 0;
         DX = 0x0227;
-        ServiceCall(cs1, 0x015A, Video, () => Video.ScrollPageUp(1, 0, 0x0227, 1));
+        ServiceCall(Video, () => Video.ScrollPageUp(1, 0, 0x0227, 1));
         AX = 0xB800;
         ES = 0xB800;
         BX = 0;

@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         do {
             CheckExternalEvents(cs1, 0x0100);
             AX = 0x4406;
-            BX = Alu16.Xor(BX, BX);
-            (AX, DX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => Dos.IoControl(0x4406, CX, DX, 0, DS), r => CarryOnInterruptStack(r.carryFlag));
+            BX = 0;
+            (AX, DX, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4406, CX, DX, 0, DS));
             AL = Alu8.Or(AL, AL);
         } while (AL == 0);
         AH = 7;

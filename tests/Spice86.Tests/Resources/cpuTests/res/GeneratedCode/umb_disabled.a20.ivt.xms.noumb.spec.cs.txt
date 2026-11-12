@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort index = 0;
@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_010C = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x5200;
-        (index, ES) = ServiceCall(cs1, 0x0105, Dos, () => Dos.ReadListOfListsAddress());
+        (index, ES) = ServiceCall(Dos, () => Dos.ReadListOfListsAddress());
         flagOperand_0105 = UInt16[ES, index + 0x66];
         Alu16.Sub(flagOperand_0105, 0xFFFF);
         if (flagOperand_0105 == 0xFFFF) {
@@ -29,11 +29,11 @@ public partial class CfgGeneratedOverrides {
             Alu8.And(flagOperand_010C, 1);
             if ((flagOperand_010C & 1) == 0) {
                 index = 1;
-                (AX, CarryFlag) = ServiceCall(cs1, 0x011B, Dos, () => Dos.MemoryAllocationStrategy(0x5803, 1), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5803, 1));
                 if (CarryFlag) {
                     Alu16.Sub(AX, 1);
                     if (AX == 1) {
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x0127, Dos, () => Dos.MemoryAllocationStrategy(0x5802, 1), r => CarryOnInterruptStack(r.carryFlag));
+                        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5802, 1));
                         if (CarryFlag) {
                             goto L_0131;
                         }

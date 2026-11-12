@@ -17,8 +17,8 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         byte byte1 = 0;
-        ushort word2 = 0;
-        ushort word3;
+        ushort word2;
+        ushort word3 = 0;
         byte byte2 = 0;
         byte flagOperand_013C = 0;
         ushort flagOperand_018D = 0;
@@ -56,11 +56,9 @@ public partial class CfgGeneratedOverrides {
         }
         ImageMinus0003Globals.Byte02FB = AL;
         DL = 0x80;
-        Alu8.Sub(AL, 0x68);
         if (AL != 0x68) {
             VerifySpeculativeRunOrFail(cs1, 0x0116, SpeculativeRun_0116);
             DL = 0;
-            Alu8.Sub(AL, 0x66);
             if (AL != 0x66) {
                 VerifySpeculativeRunOrFail(cs1, 0x011C, SpeculativeRun_011C);
                 Alu8.Sub(AL, 0x61);
@@ -73,12 +71,12 @@ public partial class CfgGeneratedOverrides {
             }
         }
     L_0125:
-        word1 = ServiceCall(cs1, 0x0127, Equipment, () => Equipment.GetEquipmentList());
+        word1 = ServiceCall(Equipment, () => Equipment.GetEquipmentList());
         Alu16.And(word1, word1);
         AX = word1;
         AL = 1;
         if (ZeroFlag) {
-            AX = ServiceCall(cs1, 0x0131, MemorySize, () => MemorySize.GetConventionalMemorySize());
+            AX = ServiceCall(MemorySize, () => MemorySize.GetConventionalMemorySize());
             Alu16.Sub(AX, 0x0280);
             AL = 2;
             if (ZeroFlag) {
@@ -97,7 +95,7 @@ public partial class CfgGeneratedOverrides {
                 ImageMinus0003Globals.Word030A = SI;
                 ImageMinus0003Globals.Word030C = DI;
                 ImageMinus0003Globals.Word030E = BP;
-                (AX, CX, DX, BX, CarryFlag) = ServiceCall(cs1, 0x0172, Disk, () => Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3), r => CarryOnInterruptStack(r.carryFlag));
+                (AX, CX, DX, BX, CarryFlag) = ServiceCall(Disk, () => Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3));
                 Stack.Push16(FlagRegister16);
                 ushort popStackCheck_0173 = Stack.Peek16(0);
                 ushort popDestinationCheck_0173 = ImageMinus0003Globals.Word0310;
@@ -252,13 +250,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_02F0;
                         }
                     L_0292:
-                        AX = SP;
-                        AX = Alu16.Sub(AX, 6);
-                        ImageMinus0003Globals.Word02FC = AX;
+                        word2 = (ushort)(SP - 6);
+                        ImageMinus0003Globals.Word02FC = word2;
                         ImageMinus0003Globals.Word02FE = SS;
-                        (word2, CX, BX) = ServiceCall(cs1, 0x02A4, Dos, () => Dos.ReadDosVersion());
-                        ECX = (uint)(int)(short)word2;
-                        EDX = (uint)(int)(short)word2;
+                        (word3, CX, BX) = ServiceCall(Dos, () => Dos.ReadDosVersion());
+                        ECX = (uint)(int)(short)word3;
+                        EDX = (uint)(int)(short)word3;
                         EAX = 0;
                         AL = 0x13;
                         Alu32.Sub(ECX, 5);
@@ -270,8 +267,8 @@ public partial class CfgGeneratedOverrides {
                         if (EDX != 5) {
                             goto L_02F0;
                         }
-                        word3 = ImageMinus0003Globals.Word002E;
-                        ImageMinus0003Globals.Word0300 = word3;
+                        word2 = ImageMinus0003Globals.Word002E;
+                        ImageMinus0003Globals.Word0300 = word2;
                         AX = ImageMinus0003Globals.Word0030;
                         ImageMinus0003Globals.Word0302 = AX;
                         AX = ImageMinus0003Globals.Word02FC;
@@ -656,7 +653,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: AX, ECX, DX, EBX, CF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: EAX, ECX, DX, EBX, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0058_F0058() {
         CheckExternalEvents(biosSegment, 0x0058);

@@ -3,9 +3,12 @@ namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Linq;
 
 /// <summary>
 /// What a partitioned program knows about the hardware interrupts that can fire during its
@@ -43,6 +46,12 @@ internal sealed record HardwareInterruptSetup {
     /// path may run program code at a mouse event.</summary>
     public bool MouseUserSubroutineRegistered { get; init; }
 
+    /// <summary>The program set the current PSP itself through DOS AH=50h or created a child PSP
+    /// through AH=55h during the run, so a terminate can resume the parent through an interrupt
+    /// frame a typed call wrote; every typed service call of such a program keeps writing the
+    /// frame.</summary>
+    public bool ProgramSetCurrentPsp { get; init; }
+
     /// <summary>Captures the setup from the installed handlers, the current interrupt vector
     /// table, the registered callbacks and whether a mouse user subroutine was registered during
     /// the run.</summary>
@@ -66,7 +75,9 @@ internal sealed record HardwareInterruptSetup {
             ChainedVectorTargets = chainedTargets,
             ServiceVectors = CaptureServiceVectors(installed),
             CallbackDescriptions = Emulator.InterruptHandlers.Common.Callback.CallbackDescriptions.Describe(callbackHandler),
-            MouseUserSubroutineRegistered = mouseUserSubroutineRegistered
+            MouseUserSubroutineRegistered = mouseUserSubroutineRegistered,
+            ProgramSetCurrentPsp = installed.Handlers.Values
+                .OfType<DosInt21Handler>().Any(handler => handler.ProgramSetCurrentPsp)
         };
     }
 

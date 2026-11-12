@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 6;
         DL = 0xFF;
-        (AL, ZeroFlag) = ServiceCall(cs1, 0x0106, Dos, () => Dos.DirectConsoleIo(0xFF, AL, ZeroFlag), r => ZeroOnInterruptStack(r.zeroFlag));
+        (AL, ZeroFlag) = ServiceCall(Dos, () => Dos.DirectConsoleIo(0xFF, AL, ZeroFlag));
         AH = 7;
         BX = 0xB800;
         ES = 0xB800;

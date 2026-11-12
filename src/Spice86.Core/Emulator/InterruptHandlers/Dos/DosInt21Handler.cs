@@ -1419,6 +1419,7 @@ public class DosInt21Handler : InterruptHandler {
         Memory = ServiceMemoryEffect.Write,
         Implementation = nameof(SetCurrentPsp), Inputs = [CpuValues.Bx])]
     public void SetCurrentPsp() {
+        ProgramSetCurrentPsp = true;
         SetCurrentPsp(State.BX);
     }
 
@@ -2157,6 +2158,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     [InterruptService(0x55, Reads = CpuValues.Ah | CpuValues.Dx | CpuValues.Si | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite)]
     public void CreateChildPsp() {
+        ProgramSetCurrentPsp = true;
         State.AL = CreateChildPsp(State.DX, State.SI);
     }
 
@@ -2287,6 +2289,13 @@ public class DosInt21Handler : InterruptHandler {
         }
         Run(State.AH);
     }
+
+    /// <summary>Whether the program set the current PSP itself through AH=50h or created a child
+    /// PSP through AH=55h: a terminate can then resume the parent through the interrupt frame a
+    /// typed call would have left on the recorded caller stack, so generated service calls of
+    /// such a program keep writing the frame. Set by the AH=50h and AH=55h dispatch wrappers only;
+    /// internal callers of the typed overloads do not set it.</summary>
+    public bool ProgramSetCurrentPsp { get; private set; }
 
     /// <summary>Whether <paramref name="operation"/> enters through the caller-stack save DOS
     /// performs on service entry: every operation except the PSP get/set functions.</summary>

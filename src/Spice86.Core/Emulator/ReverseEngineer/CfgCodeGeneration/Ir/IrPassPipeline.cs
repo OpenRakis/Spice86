@@ -84,7 +84,7 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        RunAll(method, verify, buildWebs, ioPorts, _ => false, GenerationPolicy.Strict, timer);
+        RunAll(method, verify, buildWebs, ioPorts, _ => false, false, GenerationPolicy.Strict, timer);
 
     /// <summary>Runs the whole pipeline on <paramref name="method"/> with
     /// <paramref name="ioPorts"/> and <paramref name="hasOnlyBuiltInTargets"/> the
@@ -94,10 +94,10 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationPolicy policy,
-        GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        GenerationPolicy policy, GenerationStepTimer timer) {
         IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs,
-            ioPorts, hasOnlyBuiltInTargets, policy, timer);
+            ioPorts, hasOnlyBuiltInTargets, programSetCurrentPsp, policy, timer);
         if (result.Ssa is not { } ssa || (buildWebs && result.Webs is null)) {
             throw new InvalidOperationException(
                 $"A full IR pipeline run of {method.Name} must produce an SSA and webs.");
@@ -121,11 +121,12 @@ internal static class IrPassPipeline {
     /// becomes a direct service call.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        Run(method, last, verify, buildWebs, ioPorts, _ => false, GenerationPolicy.Strict, timer);
+        Run(method, last, verify, buildWebs, ioPorts, _ => false, false, GenerationPolicy.Strict, timer);
 
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/> with <paramref name="ioPorts"/> and
-    /// <paramref name="hasOnlyBuiltInTargets"/> the built-in-targets check
+    /// <paramref name="hasOnlyBuiltInTargets"/> the built-in-targets check and
+    /// <paramref name="programSetCurrentPsp"/> the frame rule
     /// <see cref="IrPass.InterruptServiceCalls"/> gates direct service calls on, measuring each
     /// pass, each SSA build, the web build when <paramref name="buildWebs"/> is true, and the
     /// verification into <paramref name="timer"/>.</summary>
@@ -134,13 +135,13 @@ internal static class IrPassPipeline {
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) =>
-        Run(method, last, verify, buildWebs, ioPorts, hasOnlyBuiltInTargets, GenerationPolicy.Strict,
+        Run(method, last, verify, buildWebs, ioPorts, hasOnlyBuiltInTargets, false, GenerationPolicy.Strict,
             timer);
 
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationPolicy policy,
-        GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        GenerationPolicy policy, GenerationStepTimer timer) {
         IrSsa? ssa = null;
         IrSsaWebs? webs = null;
         IReadOnlyDictionary<ICfgNode, DosCallRecord> dosCalls = new Dictionary<ICfgNode, DosCallRecord>();
@@ -217,7 +218,7 @@ internal static class IrPassPipeline {
         }
         MakeCurrent();
         int typedCalls = PassResult(IrPass.InterruptServiceCalls.ToString(),
-            () => IrInterruptServiceCalls.Apply(method, editor, facts, hasOnlyBuiltInTargets));
+            () => IrInterruptServiceCalls.Apply(method, editor, facts, hasOnlyBuiltInTargets, programSetCurrentPsp));
         if (typedCalls != 0) {
             MakeCurrentTimed("ssa build typed calls");
             MakeCurrent();

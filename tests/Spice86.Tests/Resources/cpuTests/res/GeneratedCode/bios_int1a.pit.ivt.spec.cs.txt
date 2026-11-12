@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -20,25 +20,25 @@ public partial class CfgGeneratedOverrides {
         AL = 1;
         Out8(0x0998, 1);
         AH = 0;
-        (AL, CX, DX) = ServiceCall(cs1, 0x010A, Clock, () => Clock.ReadSystemClockCounter());
+        (AL, CX, DX) = ServiceCall(Clock, () => Clock.ReadSystemClockCounter());
         AL = 2;
         Out8(0x0998, 2);
-        ServiceCall(cs1, 0x011A, Clock, () => Clock.SetSystemClockCounter(0x0012, 0x3456));
+        ServiceCall(Clock, () => Clock.SetSystemClockCounter(0x0012, 0x3456));
         AH = 0;
-        (AL, CX, DX) = ServiceCall(cs1, 0x011E, Clock, () => Clock.ReadSystemClockCounter());
+        (AL, CX, DX) = ServiceCall(Clock, () => Clock.ReadSystemClockCounter());
         AL = 3;
         Out8(0x0998, 3);
         AH = 2;
-        (CX, DX, CarryFlag) = ServiceCall(cs1, 0x0128, Clock, () => Clock.ReadTimeFromRTC(), r => CarryOnInterruptStack(r.carryFlag));
+        (CX, DX, CarryFlag) = ServiceCall(Clock, () => Clock.ReadTimeFromRTC());
         if (!CarryFlag) {
             AL = CH;
-            (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x012F, () => unknown_016D_0199_01869(AL));
+            CarryFlag = NearCall(cs1, 0x012F, () => unknown_016D_0199_01869(AL));
             if (!CarryFlag) {
                 AL = CL;
-                (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0136, () => unknown_016D_0199_01869(AL));
+                CarryFlag = NearCall(cs1, 0x0136, () => unknown_016D_0199_01869(AL));
                 if (!CarryFlag) {
                     AL = DH;
-                    (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x013D, () => unknown_016D_0199_01869(AL));
+                    CarryFlag = NearCall(cs1, 0x013D, () => unknown_016D_0199_01869(AL));
                     if (!CarryFlag) {
                         DX = 0x0998;
                         AL = 4;
@@ -46,31 +46,31 @@ public partial class CfgGeneratedOverrides {
                         AH = 3;
                         CH = 0x12;
                         DH = 0x56;
-                        CarryFlag = ServiceCall(cs1, 0x0151, Clock, () => Clock.SetRTCTime(), r => CarryOnInterruptStack(r));
+                        CarryFlag = ServiceCall(Clock, () => Clock.SetRTCTime());
                         AL = 5;
                         Out8(0x0998, 5);
                         AH = 4;
-                        (CX, DX, CarryFlag) = ServiceCall(cs1, 0x015B, Clock, () => Clock.ReadDateFromRTC(), r => CarryOnInterruptStack(r.carryFlag));
+                        (CX, DX, CarryFlag) = ServiceCall(Clock, () => Clock.ReadDateFromRTC());
                         if (CarryFlag) {
                             goto L_0192;
                         }
                         AL = CH;
-                        (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0162, () => unknown_016D_0199_01869(AL));
+                        CarryFlag = NearCall(cs1, 0x0162, () => unknown_016D_0199_01869(AL));
                         if (CarryFlag) {
                             goto L_0192;
                         }
                         AL = CL;
-                        (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0169, () => unknown_016D_0199_01869(AL));
+                        CarryFlag = NearCall(cs1, 0x0169, () => unknown_016D_0199_01869(AL));
                         if (CarryFlag) {
                             goto L_0192;
                         }
                         AL = DH;
-                        (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0170, () => unknown_016D_0199_01869(AL));
+                        CarryFlag = NearCall(cs1, 0x0170, () => unknown_016D_0199_01869(AL));
                         if (CarryFlag) {
                             goto L_0192;
                         }
                         AL = DL;
-                        (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0177, () => unknown_016D_0199_01869(AL));
+                        CarryFlag = NearCall(cs1, 0x0177, () => unknown_016D_0199_01869(AL));
                         if (!CarryFlag) {
                             DX = 0x0998;
                             AL = 6;
@@ -78,7 +78,7 @@ public partial class CfgGeneratedOverrides {
                             AH = 5;
                             CX = 0x2024;
                             DH = 0x11;
-                            CarryFlag = ServiceCall(cs1, 0x018B, Clock, () => Clock.SetRTCDate(), r => CarryOnInterruptStack(r));
+                            CarryFlag = ServiceCall(Clock, () => Clock.SetRTCDate());
                             DX = 0x0999;
                             AL = 0;
                             Out8(0x0999, 0);
@@ -97,9 +97,9 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: AL. Outputs: flags. Changes: flags.</summary>
+    /// <summary>Inputs: AL. Outputs: CF. Changes: flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (bool result, bool result2, bool result3, bool result4, bool result5, bool result6) unknown_016D_0199_01869(byte byte1) {
+    public virtual bool unknown_016D_0199_01869(byte byte1) {
         AL = byte1;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0199);
@@ -115,7 +115,7 @@ public partial class CfgGeneratedOverrides {
                 BX = Stack.Pop16();
                 AX = Stack.Pop16();
                 NearReturn();
-                return (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+                return CarryFlag;
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x01B3, SpeculativeRun_01B3);
@@ -123,11 +123,11 @@ public partial class CfgGeneratedOverrides {
         BX = Stack.Pop16();
         AX = Stack.Pop16();
         NearReturn();
-        return (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return CarryFlag;
     }
 
     public virtual Action unknown_016D_0199_01869_Asm() {
-        (CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016D_0199_01869(AL);
+        CarryFlag = unknown_016D_0199_01869(AL);
         return Returned;
     }
 

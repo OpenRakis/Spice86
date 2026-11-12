@@ -71,8 +71,10 @@ internal static class IrInterruptServiceCalls {
     /// a stale site even when no statement became typed.</summary>
     /// <param name="hasOnlyBuiltInTargets">Whether every <c>int</c> site of the program on a
     /// vector observed only the installed stub.</param>
+    /// <param name="programSetCurrentPsp">Whether the program set the current PSP itself through
+    /// DOS AH=50h/55h; then every typed service call keeps writing the interrupt frame.</param>
     public static int Apply(IrMethod method, IrEditor editor, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp) {
         List<(IrBlock Block, int Index, IrStatement Replacement)> typed = [];
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
@@ -83,7 +85,7 @@ internal static class IrInterruptServiceCalls {
                     continue;
                 }
                 IVisitableAstNode replacement = Classify(call, service, block, index, facts,
-                    hasOnlyBuiltInTargets);
+                    hasOnlyBuiltInTargets, programSetCurrentPsp);
                 if (ReferenceEquals(replacement, call)) {
                     continue;
                 }
@@ -98,7 +100,7 @@ internal static class IrInterruptServiceCalls {
 
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,
         InterruptServiceVector service, IrBlock block, int index, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp) {
         InterruptServiceEntry? entry;
         ServiceSelector? selector = null;
         int? selectorValue = null;
@@ -132,6 +134,7 @@ internal static class IrInterruptServiceCalls {
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
             RunsEntryHook = RunsEntryHook(entry),
+            WritesFrame = programSetCurrentPsp,
             Results = [.. ServiceCallSignature.Outputs(entry.Contract)
                 .Select(output => IrValueSets.NodeOf(output.Mask))],
             ReturnSegment = call.Arguments[0],

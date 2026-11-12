@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4410;
         BX = Alu16.Xor(BX, BX);
-        (AX, DX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos, () => Dos.IoControl(0x4410, CX, DX, 0, DS), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, DX, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4410, CX, DX, 0, DS));
         DL = AL;
         Stack.Push16(FlagRegister16);
         AX = Stack.Pop16();

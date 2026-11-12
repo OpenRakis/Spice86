@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0111;
         AX = 0x2522;
-        ServiceCall(cs1, 0x0109, Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
+        ServiceCall(Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
         AX = 0x3100;
         DX = 8;
         InterruptCall(cs1, 0x0111, 0x21);

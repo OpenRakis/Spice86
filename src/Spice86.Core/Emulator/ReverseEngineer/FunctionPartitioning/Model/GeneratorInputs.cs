@@ -26,7 +26,8 @@ internal sealed record GeneratorInputs(
             ChainedVectorTargets = new Dictionary<byte, SegmentedAddress>(),
             ServiceVectors = new Dictionary<byte, InterruptServiceVector>(),
             CallbackDescriptions = new Dictionary<ushort, string>(),
-            MouseUserSubroutineRegistered = false
+            MouseUserSubroutineRegistered = false,
+            ProgramSetCurrentPsp = false
         },
         new ProgramImages(0, [], []),
         new ChangedMemorySnapshot { WatchedAreas = [], ChangedRanges = [] },

@@ -20,16 +20,15 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0125;
         CX = 1;
         AH = 0x3F;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x010D, Dos, () => Dos.ReadFile(0, 1, DS, 0x0125), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0, 1, DS, 0x0125));
         AX = 0x4406;
         BX = 0;
-        CarryFlag = false;
         ParityFlag = true;
         AuxiliaryFlag = false;
         ZeroFlag = true;
         SignFlag = false;
         OverflowFlag = false;
-        (AX, DX, CarryFlag) = ServiceCall(cs1, 0x0115, Dos, () => Dos.IoControl(0x4406, 1, 0x0125, 0, DS), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, DX, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4406, 1, 0x0125, 0, DS));
         AH = 7;
         BX = 0xB800;
         ES = 0xB800;

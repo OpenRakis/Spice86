@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort fileHandle = 0;
@@ -25,52 +25,49 @@ public partial class CfgGeneratedOverrides {
         DS = Stack.Pop16();
         fileHandle = 0xFFFF;
         AH = 0x68;
-        CarryFlag = false;
-        (previousAx, CarryFlag) = ServiceCall(cs1, 0x010A, Dos, () => Dos.CommitFile(0xFFFF, AX), r => CarryOnInterruptStack(r.carryFlag));
+        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0xFFFF, AX));
         if (CarryFlag) {
             Alu16.Sub(previousAx, 6);
             if (previousAx == 6) {
                 CX = Alu16.Xor(CX, CX);
                 DX = 0x01CB;
-                (previousAx, CarryFlag) = ServiceCall(cs1, 0x011E, Dos, () => Dos.CreateFile(Dos.StringDecoder.GetDosString(DS, 0x01CB, '\0', "COMMIT.DAT"), 0), r => CarryOnInterruptStack(r.carryFlag));
+                (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CreateFile(Dos.StringDecoder.GetDosString(DS, 0x01CB, '\0', "COMMIT.DAT"), 0));
                 if (!CarryFlag) {
                     ImageMinus0003Globals.Word01C9 = previousAx;
                     fileHandle = previousAx;
                     CX = 4;
                     DX = 0x01D6;
                     // DOS 40h write "DATA"
-                    (previousAx, CarryFlag) = ServiceCall(cs1, 0x0131, Dos, () => Dos.WriteFile(fileHandle, 4, DS, 0x01D6), r => CarryOnInterruptStack(r.carryFlag));
+                    (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 4, DS, 0x01D6));
                     if (!CarryFlag) {
                         Alu16.Sub(previousAx, 4);
                         if (previousAx != 4) {
                             goto L_01C2;
                         }
                         CX = 0x000A;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x0143, Dos, () => Dos.ForceDuplicateHandle(fileHandle, 0x000A), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ForceDuplicateHandle(fileHandle, 0x000A));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x0149, Dos, () => Dos.CloseFile(fileHandle, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         fileHandle = 0x000A;
                         AX = previousAx;
                         AH = 0x68;
-                        CarryFlag = true;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x0153, Dos, () => Dos.CommitFile(0x000A, AX), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         CX = 0;
                         DX = 0;
-                        CarryFlag = false;
                         ParityFlag = true;
                         AuxiliaryFlag = false;
                         ZeroFlag = true;
                         SignFlag = false;
                         OverflowFlag = false;
-                        (previousAx, DX, CarryFlag) = ServiceCall(cs1, 0x015E, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 0x000A, 0, 0), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Current, 0x000A, 0, 0));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
@@ -82,13 +79,13 @@ public partial class CfgGeneratedOverrides {
                         if (DX != 0) {
                             goto L_01C2;
                         }
-                        (previousAx, DX, CarryFlag) = ServiceCall(cs1, 0x016E, Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 0x000A, 0, DX), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, DX, CarryFlag) = ServiceCall(Dos, () => Dos.SeekFile(global::System.IO.SeekOrigin.Begin, 0x000A, 0, DX));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         CX = 4;
                         DX = 0x01DA;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x017A, Dos, () => Dos.ReadFile(0x000A, 4, DS, 0x01DA), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0x000A, 4, DS, 0x01DA));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
@@ -108,14 +105,13 @@ public partial class CfgGeneratedOverrides {
                         if (previousAx != flagOperand_018D) {
                             goto L_01C2;
                         }
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x0197, Dos, () => Dos.CloseFile(0x000A, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(0x000A, 0x3E));
                         if (CarryFlag) {
                             goto L_01C2;
                         }
                         AX = previousAx;
                         AH = 0x68;
-                        CarryFlag = false;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x019E, Dos, () => Dos.CommitFile(0x000A, AX), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(0x000A, AX));
                         if (!CarryFlag) {
                             goto L_01C2;
                         }
@@ -126,7 +122,7 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = ImageMinus0003Globals.Word01C9;
                         AX = previousAx;
                         AH = 0x68;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x01AD, Dos, () => Dos.CommitFile(fileHandle, AX), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(fileHandle, AX));
                         if (!CarryFlag) {
                             goto L_01C2;
                         }
@@ -137,8 +133,7 @@ public partial class CfgGeneratedOverrides {
                         fileHandle = 1;
                         AX = previousAx;
                         AH = 0x68;
-                        CarryFlag = true;
-                        (previousAx, CarryFlag) = ServiceCall(cs1, 0x01BC, Dos, () => Dos.CommitFile(1, AX), r => CarryOnInterruptStack(r.carryFlag));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CommitFile(1, AX));
                         if (CarryFlag) {
                             goto L_01C2;
                         }

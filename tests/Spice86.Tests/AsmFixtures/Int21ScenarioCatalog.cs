@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Keyboard;
@@ -121,6 +122,8 @@ internal static class Int21ScenarioCatalog {
             }, NoDetailAssertions),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
         GetTrueName(),
+        PspSwitchFrameReuse(),
+        ExecCtrlCChildFrame(),
         DosEntryHookFunction(),
         WithHandleTestFiles("set_handle_count_relocates_jft.com"),
         ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
@@ -165,6 +168,93 @@ internal static class Int21ScenarioCatalog {
                     "the saved SS is the program's own PSP segment");
             });
         }, [$"{ResourceSubDirectory}/{programFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs psp_switch_frame_reuse.com: section 1 creates a child PSP with untyped AH=26h,
+    /// then a typed AH=50h at the same SP whose frame overwrites the 26h frame's FLAGS; the child's
+    /// terminate must pop the 50h FLAGS. Section 2 calls the stack-saving typed AH=30h at SP = Y,
+    /// seeds Y-6..Y-1, then keeps every later frame on a scratch stack; the child's terminate must
+    /// pop the 30h frame's FLAGS and land at SS:Y. Both resumes store pushf, SS and SP to
+    /// 5000:0000.</summary>
+    private static AsmScenario PspSwitchFrameReuse() {
+        const string identity = "psp_switch_frame_reuse";
+        const string programFileName = "psp_switch_frame_reuse.com";
+        const uint resultBase = 0x50000;
+        ushort expectedFlags = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E45 }.FlagRegister16;
+        ushort expectedFlags2 = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E11 }.FlagRegister16;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+
+                result.Memory.UInt16[resultBase + 0].Should().Be(expectedFlags,
+                    "the resume pops the FLAGS of the typed 50h frame that overwrote the 26h frame");
+                result.Memory.UInt16[resultBase + 2].Should().Be(result.Memory.UInt16[resultBase + 6],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 4].Should().Be(result.Memory.UInt16[resultBase + 8],
+                    "the resume restores the parent's SP at the 26h/50h call");
+                result.Memory.UInt16[resultBase + 10].Should().Be(expectedFlags2,
+                    "the resume pops the FLAGS of the stack-saving typed 30h frame at SS:Y-6");
+                result.Memory.UInt16[resultBase + 12].Should().Be(result.Memory.UInt16[resultBase + 16],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 14].Should().Be(result.Memory.UInt16[resultBase + 18],
+                    "the resume lands at SP = Y");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs exec_ctrl_c_child_frame.com: a program without 50h/55h EXECs CTRLCD.COM, which
+    /// stuffs a Ctrl-C keystroke into the BIOS keyboard buffer and calls the typed INT 21h/AH=09h
+    /// service. DOS terminates the child inside the typed call; the resume pops the parent's EXEC
+    /// frame, which is always written because EXEC is untyped, so the typed 09h call needs no frame.
+    /// The resume stores pushf, SS and SP to 5000:0000.</summary>
+    private static AsmScenario ExecCtrlCChildFrame() {
+        const string identity = "exec_ctrl_c_child_frame";
+        const string programFileName = "exec_ctrl_c_child_frame.com";
+        const string childFileName = "ctrl_c_print_child.com";
+        const uint resultBase = 0x50000;
+        ushort expectedFlags = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E45 }.FlagRegister16;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            CopyResourceFile(childFileName, directory, "CTRLCD.COM");
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+                result.Memory.UInt16[resultBase + 0].Should().Be(expectedFlags,
+                    "the resume pops the FLAGS of the parent's untyped EXEC frame");
+                result.Memory.UInt16[resultBase + 2].Should().Be(result.Memory.UInt16[resultBase + 6],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 4].Should().Be(result.Memory.UInt16[resultBase + 8],
+                    "the resume restores the parent's SP at the EXEC call");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}", $"{ResourceSubDirectory}/{childFileName}"]) {
             PrimaryResourceFileName = programFileName
         };
     }

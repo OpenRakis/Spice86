@@ -21,9 +21,9 @@ public partial class CfgGeneratedOverrides {
         DS = 0x1234;
         DX = 0x5678;
         AX = 0x25F0;
-        ServiceCall(cs1, 0x010E, Dos, () => Dos.SetInterruptVector(0xF0, DS, 0x5678));
+        ServiceCall(Dos, () => Dos.SetInterruptVector(0xF0, DS, 0x5678));
         word1 = 0x35F0;
-        (BX, ES) = ServiceCall(cs1, 0x0114, Dos, () => Dos.ReadInterruptVector(0xF0));
+        (BX, ES) = ServiceCall(Dos, () => Dos.ReadInterruptVector(0xF0));
         Alu16.Sub(BX, 0x5678);
         if (BX == 0x5678) {
             word1 = ES;

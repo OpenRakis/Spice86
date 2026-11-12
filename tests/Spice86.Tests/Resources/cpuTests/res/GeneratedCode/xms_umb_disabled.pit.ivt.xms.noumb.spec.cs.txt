@@ -12,13 +12,13 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x4310;
-        (AL, BX, ES, CarryFlag) = ServiceCall(cs1, 0x0105, DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES), r => CarryOnInterruptStack(r.carryFlag));
+        (AL, BX, ES, CarryFlag) = ServiceCall(DosMultiplex, () => DosMultiplex.XmsServices(0x10, BX, ES));
         ImageMinus0003Globals.Word012B = BX;
         ImageMinus0003Globals.Word012D = ES;
         AH = 0x10;

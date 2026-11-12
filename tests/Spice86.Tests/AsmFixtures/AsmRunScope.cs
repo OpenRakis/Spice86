@@ -21,6 +21,9 @@ internal sealed class AsmRunScope : IDisposable {
     /// on the fresh machine before the program starts.</summary>
     public const string EmulatorCodeInventoryObservation = "emulatorCodeInventory";
 
+    /// <summary>Name of the <see cref="SoftwareInterruptRecorder"/> observation every run installs.</summary>
+    public const string SoftwareInterruptsObservation = "softwareInterrupts";
+
     private readonly List<string> _ownedDirectories = new();
     private readonly List<ObservationProvider> _observationProviders = new();
     private AsmFixture? _fixture;
