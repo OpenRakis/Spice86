@@ -24,7 +24,9 @@ using System.Linq;
 /// token either the version is the same or every memory-writing statement in between is a plain
 /// store or a push (<see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> refuses the rest) whose
 /// writes are all <see cref="IrAliasRelation.Disjoint"/> known RAM from every memory read the moved
-/// expression makes. An event check needs no refusal of its own: its may-write re-versions the
+/// expression makes. A read not proved conventional RAM also keeps its order with other such
+/// reads (<see cref="IrMemoryAliasAnalysis.DeviceReadOrderSafe"/>): the version rule cannot see
+/// a device read's side effect. An event check needs no refusal of its own: its may-write re-versions the
 /// registers a handler can observe, so the version rule already blocks a merge across it.
 /// </summary>
 internal static class IrExpressionPropagation {
@@ -184,17 +186,24 @@ internal static class IrExpressionPropagation {
     }
 
     /// <summary>Whether the moved expression's memory reads can cross the statements between the
-    /// writer at <paramref name="i"/> and the reader at <paramref name="j"/>: yes when the read does
-    /// not touch memory or the memory version is unchanged; otherwise every memory-writing statement
-    /// strictly between them must be a plain store or a push whose writes are all proved
+    /// writer at <paramref name="i"/> and the reader at <paramref name="j"/>: a read not proved
+    /// conventional RAM keeps its order with other such reads
+    /// (<see cref="IrMemoryAliasAnalysis.DeviceReadOrderSafe"/>); beyond that, yes when the memory
+    /// version is unchanged, otherwise every memory-writing statement strictly between them must
+    /// be a plain store or a push whose writes are all proved
     /// <see cref="IrAliasRelation.Disjoint"/> from each moved read, all known RAM.</summary>
     private static bool MemoryCrossable(IrBlock block, int i, int j, IrEffects moved, IrSsa ssa,
         IrMemoryAliasAnalysis alias) {
-        if ((moved.TokenReads & IrTokens.Memory) == IrTokens.None
-            || ssa.SameVersions(CpuValues.None, IrTokens.Memory, (block, i + 1), (block, j))) {
+        if ((moved.TokenReads & IrTokens.Memory) == IrTokens.None) {
             return true;
         }
         IReadOnlyList<IrMemoryAccess> reads = alias.Reads(block, i);
+        if (!alias.DeviceReadOrderSafe(block, i, j, reads)) {
+            return false;
+        }
+        if (ssa.SameVersions(CpuValues.None, IrTokens.Memory, (block, i + 1), (block, j))) {
+            return true;
+        }
         for (int k = i + 1; k < j; k++) {
             if ((block.Statements[k].Effects.TokenWrites & IrTokens.Memory) == IrTokens.None) {
                 continue;

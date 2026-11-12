@@ -2394,10 +2394,11 @@ public partial class CfgGeneratedOverrides {
                     goto L_11C8;
                 }
             L_1256:
+                BX = frame.Local26;
                 CX = frame.Local22;
                 AX = frame.Local10;
                 DX = frame.Local8;
-                BX = (ushort)(frame.Local26 + UInt16[DS, SI + 0x0C]);
+                BX += UInt16[DS, SI + 0x0C];
                 NearCall(cs1, 0x1268, unknown_017D_1B32_03302Entry);
                 flagOperand_11FE = UInt8[DS, SI + 0x18];
                 Alu8.Sub(flagOperand_11FE, 0x58);

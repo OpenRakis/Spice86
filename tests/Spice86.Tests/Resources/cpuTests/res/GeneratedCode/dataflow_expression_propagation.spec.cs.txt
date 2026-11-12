@@ -108,13 +108,13 @@ public partial class CfgGeneratedOverrides {
             InterruptCall(biosSegment, 0x00BB, 0x61, biosSegment, 0x015E, unknown_F000_015E_F015EEntry);
             word4 = AX;
             UInt16[DS, BX + 0x1A] = word4;
+            AX = UInt16[CS, SI];
             CX = UInt16[CS, SI + 4];
-            word3 = (ushort)(UInt16[CS, SI] + CX);
-            word2 = word3;
-            word8 = word3;
+            AX += CX;
+            word2 = AX;
+            word8 = AX;
             UInt16[DS, BX + 0x1C] = word2;
             UInt16[DS, BX + 0x1E] = word8;
-            AX = word3;
             AL = 5;
             UInt16[DS, BX + 0x20] = 5;
             DX = UInt16[CS, SI + 4];

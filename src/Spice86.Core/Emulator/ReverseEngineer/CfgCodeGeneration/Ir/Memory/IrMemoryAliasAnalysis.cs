@@ -145,6 +145,26 @@ internal sealed class IrMemoryAliasAnalysis {
         };
     }
 
+    /// <summary>Whether the memory reads of the statement at <paramref name="from"/> keep their
+    /// order when they move to <paramref name="to"/>: a read that is not proved conventional RAM
+    /// (<see cref="IsKnownRam"/>) cannot cross another read that is not proved conventional RAM
+    /// in the statements strictly between. A device read can carry a side effect ordinary memory
+    /// does not have - a VGA read loads the four latches a write-mode-1 store then copies - so
+    /// the memory token version staying unchanged is not enough to keep two such reads in
+    /// order (DRO-1).</summary>
+    public bool DeviceReadOrderSafe(IrBlock block, int from, int to,
+        IReadOnlyList<IrMemoryAccess> movedReads) {
+        if (movedReads.All(IsKnownRam)) {
+            return true;
+        }
+        for (int index = from + 1; index < to; index++) {
+            if (Reads(block, index).Any(read => !IsKnownRam(read))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static bool WritesMemoryToken(ValueNode node) =>
         (IrEffectsVisitor.Of(node, false).TokenWrites & IrTokens.Memory) != IrTokens.None;
 

@@ -839,6 +839,14 @@ internal static class AsmFixtureCatalog {
                         machine.Memory.UInt8[0x2000, 0x0301] = 0x22
                 }, ResultRegion(0x48,
                     (0x40, 1, 0x40), (0x41, 1, 0x33), (0x42, 1, 0x40), (0x43, 1, 0xE5)));
+            case "dataflow_device_order":
+                // The mode-1 write at es:[2] copies the latches the last device read loaded:
+                // es:[1]'s planes 55h/66h/77h/99h, not es:[0]'s 11h/22h/44h/88h. A merge that
+                // moves the read of es:[0] past the read of es:[1] leaves the wrong latches.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x4C,
+                        (0x40, 4, 0x00005511), (0x44, 1, 0x55),
+                        (0x48, 1, 0x55), (0x49, 1, 0x66), (0x4A, 1, 0x77), (0x4B, 1, 0x99)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());

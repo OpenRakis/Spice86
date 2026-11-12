@@ -73,8 +73,9 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, BX + 0x26] = byte1;
             DL = (byte)((sbyte)UInt8[CS, SI] >> 7);
             UInt8[DS, BX + 0x27] = DL;
+            word1 = UInt16[CS, SI];
             CL = UInt8[CS, SI + 4];
-            DX = (ushort)(UInt16[CS, SI] >> (CL & 0x1F) >> 1);
+            DX = (ushort)(word1 >> (CL & 0x1F) >> 1);
             UInt16[DS, BX + 0x28] = DX;
             BX += 0x0040;
             SI = Alu16.Add(SI, 5);

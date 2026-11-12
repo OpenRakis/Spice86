@@ -196,9 +196,10 @@ public partial class CfgGeneratedOverrides {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0058);
         DsGlobals.Word0E00 = 0;
+        AX = UInt16[CS, SI];
         CX = UInt16[CS, SI + 2];
         DX = 0;
-        AX = (ushort)(UInt16[CS, SI] + 1);
+        AX++;
         if (JumpDispatcher.Jump(unknown_F000_006A_F006AEntry, 0x0000)) {
             goto entrydispatcher;
         }
