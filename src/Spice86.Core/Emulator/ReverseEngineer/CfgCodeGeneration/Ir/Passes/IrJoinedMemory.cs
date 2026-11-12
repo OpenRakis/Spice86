@@ -27,34 +27,38 @@ using System.Linq;
 /// <see cref="SegmentedPointerNode"/>s with 16-bit unsigned segment and offset expressions, each
 /// offset resolves to a constant word with <c>high == low + 2</c> and no wrap, the segments are
 /// the same known RAM value read at the same version, and the widened four-byte range stays
-/// under the device mappings (<see cref="IrMemoryAliasAnalysis.IsKnownRam"/>). Anything dynamic,
+/// under the device mappings (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>). Anything dynamic,
 /// wrapped, signed or mapped refuses: a merge would then read or write bytes the original code
 /// never touched.</para>
 /// </summary>
 internal static class IrJoinedMemory {
     /// <summary>Applies both forms over <paramref name="method"/>; returns the number of joined
     /// statements. The SSA must be rebuilt by the caller when the result is not zero.</summary>
-    public static int Apply(IrMethod method, IrEditor editor) {
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static int Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static int Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
         int joined = 0;
         foreach (IrBlock block in method.Blocks) {
             if (editor.Ssa.IsStale) {
                 editor.Rebind(method, "ssa rebind joined memory");
             }
-            joined += JoinBlock(block, editor.Ssa, method, editor, pinnedOrigins);
+            joined += JoinBlock(block, editor.Ssa, method, editor, pinnedOrigins, policy);
         }
         return joined;
     }
 
     private static int JoinBlock(IrBlock block, IrSsa ssa, IrMethod method,
-            IrEditor editor, HashSet<ICfgNode> pinnedOrigins) {
+            IrEditor editor, HashSet<ICfgNode> pinnedOrigins, GenerationPolicy policy) {
         IReadOnlyList<IrStatement> statements = block.Statements;
-        IrMemoryAliasAnalysis alias = new(ssa);
+        IrMemoryAliasAnalysis alias = new(ssa, policy);
         int joined = 0;
         for (int i = 0; i < statements.Count; i++) {
             if (ssa.IsStale) {
                 ssa = editor.Rebind(method, "ssa rebind joined memory");
-                alias = new IrMemoryAliasAnalysis(ssa);
+                alias = new IrMemoryAliasAnalysis(ssa, policy);
             }
             IrStatement statement = statements[i];
             IVisitableAstNode node = RewriteReads(statement.Node, statement, alias);
@@ -111,8 +115,8 @@ internal static class IrJoinedMemory {
         }
         // The two word accesses and the widened four-byte access must all stay in known RAM:
         // a device read can observe, a device store can be ignored.
-        return alias.IsKnownRam(lowAccess) && alias.IsKnownRam(highAccess)
-            && alias.IsKnownRam(lowAccess with { Width = 4 });
+        return alias.AllowsRam(lowAccess) && alias.AllowsRam(highAccess)
+            && alias.AllowsRam(lowAccess with { Width = 4 });
     }
 
     /// <summary>Whether the statement may be folded around at all: never faulting, never

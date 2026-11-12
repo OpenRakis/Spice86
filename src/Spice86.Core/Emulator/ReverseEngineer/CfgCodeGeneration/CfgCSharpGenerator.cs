@@ -46,6 +46,7 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _verify;
     private readonly int _maxLinesPerFile;
     private readonly bool _printAsmComments;
+    private readonly GenerationPolicy _policy;
 
     /// <summary>The production generator: no census collection, no IR verification, no ASM
     /// instruction comments.</summary>
@@ -73,13 +74,27 @@ internal sealed class CfgCSharpGenerator {
         : this(collectCensuses, verify, false, maxLinesPerFile) {
     }
 
+    /// <summary>Creates a generator with the ASM comment option and an explicit policy.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        GenerationPolicy policy) : this(collectCensuses, verify, printAsmComments, policy,
+        MaxLinesPerFile) {
+    }
+
     /// <summary>Creates a generator with a per-file line limit and explicit comment option.</summary>
     internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
-        int maxLinesPerFile) {
+        int maxLinesPerFile) : this(collectCensuses, verify, printAsmComments, GenerationPolicy.Strict,
+        maxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with a per-file line limit, explicit comment option and
+    /// explicit policy.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        GenerationPolicy policy, int maxLinesPerFile) {
         _collectCensuses = collectCensuses;
         _verify = verify;
         _printAsmComments = printAsmComments;
         _maxLinesPerFile = maxLinesPerFile;
+        _policy = policy;
     }
 
     /// <summary>Generates without progress reporting; the overload used by tests and tools.</summary>
@@ -96,7 +111,8 @@ internal sealed class CfgCSharpGenerator {
         }
         progress.BeginPhase(DumpPhase.CodeAnalysis);
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic,
+            _policy);
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePlan);
@@ -115,6 +131,8 @@ internal sealed class CfgCSharpGenerator {
 
         CSharpSourceWriter supplierWriter = new();
         EmitFilePreamble(supplierWriter, false);
+        supplierWriter.Line(_policy.HeaderLine);
+        supplierWriter.Line();
         EmitSupplier(supplierWriter, plan);
         progress.EndPhase();
 
@@ -864,7 +882,7 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     internal IReadOnlyList<LiftedMethod> LiftMethods(CfgPartitionedProgram program) {
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic, _policy);
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);

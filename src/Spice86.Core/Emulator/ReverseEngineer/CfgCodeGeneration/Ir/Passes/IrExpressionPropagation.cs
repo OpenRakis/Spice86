@@ -39,19 +39,23 @@ internal static class IrExpressionPropagation {
     private const uint RegisterValues = (1u << (int)IrSsaValue.Gs + 1) - 1;
 
     /// <summary>Merges the single-use register writes of <paramref name="method"/> into their readers.</summary>
-    public static void Apply(IrMethod method, IrEditor editor) {
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         foreach (IrBlock block in method.Blocks) {
             if (editor.Ssa.IsStale) {
                 editor.Rebind(method, "ssa rebind expression propagation");
             }
             MergeBlock(block, method, entryNodes, editor.Ssa, editor,
-                new IrMemoryAliasAnalysis(editor.Ssa));
+                new IrMemoryAliasAnalysis(editor.Ssa, policy), policy);
         }
     }
 
     private static void MergeBlock(IrBlock block, IrMethod method, HashSet<ICfgNode> entryNodes,
-        IrSsa ssa, IrEditor editor, IrMemoryAliasAnalysis alias) {
+        IrSsa ssa, IrEditor editor, IrMemoryAliasAnalysis alias, GenerationPolicy policy) {
         if (ssa.IsLivenessStale) {
             ssa.RecomputeLiveness();
         }
@@ -61,7 +65,7 @@ internal static class IrExpressionPropagation {
         for (int i = 0; i < block.Statements.Count; i++) {
             if (ssa.IsStale) {
                 ssa = editor.Rebind(method, "ssa rebind expression propagation");
-                alias = new IrMemoryAliasAnalysis(ssa);
+                alias = new IrMemoryAliasAnalysis(ssa, policy);
             }
             if (covered[i] > 0
                 && TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {
@@ -213,7 +217,7 @@ internal static class IrExpressionPropagation {
             }
             foreach (IrMemoryAccess write in alias.Writes(block, k)) {
                 foreach (IrMemoryAccess read in reads) {
-                    if (!alias.IsKnownRam(write) || !alias.IsKnownRam(read)
+                    if (!alias.AllowsRam(write) || !alias.AllowsRam(read)
                         || alias.Relation(write, read) != IrAliasRelation.Disjoint) {
                         return false;
                     }

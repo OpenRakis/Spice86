@@ -189,7 +189,7 @@ internal sealed class IrStackSlots {
                     IrStackSlotDefinition definition = new(statement, delta);
                     pushed.Slots[delta] = [definition];
                     pushed.PartialSlots.Remove(delta);
-                    if (alias.IsKnownRam(
+                    if (alias.AllowsRam(
                             SlotAccessAt(block, index, state, delta, width, alias))) {
                         _ramProvedDefinitions.Add(definition);
                     }
@@ -237,7 +237,7 @@ internal sealed class IrStackSlots {
                     IrMemoryAccess popAccess =
                         SlotAccessAt(block, index, state, state.Offset.Delta, width, alias);
                     RecordRead(statement, state.Offset.Delta, width, state,
-                        alias.IsKnownRam(popAccess));
+                        alias.AllowsRam(popAccess));
                 }
                 if (state.Offset.Kind != IrStackOffsetKind.Known) {
                     return state;
@@ -255,7 +255,7 @@ internal sealed class IrStackSlots {
                     int delta = state.Offset.Delta + peekDelta;
                     int width = (int)stack.Width / 8;
                     RecordRead(statement, delta, width, state,
-                        alias.IsKnownRam(SlotAccessAt(block, index, state, delta, width, alias)));
+                        alias.AllowsRam(SlotAccessAt(block, index, state, delta, width, alias)));
                 }
                 return state;
             default:
@@ -273,7 +273,7 @@ internal sealed class IrStackSlots {
                     { Register: RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
                         RegisterIndex: (int)RegisterIndex.SpIndex } }] })) {
             RecordRead(statement, state.Offset.Delta + read.OffsetDisplacement, read.Width, state,
-                alias.IsKnownRam(read));
+                alias.AllowsRam(read));
         }
     }
 
@@ -392,7 +392,7 @@ internal sealed class IrStackSlots {
     /// <summary>Records a read of <paramref name="width"/> bytes at <paramref name="delta"/>: only
     /// a slot starting there with the same width supplies it; a slot of another width leaves the
     /// read unattributed. <paramref name="accessKnownRam"/> is the shared
-    /// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> decision on the read's own access; the read
+    /// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> decision on the read's own access; the read
     /// is RAM-proved when its access and every supplying definition's write are.</summary>
     private void RecordRead(IrStatement statement, int delta, int width, IrStackState state,
         bool accessKnownRam) {

@@ -223,7 +223,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
             AsmFinalState baseline = InterpretedBaseline(execution.Fixture.Settings, discoverySettings,
                 discoveryFinalState, interpretedStates);
-            GeneratedCodeDifferentialReport.Check(goldenKey, baseline,
+            GeneratedCodeDifferentialReport.Check(goldenKey,
+                execution.Fixture.Settings.GenerationPolicy.Name, baseline,
                 AsmFinalState.Capture(run, execution.Fixture.Settings));
         }
     }
@@ -328,6 +329,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
         }
+        key += settings.GenerationPolicy.GoldenSuffix;
         return key + settings.HandlerSegmentGoldenSuffix;
     }
 
@@ -456,7 +458,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
     private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram =
-            new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
+            new CfgCSharpGenerator(collectCensuses: true, verify: true, printAsmComments: false,
+                scope.Fixture.Settings.GenerationPolicy).Generate(program);
         AssertAddressMapCoversEveryInstruction(program, generatedProgram);
         IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);

@@ -18,7 +18,8 @@ using System.Linq;
 /// normalized 16-bit offset (sorted register/version terms plus a constant displacement, or
 /// unknown) and a width. <see cref="Relation"/> proves two accesses equal or disjoint from the SSA
 /// versions and the constants <c>IrConstants</c> already substituted; it never reads observed
-/// addresses. <see cref="IsKnownRam"/> restricts the rewrites to accesses that provably stay below
+/// addresses. <see cref="RamDecision"/> restricts the rewrites to accesses the policy allows as
+/// ordinary RAM - proved to stay below
 /// the device mappings (linear <c>0xA0000</c>); a device read can have a side effect, a store to a
 /// device range is ignored. A statement that writes the memory token but is not a plain store or a
 /// push is a <see cref="IsFullMemoryBoundary"/>.
@@ -29,16 +30,30 @@ internal sealed class IrMemoryAliasAnalysis {
 
     private readonly IrSsa _ssa;
     private readonly IrSegmentValueResolver _segmentValues;
+    private readonly GenerationPolicy _policy;
 
-    /// <summary>Builds the analysis over the SSA of one method.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa) : this(ssa, IrSegmentFacts.None) {
+    /// <summary>Builds the analysis over the SSA of one method in strict mode.</summary>
+    public IrMemoryAliasAnalysis(IrSsa ssa) : this(ssa, IrSegmentFacts.None, GenerationPolicy.Strict) {
+    }
+
+    /// <summary>Builds the analysis over the SSA of one method under <paramref name="policy"/>.</summary>
+    public IrMemoryAliasAnalysis(IrSsa ssa, GenerationPolicy policy) :
+        this(ssa, IrSegmentFacts.None, policy) {
     }
 
     /// <summary>Builds the analysis over the SSA of one method, resolving entry versions through
-    /// the segment entry facts <paramref name="facts"/> a prepare round consumed.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts) {
+    /// the segment entry facts <paramref name="facts"/> a prepare round consumed, in strict mode.</summary>
+    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts) :
+        this(ssa, facts, GenerationPolicy.Strict) {
+    }
+
+    /// <summary>Builds the analysis over the SSA of one method, resolving entry versions through
+    /// the segment entry facts <paramref name="facts"/> a prepare round consumed, under
+    /// <paramref name="policy"/>.</summary>
+    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts, GenerationPolicy policy) {
         _ssa = ssa;
         _segmentValues = new IrSegmentValueResolver(ssa, facts);
+        _policy = policy;
     }
 
     /// <summary>The pointer reads of the statement at <paramref name="index"/> in
@@ -151,19 +166,19 @@ internal sealed class IrMemoryAliasAnalysis {
     }
 
     /// <summary>Whether the memory reads of the statement at <paramref name="from"/> keep their
-    /// order when they move to <paramref name="to"/>: a read that is not proved conventional RAM
-    /// (<see cref="IsKnownRam"/>) cannot cross another read that is not proved conventional RAM
+    /// order when they move to <paramref name="to"/>: a read the policy does not allow as
+    /// conventional RAM (<see cref="AllowsRam"/>) cannot cross another such read
     /// in the statements strictly between. A device read can carry a side effect ordinary memory
     /// does not have - a VGA read loads the four latches a write-mode-1 store then copies - so
     /// the memory token version staying unchanged is not enough to keep two such reads in
     /// order (DRO-1).</summary>
     public bool DeviceReadOrderSafe(IrBlock block, int from, int to,
         IReadOnlyList<IrMemoryAccess> movedReads) {
-        if (movedReads.All(IsKnownRam)) {
+        if (movedReads.All(AllowsRam)) {
             return true;
         }
         for (int index = from + 1; index < to; index++) {
-            if (Reads(block, index).Any(read => !IsKnownRam(read))) {
+            if (Reads(block, index).Any(read => !AllowsRam(read))) {
                 return false;
             }
         }
@@ -208,24 +223,51 @@ internal sealed class IrMemoryAliasAnalysis {
         return IrAliasRelation.Disjoint;
     }
 
-    /// <summary>Whether every byte the access can reach lies below the device mappings at
-    /// <c>0xA0000</c>: the segment value is known and the whole reachable range - the constant
-    /// offset range, or the whole segment window when the offset is not constant - stays under it.
-    /// An unknown segment value is never known RAM.</summary>
-    public bool IsKnownRam(IrMemoryAccess access) {
+    /// <summary>What the analysis can prove about <paramref name="access"/> being ordinary RAM.
+    /// <see cref="IrRamProof.Proved"/>: every byte the access can reach lies below the device
+    /// mappings at <c>0xA0000</c>. <see cref="IrRamProof.ProvedUnsafe"/>: every reachable byte is
+    /// inside the device mappings - a known device range. <see cref="IrRamProof.Unknown"/>: the
+    /// proof does not have enough knowledge - an unknown segment value, or a range that straddles
+    /// the device base.</summary>
+    public IrRamProof RamProof(IrMemoryAccess access) {
         if (access.LinearAddress is { } address) {
-            return address + (uint)access.Width <= DeviceBase;
+            return address + (uint)access.Width <= DeviceBase
+                ? IrRamProof.Proved
+                : IrRamProof.ProvedUnsafe;
         }
         if (access.SegmentValue is not { } segment) {
-            return false;
+            return IrRamProof.Unknown;
         }
         uint segmentBase = (uint)segment * 16;
-        if (access.OffsetTerms is { Count: 0 }) {
-            return segmentBase + (uint)(ushort)access.OffsetDisplacement + (uint)access.Width
-                <= DeviceBase;
+        uint low = access.OffsetTerms is { Count: 0 }
+            ? segmentBase + (uint)(ushort)access.OffsetDisplacement
+            : segmentBase;
+        uint high = access.OffsetTerms is { Count: 0 }
+            ? low + (uint)access.Width
+            : segmentBase + 0xFFFF + (uint)access.Width;
+        if (high <= DeviceBase) {
+            return IrRamProof.Proved;
         }
-        return segmentBase + 0xFFFF + (uint)access.Width <= DeviceBase;
+        if (low >= DeviceBase) {
+            return IrRamProof.ProvedUnsafe;
+        }
+        return IrRamProof.Unknown;
     }
+
+    /// <summary>The one decision every consumer of the tri-state makes: whether
+    /// <paramref name="access"/> may be treated as ordinary RAM under the policy. A proved access
+    /// is always allowed; a proved-unsafe one never is; an unknown one is allowed - and recorded
+    /// <see cref="IrRamDecision.Assumed"/> - only when the policy enables
+    /// <see cref="GenerationPolicy.AssumeUnknownMemoryIsRam"/>.</summary>
+    public IrRamDecision RamDecision(IrMemoryAccess access) {
+        IrRamProof proof = RamProof(access);
+        return new IrRamDecision(proof,
+            proof == IrRamProof.Unknown && _policy.AssumeUnknownMemoryIsRam);
+    }
+
+    /// <summary>Whether <paramref name="access"/> may be treated as ordinary RAM under the
+    /// policy: <see cref="RamDecision"/> without the provenance.</summary>
+    public bool AllowsRam(IrMemoryAccess access) => RamDecision(access).Allowed;
 
     /// <summary>The access of one pointer <paramref name="node"/> read or written by
     /// <paramref name="statement"/>.</summary>

@@ -13,7 +13,7 @@ using System.Linq;
 /// Removes a store whose every byte a later store of the same block provably rewrites before
 /// anything can read it: <c>mov [si],ax</c> followed by <c>mov [si],bx</c> keeps only the second
 /// store. Legality rows, all through <see cref="IrMemoryAliasAnalysis"/>:
-/// OS-1: the removed access is proved ordinary RAM (<see cref="IrMemoryAliasAnalysis.IsKnownRam"/>);
+/// OS-1: the removed access is proved ordinary RAM (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>);
 /// OS-2: a later store covers its whole byte range (<see cref="IrMemoryAliasAnalysis.Covers"/> - a
 /// partial overlap keeps the store);
 /// OS-3: every statement strictly between reads bytes <see cref="IrAliasRelation.Disjoint"/> from
@@ -27,9 +27,13 @@ using System.Linq;
 /// </summary>
 internal static class IrOverwrittenStores {
     /// <summary>Removes fully covered stores, block by block; returns the removed count.</summary>
-    public static int Apply(IrMethod method, IrEditor editor) {
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static int Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static int Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         IrSsa ssa = editor.Ssa;
-        IrMemoryAliasAnalysis alias = new(ssa);
+        IrMemoryAliasAnalysis alias = new(ssa, policy);
         List<(IrBlock Block, int Index)> removable = [];
         foreach (IrBlock block in method.Blocks) {
             for (int s = 0; s < block.Statements.Count; s++) {
@@ -57,7 +61,7 @@ internal static class IrOverwrittenStores {
             || AddressTokenReads(assign.Left) != IrTokens.None
             || IrEffectsVisitor.Of(assign.Right, false).TokenReads != IrTokens.None
             || alias.Writes(block, s) is not [IrMemoryAccess storeAccess]
-            || !alias.IsKnownRam(storeAccess)) {
+            || !alias.AllowsRam(storeAccess)) {
             return false;
         }
         for (int k = s + 1; k < block.Statements.Count; k++) {

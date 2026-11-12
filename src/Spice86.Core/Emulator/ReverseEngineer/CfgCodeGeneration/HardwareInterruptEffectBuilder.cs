@@ -329,7 +329,7 @@ internal sealed class HardwareInterruptEffectBuilder {
         IrPassPipeline.Run(method, IrPass.InstructionIdioms, verify: false, buildWebs: false,
             new GenerationStepTimer());
         IrSsa ssa = IrSsa.Build(method);
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa, _context.Policy));
         (IrMethod Method, IrSsa Ssa, IrStackSlots Slots) data = (method, ssa, slots);
         _liftedByMethod[methodPlan] = data;
         return data;

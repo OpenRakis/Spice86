@@ -77,7 +77,8 @@ internal sealed class IrMethodEmitter(
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
-            context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+            context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets, context.Policy,
+            timer);
         ConstantMemoryAccessTable constantMemoryAccesses = IrConstantMemoryAccesses.Collect(irMethod);
         (BlockNode EntryDispatch, BlockNode Body, GotoCensus Census, GotoTargets Targets) structured =
             timer.Measure("lowering and structuring", () => {
@@ -104,7 +105,7 @@ internal sealed class IrMethodEmitter(
         FrameSlotPlan? framePlan = timer.Measure("frame slots", () => BuildFramePlan(irMethod, pipeline.Ssa, method));
         IrSegmentFacts entryFactSet = EntryFactsOf(irMethod, entryFacts);
         SaveRestorePairs.SavedPairPlan savedPairs =
-            SaveRestorePairs.Plan(irMethod, pipeline.Ssa, entryFactSet);
+            SaveRestorePairs.Plan(irMethod, pipeline.Ssa, entryFactSet, context.Policy);
         BlockNode body = structured.Body;
         if (savedPairs.Pairs.Count > 0) {
             body = SaveRestorePairs.Apply(body, savedPairs);
@@ -141,7 +142,7 @@ internal sealed class IrMethodEmitter(
             return null;
         }
         IrFrames frames = IrFrames.Compute(irMethod, ssa,
-            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(ssa)),
+            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(ssa, context.Policy)),
             statement => {
                 if (statement.Origin is CfgInstruction instruction) {
                     return effectBuilder.CallTargetWrites(instruction);

@@ -8,6 +8,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
@@ -597,6 +598,13 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_alias_traps_286"),
             PartitionScenario("dataflow_io_barrier"),
             PartitionScenario("dataflow_device_order"),
+            AsmScenario.FromFixture("dataflow_device_order",
+                () => AsmFixtureCatalog.Partition("dataflow_device_order")
+                    .WithGenerationPolicy(RelaxedRamPolicy)),
+            PartitionScenario("dataflow_ram_policy"),
+            AsmScenario.FromFixture("dataflow_ram_policy",
+                () => AsmFixtureCatalog.Partition("dataflow_ram_policy")
+                    .WithGenerationPolicy(RelaxedRamPolicy)),
             PartitionScenario("dataflow_stack_vram"),
             PartitionScenario("dataflow_overwritten_stores"),
             PartitionScenario("dataflow_compiler_idioms"),
@@ -644,4 +652,9 @@ internal static class AsmScenarioCatalog {
     private static AsmScenario PartitionScenario(string binName) {
         return AsmScenario.FromFixture(binName, () => AsmFixtureCatalog.Partition(binName));
     }
+
+    /// <summary>The unknown-memory-is-RAM relaxation, the one named relaxation G15.1 runs beside
+    /// strict mode on the scenarios listed above.</summary>
+    private static readonly GenerationPolicy RelaxedRamPolicy =
+        new(GenerationRelaxation.UnknownMemoryIsRam);
 }

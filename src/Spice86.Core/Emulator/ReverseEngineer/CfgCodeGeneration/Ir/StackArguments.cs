@@ -393,7 +393,7 @@ internal sealed class StackArguments {
             return frames;
         }
         IrMethod method = prepared.IrMethod;
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(prepared.Ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(prepared.Ssa, _context.Policy));
         frames = IrFrames.Compute(method, prepared.Ssa, slots, statement => {
             if (statement.Origin is CfgInstruction instruction) {
                 return _effectBuilder.CallTargetWrites(instruction);

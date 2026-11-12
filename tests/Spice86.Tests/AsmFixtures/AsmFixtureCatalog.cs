@@ -855,6 +855,15 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x45,
                         (0x40, 1, 0x55),
                         (0x41, 1, 0x55), (0x42, 1, 0x66), (0x43, 1, 0x77), (0x44, 1, 0x99)));
+            case "dataflow_ram_policy":
+                // GP-1: the proved-RAM read forwards in both modes; the unknown-segment stores and
+                // reads (20h-23h) keep their runtime bytes under the relaxation because es = 2000h
+                // is real RAM; the proved device overwrite stays exact.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x64,
+                        (0x20, 1, 0xAA), (0x21, 1, 0xBB), (0x22, 1, 0x77), (0x23, 1, 0x88),
+                        (0x40, 2, 0x1234), (0x42, 2, 0xBBAA), (0x44, 2, 0x8877),
+                        (0x62, 2, 0x2000)));
             case "dataflow_overwritten_stores":
                 // The first stores of the kept sections each leave a byte an observer reads:
                 // the aliased read (46h), the callee (48h), the int 0 handler (4Ah). A removal

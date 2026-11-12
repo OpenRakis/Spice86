@@ -33,8 +33,10 @@ internal sealed class CfgGeneratorContext {
         Dictionary<ushort, string> segmentVariables,
         Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> transfersByEdge,
         Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> entriesByPartition,
-        IReadOnlyList<SignatureFieldPlan> signatureFields) {
+        IReadOnlyList<SignatureFieldPlan> signatureFields,
+        GenerationPolicy policy) {
         Program = program;
+        Policy = policy;
         _partitionByNode = partitionByNode;
         _methodNames = methodNames;
         _partitionBaseNames = partitionBaseNames;
@@ -58,6 +60,10 @@ internal sealed class CfgGeneratorContext {
     }
 
     public CfgPartitionedProgram Program { get; }
+
+    /// <summary>The relaxations the whole generation run shares: effects, SSA, summaries, passes
+    /// and emission read this one object.</summary>
+    public GenerationPolicy Policy { get; }
 
     /// <summary>Every signature field the generated class declares, in emission order.</summary>
     public IReadOnlyList<SignatureFieldPlan> SignatureFields { get; }

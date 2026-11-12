@@ -35,6 +35,7 @@ internal static class MachineGoldens {
         if (fixture.Settings.VariantName.Length > 0) {
             key += "." + fixture.Settings.VariantName;
         }
+        key += fixture.Settings.GenerationPolicy.GoldenSuffix;
         return key + fixture.Settings.HandlerSegmentGoldenSuffix;
     }
 

@@ -26,7 +26,8 @@ internal sealed class GeneratorAnalysis {
     public CfgPartitionedProgram Program { get; }
     public CfgGeneratorContext Context { get; }
 
-    public static GeneratorAnalysis Build(CfgPartitionedProgram program, InstructionMnemonic mnemonic) {
+    public static GeneratorAnalysis Build(CfgPartitionedProgram program, InstructionMnemonic mnemonic,
+        GenerationPolicy policy) {
         // Reverse index: every instruction back to its owning partition, so emitters can answer
         // "same method or cross-partition?" for any edge endpoint in O(1).
         Dictionary<ICfgNode, CfgCodePartition> partitionByNode = new();
@@ -80,7 +81,7 @@ internal sealed class GeneratorAnalysis {
         List<SignatureFieldPlan> signatureFields = BuildSignatureFields(program, mnemonic);
 
         CfgGeneratorContext context = new(program, partitionByNode, methodNames, partitionBaseNames,
-            segmentVariables, transfersByEdge, entriesByPartition, signatureFields);
+            segmentVariables, transfersByEdge, entriesByPartition, signatureFields, policy);
         return new GeneratorAnalysis(program, context);
     }
 

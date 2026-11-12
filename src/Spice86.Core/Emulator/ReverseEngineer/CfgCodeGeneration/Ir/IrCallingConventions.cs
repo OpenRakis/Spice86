@@ -504,7 +504,7 @@ internal sealed class IrCallingConventions {
             IrStackSlots slots = IrStackSlots.Empty;
             if (NeedsStackSlots(source.IrMethod)) {
                 slots = IrStackSlots.Compute(source.IrMethod,
-                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts));
+                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts, _context.Policy));
             }
             _methodByName[source.Method.MethodName] = new MethodData {
                 Source = source,

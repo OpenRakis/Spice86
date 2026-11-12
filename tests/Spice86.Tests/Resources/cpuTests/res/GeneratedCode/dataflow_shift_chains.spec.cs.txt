@@ -170,6 +170,8 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
+// Relaxations: none
+
 public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
         return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;

@@ -54,8 +54,23 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="goldenKey">Key of the fixture that produced both states.</param>
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
-    public static void Check(string goldenKey, AsmFinalState emulated, AsmFinalState generated) {
-        string line = Describe(goldenKey, StrictPolicy, emulated, generated);
+    /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
+    /// to the report and fails when their strict final states differ, under the strict policy.</summary>
+    /// <param name="goldenKey">Key of the fixture that produced both states.</param>
+    /// <param name="emulated">Final state of the interpreted run.</param>
+    /// <param name="generated">Final state of the generated run.</param>
+    public static void Check(string goldenKey, AsmFinalState emulated, AsmFinalState generated) =>
+        Check(goldenKey, StrictPolicy, emulated, generated);
+
+    /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
+    /// to the report and fails when their strict final states differ.</summary>
+    /// <param name="goldenKey">Key of the fixture that produced both states.</param>
+    /// <param name="policy">The generation policy the comparison ran under.</param>
+    /// <param name="emulated">Final state of the interpreted run.</param>
+    /// <param name="generated">Final state of the generated run.</param>
+    public static void Check(string goldenKey, string policy, AsmFinalState emulated,
+        AsmFinalState generated) {
+        string line = Describe(goldenKey, policy, emulated, generated);
         AppendLine(line);
         line.Should().EndWith("| identical", "the generated run must end in the interpreted run's " +
             "final state: {0}", line);

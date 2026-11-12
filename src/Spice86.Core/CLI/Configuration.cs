@@ -39,6 +39,12 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--GeneratedCodeAsmComments")]
     public bool GeneratedCodeAsmComments { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides treat memory the analysis cannot prove as
+    /// ordinary RAM; off by default - strict mode optimizes proved RAM only. A proved device range
+    /// is never relaxed.</summary>
+    [CommandOption("--GeneratedCodeAssumeUnknownMemoryIsRam")]
+    public bool GeneratedCodeAssumeUnknownMemoryIsRam { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

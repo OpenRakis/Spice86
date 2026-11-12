@@ -329,7 +329,7 @@ The legality conditions are catalogued in [codeGeneratorLegality.md](codeGenerat
 | AluAssignmentRewrite AA-1 to AA-4 | `IrAluLowering` | `dataflow_legality_traps` §AA-4; `dataflow_flag_definitions`, `instruction_coverage_386`; compile gate |
 | IrDeadFlagWrites DF-1 to DF-2 | `IrDeadFlagWrites` | `alu_dead_flags`, `bcdcnv`, `datatrnf`, `dataflow_double_precision`, `dataflow_flag_definitions`, `instruction_coverage_386`, `realloc_test_pad*` |
 | ExpressionPropagation EP-1 to EP-8 | `IrExpressionPropagation` (`SameVersions` covers EP-1; the alias analysis covers EP-5) | `dataflow_legality_traps` section EP-1, section EP-5, section EP-7b; `dataflow_alias_traps` section AL-1 to section AL-3; `IrExpressionPropagationTest` for the port half of EP-5 |
-| Memory alias analysis AL-1 to AL-5 | `IrMemoryAliasAnalysis` (`Relation`, `IsKnownRam`, `IsFullMemoryBoundary`) | `dataflow_alias_traps` section AL-1 to section AL-4; AL-5 is `unit test only` (`IrStoreForwardingTest.EventCheckBetween_Stays`) |
+| Memory alias analysis AL-1 to AL-5 | `IrMemoryAliasAnalysis` (`Relation`, `AllowsRam`, `IsFullMemoryBoundary`) | `dataflow_alias_traps` section AL-1 to section AL-4; AL-5 is `unit test only` (`IrStoreForwardingTest.EventCheckBetween_Stays`) |
 | Segment values SV-1 to SV-6 | `IrSegmentValues` (`IrStackSlots` for the stack reads) | `data_segment_values` section S1 to section S12; `IrSegmentValuesTest` |
 | Segment values across calls SC-1 to SC-3 | `IrSegmentSummaries` | `data_segment_values` section S8 to section S12; `IrSegmentValuesAcrossCallsTest` |
 | Globals by location GL-1 | `GlobalAccessClassification.ClassifyPointer` | `data_segment_values` section S15, section S13b; `CfgCSharpGeneratorLocationsTest` |
@@ -374,6 +374,10 @@ A pass is an `IrMethod` -> `IrMethod` transform in the fixed list of `IrMethodEm
 2. add one ASM fixture section per condition whose result region fails when the condition is dropped (a mutation check); `dataflow_legality_traps` shows the pattern;
 3. update or remove the statements only through the `IrEditor` the pipeline passes so later passes in the same group keep working; a pass that must see its own rewrite calls `Rebind`, timed as `ssa rebind <pass>` - otherwise it collects its edits, then applies them. If the pass changes the block structure (removes or adds blocks/edges), it must run before the SSA rebuild or trigger one;
 4. run the opt-in runs: the generated-code classes serially (goldens) and `SPICE86_JIT_GENERATOR_IR=1`.
+
+### Generation policy
+
+`GenerationPolicy` (`CfgCodeGeneration/`) is the immutable set of named relaxations the whole run shares: `CfgGeneratorContext.Policy` carries it, so effects, SSA, summaries, passes and emission read the same object. The default is strict mode - no relaxations, the baseline. Each relaxation is one command-line option; the first is `--GeneratedCodeAssumeUnknownMemoryIsRam` (`GenerationRelaxation.UnknownMemoryIsRam`), which lets the alias analysis treat memory it cannot classify as ordinary RAM. An assumption fills missing knowledge and never overrides a contrary fact: `IrMemoryAliasAnalysis.RamProof` classifies every access as `Proved` (every reachable byte below `0xA0000`), `ProvedUnsafe` (every reachable byte inside the device mappings - never relaxable) or `Unknown`, and the single `RamDecision` / `AllowsRam` gate answers "usable as RAM" for every consumer, recording `Assumed` when a relaxation granted the permission. The generated supplier file's header prints the run's relaxations as `// Relaxations: none` or the enabled names; the catalogue runs every scenario strict and runs the listed scenarios a second time under the relaxation, with a `.ram` golden key and the policy name in the differential report (GP-1 to GP-3 in the legality catalogue).
 
 ### Opt-in runs
 

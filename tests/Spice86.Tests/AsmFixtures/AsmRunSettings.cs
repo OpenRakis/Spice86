@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>Run settings of an ASM fixture: the bin to run, the cycle failsafe and the machine configuration.</summary>
@@ -57,6 +58,10 @@ internal sealed record AsmRunSettings {
 
     /// <summary>Segment for installed BIOS callbacks, separate from BIOS-image fixture code when needed.</summary>
     public ushort AsmHandlersSegment { get; init; } = 0xF000;
+
+    /// <summary>The generation policy the generated execution runs under; strict by default. A
+    /// relaxed policy selects the relaxed generated source golden and reports its policy name.</summary>
+    public GenerationPolicy GenerationPolicy { get; init; } = GenerationPolicy.Strict;
 
     /// <summary>Golden suffix for relocated callbacks; unchanged when callbacks are not installed.</summary>
     public string HandlerSegmentGoldenSuffix {

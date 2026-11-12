@@ -17,9 +17,9 @@ using System.Linq;
 /// <item><description>SG-1: no statement of the run writes memory that may alias the code bytes -
 /// a <see cref="IrTokens.Memory"/> write that is not <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
 /// keeps the merge only when every access of <see cref="IrMemoryAliasAnalysis.Writes"/> is
-/// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> and <see cref="IrAliasRelation.Disjoint"/> from the
+/// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> and <see cref="IrAliasRelation.Disjoint"/> from the
 /// raw linear range run start .. block code end. The code range needs no
-/// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> proof of its own: a write proven to be conventional
+/// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> proof of its own: a write proven to be conventional
 /// RAM below 0xA0000 cannot reach a device mapping, nothing at or above 0xA0000 is backed by
 /// conventional RAM, and the A20 wrap is already handled by <see cref="IrMemoryAliasAnalysis.Relation"/>;
 /// so a known-RAM write that is linearly disjoint from the code bytes cannot change them, wherever the
@@ -45,11 +45,15 @@ using System.Linq;
 internal static class IrSpeculativeGuardMerge {
     /// <summary>Merges the speculative guards of every block of <paramref name="method"/>.
     /// Runs on the final statements: it must run last so no other pass sees a merged guard.</summary>
-    public static void Apply(IrMethod method, IrEditor editor) {
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         List<(IrBlock Block, int Index, IrStatement Statement)> replacements = [];
         List<(IrBlock Block, int Index)> removals = [];
         foreach (IrBlock block in method.Blocks) {
-            CollectBlock(block, new IrMemoryAliasAnalysis(editor.Ssa), replacements, removals);
+            CollectBlock(block, new IrMemoryAliasAnalysis(editor.Ssa, policy), replacements, removals);
         }
         foreach ((IrBlock block, int index, IrStatement merged) in replacements) {
             editor.Replace(block, index, merged);
@@ -154,7 +158,7 @@ internal static class IrSpeculativeGuardMerge {
             Width = blockCodeEnd - runStartOffset
         };
         foreach (IrMemoryAccess write in alias.Writes(block, index)) {
-            if (!alias.IsKnownRam(write) || alias.Relation(write, codeRange) != IrAliasRelation.Disjoint) {
+            if (!alias.AllowsRam(write) || alias.Relation(write, codeRange) != IrAliasRelation.Disjoint) {
                 return false;
             }
         }

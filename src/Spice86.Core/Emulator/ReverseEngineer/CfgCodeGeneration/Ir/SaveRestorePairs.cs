@@ -54,17 +54,22 @@ internal static class SaveRestorePairs {
     /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
     /// slot analysis of its final IR.</summary>
     public static SavedPairPlan Plan(IrMethod method, IrSsa ssa) =>
-        Plan(method, ssa, IrSegmentFacts.None);
+        Plan(method, ssa, IrSegmentFacts.None, GenerationPolicy.Strict);
+
+    /// <summary>Finds the qualifying pairs of <paramref name="method"/> in strict mode.</summary>
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts) =>
+        Plan(method, ssa, entryFacts, GenerationPolicy.Strict);
 
     /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
     /// slot analysis of its final IR, resolving entry versions through the segment entry facts
     /// the prepare round consumed.</summary>
-    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts) {
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts,
+        GenerationPolicy policy) {
         if (!method.Blocks.SelectMany(block => block.Statements).Any(statement =>
                 statement.Node is StackCallNode { Operation: StackOperation.Push })) {
             return SavedPairPlan.Empty;
         }
-        IrMemoryAliasAnalysis alias = new(ssa, entryFacts);
+        IrMemoryAliasAnalysis alias = new(ssa, entryFacts, policy);
         IrStackSlots slots = IrStackSlots.Compute(method, alias);
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> dominators = DominatorTreeBuilder.BuildFromEntries(graph);

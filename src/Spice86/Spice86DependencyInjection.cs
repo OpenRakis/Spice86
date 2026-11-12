@@ -499,8 +499,12 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner,
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
+        GenerationPolicy generationPolicy = new(
+            configuration.GeneratedCodeAssumeUnknownMemoryIsRam
+                ? GenerationRelaxation.UnknownMemoryIsRam
+                : GenerationRelaxation.None);
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(false, false,
-            configuration.GeneratedCodeAsmComments), loggerService);
+            configuration.GeneratedCodeAsmComments, generationPolicy), loggerService);
         DumpProgressReporter dumpProgressReporter = new(loggerService, new SystemTimeProvider());
         DumpProgressReporter = dumpProgressReporter;
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,

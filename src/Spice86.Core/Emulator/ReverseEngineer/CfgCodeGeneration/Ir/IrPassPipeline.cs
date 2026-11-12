@@ -84,7 +84,7 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        RunAll(method, verify, buildWebs, ioPorts, _ => false, timer);
+        RunAll(method, verify, buildWebs, ioPorts, _ => false, GenerationPolicy.Strict, timer);
 
     /// <summary>Runs the whole pipeline on <paramref name="method"/> with
     /// <paramref name="ioPorts"/> and <paramref name="hasOnlyBuiltInTargets"/> the
@@ -94,9 +94,10 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationPolicy policy,
+        GenerationStepTimer timer) {
         IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs,
-            ioPorts, hasOnlyBuiltInTargets, timer);
+            ioPorts, hasOnlyBuiltInTargets, policy, timer);
         if (result.Ssa is not { } ssa || (buildWebs && result.Webs is null)) {
             throw new InvalidOperationException(
                 $"A full IR pipeline run of {method.Name} must produce an SSA and webs.");
@@ -120,7 +121,7 @@ internal static class IrPassPipeline {
     /// becomes a direct service call.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        Run(method, last, verify, buildWebs, ioPorts, _ => false, timer);
+        Run(method, last, verify, buildWebs, ioPorts, _ => false, GenerationPolicy.Strict, timer);
 
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/> with <paramref name="ioPorts"/> and
@@ -128,9 +129,18 @@ internal static class IrPassPipeline {
     /// <see cref="IrPass.InterruptServiceCalls"/> gates direct service calls on, measuring each
     /// pass, each SSA build, the web build when <paramref name="buildWebs"/> is true, and the
     /// verification into <paramref name="timer"/>.</summary>
+    /// <summary>Runs every pass up to and including <paramref name="last"/> on
+    /// <paramref name="method"/> in strict mode.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) =>
+        Run(method, last, verify, buildWebs, ioPorts, hasOnlyBuiltInTargets, GenerationPolicy.Strict,
+            timer);
+
+    public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
+        IReadOnlyDictionary<ushort, Type> ioPorts,
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationPolicy policy,
+        GenerationStepTimer timer) {
         IrSsa? ssa = null;
         IrSsaWebs? webs = null;
         IReadOnlyDictionary<ICfgNode, DosCallRecord> dosCalls = new Dictionary<ICfgNode, DosCallRecord>();
@@ -249,13 +259,14 @@ internal static class IrPassPipeline {
             return Finish();
         }
         MakeCurrent();
-        Pass(IrPass.StoreForwarding.ToString(), () => IrStoreForwarding.Apply(method, editor));
+        Pass(IrPass.StoreForwarding.ToString(),
+            () => IrStoreForwarding.Apply(method, editor, policy));
         if (last == IrPass.StoreForwarding) {
             return Finish();
         }
         MakeCurrent();
         PassResult(IrPass.OverwrittenStores.ToString(),
-            () => IrOverwrittenStores.Apply(method, editor));
+            () => IrOverwrittenStores.Apply(method, editor, policy));
         if (last == IrPass.OverwrittenStores) {
             return Finish();
         }
@@ -285,7 +296,8 @@ internal static class IrPassPipeline {
             RebuildWebs();
         }
         MakeCurrent();
-        Pass(IrPass.ExpressionPropagation.ToString(), () => IrExpressionPropagation.Apply(method, editor));
+        Pass(IrPass.ExpressionPropagation.ToString(),
+            () => IrExpressionPropagation.Apply(method, editor, policy));
         if (last == IrPass.ExpressionPropagation) {
             return Finish();
         }
@@ -326,7 +338,7 @@ internal static class IrPassPipeline {
             return Finish();
         }
         int joinedAccesses = PassResult(IrPass.JoinedMemory.ToString(),
-            () => IrJoinedMemory.Apply(method, editor));
+            () => IrJoinedMemory.Apply(method, editor, policy));
         MakeCurrent();
         if (joinedAccesses != 0) {
             RebuildWebs();
@@ -335,7 +347,8 @@ internal static class IrPassPipeline {
             return Finish();
         }
         MakeCurrent();
-        Pass(IrPass.SpeculativeGuardMerge.ToString(), () => IrSpeculativeGuardMerge.Apply(method, editor));
+        Pass(IrPass.SpeculativeGuardMerge.ToString(),
+            () => IrSpeculativeGuardMerge.Apply(method, editor, policy));
         return Finish();
 
         IrPipelineResult Finish() {
