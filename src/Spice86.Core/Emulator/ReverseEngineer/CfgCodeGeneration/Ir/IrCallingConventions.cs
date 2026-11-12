@@ -88,13 +88,14 @@ internal sealed class IrCallingConventions {
     /// <summary>How many iterations the last <see cref="Compute"/> ran to the fixed point.</summary>
     internal int Iterations { get; private set; }
 
-    /// <summary>Computes the conventions of <paramref name="methods"/> to a fixed point.</summary>
+    /// <summary>Computes the conventions of <paramref name="methods"/> to a fixed point, invoking
+    /// <paramref name="roundStarted"/> with the 1-based number of each fixed-point iteration.</summary>
     public static IrCallingConventions Compute(IReadOnlyList<PreparedMethod> methods,
-        CfgGeneratorContext context) {
+        CfgGeneratorContext context, Action<int> roundStarted) {
         IrCallingConventions conventions = new(context);
         conventions.Preprocess(methods);
         conventions.SeedUnknownWays();
-        conventions.Iterate();
+        conventions.Iterate(roundStarted);
         return conventions;
     }
 
@@ -491,7 +492,7 @@ internal sealed class IrCallingConventions {
         return call.Resolved ? TargetsChanges(call) : CpuValues.All;
     }
 
-    private void Iterate() {
+    private void Iterate(Action<int> roundStarted) {
         // Each round recomputes only the entry sites and outputs whose inputs changed: a site when
         // an input, a change or an output it reads moved; an outputs when its entry's changes or a
         // caller's liveness inputs moved. Writes happen in the same positions as a full recompute,
@@ -500,6 +501,7 @@ internal sealed class IrCallingConventions {
         HashSet<CfgCodePartitionEntry> sitesDirty = new(_methodByEntry.Keys);
         HashSet<CfgCodePartitionEntry> outputsDirty = new(_states.Keys);
         for (int iteration = 0; ; iteration++) {
+            roundStarted(iteration + 1);
             bool changed = false;
             foreach (MethodData method in _methods) {
                 foreach (EntrySite site in method.Entries) {

@@ -36,7 +36,7 @@ internal sealed class DumpProgressUiService : IDisposable {
     }
 
     private void OnPhaseBegan(DumpPhase phase) =>
-        _uiDispatcher.Post(() => _viewModel?.BeginPhase());
+        _uiDispatcher.Post(() => _viewModel?.BeginPhase(phase));
 
     private void OnDumpStarted() => _uiDispatcher.Post(() => {
         _viewModel = new DumpProgressViewModel();

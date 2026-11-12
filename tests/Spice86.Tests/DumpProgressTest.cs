@@ -25,6 +25,8 @@ public class DumpProgressTest {
         DumpPhase.CodeAnalysis,
         DumpPhase.CodePlan,
         DumpPhase.CodeMethods,
+        DumpPhase.CodeProgramAnalysis,
+        DumpPhase.CodePrinting,
         DumpPhase.CodeSource,
         DumpPhase.CodeProject,
         DumpPhase.Symbols,

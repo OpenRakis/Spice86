@@ -18,12 +18,12 @@ using Xunit;
 using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
 
 /// <summary>
-/// The generator reports one CodeMethods step per emitted method through
-/// <see cref="DumpProgressReporter"/>.
+/// The generator reports one CodeMethods preparation step, the CodeProgramAnalysis parts and one
+/// CodePrinting step per method through <see cref="DumpProgressReporter"/>.
 /// </summary>
 public class GeneratorProgressTest {
     [Fact]
-    public void GenerateReportsCodeMethodsStepsOneToMethodCount() {
+    public void GenerateReportsStepsOfEveryCodeGenerationPhase() {
         TestInstructionHelper helper = new();
         CfgInstruction first = Parse(helper, 0x0000, 0x90);
         CfgInstruction ret = Parse(helper, 0x0001, 0xC3);
@@ -37,14 +37,32 @@ public class GeneratorProgressTest {
         DumpProgressReporter reporter = new(NullLogger.Instance, new SystemTimeProvider());
         List<(DumpPhase Phase, int Current, int Total, string Item)> steps = new();
         reporter.StepReported += (phase, current, total, item) => steps.Add((phase, current, total, item));
+        List<string> messages = new();
+        reporter.MessageLogged += messages.Add;
 
         new CfgCSharpGenerator().Generate(program, reporter);
 
-        steps.Should().NotBeEmpty();
-        steps.Should().OnlyContain(s => s.Phase == DumpPhase.CodeMethods);
-        steps.Select(s => s.Current).Should().Equal(Enumerable.Range(1, steps.Count));
-        steps.Select(s => s.Total).Distinct().Should().Equal(steps.Count);
-        steps.Select(s => s.Item).Should().Equal("test_F000_0000_F0000");
+        List<(DumpPhase Phase, int Current, int Total, string Item)> methodsSteps =
+            steps.Where(s => s.Phase == DumpPhase.CodeMethods).ToList();
+        methodsSteps.Should().Equal((DumpPhase.CodeMethods, 1, 1, "test_F000_0000_F0000"));
+
+        List<(DumpPhase Phase, int Current, int Total, string Item)> analysisSteps =
+            steps.Where(s => s.Phase == DumpPhase.CodeProgramAnalysis).ToList();
+        analysisSteps.Select(s => s.Item).Take(3).Should().Equal(
+            "segment summaries", "calling conventions", "calling conventions, round 1");
+        analysisSteps.Select(s => s.Item).TakeLast(2).Should().Equal(
+            "typed signatures", "globals classification");
+        analysisSteps.Should().OnlyContain(s => s.Total == 4);
+        analysisSteps.Where(s => s.Current == 2).Should()
+            .OnlyContain(s => s.Item.StartsWith("calling conventions"));
+
+        List<(DumpPhase Phase, int Current, int Total, string Item)> printingSteps =
+            steps.Where(s => s.Phase == DumpPhase.CodePrinting).ToList();
+        printingSteps.Should().Equal((DumpPhase.CodePrinting, 1, 1, "test_F000_0000_F0000"));
+
+        steps.Select(s => s.Phase).Distinct().Should().Equal(
+            DumpPhase.CodeMethods, DumpPhase.CodeProgramAnalysis, DumpPhase.CodePrinting);
+        messages.Should().Contain(m => m.StartsWith("Calling conventions fixed point finished in "));
     }
 
     [Fact]
@@ -87,7 +105,7 @@ public class GeneratorProgressTest {
 
         string line = CfgCSharpGenerator.SlowMethodLine(3, 7, "test_F000_0000_F0000", 30, 4, 80, timer);
 
-        line.Should().Be("Code generation: method 3 / 7 test_F000_0000_F0000 took 1212 ms " +
+        line.Should().Be("Code generation: slow method 3 / 7 test_F000_0000_F0000 took 1212 ms " +
             "(30 instructions, 4 IR blocks, 80 statements): lift 5 ms, ssa build 1 1200 ms, printing 7 ms");
     }
 }

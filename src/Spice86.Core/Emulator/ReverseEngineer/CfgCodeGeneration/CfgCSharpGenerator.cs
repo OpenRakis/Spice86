@@ -118,18 +118,22 @@ internal sealed class CfgCSharpGenerator {
             flagReadCensus.Merge(methodCensus.FlagReads);
             webCensus.Merge(methodCensus.Webs);
         }
+        progress.EndPhase();
 
+        progress.BeginPhase(DumpPhase.CodeProgramAnalysis);
         ProgramAnalysis analysis = ProgramAnalysis.Compute(prepared, context, effectBuilder,
-            program.Inputs.ProgramImages);
-        progress.Detail($"Calling conventions fixed point finished in {analysis.CallingConventions.Iterations} iterations");
+            program.Inputs.ProgramImages, progress);
 
         RewritePreparedBodies(prepared, program, analysis);
 
         IReadOnlyList<SpeculativeRunFieldPlan> speculativeRunFields = NameSpeculativeRunFields(prepared);
+        progress.EndPhase();
 
+        progress.BeginPhase(DumpPhase.CodePrinting);
         List<(ushort Segment, string Text, bool HasFrame)> methodTexts = new(plan.Methods.Count);
         for (int i = 0; i < prepared.Count; i++) {
             PreparedMethod preparedMethod = prepared[i];
+            progress.Step(i + 1, prepared.Count, preparedMethod.Method.MethodName);
             GenerationStepTimer timer = timers[i];
             CSharpSourceWriter methodWriter = new();
             methodWriter.Indent();
@@ -269,7 +273,7 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     internal static string SlowMethodLine(int current, int total, string name, int instructions, int blocks,
         int statements, GenerationStepTimer timer) =>
-        $"Code generation: method {current} / {total} {name} took {timer.TotalMilliseconds} ms ({instructions} instructions, {blocks} IR blocks, {statements} statements): "
+        $"Code generation: slow method {current} / {total} {name} took {timer.TotalMilliseconds} ms ({instructions} instructions, {blocks} IR blocks, {statements} statements): "
         + string.Join(", ", timer.Steps.Select(step => $"{step.Step} {step.Milliseconds} ms"));
 
     /// <summary>

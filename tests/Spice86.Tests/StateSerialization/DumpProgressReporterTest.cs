@@ -53,10 +53,10 @@ public class DumpProgressReporterTest {
         reporter.EndPhase();
 
         List<string> stepMessages = logger.Messages
-            .Where(m => m.StartsWith("Code generation: method ")).ToList();
+            .Where(m => m.StartsWith("Code generation (3/5): preparing method ")).ToList();
         // current * 10 / 25 increases at steps 1, 3, 5, 8, 10, 13, 15, 18, 20, 23 and 25 (the last).
         stepMessages.Should().HaveCount(11);
-        stepMessages.Last().Should().Be("Code generation: method 25 / 25 (100%): method_25");
+        stepMessages.Last().Should().Be("Code generation (3/5): preparing method 25 / 25 (100%): method_25");
     }
 
     [Fact]
@@ -72,11 +72,11 @@ public class DumpProgressReporterTest {
         reporter.EndPhase();
 
         List<string> stepMessages = logger.Messages
-            .Where(m => m.StartsWith("Code generation: method ")).ToList();
+            .Where(m => m.StartsWith("Code generation (3/5): preparing method ")).ToList();
         stepMessages.Should().Equal(
-            "Code generation: method 1 / 3 (33%): method_1",
-            "Code generation: method 2 / 3 (66%): method_2",
-            "Code generation: method 3 / 3 (100%): method_3");
+            "Code generation (3/5): preparing method 1 / 3 (33%): method_1",
+            "Code generation (3/5): preparing method 2 / 3 (66%): method_2",
+            "Code generation (3/5): preparing method 3 / 3 (100%): method_3");
     }
 
     [Fact]
@@ -155,10 +155,10 @@ public class DumpProgressReporterTest {
         reporter.EndPhase();
 
         List<string> stepMessages = logger.Messages
-            .Where(m => m.StartsWith("Code generation: method ")).ToList();
+            .Where(m => m.StartsWith("Code generation (3/5): preparing method ")).ToList();
         stepMessages.Should().Equal(
-            "Code generation: method 1 / 1000 (0%): method_1",
-            "Code generation: method 4 / 1000 (0%): method_4");
+            "Code generation (3/5): preparing method 1 / 1000 (0%): method_1",
+            "Code generation (3/5): preparing method 4 / 1000 (0%): method_4");
     }
 
     [Fact]
