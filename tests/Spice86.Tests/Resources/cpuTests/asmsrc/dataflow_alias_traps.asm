@@ -16,6 +16,18 @@ start:
     xor bx, bx
     xor si, si
 
+; AL-6 (G1.2): DS = 2000h and ES = 1FFFh, so es:[10h] is linear 20000h = DS:0.
+; The word store at [0FFFFh] puts its high byte 22h there through the offset
+; wrap, so the read sees 22h, not the 11h the es store left - a forwarding or
+; merge that treats the store's range as contiguous misses the wrapped byte.
+; Runs first so the AL-1 store below leaves [0] at its expected 12h.
+    mov ax, 1FFFh
+    mov es, ax
+    mov byte [es:10h], 11h
+    mov word [0FFFFh], 2233h
+    mov cl, [es:10h]
+    mov [bx+56h], cl
+
 ; AL-1: a word store at [0FFFFh] also touches offset 0, so the read must not move past it
 ; (each trap read is the last write of its register: a later write of the register would read
 ; the version the merge wants to move and refuse it)

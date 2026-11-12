@@ -1,5 +1,5 @@
 {
-  "sourceSha256": "c8b88d73a1218709012ae3d5215aed282345565d22ffd813891b8a45e1f56b6b",
+  "sourceSha256": "347a4bd91a9b60d75913cc75cc3cf5b5a6563698b7186993740ca0900cecc132",
   "program": {
     "minimum": {
       "StringServiceCalls": 0,
@@ -37,9 +37,9 @@
       "PlainRegisterAssignments": 23,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 11,
+      "RegisterReads": 12,
       "RegisterWrites": 26,
-      "Statements": 113,
+      "Statements": 118,
       "WriteBacks": 3
     }
   },
@@ -82,7 +82,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 0,
       "RegisterWrites": 0,
-      "Statements": 9,
+      "Statements": 10,
       "WriteBacks": 0
     }
   }

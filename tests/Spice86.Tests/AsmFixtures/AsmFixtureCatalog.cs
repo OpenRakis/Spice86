@@ -822,7 +822,10 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x002A), (0x42, 2, 0x002A), (0x44, 2, 0x002A),
                     (0x4A, 2, 0x2222), (0x4C, 2, 0x3333), (0x4E, 1, 0x11),
                     (0x50, 1, 0x11), (0x51, 1, 0x22), (0x52, 1, 0x44), (0x53, 1, 0x88),
-                    (0x54, 2, 0x0055)));
+                    (0x54, 2, 0x0055),
+                    (0x56, 1, 0x22), (0x57, 1, 0x00)));
+            case "dataflow_alias_traps_286":
+                return DataflowAliasTraps286(binName);
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());
@@ -1497,6 +1500,18 @@ internal static class AsmFixtureCatalog {
             VariantName = "patched"
         };
         return ResultRegionFixture(settings, DataJumpTablesRegion(true));
+    }
+
+    /// <summary>Runs the AL-6 wrap trap on the 286 memory model, which raises segment faults:
+    /// the word store at offset 0FFFFh faults instead of wrapping, so the read back of es:[10h]
+    /// keeps the 0x11 the es store left and the #GP handler counts one fault.</summary>
+    private static AsmFixture DataflowAliasTraps286(string binName) {
+        AsmRunSettings settings = new() {
+            BinName = binName,
+            CpuModel = CpuModel.INTEL_80286
+        };
+        return ResultRegionFixture(settings, ResultRegion(0x58,
+            (0x00, 1, 0x11), (0x56, 1, 0x11), (0x57, 1, 0x01)));
     }
 
     /// <summary>Runs dataflow_double_precision on the 286 memory model, which raises segment faults:

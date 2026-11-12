@@ -148,29 +148,28 @@ internal sealed class IrMemoryAliasAnalysis {
     /// 16-bit circular offset ranges when the offset terms are the same. Any other case compares
     /// the linear byte ranges when both are fully constant, each taken with and without the A20
     /// wrap (<c>&amp; 0xFFFFF</c>): <see cref="IrAliasRelation.Equal"/> only when they are the same
-    /// range both ways, <see cref="IrAliasRelation.Disjoint"/> only when no pair intersects. A
+    /// ranges both ways, <see cref="IrAliasRelation.Disjoint"/> only when no pair intersects. A
     /// range crossing the 1 MiB A20 boundary is <see cref="IrAliasRelation.MayAlias"/> unless the
-    /// two ranges are identical: masking its endpoints independently does not describe where its
-    /// bytes actually land.</summary>
+    /// two accesses give the same ranges: masking its endpoints independently does not describe
+    /// where its bytes actually land.</summary>
     public IrAliasRelation Relation(IrMemoryAccess first, IrMemoryAccess second) {
         if (SameSegmentBase(first, second)) {
             return OffsetRelation(first, second);
         }
-        (uint Start, uint End)? firstRange = LinearRange(first);
-        (uint Start, uint End)? secondRange = LinearRange(second);
-        if (firstRange is null || secondRange is null) {
+        IReadOnlyList<(uint Start, uint End)>? firstRanges = LinearRanges(first);
+        IReadOnlyList<(uint Start, uint End)>? secondRanges = LinearRanges(second);
+        if (firstRanges is null || secondRanges is null) {
             return IrAliasRelation.MayAlias;
         }
-        if (firstRange == secondRange && Wrapped(firstRange.Value) == Wrapped(secondRange.Value)) {
+        if (firstRanges.SequenceEqual(secondRanges)) {
             return IrAliasRelation.Equal;
         }
-        if ((firstRange.Value.Start >> 20) != (firstRange.Value.End >> 20)
-            || (secondRange.Value.Start >> 20) != (secondRange.Value.End >> 20)) {
+        if (firstRanges.Any(CrossesMegabyte) || secondRanges.Any(CrossesMegabyte)) {
             return IrAliasRelation.MayAlias;
         }
-        foreach ((uint start, uint end) in new[] { firstRange.Value, Wrapped(firstRange.Value) }) {
+        foreach ((uint start, uint end) in firstRanges.Concat(firstRanges.Select(Wrapped))) {
             foreach ((uint otherStart, uint otherEnd) in
-                new[] { secondRange.Value, Wrapped(secondRange.Value) }) {
+                secondRanges.Concat(secondRanges.Select(Wrapped))) {
                 if (RangesIntersect(start, end, otherStart, otherEnd)) {
                     return IrAliasRelation.MayAlias;
                 }
@@ -363,18 +362,30 @@ internal sealed class IrMemoryAliasAnalysis {
         return distance >= width1 && (0x10000 - distance) >= width2;
     }
 
-    /// <summary>The linear byte range of an access, when its segment value is known and its offset
-    /// is fully constant - or it is an absolute pointer of constant address.</summary>
-    private static (uint Start, uint End)? LinearRange(IrMemoryAccess access) {
+    /// <summary>The linear byte ranges of an access, when its segment value is known and its
+    /// offset is fully constant - or it is an absolute pointer of constant address. Each byte of
+    /// a segmented access is translated separately with a wrapping 16-bit offset, so an access
+    /// whose offset range crosses 0xFFFF is two ranges: the bytes before and after the
+    /// wrap.</summary>
+    private static IReadOnlyList<(uint Start, uint End)>? LinearRanges(IrMemoryAccess access) {
         if (access.LinearAddress is { } address) {
-            return (address, address + (uint)access.Width - 1);
+            return [(address, address + (uint)access.Width - 1)];
         }
         if (access.SegmentValue is { } segment && access.OffsetTerms is { Count: 0 }) {
-            uint start = (uint)segment * 16 + (uint)(ushort)access.OffsetDisplacement;
-            return (start, start + (uint)access.Width - 1);
+            uint segmentBase = (uint)segment * 16;
+            uint offset = (uint)(ushort)access.OffsetDisplacement;
+            uint offsetEnd = offset + (uint)access.Width - 1;
+            if (offsetEnd <= 0xFFFF) {
+                return [(segmentBase + offset, segmentBase + offsetEnd)];
+            }
+            return [(segmentBase + offset, segmentBase + 0xFFFF),
+                (segmentBase, segmentBase + (offsetEnd & 0xFFFF))];
         }
         return null;
     }
+
+    private static bool CrossesMegabyte((uint Start, uint End) range) =>
+        (range.Start >> 20) != (range.End >> 20);
 
     private static (uint Start, uint End) Wrapped((uint Start, uint End) range) =>
         (range.Start & 0xFFFFF, range.End & 0xFFFFF);

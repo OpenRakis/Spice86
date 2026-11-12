@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0146",
+  "lastExecutedAddress": "F000:015F",
   "lastExecutedBlockId": 3,
   "blocks": [
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:0146",
+      "term": "F000:015F",
       "pred": [
         2
       ],
@@ -24,6 +24,12 @@
         "FC|cld",
         "31DB|xor BX,BX",
         "31F6|xor SI,SI",
+        "B8FF1F|mov AX,0x1FFF",
+        "8EC0|mov ES,AX",
+        "26C606100011|mov byte ptr ES:[0x0010],0x11",
+        "C706FFFF3322|mov word ptr DS:[0xFFFF],0x2233",
+        "268A0E1000|mov CL,byte ptr ES:[0x0010]",
+        "884F56|mov byte ptr DS:[BX\u002B0x56],CL",
         "C606000055|mov byte ptr DS:[0],0x55",
         "C606010000|mov byte ptr DS:[1],0",
         "8B3E0000|mov DI,word ptr DS:[0]",

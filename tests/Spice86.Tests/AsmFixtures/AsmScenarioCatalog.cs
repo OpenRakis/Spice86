@@ -594,6 +594,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
             PartitionScenario("dataflow_alias_traps"),
+            PartitionScenario("dataflow_alias_traps_286"),
             PartitionScenario("dataflow_compiler_idioms"),
             PartitionScenario("dataflow_arithmetic_idioms"),
             PartitionScenario("dataflow_joined_memory"),

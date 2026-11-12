@@ -14,8 +14,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort word1;
         byte byte1;
+        ushort word1;
         byte byte2;
         ushort word2 = 0;
         ushort index = 0;
@@ -27,6 +27,11 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         DirectionFlag = false;
         BX = 0;
+        ES = 0x1FFF;
+        Segment1FFFGlobals.Byte0010 = 0x11;
+        Segment2000Globals.WordFFFF = 0x2233;
+        byte1 = Segment1FFFGlobals.Byte0010;
+        Segment2000Globals.Byte0056 = byte1;
         Segment2000Globals.Byte0000 = 0x55;
         Segment2000Globals.Byte0001 = 0;
         DI = Segment2000Globals.Word0000;
@@ -62,9 +67,9 @@ public partial class CfgGeneratedOverrides {
         SegmentA000Globals.Byte0000 = 0x88;
         Vga.WriteSequencerRegister(2, 0x0F);
         Vga.WriteGraphicsControllerRegister(5, 1);
-        byte1 = SegmentA000Globals.Byte0000;
+        CL = SegmentA000Globals.Byte0000;
         SegmentA000Globals.Byte0010 = 0;
-        Segment2000Globals.Byte004E = byte1;
+        Segment2000Globals.Byte004E = CL;
         Vga.WriteGraphicsControllerRegister(5, 0);
         AX = 4;
         Vga.WriteGraphicsControllerRegister(4, 0);
@@ -143,6 +148,26 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
     public byte Byte8001 { get => _memory.UInt8[Segment, 0x8001]; set => _memory.UInt8[Segment, 0x8001] = value; }
 }
 
+// ==== file: Segment1FFFGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment1FFFGlobals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment1FFFGlobals(IMemory memory, ushort programStartSegment) : base(memory, 0x1FFF0) {
+        _memory = memory;
+        Segment = 0x1FFF;
+    }
+
+    /// Overlaps Segment2000Globals.Byte0000, Segment2000Globals.Word0000.
+    public byte Byte0010 { get => _memory.UInt8[Segment, 0x0010]; set => _memory.UInt8[Segment, 0x0010] = value; }
+}
+
 // ==== file: Segment2000Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -159,8 +184,10 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
         Segment = 0x2000;
     }
 
+    /// Overlaps Segment1FFFGlobals.Byte0010.
     public byte Byte0000 { get => _memory.UInt8[Segment, 0x0000]; set => _memory.UInt8[Segment, 0x0000] = value; }
 
+    /// Overlaps Segment1FFFGlobals.Byte0010.
     public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 
     public byte Byte0001 { get => _memory.UInt8[Segment, 0x0001]; set => _memory.UInt8[Segment, 0x0001] = value; }
@@ -207,6 +234,8 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     public byte Byte0053 { get => _memory.UInt8[Segment, 0x0053]; set => _memory.UInt8[Segment, 0x0053] = value; }
 
     public ushort Word0054 { get => _memory.UInt16[Segment, 0x0054]; set => _memory.UInt16[Segment, 0x0054] = value; }
+
+    public byte Byte0056 { get => _memory.UInt8[Segment, 0x0056]; set => _memory.UInt8[Segment, 0x0056] = value; }
 
     public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
 
@@ -292,6 +321,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
+    protected readonly Segment1FFFGlobals Segment1FFFGlobals;
     protected readonly Segment2000Globals Segment2000Globals;
     protected readonly Segment2001Globals Segment2001Globals;
     protected readonly SegmentA000Globals SegmentA000Globals;
@@ -300,6 +330,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+        Segment1FFFGlobals = new Segment1FFFGlobals(Memory, programStartSegment);
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         Segment2001Globals = new Segment2001Globals(Memory, programStartSegment);
         SegmentA000Globals = new SegmentA000Globals(Memory, programStartSegment);
