@@ -45,6 +45,12 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--GeneratedCodeAssumeUnknownMemoryIsRam")]
     public bool GeneratedCodeAssumeUnknownMemoryIsRam { get; init; }
 
+    /// <summary>When <c>true</c>, a generated exit that leaves the machine reads no register or
+    /// flag: final CPU state is unspecified; memory and device effects stay observed. Off by
+    /// default - strict mode keeps the whole final state observed.</summary>
+    [CommandOption("--GeneratedCodeTerminalStateUnobserved")]
+    public bool GeneratedCodeTerminalStateUnobserved { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

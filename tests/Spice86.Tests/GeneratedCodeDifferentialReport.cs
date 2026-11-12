@@ -2,6 +2,7 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Tests.AsmFixtures;
 
 /// <summary>
@@ -60,17 +61,28 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
     public static void Check(string goldenKey, AsmFinalState emulated, AsmFinalState generated) =>
-        Check(goldenKey, StrictPolicy, emulated, generated);
+        Check(goldenKey, GenerationPolicy.Strict, emulated, generated);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
-    /// to the report and fails when their strict final states differ.</summary>
+    /// to the report and fails when their compared final states differ. Under
+    /// <see cref="GenerationRelaxation.TerminalStateUnobserved"/> the register comparison is
+    /// skipped - the policy declares final CPU state unspecified - and only memory decides.</summary>
     /// <param name="goldenKey">Key of the fixture that produced both states.</param>
     /// <param name="policy">The generation policy the comparison ran under.</param>
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
-    public static void Check(string goldenKey, string policy, AsmFinalState emulated,
+    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
         AsmFinalState generated) {
-        string line = Describe(goldenKey, policy, emulated, generated);
+        string line;
+        if (policy.TerminalStateUnobserved) {
+            string ram = DescribeRam(emulated.Ram, generated.Ram);
+            string extended = DescribeExtended(emulated, generated);
+            line = ram == "none" && extended == "none"
+                ? $"{goldenKey} | {policy.Name} | registers: unobserved | identical"
+                : $"{goldenKey} | {policy.Name} | registers: unobserved | ram: {ram} | extended: {extended}";
+        } else {
+            line = Describe(goldenKey, policy.Name, emulated, generated);
+        }
         AppendLine(line);
         line.Should().EndWith("| identical", "the generated run must end in the interpreted run's " +
             "final state: {0}", line);

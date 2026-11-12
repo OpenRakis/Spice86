@@ -224,7 +224,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
             AsmFinalState baseline = InterpretedBaseline(execution.Fixture.Settings, discoverySettings,
                 discoveryFinalState, interpretedStates);
             GeneratedCodeDifferentialReport.Check(goldenKey,
-                execution.Fixture.Settings.GenerationPolicy.Name, baseline,
+                execution.Fixture.Settings.GenerationPolicy, baseline,
                 AsmFinalState.Capture(run, execution.Fixture.Settings));
         }
     }

@@ -78,10 +78,14 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly List<MethodData> _methods = [];
     private readonly bool _observed;
+    private readonly CpuValues _terminalObserved;
 
     private IrCallingConventions(CfgGeneratorContext context, bool observed) {
         _context = context;
         _observed = observed;
+        _terminalObserved = context.Policy.TerminalStateUnobserved
+            ? CpuValues.None
+            : Reportable;
         foreach (CfgCodePartition partition in context.Program.Partitions) {
             foreach (CfgCodePartitionEntry entry in partition.Entries) {
                 _entryByNode[entry.Node] = entry;
@@ -979,10 +983,19 @@ internal sealed class IrCallingConventions {
     }
 
     /// <summary>What callers read after <paramref name="entry"/>: everything when it has a non-call
-    /// way in, else the union over its call sites of the bytes still needed after the call.</summary>
+    /// way in, else the union over its call sites of the bytes still needed after the call. The
+    /// program entry's non-call way is the terminal observation: under
+    /// <see cref="GenerationRelaxation.TerminalStateUnobserved"/> the machine leaves it reading no
+    /// register, so it falls through to the callers' union. Other non-call ways - execution
+    /// context entries and non-call transfer targets - return into code that still observes the
+    /// machine, so they keep the whole reportable demand.</summary>
     private CpuValues LiveAfter(CfgCodePartitionEntry entry, EntryState state) {
         if (state.UnknownWay) {
-            return Reportable;
+            bool terminalOnly = _terminalObserved != Reportable
+                && entry.Address.Equals(_context.Program.Inputs.ProgramEntryPoint);
+            if (!terminalOnly) {
+                return Reportable;
+            }
         }
         if (!_callersOf.TryGetValue(entry, out List<(MethodData, CallSite)>? callers)) {
             return CpuValues.None;
@@ -1101,15 +1114,14 @@ internal sealed class IrCallingConventions {
             case ExitKind.Abort:
                 // A return that leaves generated code (a terminal hlt) leaves the machine state
                 // observed - the strict differential gate compares every register and flag - so
-                // the observed demand adds every reportable value at that exit. Generated code
-                // after it reads nothing, so the code demand stays at the message parts only and
-                // the observed set never reaches the signatures. A fail-as-untested or a thrown
-                // abort ends the run failing: both demands are the message parts.
-                if (Contains<ReturnNode>(exit.Transfer)
-                        && !Contains<FailAsUntestedNode>(exit.Transfer)
-                        && !Contains<ThrowNode>(exit.Transfer)
-                        && _observed) {
-                    return (AbortReads(exit.Transfer) | Reportable) & mask;
+                // the observed demand adds every reportable value at that exit, or the terminal
+                // observation of the generation policy (none when the final CPU state is
+                // unobserved). Generated code after it reads nothing, so the code demand stays at
+                // the message parts only and the observed set never reaches the signatures. A
+                // fail-as-untested or a thrown abort ends the run failing: both demands are the
+                // message parts.
+                if (IsMachineLeavingReturn(exit.Transfer) && _observed) {
+                    return (AbortReads(exit.Transfer) | _terminalObserved) & mask;
                 }
                 return AbortReads(exit.Transfer) & mask;
             case ExitKind.TransferResolved:
@@ -1138,6 +1150,27 @@ internal sealed class IrCallingConventions {
         }
         return inputs;
     }
+
+    /// <summary>Whether <paramref name="transfer"/> ends generated code for good - it returns to
+    /// the machine and does not fail or throw.</summary>
+    private static bool IsMachineLeavingReturn(IVisitableAstNode transfer) =>
+        Contains<ReturnNode>(transfer)
+        && !Contains<FailAsUntestedNode>(transfer)
+        && !Contains<ThrowNode>(transfer);
+
+    /// <summary>The register bytes a machine-leaving return exit reads, or <see langword="null"/>
+    /// when <paramref name="exit"/> is not such an exit: the parts its transfer literally
+    /// references - the terminal <see cref="Reportable"/> term is not a literal read. Under strict
+    /// mode an abort exit keeps the default exit-use effect; under
+    /// <see cref="GenerationRelaxation.TerminalStateUnobserved"/> this is the whole demand.</summary>
+    internal CpuValues? TerminalExitReadsOf(string methodName, IrExit exit) =>
+        _context.Policy.TerminalStateUnobserved
+        && _methodByName.TryGetValue(methodName, out MethodData? data)
+        && data.ExitByTerminator.TryGetValue(exit, out ExitSite? site)
+        && site.Kind == ExitKind.Abort
+        && IsMachineLeavingReturn(exit.Transfer)
+            ? AbortReads(exit.Transfer)
+            : null;
 
     /// <summary>The machine bytes an abort exit's message reads: only the register / flag /
     /// segment parts the message literally references. Exit-use and unknown-call effects do not

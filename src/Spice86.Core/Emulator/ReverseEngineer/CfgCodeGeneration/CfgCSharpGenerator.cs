@@ -399,11 +399,14 @@ internal sealed class CfgCSharpGenerator {
     private static IReadOnlyDictionary<ICfgNode, CpuValues> ExitReadsOf(
         PreparedMethod prepared, IrCallingConventions conventions) {
         string methodName = prepared.Method.MethodName;
-        List<IrExit> exits = prepared.IrMethod.Blocks
-            .Where(block => block.HasTerminator && block.Terminator is IrExit exit
-                && (conventions.IsReturnExit(methodName, exit)
-                    || conventions.IsResolvedTransferExit(methodName, exit)))
-            .Select(block => (IrExit)block.Terminator).ToList();
+        List<(IrExit Exit, CpuValues? TerminalReads)> exits = prepared.IrMethod.Blocks
+            .Where(block => block.HasTerminator && block.Terminator is IrExit)
+            .Select(block => (IrExit)block.Terminator)
+            .Select(exit => (Exit: exit, TerminalReads: conventions.TerminalExitReadsOf(methodName, exit)))
+            .Where(pair => pair.TerminalReads.HasValue
+                || conventions.IsReturnExit(methodName, pair.Exit)
+                || conventions.IsResolvedTransferExit(methodName, pair.Exit))
+            .ToList();
         if (exits.Count == 0) {
             return new Dictionary<ICfgNode, CpuValues>();
         }
@@ -415,11 +418,11 @@ internal sealed class CfgCSharpGenerator {
         }
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
         Dictionary<ICfgNode, CpuValues> reads = new();
-        foreach (IrExit exit in exits) {
-            CpuValues demand = conventions.IsResolvedTransferExit(methodName, exit)
+        foreach ((IrExit exit, CpuValues? terminalReads) in exits) {
+            CpuValues demand = terminalReads ?? (conventions.IsResolvedTransferExit(methodName, exit)
                 ? conventions.TransferInputsOf(methodName, exit) | nonReportable
                 : outputs | nonReportable
-                    | (conventions.LandingInputsOf(methodName, exit) & changes);
+                    | (conventions.LandingInputsOf(methodName, exit) & changes));
             reads[exit.Origin] = reads.GetValueOrDefault(exit.Origin) | demand;
         }
         return reads;
