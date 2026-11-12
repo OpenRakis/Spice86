@@ -13,6 +13,13 @@
 ; 6: a transfer to s6_cfreader that reads CF keeps the stc before the jmp.
 ; 7: a transfer to s7_target that overwrites the flags lets the cmp fold into the jne.
 ; 8: a transfer to s8_target that reads DX keeps the mov dx before the jmp.
+; 9: s9_looper calls s9_leaf in a loop; the leaf touches neither AX nor DF, so
+;    the caller's AX and DF versions stay preserved across the calls and through
+;    the loop-head phi.
+; 10: s10_looper's loop body has two paths: .call keeps BX through a resolved leaf
+;    and can leave right after the call; .write clobbers AX. The first iterations
+;    take .write, the last leaves through .call: the BX version right after the
+;    leaf call must not be claimed preserved.
 use16
 start:
     cli                     ; no interrupt may fire before the vectors and the PIT are set
@@ -89,6 +96,22 @@ start:
     ; 8
     call s8_again             ; stores 1111h
     call s8_brancher          ; stores 0ABCDh through the transfer
+    ; 9
+    std
+    mov ax, 5678h
+    mov cx, 3
+    call s9_looper            ; the leaf touches neither AX nor DF, so both must survive
+    mov [0316h], ax
+    pushf
+    pop ax
+    and ax, 0400h
+    mov [0318h], ax
+    cld
+    ; 10
+    mov bx, 5678h
+    mov cl, 3
+    call s10_looper           ; .write runs twice, the last pass leaves through .call
+    mov [031Ah], bx
     hlt
 
 s6_again:
@@ -135,6 +158,35 @@ s8_brancher:
 
 s8_target:
     mov [0314h], dx
+    ret
+
+s9_looper:
+.loop:
+    call s9_leaf
+    loop .loop
+    ret
+
+s9_leaf:
+    mov dx, [0314h]
+    ret
+
+s10_looper:
+.loop:
+    test cl, 2
+    jz .call                  ; cl=1: the only .call pass, which also exits
+    mov bx, 0DEADh            ; path B writes BX
+    jmp .next
+.call:
+    call s10_leaf             ; path A: the leaf does not touch BX
+    cmp cl, 1
+    je .out                   ; the exit edge is on path A, right after the call
+.next:
+    loop .loop
+.out:
+    ret
+
+s10_leaf:
+    mov dx, [0314h]
     ret
 
 s1_reads_bx:

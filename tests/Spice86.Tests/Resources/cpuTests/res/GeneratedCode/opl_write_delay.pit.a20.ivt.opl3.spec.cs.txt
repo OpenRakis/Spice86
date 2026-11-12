@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
@@ -107,7 +107,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:011E");
     }
 
-    /// <summary>Inputs: EAX, CX. Outputs: EAX, CX. Changes: EAX, ECX, DX.</summary>
+    /// <summary>Inputs: CX. Outputs: CX. Changes: AL, CX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01A4_01874() {
         CheckExternalEvents(cs1, 0x01A4);
@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, CX. Outputs: EAX, ECX, DX. Changes: EAX, ECX, DX.</summary>
+    /// <summary>Inputs: CX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01B7_01887() {
         CheckExternalEvents(cs1, 0x01B7);
@@ -137,7 +137,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, CX, DX. Outputs: EAX, CX. Changes: EAX, ECX, DX.</summary>
+    /// <summary>Inputs: CX, DX. Outputs: CX. Changes: AL, CX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01CA_0189A() {
         CheckExternalEvents(cs1, 0x01CA);
@@ -154,7 +154,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, CX, DX. Outputs: EAX, ECX, DX. Changes: EAX, ECX, DX.</summary>
+    /// <summary>Inputs: CX, DX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01D8_018A8() {
         CheckExternalEvents(cs1, 0x01D8);
@@ -171,7 +171,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EBX, SI, DS, DF. Outputs: EAX, EBX, ESI, flags. Changes: EAX, EBX, ESI, flags.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: AH, BX, SI, flags. Changes: AX, BX, SI, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01E6_018B6() {
         while (true) {
@@ -189,7 +189,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, EDX, EBX. Outputs: CX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX. Outputs: CX, BX. Changes: AX, CX, DX, BX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01F5_018C5() {
         CheckExternalEvents(cs1, 0x01F5);

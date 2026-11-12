@@ -64,7 +64,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: ZF. Outputs: CX, BX. Changes: AX, ECX, EDX, EBX, ESI, DS, flags, DF.</summary>
+    /// <summary>Inputs: ZF. Outputs: CX, BX. Changes: AX, CX, DX, BX, SI, DS, flags, DF.</summary>
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         BX = 0xF000;
@@ -83,7 +83,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: DS, ZF. Outputs: CX, BX. Changes: ECX, EDX, EBX, ESI, flags, DF.</summary>
+    /// <summary>Inputs: DS, ZF. Outputs: CX, BX. Changes: CX, DX, BX, SI, flags, DF.</summary>
     /// Segment values at entry, from every call site: DS = 0xF000.
     public virtual Action unknown_F000_1290_F1290() {
         do {

@@ -18,16 +18,25 @@ using System.Linq;
 /// matched to pushes of preserved bytes restores them; a full definition preserves nothing; a
 /// partial definition by a statement whose transfer effect the caller knows (a call, an event
 /// check) preserves the previous bytes the transfer does not change; anything else preserves the
-/// previous bytes the statement does not write. A cycle preserves nothing.
+/// previous bytes the statement does not write. A cycle back-edge contributes the in-progress
+/// version's current hypothesis, which starts at the full mask and shrinks until stable; a result
+/// computed under a hypothesis still in progress is never memoized.
 /// </summary>
 internal sealed class IrPreservation {
+    private sealed class PreservationFrame(int version, CpuValues hypothesis) {
+        public int Version { get; } = version;
+        public CpuValues Hypothesis { get; set; } = hypothesis;
+        public bool Revisited { get; set; }
+    }
+
     private readonly IrSsa _ssa;
     private readonly IrStackSlots _slots;
     private readonly Func<IrStatement, CpuValues?> _transferChanges;
     private readonly Dictionary<IrSsaPhi, IrBlock> _phiBlocks = new();
     private readonly Dictionary<int, IrSsaPhi> _phiByResult = new();
     private readonly Dictionary<int, CpuValues> _memo = new();
-    private readonly HashSet<int> _visiting = new();
+    private readonly List<PreservationFrame> _stack = new();
+    private int _dependencyDepth;
 
     /// <summary>Creates the shared preservation rule set for <paramref name="method"/>.</summary>
     /// <param name="transferChanges">For a statement whose effect is a transfer the caller knows
@@ -61,12 +70,38 @@ internal sealed class IrPreservation {
         if (info.Kind == IrSsaDefinitionKind.MethodEntry) {
             return IrSsaValues.MaskOf(value);
         }
-        if (!_visiting.Add(version)) {
-            return CpuValues.None;
+        int index = _stack.FindIndex(frame => frame.Version == version);
+        if (index >= 0) {
+            _stack[index].Revisited = true;
+            _dependencyDepth = Math.Min(_dependencyDepth, index);
+            return _stack[index].Hypothesis & IrSsaValues.MaskOf(value);
         }
-        CpuValues result = PreservedUncached(value, version, info);
-        _visiting.Remove(version);
-        _memo[version] = result;
+        PreservationFrame frame = new(version, IrSsaValues.MaskOf(value));
+        _stack.Add(frame);
+        int depth = _stack.Count - 1;
+        CpuValues result;
+        int dependency;
+        while (true) {
+            frame.Revisited = false;
+            int outerDependency = _dependencyDepth;
+            _dependencyDepth = int.MaxValue;
+            result = PreservedUncached(value, version, info);
+            dependency = _dependencyDepth;
+            _dependencyDepth = Math.Min(outerDependency, dependency);
+            if (!frame.Revisited) {
+                break;
+            }
+            CpuValues next = frame.Hypothesis & result;
+            if (next == frame.Hypothesis) {
+                result = frame.Hypothesis;
+                break;
+            }
+            frame.Hypothesis = next;
+        }
+        _stack.RemoveAt(depth);
+        if (dependency >= depth) {
+            _memo[version] = result;
+        }
         return result;
     }
 

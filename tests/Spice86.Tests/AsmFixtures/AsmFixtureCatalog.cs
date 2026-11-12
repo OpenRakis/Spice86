@@ -1199,6 +1199,12 @@ internal static class AsmFixtureCatalog {
             result.Memory.UInt8[0x2000, 0x0311].Should().Be(0, "the untaken jne arm never runs");
             result.Memory.UInt16[0x2000, 0x0314].Should().Be(0xABCD,
                 "the transfer target reads DX, so the write before the jmp survives the partition exit");
+            result.Memory.UInt16[0x2000, 0x0316].Should().Be(0x5678,
+                "the leaf does not touch AX, so the caller's AX survives the calls and the loop");
+            result.Memory.UInt16[0x2000, 0x0318].Should().Be(0x0400,
+                "the leaf does not touch DF, so the caller's std survives the calls and the loop");
+            result.Memory.UInt16[0x2000, 0x031A].Should().Be(0xDEAD,
+                "the loop's .write path clobbers AX before the last pass leaves through .call");
         });
     }
 

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EDX, EBX, EBP, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         byte byte1 = 0;
@@ -70,7 +70,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0133");
     }
 
-    /// <summary>Inputs: EBX, SI, DS, DF. Outputs: EAX, EBX, ESI, flags. Changes: EAX, EBX, ESI, flags.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: AH, BX, SI, flags. Changes: AX, BX, SI, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0174_01844() {
         while (true) {
@@ -88,7 +88,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, EDX, EBX. Outputs: ECX, EDX, EBX. Changes: EAX, ECX, EDX, EBX, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX. Outputs: CX, BX. Changes: AX, CX, DX, BX, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0183_01853() {
         CheckExternalEvents(cs1, 0x0183);

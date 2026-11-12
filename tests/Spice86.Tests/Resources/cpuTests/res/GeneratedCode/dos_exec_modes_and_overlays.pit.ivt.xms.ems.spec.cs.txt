@@ -67,7 +67,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(word1);
             ES = Stack.Pop16();
             BX = word2;
-            (EAX, ECX, ESI, EDI) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(EAX, ECX, ESI, EDI, DS));
+            (CX, SI, DI) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(SI, DS));
             AL = 0x45;
             NearCall(cs1, 0x0155, unknown_016D_02E0_019B0Entry);
             (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0020));
@@ -200,15 +200,12 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, ECX, ESI, EDI, DS. Outputs: EAX, ECX, ESI, EDI. Changes: EAX, ECX, BX, ESI, EDI, ES, flags.</summary>
+    /// <summary>Inputs: SI, DS. Outputs: CX, SI, DI. Changes: AL, CX, BX, SI, DI, ES, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (uint result, uint result2, uint result3, uint result4) unknown_016D_0246_01916(uint dword1, uint dword2, uint dword3, uint dword4, ushort word1) {
-        EAX = dword1;
-        ECX = dword2;
-        ESI = dword3;
-        EDI = dword4;
-        DS = word1;
-        ushort word2;
+    public virtual (ushort result, ushort result2, ushort result3) unknown_016D_0246_01916(ushort word1, ushort word2) {
+        SI = word1;
+        DS = word2;
+        ushort word3;
         CheckExternalEvents(cs1, 0x0246);
         BX = ImageMinus0003Globals.Word002C;
         ES = BX;
@@ -219,7 +216,7 @@ public partial class CfgGeneratedOverrides {
             Alu16.Sub(CX, 0);
             if (CX == 0) {
                 NearReturn();
-                return (EAX, ECX, ESI, EDI);
+                return (CX, SI, DI);
             }
             CX--;
             AL = UInt8[ES, DI];
@@ -231,13 +228,13 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        word2 = (ushort)(DI + 3);
-        SI = word2;
+        word3 = (ushort)(DI + 3);
+        SI = word3;
         DI = 0x02F1;
         do {
             CheckExternalEvents(cs1, 0x026F);
             AL = UInt8[ES, SI];
-            UInt8[word1, DI] = AL;
+            UInt8[word2, DI] = AL;
             SI++;
             DI++;
         } while (AL != 0);
@@ -249,7 +246,7 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
             DI--;
-            AL = UInt8[word1, DI];
+            AL = UInt8[word2, DI];
             Alu8.Sub(AL, 0x2E);
             if (AL == 0x2E) {
                 goto L_028B;
@@ -258,17 +255,17 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x028A, Signature_028A_inc);
         DI = Alu16.Inc(DI);
     L_028B:
-        UInt8[word1, DI] = 0x2E;
-        UInt8[word1, DI + 1] = 0x30;
-        UInt8[word1, DI + 2] = 0x30;
-        UInt8[word1, DI + 3] = 0x30;
-        UInt8[word1, DI + 4] = 0;
+        UInt8[word2, DI] = 0x2E;
+        UInt8[word2, DI + 1] = 0x30;
+        UInt8[word2, DI + 2] = 0x30;
+        UInt8[word2, DI + 3] = 0x30;
+        UInt8[word2, DI + 4] = 0;
         NearReturn();
-        return (EAX, ECX, ESI, EDI);
+        return (CX, SI, DI);
     }
 
     public virtual Action unknown_016D_0246_01916_Asm() {
-        (EAX, ECX, ESI, EDI) = unknown_016D_0246_01916(EAX, ECX, ESI, EDI, DS);
+        (CX, SI, DI) = unknown_016D_0246_01916(SI, DS);
         return Returned;
     }
 

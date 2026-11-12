@@ -39,7 +39,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, SI, DI, ES, DS. Outputs: BX, ES. Changes: EAX, ECX, EDX, BX, EBP, ES, flags.</summary>
+    /// <summary>Inputs: AX, SI, DI, ES, DS. Outputs: BX, ES. Changes: AX, CX, DX, BX, BP, ES, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_01A4_F01A4() {
