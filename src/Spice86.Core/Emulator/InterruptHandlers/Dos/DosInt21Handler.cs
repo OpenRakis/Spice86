@@ -1595,6 +1595,48 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Gets or sets the DOS switch character and the "availdev" character (INT 21h AH=37h, "DosSwitchChar").
+    /// </summary>
+    /// <remarks>
+    /// The get subfunctions (AL=00h, AL=02h) always return '/' (0x2F) like DOS 5.0 and later, and the
+    /// set subfunctions (AL=01h, AL=03h) report success and keep DL. The game 'Iron Blood' calls this
+    /// service.
+    /// </remarks>
+    [InterruptService(0x37, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dl | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al | CpuValues.Dl, Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(GetSetSwitchCharacter), Inputs = [CpuValues.Al, CpuValues.Dl])]
+    public void GetSetSwitchCharacter() {
+        (byte al, byte dl) = GetSetSwitchCharacter(State.AL, State.DL);
+        State.AL = al;
+        State.DL = dl;
+    }
+
+    /// <summary>Handles the switch character operation <paramref name="operation"/>: the get subfunctions
+    /// return AL=0 and the switch character '/' in DL, the set subfunctions return AL=0 and keep the
+    /// character the caller had in DL, and any other subfunction returns AL=0xFF.</summary>
+    public (byte al, byte dl) GetSetSwitchCharacter(byte operation, byte previousDl) {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("GET/SET SWITCH CHARACTER (DosSwitchChar) OPERATION {Operation}",
+                ConvertUtils.ToHex8(operation));
+        }
+        const byte switchCharacter = 0x2F; // '/'
+        switch (operation) {
+            case 0x00: // Get switch character
+                return (0, switchCharacter);
+            case 0x01: // Set switch character
+                return (0, previousDl);
+            case 0x02: // Get availdev character
+                return (0, switchCharacter);
+            case 0x03: // Set availdev character
+                return (0, previousDl);
+            default:
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("DOS:0x37: call for not supported switchchar");
+                }
+                return (0xFF, previousDl);
+        }
+    }
+
+    /// <summary>
     /// Gets the address of the current Program Segment Prefix.
     /// </summary>
     /// <returns>

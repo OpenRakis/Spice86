@@ -1,5 +1,5 @@
-016D:0100 mov AH,3
-016D:0102 int 0x21
+016E:0100 mov AH,3
+016E:0102 int 0x21
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX

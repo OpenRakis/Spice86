@@ -82,7 +82,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -102,13 +102,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly SegmentB800Globals SegmentB800Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
         SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -140,7 +140,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -155,59 +155,59 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
-    public virtual Action unknown_016D_0100_017D0() {
+    public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov BX,0
+        // 016E:0100 mov BX,0
         BX = 0;
-        // 016D:0103 mov DX,word ptr [0x000017D4]
-        DX = UInt16[0x000017D4];
-        // 016D:0106 mov CX,1
+        // 016E:0103 mov DX,word ptr [0x000017E4]
+        DX = UInt16[0x000017E4];
+        // 016E:0106 mov CX,1
         CX = 1;
-        // 016D:0109 mov AH,0x3F
+        // 016E:0109 mov AH,0x3F
         AH = 0x3F;
-        // 016D:010B int 0x21
+        // 016E:010B int 0x21
         Dos.RecordCallerStack(SS, SP);
         (AX, CarryFlag) = Dos.ReadFile(0, 1, DS, DX);
-        // 016D:010D selector
+        // 016E:010D selector
         if (SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_123)) {
-            // 016D:010D mov AX,0xB800
+            // 016E:010D mov AX,0xB800
             AX = 0xB800;
-            // 016D:0110 mov ES,AX
+            // 016E:0110 mov ES,AX
             ES = 0xB800;
-            // 016D:0112 mov DI,0
+            // 016E:0112 mov DI,0
             DI = 0;
-            // 016D:0115 mov AL,byte ptr DS:[0x0120]
+            // 016E:0115 mov AL,byte ptr DS:[0x0120]
             AL = DsGlobals.Byte0120;
-            // 016D:0118 mov AH,7
+            // 016E:0118 mov AH,7
             AH = 7;
-            // 016D:011A stos word ptr ES:[DI],AX
+            // 016E:011A stos word ptr ES:[DI],AX
             SegmentB800Globals.Word0000 = AX;
             DI = (ushort)(DirectionFlag ? -2 : 2);
-            // 016D:011B mov AX,0x4C00
+            // 016E:011B mov AX,0x4C00
             AX = 0x4C00;
-            // 016D:011E int 0x21
+            // 016E:011E int 0x21
             InterruptCall(cs1, 0x0120, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:011E");
+            throw FailAsUntested("Untested return from call at 016E:011E");
         }
         if (!SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_107)) {
-            throw FailAsUntested("Untested code variant at 016D:010D");
+            throw FailAsUntested("Untested code variant at 016E:010D");
         }
-        // 016D:010D mov BX,1
+        // 016E:010D mov BX,1
         BX = 1;
-        // 016D:0110 mov DX,0x011F
+        // 016E:0110 mov DX,0x011F
         DX = 0x011F;
-        // 016D:0113 mov CX,1
+        // 016E:0113 mov CX,1
         CX = 1;
-        // 016D:0116 mov AH,0x40
+        // 016E:0116 mov AH,0x40
         AH = 0x40;
-        // 016D:0118 int 0x21
+        // 016E:0118 int 0x21
         Dos.RecordCallerStack(SS, SP);
         (AX, CarryFlag) = Dos.WriteFile(1, 1, DS, 0x011F);
-        // 016D:011A mov AX,0x4C00
+        // 016E:011A mov AX,0x4C00
         AX = 0x4C00;
-        // 016D:011D int 0x21
+        // 016E:011D int 0x21
         InterruptCall(cs1, 0x011F, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:011D");
+        throw FailAsUntested("Untested return from call at 016E:011D");
     }
 
 }
@@ -397,7 +397,7 @@ public partial class CfgGeneratedOverrides {
                     return InterruptRet();
                 }
                 if (CS == cs1 && IP == 0x0100) {
-                    if (JumpDispatcher.Jump(unknown_016D_0100_017D0Entry, 0x0000)) {
+                    if (JumpDispatcher.Jump(unknown_016E_0100_017E0Entry, 0x0000)) {
                         goto entrydispatcher;
                     }
                     return JumpDispatcher.RequiredJumpAsmReturn;

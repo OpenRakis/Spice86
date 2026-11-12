@@ -85,7 +85,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -103,11 +103,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly CsGlobals CsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -121,7 +121,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -139,7 +139,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -154,283 +154,283 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov DX,0x0998
+        // 016E:0100 mov DX,0x0998
         DX = 0x0998;
-        // 016D:0103 mov AL,1
+        // 016E:0103 mov AL,1
         AL = 1;
-        // 016D:0105 out DX,AL
+        // 016E:0105 out DX,AL
         Out8(0x0998, 1);
-        // 016D:0106 mov AH,0x2A
-        // 016D:0108 int 0x21
+        // 016E:0106 mov AH,0x2A
+        // 016E:0108 int 0x21
         Dos.RecordCallerStack(SS, SP);
         (AX, CX, DX) = Dos.ReadDate(0x2A);
-        // 016D:010A cmp CX,0x07BC
+        // 016E:010A cmp CX,0x07BC
         Alu16.Sub(CX, 0x07BC);
-        // 016D:010E jb near 0x021F
+        // 016E:010E jb near 0x021F
         if (CX >= 0x07BC) {
-            // 016D:0112 cmp DH,1
+            // 016E:0112 cmp DH,1
             Alu8.Sub(DH, 1);
-            // 016D:0115 jb near 0x021F
+            // 016E:0115 jb near 0x021F
             if (DH != 0) {
-                // 016D:0119 cmp DH,0x0C
+                // 016E:0119 cmp DH,0x0C
                 Alu8.Sub(DH, 0x0C);
-                // 016D:011C ja near 0x021F
+                // 016E:011C ja near 0x021F
                 if (DH <= 0x0C) {
-                    // 016D:0120 cmp DL,1
+                    // 016E:0120 cmp DL,1
                     Alu8.Sub(DL, 1);
-                    // 016D:0123 jb near 0x021F
+                    // 016E:0123 jb near 0x021F
                     if (DL != 0) {
-                        // 016D:0127 cmp DL,0x1F
+                        // 016E:0127 cmp DL,0x1F
                         Alu8.Sub(DL, 0x1F);
-                        // 016D:012A ja near 0x021F
+                        // 016E:012A ja near 0x021F
                         if (DL > 0x1F) {
                             goto L_021F;
                         }
-                        // 016D:012E mov DX,0x0998
+                        // 016E:012E mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0131 mov AL,2
+                        // 016E:0131 mov AL,2
                         AL = 2;
-                        // 016D:0133 out DX,AL
+                        // 016E:0133 out DX,AL
                         Out8(0x0998, 2);
-                        // 016D:0134 mov AH,0x2B
+                        // 016E:0134 mov AH,0x2B
                         AH = 0x2B;
-                        // 016D:0136 mov CX,0x07E8
+                        // 016E:0136 mov CX,0x07E8
                         CX = 0x07E8;
-                        // 016D:0139 mov DH,0x0B
-                        // 016D:013B mov DL,0x0E
+                        // 016E:0139 mov DH,0x0B
+                        // 016E:013B mov DL,0x0E
                         DX = 0x0B0E;
-                        // 016D:013D int 0x21
+                        // 016E:013D int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetDate(0x07E8, 0x0B, 0x0E);
-                        // 016D:013F cmp AL,0
+                        // 016E:013F cmp AL,0
                         Alu8.Sub(AL, 0);
-                        // 016D:0141 jne near 0x021F
+                        // 016E:0141 jne near 0x021F
                         if (AL != 0) {
                             goto L_021F;
                         }
-                        // 016D:0145 mov DX,0x0998
+                        // 016E:0145 mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0148 mov AL,3
+                        // 016E:0148 mov AL,3
                         AL = 3;
-                        // 016D:014A out DX,AL
+                        // 016E:014A out DX,AL
                         Out8(0x0998, 3);
-                        // 016D:014B mov AH,0x2B
+                        // 016E:014B mov AH,0x2B
                         AH = 0x2B;
-                        // 016D:014D mov CX,0x07BB
+                        // 016E:014D mov CX,0x07BB
                         CX = 0x07BB;
-                        // 016D:0150 mov DH,1
-                        // 016D:0152 mov DL,1
+                        // 016E:0150 mov DH,1
+                        // 016E:0152 mov DL,1
                         DX = 0x0101;
-                        // 016D:0154 int 0x21
+                        // 016E:0154 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetDate(0x07BB, 1, 1);
-                        // 016D:0156 cmp AL,0xFF
+                        // 016E:0156 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:0158 jne near 0x021F
+                        // 016E:0158 jne near 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:015C mov DX,0x0998
+                        // 016E:015C mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:015F mov AL,4
+                        // 016E:015F mov AL,4
                         AL = 4;
-                        // 016D:0161 out DX,AL
+                        // 016E:0161 out DX,AL
                         Out8(0x0998, 4);
-                        // 016D:0162 mov AH,0x2B
+                        // 016E:0162 mov AH,0x2B
                         AH = 0x2B;
-                        // 016D:0164 mov CX,0x07E8
+                        // 016E:0164 mov CX,0x07E8
                         CX = 0x07E8;
-                        // 016D:0167 mov DH,0x0D
-                        // 016D:0169 mov DL,1
+                        // 016E:0167 mov DH,0x0D
+                        // 016E:0169 mov DL,1
                         DX = 0x0D01;
-                        // 016D:016B int 0x21
+                        // 016E:016B int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetDate(0x07E8, 0x0D, 1);
-                        // 016D:016D cmp AL,0xFF
+                        // 016E:016D cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:016F jne near 0x021F
+                        // 016E:016F jne near 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:0173 mov DX,0x0998
+                        // 016E:0173 mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0176 mov AL,5
+                        // 016E:0176 mov AL,5
                         AL = 5;
-                        // 016D:0178 out DX,AL
+                        // 016E:0178 out DX,AL
                         Out8(0x0998, 5);
-                        // 016D:0179 mov AH,0x2B
+                        // 016E:0179 mov AH,0x2B
                         AH = 0x2B;
-                        // 016D:017B mov CX,0x07E8
+                        // 016E:017B mov CX,0x07E8
                         CX = 0x07E8;
-                        // 016D:017E mov DH,1
-                        // 016D:0180 mov DL,0x20
+                        // 016E:017E mov DH,1
+                        // 016E:0180 mov DL,0x20
                         DX = 0x0120;
-                        // 016D:0182 int 0x21
+                        // 016E:0182 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetDate(0x07E8, 1, 0x20);
-                        // 016D:0184 cmp AL,0xFF
+                        // 016E:0184 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:0186 jne near 0x021F
+                        // 016E:0186 jne near 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:018A mov DX,0x0998
-                        // 016D:018D mov AL,6
+                        // 016E:018A mov DX,0x0998
+                        // 016E:018D mov AL,6
                         AL = 6;
-                        // 016D:018F out DX,AL
+                        // 016E:018F out DX,AL
                         Out8(0x0998, 6);
-                        // 016D:0190 mov AH,0x2C
+                        // 016E:0190 mov AH,0x2C
                         AH = 0x2C;
-                        // 016D:0192 int 0x21
+                        // 016E:0192 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (CX, DX) = Dos.ReadTime();
-                        // 016D:0194 cmp CH,0x17
+                        // 016E:0194 cmp CH,0x17
                         Alu8.Sub(CH, 0x17);
-                        // 016D:0197 ja near 0x021F
+                        // 016E:0197 ja near 0x021F
                         if (CH > 0x17) {
                             goto L_021F;
                         }
-                        // 016D:019B cmp CL,0x3B
+                        // 016E:019B cmp CL,0x3B
                         Alu8.Sub(CL, 0x3B);
-                        // 016D:019E ja short 0x021F
+                        // 016E:019E ja short 0x021F
                         if (CL > 0x3B) {
                             goto L_021F;
                         }
-                        // 016D:01A0 cmp DH,0x3B
+                        // 016E:01A0 cmp DH,0x3B
                         Alu8.Sub(DH, 0x3B);
-                        // 016D:01A3 ja short 0x021F
+                        // 016E:01A3 ja short 0x021F
                         if (DH > 0x3B) {
                             goto L_021F;
                         }
-                        // 016D:01A5 cmp DL,0x63
+                        // 016E:01A5 cmp DL,0x63
                         Alu8.Sub(DL, 0x63);
-                        // 016D:01A8 ja short 0x021F
+                        // 016E:01A8 ja short 0x021F
                         if (DL > 0x63) {
                             goto L_021F;
                         }
-                        // 016D:01AA mov DX,0x0998
+                        // 016E:01AA mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:01AD mov AL,7
+                        // 016E:01AD mov AL,7
                         AL = 7;
-                        // 016D:01AF out DX,AL
+                        // 016E:01AF out DX,AL
                         Out8(0x0998, 7);
-                        // 016D:01B0 mov AH,0x2D
+                        // 016E:01B0 mov AH,0x2D
                         AH = 0x2D;
-                        // 016D:01B2 mov CH,0x0C
-                        // 016D:01B4 mov CL,0x22
+                        // 016E:01B2 mov CH,0x0C
+                        // 016E:01B4 mov CL,0x22
                         CX = 0x0C22;
-                        // 016D:01B6 mov DH,0x38
-                        // 016D:01B8 mov DL,0x4E
+                        // 016E:01B6 mov DH,0x38
+                        // 016E:01B8 mov DL,0x4E
                         DX = 0x384E;
-                        // 016D:01BA int 0x21
+                        // 016E:01BA int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetTime(0x0C, 0x22, 0x38, 0x4E);
-                        // 016D:01BC cmp AL,0
+                        // 016E:01BC cmp AL,0
                         Alu8.Sub(AL, 0);
-                        // 016D:01BE jne short 0x021F
+                        // 016E:01BE jne short 0x021F
                         if (AL != 0) {
                             goto L_021F;
                         }
-                        // 016D:01C0 mov DX,0x0998
+                        // 016E:01C0 mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:01C3 mov AL,8
+                        // 016E:01C3 mov AL,8
                         AL = 8;
-                        // 016D:01C5 out DX,AL
+                        // 016E:01C5 out DX,AL
                         Out8(0x0998, 8);
-                        // 016D:01C6 mov AH,0x2D
+                        // 016E:01C6 mov AH,0x2D
                         AH = 0x2D;
-                        // 016D:01C8 mov CH,0x18
-                        // 016D:01CA mov CL,0
+                        // 016E:01C8 mov CH,0x18
+                        // 016E:01CA mov CL,0
                         CX = 0x1800;
-                        // 016D:01CC mov DH,0
-                        // 016D:01CE mov DL,0
+                        // 016E:01CC mov DH,0
+                        // 016E:01CE mov DL,0
                         DX = 0;
-                        // 016D:01D0 int 0x21
+                        // 016E:01D0 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetTime(0x18, 0, 0, 0);
-                        // 016D:01D2 cmp AL,0xFF
+                        // 016E:01D2 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:01D4 jne short 0x021F
+                        // 016E:01D4 jne short 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:01D6 mov DX,0x0998
+                        // 016E:01D6 mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:01D9 mov AL,9
+                        // 016E:01D9 mov AL,9
                         AL = 9;
-                        // 016D:01DB out DX,AL
+                        // 016E:01DB out DX,AL
                         Out8(0x0998, 9);
-                        // 016D:01DC mov AH,0x2D
+                        // 016E:01DC mov AH,0x2D
                         AH = 0x2D;
-                        // 016D:01DE mov CH,0
-                        // 016D:01E0 mov CL,0x3C
+                        // 016E:01DE mov CH,0
+                        // 016E:01E0 mov CL,0x3C
                         CX = 0x003C;
-                        // 016D:01E2 mov DH,0
-                        // 016D:01E4 mov DL,0
+                        // 016E:01E2 mov DH,0
+                        // 016E:01E4 mov DL,0
                         DX = 0;
-                        // 016D:01E6 int 0x21
+                        // 016E:01E6 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetTime(0, 0x3C, 0, 0);
-                        // 016D:01E8 cmp AL,0xFF
+                        // 016E:01E8 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:01EA jne short 0x021F
+                        // 016E:01EA jne short 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:01EC mov DX,0x0998
+                        // 016E:01EC mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:01EF mov AL,0x0A
+                        // 016E:01EF mov AL,0x0A
                         AL = 0x0A;
-                        // 016D:01F1 out DX,AL
+                        // 016E:01F1 out DX,AL
                         Out8(0x0998, 0x0A);
-                        // 016D:01F2 mov AH,0x2D
+                        // 016E:01F2 mov AH,0x2D
                         AH = 0x2D;
-                        // 016D:01F4 mov CH,0
-                        // 016D:01F6 mov CL,0
+                        // 016E:01F4 mov CH,0
+                        // 016E:01F6 mov CL,0
                         CX = 0;
-                        // 016D:01F8 mov DH,0x3C
-                        // 016D:01FA mov DL,0
+                        // 016E:01F8 mov DH,0x3C
+                        // 016E:01FA mov DL,0
                         DX = 0x3C00;
-                        // 016D:01FC int 0x21
+                        // 016E:01FC int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetTime(0, 0, 0x3C, 0);
-                        // 016D:01FE cmp AL,0xFF
+                        // 016E:01FE cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:0200 jne short 0x021F
+                        // 016E:0200 jne short 0x021F
                         if (AL != 0xFF) {
                             goto L_021F;
                         }
-                        // 016D:0202 mov DX,0x0998
+                        // 016E:0202 mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0205 mov AL,0x0B
+                        // 016E:0205 mov AL,0x0B
                         AL = 0x0B;
-                        // 016D:0207 out DX,AL
+                        // 016E:0207 out DX,AL
                         Out8(0x0998, 0x0B);
-                        // 016D:0208 mov AH,0x2D
+                        // 016E:0208 mov AH,0x2D
                         AH = 0x2D;
-                        // 016D:020A mov CH,0
-                        // 016D:020C mov CL,0
+                        // 016E:020A mov CH,0
+                        // 016E:020C mov CL,0
                         CX = 0;
-                        // 016D:020E mov DH,0
-                        // 016D:0210 mov DL,0x64
+                        // 016E:020E mov DH,0
+                        // 016E:0210 mov DL,0x64
                         DX = 0x0064;
-                        // 016D:0212 int 0x21
+                        // 016E:0212 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         AL = Dos.SetTime(0, 0, 0, 0x64);
-                        // 016D:0214 cmp AL,0xFF
+                        // 016E:0214 cmp AL,0xFF
                         Alu8.Sub(AL, 0xFF);
-                        // 016D:0216 jne short 0x021F
+                        // 016E:0216 jne short 0x021F
                         if (AL == 0xFF) {
-                            // 016D:0218 mov DX,0x0999
+                            // 016E:0218 mov DX,0x0999
                             DX = 0x0999;
-                            // 016D:021B mov AL,0
+                            // 016E:021B mov AL,0
                             AL = 0;
-                            // 016D:021D out DX,AL
+                            // 016E:021D out DX,AL
                             Out8(0x0999, 0);
-                            // 016D:021E hlt
+                            // 016E:021E hlt
                             return Hlt();
                         }
                     }
@@ -439,14 +439,14 @@ public partial class CfgGeneratedOverrides {
         }
     L_021F:
         VerifySpeculativeRunOrFail(cs1, 0x021F, SpeculativeRun_021F);
-        // 016D:021F mov DX,0x0999
+        // 016E:021F mov DX,0x0999
         DX = 0x0999;
-        // 016D:0222 mov AL,0xFF
+        // 016E:0222 mov AL,0xFF
         AL = 0xFF;
-        // 016D:0224 out DX,AL
+        // 016E:0224 out DX,AL
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0225, Signature_0225_hlt);
-        // 016D:0225 hlt
+        // 016E:0225 hlt
         return Hlt();
     }
 
@@ -612,7 +612,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

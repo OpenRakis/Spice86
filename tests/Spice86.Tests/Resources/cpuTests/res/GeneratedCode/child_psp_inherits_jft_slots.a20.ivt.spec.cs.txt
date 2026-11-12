@@ -82,8 +82,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_01BB_0188BEntry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_01BB_0189BEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -99,16 +99,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_01BB_0188BEntry = _ => unknown_016D_01BB_0188B();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_01BB_0189BEntry = _ => unknown_016E_01BB_0189B();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -122,8 +122,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01BB, unknown_016D_01BB_0188BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01BB, unknown_016E_01BB_0189BEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -141,7 +141,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -156,172 +156,172 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort bx1 = 0;
         byte al1 = 0;
         byte flagOperand_0150 = 0;
         byte flagOperand_0170 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov AH,0x62
+        // 016E:0100 mov AH,0x62
         AH = 0x62;
-        // 016D:0102 int 0x21
+        // 016E:0102 int 0x21
         BX = Dos.ReadPspAddress();
-        // 016D:0104 mov word ptr DS:[0x01CE],BX
-        ImageMinus0003Globals.Word01CE = BX;
-        // 016D:0108 mov DX,0x01D1
+        // 016E:0104 mov word ptr DS:[0x01CE],BX
+        ImageMinus0002Globals.Word01CE = BX;
+        // 016E:0108 mov DX,0x01D1
         DX = 0x01D1;
-        // 016D:010B call near 0x01BB
-        NearCall(cs1, 0x010E, unknown_016D_01BB_0188BEntry);
-        // 016D:010E cmp AX,5
+        // 016E:010B call near 0x01BB
+        NearCall(cs1, 0x010E, unknown_016E_01BB_0189BEntry);
+        // 016E:010E cmp AX,5
         Alu16.Sub(AX, 5);
-        // 016D:0111 jne near 0x01B4
+        // 016E:0111 jne near 0x01B4
         if (AX == 5) {
-            // 016D:0115 mov DX,0x01D7
+            // 016E:0115 mov DX,0x01D7
             DX = 0x01D7;
-            // 016D:0118 call near 0x01BB
-            NearCall(cs1, 0x011B, unknown_016D_01BB_0188BEntry);
-            // 016D:011B cmp AX,6
+            // 016E:0118 call near 0x01BB
+            NearCall(cs1, 0x011B, unknown_016E_01BB_0189BEntry);
+            // 016E:011B cmp AX,6
             Alu16.Sub(AX, 6);
-            // 016D:011E jne near 0x01B4
+            // 016E:011E jne near 0x01B4
             if (AX == 6) {
-                // 016D:0122 mov DX,0x01DD
+                // 016E:0122 mov DX,0x01DD
                 DX = 0x01DD;
-                // 016D:0125 call near 0x01BB
-                NearCall(cs1, 0x0128, unknown_016D_01BB_0188BEntry);
-                // 016D:0128 cmp AX,7
+                // 016E:0125 call near 0x01BB
+                NearCall(cs1, 0x0128, unknown_016E_01BB_0189BEntry);
+                // 016E:0128 cmp AX,7
                 Alu16.Sub(AX, 7);
-                // 016D:012B jne near 0x01B4
+                // 016E:012B jne near 0x01B4
                 if (AX == 7) {
-                    // 016D:012F mov DX,0x2000
+                    // 016E:012F mov DX,0x2000
                     DX = 0x2000;
-                    // 016D:0132 mov SI,0x0010
+                    // 016E:0132 mov SI,0x0010
                     SI = 0x0010;
-                    // 016D:0135 mov AH,0x55
+                    // 016E:0135 mov AH,0x55
                     AH = 0x55;
-                    // 016D:0137 int 0x21
+                    // 016E:0137 int 0x21
                     InterruptCall(cs1, 0x0139, 0x21);
-                    // 016D:0139 mov BX,0x2000
+                    // 016E:0139 mov BX,0x2000
                     BX = 0x2000;
-                    // 016D:013C mov AH,0x50
+                    // 016E:013C mov AH,0x50
                     AH = 0x50;
-                    // 016D:013E int 0x21
+                    // 016E:013E int 0x21
                     Dos.SetCurrentPsp(0x2000);
-                    // 016D:0140 mov SI,0
+                    // 016E:0140 mov SI,0
                     SI = 0;
                     do {
                         CheckExternalEvents(cs1, 0x0143);
-                        // 016D:0143 mov ES,word ptr DS:[0x01CE]
-                        ES = ImageMinus0003Globals.Word01CE;
-                        // 016D:0147 mov AL,byte ptr ES:[SI+0x18]
+                        // 016E:0143 mov ES,word ptr DS:[0x01CE]
+                        ES = ImageMinus0002Globals.Word01CE;
+                        // 016E:0147 mov AL,byte ptr ES:[SI+0x18]
                         AL = UInt8[ES, (ushort)(SI + 0x18)];
-                        // 016D:014B mov BX,0x2000
+                        // 016E:014B mov BX,0x2000
                         BX = 0x2000;
-                        // 016D:014E mov ES,BX
+                        // 016E:014E mov ES,BX
                         ES = 0x2000;
-                        // 016D:0150 cmp AL,byte ptr ES:[SI+0x18]
+                        // 016E:0150 cmp AL,byte ptr ES:[SI+0x18]
                         flagOperand_0150 = UInt8[ES, (ushort)(SI + 0x18)];
                         Alu8.Sub(AL, flagOperand_0150);
-                        // 016D:0154 jne short 0x01B4
+                        // 016E:0154 jne short 0x01B4
                         if (AL != flagOperand_0150) {
                             goto L_01B4;
                         }
-                        // 016D:0156 inc SI
+                        // 016E:0156 inc SI
                         SI++;
-                        // 016D:0157 cmp SI,8
+                        // 016E:0157 cmp SI,8
                         Alu16.Sub(SI, 8);
-                        // 016D:015A jne short 0x0143
+                        // 016E:015A jne short 0x0143
                     } while (SI != 8);
-                    // 016D:015C mov BX,5
+                    // 016E:015C mov BX,5
                     BX = 5;
-                    // 016D:015F mov CX,1
+                    // 016E:015F mov CX,1
                     CX = 1;
-                    // 016D:0162 mov DX,0x01D0
+                    // 016E:0162 mov DX,0x01D0
                     DX = 0x01D0;
-                    // 016D:0165 mov AH,0x3F
-                    // 016D:0167 int 0x21
+                    // 016E:0165 mov AH,0x3F
+                    // 016E:0167 int 0x21
                     Dos.RecordCallerStack(SS, SP);
                     (AX, CarryFlag) = Dos.ReadFile(5, 1, DS, 0x01D0);
-                    // 016D:0169 jb short 0x01B4
+                    // 016E:0169 jb short 0x01B4
                     if (!CarryFlag) {
-                        // 016D:016B cmp AX,1
+                        // 016E:016B cmp AX,1
                         Alu16.Sub(AX, 1);
-                        // 016D:016E jne short 0x01B4
+                        // 016E:016E jne short 0x01B4
                         if (AX != 1) {
                             goto L_01B4;
                         }
-                        // 016D:0170 cmp byte ptr DS:[0x01D0],0x41
-                        flagOperand_0170 = ImageMinus0003Globals.Byte01D0;
+                        // 016E:0170 cmp byte ptr DS:[0x01D0],0x41
+                        flagOperand_0170 = ImageMinus0002Globals.Byte01D0;
                         Alu8.Sub(flagOperand_0170, 0x41);
-                        // 016D:0175 jne short 0x01B4
+                        // 016E:0175 jne short 0x01B4
                         if (flagOperand_0170 != 0x41) {
                             goto L_01B4;
                         }
-                        // 016D:0177 mov DX,0x01E3
+                        // 016E:0177 mov DX,0x01E3
                         DX = 0x01E3;
-                        // 016D:017A call near 0x01BB
-                        NearCall(cs1, 0x017D, unknown_016D_01BB_0188BEntry);
-                        // 016D:017D cmp AX,8
+                        // 016E:017A call near 0x01BB
+                        NearCall(cs1, 0x017D, unknown_016E_01BB_0189BEntry);
+                        // 016E:017D cmp AX,8
                         Alu16.Sub(AX, 8);
-                        // 016D:0180 jne short 0x01B4
+                        // 016E:0180 jne short 0x01B4
                         if (AX != 8) {
                             goto L_01B4;
                         }
-                        // 016D:0182 mov BX,AX
+                        // 016E:0182 mov BX,AX
                         BX = AX;
-                        // 016D:0184 mov AH,0x3E
-                        // 016D:0186 int 0x21
+                        // 016E:0184 mov AH,0x3E
+                        // 016E:0186 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
-                        // 016D:0188 jb short 0x01B4
+                        // 016E:0188 jb short 0x01B4
                         if (CarryFlag) {
                             goto L_01B4;
                         }
-                        // 016D:018A mov BX,5
+                        // 016E:018A mov BX,5
                         BX = 5;
                         do {
                             CheckExternalEvents(cs1, 0x018D);
-                            // 016D:018D mov AH,0x3E
-                            // 016D:018F int 0x21
+                            // 016E:018D mov AH,0x3E
+                            // 016E:018F int 0x21
                             Dos.RecordCallerStack(SS, SP);
                             (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
-                            // 016D:0191 jb short 0x01B4
+                            // 016E:0191 jb short 0x01B4
                             if (CarryFlag) {
                                 goto L_01B4;
                             }
-                            // 016D:0193 inc BX
+                            // 016E:0193 inc BX
                             BX++;
-                            // 016D:0194 cmp BX,8
+                            // 016E:0194 cmp BX,8
                             Alu16.Sub(BX, 8);
-                            // 016D:0197 jne short 0x018D
+                            // 016E:0197 jne short 0x018D
                         } while (BX != 8);
-                        // 016D:0199 mov BX,word ptr DS:[0x01CE]
-                        bx1 = ImageMinus0003Globals.Word01CE;
-                        // 016D:019D mov AH,0x50
+                        // 016E:0199 mov BX,word ptr DS:[0x01CE]
+                        bx1 = ImageMinus0002Globals.Word01CE;
+                        // 016E:019D mov AH,0x50
                         AH = 0x50;
-                        // 016D:019F int 0x21
+                        // 016E:019F int 0x21
                         Dos.SetCurrentPsp(bx1);
-                        // 016D:01A1 mov BX,5
+                        // 016E:01A1 mov BX,5
                         BX = 5;
                         do {
                             CheckExternalEvents(cs1, 0x01A4);
-                            // 016D:01A4 mov AH,0x3E
-                            // 016D:01A6 int 0x21
+                            // 016E:01A4 mov AH,0x3E
+                            // 016E:01A6 int 0x21
                             Dos.RecordCallerStack(SS, SP);
                             (AX, CarryFlag) = Dos.CloseFile(BX, 0x3E);
-                            // 016D:01A8 jb short 0x01B4
+                            // 016E:01A8 jb short 0x01B4
                             if (CarryFlag) {
                                 goto L_01B4;
                             }
-                            // 016D:01AA inc BX
+                            // 016E:01AA inc BX
                             BX++;
-                            // 016D:01AB cmp BX,8
+                            // 016E:01AB cmp BX,8
                             Alu16.Sub(BX, 8);
-                            // 016D:01AE jne short 0x01A4
+                            // 016E:01AE jne short 0x01A4
                         } while (BX != 8);
-                        // 016D:01B0 mov AL,0
+                        // 016E:01B0 mov AL,0
                         al1 = 0;
-                        // 016D:01B2 jmp short 0x01B6
+                        // 016E:01B2 jmp short 0x01B6
                         goto L_01B6;
                     }
                 }
@@ -329,47 +329,47 @@ public partial class CfgGeneratedOverrides {
         }
     L_01B4:
         VerifySpeculativeEntryOrFail(cs1, 0x01B4, Signature_01B4_mov);
-        // 016D:01B4 mov AL,0xFF
+        // 016E:01B4 mov AL,0xFF
         al1 = 0xFF;
     L_01B6:
-        // 016D:01B6 mov DX,0x0999
+        // 016E:01B6 mov DX,0x0999
         DX = 0x0999;
-        // 016D:01B9 out DX,AL
+        // 016E:01B9 out DX,AL
         Out8(0x0999, al1);
-        // 016D:01BA hlt
+        // 016E:01BA hlt
         AL = al1;
         return Hlt();
     }
 
     /// <summary>Inputs: EAX, EDX, DS. Outputs: EAX. Changes: EAX, CF.</summary>
-    /// Segment values at entry, from every call site: DS = 0x016D.
-    public virtual Action unknown_016D_01BB_0188B() {
+    /// Segment values at entry, from every call site: DS = 0x016E.
+    public virtual Action unknown_016E_01BB_0189B() {
         ushort ax1 = 0;
         CheckExternalEvents(cs1, 0x01BB);
-        // 016D:01BB mov AX,0x3D00
+        // 016E:01BB mov AX,0x3D00
         AX = 0x3D00;
-        // 016D:01BE int 0x21
+        // 016E:01BE int 0x21
         Dos.RecordCallerStack(SS, SP);
         (ax1, CarryFlag) = Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0'));
-        // 016D:01C0 jae short 0x01C5
+        // 016E:01C0 jae short 0x01C5
         if (CarryFlag) {
             VerifySpeculativeEntryOrFail(cs1, 0x01C2, Signature_01C2_mov);
-            // 016D:01C2 mov AX,0xFFFF
+            // 016E:01C2 mov AX,0xFFFF
             ax1 = 0xFFFF;
         }
-        // 016D:01C5 push AX
+        // 016E:01C5 push AX
         Stack.Push16(ax1);
-        // 016D:01C6 push DX
+        // 016E:01C6 push DX
         Stack.Push16(DX);
-        // 016D:01C7 mov DX,0x0998
-        // 016D:01CA out DX,AL
+        // 016E:01C7 mov DX,0x0998
+        // 016E:01CA out DX,AL
         AX = ax1;
         Out8(0x0998, AL);
-        // 016D:01CB pop DX
+        // 016E:01CB pop DX
         DX = Stack.Pop16();
-        // 016D:01CC pop AX
+        // 016E:01CC pop AX
         AX = Stack.Pop16();
-        // 016D:01CD ret near
+        // 016E:01CD ret near
         return NearRet();
     }
 
@@ -535,7 +535,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: DS = 0x016D.
+    /// Segment values at entry, from every call site: DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
@@ -638,20 +638,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0002Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0002);
     }
 
     public ushort Word01CE { get => _memory.UInt16[Segment, 0x01CE]; set => _memory.UInt16[Segment, 0x01CE] = value; }

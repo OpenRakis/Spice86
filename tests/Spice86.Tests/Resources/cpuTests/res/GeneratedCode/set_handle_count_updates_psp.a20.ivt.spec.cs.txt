@@ -81,7 +81,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -100,12 +100,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly CsGlobals CsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -119,7 +119,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -137,7 +137,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -152,49 +152,49 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort bx1 = 0;
         byte al1 = 0;
         ushort flagOperand_010F = 0;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov AH,0x62
+        // 016E:0100 mov AH,0x62
         AH = 0x62;
-        // 016D:0102 int 0x21
+        // 016E:0102 int 0x21
         bx1 = Dos.ReadPspAddress();
-        // 016D:0104 mov ES,BX
+        // 016E:0104 mov ES,BX
         ES = bx1;
-        // 016D:0106 mov AH,0x67
+        // 016E:0106 mov AH,0x67
         AH = 0x67;
-        // 016D:0108 mov BX,0x0030
+        // 016E:0108 mov BX,0x0030
         BX = 0x0030;
-        // 016D:010B int 0x21
+        // 016E:010B int 0x21
         Dos.RecordCallerStack(SS, SP);
         (AX, CarryFlag) = Dos.ResizeHandleTable(0x0030, AX);
-        // 016D:010D jb short 0x011B
+        // 016E:010D jb short 0x011B
         if (!CarryFlag) {
-            // 016D:010F cmp word ptr ES:[0x0032],0x0030
+            // 016E:010F cmp word ptr ES:[0x0032],0x0030
             flagOperand_010F = EsGlobals.Word0032;
             Alu16.Sub(flagOperand_010F, 0x0030);
-            // 016D:0115 jne short 0x011B
+            // 016E:0115 jne short 0x011B
             if (flagOperand_010F != 0x0030) {
                 goto L_011B;
             }
-            // 016D:0117 mov AL,0
+            // 016E:0117 mov AL,0
             al1 = 0;
-            // 016D:0119 jmp short 0x011D
+            // 016E:0119 jmp short 0x011D
             goto L_011D;
         }
     L_011B:
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
-        // 016D:011B mov AL,0xFF
+        // 016E:011B mov AL,0xFF
         al1 = 0xFF;
     L_011D:
-        // 016D:011D mov DX,0x0999
+        // 016E:011D mov DX,0x0999
         DX = 0x0999;
-        // 016D:0120 out DX,AL
+        // 016E:0120 out DX,AL
         Out8(0x0999, al1);
-        // 016D:0121 hlt
+        // 016E:0121 hlt
         AL = al1;
         return Hlt();
     }
@@ -361,7 +361,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: BX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: DS = 0x016D.
+    /// Segment values at entry, from every call site: DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

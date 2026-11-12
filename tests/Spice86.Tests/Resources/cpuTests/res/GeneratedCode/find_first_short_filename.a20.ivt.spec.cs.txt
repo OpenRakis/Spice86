@@ -92,7 +92,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -110,11 +110,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly CsGlobals CsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -128,7 +128,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -146,7 +146,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -161,129 +161,129 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, DS. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov AH,0x1A
+        // 016E:0100 mov AH,0x1A
         AH = 0x1A;
-        // 016D:0102 mov DX,0x0288
+        // 016E:0102 mov DX,0x0288
         DX = 0x0288;
-        // 016D:0105 int 0x21
+        // 016E:0105 int 0x21
         Dos.RecordCallerStack(SS, SP);
         Dos.SetDiskTransferAddress(DS, 0x0288);
-        // 016D:0107 mov SI,0x0162
+        // 016E:0107 mov SI,0x0162
         SI = 0x0162;
-        // 016D:010A mov CX,0
+        // 016E:010A mov CX,0
         CX = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x010D);
-            // 016D:010D mov BX,word ptr DS:[SI]
+            // 016E:010D mov BX,word ptr DS:[SI]
             BX = UInt16[DS, SI];
-            // 016D:010F test BX,BX
+            // 016E:010F test BX,BX
             Alu16.And(BX, BX);
-            // 016D:0111 je short 0x015B
+            // 016E:0111 je short 0x015B
             if (BX == 0) {
                 goto L_015B;
             }
-            // 016D:0113 push CX
+            // 016E:0113 push CX
             Stack.Push16(CX);
-            // 016D:0114 push SI
+            // 016E:0114 push SI
             Stack.Push16(SI);
-            // 016D:0115 mov AL,byte ptr DS:[SI+4]
+            // 016E:0115 mov AL,byte ptr DS:[SI+4]
             AL = UInt8[DS, (ushort)(SI + 4)];
-            // 016D:0118 test AL,AL
-            // 016D:011A jne short 0x0127
+            // 016E:0118 test AL,AL
+            // 016E:011A jne short 0x0127
             if (AL != 0) {
-                // 016D:0127 mov AH,0x4F
-                // 016D:0129 int 0x21
+                // 016E:0127 mov AH,0x4F
+                // 016E:0129 int 0x21
                 Dos.RecordCallerStack(SS, SP);
                 (AX, CarryFlag) = Dos.FindNext();
             }
             else {
-                // 016D:011C mov DX,BX
+                // 016E:011C mov DX,BX
                 DX = BX;
-                // 016D:011E mov CX,0
+                // 016E:011E mov CX,0
                 CX = 0;
-                // 016D:0121 mov AH,0x4E
-                // 016D:0123 int 0x21
+                // 016E:0121 mov AH,0x4E
+                // 016E:0123 int 0x21
                 Dos.RecordCallerStack(SS, SP);
                 (AX, CarryFlag) = Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, DX, '\0'), 0);
-                // 016D:0125 jmp short 0x012B
+                // 016E:0125 jmp short 0x012B
             }
-            // 016D:012B pop SI
+            // 016E:012B pop SI
             SI = Stack.Pop16();
-            // 016D:012C pop CX
+            // 016E:012C pop CX
             CX = Stack.Pop16();
-            // 016D:012D jb short 0x0149
+            // 016E:012D jb short 0x0149
             if (CarryFlag) {
                 goto L_0149;
             }
-            // 016D:012F mov DI,word ptr DS:[SI+2]
+            // 016E:012F mov DI,word ptr DS:[SI+2]
             DI = UInt16[DS, (ushort)(SI + 2)];
-            // 016D:0132 mov BX,0x02A6
+            // 016E:0132 mov BX,0x02A6
             BX = 0x02A6;
             while (true) {
                 CheckExternalEvents(cs1, 0x0135);
-                // 016D:0135 mov AL,byte ptr DS:[BX]
+                // 016E:0135 mov AL,byte ptr DS:[BX]
                 AL = UInt8[DS, BX];
-                // 016D:0137 mov DL,byte ptr DS:[DI]
+                // 016E:0137 mov DL,byte ptr DS:[DI]
                 DL = UInt8[DS, DI];
-                // 016D:0139 cmp AL,DL
+                // 016E:0139 cmp AL,DL
                 Alu8.Sub(AL, DL);
-                // 016D:013B jne short 0x0145
+                // 016E:013B jne short 0x0145
                 if (AL != DL) {
                     goto L_0145;
                 }
-                // 016D:013D test AL,AL
-                // 016D:013F je short 0x0155
+                // 016E:013D test AL,AL
+                // 016E:013F je short 0x0155
                 if (AL == 0) {
                     break;
                 }
-                // 016D:0141 inc BX
+                // 016E:0141 inc BX
                 BX++;
-                // 016D:0142 inc DI
+                // 016E:0142 inc DI
                 DI++;
-                // 016D:0143 jmp short 0x0135
+                // 016E:0143 jmp short 0x0135
             }
-            // 016D:0155 inc CX
+            // 016E:0155 inc CX
             CX++;
-            // 016D:0156 add SI,5
+            // 016E:0156 add SI,5
             SI += 5;
-            // 016D:0159 jmp short 0x010D
+            // 016E:0159 jmp short 0x010D
         }
     L_0145:
         VerifySpeculativeRunOrFail(cs1, 0x0145, SpeculativeRun_0145);
-        // 016D:0145 mov AL,CL
+        // 016E:0145 mov AL,CL
         AL = CL;
-        // 016D:0147 jmp short 0x014D
+        // 016E:0147 jmp short 0x014D
         goto L_014D;
     L_0149:
         VerifySpeculativeRunOrFail(cs1, 0x0149, SpeculativeRun_0149);
-        // 016D:0149 mov AL,CL
+        // 016E:0149 mov AL,CL
         AL = CL;
-        // 016D:014B or AL,0x80
+        // 016E:014B or AL,0x80
         AL = Alu8.Or(AL, 0x80);
     L_014D:
         VerifySpeculativeRunOrFail(cs1, 0x014D, SpeculativeRun_014D);
-        // 016D:014D mov DX,0x0998
+        // 016E:014D mov DX,0x0998
         DX = 0x0998;
-        // 016D:0150 out DX,AL
+        // 016E:0150 out DX,AL
         Out8(0x0998, AL);
         VerifySpeculativeRunOrFail(cs1, 0x0151, SpeculativeRun_0151);
-        // 016D:0151 mov AL,0xFF
+        // 016E:0151 mov AL,0xFF
         al1 = 0xFF;
-        // 016D:0153 jmp short 0x015D
+        // 016E:0153 jmp short 0x015D
         goto L_015D;
     L_015B:
-        // 016D:015B mov AL,0
+        // 016E:015B mov AL,0
         al1 = 0;
     L_015D:
-        // 016D:015D mov DX,0x0999
+        // 016E:015D mov DX,0x0999
         DX = 0x0999;
-        // 016D:0160 out DX,AL
+        // 016E:0160 out DX,AL
         Out8(0x0999, al1);
-        // 016D:0161 hlt
+        // 016E:0161 hlt
         AL = al1;
         return Hlt();
     }
@@ -450,7 +450,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
