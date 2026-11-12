@@ -1,0 +1,153 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:00C6",
+  "lastExecutedBlockId": 105,
+  "blocks": [
+    {
+      "id": 105,
+      "entry": "F000:0091",
+      "term": "F000:00C6",
+      "pred": [
+        70,
+        98
+      ],
+      "succ": [],
+      "asm": [
+        "C7062A002222|mov word ptr DS:[0x002A],0x2222",
+        "A12A00|mov AX,word ptr DS:[0x002A]",
+        "89474E|mov word ptr DS:[BX\u002B0x4E],AX",
+        "B800A0|mov AX,0xA000",
+        "8EC0|mov ES,AX",
+        "26C70630001111|mov word ptr ES:[0x0030],0x1111",
+        "26C70630002222|mov word ptr ES:[0x0030],0x2222",
+        "C70632001111|mov word ptr DS:[0x0032],0x1111",
+        "B000|mov AL,0",
+        "E680|out 0x80,AL",
+        "C70632002222|mov word ptr DS:[0x0032],0x2222",
+        "A13200|mov AX,word ptr DS:[0x0032]",
+        "894750|mov word ptr DS:[BX\u002B0x50],AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 70,
+      "entry": "F000:0074",
+      "term": "F000:008C",
+      "pred": [
+        3,
+        33
+      ],
+      "succ": [
+        98,
+        105
+      ],
+      "asm": [
+        "C70628002222|mov word ptr DS:[0x0028],0x2222",
+        "A12800|mov AX,word ptr DS:[0x0028]",
+        "89474C|mov word ptr DS:[BX\u002B0x4C],AX",
+        "C7062A001111|mov word ptr DS:[0x002A],0x1111",
+        "BA0000|mov DX,0",
+        "B80A00|mov AX,0x000A",
+        "2EF7360001|div word ptr CS:[0x0100]"
+      ]
+    },
+    {
+      "id": 98,
+      "entry": "F000:00CE",
+      "term": "F000:00E4",
+      "pred": [
+        70
+      ],
+      "succ": [
+        105
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "A12A00|mov AX,word ptr DS:[0x002A]",
+        "89474A|mov word ptr DS:[BX\u002B0x4A],AX",
+        "2EC70600010100|mov word ptr CS:[0x0100],1",
+        "C746029100|mov word ptr SS:[BP\u002B2],0x0091",
+        "5D|pop BP",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0071",
+      "pred": [
+        2
+      ],
+      "succ": [
+        33,
+        70
+      ],
+      "asm": [
+        "C7060000CE00|mov word ptr DS:[0],0x00CE",
+        "8C0E0200|mov word ptr DS:[2],CS",
+        "2EC70600010000|mov word ptr CS:[0x0100],0",
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "FC|cld",
+        "31DB|xor BX,BX",
+        "31F6|xor SI,SI",
+        "C70620001111|mov word ptr DS:[0x0020],0x1111",
+        "C70620002222|mov word ptr DS:[0x0020],0x2222",
+        "A12000|mov AX,word ptr DS:[0x0020]",
+        "894740|mov word ptr DS:[BX\u002B0x40],AX",
+        "C606220011|mov byte ptr DS:[0x0022],0x11",
+        "C606230022|mov byte ptr DS:[0x0023],0x22",
+        "C70622003333|mov word ptr DS:[0x0022],0x3333",
+        "A12200|mov AX,word ptr DS:[0x0022]",
+        "894742|mov word ptr DS:[BX\u002B0x42],AX",
+        "C70624001111|mov word ptr DS:[0x0024],0x1111",
+        "C606240055|mov byte ptr DS:[0x0024],0x55",
+        "A12400|mov AX,word ptr DS:[0x0024]",
+        "894744|mov word ptr DS:[BX\u002B0x44],AX",
+        "C70626001111|mov word ptr DS:[0x0026],0x1111",
+        "A12600|mov AX,word ptr DS:[0x0026]",
+        "C70626002222|mov word ptr DS:[0x0026],0x2222",
+        "894746|mov word ptr DS:[BX\u002B0x46],AX",
+        "C70628001111|mov word ptr DS:[0x0028],0x1111",
+        "E85300|call near 0x00C7"
+      ]
+    },
+    {
+      "id": 33,
+      "entry": "F000:00C7",
+      "term": "F000:00CD",
+      "pred": [
+        3
+      ],
+      "succ": [
+        70
+      ],
+      "asm": [
+        "A12800|mov AX,word ptr DS:[0x0028]",
+        "894748|mov word ptr DS:[BX\u002B0x48],AX",
+        "C3|ret near"
+      ]
+    }
+  ],
+  "truncated": false
+}

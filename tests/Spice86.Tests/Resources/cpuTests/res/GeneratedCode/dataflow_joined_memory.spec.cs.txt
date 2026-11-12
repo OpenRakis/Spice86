@@ -90,7 +90,6 @@ public partial class CfgGeneratedOverrides {
             word5 = Segment2000Globals.Word0802;
             Segment2000Globals.Word004A = word5;
             word4 = Segment2000Globals.Word0800;
-            Segment2000Globals.Word0802 = 0xBEEF;
             UInt16[DS, BX + 0x14] = word4;
             UInt16[DS, BX + 0x16] = 0xBEEF;
             Segment2000Globals.Word0802 = 0x89AB;

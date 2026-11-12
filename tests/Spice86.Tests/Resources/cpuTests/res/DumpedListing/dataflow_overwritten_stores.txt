@@ -1,0 +1,62 @@
+F000:0000 mov word ptr DS:[0],0x00CE
+F000:0006 mov word ptr DS:[2],CS
+F000:000A mov word ptr CS:[0x0100],0
+F000:0011 mov AX,0x2000
+F000:0014 mov DS,AX
+F000:0016 mov SS,AX
+F000:0018 mov SP,0x1000
+F000:001B cld
+F000:001C xor BX,BX
+F000:001E xor SI,SI
+F000:0020 mov word ptr DS:[0x0020],0x1111
+F000:0026 mov word ptr DS:[0x0020],0x2222
+F000:002C mov AX,word ptr DS:[0x0020]
+F000:002F mov word ptr DS:[BX+0x40],AX
+F000:0032 mov byte ptr DS:[0x0022],0x11
+F000:0037 mov byte ptr DS:[0x0023],0x22
+F000:003C mov word ptr DS:[0x0022],0x3333
+F000:0042 mov AX,word ptr DS:[0x0022]
+F000:0045 mov word ptr DS:[BX+0x42],AX
+F000:0048 mov word ptr DS:[0x0024],0x1111
+F000:004E mov byte ptr DS:[0x0024],0x55
+F000:0053 mov AX,word ptr DS:[0x0024]
+F000:0056 mov word ptr DS:[BX+0x44],AX
+F000:0059 mov word ptr DS:[0x0026],0x1111
+F000:005F mov AX,word ptr DS:[0x0026]
+F000:0062 mov word ptr DS:[0x0026],0x2222
+F000:0068 mov word ptr DS:[BX+0x46],AX
+F000:006B mov word ptr DS:[0x0028],0x1111
+F000:0071 call near 0x00C7
+F000:0074 mov word ptr DS:[0x0028],0x2222
+F000:007A mov AX,word ptr DS:[0x0028]
+F000:007D mov word ptr DS:[BX+0x4C],AX
+F000:0080 mov word ptr DS:[0x002A],0x1111
+F000:0086 mov DX,0
+F000:0089 mov AX,0x000A
+F000:008C div word ptr CS:[0x0100]
+F000:0091 mov word ptr DS:[0x002A],0x2222
+F000:0097 mov AX,word ptr DS:[0x002A]
+F000:009A mov word ptr DS:[BX+0x4E],AX
+F000:009D mov AX,0xA000
+F000:00A0 mov ES,AX
+F000:00A2 mov word ptr ES:[0x0030],0x1111
+F000:00A9 mov word ptr ES:[0x0030],0x2222
+F000:00B0 mov word ptr DS:[0x0032],0x1111
+F000:00B6 mov AL,0
+F000:00B8 out 0x80,AL
+F000:00BA mov word ptr DS:[0x0032],0x2222
+F000:00C0 mov AX,word ptr DS:[0x0032]
+F000:00C3 mov word ptr DS:[BX+0x50],AX
+F000:00C6 hlt
+F000:00C7 mov AX,word ptr DS:[0x0028]
+F000:00CA mov word ptr DS:[BX+0x48],AX
+F000:00CD ret near
+F000:00CE push BP
+F000:00CF mov BP,SP
+F000:00D1 mov AX,word ptr DS:[0x002A]
+F000:00D4 mov word ptr DS:[BX+0x4A],AX
+F000:00D7 mov word ptr CS:[0x0100],1
+F000:00DE mov word ptr SS:[BP+2],0x0091
+F000:00E3 pop BP
+F000:00E4 iret
+F000:FFF0 jmp short 0

@@ -249,7 +249,6 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         DirectionFlag = false;
         Segment2000Globals.Byte0010 = 0xE1;
-        Segment2000Globals.Word0060 = 0x1111;
         Segment2000Globals.Byte0062 = 0x44;
         Segment2000Globals.Byte0063 = 0x77;
         Segment2000Globals.Byte0064 = 0x99;

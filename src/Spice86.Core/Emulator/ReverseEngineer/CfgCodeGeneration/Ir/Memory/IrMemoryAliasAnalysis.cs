@@ -367,6 +367,32 @@ internal sealed class IrMemoryAliasAnalysis {
         || (first.SegmentValue is { } firstValue && second.SegmentValue is { } secondValue
             && firstValue == secondValue);
 
+    /// <summary>Whether <paramref name="outer"/> writes every byte <paramref name="inner"/> can
+    /// reach. Same segment base compares the 16-bit circular offset ranges when the offset terms
+    /// are the same; otherwise every linear byte range of <paramref name="inner"/> must sit inside
+    /// a range of <paramref name="outer"/>, each taken with and without the A20 wrap like
+    /// <see cref="Relation"/>.</summary>
+    public bool Covers(IrMemoryAccess outer, IrMemoryAccess inner) {
+        if (SameSegmentBase(outer, inner)) {
+            if (outer.OffsetTerms is null || inner.OffsetTerms is null
+                || !outer.OffsetTerms.SequenceEqual(inner.OffsetTerms)) {
+                return false;
+            }
+            int outerStart = outer.OffsetDisplacement & 0xFFFF;
+            int innerStart = inner.OffsetDisplacement & 0xFFFF;
+            return ((innerStart - outerStart) & 0xFFFF) + inner.Width <= outer.Width;
+        }
+        IReadOnlyList<(uint Start, uint End)>? outerRanges = LinearRanges(outer);
+        IReadOnlyList<(uint Start, uint End)>? innerRanges = LinearRanges(inner);
+        if (outerRanges is null || innerRanges is null) {
+            return false;
+        }
+        List<(uint Start, uint End)> covering =
+            [.. outerRanges.Concat(outerRanges.Select(Wrapped))];
+        return innerRanges.All(innerRange => covering.Any(outerRange
+            => outerRange.Start <= innerRange.Start && outerRange.End >= innerRange.End));
+    }
+
     /// <summary>Equal or disjoint 16-bit circular offset ranges of two same-base accesses, when
     /// their offset terms are the same.</summary>
     private static IrAliasRelation OffsetRelation(IrMemoryAccess first, IrMemoryAccess second) {

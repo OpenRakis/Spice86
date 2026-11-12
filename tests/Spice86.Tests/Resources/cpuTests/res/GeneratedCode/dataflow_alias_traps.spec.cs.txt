@@ -28,7 +28,6 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         BX = 0;
         ES = 0x1FFF;
-        Segment1FFFGlobals.Byte0010 = 0x11;
         Segment2000Globals.WordFFFF = 0x2233;
         byte1 = Segment1FFFGlobals.Byte0010;
         Segment2000Globals.Byte0056 = byte1;

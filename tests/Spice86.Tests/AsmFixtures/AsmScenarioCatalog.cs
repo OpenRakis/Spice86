@@ -598,6 +598,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_io_barrier"),
             PartitionScenario("dataflow_device_order"),
             PartitionScenario("dataflow_stack_vram"),
+            PartitionScenario("dataflow_overwritten_stores"),
             PartitionScenario("dataflow_compiler_idioms"),
             PartitionScenario("dataflow_arithmetic_idioms"),
             PartitionScenario("dataflow_joined_memory"),

@@ -855,6 +855,18 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x45,
                         (0x40, 1, 0x55),
                         (0x41, 1, 0x55), (0x42, 1, 0x66), (0x43, 1, 0x77), (0x44, 1, 0x99)));
+            case "dataflow_overwritten_stores":
+                // The first stores of the kept sections each leave a byte an observer reads:
+                // the aliased read (46h), the callee (48h), the int 0 handler (4Ah). A removal
+                // that misses its condition shows as 0x2222 or 0x0000 there instead.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x52,
+                        (0x20, 2, 0x2222), (0x22, 2, 0x3333), (0x24, 2, 0x1155),
+                        (0x26, 2, 0x2222), (0x28, 2, 0x2222), (0x2A, 2, 0x2222),
+                        (0x32, 2, 0x2222),
+                        (0x40, 2, 0x2222), (0x42, 2, 0x3333), (0x44, 2, 0x1155),
+                        (0x46, 2, 0x1111), (0x48, 2, 0x1111), (0x4A, 2, 0x1111),
+                        (0x4C, 2, 0x2222), (0x4E, 2, 0x2222), (0x50, 2, 0x2222)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());

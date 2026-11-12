@@ -34,7 +34,6 @@ public partial class CfgGeneratedOverrides {
         if (AX != DX) {
             return unknown_F000_15C7_F15C7();
         }
-        Segment0000Globals.Word0000 = 0xBEEF;
         Segment0000Globals.Word0000 = CS;
         flagOperand_0680 = CS;
         Alu16.Sub(flagOperand_0680, DX);
@@ -1852,7 +1851,6 @@ public partial class CfgGeneratedOverrides {
                         if (AX != 0x2000) {
                             return unknown_F000_15C7_F15C7();
                         }
-                        Segment2000Globals.Word0000 = 0xBEEF;
                         Segment2000Globals.Word0000 = DS;
                         if (Segment2000Globals.Word0000 != 0x2000) {
                             return unknown_F000_15C7_F15C7();

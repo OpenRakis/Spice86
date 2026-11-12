@@ -20,6 +20,7 @@ internal enum IrPass {
     AluLowering,
     DeadFlagWrites,
     StoreForwarding,
+    OverwrittenStores,
     DeadRegisterWrites,
     ExpressionPropagation,
     ConstantChainFold,
@@ -250,6 +251,12 @@ internal static class IrPassPipeline {
         MakeCurrent();
         Pass(IrPass.StoreForwarding.ToString(), () => IrStoreForwarding.Apply(method, editor));
         if (last == IrPass.StoreForwarding) {
+            return Finish();
+        }
+        MakeCurrent();
+        PassResult(IrPass.OverwrittenStores.ToString(),
+            () => IrOverwrittenStores.Apply(method, editor));
+        if (last == IrPass.OverwrittenStores) {
             return Finish();
         }
         // Group 2 made new constants (lowered ALU calls, forwarded stores): propagate them on the
