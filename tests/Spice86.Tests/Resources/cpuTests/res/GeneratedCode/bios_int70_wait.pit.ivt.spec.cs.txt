@@ -18,7 +18,8 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         ushort word2 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        word1 = CS;
+        Stack.Push16(CS);
+        word1 = Stack.Pop16();
         AL = 1;
         Out8(0x0998, 1);
         DS = word1;

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: flags, DF. Outputs: DX, flags, DF. Changes: DX, flags, DF.</summary>
+    /// <summary>Inputs: AX, flags, DF. Outputs: AX, DX, flags, DF. Changes: AX, DX, flags, DF.</summary>
     public virtual Action unknown_F000_003F_F003F() {
         CheckExternalEvents(biosSegment, 0x003F);
         Stack.Push16(AX);

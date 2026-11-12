@@ -124,9 +124,14 @@ internal sealed class IrMemoryAliasAnalysis {
     /// <see cref="IrTokens.Memory"/> token, or exactly a push whose argument writes none - a call,
     /// an interrupt, a callback, an event check, an opaque statement, a store whose value or
     /// address itself writes memory, or a helper the lifter did not split: a boundary no access
-    /// may cross.</summary>
+    /// may cross. A statement that writes the <see cref="IrTokens.Io"/> token is also a boundary:
+    /// a port call can write RAM synchronously through a device callback, the way the Sound
+    /// Blaster DSP E2h command's DMA write lands inside the mask-register write.</summary>
     public bool IsFullMemoryBoundary(IrBlock block, int index) {
         IrStatement statement = block.Statements[index];
+        if ((statement.Effects.TokenWrites & IrTokens.Io) != IrTokens.None) {
+            return true;
+        }
         if ((statement.Effects.TokenWrites & IrTokens.Memory) == IrTokens.None) {
             return false;
         }

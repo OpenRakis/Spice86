@@ -58,7 +58,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0166");
     }
 
-    /// <summary>Inputs: DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    /// <summary>Inputs: AX, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_016D_0168_01838() {
         byte flagOperand_0168 = 0;
         CheckExternalEvents(cs1, 0x0168);
@@ -217,7 +217,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_0081_F0081Entry;
     private readonly Func<int, Action> unknown_F000_0086_F0086Entry;
     private readonly Func<int, Action> unknown_F000_0096_F0096Entry;
-    private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
+    private readonly Func<int, Action> unknown_F000_00E8_F00E8_AsmEntry;
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly EsGlobals EsGlobals;
@@ -247,7 +247,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0081_F0081Entry = _ => unknown_F000_0081_F0081();
         unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
-        unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
+        unknown_F000_00E8_F00E8_AsmEntry = _ => unknown_F000_00E8_F00E8_Asm();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0168, unknown_016D_0168_01838Entry, "unknown");
@@ -263,7 +263,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0081, unknown_F000_0081_F0081Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
     }
 
@@ -522,11 +522,18 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at F000:00B7");
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
-    public virtual Action unknown_F000_00E8_F00E8() {
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
+    public virtual ushort unknown_F000_00E8_F00E8(ushort word1) {
+        AX = word1;
         CheckExternalEvents(biosSegment, 0x00E8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
-        return FarRet();
+        FarReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_00E8_F00E8_Asm() {
+        AX = unknown_F000_00E8_F00E8(AX);
+        return Returned;
     }
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
@@ -536,7 +543,7 @@ public partial class CfgGeneratedOverrides {
         // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
         Callback(biosSegment, 0x00E9, 0x010C);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
-        FarCall(biosSegment, 0x00F2, biosSegment, unknown_F000_00E8_F00E8Entry);
+        AX = FarCall(biosSegment, 0x00F2, biosSegment, () => unknown_F000_00E8_F00E8(AX));
         VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
         // Spice86 callback: MouseDriver.AfterUserHandlerExecution
         Callback(biosSegment, 0x00F2, 0x010D);

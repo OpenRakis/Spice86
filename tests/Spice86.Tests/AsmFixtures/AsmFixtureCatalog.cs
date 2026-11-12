@@ -9,6 +9,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
@@ -826,6 +827,18 @@ internal static class AsmFixtureCatalog {
                     (0x56, 1, 0x22), (0x57, 1, 0x00)));
             case "dataflow_alias_traps_286":
                 return DataflowAliasTraps286(binName);
+            case "dataflow_io_barrier":
+                // The Sound Blaster's DSP E2h command registers a DMA callback that writes the
+                // computed E2 value into the channel's buffer when the program unmasks channel 1,
+                // synchronously inside the mask-register port write. 22h at ds:[301h] is the value
+                // the IOB-2 compare must see before that port call.
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    SbType = SbType.SBPro2,
+                    ConfigureMachine = machine =>
+                        machine.Memory.UInt8[0x2000, 0x0301] = 0x22
+                }, ResultRegion(0x48,
+                    (0x40, 1, 0x40), (0x41, 1, 0x33), (0x42, 1, 0x40), (0x43, 1, 0xE5)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());

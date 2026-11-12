@@ -140,7 +140,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX. Changes: EAX, CF.</summary>
+    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX. Changes: EAX, DX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_016D_01D8_018A8() {
         ushort word1 = 0;

@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Relations;
@@ -56,11 +57,13 @@ internal static class IrFlagPropagation {
         private readonly Dictionary<IrStatement, Candidate> _candidates = [];
         private readonly Dictionary<IrStatement, MemoryOperandTemp> _tempsBySetter = [];
         private readonly HashSet<IrStatement> _tempRegistered = [];
+        private readonly IrMemoryAliasAnalysis _alias;
 
         public Rewrite(IrMethod method, IrEditor editor, IrSsa ssa) {
             _method = method;
             _editor = editor;
             _ssa = ssa;
+            _alias = new IrMemoryAliasAnalysis(ssa);
             _byOrigin = IrOrigins.ByOrigin(method);
             _entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
             _entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
@@ -290,7 +293,8 @@ internal static class IrFlagPropagation {
 
         /// <summary>A memory operand can be re-read at the reader only when the setter is dropped (its
         /// own read is gone) and every statement between them stays inside the same block without an
-        /// entry node, a boundary node or a statement whose effects touch memory. An event check needs
+        /// entry node, a boundary node, a statement whose effects touch memory or a full memory
+        /// boundary (a port write can store to RAM synchronously). An event check needs
         /// no refusal of its own: its may-write re-versions the registers a handler can observe.</summary>
         private bool MemoryOperandAvailable(
             (IrBlock Block, int Index, IrStatement Statement) site, (IrBlock Block, int Index) reader,
@@ -306,7 +310,8 @@ internal static class IrFlagPropagation {
                 if (between.Node is InstructionStartNode or CommentNode) {
                     continue;
                 }
-                if (between.Node is SpeculativeGuardNode || between.Effects.TouchesMemory) {
+                if (between.Node is SpeculativeGuardNode || between.Effects.TouchesMemory
+                    || _alias.IsFullMemoryBoundary(site.Block, index)) {
                     return false;
                 }
             }
