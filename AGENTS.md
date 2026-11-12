@@ -16,14 +16,13 @@ Spice86 is a .NET 10 cross-platform emulator for reverse engineering real-mode D
 - **`Spice86.Tests`**: XUnit tests with FluentAssertions and NSubstitute
 
 ### Dependency Injection
-The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines):
+The entire emulator is assembled in `Spice86DependencyInjection.cs`:
 - Constructor creates the full object graph with explicit dependencies (no IoC container)
 - Order matters: components are constructed in dependency order
 - Components are wired together with event handlers and shared state
 - Entry point is `Program.cs` which instantiates `Spice86DependencyInjection`
 - **`Spice86DependencyInjection` is the central composition root** - understand its structure when working with dependencies
-- The `Machine` class aggregates emulator components (CPU, memory, devices) - access via properties like `CfgCpu`, `Memory`, `Stack`
-- `InterruptVectorTable` and `Stack` are now passed directly to `Machine` constructor
+- The `Machine` class aggregates emulator components (CPU, memory, devices). Override code receives it (`CSharpOverrideHelper`). Emulator code does not: a component takes the specific components it needs (`CfgCpu`, `Memory`, `Stack`, ...) as constructor parameters, never `Machine`.
 
 ### CPU Execution Model
 **`CfgCpu`** is the sole CPU implementation (Control Flow Graph-based executor):
@@ -118,7 +117,7 @@ SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test --p
 ```csharp
 public class MyOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService, Configuration configuration, 
+        ILogger loggerService, Configuration configuration,
         ushort programStartSegment, Machine machine) {
         return new MyOverrides(new(), machine, loggerService, configuration).FunctionInformations;
     }
@@ -126,7 +125,7 @@ public class MyOverrideSupplier : IOverrideSupplier {
 
 public class MyOverrides : CSharpOverrideHelper {
     public MyOverrides(IDictionary<SegmentedAddress, FunctionInformation> funcInfos,
-                       Machine machine, ILoggerService logger, Configuration config)
+                       Machine machine, ILogger logger, Configuration config)
         : base(funcInfos, machine, logger, config) {
         DefineFunction(0xF000, 0xA1E8, MyFunction_F000_A1E8_FA1E8);
         OverrideInstruction(0xF000, 0xFFF0, MyInstructionOverride);
@@ -168,25 +167,23 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **No scripts outside the project** - do NOT create temporary scripts (Python, Bash, PowerShell, Node, etc.) anywhere on the filesystem, including `/tmp`, the user's home directory, or any location outside the workspace. Do not create throwaway helper scripts inside the workspace either. Use the available tools (file editing, grep, search, terminal one-liners) directly. If a multi-step computation is truly needed, run it as an inline shell one-liner in the terminal without writing a file.
 - **Use `tmp/` for temporary files** - if a temporary file must be written (e.g., captured command output, intermediate data), place it inside the `tmp/` folder at the root of the repository. Never write to `/tmp` or any path outside the workspace.
 - **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
-- **No optional parameters** - avoid optional/defaulted method parameters in new code. Prefer non-nullable types; a field or dependency should be nullable only when its absence is a real, distinct state (e.g. a feature disabled by a flag). When a nullable feature-gate would otherwise force `?.`/`is not null` guards across many call sites, prefer a null-object (no-op) implementation or unconditional construction over a nullable reference.
+- **Default parameters, not forwarding overloads** - when most callers pass the same value, an optional parameter with a constant default is fine (`bool verify = false`, `int maxLinesPerFile = MaxLinesPerFile`). Do not write an overload or a constructor whose only job is to call another one with a default value: use one member with optional parameters instead. A default that cannot be a constant (an object such as `GenerationPolicy.Strict`) is passed explicitly by every caller; do not make the parameter nullable just to default it. At a call site, name a `bool` or bare-number argument whose meaning is not obvious (`verify: true`).
+- **Nullable only for a real absent state** - prefer non-nullable types; a field or dependency is nullable only when its absence is a real, distinct state (e.g. a feature disabled by a flag). When a nullable feature-gate would otherwise force `?.`/`is not null` guards across many call sites, prefer a null-object (no-op) implementation or unconditional construction over a nullable reference.
 - **No complex ternary expressions** - avoid nested, chained, or multi-line ternaries; simple single-line ternaries with short operands are allowed (e.g. `int x = a > b ? a : b;`). When both branches of an `if`/`else` only assign the same variable and each branch is a single simple expression, write it as a ternary instead: CodeQL flags the `if`/`else` form as a missed ternary opportunity. A condition or a branch that is not a single simple expression must use explicit `if/else`
-- **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
+- **Comments** - write self-documenting code with clear names. XML doc comments are required on public types and members only (the compiler checks them), in one or two sentences that say what the member does, not how; do not repeat the signature or list obvious parameters. On internal and private members, write a doc comment only when the name and types are not enough: a non-obvious contract, an invariant, a reason. No inline comment that restates the next line
 - **Removals shrink the diff** - when asked to remove something, delete it. Do not add replacement code, compatibility shims, flags, fallbacks or "removed" comments unless asked. Check with `git diff --stat` that the diff removes more lines than it adds.
 - **One source of truth: factor, do not add** - before adding a type, record, table, list, enum, flag or analysis, search for an existing one that holds the same fact (the same registers, addresses, names, read/write sets or rule) and reuse or extend it. Do not add: a second model of a fact with a converter between the two; a table that repeats another table in another order or with other names; a record that copies the fields of another object (hold the object); a side dictionary keyed by an object that already has a record; a property set after construction; the same algorithm in two classes (move it into one shared helper). A bigger diff is not "safer": when new code covers old code, delete the old code in the same change, and prefer the change that removes more lines than it adds. Production code must not change shape for tests: no nullable inputs, settable properties, counters or members that only tests use. In the report, list each new type and table and say why no existing one could hold its data, and explain every file where `git diff --stat` shows many more additions than removals.
 - **Simple English, short answers** - many readers are not native English speakers. In messages, comments, docs, commits and PR descriptions, use common words, short sentences and active voice; avoid idioms. When one sentence is enough, write one sentence.
 - **No references to plan/spec sections in code** - never point comments, XML docs, or test names at sections of a plan, spec, or implementation-tracking document (e.g. "Phase 5", "Gap D", "Rule 4", "section S6.1.1", "Test 18", "implementation plan"). Those documents are temporary or drift over time, leaving dangling pointers that mean nothing to a future reader. Describe the actual behavior, invariant, or scenario directly instead.
-- **Test before submit** - always run tests after code changes to verify functionality
-- **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green. While iterating (fix, review rework), run only the narrow test classes that cover the change, plus the golden catalogue when generated output can change. Run the full suite (without `SingleStepTest`) once, on the final state of the task, right before it is committed or handed back; run it again only if code changed after that run.
-- **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks
-- **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
-- **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
+- **Build and test** - for any task that changes code or tests: while iterating (fix, review rework), build and run only the narrow test classes that cover the change, plus the golden catalogue when generated output can change. On the final state of the task, right before it is committed or handed back, build with no warning and run the full suite (without `SingleStepTest`) once; run it again only if code changed after that run. Do not stop until it is green.
+- **Enforce TDD** - write the test first and see it fail for the expected reason, then make it pass by changing the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
 - **Generator pass legality** - a new code-generator pass states each legality condition with the IR effects model (`IrValues`, `IrTokens`, `MayFault`, `DeliversInterrupts`; `IrSsa.SameVersions` is the move/merge rule) in its summary, and adds one ASM fixture section per condition whose result region fails when the condition is dropped (a mutation check).
 - **Generated-code readability gates are requirements** - preserve their intent across refactors, even when helper classes, method names or emitted shapes change. Raising an upper bound, lowering a lower bound, deleting a metric/assertion, excluding fixtures or methods, or changing the collector so it counts less is generally a red flag and needs explicit justification. Do not weaken a gate merely to make a failing implementation pass, and do not automatically refresh metric baselines during golden regeneration.
   - For every relaxation, identify the affected fixture and metric, old/new limits and measured values, show before/after generated C#, and explain the concrete correctness requirement or readability improvement that warrants the tradeoff. Include relevant behavioral validation. "The old API was removed", "the goldens changed" and "the tests now pass" are not sufficient reasons.
   - Prefer adapting the collector/assertion to the replacement implementation while retaining the original quality requirement. Report any relaxation prominently in the completion report and PR description. Without a justified tradeoff, fix the implementation or report the unresolved regression; do not declare the task complete by removing the check.
   - Measure readability per fixture, with method-level diagnostics where available. New fixtures or improvements elsewhere must not hide an existing fixture's regression. Fewer repository lines do not compensate for worse generated C#. Metrics supplement behavioral tests and golden review; they do not replace them.
-- **Test features, not bricks** - test behavior through a real entry point: an ASM scenario, an interrupt call, the HTTP API, a view model. Before adding a test, check whether an existing test already fails when the new code is broken; if one does, add nothing. Add a unit test only for a case no end-to-end test can show (for example, a refusal condition or an edge case no fixture reaches). Do not test private helpers, constructors, property getters, registry contents or method signatures found by reflection. Delete tests that only helped during development once an end-to-end test covers the behavior. In the report, list each added test and the behavior it proves.
+- **Test features, not bricks** - test behavior through a real entry point: an ASM scenario (preferred for anything the emulator executes), an interrupt call, the HTTP API, a view model. Before adding a test, check whether an existing test already fails when the new code is broken; if one does, add nothing. Add a unit test only for a case no end-to-end test can show (for example, a refusal condition or an edge case no fixture reaches). Do not test private helpers, constructors, property getters, registry contents or method signatures found by reflection. Delete tests that only helped during development once an end-to-end test covers the behavior. In the report, list each added test and the behavior it proves.
 - **No unit tests that repeat the goldens** - when a change only alters printed or displayed text (generated C#, listings, CFG JSON, instruction rendering) and the committed goldens already contain that text, the golden diff and its review checks are the test: the golden comparison fails before the change and passes after regeneration, which satisfies the TDD rule. Do not add a unit test that asserts the same text. Write unit tests for what goldens cannot show or do not cover: the conditions under which a rewrite applies or is refused, equivalence against the emulator (ALU, JIT), invariants and generation-time checks, and shapes or edge cases no fixture executes.
 - **Pause-refresh rule for new ViewModels** - view models that refresh from a dispatcher timer must refresh at most once per pause cycle. Gate updates on `IPauseHandler.IsPaused`, track a per-pause boolean flag, and reset it on resume.
 
@@ -207,28 +204,17 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **One top-level type per file**: Do not place multiple classes/structs/enums in the same file
   - Exception: private nested/inner types declared inside a class are allowed
   - Group related types via namespaces, not by co-locating multiple top-level types
-- **No generic catch clauses**: Catch specific exceptions only - **this is strictly enforced**
+- **No generic catch clauses**: catch the specific exceptions the code can handle.
   ```csharp
-  // WRONG - NEVER DO THIS
-  try {
-      // code
+  // Wrong
   } catch (Exception ex) {
-      // handling
-  }
-  
-  // CORRECT - Catch specific exceptions
-  try {
-      // code
+
+  // Correct: one clause per type, or one filtered clause when the handling is the same
   } catch (IOException ex) {
-      // handling
-  } catch (ArgumentException ex) {
-      // handling
-  }
+  } catch (Exception ex) when (ex is InvalidOperationException or IOException) {
   ```
-  - **NEVER use generic `catch (Exception)`, `catch (Exception e)`, or empty `catch`**
-  - Each exception type must be caught explicitly
-  - This is non-negotiable - the .editorconfig enforces this rule
-  
+  - Never an unfiltered `catch (Exception)`, `catch (Exception e)` or an empty `catch`. No build rule checks this: reviewers do.
+
 - **No null-forgiving operator (!)**: The null-forgiving operator is **BANNED**
   ```csharp
   // Wrong - NEVER use !
@@ -243,11 +229,10 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   ```
   - Properly handle null cases with null checks, null-coalescing, or null-conditional operators
   - Don't ignore nullable warnings - fix the underlying issue
-  - **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
+- **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
 - **Use `Path.Join`, not `Path.Combine`**: Never use `System.IO.Path.Combine`. It silently discards all earlier segments if a later argument is rooted, and CodeQL flags every call ("Path.Combine may silently drop its earlier arguments") because it cannot prove the arguments are relative. Always use `Path.Join`, which concatenates segments without dropping any. This is a very frequent CodeQL finding - prefer `Path.Join` everywhere paths are assembled.
-- **No complex ternary operator**: Avoid nested, chained, or multi-line ternary expressions. Simple single-line ternaries with short, obvious operands are acceptable, and so is an `if`/`else` that only assigns the same variable in both branches rewritten as one ternary (CodeQL: missed ternary opportunity). Use explicit `if/else` blocks when the condition or either branch is not a single simple expression.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only
@@ -266,15 +251,12 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   namespace Spice86.Core.Emulator.CPU;
   ```
 - **Nullable**: Enabled project-wide with `<WarningsAsErrors>nullable</WarningsAsErrors>`
-- **Documentation**: XML comments required (`<GenerateDocumentationFile>true</GenerateDocumentationFile>`)
-- **No stub implementations**: Create proper real implementations
-  - Stubs that return hardcoded values or do nothing are not allowed
-  - Magic values are not allowed, define enums or consts with clear names
+- **Documentation**: `<GenerateDocumentationFile>true</GenerateDocumentationFile>`; see "Comments" above for what needs a doc comment
+- **No fake implementations**: a method that pretends to work (returns a made-up value, silently does nothing where behavior is expected) is not allowed; implement it or throw `NotSupportedException`. A null-object for a feature that is switched off is allowed (see "Nullable only for a real absent state").
+- **No magic values**: define enums or consts with clear names
 
 ### Testing Patterns
-- **Prefer ASM-based tests over unit tests** for testing the emulator
-  - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
-  - Use assembly-based integration tests for comprehensive emulator validation
+- What to test and how is in "Test features, not bricks" and "No unit tests that repeat the goldens" above.
 - **Every runnable ASM scenario is catalogue-driven**
   - Register it in `tests/Spice86.Tests/AsmFixtures/AsmScenarioCatalog.cs` with one behavioral oracle. Keep child programs, overlays, includes, and data files as dependencies of the scenario that loads them, not as standalone scenarios.
   - `AsmScenarioTest` derives one theory case per generated-source golden from the catalogue; the cases run in parallel under the assembly-wide `ParallelMode.All`. Each case runs the non-discovery variants interpreted against the machine goldens, performs interpreted discovery, generates and compiles C#, executes each registered variant with the same oracle, and checks the generated-source golden. Adding a scenario therefore adds interpreted and generated coverage automatically.
@@ -286,10 +268,10 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation
 
 ### Logging
-- Inject `ILoggerService`, check log level before expensive operations:
+- Inject `ILogger` (Microsoft.Extensions.Logging), check the level before expensive operations:
   ```csharp
-  if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-      _loggerService.Verbose("Details: {Value}", expensiveOperation());
+  if (_loggerService.IsEnabled(LogLevel.Trace)) {
+      _loggerService.LogTrace("Details: {Value}", expensiveOperation());
   }
   ```
 - Log levels controlled by CLI: `--VerboseLogs`, `--WarningLogs`, `--SilencedLogs`
