@@ -24,7 +24,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0010);
         Stack.Push16(AX);
         AX = 0x000E;
-        NearCall(cs1, 0x0017, unknown_017D_00E5_018B5Entry, [new(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry)]);
+        NearCall(cs1, 0x0017, unknown_017D_00E5_018B5Entry);
         word1 = Stack.Pop16();
         Stack.Push16(BX);
         Stack.Push16(CX);
@@ -68,7 +68,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x004E);
         Stack.Push16(AX);
         AX = 4;
-        NearCall(cs1, 0x0055, unknown_017D_00E5_018B5Entry, [new(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry)]);
+        NearCall(cs1, 0x0055, unknown_017D_00E5_018B5Entry);
         AX = Stack.Pop16();
         Stack.Push16(DX);
         word1 = (ushort)((short)AX >> 15);
@@ -87,7 +87,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x005E);
         Stack.Push16(AX);
         AX = 0x001A;
-        NearCall(cs1, 0x0065, unknown_017D_00E5_018B5Entry, [new(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry)]);
+        NearCall(cs1, 0x0065, unknown_017D_00E5_018B5Entry);
         word1 = Stack.Pop16();
         Stack.Push16(BX);
         Stack.Push16(CX);
@@ -774,7 +774,7 @@ public partial class CfgGeneratedOverrides {
         BX = DX;
         AX = SI;
         DX = DI;
-        NearCall(cs1, 0x0573, unknown_017D_136B_02B3BEntry, [new(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry)]);
+        NearCall(cs1, 0x0573, unknown_017D_136B_02B3BEntry);
         DX = AX;
         if (SsUInt16[BP - 2] != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x057B, Signature_057B_and);
@@ -832,7 +832,7 @@ public partial class CfgGeneratedOverrides {
                 NearCall(cs1, 0x05C7, unknown_017D_0801_01FD1Entry);
                 break;
             case 0x0832:
-                NearCall(cs1, 0x05C7, unknown_017D_0832_02002Entry, [new(new(cs1, 0x175A), unknown_017D_175A_02F2AEntry)]);
+                NearCall(cs1, 0x05C7, unknown_017D_0832_02002Entry);
                 break;
             case 0x0859:
                 NearCall(cs1, 0x05C7, unknown_017D_0859_02029Entry);
@@ -928,12 +928,12 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
             SI = index;
-            NearCall(cs1, 0x0627, unknown_017D_05B2_01D82Entry, [new(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry)]);
+            NearCall(cs1, 0x0627, unknown_017D_05B2_01D82Entry);
             UInt8[DS, SI] = 2;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x062C, Signature_062C_call);
         SI = index;
-        NearCall(cs1, 0x062F, unknown_017D_05CA_01D9AEntry, [new(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry)]);
+        NearCall(cs1, 0x062F, unknown_017D_05CA_01D9AEntry);
         throw FailAsUntested("Untested return from call at 017D:062C");
     L_0631:
         DS = Stack.Pop16();
@@ -991,12 +991,12 @@ public partial class CfgGeneratedOverrides {
                 if (flagOperand_0681 != 0) {
                     break;
                 }
-                NearCall(cs1, 0x0689, unknown_017D_05B2_01D82Entry, [new(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry)]);
+                NearCall(cs1, 0x0689, unknown_017D_05B2_01D82Entry);
             }
             UInt8[DS, SI] = 2;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x068B, Signature_068B_call);
-        NearCall(cs1, 0x068E, unknown_017D_05CA_01D9AEntry, [new(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry)]);
+        NearCall(cs1, 0x068E, unknown_017D_05CA_01D9AEntry);
         throw FailAsUntested("Untested return from call at 017D:068B");
     L_0690:
         DS = Stack.Pop16();
@@ -2683,7 +2683,7 @@ public partial class CfgGeneratedOverrides {
             BX = (ushort)(BP - 0x22);
             DX = (ushort)(BP - 0x6C);
             AX = (ushort)(BP - 0x6A);
-            NearCall(cs1, 0x1456, unknown_017D_0E94_02664Entry, [new(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry)]);
+            NearCall(cs1, 0x1456, unknown_017D_0E94_02664Entry);
             SI = AX;
             word1 = (ushort)(SsUInt16[BP - 0x16] + SsUInt16[BP - 0x14]);
             AX = (ushort)(word1 + SsUInt16[BP - 0x12] + SsUInt16[BP - 0x10]);
@@ -2774,7 +2774,7 @@ public partial class CfgGeneratedOverrides {
         DX = SsUInt16[BP - 6];
         CX = DI;
         AX = SI;
-        NearCall(cs1, 0x14EF, unknown_017D_0DD1_025A1Entry, [new(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry)]);
+        NearCall(cs1, 0x14EF, unknown_017D_0DD1_025A1Entry);
         throw FailAsUntested("Untested return from call at 017D:14EC");
     L_149B:
         VerifySpeculativeRunOrFail(cs1, 0x149B, SpeculativeRun_149B);
@@ -3072,7 +3072,7 @@ public partial class CfgGeneratedOverrides {
                     break;
                 }
                 AX = DI;
-                NearCall(cs1, 0x172E, unknown_017D_1F62_03732Entry, [new(new(cs1, 0x1EF1), unknown_017D_1EF1_036C1Entry)]);
+                NearCall(cs1, 0x172E, unknown_017D_1F62_03732Entry);
                 Alu16.And(AX, AX);
                 if (AX == 0) {
                     break;
@@ -4604,7 +4604,7 @@ public partial class CfgGeneratedOverrides {
                         UInt16[DS, SI] = AX;
                         AX = SI;
                         BX = SI;
-                        NearCall(cs1, 0x2031, unknown_017D_1E95_03665Entry, [new(new(cs1, 0x1EF1), unknown_017D_1EF1_036C1Entry)]);
+                        NearCall(cs1, 0x2031, unknown_017D_1E95_03665Entry);
                         DI = AX;
                     L_1FF0:
                         CarryFlag = false;
@@ -5570,14 +5570,22 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x05BE, unknown_017D_05BE_01D8EEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0D9A, unknown_017D_0D9A_0256AEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1EF1, unknown_017D_1EF1_036C1Entry, "unknown");
+        DefineCallLandings(new(cs1, 0x0017), new CallLanding(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry));
+        DefineCallLandings(new(cs1, 0x0055), new CallLanding(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry));
+        DefineCallLandings(new(cs1, 0x0065), new CallLanding(new(cs1, 0x04E5), unknown_017D_04E5_01CB5Entry));
+        DefineCallLandings(new(cs1, 0x0573), new CallLanding(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry));
+        DefineCallLandings(new(cs1, 0x05C7), new CallLanding(new(cs1, 0x175A), unknown_017D_175A_02F2AEntry));
+        DefineCallLandings(new(cs1, 0x0627), new CallLanding(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry));
+        DefineCallLandings(new(cs1, 0x062F), new CallLanding(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry));
+        DefineCallLandings(new(cs1, 0x0689), new CallLanding(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry));
+        DefineCallLandings(new(cs1, 0x068E), new CallLanding(new(cs1, 0x05BE), unknown_017D_05BE_01D8EEntry));
+        DefineCallLandings(new(cs1, 0x1456), new CallLanding(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry));
+        DefineCallLandings(new(cs1, 0x14EF), new CallLanding(new(cs1, 0x0D9A), unknown_017D_0D9A_0256AEntry));
+        DefineCallLandings(new(cs1, 0x172E), new CallLanding(new(cs1, 0x1EF1), unknown_017D_1EF1_036C1Entry));
+        DefineCallLandings(new(cs1, 0x2031), new CallLanding(new(cs1, 0x1EF1), unknown_017D_1EF1_036C1Entry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

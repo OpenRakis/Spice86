@@ -65,7 +65,7 @@ public sealed class GeneratedCodeCoverageReportTest {
         string[] columns = row.Split('\t');
         columns[2].Should().Be("ok");
         columns[3].Should().BeEmpty();
-        columns[4].Should().Be("3");
+        columns[4].Should().Be("2");
         columns[5].Should().NotBeEmpty();
     }
 

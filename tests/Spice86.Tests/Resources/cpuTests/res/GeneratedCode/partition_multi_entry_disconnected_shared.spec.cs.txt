@@ -39,13 +39,13 @@ public partial class CfgGeneratedOverrides {
         BX = 0;
         CX = 0;
         AL = 0;
-        NearCall(biosSegment, 0x0011, unknown_F000_0039_F0039Entry, [new(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry)]);
+        NearCall(biosSegment, 0x0011, unknown_F000_0039_F0039Entry);
         AL = 1;
-        NearCall(biosSegment, 0x0016, unknown_F000_0039_F0039Entry, [new(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry)]);
+        NearCall(biosSegment, 0x0016, unknown_F000_0039_F0039Entry);
         AL = 0;
-        NearCall(biosSegment, 0x001B, unknown_F000_003F_F003FEntry, [new(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry)]);
+        NearCall(biosSegment, 0x001B, unknown_F000_003F_F003FEntry);
         AL = 1;
-        NearCall(biosSegment, 0x0020, unknown_F000_003F_F003FEntry, [new(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry)]);
+        NearCall(biosSegment, 0x0020, unknown_F000_003F_F003FEntry);
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         SsUInt32[0x0604] = 0x00001001 | (uint)BX << 16;
         SsUInt16[0x0608] = CX;
@@ -141,14 +141,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x004B, unknown_F000_004B_F004BEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0051, unknown_F000_0051_F0051_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0055, unknown_F000_0055_F0055_AsmEntry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x0011), new CallLanding(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new CallLanding(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new CallLanding(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new CallLanding(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x0016), new CallLanding(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new CallLanding(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new CallLanding(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new CallLanding(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x001B), new CallLanding(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new CallLanding(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new CallLanding(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new CallLanding(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x0020), new CallLanding(new(biosSegment, 0x0045), unknown_F000_0045_F0045Entry), new CallLanding(new(biosSegment, 0x004B), unknown_F000_004B_F004BEntry), new CallLanding(new(biosSegment, 0x0051), unknown_F000_0051_F0051_AsmEntry), new CallLanding(new(biosSegment, 0x0055), unknown_F000_0055_F0055_AsmEntry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

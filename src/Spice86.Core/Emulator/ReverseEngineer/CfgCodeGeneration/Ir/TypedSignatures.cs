@@ -47,10 +47,12 @@ internal sealed class TypedSignatures {
         _byMethodName.ContainsKey(methodName) ? methodName + "_Asm" : methodName;
 
     /// <summary>The signature a call statement may use: <paramref name="node"/> is a 16-bit call
-    /// whose only observed target is a typed method's entry, with no redirected return and an
-    /// observed continuation; <c>null</c> for any other call site (it keeps the untyped helper).</summary>
+    /// whose only observed target is a typed method's entry, with no redirected return, no observed
+    /// mid-call landings and an observed continuation; <c>null</c> for any other call site (it keeps
+    /// the untyped helper).</summary>
     public TypedSignature? TypedCallOf(ProcedureCallHelperNode node) {
-        if (node.SingleObservedTarget && node.ObservedContinuation && node.Width == BitWidth.WORD_16
+        if (node.SingleObservedTarget && node.ObservedContinuation && !node.ObservedLandings
+            && node.Width == BitWidth.WORD_16
             && node.Arguments[^1] is MethodGroupNode { SingleEntry: true, LoadOffset: 0 } group
             && _byMethodName.TryGetValue(group.MethodName, out TypedSignature? signature)) {
             return signature;

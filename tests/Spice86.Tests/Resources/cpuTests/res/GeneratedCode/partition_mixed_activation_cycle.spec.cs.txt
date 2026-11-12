@@ -29,7 +29,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
     public virtual Action unknown_F000_002E_F002E() {
         CheckExternalEvents(biosSegment, 0x002E);
-        NearCall(biosSegment, 0x0031, unknown_F000_0032_F0032Entry, [new(new(biosSegment, 0x0028), unknown_F000_0028_F0028Entry), new(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry)]);
+        NearCall(biosSegment, 0x0031, unknown_F000_0032_F0032Entry);
         return NearRet();
     }
 
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
         CX = 1;
         NearCall(biosSegment, 0x000E, unknown_F000_002E_F002EEntry);
         CX = 2;
-        NearCall(biosSegment, 0x0014, unknown_F000_0028_F0028Entry, [new(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry)]);
+        NearCall(biosSegment, 0x0014, unknown_F000_0028_F0028Entry);
         SsUInt16[0x0600] = SP;
         SsUInt16[0x0602] = SS;
         SsUInt16[0x0604] = AX;
@@ -94,14 +94,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002E, unknown_F000_002E_F002EEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0032, unknown_F000_0032_F0032Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x0014), new CallLanding(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry));
+        DefineCallLandings(new(biosSegment, 0x0031), new CallLanding(new(biosSegment, 0x0028), unknown_F000_0028_F0028Entry), new CallLanding(new(biosSegment, 0x002E), unknown_F000_002E_F002EEntry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

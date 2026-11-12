@@ -91,7 +91,7 @@
       "RawMemoryAccesses": 0,
       "RegisterReads": 0,
       "RegisterWrites": 0,
-      "Statements": 8,
+      "Statements": 10,
       "StatusFlagReads": 0,
       "WriteBacks": 0
     }

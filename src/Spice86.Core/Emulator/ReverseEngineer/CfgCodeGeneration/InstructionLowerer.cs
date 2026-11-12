@@ -186,9 +186,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                 new MethodGroupNode(Context.GetMethodName(handler.Partition),
                     Context.GetEntryLoadOffset(handler.Partition, handler.Entry.Node),
                     Context.GetEntries(handler.Partition).Count == 1)];
-            if (Transfer.LandingsList(handler.Partition, continuation) is { } handlerLandings) {
-                handlerArguments.Add(handlerLandings);
-            }
+            Transfer.RecordCallLandings(expectedReturn,
+                Transfer.LandingsList(handler.Partition, continuation));
             return Sequence(
                 new ProgramInterruptCallHelperNode(handlerArguments.ToArray(), handler.Effect, HardwareInterruptEffect),
                 Transfer.EmitPostCallContinuation(node.Instruction, continuation));
@@ -202,10 +201,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             new OffsetLiteralNode(expectedReturn.Offset),
             vector,
             Transfer.RedirectedAddressList(continuation)];
-        if (Transfer.InterruptLandingsList(node.Instruction, continuation) is { } landings) {
-            callArguments.Add(landings);
-            elsewhereArguments.Add(landings);
-        }
+        Transfer.RecordCallLandings(expectedReturn,
+            Transfer.InterruptLandingsList(node.Instruction, continuation));
         return Sequence(
             Transfer.EmitCallWithRedirectedDispatch(node.Instruction, continuation,
                 new InterruptCallHelperNode(kind, service, null, callArguments.ToArray()),

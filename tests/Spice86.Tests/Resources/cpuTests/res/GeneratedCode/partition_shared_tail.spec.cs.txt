@@ -32,8 +32,8 @@ public partial class CfgGeneratedOverrides {
         AX = 0x1000;
         SS = 0x1000;
         SP = 0x0100;
-        NearCall(biosSegment, 0x000B, unknown_F000_0027_F0027Entry, [new(new(biosSegment, 0x0031), unknown_F000_0031_F0031_AsmEntry)]);
-        NearCall(biosSegment, 0x000E, unknown_F000_002C_F002CEntry, [new(new(biosSegment, 0x0031), unknown_F000_0031_F0031_AsmEntry)]);
+        NearCall(biosSegment, 0x000B, unknown_F000_0027_F0027Entry);
+        NearCall(biosSegment, 0x000E, unknown_F000_002C_F002CEntry);
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         SsUInt32[0x0604] = (uint)AX | (uint)BX << 16;
         SsUInt16[0x0608] = CX;
@@ -87,14 +87,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002C, unknown_F000_002C_F002CEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0031, unknown_F000_0031_F0031_AsmEntry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x000B), new CallLanding(new(biosSegment, 0x0031), unknown_F000_0031_F0031_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x000E), new CallLanding(new(biosSegment, 0x0031), unknown_F000_0031_F0031_AsmEntry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

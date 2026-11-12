@@ -1464,6 +1464,31 @@ public class CSharpOverrideHelperTest {
         dsRead.Should().Throw<CpuGeneralProtectionFaultException>();
     }
 
+    /// <summary>
+    /// With <c>ObservedTransfersOnly</c> set the base <c>HardwareInterruptFunction</c> fails any
+    /// delivery as untested; without it the base keeps looking up the override registered at the
+    /// vector's target.
+    /// </summary>
+    [Fact]
+    public void HardwareInterruptFunctionHonorsObservedTransfersOnly() {
+        using Spice86Creator creator = new Spice86Creator(binName: "add");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        HardwareDispatchOverride restricted = new(new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 }, true);
+        HardwareDispatchOverride permissive = new(new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 }, false);
+        SegmentedAddress handler = new(0xF000, 0x0031);
+
+        Action restrictedDispatch = () => _ = restricted.Dispatch(0x08, handler);
+        restrictedDispatch.Should().Throw<UnrecoverableException>()
+            .WithMessage("*Hardware interrupt 0x08 targets F000:0031*");
+
+        Action handlerAction = permissive.Dispatch(0x08, handler)(0);
+        permissive.HandlerCalled.Should().Be(1);
+        handlerAction.Should().NotBeNull();
+    }
+
     private CSharpOverrideHelper CreateHelper(Machine machine) =>
         CreateHelper(machine, new Dictionary<SegmentedAddress, FunctionInformation>());
 
@@ -1489,6 +1514,29 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.EAX.Should().Be(before.Eax, "the division helper must not modify EAX");
         machine.CpuState.EDX.Should().Be(before.Edx, "the division helper must not modify EDX");
         machine.CpuState.Flags.FlagRegister.Should().Be(before.Flags, "the division helper must not modify flags");
+    }
+}
+
+class HardwareDispatchOverride : CSharpOverrideHelper {
+    private readonly bool _observedTransfersOnly;
+
+    public HardwareDispatchOverride(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILogger loggerService, Configuration configuration, bool observedTransfersOnly)
+        : base(functionInformations, machine, loggerService, configuration) {
+        _observedTransfersOnly = observedTransfersOnly;
+        DefineFunction(0xF000, 0x0031, Handler_F000_0031_F0031);
+    }
+
+    public int HandlerCalled { get; private set; }
+
+    protected override bool ObservedTransfersOnly => _observedTransfersOnly;
+
+    public Func<int, Action> Dispatch(byte vectorNumber, SegmentedAddress target) =>
+        HardwareInterruptFunction(vectorNumber, target);
+
+    public Action Handler_F000_0031_F0031(int loadOffset) {
+        HandlerCalled++;
+        return InterruptRet();
     }
 }
 

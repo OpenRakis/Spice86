@@ -34,6 +34,10 @@ internal sealed record ProcedureCallHelperNode : MethodCallNode {
     /// <summary>Whether a continuation was observed after the call during discovery.</summary>
     public bool ObservedContinuation { get; init; }
 
+    /// <summary>Whether discovery observed landings mid-call; such calls keep the untyped helper
+    /// form (the landings the wiring arms for the expected return).</summary>
+    public bool ObservedLandings { get; init; }
+
     /// <summary>The callee-convention summary the call provably has, or
     /// <see langword="null"/> when the call must keep <see cref="IrEffects.Unknown"/>.</summary>
     public IrEffects? Summary { get; init; }
@@ -43,6 +47,7 @@ internal sealed record ProcedureCallHelperNode : MethodCallNode {
         new ProcedureCallHelperNode(Distance, Width, arguments) {
             SingleObservedTarget = SingleObservedTarget,
             ObservedContinuation = ObservedContinuation,
+            ObservedLandings = ObservedLandings,
             Summary = Summary
         };
 }

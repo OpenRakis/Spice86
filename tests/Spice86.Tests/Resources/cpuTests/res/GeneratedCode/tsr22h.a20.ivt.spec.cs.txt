@@ -47,7 +47,7 @@ public partial class CfgGeneratedOverrides {
         DX = word2;
         AX = word2;
         AH = 0x26;
-        InterruptCall(cs1, 0x012A, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
+        InterruptCall(cs1, 0x012A, 0x21);
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A7, SpeculativeRun_01A7);
             AX = 0x4C03;
@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested return from call at 016D:019B");
         }
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0193, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
+        InterruptCall(cs1, 0x0193, 0x21);
         throw FailAsUntested("Untested return from call at 016D:0191");
     }
 
@@ -147,7 +147,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs2, 0x0100);
         DX = 0x0013;
         AX = 0x31AA;
-        InterruptCall(cs2, 0x0108, 0x21, [new(new(cs1, 0x016A), unknown_016D_016A_0183AEntry)]);
+        InterruptCall(cs2, 0x0108, 0x21);
         throw FailAsUntested("Untested return from call at 01AC:0106");
     }
 
@@ -322,14 +322,18 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
+        DefineCallLandings(new(cs1, 0x0112), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x011D), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x012A), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x0159), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x0179), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x0183), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x018C), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x0193), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs2, 0x0108), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

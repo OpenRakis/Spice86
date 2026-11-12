@@ -39,10 +39,10 @@ public partial class CfgGeneratedOverrides {
                     DX = 0x2000;
                     SI = 0x0010;
                     AH = 0x55;
-                    InterruptCall(cs1, 0x013F, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+                    InterruptCall(cs1, 0x013F, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
                     BX = 0x2000;
                     AH = 0x50;
-                    InterruptCall(cs1, 0x0146, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+                    InterruptCall(cs1, 0x0146, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
                     CX = 0x0013;
                     do {
                         CheckExternalEvents(cs1, 0x0149);
@@ -55,7 +55,7 @@ public partial class CfgGeneratedOverrides {
                         }
                         BX = AX;
                         AH = 0x3E;
-                        InterruptCall(cs1, 0x0159, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+                        InterruptCall(cs1, 0x0159, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
                         if (CarryFlag) {
                             goto L_018F;
                         }
@@ -64,13 +64,13 @@ public partial class CfgGeneratedOverrides {
                     NearCall(cs1, 0x0160, unknown_016D_019C_0186CEntry);
                     BX = DsGlobals.Word01CC;
                     AH = 0x50;
-                    InterruptCall(cs1, 0x0168, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+                    InterruptCall(cs1, 0x0168, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
                     NearCall(cs1, 0x016B, unknown_016D_019C_0186CEntry);
                     Stack.Push16(DS);
                     DX = DsGlobals.Word01CE;
                     DS = DsGlobals.Word01D0;
                     AX = 0x2521;
-                    InterruptCall(cs1, 0x0175, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+                    InterruptCall(cs1, 0x0175, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
                     DS = Stack.Pop16();
                     AL = DsGlobals.Byte01D2;
                     Out8(0x0998, AL);
@@ -96,7 +96,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0196_01866() {
         CheckExternalEvents(cs1, 0x0196);
         AX = 0x3D00;
-        InterruptCall(cs1, 0x019B, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+        InterruptCall(cs1, 0x019B, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
         return NearRet();
     }
 
@@ -107,7 +107,7 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(cs1, 0x019F);
             AH = 0x3E;
-            InterruptCall(cs1, 0x01A3, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry, [new(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry)]);
+            InterruptCall(cs1, 0x01A3, 0x21, cs1, 0x01AA, unknown_016D_01AA_0187AEntry);
             BX++;
             Alu16.Sub(BX, 8);
         } while (BX != 8);
@@ -296,14 +296,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
+        DefineCallLandings(new(cs1, 0x013F), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x0146), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x0159), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x0168), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x0175), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x019B), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
+        DefineCallLandings(new(cs1, 0x01A3), new CallLanding(new(biosSegment, 0x0096), unknown_F000_0096_F0096Entry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

@@ -1095,12 +1095,12 @@ public partial class CfgGeneratedOverrides {
         SI = 0;
         AX = SP;
         CarryFlag = false;
-        NearCall(biosSegment, 0x1369, unknown_F000_136F_F136FEntry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        NearCall(biosSegment, 0x1369, unknown_F000_136F_F136FEntry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
         CarryFlag = false;
-        NearCall32(biosSegment, 0x1387, unknown_F000_138D_F138DEntry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        NearCall32(biosSegment, 0x1387, unknown_F000_138D_F138DEntry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
@@ -1109,7 +1109,7 @@ public partial class CfgGeneratedOverrides {
         if (BX != 0x136F) {
             throw FailAsUntested($"Untested near call target 0x{BX:X4} at F000:13A3");
         }
-        NearCall(biosSegment, 0x13A5, unknown_F000_136F_F136FEntry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        NearCall(biosSegment, 0x13A5, unknown_F000_136F_F136FEntry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
@@ -1118,18 +1118,18 @@ public partial class CfgGeneratedOverrides {
         if ((ushort)EBX != 0x138D) {
             throw FailAsUntested($"Untested near call target 0x{(ushort)EBX:X4} at F000:13B0");
         }
-        NearCall32(biosSegment, 0x13B3, unknown_F000_138D_F138DEntry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        NearCall32(biosSegment, 0x13B3, unknown_F000_138D_F138DEntry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
         AX = SP;
         CarryFlag = false;
-        FarCall(biosSegment, 0x13BF, biosSegment, unknown_F000_13C5_F13C5Entry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        FarCall(biosSegment, 0x13BF, biosSegment, unknown_F000_13C5_F13C5Entry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
         CarryFlag = false;
-        FarCall32(biosSegment, 0x13DF, biosSegment, unknown_F000_13E5_F13E5Entry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        FarCall32(biosSegment, 0x13DF, biosSegment, unknown_F000_13E5_F13E5Entry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
@@ -1141,7 +1141,7 @@ public partial class CfgGeneratedOverrides {
         if (targetSegment_1401 != biosSegment || targetOffset_1401 != 0x13C5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1401:X4}:{targetOffset_1401:X4} at F000:1401");
         }
-        FarCall(biosSegment, 0x1403, biosSegment, unknown_F000_13C5_F13C5Entry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        FarCall(biosSegment, 0x1403, biosSegment, unknown_F000_13C5_F13C5Entry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
@@ -1153,7 +1153,7 @@ public partial class CfgGeneratedOverrides {
         if (targetSegment_1414 != biosSegment || targetOffset_1414 != 0x13E5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
         }
-        FarCall32(biosSegment, 0x1417, biosSegment, unknown_F000_13E5_F13E5Entry, [new(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry)]);
+        FarCall32(biosSegment, 0x1417, biosSegment, unknown_F000_13E5_F13E5Entry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }
@@ -2131,14 +2131,17 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x13E5, unknown_F000_13E5_F13E5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x15C7, unknown_F000_15C7_F15C7Entry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x1369), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x1387), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x13A5), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x13B3), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x13BF), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x13DF), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x1403), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
+        DefineCallLandings(new(biosSegment, 0x1417), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

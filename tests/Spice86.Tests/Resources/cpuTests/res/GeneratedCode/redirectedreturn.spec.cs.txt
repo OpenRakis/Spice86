@@ -17,7 +17,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: DS. Changes: all.</summary>
     public virtual Action unknown_F000_0043_F0043() {
         CheckExternalEvents(biosSegment, 0x0043);
-        if (!InterruptCallReturnedElsewhere(biosSegment, 0x0045, 0x80, [new(biosSegment, 0x0046)], [new(new(biosSegment, 0x0057), unknown_F000_0057_F0057Entry)])) {
+        if (!InterruptCallReturnedElsewhere(biosSegment, 0x0045, 0x80, [new(biosSegment, 0x0046)])) {
             throw FailAsUntested("Untested return from call at F000:0043");
         }
         if (CS != biosSegment || IP != 0x0046) {
@@ -81,7 +81,7 @@ public partial class CfgGeneratedOverrides {
         Segment0000Globals.Word0000 = 0;
         do {
             CheckExternalEvents(biosSegment, 0x001A);
-            if (!InterruptCallReturnedElsewhere(biosSegment, 0x001C, 0x80, [new(biosSegment, 0x001D)], [new(new(biosSegment, 0x0057), unknown_F000_0057_F0057Entry)])) {
+            if (!InterruptCallReturnedElsewhere(biosSegment, 0x001C, 0x80, [new(biosSegment, 0x001D)])) {
                 throw FailAsUntested("Untested return from call at F000:001A");
             }
             if (CS != biosSegment || IP != 0x001D) {
@@ -199,14 +199,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x004F, unknown_F000_004F_F004FEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0057, unknown_F000_0057_F0057Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x001C), new CallLanding(new(biosSegment, 0x0057), unknown_F000_0057_F0057Entry));
+        DefineCallLandings(new(biosSegment, 0x0045), new CallLanding(new(biosSegment, 0x0057), unknown_F000_0057_F0057Entry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

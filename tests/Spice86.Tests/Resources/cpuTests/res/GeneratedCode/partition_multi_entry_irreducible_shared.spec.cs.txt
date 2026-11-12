@@ -82,27 +82,27 @@ public partial class CfgGeneratedOverrides {
         SP = 0x0100;
         DX = 0;
         CX = 0;
-        NearCall(biosSegment, 0x0015, unknown_F000_006B_F006BEntry, [new(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry)]);
+        NearCall(biosSegment, 0x0015, unknown_F000_006B_F006BEntry);
         CX = 1;
-        NearCall(biosSegment, 0x001B, unknown_F000_006D_F006DEntry, [new(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry)]);
+        NearCall(biosSegment, 0x001B, unknown_F000_006D_F006DEntry);
         CX = 2;
-        NearCall(biosSegment, 0x0021, unknown_F000_008B_F008BEntry, [new(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry)]);
+        NearCall(biosSegment, 0x0021, unknown_F000_008B_F008BEntry);
         BX = 0;
         DX = 3;
-        NearCall(biosSegment, 0x002A, unknown_F000_0092_F0092Entry, [new(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry)]);
+        NearCall(biosSegment, 0x002A, unknown_F000_0092_F0092Entry);
         DsGlobals.Word0200 = 0x009A;
         DsGlobals.Word0202 = CS;
         SI = 0;
         InterruptCall(biosSegment, 0x0039, 0x80, biosSegment, 0x009A, unknown_F000_009A_F009AEntry);
         Stack.Push16(FlagRegister16);
         Stack.Push16(CS);
-        NearCall(biosSegment, 0x003E, unknown_F000_0094_F0094Entry, [new(new(biosSegment, 0x009A), unknown_F000_009A_F009AEntry)]);
+        NearCall(biosSegment, 0x003E, unknown_F000_0094_F0094Entry);
         Stack.Push16(FlagRegister16);
         Stack.Push16(CS);
         NearCall(biosSegment, 0x0043, unknown_F000_009A_F009AEntry);
         Stack.Push16(FlagRegister16);
         Stack.Push16(CS);
-        NearCall(biosSegment, 0x0048, unknown_F000_0098_F0098Entry, [new(new(biosSegment, 0x009A), unknown_F000_009A_F009AEntry)]);
+        NearCall(biosSegment, 0x0048, unknown_F000_0098_F0098Entry);
         SsUInt16[0x0600] = SP;
         SsUInt16[0x0602] = SS;
         SsUInt16[0x0604] = AX;
@@ -239,14 +239,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x006F, unknown_F000_006F_F006F, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007D, _ => unknown_F000_006F_F006F(0x007D), "unknown_entry");
+        DefineCallLandings(new(biosSegment, 0x0015), new CallLanding(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new CallLanding(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new CallLanding(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry));
+        DefineCallLandings(new(biosSegment, 0x001B), new CallLanding(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new CallLanding(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new CallLanding(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry));
+        DefineCallLandings(new(biosSegment, 0x0021), new CallLanding(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new CallLanding(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new CallLanding(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry));
+        DefineCallLandings(new(biosSegment, 0x002A), new CallLanding(new(biosSegment, 0x006F), unknown_F000_006F_F006F), new CallLanding(new(biosSegment, 0x007D), _ => unknown_F000_006F_F006F(0x007D)), new CallLanding(new(biosSegment, 0x008B), unknown_F000_008B_F008BEntry));
+        DefineCallLandings(new(biosSegment, 0x003E), new CallLanding(new(biosSegment, 0x009A), unknown_F000_009A_F009AEntry));
+        DefineCallLandings(new(biosSegment, 0x0048), new CallLanding(new(biosSegment, 0x009A), unknown_F000_009A_F009AEntry));
     }
 
-    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
-        (vectorNumber, target.Segment, target.Offset) switch {
-            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
-        };
-
-    protected override bool ObservedCallLandingsOnly => true;
+    protected override bool ObservedTransfersOnly => true;
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Guards.cs ====

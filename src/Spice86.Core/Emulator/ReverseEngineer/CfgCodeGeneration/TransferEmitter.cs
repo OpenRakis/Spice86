@@ -23,6 +23,30 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// actual writing to source text happens elsewhere.
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
+    private readonly Dictionary<SegmentedAddress, CallLandingListNode> _callLandings = [];
+
+    /// <summary>The mid-call landings of every generated call site, keyed by the site's expected
+    /// return address; the wiring constructor arms them with <c>DefineCallLandings</c>.</summary>
+    internal IReadOnlyDictionary<SegmentedAddress, CallLandingListNode> CallLandings => _callLandings;
+
+    /// <summary>Records the landings of the call site expecting to return to
+    /// <paramref name="expectedReturn"/>; recording the same address twice with the same arms is a no-op.</summary>
+    /// <exception cref="InvalidOperationException">Two call sites with the same return address
+    /// observed different landings.</exception>
+    internal void RecordCallLandings(SegmentedAddress expectedReturn, CallLandingListNode? landings) {
+        if (landings is null) {
+            return;
+        }
+        if (_callLandings.TryGetValue(expectedReturn, out CallLandingListNode? existing)) {
+            if (!existing.Arms.SequenceEqual(landings.Arms)) {
+                throw new InvalidOperationException(
+                    $"Two call sites returning to {expectedReturn} observed different landing tables.");
+            }
+            return;
+        }
+        _callLandings[expectedReturn] = landings;
+    }
+
     /// <summary>
     /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, preceded by a CS
     /// assignment when the edge crosses a segment inside one generated method, a partition return, or a cyclic-flow
@@ -110,11 +134,14 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// omitted.
     /// </summary>
     public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs,
-        bool singleObservedTarget, CallContinuation continuation, CallLandingListNode? landings) =>
-        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs, landings)) {
+        bool singleObservedTarget, CallContinuation continuation, CallLandingListNode? landings) {
+        RecordCallLandings(expectedReturn, landings);
+        return new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs)) {
             SingleObservedTarget = singleObservedTarget,
-            ObservedContinuation = continuation.ObservedContinuationEdge is not null
+            ObservedContinuation = continuation.ObservedContinuationEdge is not null,
+            ObservedLandings = landings is not null
         };
+    }
 
     /// <summary>
     /// The <c>&lt;helper&gt;ReturnedElsewhere</c> variant of <see cref="CallHelper"/>: same arguments plus the
@@ -122,11 +149,9 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// </summary>
     public MethodCallValueNode CallHelperReturnedElsewhere(CallDistance distance, BitWidth width,
         SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation, CallLandingListNode? landings) {
+        RecordCallLandings(expectedReturn, landings);
         List<IVisitableAstNode> arguments =
-            [..CallHelperArguments(expectedReturn, function, targetCs, null), RedirectedAddressList(continuation)];
-        if (landings is not null) {
-            arguments.Add(landings);
-        }
+            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)];
         return new ProcedureCallReturnedElsewhereHelperNode(distance, width, arguments.ToArray());
     }
 
@@ -137,8 +162,8 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
     /// <summary>
     /// The mid-call landings discovery observed for a call into <paramref name="calleeEdge"/>'s partition as a
-    /// <c>CallLanding[]</c> argument, or <c>null</c> when the callee's activation transfers to no partition
-    /// entry while the call's frame is open and the argument is omitted.
+    /// wiring-table row, or <c>null</c> when the callee's activation transfers to no partition
+    /// entry while the call's frame is open and no row is needed.
     /// </summary>
     public CallLandingListNode? LandingsList(ResolvedCfgEdge calleeEdge, CallContinuation continuation) =>
         LandingsList([context.GetPartition(calleeEdge.Target)], continuation);
@@ -149,7 +174,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     public CallLandingListNode? LandingsList(CfgCodePartition calleePartition, CallContinuation continuation) =>
         LandingsList([calleePartition], continuation);
 
-    /// <summary>The <see cref="LandingsList(ResolvedCfgEdge, CallContinuation)"/> argument for an
+    /// <summary>The <see cref="LandingsList(ResolvedCfgEdge, CallContinuation)"/> row for an
     /// <c>int</c> site: the union of the landings of every handler partition the site was observed to
     /// invoke, because the vector is resolved at runtime.</summary>
     public CallLandingListNode? InterruptLandingsList(CfgInstruction instruction, CallContinuation continuation) =>
@@ -210,7 +235,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             BinaryOperation.LOGICAL_AND,
             new BinaryOperationNode(DataType.BOOL, offset, BinaryOperation.EQUAL, new OffsetLiteralNode(expected.Offset)));
 
-    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallLandingListNode? landings) {
+    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
         List<IVisitableAstNode> arguments = [
             new SegmentVariableNode(expectedReturn.Segment),
             new OffsetLiteralNode(expectedReturn.Offset)
@@ -219,9 +244,6 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             arguments.Add(new SegmentVariableNode(targetCs.Value));
         }
         arguments.Add(function);
-        if (landings is not null) {
-            arguments.Add(landings);
-        }
         return arguments.ToArray();
     }
 
