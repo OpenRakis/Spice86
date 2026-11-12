@@ -23,7 +23,7 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_0128 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        BX = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ES = BX;
         word1 = EsGlobals.Word002C;
         Alu16.And(word1, word1);

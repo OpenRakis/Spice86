@@ -224,16 +224,19 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// output lvalues: <c>ServiceCall(cs1, 0x0108, Dos, () => Dos.ReadDosVersion())</c> for a void
     /// contract, or <c>(AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos,
     /// () => Dos.OpenFile(0, ...), r => CarryOnInterruptStack(r.carryFlag))</c>. The helper pushes
-    /// the interrupt frame, runs the handler's entry bookkeeping, invokes the service and pops
-    /// the frame back, so no separate <c>RecordCallerStack</c> line is printed. Register-local
+    /// the interrupt frame, runs the handler's entry bookkeeping when
+    /// <see cref="InterruptServiceCallNode.RunsEntryHook"/> (the handler argument is printed only
+    /// then), invokes the service and pops the frame back, so no separate
+    /// <c>RecordCallerStack</c> line is printed. Register-local
     /// promotion can turn an output target into a local (<c>ax = call</c>), which the existing
     /// writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
         string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
             $"{expressions.Print(call.ReturnOffset).Text}";
         string invocation = expressions.Print(call).Text;
+        string handlerArgument = call.RunsEntryHook ? $"{call.PropertyPath}, " : string.Empty;
         string helper = $"{HelperCallNames.ServiceCallMethodName}({returnAddress}, " +
-            $"{call.PropertyPath}, () => {invocation}";
+            $"{handlerArgument}() => {invocation}";
         if (call.Results.Count == 0) {
             writer.Line(helper + ");");
             return;

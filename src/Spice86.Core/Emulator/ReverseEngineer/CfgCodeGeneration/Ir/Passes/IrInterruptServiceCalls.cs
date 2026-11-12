@@ -131,6 +131,7 @@ internal static class IrInterruptServiceCalls {
         }
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
+            RunsEntryHook = RunsEntryHook(entry),
             Results = [.. ServiceCallSignature.Outputs(entry.Contract)
                 .Select(output => IrValueSets.NodeOf(output.Mask))],
             ReturnSegment = call.Arguments[0],
@@ -172,6 +173,17 @@ internal static class IrInterruptServiceCalls {
         }
         return operation <= (byte)DosInt21Handler.AllocationStrategySubFunction
             .SetUpperMemoryBlockState;
+    }
+
+    /// <summary>Whether the typed call of <paramref name="entry"/> runs the handler's entry
+    /// bookkeeping: a DOS service saves the caller stack exactly when
+    /// <see cref="DosInt21Handler.SavesCallerStack"/> accepts its function number, every other
+    /// handler's hook is the base no-op and always runs.</summary>
+    private static bool RunsEntryHook(InterruptServiceEntry entry) {
+        if (entry.Implementation?.DeclaringType != typeof(DosInt21Handler)) {
+            return true;
+        }
+        return DosInt21Handler.SavesCallerStack((byte)entry.SelectorValue);
     }
 
     /// <summary>The name of the unique <see cref="CSharpOverrideHelper"/> property holding the

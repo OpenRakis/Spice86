@@ -50,6 +50,11 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
     /// <summary>The precise service contract whose effects the call has.</summary>
     public ServiceContract Contract => Service.Contract;
 
+    /// <summary>Whether the call runs the handler's entry bookkeeping
+    /// (<see cref="InterruptHandler.OnInterruptEntry"/>): decided at classification time from the
+    /// service entry, so a typed call never consults the live selector register.</summary>
+    public bool RunsEntryHook { get; init; } = true;
+
     /// <summary>The constant string the call reads at <c>DS:DX</c>, printed as the checked
     /// expected value of the string argument; <see langword="null"/> otherwise.</summary>
     public string? StringLiteral { get; init; }
@@ -71,6 +76,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
     public override MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
         new InterruptServiceCallNode(Vector, Selector, Service,
             PropertyPath ?? string.Empty, arguments) {
+            RunsEntryHook = RunsEntryHook,
             StringLiteral = StringLiteral,
             Results = Results,
             ReturnSegment = ReturnSegment,
@@ -83,6 +89,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
         IVisitableAstNode returnOffset, IVisitableAstNode[] arguments) =>
         new InterruptServiceCallNode(Vector, Selector, Service,
             PropertyPath ?? string.Empty, arguments) {
+            RunsEntryHook = RunsEntryHook,
             StringLiteral = StringLiteral,
             Results = Results,
             ReturnSegment = returnSegment,

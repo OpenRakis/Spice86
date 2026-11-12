@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         AX = 0x2522;
         ServiceCall(cs1, 0x0109, Dos, () => Dos.SetInterruptVector(0x22, DS, 0x011E));
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x010D, Dos, () => Dos.ReadPspAddress());
+        BX = ServiceCall(cs1, 0x010D, () => Dos.ReadPspAddress());
         ES = BX;
         ES = EsGlobals.Word0016;
         DX = EsGlobals.Word0002;

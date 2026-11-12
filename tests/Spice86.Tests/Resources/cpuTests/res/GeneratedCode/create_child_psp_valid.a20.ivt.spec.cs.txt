@@ -25,7 +25,7 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0147 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        segment = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        segment = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         word1 = segment;
         ES = segment;
         word2 = EsGlobals.Word002C;
@@ -36,11 +36,11 @@ public partial class CfgGeneratedOverrides {
         Alu8.Sub(AL, 0xF0);
         if (AL == 0xF0) {
             AH = 0x62;
-            segment = ServiceCall(cs1, 0x011F, Dos, () => Dos.ReadPspAddress());
+            segment = ServiceCall(cs1, 0x011F, () => Dos.ReadPspAddress());
             Alu16.Sub(segment, 0x2000);
             if (segment == 0x2000) {
                 segment = word1;
-                ServiceCall(cs1, 0x012B, Dos, () => Dos.SetCurrentPsp(segment));
+                ServiceCall(cs1, 0x012B, () => Dos.SetCurrentPsp(segment));
                 AX = 0x2000;
                 ES = 0x2000;
                 flagOperand_0130 = Segment2000Globals.Byte0000;

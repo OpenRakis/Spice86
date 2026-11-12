@@ -112,11 +112,12 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     public abstract void Run();
 
     /// <summary>
-    /// The bookkeeping the interpreted <see cref="Run()"/> entry performs after the interrupt
-    /// pushed its frame and before the service dispatches. The generated typed service call runs
-    /// it from the same lowered SP through
-    /// <see cref="CSharpOverrideHelper.ServiceCall(ushort, ushort, InterruptHandler, Action)"/>,
-    /// so the rule lives only here.
+    /// The entry bookkeeping of a service that has one: the interpreted <see cref="Run()"/> entry
+    /// calls it after the interrupt pushed its frame and before the service dispatches, and the
+    /// generated typed service call runs it from the same lowered SP through
+    /// <see cref="CSharpOverrideHelper.ServiceCall(ushort, ushort, InterruptHandler, Action)"/>.
+    /// The caller decides whether the service about to dispatch has bookkeeping; the hook itself
+    /// performs it unconditionally and must not consult the selector register.
     /// </summary>
     public virtual void OnInterruptEntry() {
     }

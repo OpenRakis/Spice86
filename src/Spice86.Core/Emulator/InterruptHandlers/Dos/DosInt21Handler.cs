@@ -2270,18 +2270,21 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <inheritdoc />
     /// <remarks>
-    /// Like MS-DOS, the caller SS:SP is saved into the current PSP (offset 2Eh) on entry, except for the
-    /// PSP get/set functions. Process termination restores the parent's stack from this field.
+    /// Like MS-DOS, the caller SS:SP is saved into the current PSP (offset 2Eh) on entry. The
+    /// interpreted <see cref="Run()"/> calls it only when <see cref="SavesCallerStack"/> accepts the
+    /// real AH; a typed service call decides the same way from the service entry it bound, so the
+    /// hook must not read <see cref="State.AH"/>. Process termination restores the parent's stack
+    /// from this field.
     /// </remarks>
     public override void OnInterruptEntry() {
-        if (SavesCallerStack(State.AH)) {
-            RecordCallerStack(State.SS, (ushort)(State.SP + 6));
-        }
+        RecordCallerStack(State.SS, (ushort)(State.SP + 6));
     }
 
     /// <inheritdoc />
     public override void Run() {
-        OnInterruptEntry();
+        if (SavesCallerStack(State.AH)) {
+            OnInterruptEntry();
+        }
         Run(State.AH);
     }
 

@@ -41,7 +41,7 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         CheckExternalEvents(cs1, 0x0122);
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x0126, Dos, () => Dos.ReadPspAddress());
+        BX = ServiceCall(cs1, 0x0126, () => Dos.ReadPspAddress());
         ES = BX;
         word1 = EsGlobals.Word002C;
         Alu16.And(word1, word1);

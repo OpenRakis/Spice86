@@ -1421,13 +1421,25 @@ public class CSharpOverrideHelper {
     /// <exception cref="UnrecoverableException">The frame the service left does not return to the
     /// expected continuation.</exception>
     public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
-        IInterruptHandler handler, Func<T> invocation, Action<T> stackedFlags) {
+        IInterruptHandler handler, Func<T> invocation, Action<T> stackedFlags) =>
+        ServiceCallCore(expectedReturnCs, expectedReturnIp, invocation, stackedFlags,
+            handler as InterruptHandler);
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// typed service that has no entry bookkeeping: the printer selects this overload when the
+    /// bound service entry keeps the handler's entry hook off.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> invocation, Action<T> stackedFlags) =>
+        ServiceCallCore(expectedReturnCs, expectedReturnIp, invocation, stackedFlags, null);
+
+    private T ServiceCallCore<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> invocation, Action<T> stackedFlags, InterruptHandler? handler) {
         Stack.Push16(State.Flags.FlagRegister16);
         Stack.PushSegmentedAddress(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
         State.InterruptFlag = false;
-        if (handler is InterruptHandler registered) {
-            registered.OnInterruptEntry();
-        }
+        handler?.OnInterruptEntry();
         T result = invocation();
         stackedFlags(result);
         ushort ip = Stack.Pop16();
@@ -1450,12 +1462,30 @@ public class CSharpOverrideHelper {
         ServiceCall(expectedReturnCs, expectedReturnIp, handler, invocation, _ => { });
 
     /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, Func{T}, Action{T})"/> for a service that returns
+    /// no flag on the interrupt stack.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> invocation) =>
+        ServiceCall(expectedReturnCs, expectedReturnIp, invocation, _ => { });
+
+    /// <summary>
     /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
     /// service with no return value.
     /// </summary>
     public void ServiceCall(ushort expectedReturnCs, ushort expectedReturnIp,
         IInterruptHandler handler, Action invocation) {
         ServiceCall<int>(expectedReturnCs, expectedReturnIp, handler,
+            () => { invocation(); return 0; }, _ => { });
+    }
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, Func{T}, Action{T})"/> for a service with no
+    /// return value.
+    /// </summary>
+    public void ServiceCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        Action invocation) {
+        ServiceCall<int>(expectedReturnCs, expectedReturnIp,
             () => { invocation(); return 0; }, _ => { });
     }
 

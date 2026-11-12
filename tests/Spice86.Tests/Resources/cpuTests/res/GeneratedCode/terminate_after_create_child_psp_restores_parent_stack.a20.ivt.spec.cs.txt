@@ -25,7 +25,7 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0181 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        word1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        word1 = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ImageMinus0003Globals.Word0192 = word1;
         AX = Alu16.Xor(AX, AX);
         ES = 0;
@@ -40,11 +40,11 @@ public partial class CfgGeneratedOverrides {
         AH = 0x55;
         InterruptCall(cs1, 0x012C, 0x21);
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x0130, Dos, () => Dos.ReadPspAddress());
+        BX = ServiceCall(cs1, 0x0130, () => Dos.ReadPspAddress());
         Alu16.Sub(BX, 0x2000);
         if (BX == 0x2000) {
             BX = 0x2000;
-            ServiceCall(cs1, 0x013D, Dos, () => Dos.SetCurrentPsp(0x2000));
+            ServiceCall(cs1, 0x013D, () => Dos.SetCurrentPsp(0x2000));
             ES = 0x2000;
             Segment2000Globals.Dword000A = 0x00000155 | (uint)CS << 16;
             AX = 0x4C00;
@@ -64,7 +64,7 @@ public partial class CfgGeneratedOverrides {
                 Alu16.Sub(SP, flagOperand_015F);
                 if (SP == flagOperand_015F) {
                     AH = 0x62;
-                    BX = ServiceCall(cs1, 0x0169, Dos, () => Dos.ReadPspAddress());
+                    BX = ServiceCall(cs1, 0x0169, () => Dos.ReadPspAddress());
                     flagOperand_0169 = DsGlobals.Word0192;
                     Alu16.Sub(BX, flagOperand_0169);
                     if (BX == flagOperand_0169) {

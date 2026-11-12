@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_0170 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        BX = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ImageMinus0003Globals.Word01CE = BX;
         DX = 0x01D1;
         NearCall(cs1, 0x010E, unknown_016D_01BB_0188BEntry);
@@ -41,7 +41,7 @@ public partial class CfgGeneratedOverrides {
                     InterruptCall(cs1, 0x0139, 0x21);
                     BX = 0x2000;
                     AH = 0x50;
-                    ServiceCall(cs1, 0x0140, Dos, () => Dos.SetCurrentPsp(0x2000));
+                    ServiceCall(cs1, 0x0140, () => Dos.SetCurrentPsp(0x2000));
                     SI = 0;
                     do {
                         CheckExternalEvents(cs1, 0x0143);
@@ -94,7 +94,7 @@ public partial class CfgGeneratedOverrides {
                         } while (BX != 8);
                         segment = ImageMinus0003Globals.Word01CE;
                         AH = 0x50;
-                        ServiceCall(cs1, 0x01A1, Dos, () => Dos.SetCurrentPsp(segment));
+                        ServiceCall(cs1, 0x01A1, () => Dos.SetCurrentPsp(segment));
                         BX = 5;
                         do {
                             CheckExternalEvents(cs1, 0x01A4);

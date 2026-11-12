@@ -73,7 +73,7 @@ public partial class CfgGeneratedOverrides {
         word4 = Stack.Pop16();
         EsGlobals.Word000C = word4;
         BX = DsGlobals.Word03D4;
-        ServiceCall(cs1, 0x0159, Dos, () => Dos.SetCurrentPsp(BX));
+        ServiceCall(cs1, 0x0159, () => Dos.SetCurrentPsp(BX));
         word1 = DsGlobals.Word03D4;
         DS = word1;
         ES = word1;
@@ -110,7 +110,7 @@ public partial class CfgGeneratedOverrides {
         }
         BX = CS;
         AH = 0x50;
-        ServiceCall(cs1, 0x0183, Dos, () => Dos.SetCurrentPsp(BX));
+        ServiceCall(cs1, 0x0183, () => Dos.SetCurrentPsp(BX));
         AX = DsGlobals.Word03D4;
         ES = AX;
         AH = 0x49;

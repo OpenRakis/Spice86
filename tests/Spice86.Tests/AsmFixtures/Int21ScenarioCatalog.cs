@@ -121,6 +121,7 @@ internal static class Int21ScenarioCatalog {
             }, NoDetailAssertions),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
         GetTrueName(),
+        DosEntryHookFunction(),
         WithHandleTestFiles("set_handle_count_relocates_jft.com"),
         ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
             new Int21RunSetup { ExeArgs = "h" }, NoDetailAssertions),
@@ -137,6 +138,35 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario Simple(string programFileName) {
         return ProgramScenario(ProgramName(programFileName), programFileName, Int21RunSetup.None,
             NoDetailAssertions);
+    }
+
+    /// <summary>Runs dos_entry_hook_function.com: the program leaves AH = 62h set through an untyped
+    /// INT 2Fh, then calls the typed AH=30h (Get DOS version) at a deeper stack pointer. The typed
+    /// call's entry bookkeeping must save the caller stack under its own function number, so the PSP
+    /// caller-stack field ends at SS:FFF4; a stale-AH decision would keep the first record's value.</summary>
+    private static AsmScenario DosEntryHookFunction() {
+        const string identity = "dos_entry_hook_function";
+        const string programFileName = "dos_entry_hook_function.com";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory
+            };
+            return new AsmFixture(settings, [], result => {
+                result.Memory.UInt16[0x3000, 0].Should().Be(0xFFF4,
+                    "the AH=30h call at SP=FFFAh saves SS:FFF4 under its own function number, not stale AH=62h");
+                result.Memory.UInt16[0x3000, 2].Should().Be(result.Memory.UInt16[0x3000, 4],
+                    "the saved SS is the program's own PSP segment");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
     }
 
     /// <summary>The program exercises DOS upper memory blocks, so the run provides XMS.</summary>

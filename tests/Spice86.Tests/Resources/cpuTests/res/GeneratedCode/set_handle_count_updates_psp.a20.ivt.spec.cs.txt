@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_010F = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        word1 = ServiceCall(cs1, 0x0104, Dos, () => Dos.ReadPspAddress());
+        word1 = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ES = word1;
         AH = 0x67;
         BX = 0x0030;
