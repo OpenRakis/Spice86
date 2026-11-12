@@ -82,8 +82,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_01B3 = [Signature_01B3_stc, Signature_01B4_pop, Signature_01B5_pop, Signature_01B6_ret];
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_0199_01869_AsmEntry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_0199_01879_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_0053_F0053Entry;
@@ -99,11 +99,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_0199_01869_AsmEntry = _ => unknown_016D_0199_01869_Asm();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_0199_01879_AsmEntry = _ => unknown_016E_0199_01879_Asm();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_0053_F0053Entry = _ => unknown_F000_0053_F0053();
@@ -117,8 +117,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0199, unknown_016D_0199_01869_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0199, unknown_016E_0199_01879_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0053, unknown_F000_0053_F0053Entry, "unknown");
@@ -136,7 +136,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -151,144 +151,144 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov DX,0x0998
+        // 016E:0100 mov DX,0x0998
         DX = 0x0998;
-        // 016D:0103 mov AL,1
+        // 016E:0103 mov AL,1
         AL = 1;
-        // 016D:0105 out DX,AL
+        // 016E:0105 out DX,AL
         Out8(0x0998, 1);
-        // 016D:0106 mov AH,0
+        // 016E:0106 mov AH,0
         AH = 0;
-        // 016D:0108 int 0x1A
+        // 016E:0108 int 0x1A
         (AL, CX, DX) = Clock.ReadSystemClockCounter();
-        // 016D:010A mov DX,0x0998
-        // 016D:010D mov AL,2
+        // 016E:010A mov DX,0x0998
+        // 016E:010D mov AL,2
         AL = 2;
-        // 016D:010F out DX,AL
+        // 016E:010F out DX,AL
         Out8(0x0998, 2);
-        // 016D:0110 mov AH,1
-        // 016D:0112 mov CX,0x0012
-        // 016D:0115 mov DX,0x3456
-        // 016D:0118 int 0x1A
+        // 016E:0110 mov AH,1
+        // 016E:0112 mov CX,0x0012
+        // 016E:0115 mov DX,0x3456
+        // 016E:0118 int 0x1A
         Clock.SetSystemClockCounter(0x0012, 0x3456);
-        // 016D:011A mov AH,0
+        // 016E:011A mov AH,0
         AH = 0;
-        // 016D:011C int 0x1A
+        // 016E:011C int 0x1A
         (AL, CX, DX) = Clock.ReadSystemClockCounter();
-        // 016D:011E mov DX,0x0998
-        // 016D:0121 mov AL,3
+        // 016E:011E mov DX,0x0998
+        // 016E:0121 mov AL,3
         AL = 3;
-        // 016D:0123 out DX,AL
+        // 016E:0123 out DX,AL
         Out8(0x0998, 3);
-        // 016D:0124 mov AH,2
+        // 016E:0124 mov AH,2
         AH = 2;
-        // 016D:0126 int 0x1A
+        // 016E:0126 int 0x1A
         (CX, DX, CarryFlag) = Clock.ReadTimeFromRTC();
-        // 016D:0128 jb short 0x0192
+        // 016E:0128 jb short 0x0192
         if (!CarryFlag) {
-            // 016D:012A mov AL,CH
+            // 016E:012A mov AL,CH
             AL = CH;
-            // 016D:012C call near 0x0199
-            CarryFlag = NearCall(cs1, 0x012F, () => unknown_016D_0199_01869(AL));
-            // 016D:012F jb short 0x0192
+            // 016E:012C call near 0x0199
+            CarryFlag = NearCall(cs1, 0x012F, () => unknown_016E_0199_01879(AL));
+            // 016E:012F jb short 0x0192
             if (!CarryFlag) {
-                // 016D:0131 mov AL,CL
+                // 016E:0131 mov AL,CL
                 AL = CL;
-                // 016D:0133 call near 0x0199
-                CarryFlag = NearCall(cs1, 0x0136, () => unknown_016D_0199_01869(AL));
-                // 016D:0136 jb short 0x0192
+                // 016E:0133 call near 0x0199
+                CarryFlag = NearCall(cs1, 0x0136, () => unknown_016E_0199_01879(AL));
+                // 016E:0136 jb short 0x0192
                 if (!CarryFlag) {
-                    // 016D:0138 mov AL,DH
+                    // 016E:0138 mov AL,DH
                     AL = DH;
-                    // 016D:013A call near 0x0199
-                    CarryFlag = NearCall(cs1, 0x013D, () => unknown_016D_0199_01869(AL));
-                    // 016D:013D jb short 0x0192
+                    // 016E:013A call near 0x0199
+                    CarryFlag = NearCall(cs1, 0x013D, () => unknown_016E_0199_01879(AL));
+                    // 016E:013D jb short 0x0192
                     if (!CarryFlag) {
-                        // 016D:013F mov DX,0x0998
+                        // 016E:013F mov DX,0x0998
                         DX = 0x0998;
-                        // 016D:0142 mov AL,4
+                        // 016E:0142 mov AL,4
                         AL = 4;
-                        // 016D:0144 out DX,AL
+                        // 016E:0144 out DX,AL
                         Out8(0x0998, 4);
-                        // 016D:0145 mov AH,3
+                        // 016E:0145 mov AH,3
                         AH = 3;
-                        // 016D:0147 mov CH,0x12
+                        // 016E:0147 mov CH,0x12
                         CH = 0x12;
-                        // 016D:0149 mov CL,0x34
-                        // 016D:014B mov DH,0x56
+                        // 016E:0149 mov CL,0x34
+                        // 016E:014B mov DH,0x56
                         DH = 0x56;
-                        // 016D:014D mov DL,0
-                        // 016D:014F int 0x1A
+                        // 016E:014D mov DL,0
+                        // 016E:014F int 0x1A
                         CarryFlag = Clock.SetRTCTime();
-                        // 016D:0151 mov DX,0x0998
-                        // 016D:0154 mov AL,5
+                        // 016E:0151 mov DX,0x0998
+                        // 016E:0154 mov AL,5
                         AL = 5;
-                        // 016D:0156 out DX,AL
+                        // 016E:0156 out DX,AL
                         Out8(0x0998, 5);
-                        // 016D:0157 mov AH,4
+                        // 016E:0157 mov AH,4
                         AH = 4;
-                        // 016D:0159 int 0x1A
+                        // 016E:0159 int 0x1A
                         (CX, DX, CarryFlag) = Clock.ReadDateFromRTC();
-                        // 016D:015B jb short 0x0192
+                        // 016E:015B jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:015D mov AL,CH
+                        // 016E:015D mov AL,CH
                         AL = CH;
-                        // 016D:015F call near 0x0199
-                        CarryFlag = NearCall(cs1, 0x0162, () => unknown_016D_0199_01869(AL));
-                        // 016D:0162 jb short 0x0192
+                        // 016E:015F call near 0x0199
+                        CarryFlag = NearCall(cs1, 0x0162, () => unknown_016E_0199_01879(AL));
+                        // 016E:0162 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:0164 mov AL,CL
+                        // 016E:0164 mov AL,CL
                         AL = CL;
-                        // 016D:0166 call near 0x0199
-                        CarryFlag = NearCall(cs1, 0x0169, () => unknown_016D_0199_01869(AL));
-                        // 016D:0169 jb short 0x0192
+                        // 016E:0166 call near 0x0199
+                        CarryFlag = NearCall(cs1, 0x0169, () => unknown_016E_0199_01879(AL));
+                        // 016E:0169 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:016B mov AL,DH
+                        // 016E:016B mov AL,DH
                         AL = DH;
-                        // 016D:016D call near 0x0199
-                        CarryFlag = NearCall(cs1, 0x0170, () => unknown_016D_0199_01869(AL));
-                        // 016D:0170 jb short 0x0192
+                        // 016E:016D call near 0x0199
+                        CarryFlag = NearCall(cs1, 0x0170, () => unknown_016E_0199_01879(AL));
+                        // 016E:0170 jb short 0x0192
                         if (CarryFlag) {
                             goto L_0192;
                         }
-                        // 016D:0172 mov AL,DL
+                        // 016E:0172 mov AL,DL
                         AL = DL;
-                        // 016D:0174 call near 0x0199
-                        CarryFlag = NearCall(cs1, 0x0177, () => unknown_016D_0199_01869(AL));
-                        // 016D:0177 jb short 0x0192
+                        // 016E:0174 call near 0x0199
+                        CarryFlag = NearCall(cs1, 0x0177, () => unknown_016E_0199_01879(AL));
+                        // 016E:0177 jb short 0x0192
                         if (!CarryFlag) {
-                            // 016D:0179 mov DX,0x0998
+                            // 016E:0179 mov DX,0x0998
                             DX = 0x0998;
-                            // 016D:017C mov AL,6
+                            // 016E:017C mov AL,6
                             AL = 6;
-                            // 016D:017E out DX,AL
+                            // 016E:017E out DX,AL
                             Out8(0x0998, 6);
-                            // 016D:017F mov AH,5
+                            // 016E:017F mov AH,5
                             AH = 5;
-                            // 016D:0181 mov CH,0x20
-                            // 016D:0183 mov CL,0x24
+                            // 016E:0181 mov CH,0x20
+                            // 016E:0183 mov CL,0x24
                             CX = 0x2024;
-                            // 016D:0185 mov DH,0x11
+                            // 016E:0185 mov DH,0x11
                             DH = 0x11;
-                            // 016D:0187 mov DL,0x14
-                            // 016D:0189 int 0x1A
+                            // 016E:0187 mov DL,0x14
+                            // 016E:0189 int 0x1A
                             CarryFlag = Clock.SetRTCDate();
-                            // 016D:018B mov DX,0x0999
+                            // 016E:018B mov DX,0x0999
                             DX = 0x0999;
-                            // 016D:018E mov AL,0
+                            // 016E:018E mov AL,0
                             AL = 0;
-                            // 016D:0190 out DX,AL
+                            // 016E:0190 out DX,AL
                             Out8(0x0999, 0);
-                            // 016D:0191 hlt
+                            // 016E:0191 hlt
                             return Hlt();
                         }
                     }
@@ -297,65 +297,65 @@ public partial class CfgGeneratedOverrides {
         }
     L_0192:
         VerifySpeculativeRunOrFail(cs1, 0x0192, SpeculativeRun_0192);
-        // 016D:0192 mov DX,0x0999
+        // 016E:0192 mov DX,0x0999
         DX = 0x0999;
-        // 016D:0195 mov AL,0xFF
+        // 016E:0195 mov AL,0xFF
         AL = 0xFF;
-        // 016D:0197 out DX,AL
+        // 016E:0197 out DX,AL
         Out8(0x0999, 0xFF);
         VerifySpeculativeEntryOrFail(cs1, 0x0198, Signature_0198_hlt);
-        // 016D:0198 hlt
+        // 016E:0198 hlt
         return Hlt();
     }
 
     /// <summary>Inputs: AL. Outputs: CF. Changes: flags.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual bool unknown_016D_0199_01869(byte al) {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual bool unknown_016E_0199_01879(byte al) {
         AL = al;
         CheckExternalEvents(cs1, 0x0199);
-        // 016D:0199 push AX
+        // 016E:0199 push AX
         Stack.Push16(AX);
-        // 016D:019A push BX
+        // 016E:019A push BX
         Stack.Push16(BX);
-        // 016D:019B mov BL,AL
-        // 016D:019D shr BL,4
+        // 016E:019B mov BL,AL
+        // 016E:019D shr BL,4
         BL = (byte)(AL >> 4);
-        // 016D:01A0 cmp BL,9
+        // 016E:01A0 cmp BL,9
         Alu8.Sub(BL, 9);
-        // 016D:01A3 ja short 0x01B3
+        // 016E:01A3 ja short 0x01B3
         if (BL <= 9) {
-            // 016D:01A5 mov BL,AL
-            // 016D:01A7 and BL,0x0F
+            // 016E:01A5 mov BL,AL
+            // 016E:01A7 and BL,0x0F
             BL = (byte)(AL & 0x0F);
-            // 016D:01AA cmp BL,9
+            // 016E:01AA cmp BL,9
             Alu8.Sub(BL, 9);
-            // 016D:01AD ja short 0x01B3
+            // 016E:01AD ja short 0x01B3
             if (BL <= 9) {
-                // 016D:01AF clc
+                // 016E:01AF clc
                 CarryFlag = false;
-                // 016D:01B0 pop BX
+                // 016E:01B0 pop BX
                 BX = Stack.Pop16();
-                // 016D:01B1 pop AX
+                // 016E:01B1 pop AX
                 AX = Stack.Pop16();
-                // 016D:01B2 ret near
+                // 016E:01B2 ret near
                 NearReturn();
                 return CarryFlag;
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x01B3, SpeculativeRun_01B3);
-        // 016D:01B3 stc
+        // 016E:01B3 stc
         CarryFlag = true;
-        // 016D:01B4 pop BX
+        // 016E:01B4 pop BX
         BX = Stack.Pop16();
-        // 016D:01B5 pop AX
+        // 016E:01B5 pop AX
         AX = Stack.Pop16();
-        // 016D:01B6 ret near
+        // 016E:01B6 ret near
         NearReturn();
         return CarryFlag;
     }
 
-    public virtual Action unknown_016D_0199_01869_Asm() {
-        CarryFlag = unknown_016D_0199_01869(AL);
+    public virtual Action unknown_016E_0199_01879_Asm() {
+        CarryFlag = unknown_016E_0199_01879(AL);
         return Returned;
     }
 
@@ -422,7 +422,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: EAX, ECX, EDX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0053_F0053() {
         CheckExternalEvents(biosSegment, 0x0053);
         // F000:0053 callback 0x001A

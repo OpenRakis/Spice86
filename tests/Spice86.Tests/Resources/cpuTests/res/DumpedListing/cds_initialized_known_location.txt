@@ -1,26 +1,26 @@
-016D:0100 mov AH,0x52
-016D:0102 int 0x21
-016D:0104 les SI,word ptr ES:[BX+0x16]
-016D:0108 push ES
-016D:0109 pop DS
-016D:010A lods AL,byte ptr DS:[SI]
-016D:010B cmp AL,0x43
-016D:010D jne short 0x0122
-016D:010F lods AL,byte ptr DS:[SI]
-016D:0110 cmp AL,0x3A
-016D:0112 jne short 0x0122
-016D:0114 lods AL,byte ptr DS:[SI]
-016D:0115 cmp AL,0x5C
-016D:0117 jne short 0x0122
-016D:0119 lods AL,byte ptr DS:[SI]
-016D:011A cmp AL,0
-016D:011C jne short 0x0122
-016D:011E mov AL,0
-016D:0120 jmp short 0x0124
-016D:0122 mov AL,0xFF
-016D:0124 mov DX,0x0999
-016D:0127 out DX,AL
-016D:0128 hlt
+016E:0100 mov AH,0x52
+016E:0102 int 0x21
+016E:0104 les SI,word ptr ES:[BX+0x16]
+016E:0108 push ES
+016E:0109 pop DS
+016E:010A lods AL,byte ptr DS:[SI]
+016E:010B cmp AL,0x43
+016E:010D jne short 0x0122
+016E:010F lods AL,byte ptr DS:[SI]
+016E:0110 cmp AL,0x3A
+016E:0112 jne short 0x0122
+016E:0114 lods AL,byte ptr DS:[SI]
+016E:0115 cmp AL,0x5C
+016E:0117 jne short 0x0122
+016E:0119 lods AL,byte ptr DS:[SI]
+016E:011A cmp AL,0
+016E:011C jne short 0x0122
+016E:011E mov AL,0
+016E:0120 jmp short 0x0124
+016E:0122 mov AL,0xFF
+016E:0124 mov DX,0x0999
+016E:0127 out DX,AL
+016E:0128 hlt
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX

@@ -84,8 +84,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_003A = [Signature_003A_cmp, Signature_003D_je];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_0159_01829Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_0159_01839Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_0035_F0035Entry;
@@ -107,15 +107,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly SegmentB800Globals SegmentB800Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
         SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_0159_01829Entry = _ => unknown_016D_0159_01829();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_0159_01839Entry = _ => unknown_016E_0159_01839();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_0035_F0035Entry = _ => unknown_F000_0035_F0035();
@@ -130,8 +130,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8_AsmEntry = _ => unknown_F000_00E8_F00E8_Asm();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0159, unknown_016D_0159_01829Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0159, unknown_016E_0159_01839Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0035, unknown_F000_0035_F0035Entry, "unknown");
@@ -150,7 +150,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -165,101 +165,101 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort ax;
         ushort di;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 cli
+        // 016E:0100 cli
         InterruptFlag = false;
-        // 016D:0101 xor AX,AX
+        // 016E:0101 xor AX,AX
         AX = Alu16.Xor(AX, AX);
-        // 016D:0103 mov ES,AX
+        // 016E:0103 mov ES,AX
         ES = 0;
-        // 016D:0105 mov AX,word ptr ES:[0x0024]
+        // 016E:0105 mov AX,word ptr ES:[0x0024]
         ax = Segment0000Globals.Word0024;
-        // 016D:0109 mov word ptr CS:[0x0167],AX
+        // 016E:0109 mov word ptr CS:[0x0167],AX
         CsGlobals.Word0167 = ax;
-        // 016D:010D mov AX,word ptr ES:[0x0026]
+        // 016E:010D mov AX,word ptr ES:[0x0026]
         AX = Segment0000Globals.Word0026;
-        // 016D:0111 mov word ptr CS:[0x0169],AX
+        // 016E:0111 mov word ptr CS:[0x0169],AX
         CsGlobals.Word0169 = AX;
-        // 016D:0115 mov word ptr ES:[0x0024],0x0159
-        // 016D:011C mov word ptr ES:[0x0026],CS
+        // 016E:0115 mov word ptr ES:[0x0024],0x0159
+        // 016E:011C mov word ptr ES:[0x0026],CS
         Segment0000Globals.Dword0024 = 0x00000159 | (uint)CS << 16;
-        // 016D:0121 mov AL,0xD2
+        // 016E:0121 mov AL,0xD2
         AL = 0xD2;
-        // 016D:0123 out 0x64,AL
+        // 016E:0123 out 0x64,AL
         KeyboardControllerPorts.WriteCommand(0xD2);
-        // 016D:0125 mov AL,0x1E
+        // 016E:0125 mov AL,0x1E
         AL = 0x1E;
-        // 016D:0127 out 0x60,AL
+        // 016E:0127 out 0x60,AL
         KeyboardControllerPorts.WriteData(0x1E);
-        // 016D:0129 mov AH,0
+        // 016E:0129 mov AH,0
         AH = 0;
-        // 016D:012B int 0x16
+        // 016E:012B int 0x16
         InterruptCall(cs1, 0x012D, 0x16);
-        // 016D:012D mov BX,AX
+        // 016E:012D mov BX,AX
         BX = AX;
-        // 016D:012F cli
+        // 016E:012F cli
         InterruptFlag = false;
-        // 016D:0130 mov AX,word ptr CS:[0x0167]
+        // 016E:0130 mov AX,word ptr CS:[0x0167]
         ax = CsGlobals.Word0167;
-        // 016D:0134 mov word ptr ES:[0x0024],AX
+        // 016E:0134 mov word ptr ES:[0x0024],AX
         EsGlobals.Word0024 = ax;
-        // 016D:0138 mov AX,word ptr CS:[0x0169]
+        // 016E:0138 mov AX,word ptr CS:[0x0169]
         AX = CsGlobals.Word0169;
-        // 016D:013C mov word ptr ES:[0x0026],AX
+        // 016E:013C mov word ptr ES:[0x0026],AX
         EsGlobals.Word0026 = AX;
-        // 016D:0140 mov AX,0xB800
+        // 016E:0140 mov AX,0xB800
         AX = 0xB800;
-        // 016D:0143 mov ES,AX
+        // 016E:0143 mov ES,AX
         ES = 0xB800;
-        // 016D:0145 xor DI,DI
+        // 016E:0145 xor DI,DI
         DI = Alu16.Xor(DI, DI);
-        // 016D:0147 mov AH,7
-        // 016D:0149 mov AL,BL
+        // 016E:0147 mov AH,7
+        // 016E:0149 mov AL,BL
         AX = (ushort)(BL | 0x0700);
-        // 016D:014B stos word ptr ES:[DI],AX
+        // 016E:014B stos word ptr ES:[DI],AX
         SegmentB800Globals.Word0000 = AX;
         di = (ushort)(DirectionFlag ? -2 : 2);
-        // 016D:014C mov AL,BH
+        // 016E:014C mov AL,BH
         AL = BH;
-        // 016D:014E stos word ptr ES:[DI],AX
+        // 016E:014E stos word ptr ES:[DI],AX
         UInt16[ES, di] = AX;
         DI = (ushort)(di + (ushort)(DirectionFlag ? -2 : 2));
-        // 016D:014F mov AL,byte ptr CS:[0x0166]
+        // 016E:014F mov AL,byte ptr CS:[0x0166]
         AL = CsGlobals.Byte0166;
-        // 016D:0153 stos word ptr ES:[DI],AX
+        // 016E:0153 stos word ptr ES:[DI],AX
         UInt16[ES, DI] = AX;
         DI += (ushort)(DirectionFlag ? -2 : 2);
-        // 016D:0154 mov AX,0x4C00
+        // 016E:0154 mov AX,0x4C00
         AX = 0x4C00;
-        // 016D:0157 int 0x21
+        // 016E:0157 int 0x21
         InterruptCall(cs1, 0x0159, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:0157");
+        throw FailAsUntested("Untested return from call at 016E:0157");
     }
 
     /// <summary>Inputs: all. Does not return.</summary>
-    public virtual Action unknown_016D_0159_01829() {
+    public virtual Action unknown_016E_0159_01839() {
         byte al;
         CheckExternalEvents(cs1, 0x0159);
-        // 016D:0159 push AX
+        // 016E:0159 push AX
         Stack.Push16(AX);
-        // 016D:015A in AL,0x60
+        // 016E:015A in AL,0x60
         al = KeyboardControllerPorts.ReadData();
-        // 016D:015C mov byte ptr CS:[0x0166],AL
+        // 016E:015C mov byte ptr CS:[0x0166],AL
         CsGlobals.Byte0166 = al;
-        // 016D:0160 pop AX
+        // 016E:0160 pop AX
         AX = Stack.Pop16();
-        // 016D:0161 jmp far dword ptr CS:[0x0167]
+        // 016E:0161 jmp far dword ptr CS:[0x0167]
         ushort targetSegment_0161 = CsGlobals.Word0169;
         ushort targetOffset_0161 = CsGlobals.Word0167;
         if (targetSegment_0161 == biosSegment && targetOffset_0161 == 0x0017) {
             return unknown_F000_0017_F0017();
         }
         else {
-            throw FailAsUntested($"Untested far jump target {targetSegment_0161:X4}:{targetOffset_0161:X4} at 016D:0161");
+            throw FailAsUntested($"Untested far jump target {targetSegment_0161:X4}:{targetOffset_0161:X4} at 016E:0161");
         }
     }
 

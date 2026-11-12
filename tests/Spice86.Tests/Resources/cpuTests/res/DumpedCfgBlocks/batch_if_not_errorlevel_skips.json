@@ -1,6 +1,6 @@
 {
   "currentContextDepth": 1,
-  "currentContextEntryPoint": "016D:0100",
+  "currentContextEntryPoint": "016E:0100",
   "totalEntryPoints": 11,
   "entryPointAddresses": [
     "F000:0006",
@@ -13,15 +13,15 @@
     "F000:007C",
     "F000:0081",
     "F000:0086",
-    "016D:0100"
+    "016E:0100"
   ],
   "lastExecutedAddress": "F000:00A5",
   "lastExecutedBlockId": 89,
   "blocks": [
     {
       "id": 64,
-      "entry": "016D:0100",
-      "term": "016D:0103",
+      "entry": "016E:0100",
+      "term": "016E:0103",
       "pred": [
         89
       ],
@@ -30,7 +30,7 @@
         111
       ],
       "asm": [
-        "B8____|mov AX,word ptr [0x000017D1]",
+        "B8____|mov AX,word ptr [0x000017E1]",
         "selector"
       ]
     },
@@ -182,9 +182,9 @@
     },
     {
       "id": 111,
-      "entry": "016D:0103",
+      "entry": "016E:0103",
       "dead": true,
-      "term": "016D:0103",
+      "term": "016E:0103",
       "pred": [
         64
       ],
@@ -197,8 +197,8 @@
     },
     {
       "id": 103,
-      "entry": "016D:0103",
-      "term": "016D:0110",
+      "entry": "016E:0103",
+      "term": "016E:0110",
       "pred": [
         64
       ],

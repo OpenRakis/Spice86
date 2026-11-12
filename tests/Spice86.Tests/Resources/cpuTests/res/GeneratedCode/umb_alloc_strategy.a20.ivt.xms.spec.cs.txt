@@ -81,7 +81,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -97,15 +97,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -119,7 +119,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -137,7 +137,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -152,161 +152,161 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, DS. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort es1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 push CS
+        // 016E:0100 push CS
         Stack.Push16(CS);
-        // 016D:0101 pop ES
+        // 016E:0101 pop ES
         es1 = Stack.Pop16();
-        // 016D:0102 mov AX,0x4A00
-        // 016D:0105 mov BX,0x1000
-        // 016D:0108 int 0x21
+        // 016E:0102 mov AX,0x4A00
+        // 016E:0105 mov BX,0x1000
+        // 016E:0108 int 0x21
         Dos.RecordCallerStack(SS, SP);
         (AX, BX, CarryFlag) = Dos.ModifyMemory(es1, 0x1000);
-        // 016D:010A jb near 0x01AA
+        // 016E:010A jb near 0x01AA
         if (!CarryFlag) {
-            // 016D:010E mov AX,0x5801
-            // 016D:0111 mov BX,0x0040
+            // 016E:010E mov AX,0x5801
+            // 016E:0111 mov BX,0x0040
             BX = 0x0040;
-            // 016D:0114 int 0x21
+            // 016E:0114 int 0x21
             Dos.RecordCallerStack(SS, SP);
             (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5801, 0x0040);
-            // 016D:0116 jb near 0x01AA
+            // 016E:0116 jb near 0x01AA
             if (!CarryFlag) {
-                // 016D:011A mov AX,0x4800
-                // 016D:011D mov BX,0x2000
-                // 016D:0120 int 0x21
+                // 016E:011A mov AX,0x4800
+                // 016E:011D mov BX,0x2000
+                // 016E:0120 int 0x21
                 Dos.RecordCallerStack(SS, SP);
                 (AX, BX, CarryFlag) = Dos.AllocateMemory(0x2000);
-                // 016D:0122 jae near 0x01AA
+                // 016E:0122 jae near 0x01AA
                 if (CarryFlag) {
-                    // 016D:0126 cmp BX,0x1FFF
+                    // 016E:0126 cmp BX,0x1FFF
                     Alu16.Sub(BX, 0x1FFF);
-                    // 016D:012A jne short 0x01AA
+                    // 016E:012A jne short 0x01AA
                     if (BX == 0x1FFF) {
-                        // 016D:012C mov AX,0x4800
-                        // 016D:012F mov BX,0x1FFF
-                        // 016D:0132 int 0x21
+                        // 016E:012C mov AX,0x4800
+                        // 016E:012F mov BX,0x1FFF
+                        // 016E:0132 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, BX, CarryFlag) = Dos.AllocateMemory(0x1FFF);
-                        // 016D:0134 jb short 0x01AA
+                        // 016E:0134 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0136 cmp AX,0xD001
+                        // 016E:0136 cmp AX,0xD001
                         Alu16.Sub(AX, 0xD001);
-                        // 016D:0139 jne short 0x01AA
+                        // 016E:0139 jne short 0x01AA
                         if (AX != 0xD001) {
                             goto L_01AA;
                         }
-                        // 016D:013B mov word ptr DS:[0x01B1],AX
-                        ImageMinus0003Globals.Word01B1 = AX;
-                        // 016D:013E mov AX,0x5801
-                        // 016D:0141 mov BX,0x0080
+                        // 016E:013B mov word ptr DS:[0x01B1],AX
+                        ImageMinus0002Globals.Word01B1 = AX;
+                        // 016E:013E mov AX,0x5801
+                        // 016E:0141 mov BX,0x0080
                         BX = 0x0080;
-                        // 016D:0144 int 0x21
+                        // 016E:0144 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5801, 0x0080);
-                        // 016D:0146 jb short 0x01AA
+                        // 016E:0146 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0148 mov AX,0x4800
-                        // 016D:014B mov BX,0x2000
-                        // 016D:014E int 0x21
+                        // 016E:0148 mov AX,0x4800
+                        // 016E:014B mov BX,0x2000
+                        // 016E:014E int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, BX, CarryFlag) = Dos.AllocateMemory(0x2000);
-                        // 016D:0150 jb short 0x01AA
+                        // 016E:0150 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0152 cmp AX,0xA000
+                        // 016E:0152 cmp AX,0xA000
                         Alu16.Sub(AX, 0xA000);
-                        // 016D:0155 jae short 0x01AA
+                        // 016E:0155 jae short 0x01AA
                         if (AX >= 0xA000) {
                             goto L_01AA;
                         }
-                        // 016D:0157 mov word ptr DS:[0x01B3],AX
-                        ImageMinus0003Globals.Word01B3 = AX;
-                        // 016D:015A mov AX,0x5801
-                        // 016D:015D mov BX,0x00C3
+                        // 016E:0157 mov word ptr DS:[0x01B3],AX
+                        ImageMinus0002Globals.Word01B3 = AX;
+                        // 016E:015A mov AX,0x5801
+                        // 016E:015D mov BX,0x00C3
                         BX = 0x00C3;
-                        // 016D:0160 int 0x21
+                        // 016E:0160 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5801, 0x00C3);
-                        // 016D:0162 jae short 0x01AA
+                        // 016E:0162 jae short 0x01AA
                         if (!CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0164 cmp AX,1
+                        // 016E:0164 cmp AX,1
                         Alu16.Sub(AX, 1);
-                        // 016D:0167 jne short 0x01AA
+                        // 016E:0167 jne short 0x01AA
                         if (AX != 1) {
                             goto L_01AA;
                         }
-                        // 016D:0169 mov AX,0x5801
-                        // 016D:016C mov BX,0x00C0
+                        // 016E:0169 mov AX,0x5801
+                        // 016E:016C mov BX,0x00C0
                         BX = 0x00C0;
-                        // 016D:016F int 0x21
+                        // 016E:016F int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.MemoryAllocationStrategy(0x5801, 0x00C0);
-                        // 016D:0171 jb short 0x01AA
+                        // 016E:0171 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0173 mov AX,0x4800
-                        // 016D:0176 mov BX,0x0100
-                        // 016D:0179 int 0x21
+                        // 016E:0173 mov AX,0x4800
+                        // 016E:0176 mov BX,0x0100
+                        // 016E:0179 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, BX, CarryFlag) = Dos.AllocateMemory(0x0100);
-                        // 016D:017B jb short 0x01AA
+                        // 016E:017B jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:017D cmp AX,0xA000
+                        // 016E:017D cmp AX,0xA000
                         Alu16.Sub(AX, 0xA000);
-                        // 016D:0180 jae short 0x01AA
+                        // 016E:0180 jae short 0x01AA
                         if (AX >= 0xA000) {
                             goto L_01AA;
                         }
-                        // 016D:0182 mov word ptr DS:[0x01B5],AX
-                        ImageMinus0003Globals.Word01B5 = AX;
-                        // 016D:0185 mov AX,0x4900
-                        // 016D:0188 mov ES,word ptr DS:[0x01B5]
-                        es1 = ImageMinus0003Globals.Word01B5;
-                        // 016D:018C int 0x21
+                        // 016E:0182 mov word ptr DS:[0x01B5],AX
+                        ImageMinus0002Globals.Word01B5 = AX;
+                        // 016E:0185 mov AX,0x4900
+                        // 016E:0188 mov ES,word ptr DS:[0x01B5]
+                        es1 = ImageMinus0002Globals.Word01B5;
+                        // 016E:018C int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.FreeMemory(es1, 0x4900);
-                        // 016D:018E jb short 0x01AA
+                        // 016E:018E jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:0190 mov AX,0x4900
-                        // 016D:0193 mov ES,word ptr DS:[0x01B3]
-                        es1 = ImageMinus0003Globals.Word01B3;
-                        // 016D:0197 int 0x21
+                        // 016E:0190 mov AX,0x4900
+                        // 016E:0193 mov ES,word ptr DS:[0x01B3]
+                        es1 = ImageMinus0002Globals.Word01B3;
+                        // 016E:0197 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.FreeMemory(es1, 0x4900);
-                        // 016D:0199 jb short 0x01AA
+                        // 016E:0199 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:019B mov AX,0x4900
-                        // 016D:019E mov ES,word ptr DS:[0x01B1]
-                        es1 = ImageMinus0003Globals.Word01B1;
-                        // 016D:01A2 int 0x21
+                        // 016E:019B mov AX,0x4900
+                        // 016E:019E mov ES,word ptr DS:[0x01B1]
+                        es1 = ImageMinus0002Globals.Word01B1;
+                        // 016E:01A2 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (AX, CarryFlag) = Dos.FreeMemory(es1, 0x4900);
-                        // 016D:01A4 jb short 0x01AA
+                        // 016E:01A4 jb short 0x01AA
                         if (CarryFlag) {
                             goto L_01AA;
                         }
-                        // 016D:01A6 mov AL,0
+                        // 016E:01A6 mov AL,0
                         al1 = 0;
-                        // 016D:01A8 jmp short 0x01AC
+                        // 016E:01A8 jmp short 0x01AC
                         goto L_01AC;
                     }
                 }
@@ -314,14 +314,14 @@ public partial class CfgGeneratedOverrides {
         }
     L_01AA:
         VerifySpeculativeEntryOrFail(cs1, 0x01AA, Signature_01AA_mov);
-        // 016D:01AA mov AL,0xFF
+        // 016E:01AA mov AL,0xFF
         al1 = 0xFF;
     L_01AC:
-        // 016D:01AC mov DX,0x0999
+        // 016E:01AC mov DX,0x0999
         DX = 0x0999;
-        // 016D:01AF out DX,AL
+        // 016E:01AF out DX,AL
         Out8(0x0999, al1);
-        // 016D:01B0 hlt
+        // 016E:01B0 hlt
         ES = es1;
         AL = al1;
         return Hlt();
@@ -489,7 +489,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: DS = 0x016D.
+    /// Segment values at entry, from every call site: DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
@@ -592,20 +592,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0002Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0002);
     }
 
     public ushort Word01B1 { get => _memory.UInt16[Segment, 0x01B1]; set => _memory.UInt16[Segment, 0x01B1] = value; }

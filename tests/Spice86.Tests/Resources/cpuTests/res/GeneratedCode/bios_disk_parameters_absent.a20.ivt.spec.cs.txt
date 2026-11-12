@@ -128,7 +128,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_001C_F001CEntry;
@@ -147,15 +147,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_001C_F001CEntry = _ => unknown_F000_001C_F001C();
@@ -172,7 +172,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001C, unknown_F000_001C_F001CEntry, "unknown");
@@ -193,7 +193,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -208,8 +208,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, BP, DI, ES, DS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort ax1 = 0;
         byte al1 = 0;
         ushort ax2 = 0;
@@ -240,261 +240,261 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_02D8 = 0;
         ushort flagOperand_02E5 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        // 016D:0100 mov SI,0x0081
+        // 016E:0100 mov SI,0x0081
         SI = 0x0081;
         while (true) {
             CheckExternalEvents(cs1, 0x0103);
-            // 016D:0103 mov AL,byte ptr DS:[SI]
+            // 016E:0103 mov AL,byte ptr DS:[SI]
             AL = UInt8[DS, SI];
-            // 016D:0105 cmp AL,0x20
-            // 016D:0107 jne short 0x010C
+            // 016E:0105 cmp AL,0x20
+            // 016E:0107 jne short 0x010C
             if (AL != 0x20) {
                 break;
             }
-            // 016D:0109 inc SI
+            // 016E:0109 inc SI
             SI++;
-            // 016D:010A jmp short 0x0103
+            // 016E:010A jmp short 0x0103
         }
-        // 016D:010C mov byte ptr CS:[0x02FB],AL
-        ImageMinus0003Globals.Byte02FB = AL;
-        // 016D:0110 mov DL,0x80
+        // 016E:010C mov byte ptr CS:[0x02FB],AL
+        ImageMinus0002Globals.Byte02FB = AL;
+        // 016E:0110 mov DL,0x80
         DL = 0x80;
-        // 016D:0112 cmp AL,0x68
-        // 016D:0114 je short 0x0125
+        // 016E:0112 cmp AL,0x68
+        // 016E:0114 je short 0x0125
         if (AL != 0x68) {
-            // 016D:0116 mov DL,0
+            // 016E:0116 mov DL,0
             DL = 0;
-            // 016D:0118 cmp AL,0x66
-            // 016D:011A je short 0x0125
+            // 016E:0118 cmp AL,0x66
+            // 016E:011A je short 0x0125
             if (AL != 0x66) {
-                // 016D:011C cmp AL,0x61
+                // 016E:011C cmp AL,0x61
                 Alu8.Sub(AL, 0x61);
-                // 016D:011E je short 0x0125
+                // 016E:011E je short 0x0125
                 if (AL == 0x61) {
                     goto L_0125;
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x0120, SpeculativeRun_0120);
-                // 016D:0120 mov AL,0x6D
+                // 016E:0120 mov AL,0x6D
                 AL = 0x6D;
-                // 016D:0122 jmp near 0x02F0
+                // 016E:0122 jmp near 0x02F0
                 goto L_02F0;
             }
         }
     L_0125:
-        // 016D:0125 int 0x11
+        // 016E:0125 int 0x11
         ax1 = Equipment.GetEquipmentList();
-        // 016D:0127 test AX,AX
+        // 016E:0127 test AX,AX
         Alu16.And(ax1, ax1);
-        // 016D:0129 mov AL,1
+        // 016E:0129 mov AL,1
         AX = ax1;
         AL = 1;
-        // 016D:012B jne near 0x02F0
+        // 016E:012B jne near 0x02F0
         if (ZeroFlag) {
-            // 016D:012F int 0x12
+            // 016E:012F int 0x12
             AX = MemorySize.GetConventionalMemorySize();
-            // 016D:0131 cmp AX,0x0280
+            // 016E:0131 cmp AX,0x0280
             Alu16.Sub(AX, 0x0280);
-            // 016D:0134 mov AL,2
+            // 016E:0134 mov AL,2
             AL = 2;
-            // 016D:0136 jne near 0x02F0
+            // 016E:0136 jne near 0x02F0
             if (ZeroFlag) {
-                // 016D:013A mov DL,0x80
+                // 016E:013A mov DL,0x80
                 DL = 0x80;
-                // 016D:013C cmp byte ptr CS:[0x02FB],0x68
-                flagOperand_013C = ImageMinus0003Globals.Byte02FB;
+                // 016E:013C cmp byte ptr CS:[0x02FB],0x68
+                flagOperand_013C = ImageMinus0002Globals.Byte02FB;
                 Alu8.Sub(flagOperand_013C, 0x68);
-                // 016D:0142 je short 0x0146
+                // 016E:0142 je short 0x0146
                 if (flagOperand_013C != 0x68) {
-                    // 016D:0144 mov DL,0
+                    // 016E:0144 mov DL,0
                     DL = 0;
                 }
-                // 016D:0146 mov AL,0x5A
+                // 016E:0146 mov AL,0x5A
                 AL = 0x5A;
-                // 016D:0148 mov BX,0xA5C3
-                // 016D:014B mov CX,0x1234
-                // 016D:014E mov DH,0x56
+                // 016E:0148 mov BX,0xA5C3
+                // 016E:014B mov CX,0x1234
+                // 016E:014E mov DH,0x56
                 DH = 0x56;
-                // 016D:0150 mov AH,8
-                // 016D:0152 mov word ptr CS:[0x0304],SP
-                ImageMinus0003Globals.Word0304 = SP;
-                // 016D:0157 mov word ptr CS:[0x0306],DS
-                ImageMinus0003Globals.Word0306 = DS;
-                // 016D:015C mov word ptr CS:[0x0308],ES
-                ImageMinus0003Globals.Word0308 = ES;
-                // 016D:0161 mov word ptr CS:[0x030A],SI
-                ImageMinus0003Globals.Word030A = SI;
-                // 016D:0166 mov word ptr CS:[0x030C],DI
-                ImageMinus0003Globals.Word030C = DI;
-                // 016D:016B mov word ptr CS:[0x030E],BP
-                ImageMinus0003Globals.Word030E = BP;
-                // 016D:0170 int 0x13
+                // 016E:0150 mov AH,8
+                // 016E:0152 mov word ptr CS:[0x0304],SP
+                ImageMinus0002Globals.Word0304 = SP;
+                // 016E:0157 mov word ptr CS:[0x0306],DS
+                ImageMinus0002Globals.Word0306 = DS;
+                // 016E:015C mov word ptr CS:[0x0308],ES
+                ImageMinus0002Globals.Word0308 = ES;
+                // 016E:0161 mov word ptr CS:[0x030A],SI
+                ImageMinus0002Globals.Word030A = SI;
+                // 016E:0166 mov word ptr CS:[0x030C],DI
+                ImageMinus0002Globals.Word030C = DI;
+                // 016E:016B mov word ptr CS:[0x030E],BP
+                ImageMinus0002Globals.Word030E = BP;
+                // 016E:0170 int 0x13
                 (AX, CX, DX, BX, CarryFlag) = Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3);
-                // 016D:0172 pushf
+                // 016E:0172 pushf
                 Stack.Push16(FlagRegister16);
-                // 016D:0173 pop word ptr CS:[0x0310]
+                // 016E:0173 pop word ptr CS:[0x0310]
                 ushort popStackCheck_0173 = Stack.Peek16(0);
-                ushort popDestinationCheck_0173 = ImageMinus0003Globals.Word0310;
+                ushort popDestinationCheck_0173 = ImageMinus0002Globals.Word0310;
                 ushort poppedValue_0173 = Stack.Pop16();
-                ImageMinus0003Globals.Word0310 = poppedValue_0173;
-                // 016D:0178 mov word ptr CS:[0x0312],AX
-                ImageMinus0003Globals.Word0312 = AX;
-                // 016D:017C mov word ptr CS:[0x0314],BX
-                ImageMinus0003Globals.Word0314 = BX;
-                // 016D:0181 mov word ptr CS:[0x0316],CX
-                ImageMinus0003Globals.Word0316 = CX;
-                // 016D:0186 mov word ptr CS:[0x0318],DX
-                ImageMinus0003Globals.Word0318 = DX;
-                // 016D:018B mov AL,3
+                ImageMinus0002Globals.Word0310 = poppedValue_0173;
+                // 016E:0178 mov word ptr CS:[0x0312],AX
+                ImageMinus0002Globals.Word0312 = AX;
+                // 016E:017C mov word ptr CS:[0x0314],BX
+                ImageMinus0002Globals.Word0314 = BX;
+                // 016E:0181 mov word ptr CS:[0x0316],CX
+                ImageMinus0002Globals.Word0316 = CX;
+                // 016E:0186 mov word ptr CS:[0x0318],DX
+                ImageMinus0002Globals.Word0318 = DX;
+                // 016E:018B mov AL,3
                 AL = 3;
-                // 016D:018D cmp SP,word ptr CS:[0x0304]
-                flagOperand_018D = ImageMinus0003Globals.Word0304;
+                // 016E:018D cmp SP,word ptr CS:[0x0304]
+                flagOperand_018D = ImageMinus0002Globals.Word0304;
                 Alu16.Sub(SP, flagOperand_018D);
-                // 016D:0192 jne near 0x02F0
+                // 016E:0192 jne near 0x02F0
                 if (SP == flagOperand_018D) {
-                    // 016D:0196 mov AX,DS
+                    // 016E:0196 mov AX,DS
                     AX = DS;
-                    // 016D:0198 cmp AX,word ptr CS:[0x0306]
-                    flagOperand_0198 = ImageMinus0003Globals.Word0306;
+                    // 016E:0198 cmp AX,word ptr CS:[0x0306]
+                    flagOperand_0198 = ImageMinus0002Globals.Word0306;
                     Alu16.Sub(AX, flagOperand_0198);
-                    // 016D:019D jne near 0x02F0
+                    // 016E:019D jne near 0x02F0
                     if (AX == flagOperand_0198) {
-                        // 016D:01A1 mov AX,ES
+                        // 016E:01A1 mov AX,ES
                         AX = ES;
-                        // 016D:01A3 cmp AX,word ptr CS:[0x0308]
-                        flagOperand_01A3 = ImageMinus0003Globals.Word0308;
+                        // 016E:01A3 cmp AX,word ptr CS:[0x0308]
+                        flagOperand_01A3 = ImageMinus0002Globals.Word0308;
                         Alu16.Sub(AX, flagOperand_01A3);
-                        // 016D:01A8 jne near 0x02F0
+                        // 016E:01A8 jne near 0x02F0
                         if (AX != flagOperand_01A3) {
                             goto L_02F0;
                         }
-                        // 016D:01AC cmp SI,word ptr CS:[0x030A]
-                        flagOperand_01AC = ImageMinus0003Globals.Word030A;
+                        // 016E:01AC cmp SI,word ptr CS:[0x030A]
+                        flagOperand_01AC = ImageMinus0002Globals.Word030A;
                         Alu16.Sub(SI, flagOperand_01AC);
-                        // 016D:01B1 jne near 0x02F0
+                        // 016E:01B1 jne near 0x02F0
                         if (SI != flagOperand_01AC) {
                             goto L_02F0;
                         }
-                        // 016D:01B5 cmp DI,word ptr CS:[0x030C]
-                        flagOperand_01B5 = ImageMinus0003Globals.Word030C;
+                        // 016E:01B5 cmp DI,word ptr CS:[0x030C]
+                        flagOperand_01B5 = ImageMinus0002Globals.Word030C;
                         Alu16.Sub(DI, flagOperand_01B5);
-                        // 016D:01BA jne near 0x02F0
+                        // 016E:01BA jne near 0x02F0
                         if (DI != flagOperand_01B5) {
                             goto L_02F0;
                         }
-                        // 016D:01BE cmp BP,word ptr CS:[0x030E]
-                        flagOperand_01BE = ImageMinus0003Globals.Word030E;
+                        // 016E:01BE cmp BP,word ptr CS:[0x030E]
+                        flagOperand_01BE = ImageMinus0002Globals.Word030E;
                         Alu16.Sub(BP, flagOperand_01BE);
-                        // 016D:01C3 jne near 0x02F0
+                        // 016E:01C3 jne near 0x02F0
                         if (BP != flagOperand_01BE) {
                             goto L_02F0;
                         }
-                        // 016D:01C7 mov AL,byte ptr CS:[0x02FB]
-                        al1 = ImageMinus0003Globals.Byte02FB;
-                        // 016D:01CB cmp AL,0x68
-                        // 016D:01CD je short 0x0218
+                        // 016E:01C7 mov AL,byte ptr CS:[0x02FB]
+                        al1 = ImageMinus0002Globals.Byte02FB;
+                        // 016E:01CB cmp AL,0x68
+                        // 016E:01CD je short 0x0218
                         if (al1 == 0x68) {
                             goto L_0218;
                         }
-                        // 016D:01CF cmp AL,0x66
-                        // 016D:01D1 je near 0x025A
+                        // 016E:01CF cmp AL,0x66
+                        // 016E:01D1 je near 0x025A
                         if (al1 == 0x66) {
                             goto L_025A;
                         }
-                        // 016D:01D5 mov AL,4
+                        // 016E:01D5 mov AL,4
                         AL = 4;
-                        // 016D:01D7 test word ptr CS:[0x0310],1
-                        flagOperand_01D7 = ImageMinus0003Globals.Word0310;
+                        // 016E:01D7 test word ptr CS:[0x0310],1
+                        flagOperand_01D7 = ImageMinus0002Globals.Word0310;
                         Alu16.And(flagOperand_01D7, 1);
-                        // 016D:01DE je near 0x02F0
+                        // 016E:01DE je near 0x02F0
                         if ((flagOperand_01D7 & 1) == 0) {
                             goto L_02F0;
                         }
-                        // 016D:01E2 mov AL,5
+                        // 016E:01E2 mov AL,5
                         AL = 5;
-                        // 016D:01E4 cmp word ptr CS:[0x0312],0x805A
-                        flagOperand_01E4 = ImageMinus0003Globals.Word0312;
+                        // 016E:01E4 cmp word ptr CS:[0x0312],0x805A
+                        flagOperand_01E4 = ImageMinus0002Globals.Word0312;
                         Alu16.Sub(flagOperand_01E4, 0x805A);
-                        // 016D:01EB jne near 0x02F0
+                        // 016E:01EB jne near 0x02F0
                         if (flagOperand_01E4 != 0x805A) {
                             goto L_02F0;
                         }
-                        // 016D:01EF mov AL,6
+                        // 016E:01EF mov AL,6
                         AL = 6;
-                        // 016D:01F1 cmp word ptr CS:[0x0314],0xA5C3
-                        flagOperand_01F1 = ImageMinus0003Globals.Word0314;
+                        // 016E:01F1 cmp word ptr CS:[0x0314],0xA5C3
+                        flagOperand_01F1 = ImageMinus0002Globals.Word0314;
                         Alu16.Sub(flagOperand_01F1, 0xA5C3);
-                        // 016D:01F8 jne near 0x02F0
+                        // 016E:01F8 jne near 0x02F0
                         if (flagOperand_01F1 != 0xA5C3) {
                             goto L_02F0;
                         }
-                        // 016D:01FC mov AL,7
+                        // 016E:01FC mov AL,7
                         AL = 7;
-                        // 016D:01FE cmp word ptr CS:[0x0316],0x1234
-                        flagOperand_01FE = ImageMinus0003Globals.Word0316;
+                        // 016E:01FE cmp word ptr CS:[0x0316],0x1234
+                        flagOperand_01FE = ImageMinus0002Globals.Word0316;
                         Alu16.Sub(flagOperand_01FE, 0x1234);
-                        // 016D:0205 jne near 0x02F0
+                        // 016E:0205 jne near 0x02F0
                         if (flagOperand_01FE != 0x1234) {
                             goto L_02F0;
                         }
-                        // 016D:0209 mov AL,8
+                        // 016E:0209 mov AL,8
                         AL = 8;
-                        // 016D:020B cmp word ptr CS:[0x0318],0x5600
-                        flagOperand_020B = ImageMinus0003Globals.Word0318;
+                        // 016E:020B cmp word ptr CS:[0x0318],0x5600
+                        flagOperand_020B = ImageMinus0002Globals.Word0318;
                         Alu16.Sub(flagOperand_020B, 0x5600);
-                        // 016D:0212 jne near 0x02F0
+                        // 016E:0212 jne near 0x02F0
                         if (flagOperand_020B != 0x5600) {
                             goto L_02F0;
                         }
-                        // 016D:0216 jmp short 0x0292
+                        // 016E:0216 jmp short 0x0292
                         goto L_0292;
                     L_025A:
                         VerifySpeculativeRunOrFail(cs1, 0x025A, SpeculativeRun_025A);
-                        // 016D:025A mov AL,0x0E
+                        // 016E:025A mov AL,0x0E
                         AL = 0x0E;
-                        // 016D:025C test word ptr CS:[0x0310],1
-                        flagOperand_025C = ImageMinus0003Globals.Word0310;
+                        // 016E:025C test word ptr CS:[0x0310],1
+                        flagOperand_025C = ImageMinus0002Globals.Word0310;
                         Alu16.And(flagOperand_025C, 1);
-                        // 016D:0263 jne near 0x02F0
+                        // 016E:0263 jne near 0x02F0
                         if ((flagOperand_025C & 1) != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0267, SpeculativeRun_0267);
-                        // 016D:0267 mov AL,0x0F
+                        // 016E:0267 mov AL,0x0F
                         AL = 0x0F;
-                        // 016D:0269 cmp word ptr CS:[0x0312],0
-                        flagOperand_0269 = ImageMinus0003Globals.Word0312;
+                        // 016E:0269 cmp word ptr CS:[0x0312],0
+                        flagOperand_0269 = ImageMinus0002Globals.Word0312;
                         Alu16.Sub(flagOperand_0269, 0);
-                        // 016D:026F jne short 0x02F0
+                        // 016E:026F jne short 0x02F0
                         if (flagOperand_0269 != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0271, SpeculativeRun_0271);
-                        // 016D:0271 mov AL,0x10
+                        // 016E:0271 mov AL,0x10
                         AL = 0x10;
-                        // 016D:0273 cmp word ptr CS:[0x0314],0xA504
-                        flagOperand_0273 = ImageMinus0003Globals.Word0314;
+                        // 016E:0273 cmp word ptr CS:[0x0314],0xA504
+                        flagOperand_0273 = ImageMinus0002Globals.Word0314;
                         Alu16.Sub(flagOperand_0273, 0xA504);
-                        // 016D:027A jne short 0x02F0
+                        // 016E:027A jne short 0x02F0
                         if (flagOperand_0273 != 0xA504) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x027C, SpeculativeRun_027C);
-                        // 016D:027C mov AL,0x11
+                        // 016E:027C mov AL,0x11
                         AL = 0x11;
-                        // 016D:027E cmp word ptr CS:[0x0316],0x4F12
-                        flagOperand_027E = ImageMinus0003Globals.Word0316;
+                        // 016E:027E cmp word ptr CS:[0x0316],0x4F12
+                        flagOperand_027E = ImageMinus0002Globals.Word0316;
                         Alu16.Sub(flagOperand_027E, 0x4F12);
-                        // 016D:0285 jne short 0x02F0
+                        // 016E:0285 jne short 0x02F0
                         if (flagOperand_027E != 0x4F12) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0287, SpeculativeRun_0287);
-                        // 016D:0287 mov AL,0x12
+                        // 016E:0287 mov AL,0x12
                         AL = 0x12;
-                        // 016D:0289 cmp word ptr CS:[0x0318],0x0101
-                        flagOperand_0289 = ImageMinus0003Globals.Word0318;
+                        // 016E:0289 cmp word ptr CS:[0x0318],0x0101
+                        flagOperand_0289 = ImageMinus0002Globals.Word0318;
                         Alu16.Sub(flagOperand_0289, 0x0101);
-                        // 016D:0290 jne short 0x02F0
+                        // 016E:0290 jne short 0x02F0
                         if (flagOperand_0289 != 0x0101) {
                             goto L_02F0;
                         }
@@ -503,122 +503,122 @@ public partial class CfgGeneratedOverrides {
                         }
                     L_0218:
                         VerifySpeculativeRunOrFail(cs1, 0x0218, SpeculativeRun_0218);
-                        // 016D:0218 mov AL,9
+                        // 016E:0218 mov AL,9
                         AL = 9;
-                        // 016D:021A test word ptr CS:[0x0310],1
-                        flagOperand_021A = ImageMinus0003Globals.Word0310;
+                        // 016E:021A test word ptr CS:[0x0310],1
+                        flagOperand_021A = ImageMinus0002Globals.Word0310;
                         Alu16.And(flagOperand_021A, 1);
-                        // 016D:0221 jne near 0x02F0
+                        // 016E:0221 jne near 0x02F0
                         if ((flagOperand_021A & 1) != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0225, SpeculativeRun_0225);
-                        // 016D:0225 mov AL,0x0A
+                        // 016E:0225 mov AL,0x0A
                         AL = 0x0A;
-                        // 016D:0227 cmp word ptr CS:[0x0312],0x005A
-                        flagOperand_0227 = ImageMinus0003Globals.Word0312;
+                        // 016E:0227 cmp word ptr CS:[0x0312],0x005A
+                        flagOperand_0227 = ImageMinus0002Globals.Word0312;
                         Alu16.Sub(flagOperand_0227, 0x005A);
-                        // 016D:022D jne near 0x02F0
+                        // 016E:022D jne near 0x02F0
                         if (flagOperand_0227 != 0x005A) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0231, SpeculativeRun_0231);
-                        // 016D:0231 mov AL,0x0B
+                        // 016E:0231 mov AL,0x0B
                         AL = 0x0B;
-                        // 016D:0233 cmp word ptr CS:[0x0314],0xA5C3
-                        flagOperand_0233 = ImageMinus0003Globals.Word0314;
+                        // 016E:0233 cmp word ptr CS:[0x0314],0xA5C3
+                        flagOperand_0233 = ImageMinus0002Globals.Word0314;
                         Alu16.Sub(flagOperand_0233, 0xA5C3);
-                        // 016D:023A jne near 0x02F0
+                        // 016E:023A jne near 0x02F0
                         if (flagOperand_0233 != 0xA5C3) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x023E, SpeculativeRun_023E);
-                        // 016D:023E mov AL,0x0C
+                        // 016E:023E mov AL,0x0C
                         AL = 0x0C;
-                        // 016D:0240 cmp word ptr CS:[0x0316],0xFE3F
-                        flagOperand_0240 = ImageMinus0003Globals.Word0316;
+                        // 016E:0240 cmp word ptr CS:[0x0316],0xFE3F
+                        flagOperand_0240 = ImageMinus0002Globals.Word0316;
                         Alu16.Sub(flagOperand_0240, 0xFE3F);
-                        // 016D:0247 jne near 0x02F0
+                        // 016E:0247 jne near 0x02F0
                         if (flagOperand_0240 != 0xFE3F) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x024B, SpeculativeRun_024B);
-                        // 016D:024B mov AL,0x0D
+                        // 016E:024B mov AL,0x0D
                         AL = 0x0D;
-                        // 016D:024D cmp word ptr CS:[0x0318],0xFF01
-                        flagOperand_024D = ImageMinus0003Globals.Word0318;
+                        // 016E:024D cmp word ptr CS:[0x0318],0xFF01
+                        flagOperand_024D = ImageMinus0002Globals.Word0318;
                         Alu16.Sub(flagOperand_024D, 0xFF01);
-                        // 016D:0254 jne near 0x02F0
+                        // 016E:0254 jne near 0x02F0
                         if (flagOperand_024D != 0xFF01) {
                             goto L_02F0;
                         }
                         VerifySpeculativeEntryOrFail(cs1, 0x0258, Signature_0258_jmp);
-                        // 016D:0258 jmp short 0x0292
+                        // 016E:0258 jmp short 0x0292
                     L_0292:
-                        // 016D:0292 mov AX,SP
-                        // 016D:0294 sub AX,6
+                        // 016E:0292 mov AX,SP
+                        // 016E:0294 sub AX,6
                         AX = (ushort)(SP - 6);
-                        // 016D:0297 mov word ptr CS:[0x02FC],AX
-                        ImageMinus0003Globals.Word02FC = AX;
-                        // 016D:029B mov word ptr CS:[0x02FE],SS
-                        ImageMinus0003Globals.Word02FE = SS;
-                        // 016D:02A0 mov AH,0x30
-                        // 016D:02A2 int 0x21
+                        // 016E:0297 mov word ptr CS:[0x02FC],AX
+                        ImageMinus0002Globals.Word02FC = AX;
+                        // 016E:029B mov word ptr CS:[0x02FE],SS
+                        ImageMinus0002Globals.Word02FE = SS;
+                        // 016E:02A0 mov AH,0x30
+                        // 016E:02A2 int 0x21
                         Dos.RecordCallerStack(SS, SP);
                         (ax2, CX, BX) = Dos.ReadDosVersion();
-                        // 016D:02A4 movsx ECX,AX
+                        // 016E:02A4 movsx ECX,AX
                         ECX = (uint)(int)(short)ax2;
-                        // 016D:02A8 movsx EDX,AX
+                        // 016E:02A8 movsx EDX,AX
                         EDX = (uint)(int)(short)ax2;
-                        // 016D:02AC mov EAX,0
+                        // 016E:02AC mov EAX,0
                         EAX = 0;
-                        // 016D:02B2 mov AL,0x13
+                        // 016E:02B2 mov AL,0x13
                         AL = 0x13;
-                        // 016D:02B4 cmp ECX,5
+                        // 016E:02B4 cmp ECX,5
                         Alu32.Sub(ECX, 5);
-                        // 016D:02B8 jne short 0x02F0
+                        // 016E:02B8 jne short 0x02F0
                         if (ECX != 5) {
                             goto L_02F0;
                         }
-                        // 016D:02BA mov AL,0x14
+                        // 016E:02BA mov AL,0x14
                         AL = 0x14;
-                        // 016D:02BC cmp EDX,5
+                        // 016E:02BC cmp EDX,5
                         Alu32.Sub(EDX, 5);
-                        // 016D:02C0 jne short 0x02F0
+                        // 016E:02C0 jne short 0x02F0
                         if (EDX != 5) {
                             goto L_02F0;
                         }
-                        // 016D:02C2 mov AX,word ptr CS:[0x002E]
-                        ax = ImageMinus0003Globals.Word002E;
-                        // 016D:02C6 mov word ptr CS:[0x0300],AX
-                        ImageMinus0003Globals.Word0300 = ax;
-                        // 016D:02CA mov AX,word ptr CS:[0x0030]
-                        AX = ImageMinus0003Globals.Word0030;
-                        // 016D:02CE mov word ptr CS:[0x0302],AX
-                        ImageMinus0003Globals.Word0302 = AX;
-                        // 016D:02D2 mov AL,0x15
-                        // 016D:02D4 mov AX,word ptr CS:[0x02FC]
-                        AX = ImageMinus0003Globals.Word02FC;
-                        // 016D:02D8 cmp word ptr CS:[0x0300],AX
-                        flagOperand_02D8 = ImageMinus0003Globals.Word0300;
+                        // 016E:02C2 mov AX,word ptr CS:[0x002E]
+                        ax = ImageMinus0002Globals.Word002E;
+                        // 016E:02C6 mov word ptr CS:[0x0300],AX
+                        ImageMinus0002Globals.Word0300 = ax;
+                        // 016E:02CA mov AX,word ptr CS:[0x0030]
+                        AX = ImageMinus0002Globals.Word0030;
+                        // 016E:02CE mov word ptr CS:[0x0302],AX
+                        ImageMinus0002Globals.Word0302 = AX;
+                        // 016E:02D2 mov AL,0x15
+                        // 016E:02D4 mov AX,word ptr CS:[0x02FC]
+                        AX = ImageMinus0002Globals.Word02FC;
+                        // 016E:02D8 cmp word ptr CS:[0x0300],AX
+                        flagOperand_02D8 = ImageMinus0002Globals.Word0300;
                         Alu16.Sub(flagOperand_02D8, AX);
-                        // 016D:02DD jne short 0x02F0
+                        // 016E:02DD jne short 0x02F0
                         if (flagOperand_02D8 != AX) {
                             goto L_02F0;
                         }
-                        // 016D:02DF mov AL,0x16
-                        // 016D:02E1 mov AX,word ptr CS:[0x02FE]
-                        AX = ImageMinus0003Globals.Word02FE;
-                        // 016D:02E5 cmp word ptr CS:[0x0302],AX
-                        flagOperand_02E5 = ImageMinus0003Globals.Word0302;
+                        // 016E:02DF mov AL,0x16
+                        // 016E:02E1 mov AX,word ptr CS:[0x02FE]
+                        AX = ImageMinus0002Globals.Word02FE;
+                        // 016E:02E5 cmp word ptr CS:[0x0302],AX
+                        flagOperand_02E5 = ImageMinus0002Globals.Word0302;
                         Alu16.Sub(flagOperand_02E5, AX);
-                        // 016D:02EA jne short 0x02F0
+                        // 016E:02EA jne short 0x02F0
                         if (flagOperand_02E5 != AX) {
                             goto L_02F0;
                         }
-                        // 016D:02EC mov AL,0
+                        // 016E:02EC mov AL,0
                         al2 = 0;
-                        // 016D:02EE jmp short 0x02F6
+                        // 016E:02EE jmp short 0x02F6
                         goto L_02F6;
                     }
                 }
@@ -626,19 +626,19 @@ public partial class CfgGeneratedOverrides {
         }
     L_02F0:
         VerifySpeculativeRunOrFail(cs1, 0x02F0, SpeculativeRun_02F0);
-        // 016D:02F0 mov DX,0x0998
+        // 016E:02F0 mov DX,0x0998
         DX = 0x0998;
-        // 016D:02F3 out DX,AL
+        // 016E:02F3 out DX,AL
         Out8(0x0998, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x02F4, Signature_02F4_mov);
-        // 016D:02F4 mov AL,0xFF
+        // 016E:02F4 mov AL,0xFF
         al2 = 0xFF;
     L_02F6:
-        // 016D:02F6 mov DX,0x0999
+        // 016E:02F6 mov DX,0x0999
         DX = 0x0999;
-        // 016D:02F9 out DX,AL
+        // 016E:02F9 out DX,AL
         Out8(0x0999, al2);
-        // 016D:02FA hlt
+        // 016E:02FA hlt
         AL = al2;
         return Hlt();
     }
@@ -706,7 +706,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_001C_F001C() {
         CheckExternalEvents(biosSegment, 0x001C);
         // F000:001C callback 0x0011
@@ -717,7 +717,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0021_F0021() {
         CheckExternalEvents(biosSegment, 0x0021);
         // F000:0021 callback 0x0012
@@ -728,7 +728,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: AX, ECX, DX, EBX, CF. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0058_F0058() {
         CheckExternalEvents(biosSegment, 0x0058);
         // F000:0058 callback 0x0013
@@ -838,7 +838,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
@@ -941,20 +941,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0002Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0002);
     }
 
     public ushort Word002E { get => _memory.UInt16[Segment, 0x002E]; set => _memory.UInt16[Segment, 0x002E] = value; }

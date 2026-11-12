@@ -85,7 +85,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
-    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016F_0100_017F0Entry;
     private readonly Func<int, Action> unknown_F000_0000_F0000Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
@@ -104,11 +104,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly CsGlobals CsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0002);
+        cs1 = (ushort)(programStartSegment - 0x0001);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
-        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016F_0100_017F0Entry = _ => unknown_016F_0100_017F0();
         unknown_F000_0000_F0000Entry = _ => unknown_F000_0000_F0000();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
@@ -123,7 +123,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016F_0100_017F0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0000, unknown_F000_0000_F0000Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
@@ -142,7 +142,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
 }
 
-// ==== file: CfgGeneratedOverrides.016E.cs ====
+// ==== file: CfgGeneratedOverrides.016F.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -157,150 +157,150 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
-    public virtual Action unknown_016E_0100_017E0() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual Action unknown_016F_0100_017F0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016E:0100 mov AX,4
+        // 016F:0100 mov AX,4
         AX = 4;
-        // 016E:0103 int 0x10
+        // 016F:0103 int 0x10
         AL = Video.SetVideoMode(4);
-        // 016E:0105 mov AH,2
+        // 016F:0105 mov AH,2
         AH = 2;
-        // 016E:0107 mov BH,0
+        // 016F:0107 mov BH,0
         BH = 0;
-        // 016E:0109 mov DH,0
-        // 016E:010B mov DL,0
+        // 016F:0109 mov DH,0
+        // 016F:010B mov DL,0
         DX = 0;
-        // 016E:010D int 0x10
+        // 016F:010D int 0x10
         Video.SetCursorPosition(0, BX);
-        // 016E:010F mov AH,9
-        // 016E:0111 mov AL,0xDB
+        // 016F:010F mov AH,9
+        // 016F:0111 mov AL,0xDB
         AX = 0x09DB;
-        // 016E:0113 mov BH,0
-        // 016E:0115 mov BL,3
+        // 016F:0113 mov BH,0
+        // 016F:0115 mov BL,3
         BX = 3;
-        // 016E:0117 mov CX,0x0028
+        // 016F:0117 mov CX,0x0028
         CX = 0x0028;
-        // 016E:011A int 0x10
+        // 016F:011A int 0x10
         Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 3);
-        // 016E:011C mov AH,2
+        // 016F:011C mov AH,2
         AH = 2;
-        // 016E:011E mov BH,0
+        // 016F:011E mov BH,0
         BH = 0;
-        // 016E:0120 mov DH,1
-        // 016E:0122 mov DL,0
+        // 016F:0120 mov DH,1
+        // 016F:0122 mov DL,0
         DX = 0x0100;
-        // 016E:0124 int 0x10
+        // 016F:0124 int 0x10
         Video.SetCursorPosition(0x0100, 3);
-        // 016E:0126 mov AH,9
-        // 016E:0128 mov AL,0x20
+        // 016F:0126 mov AH,9
+        // 016F:0128 mov AL,0x20
         AX = 0x0920;
-        // 016E:012A mov BH,0
-        // 016E:012C mov BL,0
+        // 016F:012A mov BH,0
+        // 016F:012C mov BL,0
         BX = 0;
-        // 016E:012E mov CX,0x0028
+        // 016F:012E mov CX,0x0028
         CX = 0x0028;
-        // 016E:0131 int 0x10
+        // 016F:0131 int 0x10
         Video.WriteCharacterAndAttributeAtCursor(0x20, 0x0028, 0);
-        // 016E:0133 mov AH,2
+        // 016F:0133 mov AH,2
         AH = 2;
-        // 016E:0135 mov BH,0
+        // 016F:0135 mov BH,0
         BH = 0;
-        // 016E:0137 mov DH,2
-        // 016E:0139 mov DL,0
+        // 016F:0137 mov DH,2
+        // 016F:0139 mov DL,0
         DX = 0x0200;
-        // 016E:013B int 0x10
+        // 016F:013B int 0x10
         Video.SetCursorPosition(0x0200, 0);
-        // 016E:013D mov AH,9
-        // 016E:013F mov AL,0xDB
+        // 016F:013D mov AH,9
+        // 016F:013F mov AL,0xDB
         AX = 0x09DB;
-        // 016E:0141 mov BH,0
-        // 016E:0143 mov BL,1
+        // 016F:0141 mov BH,0
+        // 016F:0143 mov BL,1
         BX = 1;
-        // 016E:0145 mov CX,0x0028
+        // 016F:0145 mov CX,0x0028
         CX = 0x0028;
-        // 016E:0148 int 0x10
+        // 016F:0148 int 0x10
         Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 1);
-        // 016E:014A mov AH,6
-        // 016E:014C mov AL,1
+        // 016F:014A mov AH,6
+        // 016F:014C mov AL,1
         AX = 0x0601;
-        // 016E:014E mov BH,0
+        // 016F:014E mov BH,0
         BH = 0;
-        // 016E:0150 mov CH,0
-        // 016E:0152 mov CL,0
+        // 016F:0150 mov CH,0
+        // 016F:0152 mov CL,0
         CX = 0;
-        // 016E:0154 mov DH,2
-        // 016E:0156 mov DL,0x27
+        // 016F:0154 mov DH,2
+        // 016F:0156 mov DL,0x27
         DX = 0x0227;
-        // 016E:0158 int 0x10
+        // 016F:0158 int 0x10
         Video.ScrollPageUp(1, 0, 0x0227, 1);
-        // 016E:015A mov AX,0xB800
+        // 016F:015A mov AX,0xB800
         AX = 0xB800;
-        // 016E:015D mov ES,AX
+        // 016F:015D mov ES,AX
         ES = 0xB800;
-        // 016E:015F xor BX,BX
+        // 016F:015F xor BX,BX
         BX = 0;
-        // 016E:0161 mov CX,8
+        // 016F:0161 mov CX,8
         CX = 8;
-        // 016E:0164 xor DH,DH
+        // 016F:0164 xor DH,DH
         DH = 0;
         do {
             CheckExternalEvents(cs1, 0x0166);
-            // 016E:0166 or DH,byte ptr ES:[BX]
+            // 016F:0166 or DH,byte ptr ES:[BX]
             DH |= UInt8[ES, BX];
-            // 016E:0169 inc BX
+            // 016F:0169 inc BX
             BX++;
-            // 016E:016A loop 0x0166
+            // 016F:016A loop 0x0166
             CX--;
         } while (CX != 0);
-        // 016E:016C or DH,DH
+        // 016F:016C or DH,DH
         DH = Alu8.Or(DH, DH);
-        // 016E:016E jne short 0x018A
+        // 016F:016E jne short 0x018A
         if (DH == 0) {
-            // 016E:0170 mov BX,0x0140
+            // 016F:0170 mov BX,0x0140
             BX = 0x0140;
-            // 016E:0173 mov CX,8
+            // 016F:0173 mov CX,8
             CX = 8;
-            // 016E:0176 xor DH,DH
+            // 016F:0176 xor DH,DH
             DH = 0;
             do {
                 CheckExternalEvents(cs1, 0x0178);
-                // 016E:0178 or DH,byte ptr ES:[BX]
+                // 016F:0178 or DH,byte ptr ES:[BX]
                 DH |= UInt8[ES, BX];
-                // 016E:017B inc BX
+                // 016F:017B inc BX
                 BX++;
-                // 016E:017C loop 0x0178
+                // 016F:017C loop 0x0178
                 CX--;
             } while (CX != 0);
-            // 016E:017E or DH,DH
+            // 016F:017E or DH,DH
             DH = Alu8.Or(DH, DH);
-            // 016E:0180 je short 0x018A
+            // 016F:0180 je short 0x018A
             if (DH == 0) {
                 goto L_018A;
             }
-            // 016E:0182 mov AL,0
+            // 016F:0182 mov AL,0
             AL = 0;
-            // 016E:0184 mov DX,0x0999
+            // 016F:0184 mov DX,0x0999
             DX = 0x0999;
-            // 016E:0187 out DX,AL
+            // 016F:0187 out DX,AL
             Out8(0x0999, 0);
-            // 016E:0188 jmp short 0x0190
+            // 016F:0188 jmp short 0x0190
             goto L_0190;
         }
     L_018A:
         VerifySpeculativeRunOrFail(cs1, 0x018A, SpeculativeRun_018A);
-        // 016E:018A mov AL,0xFF
+        // 016F:018A mov AL,0xFF
         AL = 0xFF;
-        // 016E:018C mov DX,0x0999
+        // 016F:018C mov DX,0x0999
         DX = 0x0999;
-        // 016E:018F out DX,AL
+        // 016F:018F out DX,AL
         Out8(0x0999, 0xFF);
     L_0190:
-        // 016E:0190 mov AX,0x4C00
+        // 016F:0190 mov AX,0x4C00
         AX = 0x4C00;
-        // 016E:0193 int 0x21
+        // 016F:0193 int 0x21
         InterruptCall(cs1, 0x0195, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0193");
+        throw FailAsUntested("Untested return from call at 016F:0193");
     }
 
 }
@@ -320,7 +320,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         // F000:0000 callback 0x0010
@@ -476,7 +476,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0xB800, DS = 0x016E.
+    /// Segment values at entry, from every call site: ES = 0xB800, DS = 0x016F.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

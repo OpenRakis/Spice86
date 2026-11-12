@@ -78,6 +78,7 @@ internal static class Int21ScenarioCatalog {
         ReadOnlyFileAttributes(),
         SetFileAttributesRoundTrip(),
         Simple("control_break_roundtrip.com"),
+        SwitchCharacterGetSet(),
         StdinStatusDetectsCtrlC(),
         StdinStatusDetectsCtrlBreak(),
         SingleStdinRead("stdin_read_ah07.com"),
@@ -227,6 +228,16 @@ internal static class Int21ScenarioCatalog {
                     File.SetAttributes(testFilePath, FileAttributes.Archive);
                 }
             }, NoDetailAssertions);
+    }
+
+    /// <summary>The program reads back the switch and availdev characters with INT 21h AH=37h and sets
+    /// both: each detail pair is the returned AL followed by DL, so the four pairs are
+    /// 0, '/', 0, '-', 0, '/', 0, '*'.</summary>
+    private static AsmScenario SwitchCharacterGetSet() {
+        return ProgramScenario("switch_char_get_set", "switch_char_get_set.com", Int21RunSetup.None,
+            testHandler => testHandler.Details.Should().Equal(
+                new byte[] { 0x00, 0x2F, 0x00, 0x2D, 0x00, 0x2F, 0x00, 0x2A },
+                "AH=37h should return '/' for the switch and availdev characters and keep the set value in DL"));
     }
 
     /// <summary>The program polls standard input with break checking enabled; the run presses Ctrl-C into

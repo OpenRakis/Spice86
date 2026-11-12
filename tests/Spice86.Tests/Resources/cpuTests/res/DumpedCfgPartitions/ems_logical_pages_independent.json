@@ -21,7 +21,7 @@
       "entries": [
         {
           "block": 64,
-          "address": "016E:0100",
+          "address": "0170:0100",
           "kind": "executionContextEntry"
         }
       ]
@@ -246,10 +246,10 @@
       "toPartition": 14,
       "fromBlock": 64,
       "toBlock": 70,
-      "from": "016E:0105",
+      "from": "0170:0105",
       "target": "F100:0000",
       "callContinuationBlock": 75,
-      "callContinuationAddress": "016E:0107"
+      "callContinuationAddress": "0170:0107"
     },
     {
       "kind": "callOut",
@@ -257,10 +257,10 @@
       "toPartition": 14,
       "fromBlock": 79,
       "toBlock": 70,
-      "from": "016E:011C",
+      "from": "0170:011C",
       "target": "F100:0000",
       "callContinuationBlock": 101,
-      "callContinuationAddress": "016E:011E"
+      "callContinuationAddress": "0170:011E"
     },
     {
       "kind": "callOut",
@@ -268,10 +268,10 @@
       "toPartition": 14,
       "fromBlock": 104,
       "toBlock": 70,
-      "from": "016E:0132",
+      "from": "0170:0132",
       "target": "F100:0000",
       "callContinuationBlock": 119,
-      "callContinuationAddress": "016E:0134"
+      "callContinuationAddress": "0170:0134"
     },
     {
       "kind": "callOut",
@@ -279,10 +279,10 @@
       "toPartition": 14,
       "fromBlock": 122,
       "toBlock": 70,
-      "from": "016E:0148",
+      "from": "0170:0148",
       "target": "F100:0000",
       "callContinuationBlock": 137,
-      "callContinuationAddress": "016E:014A"
+      "callContinuationAddress": "0170:014A"
     },
     {
       "kind": "callOut",
@@ -313,7 +313,7 @@
       "fromBlock": 71,
       "toBlock": 75,
       "from": "F100:0004",
-      "target": "016E:0107"
+      "target": "0170:0107"
     },
     {
       "kind": "alignedReturn",
@@ -322,7 +322,7 @@
       "fromBlock": 71,
       "toBlock": 101,
       "from": "F100:0004",
-      "target": "016E:011E"
+      "target": "0170:011E"
     },
     {
       "kind": "alignedReturn",
@@ -331,7 +331,7 @@
       "fromBlock": 71,
       "toBlock": 119,
       "from": "F100:0004",
-      "target": "016E:0134"
+      "target": "0170:0134"
     },
     {
       "kind": "alignedReturn",
@@ -340,7 +340,7 @@
       "fromBlock": 71,
       "toBlock": 137,
       "from": "F100:0004",
-      "target": "016E:014A"
+      "target": "0170:014A"
     }
   ]
 }

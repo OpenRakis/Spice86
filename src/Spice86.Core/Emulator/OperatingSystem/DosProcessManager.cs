@@ -160,6 +160,10 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosDriveManager.DirectorySeparatorChar}");
         }
 
+        if (!envVars.ContainsKey("COMSPEC")) {
+            envVars.Add("COMSPEC", "Z:\\COMMAND.COM");
+        }
+
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
         }
