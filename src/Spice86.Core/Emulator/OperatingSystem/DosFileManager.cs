@@ -839,6 +839,65 @@ public class DosFileManager {
     public DosFileOperationResult SetCurrentDir(string newPath) => _driveManager.SetCurrentDir(newPath);
 
     /// <summary>
+    /// Canonicalizes <paramref name="dosPath"/> into the fully qualified DOS path returned by
+    /// INT 21h AH=60h: the drive comes from the path or from the current drive, the relative part
+    /// is resolved against the current directory of that drive, and "." and ".." components are
+    /// collapsed against the drive's root.
+    /// </summary>
+    /// <param name="dosPath">Source DOS path, possibly relative and without a drive specification.</param>
+    /// <param name="fullDosPath">The canonical "X:\..." path on success, or <see langword="null"/> on error.</param>
+    /// <returns>A success result with <paramref name="fullDosPath"/> set, a
+    /// <see cref="DosErrorCode.FileNotFound"/> error for an empty path, or an
+    /// <see cref="DosErrorCode.InvalidDrive"/> error for a drive that is not mounted.</returns>
+    public DosFileOperationResult GetTrueName(string dosPath, out string? fullDosPath) {
+        fullDosPath = null;
+        string path = dosPath.Trim();
+        if (path.Length == 0) {
+            return DosFileOperationResult.LogError(DosErrorCode.FileNotFound);
+        }
+        char driveLetter;
+        if (path.Length > 1 && path[1] == DosDriveManager.VolumeSeparatorChar) {
+            driveLetter = char.ToUpperInvariant(path[0]);
+            path = path[2..];
+        } else {
+            driveLetter = _driveManager.CurrentDrive.DriveLetter;
+        }
+        if (!_driveManager.TryGetDrive(driveLetter, out DosDriveBase? drive)) {
+            return DosFileOperationResult.LogError(DosErrorCode.InvalidDrive);
+        }
+        fullDosPath = BuildTrueName(drive, path);
+        return DosFileOperationResult.NoValue();
+    }
+
+    /// <summary>
+    /// Builds the canonical path from the drive and its relative part: the drive's current
+    /// directory followed by the relative part's components, collapsing empty, "." and ".."
+    /// components, with ".." not able to go above the drive's root.
+    /// </summary>
+    /// <param name="drive">Drive the path belongs to.</param>
+    /// <param name="relativePath">Path after the drive specification.</param>
+    /// <returns>The canonical "X:\DIR\..." path.</returns>
+    private static string BuildTrueName(DosDriveBase drive, string relativePath) {
+        List<string> parts = new();
+        foreach (string part in (drive.CurrentDosDirectory + relativePath).Split(_directoryChars)) {
+            if (part.Length == 0 || part == ".") {
+                continue;
+            }
+            if (part == "..") {
+                if (parts.Count > 0) {
+                    parts.RemoveAt(parts.Count - 1);
+                }
+                continue;
+            }
+            parts.Add(part);
+        }
+        if (parts.Count == 0) {
+            return drive.DosVolume + "\\";
+        }
+        return drive.DosVolume + "\\" + string.Join("\\", parts);
+    }
+
+    /// <summary>
     /// Sets the segmented address to the DTA.
     /// </summary>
     /// <param name="diskTransferAreaAddressSegment">The segment part of the segmented address to the DTA.</param>

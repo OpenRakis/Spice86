@@ -1,0 +1,1274 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort biosSegment;
+
+    private static readonly byte?[] Signature_010C_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_010E_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0113_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_0116_out = [0xEE];
+    private static readonly byte?[] Signature_0117_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_0131_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0136_inc = [0x41];
+    private static readonly byte?[] Signature_0149_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_014B_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0150_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_0153_out = [0xEE];
+    private static readonly byte?[] Signature_0154_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_016E_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0173_inc = [0x41];
+    private static readonly byte?[] Signature_0186_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_0188_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_018D_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_0190_out = [0xEE];
+    private static readonly byte?[] Signature_0191_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_01AB_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_01B0_inc = [0x41];
+    private static readonly byte?[] Signature_01C3_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_01C5_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_01CA_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_01CD_out = [0xEE];
+    private static readonly byte?[] Signature_01CE_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_01E8_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_01ED_inc = [0x41];
+    private static readonly byte?[] Signature_0200_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_0202_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0207_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_020A_out = [0xEE];
+    private static readonly byte?[] Signature_020B_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_0225_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_022A_inc = [0x41];
+    private static readonly byte?[] Signature_023D_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_023F_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0244_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_0247_out = [0xEE];
+    private static readonly byte?[] Signature_0248_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_0262_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0267_inc = [0x41];
+    private static readonly byte?[] Signature_027A_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_027C_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0281_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_0284_out = [0xEE];
+    private static readonly byte?[] Signature_0285_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_029F_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_02A4_inc = [0x41];
+    private static readonly byte?[] Signature_02B7_mov = [0x88, 0xC0];
+    private static readonly byte?[] Signature_02B9_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_02BE_mov = [0xBA, 0x98, 0x09];
+    private static readonly byte?[] Signature_02C1_out = [0xEE];
+    private static readonly byte?[] Signature_02C2_jmp = [0xEB, 0x24];
+    private static readonly byte?[] Signature_02DC_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_02E1_inc = [0x41];
+    private static readonly byte?[] Signature_02F4_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_02F9_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_02FB_jmp = [0xEB, 0x0B];
+    private static readonly byte?[] Signature_0303_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_0318_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_031D_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_031F_jmp = [0xEB, 0x0B];
+    private static readonly byte?[] Signature_0327_mov = [0xC6, 0x06, 0x91, 0x04, 0x01];
+    private static readonly byte?[] Signature_033B_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_push = [0x1E];
+    private static readonly byte?[] Signature_000B_push = [0x50];
+    private static readonly byte?[] Signature_000C_push = [0x52];
+    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
+    private static readonly byte?[] Signature_0013_pop = [0x5A];
+    private static readonly byte?[] Signature_0014_pop = [0x58];
+    private static readonly byte?[] Signature_0015_pop = [0x1F];
+    private static readonly byte?[] Signature_0016_iret = [0xCF];
+    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_001B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_0061_iret = [0xCF];
+    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_006C_iret = [0xCF];
+    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0071_iret = [0xCF];
+    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0076_iret = [0xCF];
+    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007B_iret = [0xCF];
+    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_0080_iret = [0xCF];
+    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0085_iret = [0xCF];
+    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
+    private static readonly byte?[] Signature_008A_iret = [0xCF];
+    private static readonly byte?[] Signature_00AA_sti = [0xFB];
+    private static readonly byte?[] Signature_00AB_callback = [0xFE, 0x38, 0x0A, 0x01];
+    private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
+    private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00BF_iret = [0xCF];
+    private static readonly byte?[] Signature_00E8_ret = [0xCB];
+    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
+    private static readonly byte?[] Signature_00F6_ret = [0xCB];
+
+    private static readonly byte?[][] SpeculativeRun_010C = [Signature_010C_mov, Signature_010E_mov];
+    private static readonly byte?[][] SpeculativeRun_0113 = [Signature_0113_mov, Signature_0116_out];
+    private static readonly byte?[][] SpeculativeRun_0149 = [Signature_0149_mov, Signature_014B_mov];
+    private static readonly byte?[][] SpeculativeRun_0150 = [Signature_0150_mov, Signature_0153_out];
+    private static readonly byte?[][] SpeculativeRun_0186 = [Signature_0186_mov, Signature_0188_mov];
+    private static readonly byte?[][] SpeculativeRun_018D = [Signature_018D_mov, Signature_0190_out];
+    private static readonly byte?[][] SpeculativeRun_01C3 = [Signature_01C3_mov, Signature_01C5_mov];
+    private static readonly byte?[][] SpeculativeRun_01CA = [Signature_01CA_mov, Signature_01CD_out];
+    private static readonly byte?[][] SpeculativeRun_0200 = [Signature_0200_mov, Signature_0202_mov];
+    private static readonly byte?[][] SpeculativeRun_0207 = [Signature_0207_mov, Signature_020A_out];
+    private static readonly byte?[][] SpeculativeRun_023D = [Signature_023D_mov, Signature_023F_mov];
+    private static readonly byte?[][] SpeculativeRun_0244 = [Signature_0244_mov, Signature_0247_out];
+    private static readonly byte?[][] SpeculativeRun_027A = [Signature_027A_mov, Signature_027C_mov];
+    private static readonly byte?[][] SpeculativeRun_0281 = [Signature_0281_mov, Signature_0284_out];
+    private static readonly byte?[][] SpeculativeRun_02B7 = [Signature_02B7_mov, Signature_02B9_mov];
+    private static readonly byte?[][] SpeculativeRun_02BE = [Signature_02BE_mov, Signature_02C1_out];
+    private static readonly byte?[][] SpeculativeRun_02F9 = [Signature_02F9_mov, Signature_02FB_jmp];
+    private static readonly byte?[][] SpeculativeRun_031D = [Signature_031D_mov, Signature_031F_jmp];
+    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
+    private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
+
+    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
+    private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
+    private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
+    private readonly Func<int, Action> unknown_F000_0063_F0063Entry;
+    private readonly Func<int, Action> unknown_F000_006D_F006DEntry;
+    private readonly Func<int, Action> unknown_F000_0072_F0072Entry;
+    private readonly Func<int, Action> unknown_F000_0077_F0077Entry;
+    private readonly Func<int, Action> unknown_F000_007C_F007CEntry;
+    private readonly Func<int, Action> unknown_F000_0081_F0081Entry;
+    private readonly Func<int, Action> unknown_F000_0086_F0086Entry;
+    private readonly Func<int, Action> unknown_F000_0096_F0096Entry;
+    private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
+    private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
+
+    protected readonly CsGlobals CsGlobals;
+    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = (ushort)(programStartSegment - 0x0003);
+        biosSegment = 0xF000;
+        CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
+        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+
+        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
+        unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
+        unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
+        unknown_F000_0063_F0063Entry = _ => unknown_F000_0063_F0063();
+        unknown_F000_006D_F006DEntry = _ => unknown_F000_006D_F006D();
+        unknown_F000_0072_F0072Entry = _ => unknown_F000_0072_F0072();
+        unknown_F000_0077_F0077Entry = _ => unknown_F000_0077_F0077();
+        unknown_F000_007C_F007CEntry = _ => unknown_F000_007C_F007C();
+        unknown_F000_0081_F0081Entry = _ => unknown_F000_0081_F0081();
+        unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
+        unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
+        unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
+        unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0063, unknown_F000_0063_F0063Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x006D, unknown_F000_006D_F006DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0072, unknown_F000_0072_F0072Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0077, unknown_F000_0077_F0077Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007C, unknown_F000_007C_F007CEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0081, unknown_F000_0081_F0081Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.016D.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: EAX, ESI, EDI, ES, DS, DF. Does not return.</summary>
+    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    public virtual Action unknown_016D_0100_017D0() {
+        ushort si1 = 0;
+        ushort si2 = 0;
+        ushort si3 = 0;
+        ushort si4 = 0;
+        ushort si5 = 0;
+        ushort si6 = 0;
+        ushort si7 = 0;
+        ushort si8 = 0;
+        byte al1 = 0;
+        byte flagOperand_0122 = 0;
+        byte flagOperand_015F = 0;
+        byte flagOperand_019C = 0;
+        byte flagOperand_01D9 = 0;
+        byte flagOperand_0216 = 0;
+        byte flagOperand_0253 = 0;
+        byte flagOperand_0290 = 0;
+        byte flagOperand_02CD = 0;
+        byte flagOperand_0330 = 0;
+        CheckExternalEvents(cs1, 0x0100);
+        // 016D:0100 mov SI,0x0342
+        si1 = 0x0342;
+        // 016D:0103 mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0106 mov AH,0x60
+        AH = 0x60;
+        // 016D:0108 int 0x21
+        SI = si1;
+        InterruptCall(cs1, 0x010A, 0x21);
+        // 016D:010A jae short 0x0119
+        if (!CarryFlag) {
+            // 016D:0119 xor CX,CX
+            CX = 0;
+            // 016D:011B mov SI,0x0411
+            si1 = 0x0411;
+            // 016D:011E mov DI,0x034B
+            DI = 0x034B;
+            while (true) {
+                CheckExternalEvents(cs1, 0x0121);
+                // 016D:0121 lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si1];
+                si1 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:0122 cmp AL,byte ptr DS:[DI]
+                flagOperand_0122 = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_0122);
+                // 016D:0124 jne short 0x0131
+                if (AL != flagOperand_0122) {
+                    goto L_0131;
+                }
+                // 016D:0126 inc DI
+                DI++;
+                // 016D:0127 test AL,AL
+                // 016D:0129 je short 0x012D
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:012B jmp short 0x0121
+            }
+            // 016D:012D xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:012F jmp short 0x0137
+            goto L_0137;
+        L_0131:
+            VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_mov);
+            // 016D:0131 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x0136, Signature_0136_inc);
+            // 016D:0136 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_0137:
+            // 016D:0137 mov AL,CL
+            AL = CL;
+            // 016D:0139 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:013C out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x010C, SpeculativeRun_010C);
+            // 016D:010C mov AL,AL
+            // 016D:010E mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x0113, SpeculativeRun_0113);
+            // 016D:0113 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0116 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_jmp);
+            // 016D:0117 jmp short 0x013D
+        }
+        // 016D:013D mov SI,0x0357
+        si2 = 0x0357;
+        // 016D:0140 mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0143 mov AH,0x60
+        AH = 0x60;
+        // 016D:0145 int 0x21
+        SI = si2;
+        InterruptCall(cs1, 0x0147, 0x21);
+        // 016D:0147 jae short 0x0156
+        if (!CarryFlag) {
+            // 016D:0156 xor CX,CX
+            CX = 0;
+            // 016D:0158 mov SI,0x0411
+            si2 = 0x0411;
+            // 016D:015B mov DI,0x0362
+            DI = 0x0362;
+            while (true) {
+                CheckExternalEvents(cs1, 0x015E);
+                // 016D:015E lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si2];
+                si2 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:015F cmp AL,byte ptr DS:[DI]
+                flagOperand_015F = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_015F);
+                // 016D:0161 jne short 0x016E
+                if (AL != flagOperand_015F) {
+                    goto L_016E;
+                }
+                // 016D:0163 inc DI
+                DI++;
+                // 016D:0164 test AL,AL
+                // 016D:0166 je short 0x016A
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:0168 jmp short 0x015E
+            }
+            // 016D:016A xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:016C jmp short 0x0174
+            goto L_0174;
+        L_016E:
+            VerifySpeculativeEntryOrFail(cs1, 0x016E, Signature_016E_mov);
+            // 016D:016E mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x0173, Signature_0173_inc);
+            // 016D:0173 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_0174:
+            // 016D:0174 mov AL,CL
+            AL = CL;
+            // 016D:0176 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0179 out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x0149, SpeculativeRun_0149);
+            // 016D:0149 mov AL,AL
+            // 016D:014B mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x0150, SpeculativeRun_0150);
+            // 016D:0150 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0153 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x0154, Signature_0154_jmp);
+            // 016D:0154 jmp short 0x017A
+        }
+        // 016D:017A mov SI,0x036E
+        si3 = 0x036E;
+        // 016D:017D mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0180 mov AH,0x60
+        AH = 0x60;
+        // 016D:0182 int 0x21
+        SI = si3;
+        InterruptCall(cs1, 0x0184, 0x21);
+        // 016D:0184 jae short 0x0193
+        if (!CarryFlag) {
+            // 016D:0193 xor CX,CX
+            CX = 0;
+            // 016D:0195 mov SI,0x0411
+            si3 = 0x0411;
+            // 016D:0198 mov DI,0x037B
+            DI = 0x037B;
+            while (true) {
+                CheckExternalEvents(cs1, 0x019B);
+                // 016D:019B lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si3];
+                si3 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:019C cmp AL,byte ptr DS:[DI]
+                flagOperand_019C = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_019C);
+                // 016D:019E jne short 0x01AB
+                if (AL != flagOperand_019C) {
+                    goto L_01AB;
+                }
+                // 016D:01A0 inc DI
+                DI++;
+                // 016D:01A1 test AL,AL
+                // 016D:01A3 je short 0x01A7
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:01A5 jmp short 0x019B
+            }
+            // 016D:01A7 xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:01A9 jmp short 0x01B1
+            goto L_01B1;
+        L_01AB:
+            VerifySpeculativeEntryOrFail(cs1, 0x01AB, Signature_01AB_mov);
+            // 016D:01AB mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x01B0, Signature_01B0_inc);
+            // 016D:01B0 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_01B1:
+            // 016D:01B1 mov AL,CL
+            AL = CL;
+            // 016D:01B3 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:01B6 out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x0186, SpeculativeRun_0186);
+            // 016D:0186 mov AL,AL
+            // 016D:0188 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x018D, SpeculativeRun_018D);
+            // 016D:018D mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0190 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x0191, Signature_0191_jmp);
+            // 016D:0191 jmp short 0x01B7
+        }
+        // 016D:01B7 mov SI,0x038B
+        si4 = 0x038B;
+        // 016D:01BA mov DI,0x0411
+        DI = 0x0411;
+        // 016D:01BD mov AH,0x60
+        AH = 0x60;
+        // 016D:01BF int 0x21
+        SI = si4;
+        InterruptCall(cs1, 0x01C1, 0x21);
+        // 016D:01C1 jae short 0x01D0
+        if (!CarryFlag) {
+            // 016D:01D0 xor CX,CX
+            CX = 0;
+            // 016D:01D2 mov SI,0x0411
+            si4 = 0x0411;
+            // 016D:01D5 mov DI,0x0398
+            DI = 0x0398;
+            while (true) {
+                CheckExternalEvents(cs1, 0x01D8);
+                // 016D:01D8 lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si4];
+                si4 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:01D9 cmp AL,byte ptr DS:[DI]
+                flagOperand_01D9 = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_01D9);
+                // 016D:01DB jne short 0x01E8
+                if (AL != flagOperand_01D9) {
+                    goto L_01E8;
+                }
+                // 016D:01DD inc DI
+                DI++;
+                // 016D:01DE test AL,AL
+                // 016D:01E0 je short 0x01E4
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:01E2 jmp short 0x01D8
+            }
+            // 016D:01E4 xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:01E6 jmp short 0x01EE
+            goto L_01EE;
+        L_01E8:
+            VerifySpeculativeEntryOrFail(cs1, 0x01E8, Signature_01E8_mov);
+            // 016D:01E8 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x01ED, Signature_01ED_inc);
+            // 016D:01ED inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_01EE:
+            // 016D:01EE mov AL,CL
+            AL = CL;
+            // 016D:01F0 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:01F3 out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x01C3, SpeculativeRun_01C3);
+            // 016D:01C3 mov AL,AL
+            // 016D:01C5 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x01CA, SpeculativeRun_01CA);
+            // 016D:01CA mov DX,0x0998
+            DX = 0x0998;
+            // 016D:01CD out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x01CE, Signature_01CE_jmp);
+            // 016D:01CE jmp short 0x01F4
+        }
+        // 016D:01F4 mov SI,0x03A8
+        si5 = 0x03A8;
+        // 016D:01F7 mov DI,0x0411
+        DI = 0x0411;
+        // 016D:01FA mov AH,0x60
+        AH = 0x60;
+        // 016D:01FC int 0x21
+        SI = si5;
+        InterruptCall(cs1, 0x01FE, 0x21);
+        // 016D:01FE jae short 0x020D
+        if (!CarryFlag) {
+            // 016D:020D xor CX,CX
+            CX = 0;
+            // 016D:020F mov SI,0x0411
+            si5 = 0x0411;
+            // 016D:0212 mov DI,0x03B8
+            DI = 0x03B8;
+            while (true) {
+                CheckExternalEvents(cs1, 0x0215);
+                // 016D:0215 lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si5];
+                si5 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:0216 cmp AL,byte ptr DS:[DI]
+                flagOperand_0216 = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_0216);
+                // 016D:0218 jne short 0x0225
+                if (AL != flagOperand_0216) {
+                    goto L_0225;
+                }
+                // 016D:021A inc DI
+                DI++;
+                // 016D:021B test AL,AL
+                // 016D:021D je short 0x0221
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:021F jmp short 0x0215
+            }
+            // 016D:0221 xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:0223 jmp short 0x022B
+            goto L_022B;
+        L_0225:
+            VerifySpeculativeEntryOrFail(cs1, 0x0225, Signature_0225_mov);
+            // 016D:0225 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x022A, Signature_022A_inc);
+            // 016D:022A inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_022B:
+            // 016D:022B mov AL,CL
+            AL = CL;
+            // 016D:022D mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0230 out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x0200, SpeculativeRun_0200);
+            // 016D:0200 mov AL,AL
+            // 016D:0202 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x0207, SpeculativeRun_0207);
+            // 016D:0207 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:020A out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x020B, Signature_020B_jmp);
+            // 016D:020B jmp short 0x0231
+        }
+        // 016D:0231 mov SI,0x03C4
+        si6 = 0x03C4;
+        // 016D:0234 mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0237 mov AH,0x60
+        AH = 0x60;
+        // 016D:0239 int 0x21
+        SI = si6;
+        InterruptCall(cs1, 0x023B, 0x21);
+        // 016D:023B jae short 0x024A
+        if (!CarryFlag) {
+            // 016D:024A xor CX,CX
+            CX = 0;
+            // 016D:024C mov SI,0x0411
+            si6 = 0x0411;
+            // 016D:024F mov DI,0x03D0
+            DI = 0x03D0;
+            while (true) {
+                CheckExternalEvents(cs1, 0x0252);
+                // 016D:0252 lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si6];
+                si6 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:0253 cmp AL,byte ptr DS:[DI]
+                flagOperand_0253 = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_0253);
+                // 016D:0255 jne short 0x0262
+                if (AL != flagOperand_0253) {
+                    goto L_0262;
+                }
+                // 016D:0257 inc DI
+                DI++;
+                // 016D:0258 test AL,AL
+                // 016D:025A je short 0x025E
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:025C jmp short 0x0252
+            }
+            // 016D:025E xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:0260 jmp short 0x0268
+            goto L_0268;
+        L_0262:
+            VerifySpeculativeEntryOrFail(cs1, 0x0262, Signature_0262_mov);
+            // 016D:0262 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x0267, Signature_0267_inc);
+            // 016D:0267 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_0268:
+            // 016D:0268 mov AL,CL
+            AL = CL;
+            // 016D:026A mov DX,0x0998
+            DX = 0x0998;
+            // 016D:026D out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x023D, SpeculativeRun_023D);
+            // 016D:023D mov AL,AL
+            // 016D:023F mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x0244, SpeculativeRun_0244);
+            // 016D:0244 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0247 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x0248, Signature_0248_jmp);
+            // 016D:0248 jmp short 0x026E
+        }
+        // 016D:026E mov SI,0x03DC
+        si7 = 0x03DC;
+        // 016D:0271 mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0274 mov AH,0x60
+        AH = 0x60;
+        // 016D:0276 int 0x21
+        SI = si7;
+        InterruptCall(cs1, 0x0278, 0x21);
+        // 016D:0278 jae short 0x0287
+        if (!CarryFlag) {
+            // 016D:0287 xor CX,CX
+            CX = 0;
+            // 016D:0289 mov SI,0x0411
+            si7 = 0x0411;
+            // 016D:028C mov DI,0x03DE
+            DI = 0x03DE;
+            while (true) {
+                CheckExternalEvents(cs1, 0x028F);
+                // 016D:028F lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si7];
+                si7 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:0290 cmp AL,byte ptr DS:[DI]
+                flagOperand_0290 = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_0290);
+                // 016D:0292 jne short 0x029F
+                if (AL != flagOperand_0290) {
+                    goto L_029F;
+                }
+                // 016D:0294 inc DI
+                DI++;
+                // 016D:0295 test AL,AL
+                // 016D:0297 je short 0x029B
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:0299 jmp short 0x028F
+            }
+            // 016D:029B xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:029D jmp short 0x02A5
+            goto L_02A5;
+        L_029F:
+            VerifySpeculativeEntryOrFail(cs1, 0x029F, Signature_029F_mov);
+            // 016D:029F mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x02A4, Signature_02A4_inc);
+            // 016D:02A4 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_02A5:
+            // 016D:02A5 mov AL,CL
+            AL = CL;
+            // 016D:02A7 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:02AA out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x027A, SpeculativeRun_027A);
+            // 016D:027A mov AL,AL
+            // 016D:027C mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x0281, SpeculativeRun_0281);
+            // 016D:0281 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0284 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x0285, Signature_0285_jmp);
+            // 016D:0285 jmp short 0x02AB
+        }
+        // 016D:02AB mov SI,0x03E2
+        si8 = 0x03E2;
+        // 016D:02AE mov DI,0x0411
+        DI = 0x0411;
+        // 016D:02B1 mov AH,0x60
+        AH = 0x60;
+        // 016D:02B3 int 0x21
+        SI = si8;
+        InterruptCall(cs1, 0x02B5, 0x21);
+        // 016D:02B5 jae short 0x02C4
+        if (!CarryFlag) {
+            // 016D:02C4 xor CX,CX
+            CX = 0;
+            // 016D:02C6 mov SI,0x0411
+            si8 = 0x0411;
+            // 016D:02C9 mov DI,0x03F8
+            DI = 0x03F8;
+            while (true) {
+                CheckExternalEvents(cs1, 0x02CC);
+                // 016D:02CC lods AL,byte ptr DS:[SI]
+                AL = UInt8[DS, si8];
+                si8 += (ushort)(DirectionFlag ? -1 : 1);
+                // 016D:02CD cmp AL,byte ptr DS:[DI]
+                flagOperand_02CD = UInt8[DS, DI];
+                Alu8.Sub(AL, flagOperand_02CD);
+                // 016D:02CF jne short 0x02DC
+                if (AL != flagOperand_02CD) {
+                    goto L_02DC;
+                }
+                // 016D:02D1 inc DI
+                DI++;
+                // 016D:02D2 test AL,AL
+                // 016D:02D4 je short 0x02D8
+                if (AL == 0) {
+                    break;
+                }
+                // 016D:02D6 jmp short 0x02CC
+            }
+            // 016D:02D8 xor CX,CX
+            CX = 0;
+            CarryFlag = false;
+            ParityFlag = true;
+            AuxiliaryFlag = false;
+            ZeroFlag = true;
+            SignFlag = false;
+            OverflowFlag = false;
+            // 016D:02DA jmp short 0x02E2
+            goto L_02E2;
+        L_02DC:
+            VerifySpeculativeEntryOrFail(cs1, 0x02DC, Signature_02DC_mov);
+            // 016D:02DC mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x02E1, Signature_02E1_inc);
+            // 016D:02E1 inc CX
+            CX = 1;
+            ParityFlag = false;
+            AuxiliaryFlag = false;
+            ZeroFlag = false;
+            SignFlag = false;
+            OverflowFlag = false;
+        L_02E2:
+            // 016D:02E2 mov AL,CL
+            AL = CL;
+            // 016D:02E4 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:02E7 out DX,AL
+            Out8(0x0998, AL);
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x02B7, SpeculativeRun_02B7);
+            // 016D:02B7 mov AL,AL
+            // 016D:02B9 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x02BE, SpeculativeRun_02BE);
+            // 016D:02BE mov DX,0x0998
+            DX = 0x0998;
+            // 016D:02C1 out DX,AL
+            Out8(0x0998, AL);
+            VerifySpeculativeEntryOrFail(cs1, 0x02C2, Signature_02C2_jmp);
+            // 016D:02C2 jmp short 0x02E8
+        }
+        // 016D:02E8 mov SI,0x0405
+        SI = 0x0405;
+        // 016D:02EB mov DI,0x0411
+        DI = 0x0411;
+        // 016D:02EE mov AH,0x60
+        AH = 0x60;
+        // 016D:02F0 int 0x21
+        InterruptCall(cs1, 0x02F2, 0x21);
+        // 016D:02F2 jb short 0x02FD
+        if (CarryFlag) {
+            // 016D:02FD mov AL,AL
+            // 016D:02FF cmp AL,2
+            Alu8.Sub(AL, 2);
+            // 016D:0301 je short 0x0308
+            if (AL != 2) {
+                VerifySpeculativeEntryOrFail(cs1, 0x0303, Signature_0303_mov);
+                // 016D:0303 mov byte ptr DS:[0x0491],1
+                ImageMinus0003Globals.Byte0491 = 1;
+            }
+        }
+        else {
+            VerifySpeculativeEntryOrFail(cs1, 0x02F4, Signature_02F4_mov);
+            // 016D:02F4 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x02F9, SpeculativeRun_02F9);
+            // 016D:02F9 mov AL,0xFF
+            AL = 0xFF;
+            // 016D:02FB jmp short 0x0308
+        }
+        // 016D:0308 mov DX,0x0998
+        // 016D:030B out DX,AL
+        Out8(0x0998, AL);
+        // 016D:030C mov SI,0x0406
+        SI = 0x0406;
+        // 016D:030F mov DI,0x0411
+        DI = 0x0411;
+        // 016D:0312 mov AH,0x60
+        AH = 0x60;
+        // 016D:0314 int 0x21
+        InterruptCall(cs1, 0x0316, 0x21);
+        // 016D:0316 jb short 0x0321
+        if (CarryFlag) {
+            // 016D:0321 mov AL,AL
+            // 016D:0323 cmp AL,0x0F
+            // 016D:0325 je short 0x032C
+            if (AL != 0x0F) {
+                VerifySpeculativeEntryOrFail(cs1, 0x0327, Signature_0327_mov);
+                // 016D:0327 mov byte ptr DS:[0x0491],1
+                ImageMinus0003Globals.Byte0491 = 1;
+            }
+        }
+        else {
+            VerifySpeculativeEntryOrFail(cs1, 0x0318, Signature_0318_mov);
+            // 016D:0318 mov byte ptr DS:[0x0491],1
+            ImageMinus0003Globals.Byte0491 = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x031D, SpeculativeRun_031D);
+            // 016D:031D mov AL,0xFF
+            AL = 0xFF;
+            // 016D:031F jmp short 0x032C
+        }
+        // 016D:032C mov DX,0x0998
+        // 016D:032F out DX,AL
+        Out8(0x0998, AL);
+        // 016D:0330 cmp byte ptr DS:[0x0491],0
+        flagOperand_0330 = ImageMinus0003Globals.Byte0491;
+        Alu8.Sub(flagOperand_0330, 0);
+        // 016D:0335 jne short 0x033B
+        if (flagOperand_0330 != 0) {
+            VerifySpeculativeEntryOrFail(cs1, 0x033B, Signature_033B_mov);
+            // 016D:033B mov AL,0xFF
+            al1 = 0xFF;
+        }
+        else {
+            // 016D:0337 mov AL,0
+            al1 = 0;
+            // 016D:0339 jmp short 0x033D
+        }
+        // 016D:033D mov DX,0x0999
+        DX = 0x0999;
+        // 016D:0340 out DX,AL
+        Out8(0x0999, al1);
+        // 016D:0341 hlt
+        AL = al1;
+        return Hlt();
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0006_F0006() {
+        CheckExternalEvents(biosSegment, 0x0006);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
+        // F000:0006 callback 8
+        // Spice86 callback: TimerInt8Handler.IncTickCounterValue
+        Callback(biosSegment, 0x0006, 8);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000A, Signature_000A_push);
+        // F000:000A push DS
+        Stack.Push16(DS);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000B, Signature_000B_push);
+        // F000:000B push AX
+        Stack.Push16(AX);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
+        // F000:000C push DX
+        Stack.Push16(DX);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
+        // F000:000D int 0x1C
+        InterruptCall(biosSegment, 0x000F, 0x1C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
+        // F000:000F callback 0x0101
+        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
+        Callback(biosSegment, 0x000F, 0x0101);
+        VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
+        // F000:0013 pop DX
+        DX = Stack.Pop16();
+        // F000:0014 pop AX
+        AX = Stack.Pop16();
+        // F000:0015 pop DS
+        DS = Stack.Pop16();
+        // F000:0016 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0017_F0017() {
+        CheckExternalEvents(biosSegment, 0x0017);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);
+        // F000:0017 callback 9
+        // INT 09h: BiosKeyboardInt9Handler
+        Callback(biosSegment, 0x0017, 9);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_iret);
+        // F000:001B iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_005D_F005D() {
+        CheckExternalEvents(biosSegment, 0x005D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
+        // F000:005D callback 0x0070
+        // INT 70h: Rtc.HandleInterrupt
+        Callback(biosSegment, 0x005D, 0x0070);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_iret);
+        // F000:0061 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0063_F0063() {
+        CheckExternalEvents(biosSegment, 0x0063);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
+        // F000:0063 call far F000:00E9
+        FarCall(biosSegment, 0x0068, biosSegment, unknown_F000_00E9_F00E9Entry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0068, Signature_0068_callback);
+        // F000:0068 callback 0x0074
+        // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
+        Callback(biosSegment, 0x0068, 0x0074);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x006C, Signature_006C_iret);
+        // F000:006C iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_006D_F006D() {
+        CheckExternalEvents(biosSegment, 0x006D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x006D, Signature_006D_callback);
+        // F000:006D callback 0x0104
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x006D, 0x0104);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0071, Signature_0071_iret);
+        // F000:0071 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0072_F0072() {
+        CheckExternalEvents(biosSegment, 0x0072);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0072, Signature_0072_callback);
+        // F000:0072 callback 0x0105
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0072, 0x0105);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0076, Signature_0076_iret);
+        // F000:0076 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0077_F0077() {
+        CheckExternalEvents(biosSegment, 0x0077);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0077, Signature_0077_callback);
+        // F000:0077 callback 0x0106
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0077, 0x0106);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007B, Signature_007B_iret);
+        // F000:007B iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_007C_F007C() {
+        CheckExternalEvents(biosSegment, 0x007C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007C, Signature_007C_callback);
+        // F000:007C callback 0x0107
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x007C, 0x0107);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0080, Signature_0080_iret);
+        // F000:0080 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0081_F0081() {
+        CheckExternalEvents(biosSegment, 0x0081);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0081, Signature_0081_callback);
+        // F000:0081 callback 0x0108
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0081, 0x0108);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_iret);
+        // F000:0085 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0086_F0086() {
+        CheckExternalEvents(biosSegment, 0x0086);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0086, Signature_0086_callback);
+        // F000:0086 callback 0x0109
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0086, 0x0109);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_iret);
+        // F000:008A iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
+    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    public virtual Action unknown_F000_0096_F0096() {
+        byte flagOperand_00AF = 0;
+        CheckExternalEvents(biosSegment, 0x0096);
+        // F000:0096 cmp AH,7
+        Alu8.Sub(AH, 7);
+        // F000:0099 je short 0x00AA
+        if (AH != 7) {
+            // F000:009B cmp AH,8
+            Alu8.Sub(AH, 8);
+            // F000:009E je short 0x00AA
+            if (AH != 8) {
+                // F000:00A0 cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:00A3 je short 0x00AA
+                if (AH != 0x0A) {
+                    // F000:00A5 callback 0x0021
+                    // INT 21h: Dos services selected by AH
+                    Callback(biosSegment, 0x00A5, 0x0021);
+                    // F000:00A9 iret
+                    return InterruptRet();
+                }
+            }
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
+        // F000:00AA sti
+        InterruptFlag = true;
+        CheckExternalEvents(biosSegment, 0x00AB);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_callback);
+        // F000:00AB callback 0x010A
+        // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
+        Callback(biosSegment, 0x00AB, 0x010A);
+        VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
+        // F000:00AF cmp byte ptr CS:[0x0095],0
+        flagOperand_00AF = CsGlobals.Byte0095;
+        Alu8.Sub(flagOperand_00AF, 0);
+        // F000:00B5 jne short 0x00BB
+        if (flagOperand_00AF != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
+            // F000:00BB callback 0x010B
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
+            Callback(biosSegment, 0x00BB, 0x010B);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
+            // F000:00BF iret
+            return InterruptRet();
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
+        // F000:00B7 int 0x28
+        InterruptCall(biosSegment, 0x00B9, 0x28);
+        throw FailAsUntested("Untested return from call at F000:00B7");
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    public virtual Action unknown_F000_00E8_F00E8() {
+        CheckExternalEvents(biosSegment, 0x00E8);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
+        // F000:00E8 ret far
+        return FarRet();
+    }
+
+    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_00E9_F00E9() {
+        CheckExternalEvents(biosSegment, 0x00E9);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);
+        // F000:00E9 callback 0x010C
+        // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
+        Callback(biosSegment, 0x00E9, 0x010C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
+        // F000:00ED call far F000:00E8
+        FarCall(biosSegment, 0x00F2, biosSegment, unknown_F000_00E8_F00E8Entry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
+        // F000:00F2 callback 0x010D
+        // Spice86 callback: MouseDriver.AfterUserHandlerExecution
+        Callback(biosSegment, 0x00F2, 0x010D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F6, Signature_00F6_ret);
+        // F000:00F6 ret far
+        return FarRet();
+    }
+
+}
+
+// ==== file: CsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex];
+
+    public CsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// CS:0x0095, whatever CS holds at the access.
+    public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
+}
+
+// ==== file: ImageMinus0003Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+        _memory = memory;
+        Segment = (ushort)(programStartSegment - 0x0003);
+    }
+
+    public byte Byte0491 { get => _memory.UInt8[Segment, 0x0491]; set => _memory.UInt8[Segment, 0x0491] = value; }
+}
