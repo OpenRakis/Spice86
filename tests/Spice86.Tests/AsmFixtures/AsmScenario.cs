@@ -70,8 +70,16 @@ internal sealed class AsmScenario {
     /// <summary>Prepares a fresh run of this scenario: a new scope, a new working directory when the scenario
     /// needs one, new observation handlers and a new fixture holding the one oracle.</summary>
     /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
-    public AsmRunScope Prepare() {
-        AsmRunScope scope = new();
+    public AsmRunScope Prepare() => PrepareInto(new AsmRunScope());
+
+    /// <summary>Prepares a run of this scenario under an earlier run's key, so its host paths match
+    /// that run's. Used for the generated execution of a variant, which must reproduce the host
+    /// environment its interpreted baseline ran in.</summary>
+    /// <param name="runKey">Run key of the interpreted baseline run.</param>
+    /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
+    public AsmRunScope Prepare(string runKey) => PrepareInto(new AsmRunScope(runKey));
+
+    private AsmRunScope PrepareInto(AsmRunScope scope) {
         bool succeeded = false;
         try {
             scope.AttachFixture(_prepareFixture(scope));

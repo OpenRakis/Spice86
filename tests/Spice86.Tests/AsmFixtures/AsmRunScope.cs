@@ -25,15 +25,27 @@ internal sealed class AsmRunScope : IDisposable {
     private readonly List<ObservationProvider> _observationProviders = new();
     private AsmFixture? _fixture;
 
-    /// <summary>Creates an empty scope. The scenario factory attaches the fixture to it.</summary>
+    /// <summary>Creates an empty scope with a fresh run key. The scenario factory attaches the fixture to it.</summary>
     public AsmRunScope() {
+        RunKey = Guid.NewGuid().ToString("N");
     }
 
     /// <summary>Creates a scope around an existing fixture, with no preparation of its own.</summary>
     /// <param name="fixture">Fixture to run in this scope.</param>
-    public AsmRunScope(AsmFixture fixture) {
+    public AsmRunScope(AsmFixture fixture) : this() {
         _fixture = fixture;
     }
+
+    /// <summary>Creates an empty scope with the run key of an earlier run, so this run reuses that
+    /// run's host paths. The scenario factory attaches the fixture to it.</summary>
+    /// <param name="runKey">Run key of the run whose host paths this run reuses.</param>
+    public AsmRunScope(string runKey) {
+        RunKey = runKey;
+    }
+
+    /// <summary>Key naming this run's host resources: the working directory of a run is the run key
+    /// under its prefix, so two runs sharing a key share the folder.</summary>
+    public string RunKey { get; }
 
     /// <summary>The fixture prepared for this run.</summary>
     /// <exception cref="InvalidOperationException">The scope has no fixture yet.</exception>
@@ -56,11 +68,14 @@ internal sealed class AsmRunScope : IDisposable {
         _fixture = fixture;
     }
 
-    /// <summary>Creates a fresh working directory for this run and owns its deletion.</summary>
+    /// <summary>Creates a fresh working directory for this run and owns its deletion. A leftover
+    /// folder of an earlier run with the same key is deleted first, so the run starts from the
+    /// fixture's files only.</summary>
     /// <param name="prefix">Directory name prefix, usually the scenario identity.</param>
     /// <returns>Path of the created directory.</returns>
     public string CreateWorkingDirectory(string prefix) {
-        string directory = Path.Join(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid():N}");
+        string directory = Path.Join(Path.GetTempPath(), $"{prefix}_{RunKey}");
+        DeleteDirectory(directory);
         Directory.CreateDirectory(directory);
         DosTestFiles.SetFixedDirectoryTimes(directory);
         _ownedDirectories.Add(directory);

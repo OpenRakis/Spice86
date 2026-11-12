@@ -549,6 +549,29 @@ public sealed class AsmScenarioPipelineTest {
         Directory.Exists(successDirectory).Should().BeFalse("successful scope's directory should be cleaned up on dispose");
     }
 
+    /// <summary>A generated execution is prepared with its interpreted baseline's run key, so both
+    /// runs share the host folder: a leftover file of the baseline run must not reach the generated
+    /// run's folder.</summary>
+    [Fact]
+    public void PrepareWithTheSameRunKeyRecreatesTheWorkingFolderWithoutLeftovers() {
+        const string identity = "same_run_key_folder";
+        List<string> directories = new();
+        AsmScenario scenario = new AsmScenario(identity, scope => {
+            directories.Add(scope.CreateWorkingDirectory(identity));
+            return AsmFixtureCatalog.JmpMov();
+        }, []);
+
+        const string runKey = "0123456789abcdef0123456789abcdef";
+        using AsmRunScope baseline = scenario.Prepare(runKey);
+        File.WriteAllText(Path.Join(directories[0], "leftover.txt"), "baseline leftover");
+
+        using AsmRunScope generated = scenario.Prepare(runKey);
+
+        directories[1].Should().Be(directories[0], "the same run key must produce the same host folder");
+        File.Exists(Path.Join(directories[1], "leftover.txt")).Should().BeFalse(
+            "a leftover of the baseline run must not reach the generated run");
+    }
+
     /// <summary>Console and INT 16h scenario subsets are disjoint and their union equals the complete
     /// collection, with no duplicate identities.</summary>
     [Fact]
