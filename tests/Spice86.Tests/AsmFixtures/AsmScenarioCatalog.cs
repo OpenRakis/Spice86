@@ -25,7 +25,6 @@ using Spice86.Tests.Utility;
 internal static class AsmScenarioCatalog {
     private const string LargestFreeBlockObservation = "largestFreeBlock";
     private const string TestPortResultsObservation = "testPortResults";
-    private const string LastChildReturnCodeObservation = "lastChildReturnCode";
     private const byte TestPortSuccess = 0x00;
     private const byte TestPortFailure = 0xFF;
     private const ushort MinFreeParagraphsAfterTsr = 0x8000;
@@ -155,20 +154,18 @@ internal static class AsmScenarioCatalog {
     }
 
     /// <summary>
-    /// Runs a TSR program that terminates and returns its exit code in AX. Each run prepares an
+    /// Runs a TSR program that terminates; DOS keeps its exit code in the SDA. Each run prepares an
     /// independent directory holding the program, so discovery and generated execution never share a
     /// host file.
     /// </summary>
     /// <param name="programName">File name of the TSR program under Resources/DosTsrTests.</param>
-    /// <param name="expectedExitCode">Exit code the program leaves in AX.</param>
+    /// <param name="expectedExitCode">Exit code the program terminates with.</param>
     /// <returns>The scenario for that program.</returns>
     public static AsmScenario TsrExitCode(string programName, byte expectedExitCode) {
         string identity = Path.GetFileNameWithoutExtension(programName);
         return new AsmScenario(identity, scope => {
             string directory = scope.CreateWorkingDirectory(identity);
             string target = CopyResourceFile("DosTsrTests", programName, directory);
-            scope.AddObservationProvider(LastChildReturnCodeObservation,
-                machine => machine.Dos.ProcessManager.LastChildReturnCode);
             AsmRunSettings settings = new() {
                 BinName = target,
                 ScenarioName = identity,
@@ -177,10 +174,10 @@ internal static class AsmScenarioCatalog {
                 EnableA20Gate = true
             };
             return new AsmFixture(settings, [], result => {
-                ushort returnCode =
-                    result.Observations.Get<ushort>(LastChildReturnCodeObservation);
+                ushort returnCode = result.Memory.UInt16[
+                    DosSwappableDataArea.BaseSegment, DosSwappableDataArea.ReturnCodeOffset];
                 ((byte)(returnCode & 0xFF)).Should().Be(expectedExitCode,
-                    $"{programName} returns its exit code in AL");
+                    $"{programName} leaves its exit code in DOS's SDA");
             });
         }, [$"DosTsrTests/{programName}"]);
     }

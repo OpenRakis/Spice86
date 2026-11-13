@@ -195,10 +195,14 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Gets or sets the return code of the last terminated child process.
     /// </summary>
     /// <remarks>
+    /// Stored in the SDA at offset 14h, where real DOS keeps it for INT 21h/4Dh.
     /// The low byte (AL) contains the exit code, and the high byte (AH) contains
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
     /// </remarks>
-    public ushort LastChildReturnCode { get; set; }
+    public ushort LastChildReturnCode {
+        get => _sda.ReturnCode;
+        set => _sda.ReturnCode = value;
+    }
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
 
