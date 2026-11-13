@@ -21,81 +21,79 @@ public partial class CfgGeneratedOverrides {
         ESP = 0x12341000;
         Stack.Push32(EAX);
         EAX = Stack.Pop32();
-        byte level_0011 = 0;
         uint oldBasePointer_0011 = EBP;
         ushort spIndex_0011 = (ushort)(SP - 4);
         SsUInt32[spIndex_0011] = oldBasePointer_0011;
         ushort framePtr_0011 = spIndex_0011;
-        if (level_0011 != 0) {
-            ushort bpIndex_0011 = (ushort)oldBasePointer_0011;
-            int i_0011 = 1;
-            while (true) {
-                if (i_0011 >= (int)level_0011) {
-                    break;
-                }
-                bpIndex_0011 -= 4;
-                spIndex_0011 -= 4;
-                SsUInt32[spIndex_0011] = SsUInt32[bpIndex_0011];
-                i_0011 += 1;
-            }
-            spIndex_0011 -= 4;
-            SsUInt32[spIndex_0011] = (uint)framePtr_0011;
-        }
         EBP = (uint)framePtr_0011;
         spIndex_0011 -= 4;
         SP = spIndex_0011;
         Stack.Leave32();
         Segment2000Globals.Dword0200 = ESP;
         ESP = 0x12345000;
-        byte level_0023 = 0;
         ushort oldBasePointer_0023 = BP;
         ushort spIndex_0023 = (ushort)(SP - 2);
         SsUInt16[spIndex_0023] = oldBasePointer_0023;
         ushort framePtr_0023 = spIndex_0023;
-        if (level_0023 != 0) {
-            ushort bpIndex_0023 = oldBasePointer_0023;
-            int i_0023 = 1;
-            while (true) {
-                if (i_0023 >= (int)level_0023) {
-                    break;
-                }
-                bpIndex_0023 -= 2;
-                spIndex_0023 -= 2;
-                SsUInt16[spIndex_0023] = SsUInt16[bpIndex_0023];
-                i_0023 += 1;
-            }
-            spIndex_0023 -= 2;
-            SsUInt16[spIndex_0023] = framePtr_0023;
-        }
         BP = framePtr_0023;
         SP = spIndex_0023;
         Stack.Leave16();
         Segment2000Globals.Dword0204 = ESP;
         ESP = 0x12347000;
-        byte level_0033 = 0;
         uint oldBasePointer_0033 = EBP;
         ushort spIndex_0033 = (ushort)(SP - 4);
         SsUInt32[spIndex_0033] = oldBasePointer_0033;
         ushort framePtr_0033 = spIndex_0033;
-        if (level_0033 != 0) {
-            ushort bpIndex_0033 = (ushort)oldBasePointer_0033;
-            int i_0033 = 1;
-            while (true) {
-                if (i_0033 >= (int)level_0033) {
-                    break;
-                }
-                bpIndex_0033 -= 4;
-                spIndex_0033 -= 4;
-                SsUInt32[spIndex_0033] = SsUInt32[bpIndex_0033];
-                i_0033 += 1;
-            }
-            spIndex_0033 -= 4;
-            SsUInt32[spIndex_0033] = (uint)framePtr_0033;
-        }
         EBP = (uint)framePtr_0033;
         SP = spIndex_0033;
         Stack.Leave32();
         Segment2000Globals.Dword0208 = ESP;
+        Segment2000Globals.Word04FE = 0xBEEF;
+        ESP = 0x12349000;
+        ushort oldBasePointer_004E = 0x0500;
+        ushort spIndex_004E = (ushort)(SP - 2);
+        SsUInt16[spIndex_004E] = oldBasePointer_004E;
+        ushort framePtr_004E = spIndex_004E;
+        ushort bpIndex_004E = oldBasePointer_004E;
+        int i_004E = 1;
+        while (true) {
+            if (i_004E >= 2) {
+                break;
+            }
+            bpIndex_004E -= 2;
+            spIndex_004E -= 2;
+            SsUInt16[spIndex_004E] = SsUInt16[bpIndex_004E];
+            i_004E += 1;
+        }
+        spIndex_004E -= 2;
+        SsUInt16[spIndex_004E] = framePtr_004E;
+        BP = framePtr_004E;
+        spIndex_004E -= 2;
+        SP = spIndex_004E;
+        Stack.Leave16();
+        Segment2000Globals.Dword05FC = 0xCAFEF00Du;
+        ESP = 0x1234A000;
+        uint oldBasePointer_0068 = 0x12340600;
+        ushort spIndex_0068 = (ushort)(SP - 4);
+        SsUInt32[spIndex_0068] = oldBasePointer_0068;
+        ushort framePtr_0068 = spIndex_0068;
+        ushort bpIndex_0068 = (ushort)oldBasePointer_0068;
+        int i_0068 = 1;
+        while (true) {
+            if (i_0068 >= 2) {
+                break;
+            }
+            bpIndex_0068 -= 4;
+            spIndex_0068 -= 4;
+            SsUInt32[spIndex_0068] = SsUInt32[bpIndex_0068];
+            i_0068 += 1;
+        }
+        spIndex_0068 -= 4;
+        SsUInt32[spIndex_0068] = (uint)framePtr_0068;
+        EBP = (uint)framePtr_0068;
+        spIndex_0068 -= 4;
+        SP = spIndex_0068;
+        Stack.Leave32();
         return Hlt();
     }
 
@@ -122,6 +120,10 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     public uint Dword0204 { get => _memory.UInt32[Segment, 0x0204]; set => _memory.UInt32[Segment, 0x0204] = value; }
 
     public uint Dword0208 { get => _memory.UInt32[Segment, 0x0208]; set => _memory.UInt32[Segment, 0x0208] = value; }
+
+    public ushort Word04FE { get => _memory.UInt16[Segment, 0x04FE]; set => _memory.UInt16[Segment, 0x04FE] = value; }
+
+    public uint Dword05FC { get => _memory.UInt32[Segment, 0x05FC]; set => _memory.UInt32[Segment, 0x05FC] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====

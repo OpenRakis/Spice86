@@ -40,7 +40,7 @@
       "RegisterReads": 66,
       "RegisterWrites": 18,
       "Statements": 126,
-      "WriteBacks": 2
+      "WriteBacks": 3
     }
   },
   "support": {

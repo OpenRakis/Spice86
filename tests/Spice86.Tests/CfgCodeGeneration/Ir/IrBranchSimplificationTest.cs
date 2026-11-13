@@ -152,6 +152,36 @@ public sealed class IrBranchSimplificationTest {
         blocksRemoved.Should().Be(3);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LocalWrittenAfterItsConstantDeclarationDoesNotFoldABranch(bool reassigned) {
+        // Arrange: byte x = 0; [x = 1;] if (x != 0) taken else dead
+        CfgInstruction instruction = Instruction(0);
+        VariableDeclarationNode declaration = new(DataType.UINT8, "x",
+            new ConstantNode(DataType.UINT8, 0));
+        (IrBlock entry, IrBlock taken, IrBlock dead) = Diamond(instruction,
+            new BinaryOperationNode(DataType.BOOL, declaration.Reference,
+                BinaryOperation.NOT_EQUAL, new ConstantNode(DataType.UINT8, 0)));
+        IrEditor.WithoutSsa.Append(entry, IrStatement.Create(declaration, instruction));
+        if (reassigned) {
+            IrEditor.WithoutSsa.Append(entry, IrStatement.Create(
+                new BinaryOperationNode(DataType.UINT8, declaration.Reference,
+                    BinaryOperation.ASSIGN, new ConstantNode(DataType.UINT8, 1)), instruction));
+        }
+        IrMethod method = Method([Entry(instruction, entry)], [instruction], entry, taken, dead);
+
+        // Act
+        Run(method);
+
+        // Assert
+        if (reassigned) {
+            entry.Terminator.Should().BeOfType<IrBranch>();
+        } else {
+            entry.Terminator.Should().BeOfType<IrJump>().Which.Edge.Target.Should().Be(dead);
+        }
+    }
+
     private static (IrBlock Entry, IrBlock Taken, IrBlock Dead) Diamond(
         CfgInstruction instruction, ValueNode condition) {
         IrBlock entry = Block(0);

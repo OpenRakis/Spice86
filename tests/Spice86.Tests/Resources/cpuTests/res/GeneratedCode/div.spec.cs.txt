@@ -279,24 +279,16 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         AX = 0xFFFF;
         SsUInt16[BP] = 2;
-        byte v2_02C4;
         byte v1_02C4;
         try {
-            v2_02C4 = 0;
             v1_02C4 = AL;
             Alu8.UpdateFlags((byte)(v1_02C4 >> 1));
-            if (v2_02C4 == 0) {
-                throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-            }
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)], [new SegmentedAddress(biosSegment, 0x0061), new SegmentedAddress(biosSegment, 0x0085), new SegmentedAddress(biosSegment, 0x00A0), new SegmentedAddress(biosSegment, 0x010F), new SegmentedAddress(biosSegment, 0x012C), new SegmentedAddress(biosSegment, 0x019B), new SegmentedAddress(biosSegment, 0x0211), new SegmentedAddress(biosSegment, 0x024D), new SegmentedAddress(biosSegment, 0x02B1), new SegmentedAddress(biosSegment, 0x02C6), new SegmentedAddress(biosSegment, 0x02F6)]);
         }
         try {
-            AH = (byte)(v1_02C4 / v2_02C4);
-            AL = (byte)(v1_02C4 % v2_02C4);
-            Alu8.UpdateFlags(AL);
-            throw FailAsUntested("Untested fallthrough after F000:02C4");
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)], [new SegmentedAddress(biosSegment, 0x0061), new SegmentedAddress(biosSegment, 0x0085), new SegmentedAddress(biosSegment, 0x00A0), new SegmentedAddress(biosSegment, 0x010F), new SegmentedAddress(biosSegment, 0x012C), new SegmentedAddress(biosSegment, 0x019B), new SegmentedAddress(biosSegment, 0x0211), new SegmentedAddress(biosSegment, 0x024D), new SegmentedAddress(biosSegment, 0x02B1), new SegmentedAddress(biosSegment, 0x02C6), new SegmentedAddress(biosSegment, 0x02F6)]);
@@ -313,9 +305,6 @@ public partial class CfgGeneratedOverrides {
         byte v2_02D2 = 1;
         byte v1_02D2 = AL;
         Alu8.UpdateFlags((byte)(v1_02D2 >> 1));
-        if (v2_02D2 == 0) {
-            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
         AH = (byte)(v1_02D2 / v2_02D2);
         AL = (byte)(v1_02D2 % v2_02D2);
         Alu8.UpdateFlags(AL);
@@ -327,9 +316,6 @@ public partial class CfgGeneratedOverrides {
         byte v2_02E3 = 0x0A;
         byte v1_02E3 = 0xFF;
         Alu8.UpdateFlags(0x7F);
-        if (v2_02E3 == 0) {
-            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
         AH = (byte)(v1_02E3 / v2_02E3);
         AL = (byte)(v1_02E3 % v2_02E3);
         Alu8.UpdateFlags(AL);
@@ -338,24 +324,16 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         AX = 0xFF00;
         SsUInt16[BP] = 2;
-        byte v2_02F4;
         byte v1_02F4;
         try {
-            v2_02F4 = 0;
             v1_02F4 = AL;
             Alu8.UpdateFlags((byte)(v1_02F4 >> 1));
-            if (v2_02F4 == 0) {
-                throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-            }
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)], [new SegmentedAddress(biosSegment, 0x0061), new SegmentedAddress(biosSegment, 0x0085), new SegmentedAddress(biosSegment, 0x00A0), new SegmentedAddress(biosSegment, 0x010F), new SegmentedAddress(biosSegment, 0x012C), new SegmentedAddress(biosSegment, 0x019B), new SegmentedAddress(biosSegment, 0x0211), new SegmentedAddress(biosSegment, 0x024D), new SegmentedAddress(biosSegment, 0x02B1), new SegmentedAddress(biosSegment, 0x02C6), new SegmentedAddress(biosSegment, 0x02F6)]);
         }
         try {
-            AH = (byte)(v1_02F4 / v2_02F4);
-            AL = (byte)(v1_02F4 % v2_02F4);
-            Alu8.UpdateFlags(AL);
-            throw FailAsUntested("Untested fallthrough after F000:02F4");
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, biosSegment, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)], [new SegmentedAddress(biosSegment, 0x0061), new SegmentedAddress(biosSegment, 0x0085), new SegmentedAddress(biosSegment, 0x00A0), new SegmentedAddress(biosSegment, 0x010F), new SegmentedAddress(biosSegment, 0x012C), new SegmentedAddress(biosSegment, 0x019B), new SegmentedAddress(biosSegment, 0x0211), new SegmentedAddress(biosSegment, 0x024D), new SegmentedAddress(biosSegment, 0x02B1), new SegmentedAddress(biosSegment, 0x02C6), new SegmentedAddress(biosSegment, 0x02F6)]);
@@ -372,9 +350,6 @@ public partial class CfgGeneratedOverrides {
         byte v2_0302 = 1;
         byte v1_0302 = AL;
         Alu8.UpdateFlags((byte)(v1_0302 >> 1));
-        if (v2_0302 == 0) {
-            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
         AH = (byte)(v1_0302 / v2_0302);
         AL = (byte)(v1_0302 % v2_0302);
         Alu8.UpdateFlags(AL);
@@ -386,9 +361,6 @@ public partial class CfgGeneratedOverrides {
         byte v2_0313 = 0x0A;
         byte v1_0313 = 0xFB;
         Alu8.UpdateFlags(0x7D);
-        if (v2_0313 == 0) {
-            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
         AH = (byte)(v1_0313 / v2_0313);
         AL = (byte)(v1_0313 % v2_0313);
         Alu8.UpdateFlags(AL);

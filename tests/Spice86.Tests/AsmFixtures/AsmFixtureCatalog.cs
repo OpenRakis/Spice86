@@ -1209,7 +1209,9 @@ internal static class AsmFixtureCatalog {
     }
 
     /// <summary>Runs stack_esp_high_bits: the dwords stored at 2000:0200/0204/0208 keep the ESP
-    /// high half <c>mov esp</c> set, with the low half back where the balanced stack ops left it.</summary>
+    /// high half <c>mov esp</c> set, with the low half back where the balanced stack ops left it,
+    /// and a 16-bit / 32-bit <c>enter</c> of nesting level 2 push the frame pointer plus one
+    /// copied caller frame word.</summary>
     public static AsmFixture StackEspHighBits() {
         return ResultFixture(new AsmRunSettings { BinName = "stack_esp_high_bits", MaxCycles = 1000 }, result => {
             result.Memory.UInt32[0x2000, 0x0200].Should().Be(0x12341000,
@@ -1218,6 +1220,18 @@ internal static class AsmFixtureCatalog {
                 "stack_esp_high_bits: 16-bit enter 0,0 / leave change only the low 16 bits of ESP");
             result.Memory.UInt32[0x2000, 0x0208].Should().Be(0x12347000,
                 "stack_esp_high_bits: 32-bit enter 0,0 / leave change only the low 16 bits of ESP");
+            result.Memory.UInt16[0x2000, 0x8FFE].Should().Be(0x0500,
+                "stack_esp_high_bits: enter 2,2 pushes the old BP");
+            result.Memory.UInt16[0x2000, 0x8FFC].Should().Be(0xBEEF,
+                "stack_esp_high_bits: enter 2,2 copies the caller frame word at [bp-2]");
+            result.Memory.UInt16[0x2000, 0x8FFA].Should().Be(0x8FFE,
+                "stack_esp_high_bits: enter 2,2 pushes the new frame pointer");
+            result.Memory.UInt32[0x2000, 0x9FFC].Should().Be(0x12340600,
+                "stack_esp_high_bits: enter 4,2 pushes the old EBP");
+            result.Memory.UInt32[0x2000, 0x9FF8].Should().Be(0xCAFEF00D,
+                "stack_esp_high_bits: enter 4,2 copies the caller frame dword at [ebp-4]");
+            result.Memory.UInt32[0x2000, 0x9FF4].Should().Be(0x00009FFC,
+                "stack_esp_high_bits: enter 4,2 pushes the new frame pointer");
         });
     }
 

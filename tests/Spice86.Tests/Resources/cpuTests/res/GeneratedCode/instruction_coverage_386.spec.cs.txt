@@ -17,10 +17,9 @@ public partial class CfgGeneratedOverrides {
         ushort word1 = 0;
         ushort word2 = 0;
         ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5;
+        ushort word4;
         ushort index;
-        ushort word6;
+        ushort word5;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -65,39 +64,23 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word000C = 0xD123;
         ushort sum_0060 = 0x000C;
         CX = 5;
-        word3 = sum_0060;
-        Segment2000Globals.Dword000E = (uint)word3 | 0x00050000;
+        AX = sum_0060;
+        Segment2000Globals.Dword000E = 0x0005000C;
         Segment2000Globals.Word0012 = 9;
         Segment2000Globals.Word0014 = 9;
         EDX = 0x78563412;
         Segment2000Globals.Dword0016 = 0x78563412;
-        word4 = SP;
-        byte level_0093 = 0;
+        word3 = SP;
         ushort oldBasePointer_0093 = 0x1234;
         ushort spIndex_0093 = (ushort)(SP - 2);
         SsUInt16[spIndex_0093] = oldBasePointer_0093;
         ushort framePtr_0093 = spIndex_0093;
-        if (level_0093 != 0) {
-            ushort bpIndex_0093 = oldBasePointer_0093;
-            int i_0093 = 1;
-            while (true) {
-                if (i_0093 >= (int)level_0093) {
-                    break;
-                }
-                bpIndex_0093 -= 2;
-                spIndex_0093 -= 2;
-                SsUInt16[spIndex_0093] = SsUInt16[bpIndex_0093];
-                i_0093 += 1;
-            }
-            spIndex_0093 -= 2;
-            SsUInt16[spIndex_0093] = framePtr_0093;
-        }
         BP = framePtr_0093;
         spIndex_0093 -= 4;
         SP = spIndex_0093;
-        word5 = (ushort)(BP - SP);
+        word4 = (ushort)(BP - SP);
         Stack.Leave16();
-        Segment2000Globals.Dword001A = (uint)word5 | (uint)(ushort)(SP - word4) << 16;
+        Segment2000Globals.Dword001A = (uint)word4 | (uint)(ushort)(SP - word3) << 16;
         Segment2000Globals.Word001E = BP;
         Segment2000Globals.Dword0E00 = 0x000A0000;
         CheckBound((short)5, Int16[DS, 0x0E00], Int16[DS, 0x0E02]);
@@ -112,8 +95,8 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0032 = 0xFFFFFFFFu;
         Stack.PushAll16(1, 2, 3, 0, SP, 5, SI, 7);
         index = SP;
-        word6 = SsUInt16[index + 6];
-        Segment2000Globals.Word003C = word6;
+        word5 = SsUInt16[index + 6];
+        Segment2000Globals.Word003C = word5;
         Stack.PopAll16();
         UInt16[DS, BX + 0x36] = AX;
         UInt16[DS, BX + 0x38] = CX;

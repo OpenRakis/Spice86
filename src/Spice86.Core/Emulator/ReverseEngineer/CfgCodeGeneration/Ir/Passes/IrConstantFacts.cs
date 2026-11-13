@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
@@ -14,7 +15,8 @@ using System.Numerics;
 /// What <see cref="IrConstants"/> computed for one method: the per-byte constant lattice of every
 /// general-register SSA version, the per-position set of registers whose current version was defined
 /// cleanly (no interrupt delivery, no unknown-like effect and no method entry on any path between the
-/// definition and the position), and the queries the branch pass runs on them.
+/// definition and the position), the method locals bound to one constant, and the queries the branch
+/// pass runs on them.
 /// </summary>
 internal sealed class IrConstantFacts {
     /// <summary>Bytes per register the lattice tracks.</summary>
@@ -27,12 +29,18 @@ internal sealed class IrConstantFacts {
     private readonly IrSsa _ssa;
     private readonly Dictionary<IrBlock, uint[]> _cleanBefore = [];
 
-    internal IrConstantFacts(IrSsa ssa) {
+    internal IrConstantFacts(IrSsa ssa, IReadOnlyDictionary<string, ConstantNode> locals) {
         _ssa = ssa;
+        Locals = locals;
         Known = new uint[ssa.VersionCount];
         Undetermined = new uint[ssa.VersionCount];
         Value = new uint[ssa.VersionCount];
     }
+
+    /// <summary>The method locals a single constant declaration binds for the whole method, keyed by
+    /// variable name - the table <see cref="IrConstants"/> uses for variable substitution and the
+    /// leaf the evaluations below resolve a <see cref="VariableReferenceNode"/> from.</summary>
+    internal IReadOnlyDictionary<string, ConstantNode> Locals { get; }
 
     /// <summary>The bytes of a version the lattice proves constant, as a byte mask.</summary>
     internal uint[] Known { get; }
@@ -122,13 +130,7 @@ internal sealed class IrConstantFacts {
     /// of <paramref name="block"/> as leaves.</summary>
     public bool TryEvaluate(IVisitableAstNode node, IrBlock block, int position, out ulong value) =>
         ConstantEvaluation.TryEvaluate(node,
-            leaf => leaf switch {
-                RegisterNode register
-                    when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,
-                CpuFlagNode { FlagMask: Flags.Direction }
-                    when TryGetDirection(block, position, out bool direction) => direction ? 1UL : 0UL,
-                _ => null
-            },
+            leaf => LeafValue(leaf, block, position),
             out value);
 
     /// <summary>Like <see cref="TryEvaluate"/>, for a caller that replaces the node with the
@@ -136,12 +138,19 @@ internal sealed class IrConstantFacts {
     public bool TryEvaluateReplacing(IVisitableAstNode node, IrBlock block, int position,
         out ulong value) =>
         ConstantEvaluation.TryEvaluateReplacing(node,
-            leaf => leaf switch {
-                RegisterNode register
-                    when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,
-                CpuFlagNode { FlagMask: Flags.Direction }
-                    when TryGetDirection(block, position, out bool direction) => direction ? 1UL : 0UL,
-                _ => null
-            },
+            leaf => LeafValue(leaf, block, position),
             out value);
+
+    /// <summary>The leaf facts every evaluation resolves: the known bytes of a register or
+    /// direction-flag version at one position, and a constant local of <see cref="Locals"/>.</summary>
+    private ulong? LeafValue(IVisitableAstNode leaf, IrBlock block, int position) => leaf switch {
+        RegisterNode register
+            when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,
+        CpuFlagNode { FlagMask: Flags.Direction }
+            when TryGetDirection(block, position, out bool direction) => direction ? 1UL : 0UL,
+        VariableReferenceNode variable
+            when Locals.TryGetValue(variable.VariableName, out ConstantNode? local)
+            => ConstantEvaluation.SemanticValue(variable.DataType, local.Value),
+        _ => null
+    };
 }
