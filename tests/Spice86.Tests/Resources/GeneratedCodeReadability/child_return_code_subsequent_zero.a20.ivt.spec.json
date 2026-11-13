@@ -27,20 +27,20 @@
       "serviceCalls.Video": 0
     },
     "maximum": {
-      "BookkeepingCalls": 2,
+      "BookkeepingCalls": 0,
       "Casts": 1,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
-      "LocalReads": 7,
-      "LocalVariables": 2,
-      "LocalWrites": 5,
-      "PlainRegisterAssignments": 6,
+      "LocalReads": 1,
+      "LocalVariables": 1,
+      "LocalWrites": 3,
+      "PlainRegisterAssignments": 3,
       "PortWrapperCalls": 0,
       "RawIoCalls": 1,
-      "RegisterReads": 4,
-      "RegisterWrites": 6,
-      "Statements": 21,
-      "WriteBacks": 3
+      "RegisterReads": 1,
+      "RegisterWrites": 3,
+      "Statements": 13,
+      "WriteBacks": 0
     }
   },
   "support": {

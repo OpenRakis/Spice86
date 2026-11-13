@@ -31,16 +31,16 @@
       "Casts": 4,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
-      "LocalReads": 8,
+      "LocalReads": 6,
       "LocalVariables": 2,
-      "LocalWrites": 13,
-      "PlainRegisterAssignments": 26,
+      "LocalWrites": 7,
+      "PlainRegisterAssignments": 16,
       "PortWrapperCalls": 0,
       "RawIoCalls": 9,
-      "RegisterReads": 14,
-      "RegisterWrites": 28,
-      "Statements": 81,
-      "WriteBacks": 3
+      "RegisterReads": 8,
+      "RegisterWrites": 18,
+      "Statements": 58,
+      "WriteBacks": 1
     }
   },
   "support": {

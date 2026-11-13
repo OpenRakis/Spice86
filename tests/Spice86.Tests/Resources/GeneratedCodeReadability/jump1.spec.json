@@ -37,13 +37,13 @@
       "LocalReads": 0,
       "LocalVariables": 0,
       "LocalWrites": 0,
-      "PlainRegisterAssignments": 16,
+      "PlainRegisterAssignments": 2,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RawMemoryAccesses": 0,
       "RegisterReads": 1,
-      "RegisterWrites": 16,
-      "Statements": 185,
+      "RegisterWrites": 2,
+      "Statements": 171,
       "StatusFlagReads": 48,
       "WriteBacks": 0
     }

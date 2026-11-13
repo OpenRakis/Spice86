@@ -28,19 +28,19 @@
     },
     "maximum": {
       "BookkeepingCalls": 0,
-      "Casts": 27,
+      "Casts": 6,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
-      "LocalReads": 19,
+      "LocalReads": 17,
       "LocalVariables": 12,
       "LocalWrites": 22,
-      "PlainRegisterAssignments": 41,
+      "PlainRegisterAssignments": 33,
       "PortWrapperCalls": 2,
       "RawIoCalls": 0,
-      "RegisterReads": 71,
-      "RegisterWrites": 43,
-      "Statements": 159,
-      "WriteBacks": 2
+      "RegisterReads": 70,
+      "RegisterWrites": 36,
+      "Statements": 156,
+      "WriteBacks": 0
     }
   },
   "support": {

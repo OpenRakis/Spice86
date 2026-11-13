@@ -27,19 +27,19 @@
       "serviceCalls.Video": 0
     },
     "maximum": {
-      "BookkeepingCalls": 11,
+      "BookkeepingCalls": 0,
       "Casts": 1,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
       "LocalReads": 0,
       "LocalVariables": 0,
       "LocalWrites": 0,
-      "PlainRegisterAssignments": 76,
+      "PlainRegisterAssignments": 39,
       "PortWrapperCalls": 0,
       "RawIoCalls": 13,
-      "RegisterReads": 58,
-      "RegisterWrites": 81,
-      "Statements": 158,
+      "RegisterReads": 18,
+      "RegisterWrites": 44,
+      "Statements": 83,
       "WriteBacks": 0
     }
   },

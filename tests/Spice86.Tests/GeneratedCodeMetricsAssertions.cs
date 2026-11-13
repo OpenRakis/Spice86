@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -179,6 +180,76 @@ internal static class GeneratedCodeMetricsAssertions {
             _ => typeof(GeneratedCodeMetrics).GetProperty(key)?.GetValue(metrics) as int?
                 ?? throw new InvalidDataException($"Unknown readability metric '{key}'.")
         };
+    }
+
+    private static readonly object TighteningGate = new();
+    private static readonly Dictionary<(string Fixture, string Part, bool Minimum, string Key), int>
+        LoosestMeasured = new();
+
+    /// <summary>Tightens the fixture's bound file toward the values this run measured: a maximum goes
+    /// down to the largest measured value, a minimum up to the smallest, never past the baseline.</summary>
+    internal static void WriteTightenedBounds(
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
+        string fixture = parts.Program.Fixture;
+        lock (TighteningGate) {
+            Accumulate(parts.Program, "program", fixture);
+            Accumulate(parts.Support, "support", fixture);
+            ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
+            string path = Path.Join(BaselineDirectory, fixture + ".json");
+            File.WriteAllText(path, FormatBaseline(baseline, fixture));
+        }
+    }
+
+    private static void Accumulate(GeneratedCodeMetrics metrics, string part, string fixture) {
+        ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
+        PartBounds bounds = part == "program" ? baseline.Program : baseline.Support;
+        Record(metrics, part, fixture, bounds.Minimum.Keys, true);
+        Record(metrics, part, fixture, bounds.Maximum.Keys, false);
+    }
+
+    private static void Record(GeneratedCodeMetrics metrics, string part, string fixture,
+        IEnumerable<string> keys, bool minimum) {
+        foreach (string key in keys) {
+            (string, string, bool, string) boundKey = (fixture, part, minimum, key);
+            int measured = MetricValue(metrics, key);
+            if (!LoosestMeasured.TryGetValue(boundKey, out int seen)) {
+                LoosestMeasured[boundKey] = measured;
+                continue;
+            }
+            LoosestMeasured[boundKey] = minimum ? Math.Min(seen, measured) : Math.Max(seen, measured);
+        }
+    }
+
+    private static string FormatBaseline(ReadabilityBaseline baseline, string fixture) {
+        using MemoryStream stream = new();
+        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true })) {
+            writer.WriteStartObject();
+            writer.WriteString("sourceSha256", baseline.SourceSha256);
+            WritePart(writer, "program", baseline.Program, fixture);
+            WritePart(writer, "support", baseline.Support, fixture);
+            writer.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+    }
+
+    private static void WritePart(Utf8JsonWriter writer, string name, PartBounds part, string fixture) {
+        writer.WritePropertyName(name);
+        writer.WriteStartObject();
+        WriteBounds(writer, "minimum", part.Minimum, fixture, name, true);
+        WriteBounds(writer, "maximum", part.Maximum, fixture, name, false);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteBounds(Utf8JsonWriter writer, string name,
+        IReadOnlyDictionary<string, int> bounds, string fixture, string part, bool minimum) {
+        writer.WritePropertyName(name);
+        writer.WriteStartObject();
+        foreach ((string key, int baseline) in bounds.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
+            writer.WriteNumber(key, minimum
+                ? Math.Max(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, true, key), int.MinValue))
+                : Math.Min(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, false, key), int.MaxValue)));
+        }
+        writer.WriteEndObject();
     }
 
     internal static IReadOnlyList<string> FindReadabilityRegressions(GeneratedCodeMetrics actual,

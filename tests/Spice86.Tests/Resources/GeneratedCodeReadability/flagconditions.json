@@ -27,9 +27,9 @@
       "serviceCalls.Video": 0
     },
     "maximum": {
-      "AluCalls": 20,
+      "AluCalls": 18,
       "BookkeepingCalls": 0,
-      "Casts": 138,
+      "Casts": 33,
       "CheckExternalEvents": 6,
       "GotoStatements": 0,
       "InterruptCallReturnedElsewhere": 0,
@@ -37,12 +37,12 @@
       "LocalReads": 29,
       "LocalVariables": 16,
       "LocalWrites": 39,
-      "PlainRegisterAssignments": 57,
+      "PlainRegisterAssignments": 48,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RawMemoryAccesses": 108,
-      "RegisterReads": 387,
-      "RegisterWrites": 89,
+      "RegisterReads": 378,
+      "RegisterWrites": 80,
       "Statements": 297,
       "StatusFlagReads": 15,
       "WriteBacks": 2

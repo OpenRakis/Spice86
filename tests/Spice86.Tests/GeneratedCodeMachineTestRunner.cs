@@ -279,6 +279,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         generatedProgram.FlagReadCensus.Total.Should().Be(parts.Program.StatusFlagReads + parts.Support.StatusFlagReads,
             $"every printed flag read of {GoldenKey(settings)} has exactly one census line entry");
         WriteWebCensus(WebCensusLine.Format(GoldenKey(settings), generatedProgram.WebCensus));
+        // GeneratedCodeMetricsAssertions.WriteTightenedBounds(parts);
         GeneratedCodeMetricsAssertions.AssertInvariants(parts, generatedProgram.SourceText, methods);
         return compiler.CompileSupplier(compilation);
     }

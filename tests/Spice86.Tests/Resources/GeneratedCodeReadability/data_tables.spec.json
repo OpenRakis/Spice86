@@ -29,7 +29,7 @@
     "maximum": {
       "AluCalls": 1,
       "BookkeepingCalls": 0,
-      "Casts": 3,
+      "Casts": 2,
       "CheckExternalEvents": 3,
       "GotoStatements": 0,
       "InterruptCallReturnedElsewhere": 0,
@@ -37,13 +37,13 @@
       "LocalReads": 6,
       "LocalVariables": 6,
       "LocalWrites": 6,
-      "PlainRegisterAssignments": 22,
+      "PlainRegisterAssignments": 15,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RawMemoryAccesses": 5,
-      "RegisterReads": 12,
-      "RegisterWrites": 22,
-      "Statements": 88,
+      "RegisterReads": 11,
+      "RegisterWrites": 15,
+      "Statements": 83,
       "StatusFlagReads": 0,
       "WriteBacks": 1
     }
