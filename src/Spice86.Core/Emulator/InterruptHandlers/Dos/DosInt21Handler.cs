@@ -996,19 +996,23 @@ public class DosInt21Handler : InterruptHandler {
     /// CF=1 and AX holds the error code on failure.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
-    [InterruptService(0x60, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Si | CpuValues.Es | CpuValues.Di | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x60, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Si | CpuValues.Es | CpuValues.Di | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(GetTrueName), Inputs = [CpuValues.Ds, CpuValues.Si, CpuValues.Es, CpuValues.Di])]
     public void GetTrueNameFromVm(bool calledFromVm) {
-        (ushort ax, bool carryFlag) = GetTrueName(
-            _dosStringDecoder.GetDosString(State.DS, State.SI, '\0'), State.ES, State.DI);
+        (ushort ax, bool carryFlag) = GetTrueName(State.DS, State.SI, State.ES, State.DI);
         State.AX = ax;
         ApplyCarryFlag(calledFromVm, carryFlag);
     }
 
     /// <summary>
-    /// Canonicalizes <paramref name="dosPath"/> and writes the canonical ASCIIZ path to
-    /// <paramref name="es"/>:<paramref name="di"/>; AX is 0 on success and the DOS error code on error.
+    /// Canonicalizes the ASCIIZ path at <paramref name="pathSegment"/>:<paramref name="pathOffset"/>
+    /// and writes the canonical ASCIIZ path to
+    /// <paramref name="bufferSegment"/>:<paramref name="bufferOffset"/>; the result is the DOS
+    /// error code on failure and whether the call failed.
     /// </summary>
-    public (ushort ax, bool carryFlag) GetTrueName(string dosPath, ushort es, ushort di) {
+    public (ushort errorCode, bool failed) GetTrueName(ushort pathSegment, ushort pathOffset,
+        ushort bufferSegment, ushort bufferOffset) {
+        string dosPath = _dosStringDecoder.GetDosString(pathSegment, pathOffset, '\0');
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("GET TRUE NAME {Path}", dosPath);
         }
@@ -1017,7 +1021,7 @@ public class DosInt21Handler : InterruptHandler {
             return FileResult(result, 0);
         }
         byte[] bytes = _dosStringDecoder.Encoding.GetBytes(fullDosPath);
-        uint address = MemoryUtils.ToPhysicalAddress(es, di);
+        uint address = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
         for (int i = 0; i < bytes.Length; i++) {
             Memory.UInt8[address + (uint)i] = bytes[i];
         }
