@@ -183,6 +183,7 @@ internal sealed class IrMethodEmitter(
                 parameterReads = analysis.TypedSignatures.BuildParameterReads(prepared.IrMethod,
                     prepared.Ssa, signature);
             }
+            body = StackRuns.Apply(body);
             return new AnalyzedMethod(prepared, signature, parameterReads, registerLocals, body);
         });
     }

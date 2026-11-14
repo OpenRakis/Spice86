@@ -77,8 +77,7 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte040C = Alu8.Inc(DsGlobals.Byte040C);
         PicPorts.WritePrimaryData(0xFF);
         PicPorts.WritePrimaryCommand(0x20);
-        BX = Stack.Pop16();
-        AX = Stack.Pop16();
+        (BX, AX) = Stack.Restore2();
         return InterruptRet();
     }
 

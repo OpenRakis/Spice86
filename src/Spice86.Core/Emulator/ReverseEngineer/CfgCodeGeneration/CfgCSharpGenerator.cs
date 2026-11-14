@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
@@ -399,7 +400,9 @@ internal sealed class CfgCSharpGenerator {
     /// <summary>The reads every return or resolved-transfer exit of <paramref name="prepared"/>
     /// demands under <paramref name="conventions"/>. A return exit reads the union of its method
     /// entries' observed <see cref="IrCallingConventions.OutputsOf"/> plus every value the
-    /// conventions do not describe plus the landing inputs the method changed; a resolved
+    /// conventions do not describe plus the landing inputs the method's writes or restores carry:
+    /// the preservation of a restored register depends on the pop that restores it, so the exit
+    /// keeps that pop's write live even though the register is not in <c>Changes</c>. A resolved
     /// transfer reads the union of its targets' observed inputs plus the non-reportable values.
     /// Includes exits that still demand every value - the fixed point needs the full demand to
     /// detect growth back to it.</summary>
@@ -423,16 +426,39 @@ internal sealed class CfgCSharpGenerator {
             outputs |= conventions.OutputsOf(entry);
             changes |= conventions.EffectOf(entry).Writes;
         }
+        CpuValues restored = RestoredPopWrites(prepared.IrMethod);
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
         Dictionary<ICfgNode, CpuValues> reads = new();
         foreach ((IrExit exit, CpuValues? terminalReads) in exits) {
             CpuValues demand = terminalReads ?? (conventions.IsResolvedTransferExit(methodName, exit)
                 ? conventions.TransferInputsOf(methodName, exit) | nonReportable
                 : outputs | nonReportable
-                    | (conventions.LandingInputsOf(methodName, exit) & changes));
+                    | (conventions.LandingInputsOf(methodName, exit) & (changes | restored)));
             reads[exit.Origin] = reads.GetValueOrDefault(exit.Origin) | demand;
         }
         return reads;
+    }
+
+    /// <summary>The general-register bytes <paramref name="method"/>'s pop statements write -
+    /// the targets the dead-pop rewrite can reach: a pop into a register that is not in
+    /// <c>Changes</c> still restores a preserved byte the landing observes.</summary>
+    private static CpuValues RestoredPopWrites(IrMethod method) {
+        CpuValues restored = CpuValues.None;
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (!IrPreservation.IsPopRestore(statement)
+                    || statement.Node is not BinaryOperationNode {
+                        BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: RegisterNode register }
+                    || register is SegmentRegisterNode
+                    || (register.DataType != DataType.UINT8
+                        && register.RegisterIndex == (int)RegisterIndex.SpIndex)) {
+                    continue;
+                }
+                restored |= IrValueSets.Of(register);
+            }
+        }
+        return restored;
     }
 
     /// <summary>The effects to give return and resolved-transfer exits in a prepare round: both

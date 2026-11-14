@@ -158,7 +158,7 @@ Every other SS access keeps an indexer form too, but a dedicated one: an SS-regi
 
 A typed single-entry method can take its proven argument slots as C# parameters (`arg0`, `arg2`, ... by entry offset above the near return address), on top of the register parameters of its signature. `StackArguments` plans them from `IrFrames`: every read of a slot must be a proven frame access, nothing in the method may write a slot, the slots must be contiguous words, and nothing inside the window from entry to the last slot read may write the argument area - no unproven store, no call target or delivered handler that writes above its own frame, no interrupt delivery, no segment-register write (`SA-1`/`SA-2` in the legality catalogue). A method that fails any condition, or whose entry can be reached another way than a generated call, keeps reading the slots from memory.
 
-A caller whose pushes match the slots merges them into the call: `AX = CallWithStackArguments(biosSegment, 0x001F, () => callee(dx, 0x2222, 0x1111), 0x2222, 0x1111);`. The helper pushes the argument words in reverse slot order through `Stack.Push16` - the same writes and order the pushes performed, with the same segment-limit faults - then runs the same typed near call as `NearCall`, then steps SP by the caller's clean-up when the following `add sp,n` had dead flags (`SA-3` to `SA-5`). Pushes must sit immediately before the call with only neutral statements between them; a store or fault in between keeps the push/call form. The `_Asm` entry wrapper keeps passing the slot values from the real stack (`GeneratedStackFrame.GetWord`), so untyped callers and registration sites behave exactly as before. Saved-register compaction is not implemented: callee-saved prologue pushes and the matching epilogue pops keep their current printed forms (`Stack.Save` / `Stack.Release` do not exist).
+A caller whose pushes match the slots merges them into the call: `AX = CallWithStackArguments(biosSegment, 0x001F, () => callee(dx, 0x2222, 0x1111), 0x2222, 0x1111);`. The helper pushes the argument words in reverse slot order through `Stack.Push16` - the same writes and order the pushes performed, with the same segment-limit faults - then runs the same typed near call as `NearCall`, then steps SP by the caller's clean-up when the following `add sp,n` had dead flags (`SA-3` to `SA-5`). Pushes must sit immediately before the call with only neutral statements between them; a store or fault in between keeps the push/call form. The `_Asm` entry wrapper keeps passing the slot values from the real stack (`GeneratedStackFrame.GetWord`), so untyped callers and registration sites behave exactly as before. Saved-register compaction happens later, in `StackRuns` (legality SV): entry pushes print `Stack.Save(...)`, exit pops `Stack.Restore<n>()`, dead pops `Stack.Release(n)`.
 
 ### Block layout
 
@@ -593,6 +593,18 @@ may alias the slot between, and a later push overwrites the abandoned word on ev
 the pop before anything can read it. Any doubt keeps the `Stack.Push16` / `Stack.Pop16` lines  - 
 a `push es; popf` whose flags-pop is followed by an event check keeps them, as does a `pop` into
 a segment register whose slot another `les` still reads.
+
+Two later rewrites compact the surviving stack lines. `IrDeadRegisterWrites` turns a pop into a
+dead general register (not SP/ESP, not a segment register, the same live-use test as for plain
+writes, legality DW-6) into a bare `Stack.Pop16();` statement - the stack read, access check and
+SP step stay; only the dead register write goes. Then `StackRuns.Apply`, the last rewrite of
+`IrMethodEmitter.Analyze`, merges the printed runs: two or more consecutive 16-bit register
+pushes at the method's entry print `Stack.Save(BX, CX, DX);`, two to six consecutive register
+pops before a `return` print `(DX, CX, BX) = Stack.Restore3();`, and consecutive bare pops print
+`Stack.Release(2);` (legality SV-1 to SV-5). The helpers are plain sequences of the same
+`Push16` / `Pop16` calls in the same order, so reads, writes, checks and SP steps are unchanged;
+a run inside a fault region, across an anchored boundary or with a printing statement between
+never merges, and a `push sp` or a pop run longer than six keeps its lines.
 
 ## Reusable analyses
 

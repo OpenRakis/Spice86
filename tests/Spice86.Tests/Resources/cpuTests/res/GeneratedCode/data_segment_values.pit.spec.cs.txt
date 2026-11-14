@@ -428,7 +428,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         ECX = Stack.Pop32();
         Stack.Push32(0x30000000);
-        CX = Stack.Pop16();
+        Stack.Release(1);
         ES = Stack.Pop16();
         byte1 = EsGlobals.Byte0010;
         DsGlobals.Byte005A = byte1;

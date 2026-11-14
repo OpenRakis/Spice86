@@ -80,7 +80,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
+    /// <summary>Inputs: BP. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1;
         ushort word2;
@@ -126,12 +126,12 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(BP);
             index = SP;
             word7 = SsUInt16[index + 2];
-            BP = Stack.Pop16();
+            Stack.Release(1);
             AX = Stack.Pop16();
             UInt16[DS, BX + 0x0A] = word7;
             Stack.Push16(AX);
             CX = SP;
-            AX = Stack.Pop16();
+            Stack.Release(1);
             UInt16[DS, BX + 0x0C] = CX;
             word1 = UInt16[CS, SI + 8];
             Stack.Push16(word1);

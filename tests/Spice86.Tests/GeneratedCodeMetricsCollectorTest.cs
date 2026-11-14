@@ -72,6 +72,22 @@ public class GeneratedCodeMetricsCollectorTest {
     }
 
     [Fact]
+    public void CountsMergedStackCalls() {
+        // Arrange
+        string body = """
+            Stack.Save(BX, CX);
+            (CX, BX) = Stack.Restore2();
+            Stack.Release(2);
+            """;
+
+        // Act
+        GeneratedCodeMetrics metrics = CollectFromMethodBody(body);
+
+        // Assert
+        metrics.StackCalls.Should().Be(3);
+    }
+
+    [Fact]
     public void CountsStatusFlagAssignmentsSeparatelyFromReads() {
         // Arrange
         string body = """

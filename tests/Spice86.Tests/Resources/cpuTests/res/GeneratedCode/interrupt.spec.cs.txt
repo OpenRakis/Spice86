@@ -42,7 +42,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_3001_F3001() {
         CheckExternalEvents(biosSegment, 0x3001);
         DsGlobals.Byte0005 = 5;
-        CX = Stack.Pop16();
+        Stack.Release(1);
         CX = 0x4002;
         Stack.Push16(0x4002);
         return InterruptRet();

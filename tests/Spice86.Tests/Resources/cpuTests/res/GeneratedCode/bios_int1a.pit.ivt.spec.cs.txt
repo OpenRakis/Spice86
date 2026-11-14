@@ -94,8 +94,7 @@ public partial class CfgGeneratedOverrides {
         AL = byte1;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0199);
-        Stack.Push16(AX);
-        Stack.Push16(BX);
+        Stack.Save(AX, BX);
         byte2 = (byte)(byte1 >> 4);
         Alu8.Sub(byte2, 9);
         if (byte2 <= 9) {
@@ -103,16 +102,14 @@ public partial class CfgGeneratedOverrides {
             Alu8.Sub(byte2, 9);
             if (byte2 <= 9) {
                 CarryFlag = false;
-                BX = Stack.Pop16();
-                AX = Stack.Pop16();
+                (BX, AX) = Stack.Restore2();
                 NearReturn();
                 return CarryFlag;
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x01B3, SpeculativeRun_01B3);
         CarryFlag = true;
-        BX = Stack.Pop16();
-        AX = Stack.Pop16();
+        (BX, AX) = Stack.Restore2();
         NearReturn();
         return CarryFlag;
     }

@@ -321,11 +321,9 @@ public partial class CfgGeneratedOverrides {
         SI = word1;
         unknown_F000_022E_F022EFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x022E);
-        Stack.Push16(BP);
-        Stack.Push16(word1);
+        Stack.Save(BP, word1);
         frame.Local4 = 0x7777;
-        SI = Stack.Pop16();
-        BP = Stack.Pop16();
+        (SI, BP) = Stack.Restore2();
         NearReturn();
         return SI;
     }

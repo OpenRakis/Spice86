@@ -22,7 +22,9 @@ using System.Linq;
 /// provably the push's slot alone, every path between the two stays inside one region holding
 /// no call, interrupt delivery, fault, stack use or read of the slot, and a later push at the
 /// same SP overwrites the abandoned word before anything can read it. The pop's target is a
-/// general register, a segment register other than SS, or the flag register; the push's value
+/// general register, a segment register other than SS, or the flag register; a bare
+/// <c>Stack.Pop</c> the dead-write removal left also closes a pair, under the same slot and
+/// path conditions, and removes both statements. The push's value
 /// is any expression. Printing-only, like the register locals: the IR keeps the push and the
 /// pop.
 /// </summary>
@@ -32,7 +34,9 @@ internal static class SaveRestorePairs {
 
     /// <summary>One qualifying pair: the statement nodes to rewrite and the shared local.</summary>
     /// <param name="Push">The <see cref="StackCallNode"/> of the push statement.</param>
-    /// <param name="Pop">The <c>ASSIGN</c> of the pop statement.</param>
+    /// <param name="Pop">The <c>ASSIGN</c> of the pop statement, or the bare
+    /// <see cref="StackCallNode"/> of a pop whose register write the dead-write removal dropped:
+    /// such a pair removes the push and the pop and uses no local.</param>
     /// <param name="Direct">Nothing sits between the push and the pop: the pop prints
     /// <c>Y = X;</c> directly and no save local is used.</param>
     /// <param name="Pushed">The expression the push statement pushes.</param>
@@ -40,7 +44,7 @@ internal static class SaveRestorePairs {
     /// <param name="Declaration">Its <c>type name = 0;</c> declaration for the method top.</param>
     /// <param name="StackAdvance">The <c>SP += width</c> statement a pop into a segment
     /// register frees its slot with: removed together with the push.</param>
-    public sealed record Pair(StackCallNode Push, BinaryOperationNode Pop, bool Direct,
+    public sealed record Pair(StackCallNode Push, IVisitableAstNode Pop, bool Direct,
         ValueNode Pushed, MethodScopedVariableReferenceNode Variable, LocalDeclarationNode Declaration,
         IVisitableAstNode? StackAdvance);
 
@@ -101,13 +105,16 @@ internal static class SaveRestorePairs {
             new(ReferenceEqualityComparer.Instance);
         HashSet<IVisitableAstNode> removed = new(ReferenceEqualityComparer.Instance);
         foreach (Pair pair in plan.Pairs) {
-            if (pair.Direct) {
+            if (pair.Pop is not BinaryOperationNode pop) {
                 removed.Add(pair.Push);
-                replacements[pair.Pop] = pair.Pop with { Right = pair.Pushed };
+                removed.Add(pair.Pop);
+            } else if (pair.Direct) {
+                removed.Add(pair.Push);
+                replacements[pop] = pop with { Right = pair.Pushed };
             } else {
                 replacements[pair.Push] = new BinaryOperationNode(pair.Variable.DataType,
                     pair.Variable, BinaryOperation.ASSIGN, pair.Pushed);
-                replacements[pair.Pop] = pair.Pop with { Right = pair.Variable };
+                replacements[pop] = pop with { Right = pair.Variable };
             }
             if (pair.StackAdvance is { } advance) {
                 removed.Add(advance);
@@ -138,61 +145,35 @@ internal static class SaveRestorePairs {
 
     /// <summary>The declarations of <paramref name="plan"/>'s save locals, printed at the method
     /// top so the restore is always in scope and definitely assigned. Adjacent pairs print the
-    /// pushed expression directly and declare nothing.</summary>
+    /// pushed expression directly, and bare-pop pairs remove both statements - both declare
+    /// nothing.</summary>
     public static IEnumerable<LocalDeclarationNode> Declarations(SavedPairPlan plan) =>
-        plan.Pairs.Where(pair => !pair.Direct).Select(pair => pair.Declaration);
+        plan.Pairs.Where(pair => pair.Pop is BinaryOperationNode && !pair.Direct)
+            .Select(pair => pair.Declaration);
 
     /// <summary>The candidate pair of the pop at <paramref name="popIndex"/> of
     /// <paramref name="popBlock"/>, or <c>null</c> when any condition fails. The pop's target is
-    /// a general register, a segment register other than SS or the flag register.</summary>
+    /// a general register, a segment register other than SS, the flag register, or nothing - a
+    /// bare <see cref="StackCallNode"/> pop the dead-write removal left discards the word, so the
+    /// pair removes both statements and no local is declared.</summary>
     private static Pair? PairOf(IrMethod method, BlockGraph<IrBlock> graph,
         DominatorTree<IrBlock> dominators, DominatorTree<IrBlock>? postDominators,
         IrMemoryAliasAnalysis alias, IrStackSlots slots, IrBlock popBlock, int popIndex,
         HashSet<string> reserved) {
         IrStatement popStatement = popBlock.Statements[popIndex];
-        if (popStatement.Node is not BinaryOperationNode {
-                BinaryOperation: BinaryOperation.ASSIGN } pop) {
-            return null;
-        }
+        IVisitableAstNode popNode = popStatement.Node;
         IVisitableAstNode? stackAdvance = null;
         BitWidth popWidth;
-        switch (pop.Left) {
-            case RegisterNode { RegisterIndex: <= (int)RegisterIndex.DiIndex } popRegister
-                when popRegister is not SegmentRegisterNode
-                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
-                    && popCall.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)
-                    && popRegister.DataType.BitWidth == popCall.Width:
-                popWidth = popCall.Width;
-                break;
-            case FlagRegisterNode flags
-                when pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
-                    && flags.DataType.BitWidth == popCall.Width:
-                popWidth = popCall.Width;
-                break;
-            case SegmentRegisterNode segment
-                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex
-                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } segmentPopCall
-                    && segment.DataType.BitWidth == segmentPopCall.Width:
-                popWidth = segmentPopCall.Width;
-                break;
-            case SegmentRegisterNode segment
-                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex:
-                // A `pop ss` blocks interrupt delivery until the next instruction retires, which
-                // an assignment does not reproduce; every other segment target stays in the pair.
-                // When the pop is not a `Stack.Pop` call - a mov reading the top word - the SP
-                // advance must be a separate statement, also part of the pair; without it the
-                // push's slot is not freed and cannot be removed.
-                popWidth = segment.DataType.BitWidth;
-                if (popIndex + 1 >= popBlock.Statements.Count
-                    || !IrStackSlots.TryStackPointerAdjustment(
-                            popBlock.Statements[popIndex + 1].Node, out int adjustment)
-                    || adjustment != (int)popWidth / 8) {
-                    return null;
-                }
-                stackAdvance = popBlock.Statements[popIndex + 1].Node;
-                break;
-            default:
-                return null;
+        BinaryOperationNode? pop = null;
+        if (popNode is StackCallNode { Operation: StackOperation.Pop } barePop
+                && barePop.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)) {
+            popWidth = barePop.Width;
+        } else if (popNode is BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN } popAssign
+            && PopTargetOf(popAssign, popBlock, popIndex, out popWidth, out stackAdvance)) {
+            pop = popAssign;
+        } else {
+            return null;
         }
         if (postDominators is null || slots.OffsetBefore(popStatement) is not {
                 Kind: IrStackOffsetKind.Known } popOffset) {
@@ -211,7 +192,7 @@ internal static class SaveRestorePairs {
                     Operation: StackOperation.Push } candidate
                 || candidate.Width != popWidth
                 || candidate.Arguments is not [ValueNode pushedValue]
-                || pushedValue.DataType.BitWidth != pop.Left.DataType.BitWidth) {
+                || pushedValue.DataType.BitWidth != popWidth) {
                 continue;
             }
             push = candidate;
@@ -286,7 +267,7 @@ internal static class SaveRestorePairs {
                 popOffset.Base, popOffset.Delta)) {
             return null;
         }
-        string stem = $"saved{TargetName(pop.Left)}_{pushStatement.Origin.Address.Offset:X4}";
+        string stem = $"saved{(pop is null ? "Discarded" : TargetName(pop.Left))}_{pushStatement.Origin.Address.Offset:X4}";
         string name = stem;
         for (int suffix = 2; !reserved.Add(name); suffix++) {
             name = $"{stem}_{suffix}";
@@ -299,8 +280,56 @@ internal static class SaveRestorePairs {
                 popBlock.Statements[index].Node is InstructionStartNode or CommentNode);
         DataType type = DataType.UnsignedFromBitWidth(popWidth);
         MethodScopedVariableReferenceNode variable = new(type, name);
-        return new Pair(push, pop, direct, pushed, variable,
+        return new Pair(push, popNode, direct, pushed, variable,
             new LocalDeclarationNode(type, name, new ConstantNode(type, 0)), stackAdvance);
+    }
+
+    /// <summary>Whether <paramref name="pop"/>'s assignment target is a general register, a
+    /// segment register other than SS or the flag register, and its popped width. A segment
+    /// target reading the top word without a <c>Stack.Pop</c> call needs its SP advance as the
+    /// next statement: it is part of the pair (<paramref name="stackAdvance"/>).</summary>
+    private static bool PopTargetOf(BinaryOperationNode pop, IrBlock popBlock, int popIndex,
+        out BitWidth popWidth, out IVisitableAstNode? stackAdvance) {
+        stackAdvance = null;
+        switch (pop.Left) {
+            case RegisterNode { RegisterIndex: <= (int)RegisterIndex.DiIndex } popRegister
+                when popRegister is not SegmentRegisterNode
+                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
+                    && popCall.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)
+                    && popRegister.DataType.BitWidth == popCall.Width:
+                popWidth = popCall.Width;
+                return true;
+            case FlagRegisterNode flags
+                when pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
+                    && flags.DataType.BitWidth == popCall.Width:
+                popWidth = popCall.Width;
+                return true;
+            case SegmentRegisterNode segment
+                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex
+                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } segmentPopCall
+                    && segment.DataType.BitWidth == segmentPopCall.Width:
+                popWidth = segmentPopCall.Width;
+                return true;
+            case SegmentRegisterNode segment
+                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex:
+                // A `pop ss` blocks interrupt delivery until the next instruction retires, which
+                // an assignment does not reproduce; every other segment target stays in the pair.
+                // When the pop is not a `Stack.Pop` call - a mov reading the top word - the SP
+                // advance must be a separate statement, also part of the pair; without it the
+                // push's slot is not freed and cannot be removed.
+                popWidth = segment.DataType.BitWidth;
+                if (popIndex + 1 >= popBlock.Statements.Count
+                    || !IrStackSlots.TryStackPointerAdjustment(
+                            popBlock.Statements[popIndex + 1].Node, out int adjustment)
+                    || adjustment != (int)popWidth / 8) {
+                    return false;
+                }
+                stackAdvance = popBlock.Statements[popIndex + 1].Node;
+                return true;
+            default:
+                popWidth = default;
+                return false;
+        }
     }
 
     /// <summary>The block and statement index of <paramref name="statement"/> in

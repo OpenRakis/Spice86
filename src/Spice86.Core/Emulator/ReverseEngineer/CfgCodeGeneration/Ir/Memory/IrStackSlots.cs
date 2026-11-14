@@ -197,6 +197,8 @@ internal sealed class IrStackSlots {
                 }
                 return state;
             }
+            case StackCallNode { Operation: StackOperation.Pop } pop:
+                return ApplyPop(block, index, pop.Width, statement, state, record, alias);
             case StackCallNode { Operation: StackOperation.Leave
                 or StackOperation.PushAll or StackOperation.PopAll }:
                 return IrStackState.Rebase(statement);
@@ -231,24 +233,8 @@ internal sealed class IrStackSlots {
     private IrStackState ApplyStackValue(IrBlock block, int index, StackCallValueNode stack,
         IrStatement statement, IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         switch (stack.Operation) {
-            case StackOperation.Pop: {
-                int width = (int)stack.Width / 8;
-                if (record) {
-                    IrMemoryAccess popAccess =
-                        SlotAccessAt(block, index, state, state.Offset.Delta, width, alias);
-                    RecordRead(statement, state.Offset.Delta, width, state,
-                        alias.AllowsRam(popAccess));
-                }
-                if (state.Offset.Kind != IrStackOffsetKind.Known) {
-                    return state;
-                }
-                int delta = state.Offset.Delta;
-                IrStackState moved = state
-                    .WithOffset(IrStackOffset.Known(state.Offset.Base, delta + width))
-                    .CopySlots();
-                RemoveSlotsIn(moved, delta, width);
-                return moved;
-            }
+            case StackOperation.Pop:
+                return ApplyPop(block, index, stack.Width, statement, state, record, alias);
             case StackOperation.Peek:
                 if (record && ConstantWordOf(stack.CallNode.Arguments
                     .OfType<ValueNode>().FirstOrDefault()) is { } peekDelta) {
@@ -261,6 +247,30 @@ internal sealed class IrStackSlots {
             default:
                 return state;
         }
+    }
+
+    /// <summary>The slot effect of a pop, whether the statement carries it in a
+    /// <see cref="StackCallValueNode"/> or is itself a bare <see cref="StackCallNode"/> the
+    /// dead-write removal left: the read is recorded at the current offset, then the offset
+    /// advances and the popped bytes leave the slot table.</summary>
+    private IrStackState ApplyPop(IrBlock block, int index, BitWidth popWidth,
+        IrStatement statement, IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
+        int width = (int)popWidth / 8;
+        if (record) {
+            IrMemoryAccess popAccess =
+                SlotAccessAt(block, index, state, state.Offset.Delta, width, alias);
+            RecordRead(statement, state.Offset.Delta, width, state,
+                alias.AllowsRam(popAccess));
+        }
+        if (state.Offset.Kind != IrStackOffsetKind.Known) {
+            return state;
+        }
+        int delta = state.Offset.Delta;
+        IrStackState moved = state
+            .WithOffset(IrStackOffset.Known(state.Offset.Base, delta + width))
+            .CopySlots();
+        RemoveSlotsIn(moved, delta, width);
+        return moved;
     }
 
     private void RecordPointerReads(IrBlock block, int index, IrStatement statement,

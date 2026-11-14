@@ -123,13 +123,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EBX. Outputs: AL, BX. Changes: AX, BX.</summary>
     public virtual Action unknown_016E_01C0_018A0() {
         CheckExternalEvents(cs1, 0x01C0);
-        Stack.Push16(AX);
-        Stack.Push16(BX);
+        Stack.Save(AX, BX);
         AH = 0x0E;
         BH = 0;
         ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, BX));
-        BX = Stack.Pop16();
-        AX = Stack.Pop16();
+        (BX, AX) = Stack.Restore2();
         return NearRet();
     }
 

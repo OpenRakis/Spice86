@@ -374,8 +374,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_1000_F1000() {
         ushort word1;
         CheckExternalEvents(biosSegment, 0x1000);
-        Stack.Push16(AX);
-        Stack.Push16(DI);
+        Stack.Save(AX, DI);
         word1 = SsUInt16[BP];
         SI = UInt16[DS, SP + 4];
         SsUInt16[BP] = SI;
@@ -383,8 +382,7 @@ public partial class CfgGeneratedOverrides {
         DI = SP;
         DI = Alu16.Add(DI, 4);
         UInt16[DS, DI] = SI;
-        DI = Stack.Pop16();
-        AX = Stack.Pop16();
+        (DI, AX) = Stack.Restore2();
         return InterruptRet();
     }
 

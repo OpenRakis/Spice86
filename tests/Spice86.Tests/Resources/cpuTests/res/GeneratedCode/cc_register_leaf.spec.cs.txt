@@ -84,10 +84,8 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_00C8_F00C8() {
         CheckExternalEvents(biosSegment, 0x00C8);
-        Stack.Push16(SI);
-        Stack.Push16(DI);
-        DI = Stack.Pop16();
-        SI = Stack.Pop16();
+        Stack.Save(SI, DI);
+        (DI, SI) = Stack.Restore2();
         return NearRet();
     }
 

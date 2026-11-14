@@ -40,7 +40,8 @@ internal static class GeneratedCodeMetricsCollector {
     private static readonly System.Text.RegularExpressions.Regex TypedFlagParameterName =
         new("^flag[0-9]+$");
     private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
-        "Push16", "Push32", "Pop16", "Pop32"
+        "Push16", "Push32", "Pop16", "Pop32", "Save", "Release",
+        "Restore2", "Restore3", "Restore4", "Restore5", "Restore6"
     };
     private static readonly HashSet<string> MemoryIndexerNames = new(StringComparer.Ordinal) {
         "UInt8", "UInt16", "UInt32", "Int8", "Int16", "Int32",

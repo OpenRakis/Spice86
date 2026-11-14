@@ -28,6 +28,7 @@ internal static class StackExpansionBuilder {
         int size = (int)call.Width / 8;
         return call.Operation switch {
             StackOperation.Push when call.Arguments is [ValueNode value] => ExpandPush(type, size, value),
+            StackOperation.Pop => ExpandPop(type, size) with { Result = null },
             StackOperation.PushAll => ExpandPushAll(type, size, call.Arguments),
             StackOperation.PopAll => ExpandPopAll(type, size),
             StackOperation.Leave => ExpandLeave(type, size),

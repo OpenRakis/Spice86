@@ -130,8 +130,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DX);
         AX = word1;
         Out8(0x0998, AL);
-        DX = Stack.Pop16();
-        AX = Stack.Pop16();
+        (DX, AX) = Stack.Restore2();
         return NearRet();
     }
 

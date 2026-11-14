@@ -583,6 +583,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_two_fault_handlers"),
             PartitionScenario("cc_register_leaf"),
             PartitionScenario("cc_stack_frames"),
+            PartitionScenario("cc_saved_registers"),
             PartitionScenario("cc_call_shapes"),
             PartitionScenario("dataflow_stack_save_restore"),
             PartitionScenario("dataflow_flag_definitions"),

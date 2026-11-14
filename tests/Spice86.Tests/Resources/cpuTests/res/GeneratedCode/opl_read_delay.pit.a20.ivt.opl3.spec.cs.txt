@@ -143,16 +143,14 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01CC_0189C() {
         CheckExternalEvents(cs1, 0x01CC);
-        Stack.Push16(CX);
-        Stack.Push16(DX);
+        Stack.Save(CX, DX);
         CX = 6;
         do {
             CheckExternalEvents(cs1, 0x01D4);
             AL = Opl3Ports.ReadAdlibAddress0();
             CX--;
         } while (CX != 0);
-        DX = Stack.Pop16();
-        CX = Stack.Pop16();
+        (DX, CX) = Stack.Restore2();
         return NearRet();
     }
 
@@ -160,16 +158,14 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01DA_018AA() {
         CheckExternalEvents(cs1, 0x01DA);
-        Stack.Push16(CX);
-        Stack.Push16(DX);
+        Stack.Save(CX, DX);
         CX = 0x0023;
         do {
             CheckExternalEvents(cs1, 0x01E2);
             AL = Opl3Ports.ReadAdlibAddress0();
             CX--;
         } while (CX != 0);
-        DX = Stack.Pop16();
-        CX = Stack.Pop16();
+        (DX, CX) = Stack.Restore2();
         return NearRet();
     }
 
@@ -195,9 +191,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_01F7_018C7() {
         CheckExternalEvents(cs1, 0x01F7);
-        Stack.Push16(BX);
-        Stack.Push16(CX);
-        Stack.Push16(DX);
+        Stack.Save(BX, CX, DX);
         CX = 0;
         BX = 0x000A;
         do {
@@ -215,9 +209,7 @@ public partial class CfgGeneratedOverrides {
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
             CX--;
         } while (CX != 0);
-        DX = Stack.Pop16();
-        CX = Stack.Pop16();
-        BX = Stack.Pop16();
+        (DX, CX, BX) = Stack.Restore3();
         return NearRet();
     }
 

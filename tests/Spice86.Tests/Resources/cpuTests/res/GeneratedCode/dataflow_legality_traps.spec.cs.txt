@@ -188,7 +188,7 @@ public partial class CfgGeneratedOverrides {
             DX = UInt16[CS, SI + 0x2C];
             Stack.Push16(AX);
             Stack.Push16(DX);
-            CX = Stack.Pop16();
+            Stack.Release(1);
             word3 = Stack.Pop16();
             UInt16[DS, BX + 0x1E] = word3;
             EDI = 0;

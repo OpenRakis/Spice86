@@ -19,6 +19,8 @@ using System.Linq;
 /// register version it defines has no live use. A use that only carries the bytes a later partial
 /// definition overwrites anyway does not keep the write alive. Entry statements and statements with
 /// unknown-like effects are never touched.
+/// A pop into a dead general register keeps its stack read, its access check and its SP step: only
+/// the dead register write goes, replaced by the bare pop statement.
 /// </summary>
 internal static class IrDeadRegisterWrites {
     /// <summary>Removes the dead plain register writes of <paramref name="method"/>.</summary>
@@ -27,7 +29,7 @@ internal static class IrDeadRegisterWrites {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, List<IrOrigins.Located>> byOrigin = IrOrigins.ByOrigin(method);
         HashSet<IrBlock> observed = ObservingBlocks(method);
-        List<(IrBlock Block, int Index)> removals = [];
+        List<(IrBlock Block, int Index, IrStatement? Replacement)> edits = [];
         foreach (IrBlock block in method.Blocks) {
             if (!observed.Contains(block)) {
                 continue;
@@ -36,14 +38,59 @@ internal static class IrDeadRegisterWrites {
                 IrStatement statement = block.Statements[index];
                 if (Drops(statement, entryNodes, ssa)
                     && OriginIsJustTheWrite(byOrigin[statement.Origin], statement)) {
-                    removals.Add((block, index));
+                    edits.Add((block, index, null));
+                    continue;
+                }
+                if (DeadPopTarget(statement, entryNodes, ssa) is { } barePop) {
+                    edits.Add((block, index,
+                        IrStatement.Create(barePop, statement.Origin)));
                 }
             }
         }
-        foreach ((IrBlock block, int index) in removals.OrderByDescending(removal => removal.Index)) {
-            editor.Remove(block, index);
+        foreach ((IrBlock block, int index, IrStatement? replacement)
+            in edits.OrderByDescending(edit => edit.Index)) {
+            if (replacement is null) {
+                editor.Remove(block, index);
+                continue;
+            }
+            editor.Replace(block, index, replacement);
         }
     }
+
+    /// <summary>The bare pop a dead register pop becomes: a statement
+    /// <c>R = Stack.Pop16()</c> / <c>Pop32()</c> whose target is a general register other than SP/ESP
+    /// and whose every defined version of that register has no live use, or <see langword="null"/>
+    /// when the pop's target is still observed. The stack read, the access check and the SP step
+    /// stay; only the dead register write goes.</summary>
+    private static StackCallNode? DeadPopTarget(IrStatement statement, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa) {
+        if (entryNodes.Contains(statement.Origin)
+            || statement.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: RegisterNode register,
+                Right: StackCallValueNode { Operation: StackOperation.Pop } pop }) {
+            return null;
+        }
+        if (IsStackPointerOrNotGeneral(register)) {
+            return null;
+        }
+        CpuValues target = IrValueSets.Of(register);
+        foreach ((IrSsaValue value, int version) in ssa.Definitions(statement)) {
+            if ((IrSsaValues.MaskOf(value) & target) == CpuValues.None) {
+                continue;
+            }
+            if (value > IrSsaValue.Gs || DefinedVersionsAreUsed(ssa, statement, value, version)) {
+                return null;
+            }
+        }
+        return new StackCallNode(StackOperation.Pop, pop.Width);
+    }
+
+    private static bool IsStackPointerOrNotGeneral(RegisterNode register) =>
+        register is SegmentRegisterNode
+        // UINT8 index 4 is AH, not SP; only word/dword index-4 stores are stack writes.
+        || (register.DataType != DataType.UINT8
+            && register.RegisterIndex == (int)RegisterIndex.SpIndex);
 
     /// <summary>The blocks that can reach an exit observing machine state or a
     /// statement or terminator that may fault. A fault observes the CPU state even

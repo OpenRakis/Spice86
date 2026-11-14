@@ -92,9 +92,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0183_01853() {
         CheckExternalEvents(cs1, 0x0183);
-        Stack.Push16(BX);
-        Stack.Push16(CX);
-        Stack.Push16(DX);
+        Stack.Save(BX, CX, DX);
         CX = 0;
         BX = 0x000A;
         do {
@@ -112,9 +110,7 @@ public partial class CfgGeneratedOverrides {
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
             CX--;
         } while (CX != 0);
-        DX = Stack.Pop16();
-        CX = Stack.Pop16();
-        BX = Stack.Pop16();
+        (DX, CX, BX) = Stack.Restore3();
         return NearRet();
     }
 
