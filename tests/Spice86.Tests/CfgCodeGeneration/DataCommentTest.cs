@@ -46,20 +46,21 @@ public class DataCommentTest {
             ServiceStringArgument.None, null, []);
 
     private static CfgBlock[] SplitAfterInterrupt(TestInstructionHelper helper,
-        (ushort Offset, byte[] Bytes)[] instructions, bool withDosStub) {
+        (ushort Offset, byte[] Bytes)[] instructions) {
         CfgInstruction[] parsed = instructions
             .Select(instruction => Parse(helper, instruction.Offset, instruction.Bytes))
             .ToArray();
         Chain(parsed);
         int interrupt = Array.FindIndex(instructions, instruction => instruction.Bytes[0] == 0xCD);
-        if (withDosStub && interrupt >= 0) {
-            // The only observed target of the int site is the installed DOS stub.
+        if (interrupt >= 0) {
+            // The int site needs an observed target to stay an InterruptCall: the stub, installed
+            // as the vector's handler only when the test sets up service contracts.
             CfgInstruction stub = Parse(helper, DosStub.Offset, [0xCF]);
             parsed[interrupt].SuccessorsPerType[InstructionSuccessorType.Normal] =
                 new HashSet<ICfgNode> { stub };
             parsed = [.. parsed, stub];
         }
-        if (interrupt < 0 || interrupt + 1 == parsed.Length - (withDosStub ? 1 : 0)) {
+        if (interrupt < 0 || interrupt + 1 == parsed.Length - 1) {
             return [Block(1, parsed)];
         }
         // A call's continuation is a CallToReturn edge, not a Normal one.
@@ -82,8 +83,7 @@ public class DataCommentTest {
             (0x0003, [0x8E, 0xD6]),         // mov ss, si
             .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
         ];
-        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), rebased,
-            dosContracts is not null);
+        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), rebased);
         CfgCodePartition partition = new() {
             Id = 1,
             Kind = CfgCodePartitionKind.Observed,

@@ -171,6 +171,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
 
     public IVisitableAstNode VisitInterruptCallNode(InterruptCallNode node) {
         CallContinuation continuation = Context.ResolveCallContinuation(node.Instruction);
+        if (!HardwareInterruptEffectBuilder.TransferTargets(node.Instruction).Any()) {
+            return UntestedMessages.Interrupt(node.Instruction.Address);
+        }
         SegmentedAddress expectedReturn = continuation.ExpectedReturnAddress;
         ExplicitCastNode vector = new(DataType.UINT8, node.VectorNumber);
         (InterruptSiteKind kind, InterruptServiceVector? service) =
@@ -225,9 +228,6 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
         List<SegmentedAddress> targets = HardwareInterruptEffectBuilder
             .TransferTargets(node.Instruction).Select(target => target.Address).ToList();
-        if (targets.Count == 0) {
-            return (InterruptSiteKind.NotObserved, null);
-        }
         return ClassifyObservedSite(Context.Program.Inputs.HardwareInterrupts, vectorNumber, targets);
     }
 

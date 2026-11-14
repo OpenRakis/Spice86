@@ -43,8 +43,7 @@ public partial class CfgGeneratedOverrides {
         }
         VerifySpeculativeRunOrFail(cs1, 0x0124, SpeculativeRun_0124);
         AX = 0x4C02;
-        InterruptCall(cs1, 0x0129, 0x21);
-        throw FailAsUntested("Untested return from call at 0160:0127");
+        throw FailAsUntested("Untested interrupt at 0160:0127");
     L_011F:
         AX = 0x4C01;
         InterruptCall(cs1, 0x0124, 0x21);
@@ -70,38 +69,35 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
-        while (true) {
-            CheckExternalEvents(biosSegment, 0x0096);
-            Alu8.Sub(AH, 7);
-            if (AH == 7) {
-                break;
-            }
+        CheckExternalEvents(biosSegment, 0x0096);
+        Alu8.Sub(AH, 7);
+        if (AH != 7) {
             Alu8.Sub(AH, 8);
-            if (AH == 8) {
-                break;
+            if (AH != 8) {
+                Alu8.Sub(AH, 0x0A);
+                if (AH == 0x0A) {
+                    goto L_00AA;
+                }
+                // INT 21h: Dos services selected by AH
+                if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
+                    return InterruptRet();
+                }
+                if (CS != cs2 || IP != 0x0100) {
+                    throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
+                }
+                CS = cs2;
+                AX = 0xB800;
+                ES = 0xB800;
+                DI = 0;
+                AX = 0x0731;
+                SegmentB800Globals.Word0000 = 0x0731;
+                DI = (ushort)(DirectionFlag ? -2 : 2);
+                AX = 0x4C00;
+                InterruptCall(cs2, 0x0112, 0x21);
+                throw FailAsUntested("Untested return from call at 016C:0110");
             }
-            Alu8.Sub(AH, 0x0A);
-            if (AH == 0x0A) {
-                break;
-            }
-            // INT 21h: Dos services selected by AH
-            if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
-                return InterruptRet();
-            }
-            if (CS != cs2 || IP != 0x0100) {
-                throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
-            }
-            CS = cs2;
-            AX = 0xB800;
-            ES = 0xB800;
-            DI = 0;
-            AX = 0x0731;
-            SegmentB800Globals.Word0000 = 0x0731;
-            DI = (ushort)(DirectionFlag ? -2 : 2);
-            AX = 0x4C00;
-            InterruptCall(cs2, 0x0112, 0x21);
-            throw FailAsUntested("Untested return from call at 016C:0110");
         }
+    L_00AA:
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
         // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
@@ -114,8 +110,7 @@ public partial class CfgGeneratedOverrides {
             return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
-        InterruptCall(biosSegment, 0x00B9, 0x28);
-        throw FailAsUntested("Untested return from call at F000:00B7");
+        throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
 }
@@ -298,7 +293,6 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_010F = [Signature_010F_cmp, Signature_0111_ja];
     private static readonly byte?[][] SpeculativeRun_0119 = [Signature_0119_cmp, Signature_011B_je];
     private static readonly byte?[][] SpeculativeRun_0124 = [Signature_0124_mov, Signature_0127_int];
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
 
 }
 
@@ -316,7 +310,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: all. Does not return.</summary>
     public virtual Action unknown_F000_0006_F0006() {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
@@ -329,15 +323,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
         Stack.Push16(DX);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
-        InterruptCall(biosSegment, 0x000F, 0x1C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
-        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
-        Callback(biosSegment, 0x000F, 0x0101);
-        VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
-        DX = Stack.Pop16();
-        AX = Stack.Pop16();
-        DS = Stack.Pop16();
-        return InterruptRet();
+        throw FailAsUntested("Untested interrupt at F000:000D");
     }
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>

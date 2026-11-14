@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
@@ -216,11 +217,16 @@ public class CfgCSharpGeneratorLocationsTest {
         // Arrange: an AX-selected service (selector 0) whose result target is AX itself.
         // Checking the selector before the result overlap would resolve the value AX holds
         // after the call to the selector constant 0.
-        IrMethod method = Lift(Linear(new TestInstructionHelper(),
-            (0x0000, [0xCD, 0x33]),       // int 0x33
-            (0x0002, [0x8E, 0xD8]),       // mov ds, ax
-            (0x0004, [0xA1, 0x20, 0x00]), // mov ax, [0x0020]
-            (0x0007, [0xC3])));           // ret
+        TestInstructionHelper helper = new();
+        CfgInstruction int33 = Parse(helper, 0x0000, 0xCD, 0x33);
+        CfgInstruction movDs = Parse(helper, 0x0002, 0x8E, 0xD8);
+        CfgInstruction movAx = Parse(helper, 0x0004, 0xA1, 0x20, 0x00);
+        CfgInstruction ret = Parse(helper, 0x0007, 0xC3);
+        Chain(int33, movDs, movAx, ret);
+        // The site needs an observed target to stay an InterruptCall.
+        CfgInstruction stub = Parse(helper, 0x9000, 0xCF);
+        int33.SuccessorsPerType[InstructionSuccessorType.Normal].Add(stub);
+        IrMethod method = Lift(Block(1, int33, movDs, movAx, ret), Block(2, stub));
         InterruptServiceEntry entry = new(0x00, "ResetMouseDriver",
             new ServiceContract(
                 new CallEffect(CpuValues.Ax | CpuValues.Ss | CpuValues.Sp, CpuValues.Ax),

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: BX, DS, flags, DF. Outputs: AX, BX, DS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_E342_EBE0_F2000() {
         CheckExternalEvents(cs1, 0xEBE0);
         DsGlobals.Byte0001 = 1;
@@ -38,7 +38,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: all.</summary>
+    /// <summary>Inputs: AX, BX, DS. Outputs: AX, CX, BX, DS. Changes: all.</summary>
     public virtual Action unknown_F000_3001_F3001() {
         CheckExternalEvents(biosSegment, 0x3001);
         DsGlobals.Byte0005 = 5;
@@ -59,7 +59,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: BX. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DX = 0;
@@ -101,11 +101,12 @@ public partial class CfgGeneratedOverrides {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x400C);
         DsGlobals.Word0010 = 0x5000;
-        if (!OverflowFlag) {
+        if (OverflowFlag) {
+            throw FailAsUntested("Untested interrupt at F000:4012");
+        }
+        else {
             return unknown_F000_4013_F4013();
         }
-        InterruptCall(biosSegment, 0x4013, 4);
-        throw FailAsUntested("Untested return from call at F000:4012");
     }
 
 }

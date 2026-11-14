@@ -114,8 +114,8 @@ public sealed class GeneratedCodeMachineTest {
                         programStartAddress) {
                 }
 
-                public override ushort unknown_F000_00B5_F00B5(ushort ax, ushort bx) =>
-                    base.unknown_F000_00B5_F00B5(ax, bx);
+                public override ushort unknown_F000_00BE_F00BE(ushort ax, ushort bx) =>
+                    base.unknown_F000_00BE_F00BE(ax, bx);
             }
             """];
         using CompiledGeneratedOverride compiled =
@@ -193,8 +193,8 @@ public sealed class GeneratedCodeMachineTest {
         machine.Stack.Push16(0x1234);
         machine.CpuState.AX = 3;
         machine.CpuState.BX = 5;
-        MethodInfo method = overridesType.GetMethod("unknown_F000_00B5_F00B5")
-            ?? throw new InvalidOperationException("unknown_F000_00B5_F00B5 method missing");
+        MethodInfo method = overridesType.GetMethod("unknown_F000_00BE_F00BE")
+            ?? throw new InvalidOperationException("unknown_F000_00BE_F00BE method missing");
         return (machine, overrides, method);
     }
 
@@ -295,6 +295,34 @@ public sealed class GeneratedCodeMachineTest {
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*F000:0043*");
+    }
+
+    /// <summary>The int 60h of cc_register_leaf's c7_error arm was never delivered during discovery, so
+    /// it fails as untested at the int instead of running whatever its vector points at. Writing 0x0200
+    /// to the word c7_guard reads (physical 0x20056, always 0 during discovery) makes the run take the
+    /// error arm.</summary>
+    [Fact]
+    public void UnreachedInterruptFailsAsUntested() {
+        AsmFixture fixture = AsmFixtureCatalog.Partition("cc_register_leaf");
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // The observed run keeps [56h] at 0, so c7_guard returns without reaching the int.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // Seeding [56h] with 0x0200 makes c7_guard take its error arm and execute the int 60h
+        // discovery never delivered.
+        AsmRunSettings errorPathSettings = fixture.Settings with {
+            ConfigureMachine = machine => machine.Memory.UInt16[0x20056] = 0x0200
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(errorPathSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Untested interrupt at F000:00ED*");
     }
 
     /// <summary>A CPU fault whose handler irets to an address discovery did not observe that fault

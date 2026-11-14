@@ -305,9 +305,14 @@ public sealed class IrInterruptServiceCallsTest {
         CallNodes(methods).OfType<InterruptServiceCallNode>().Should().ContainSingle(
             "only the recorded stub-only site binds the implementation")
             .Which.Service.Implementation?.Name.Should().Be(nameof(DosInt21Handler.ReadDosVersion));
-        CallNodes(methods).OfType<InterruptCallHelperNode>().Should().ContainSingle(
-            "the speculative site itself stays generic")
-            .Which.Kind.Should().Be(InterruptSiteKind.NotObserved);
+        CallNodes(methods).OfType<InterruptCallHelperNode>().Should().BeEmpty(
+            "the never-executed site has no call to keep generic");
+        methods.SelectMany(method => method.Blocks).Select(block => block.Terminator)
+            .OfType<IrExit>().Where(exit => exit.Transfer is FailAsUntestedNode)
+            .Should().ContainSingle("the speculative site itself fails as untested")
+            .Which.Transfer.Should().BeOfType<FailAsUntestedNode>().Which.Parts
+            .Should().Equal(new FailAsUntestedNode(
+                [UntestedMessagePart.Literal("Untested interrupt at F000:0006")]).Parts);
     }
 
     /// <summary>A site that observed both the stub and a custom target keeps the whole vector

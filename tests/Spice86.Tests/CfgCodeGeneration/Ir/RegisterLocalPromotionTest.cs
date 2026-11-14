@@ -88,12 +88,14 @@ public sealed class RegisterLocalPromotionTest {
         CfgInstruction nop = Parse(helper, 0x000A, 0x90);
         CfgInstruction endRet = Parse(helper, 0x000B, 0xC3);
         Chain(load, movBx, movDx, interrupt, ret);
-        interrupt.SuccessorsPerType[InstructionSuccessorType.Normal] = new HashSet<ICfgNode>();
+        // The site needs an observed target to stay an InterruptCall.
+        CfgInstruction stub = Parse(helper, 0x9000, 0xCF);
+        interrupt.SuccessorsPerType[InstructionSuccessorType.Normal] = new HashSet<ICfgNode> { stub };
         interrupt.SuccessorsPerType[InstructionSuccessorType.CallToReturn] =
             new HashSet<ICfgNode> { ret };
         Chain(nop, endRet);
         CfgBlock main = Block(1, load, movBx, movDx, interrupt, ret);
-        CfgBlock second = Block(2, nop, endRet);
+        CfgBlock second = Block(2, nop, endRet, stub);
         CfgCodePartitionEntry[] entries = [
             .. SingleEntry(main),
             new CfgCodePartitionEntry { Node = nop, Kind = CfgCodePartitionEntryKind.FunctionEntry }

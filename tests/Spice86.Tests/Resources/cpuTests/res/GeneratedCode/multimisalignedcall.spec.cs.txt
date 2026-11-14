@@ -67,17 +67,17 @@ public partial class CfgGeneratedOverrides {
             if (CS == biosSegment && IP == 0x001B) {
                 goto L_001B;
             }
-            if (CS == biosSegment && IP == 0x0022) {
-                break;
-            }
             else {
-                throw FailAsUntested("Redirected return target not observed at F000:0010");
+                break;
             }
         L_0014:
             Segment0000Globals.Byte0010 = 0xAA;
             continue;
         L_001B:
             Segment0000Globals.Byte0011 = 0xBB;
+        }
+        if (CS != biosSegment || IP != 0x0022) {
+            throw FailAsUntested("Redirected return target not observed at F000:0010");
         }
         Segment0000Globals.Byte0012 = 0xCC;
         return Hlt();

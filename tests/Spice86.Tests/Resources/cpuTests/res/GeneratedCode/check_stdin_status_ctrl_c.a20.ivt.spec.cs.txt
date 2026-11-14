@@ -347,8 +347,7 @@ public partial class CfgGeneratedOverrides {
             return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
-        InterruptCall(biosSegment, 0x00B9, 0x28);
-        throw FailAsUntested("Untested return from call at F000:00B7");
+        throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>

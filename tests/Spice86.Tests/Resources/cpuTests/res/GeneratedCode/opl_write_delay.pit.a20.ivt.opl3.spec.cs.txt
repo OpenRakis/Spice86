@@ -380,7 +380,6 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0160 = [Signature_0160_mov, Signature_0162_out];
     private static readonly byte?[][] SpeculativeRun_0163 = [Signature_0163_mov, Signature_0166_mov, Signature_0168_out];
     private static readonly byte?[][] SpeculativeRun_0169 = [Signature_0169_mov, Signature_016C_call];
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
 
 }
 
@@ -407,7 +406,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: all. Does not return.</summary>
     public virtual Action unknown_F000_0006_F0006() {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
@@ -420,15 +419,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
         Stack.Push16(DX);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
-        InterruptCall(biosSegment, 0x000F, 0x1C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
-        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
-        Callback(biosSegment, 0x000F, 0x0101);
-        VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
-        DX = Stack.Pop16();
-        AX = Stack.Pop16();
-        DS = Stack.Pop16();
-        return InterruptRet();
+        throw FailAsUntested("Untested interrupt at F000:000D");
     }
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>

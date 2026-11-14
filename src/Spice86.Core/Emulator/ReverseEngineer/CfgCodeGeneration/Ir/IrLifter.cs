@@ -79,7 +79,7 @@ internal sealed class IrLifter(
             lifted.LocalSuffixes[instruction] = method.GetLocalSuffix(instruction);
         }
         foreach (IrBlock block in lifted.Blocks) {
-            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode }) {
+            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode and not FailAsUntestedNode }) {
                 continue;
             }
             foreach (ICfgNode successor in block.Terminator.Origin.Successors) {

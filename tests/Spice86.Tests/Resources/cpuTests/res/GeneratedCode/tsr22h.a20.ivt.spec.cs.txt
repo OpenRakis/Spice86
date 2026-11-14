@@ -12,10 +12,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, PF, AF, ZF, SF, OF, DF. Outputs: none. Changes: EAX, CX, DX, EBX, SI, DI, ES, DS, CF, DF.</summary>
+    /// <summary>Inputs: EAX, EDX, EBX, DF. Outputs: none. Changes: EAX, CX, DX, EBX, SI, DI, ES, DS, CF, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1;
+        ushort blockSegment;
         ushort word2 = 0;
         ushort word3 = 0;
         ushort index = 0;
@@ -26,22 +27,20 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(CS);
         word1 = Stack.Pop16();
         DS = word1;
-        ES = word1;
+        blockSegment = word1;
         SS = word1;
         SP = 0x03D4;
-        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0112, Dos, () => Dos.ModifyMemory(ES, 0x003E), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, BX, CarryFlag) = ServiceCall(cs1, 0x0112, Dos, () => Dos.ModifyMemory(blockSegment, 0x003E), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x019D, SpeculativeRun_019D);
             AX = 0x4C01;
-            InterruptCall(cs1, 0x01A2, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:01A0");
+            throw FailAsUntested("Untested interrupt at 016D:01A0");
         }
         (word2, BX, CarryFlag) = ServiceCall(cs1, 0x011D, Dos, () => Dos.AllocateMemory(0x0013), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A2, SpeculativeRun_01A2);
             AX = 0x4C02;
-            InterruptCall(cs1, 0x01A7, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:01A5");
+            throw FailAsUntested("Untested interrupt at 016D:01A5");
         }
         ImageMinus0003Globals.Word03D4 = word2;
         DX = word2;
@@ -51,8 +50,7 @@ public partial class CfgGeneratedOverrides {
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A7, SpeculativeRun_01A7);
             AX = 0x4C03;
-            InterruptCall(cs1, 0x01AC, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:01AA");
+            throw FailAsUntested("Untested interrupt at 016D:01AA");
         }
         Stack.Push16(DS);
         word3 = ImageMinus0003Globals.Word03D4;
@@ -105,8 +103,7 @@ public partial class CfgGeneratedOverrides {
         if (AL != 0xAA) {
             VerifySpeculativeRunOrFail(cs1, 0x0193, SpeculativeRun_0193);
             AX = 0x4C06;
-            InterruptCall(cs1, 0x0198, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:0196");
+            throw FailAsUntested("Untested interrupt at 016D:0196");
         }
         BX = CS;
         AH = 0x50;
@@ -118,8 +115,7 @@ public partial class CfgGeneratedOverrides {
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0198, SpeculativeRun_0198);
             AX = 0x4C05;
-            InterruptCall(cs1, 0x019D, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:019B");
+            throw FailAsUntested("Untested interrupt at 016D:019B");
         }
         AX = 0x4C00;
         InterruptCall(cs1, 0x0193, 0x21);
@@ -407,7 +403,6 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_019D = [Signature_019D_mov, Signature_01A0_int];
     private static readonly byte?[][] SpeculativeRun_01A2 = [Signature_01A2_mov, Signature_01A5_int];
     private static readonly byte?[][] SpeculativeRun_01A7 = [Signature_01A7_mov, Signature_01AA_int];
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
@@ -426,7 +421,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: all. Does not return.</summary>
     public virtual Action unknown_F000_0006_F0006() {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
@@ -439,15 +434,7 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
         Stack.Push16(DX);
         VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
-        InterruptCall(biosSegment, 0x000F, 0x1C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
-        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
-        Callback(biosSegment, 0x000F, 0x0101);
-        VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
-        DX = Stack.Pop16();
-        AX = Stack.Pop16();
-        DS = Stack.Pop16();
-        return InterruptRet();
+        throw FailAsUntested("Untested interrupt at F000:000D");
     }
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
@@ -575,8 +562,7 @@ public partial class CfgGeneratedOverrides {
             return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
-        InterruptCall(biosSegment, 0x00B9, 0x28);
-        throw FailAsUntested("Untested return from call at F000:00B7");
+        throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>

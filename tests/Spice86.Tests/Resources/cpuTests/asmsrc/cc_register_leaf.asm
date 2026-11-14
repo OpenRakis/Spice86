@@ -2,9 +2,9 @@
 ; Sections for register-only calling conventions: a leaf add called twice with different
 ; inputs (C1), a DOS-style status returned in CF and tested with jc / jnc (C2), a 32-bit
 ; product returned in DX:AX (C3), a far pointer returned in ES:BX (C4), callee-saved
-; SI / DI (C5) and a dead CX the caller overwrites next to a BP the callee never touches
-; (C6).
-; DS = SS = 2000h, SP = 1000h. Results go to offsets 40h-51h (physical 20040h-20051h);
+; SI / DI (C5), a dead CX the caller overwrites next to a BP the callee never touches
+; (C6) and a guard whose error-path int discovery never delivers (C7).
+; DS = SS = 2000h, SP = 1000h. Results go to offsets 40h-53h (physical 20040h-20053h);
 ; the byte C4 reads sits at 2000:0100h and its decoy at 1000:0100h.
 use16
 start:
@@ -95,6 +95,15 @@ c2_second_done:
     mov cx, 5555h
     mov [50h], bp
 
+; C7: c7_outer calls c7_guard, which reads only AX. When AX >= 100h (never during the run: the
+; word at 56h is never written, so it is 0) c7_guard executes int 60h on an error path discovery
+; never runs.
+; Catches: the never-delivered int counted as reading every register, which widens the inputs of
+; c7_guard and c7_outer.
+    mov ax, [56h]
+    call c7_outer
+    mov [52h], ax
+
     mov word [ss:600h], sp
     mov word [ss:602h], ss
     hlt
@@ -129,6 +138,20 @@ c5_saved:
 c6_dead:
     mov cx, 9999h
     ret
+
+c7_outer:
+    call c7_guard
+    add ax, ax
+    ret
+
+c7_guard:
+    cmp ax, 100h
+    jae c7_error
+    inc ax
+    ret
+c7_error:
+    int 60h
+    hlt
 
 rb 65520-$
     jmp start

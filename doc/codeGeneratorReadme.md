@@ -267,7 +267,7 @@ Every jump/call/return in the original assembly becomes a "resolved CFG edge" - 
 | Cross-partition | `return OtherMethod(0x0000);` (`return OtherMethod();` for a single-entry callee) |
 | Cyclic cross-partition flow | `if (JumpDispatcher.Jump(Entry(unknown_F000_0025_F0025), 0x0000)) { loadOffset = JumpDispatcher.NextEntryAddress; goto entrydispatcher; }` then `return JumpDispatcher.RequiredJumpAsmReturn;` |
 | Near/far call | `NearCall(cs1, 0x00CC, Entry(unknown_F000_0200_F0200));` / `FarCall(cs1, 0x000D, cs2, Entry(unknown_F100_0000_F1000));` plus the observed post-call continuation |
-| `int` to a program handler | `InterruptCall(biosSegment, 0x0141, 0x60, biosSegment, 0x0169, Entry(unknown_F000_0169_F0169));` when the `int`'s only observed target is a program partition entry (the helper checks the live IVT entry still points there); any other `int` prints `InterruptCall(cs, ip, vector)` or the returned-elsewhere dispatch |
+| `int` to a program handler | `InterruptCall(biosSegment, 0x0141, 0x60, biosSegment, 0x0169, Entry(unknown_F000_0169_F0169));` when the `int`'s only observed target is a program partition entry (the helper checks the live IVT entry still points there); any other `int` prints `InterruptCall(cs, ip, vector)` or the returned-elsewhere dispatch; an `int` discovery never delivered fails as untested (`throw FailAsUntested("Untested interrupt at <address>")`) instead of emitting a call |
 | Return | `return NearRet();` when the `ret` has no operand, `return NearRet(0x000A);` when it has one, `return FarRet();` for `retf` |
 
 ### The IR

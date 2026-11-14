@@ -50,17 +50,13 @@ public partial class CfgGeneratedOverrides {
         while (true) {
             CheckExternalEvents(biosSegment, 0x000D);
             NearCall(biosSegment, 0x0010, () => unknown_F000_0017_F0017(DS));
-            if (SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_nop)) {
-                goto L_0010_32;
-            }
-            if (SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_hlt)) {
+            if (!SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_nop)) {
                 break;
             }
-            else {
-                throw FailAsUntested("Untested code variant at F000:0010");
-            }
-        L_0010_32:
             DsGlobals.Byte0045 += 1;
+        }
+        if (!SelectorSignatureMatches(biosSegment, 0x0010, Signature_0010_hlt)) {
+            throw FailAsUntested("Untested code variant at F000:0010");
         }
         return Hlt();
     }
