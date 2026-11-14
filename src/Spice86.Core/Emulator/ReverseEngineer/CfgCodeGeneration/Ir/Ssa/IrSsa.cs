@@ -190,6 +190,17 @@ internal sealed class IrSsa {
     }
 
     /// <summary>
+    /// The version method entry defines for <paramref name="value"/> at
+    /// <paramref name="entryBlock"/>: the value the caller passed. Unlike
+    /// <see cref="VersionBefore"/> at index 0 of the entry block, a loop-head phi does not
+    /// stand in for it.
+    /// </summary>
+    public int MethodEntryVersion(IrBlock entryBlock, IrSsaValue value) {
+        ThrowIfStale();
+        return _methodEntryByBlock[entryBlock][(int)value];
+    }
+
+    /// <summary>
     /// The version of <paramref name="value"/> after the statement at <paramref name="statementIndex"/>
     /// in <paramref name="block"/> ran. An index of <c>block.Statements.Count</c> means after the
     /// terminator.

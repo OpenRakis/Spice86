@@ -114,8 +114,8 @@ public sealed class GeneratedCodeMachineTest {
                         programStartAddress) {
                 }
 
-                public override ushort unknown_F000_00BE_F00BE(ushort ax, ushort bx) =>
-                    base.unknown_F000_00BE_F00BE(ax, bx);
+                public override ushort unknown_F000_00E1_F00E1(ushort ax, ushort bx) =>
+                    base.unknown_F000_00E1_F00E1(ax, bx);
             }
             """];
         using CompiledGeneratedOverride compiled =
@@ -193,8 +193,8 @@ public sealed class GeneratedCodeMachineTest {
         machine.Stack.Push16(0x1234);
         machine.CpuState.AX = 3;
         machine.CpuState.BX = 5;
-        MethodInfo method = overridesType.GetMethod("unknown_F000_00BE_F00BE")
-            ?? throw new InvalidOperationException("unknown_F000_00BE_F00BE method missing");
+        MethodInfo method = overridesType.GetMethod("unknown_F000_00E1_F00E1")
+            ?? throw new InvalidOperationException("unknown_F000_00E1_F00E1 method missing");
         return (machine, overrides, method);
     }
 
@@ -322,7 +322,7 @@ public sealed class GeneratedCodeMachineTest {
 
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
-            .WithMessage("*Untested interrupt at F000:00ED*");
+            .WithMessage("*Untested interrupt at F000:0110*");
     }
 
     /// <summary>A CPU fault whose handler irets to an address discovery did not observe that fault

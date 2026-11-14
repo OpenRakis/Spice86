@@ -298,7 +298,7 @@ internal sealed class TypedSignatures {
         }
         int[] entryVersions = new int[(int)IrSsaValue.Count];
         foreach (IrSsaValue value in parameterByValue.Keys) {
-            entryVersions[(int)value] = ssa.VersionBefore(signature.EntryBlock, 0, value);
+            entryVersions[(int)value] = ssa.MethodEntryVersion(signature.EntryBlock, value);
         }
         HashSet<IVisitableAstNode> targets = new(ReferenceEqualityComparer.Instance);
         foreach (IrBlock block in method.Blocks) {

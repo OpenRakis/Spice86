@@ -104,6 +104,19 @@ c2_second_done:
     call c7_outer
     mov [52h], ax
 
+; C8: c8_sum's first instruction is its loop head: it adds the words at SI to AX, counting
+; down a memory counter. Called with AX = 0, SI = 60h, words 1, 2, 3 and the counter 3.
+; Catches: a loop-head read of AX or SI printed as the method's parameter, which re-reads the
+; caller's value in every iteration (sum 1 instead of 6).
+    mov word [60h], 1
+    mov word [62h], 2
+    mov word [64h], 3
+    mov word [58h], 3
+    xor ax, ax
+    mov si, 60h
+    call c8_sum
+    mov [54h], ax
+
     mov word [ss:600h], sp
     mov word [ss:602h], ss
     hlt
@@ -152,6 +165,13 @@ c7_guard:
 c7_error:
     int 60h
     hlt
+
+c8_sum:
+    add ax, [si]
+    add si, 2
+    dec word [58h]
+    jnz c8_sum
+    ret
 
 rb 65520-$
     jmp start
