@@ -329,6 +329,9 @@ internal sealed class IrSsa {
         return _definitionSiteByVersion.GetValueOrDefault(version);
     }
 
+    /// <summary>The phi whose result is <paramref name="version"/>, or <c>null</c>.</summary>
+    internal IrSsaPhi? PhiDefining(int version) => _phiByResultId.GetValueOrDefault(version);
+
     /// <summary>The phis at the top of <paramref name="block"/>.</summary>
     public IReadOnlyList<IrSsaPhi> PhisOf(IrBlock block) {
         ThrowIfStale();

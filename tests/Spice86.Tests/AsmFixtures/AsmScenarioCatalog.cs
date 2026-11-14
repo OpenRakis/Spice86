@@ -587,6 +587,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("cc_call_shapes"),
             PartitionScenario("cc_calls_keep_stack_offset"),
             PartitionScenario("cc_stack_offset_joins"),
+            PartitionScenario("cc_untyped_call_passthrough"),
             PartitionScenario("dataflow_stack_save_restore"),
             PartitionScenario("dataflow_flag_definitions"),
             PartitionScenario("dataflow_partial_registers"),

@@ -721,6 +721,15 @@ internal static class AsmFixtureCatalog {
                     result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
                     result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
                 });
+            case "cc_untyped_call_passthrough":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.Memory.UInt16[0x2000, 0x40].Should().Be(0x000C,
+                        $"{binName}: the handler's sum reaches the caller through the untyped call");
+                    result.Memory.UInt16[0x2000, 0x42].Should().Be(0x0018,
+                        $"{binName}: the typed method doubles it into CX");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                });
             case "dataflow_stack_save_restore":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x1234), (0x02, 2, 0x3000), (0x04, 2, 0x0002), (0x06, 2, 0x0103), (0x08, 2, 0x0100),

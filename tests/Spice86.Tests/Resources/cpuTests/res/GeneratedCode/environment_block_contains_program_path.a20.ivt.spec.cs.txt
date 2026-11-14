@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_0112 = 0;
         byte flagOperand_0119 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DirectionFlag) = NearCall(cs1, 0x0103, () => unknown_016D_013C_0180C(EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DirectionFlag));
+        EDI = NearCall(cs1, 0x0103, () => unknown_016D_013C_0180C());
         flagOperand_0103 = UInt16[ES, DI];
         Alu16.Sub(flagOperand_0103, 1);
         if (flagOperand_0103 != 1) {
@@ -67,18 +67,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, uint result6, uint result7, ushort result8, ushort result9, ushort result10, ushort result11, bool result12) unknown_016D_013C_0180C(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, uint dword6, uint dword7, ushort word1, ushort word2, ushort word3, bool flag1) {
-        EAX = dword1;
-        ECX = dword2;
-        EDX = dword3;
-        EBX = dword4;
-        EBP = dword5;
-        ESI = dword6;
-        EDI = dword7;
-        DS = word1;
-        FS = word2;
-        GS = word3;
-        DirectionFlag = flag1;
+    public virtual uint unknown_016D_013C_0180C() {
         CheckExternalEvents(cs1, 0x013C);
         NearCall(cs1, 0x013F, unknown_016D_012B_017FBEntry);
         DI = 0;
@@ -91,11 +80,11 @@ public partial class CfgGeneratedOverrides {
         }
         DI = Alu16.Add(DI, 2);
         NearReturn();
-        return (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DirectionFlag);
+        return EDI;
     }
 
     public virtual Action unknown_016D_013C_0180C_Asm() {
-        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DirectionFlag) = unknown_016D_013C_0180C(EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DirectionFlag);
+        EDI = unknown_016D_013C_0180C();
         return Returned;
     }
 

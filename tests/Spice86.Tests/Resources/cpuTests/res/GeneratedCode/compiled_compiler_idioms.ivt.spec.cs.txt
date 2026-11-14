@@ -16,42 +16,41 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017D_0010_017E0(ushort word1, ushort word2, ushort word3) {
-        DX = word1;
-        BX = word2;
-        DS = word3;
-        ushort word4;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017D_0010_017E0(ushort word1) {
+        DS = word1;
+        ushort word2;
         ushort index = 0;
-        ushort word5 = 0;
+        ushort word3 = 0;
+        ushort word6;
         uint dword1 = 0;
         CheckExternalEvents(cs1, 0x0010);
         Stack.Push16(AX);
         AX = 0x000E;
         NearCall(cs1, 0x0017, unknown_017D_00E5_018B5Entry);
-        word4 = Stack.Pop16();
+        word2 = Stack.Pop16();
         Stack.Push16(BX);
         Stack.Push16(CX);
         Stack.Push16(SI);
         Stack.Push16(DI);
         Stack.Push16(BP);
         index = SP;
-        Stack.Push16(word4);
-        word5 = DX;
+        Stack.Push16(word2);
+        word3 = DX;
         dword1 = 0;
         BX = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0028);
-            Alu16.Sub(BX, word5);
-            if (BX >= word5) {
+            Alu16.Sub(BX, word3);
+            if (BX >= word3) {
                 break;
             }
             SI = (ushort)((BX & 3) << 1);
             SI += SsUInt16[index - 2];
-            CX = UInt16[word3, SI];
+            CX = UInt16[word1, SI];
             SI = 0;
             uint dxAx_003A = dword1 << 1;
-            DX = (ushort)(dxAx_003A >> 16);
-            dword1 = (uint)(((uint)(ushort)((ushort)dword1 << 1) | (uint)DX << 16) + (uint)CX);
+            word6 = (ushort)(dxAx_003A >> 16);
+            dword1 = (uint)(((uint)(ushort)((ushort)dword1 << 1) | (uint)word6 << 16) + (uint)CX);
             BX++;
         }
         SP = index;
@@ -67,23 +66,22 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_017D_0010_017E0_Asm() {
-        (AX, CX, DX, BX, BP) = unknown_017D_0010_017E0(DX, BX, DS);
+        (AX, CX, DX, BX, BP) = unknown_017D_0010_017E0(DS);
         return Returned;
     }
 
     /// <summary>Inputs: AX, DX, DS. Outputs: AX. Changes: AX, DX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_017D_004E_0181E(ushort word1, ushort word2) {
-        DX = word1;
-        DS = word2;
+    public virtual ushort unknown_017D_004E_0181E() {
+        ushort word1;
         CheckExternalEvents(cs1, 0x004E);
         Stack.Push16(AX);
         AX = 4;
         NearCall(cs1, 0x0055, unknown_017D_00E5_018B5Entry);
         AX = Stack.Pop16();
         Stack.Push16(DX);
-        DX = (ushort)((short)AX >> 15);
-        AX = Alu16.Sub(AX, DX);
+        word1 = (ushort)((short)AX >> 15);
+        AX = Alu16.Sub(AX, word1);
         AX = Alu16.Sar(AX, 1);
         DX = Stack.Pop16();
         NearReturn();
@@ -91,7 +89,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_017D_004E_0181E_Asm() {
-        AX = unknown_017D_004E_0181E(DX, DS);
+        AX = unknown_017D_004E_0181E();
         return Returned;
     }
 
@@ -127,7 +125,7 @@ public partial class CfgGeneratedOverrides {
             }
             DX = AX;
             AX = 0x0084;
-            (AX, CX, DX, BX, BP) = NearCall(cs1, 0x0095, () => unknown_017D_0010_017E0(DX, BX, DS));
+            (AX, CX, DX, BX, BP) = NearCall(cs1, 0x0095, () => unknown_017D_0010_017E0(DS));
             word2 = AX;
             SI = DX;
             if (BX != 0) {
@@ -151,7 +149,7 @@ public partial class CfgGeneratedOverrides {
             }
             Stack.Push16(word4);
             AX = (ushort)-CX;
-            AX = NearCall(cs1, 0x00BE, () => unknown_017D_004E_0181E(DX, DS));
+            AX = NearCall(cs1, 0x00BE, () => unknown_017D_004E_0181E());
             Stack.Push16(AX);
             AX = word2;
             DX = SI;
@@ -3894,7 +3892,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_2136;
             }
         }
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, DX, DI, DS, count));
+        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, DX, DS));
         NearCall(cs1, 0x2133, unknown_017D_2280_03A50Entry);
         DsGlobals.Word030A = AX;
     L_2136:
@@ -4792,12 +4790,10 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: BX, flags. Changes: AX, CX, BX, SI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_017D_209C_0386C(ushort word1, ushort word2, ushort word3, ushort word4, bool flag1) {
+    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_017D_209C_0386C(ushort word1, ushort word2, ushort word3) {
         AX = word1;
         DX = word2;
-        DI = word3;
-        DS = word4;
-        DirectionFlag = flag1;
+        DS = word3;
         ushort index = 0;
         ushort flagOperand_20A5 = 0;
         CheckExternalEvents(cs1, 0x209C);
@@ -4838,7 +4834,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_017D_209C_0386C_Asm() {
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017D_209C_0386C(AX, DX, DI, DS, DirectionFlag);
+        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017D_209C_0386C(AX, DX, DS);
         return Returned;
     }
 

@@ -28,6 +28,11 @@ using System.Runtime.CompilerServices;
 /// <see cref="IrCallingConventions"/>; the IR and its effects do not change. The emitted body
 /// assigns each parameter to its register before anything else, so callers that are not
 /// generated code (hand-written C#, a subclass) enter with any argument values.
+/// <para>A second pass over the typed set then drops the parameters and outputs that only pass
+/// through an untyped call: a register or flag the body merely feeds to such a call stays a
+/// machine input, and an output only such a call defines stays machine state the caller reads
+/// back. The convention sets do not change, so the call summary still reads every input and
+/// writes every change.</para>
 /// </summary>
 internal sealed class TypedSignatures {
     private readonly Dictionary<string, TypedSignature> _byMethodName;
@@ -75,8 +80,40 @@ internal sealed class TypedSignatures {
             .ToDictionary(pair => pair.MethodName,
                 pair => pair.Signature ?? throw new InvalidOperationException("SignatureOf gave no signature."));
         TypedSignatures signatures = new(byName);
+        signatures.RefineSignatures(methods, conventions);
         signatures.AssignNames(methods);
         return signatures;
+    }
+
+    /// <summary>Second pass over the typed methods, with the pass-1 set known: an input the body
+    /// only feeds to an untyped call, and an output only an untyped call writes, stay machine
+    /// state instead of becoming a parameter or a tuple element. The convention sets do not
+    /// change: the call summary still reads every input and writes every change.</summary>
+    private void RefineSignatures(IReadOnlyList<PreparedMethod> methods,
+        IrCallingConventions conventions) {
+        foreach (PreparedMethod source in methods) {
+            if (!_byMethodName.TryGetValue(source.Method.MethodName,
+                    out TypedSignature? signature)) {
+                continue;
+            }
+            CfgCodePartitionEntry entry = source.Method.Entries[0];
+            IrEntry irEntry = source.IrMethod.Entries
+                .Single(methodEntry => methodEntry.Node.Equals(entry.Node));
+            CpuValues inputs = conventions.EffectOf(entry).Reads;
+            CpuValues outputs = conventions.OutputsOf(entry);
+            Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
+            _byMethodName[source.Method.MethodName] = new TypedSignature {
+                Parameters = GenericNames(CpuValueParameters.Decompose(
+                    inputs & ~MachineInputs(source, irEntry, inputs, IsTypedCall)),
+                    nameCounters),
+                Outputs = GenericNames(CpuValueParameters.Decompose(
+                    outputs & ~MachineOutputs(source, outputs)),
+                    nameCounters),
+                Distance = signature.Distance,
+                PoppedBytes = signature.PoppedBytes,
+                EntryBlock = signature.EntryBlock
+            };
+        }
     }
 
     /// <summary>The G4.2 names of every typed signature, iterated to a fixed point because a
@@ -160,19 +197,29 @@ internal sealed class TypedSignatures {
         return RoleNames.RoleName(roots, value, null, isSegment, origins);
     }
 
-    /// <summary>The input bytes whose register the method only saves and carries or merges into
-    /// versions it again only saves: a general or segment register is a machine input when the
-    /// worklist over its entry version's uses meets only save pushes
-    /// (<see cref="IrPreservation.IsPushOf"/>), event checks, phis and partial definitions that do
-    /// not read its bytes - the bytes a pop restore writes end the carried value. A machine input
-    /// stays in the convention's inputs, so the typed call reads it from the machine and the body
-    /// reads the machine register wherever it reads that version; only the parameter and its
-    /// copy-in line go. A terminator, exit or other statement read disqualifies; flags never
-    /// qualify.</summary>
-    private static CpuValues MachineInputs(PreparedMethod source, IrEntry irEntry, CpuValues inputs) {
+    /// <summary>Whether <paramref name="statement"/> contains a call the typed-call check refuses:
+    /// an untyped callee reads live machine state, so a version that only feeds such a call stays a
+    /// machine value.</summary>
+    private static bool HasUntypedCall(IrStatement statement,
+        Func<ProcedureCallHelperNode, bool> isTypedCall) =>
+        IrAstChildren.Descendants(statement.Node).OfType<ProcedureCallHelperNode>()
+            .Any(node => !isTypedCall(node));
+
+    /// <summary>The input bytes whose value the method only saves, merges, or feeds an untyped
+    /// call: a general or segment register is a machine input when the worklist over its entry
+    /// version's uses meets only save pushes (<see cref="IrPreservation.IsPushOf"/>), event
+    /// checks, untyped-call reads (<see cref="HasUntypedCall"/>), phis and partial definitions
+    /// that do not read its bytes - the bytes a pop restore writes end the carried value. A flag
+    /// qualifies the same way except that only untyped-call reads, event checks and phis are
+    /// ignored: a flag save is a real read. A machine input stays in the convention's inputs, so
+    /// the typed call reads it from the machine and the body reads the machine register wherever
+    /// it reads that version; only the parameter and its copy-in line go. A terminator, exit or
+    /// other statement read disqualifies.</summary>
+    private static CpuValues MachineInputs(PreparedMethod source, IrEntry irEntry, CpuValues inputs,
+        Func<ProcedureCallHelperNode, bool> isTypedCall) {
         CpuValues machine = CpuValues.None;
-        foreach (IrSsaValue value in Enum.GetValues<IrSsaValue>()
-                .Where(value => value <= IrSsaValue.Gs)) {
+        foreach (IrSsaValue value in Enum.GetValues<IrSsaValue>()) {
+            bool register = value <= IrSsaValue.Gs;
             CpuValues bytes0 = IrSsaValues.MaskOf(value) & inputs;
             if (bytes0 == CpuValues.None) {
                 continue;
@@ -196,10 +243,13 @@ internal sealed class TypedSignatures {
                         break;
                     }
                     if (statement.Node is CheckExternalEventsNode
-                        || IrPreservation.IsPushOf(statement, value, out _)) {
+                        || HasUntypedCall(statement, isTypedCall)) {
                         continue;
                     }
-                    if (use.ConditionalNewVersion >= 0
+                    if (register && IrPreservation.IsPushOf(statement, value, out _)) {
+                        continue;
+                    }
+                    if (register && use.ConditionalNewVersion >= 0
                         && (statement.Effects.Reads & bytes) == CpuValues.None) {
                         CpuValues carried = bytes & ~statement.Effects.MustWrite;
                         if (carried != CpuValues.None) {
@@ -216,6 +266,52 @@ internal sealed class TypedSignatures {
             }
         }
         return machine;
+    }
+
+    /// <summary>The output bytes whose version at every return exit is defined by an untyped call
+    /// (or by a phi whose operands all are): the caller reads them back from the machine register,
+    /// which the typed body writes anyway, so no tuple element is needed.</summary>
+    private CpuValues MachineOutputs(PreparedMethod source, CpuValues outputs) {
+        List<IrBlock> returnExits = [.. source.IrMethod.Blocks.Where(block =>
+            block.Terminator is IrExit exit
+            && IrAstChildren.Descendants(exit.Transfer).OfType<ProcedureReturnHelperNode>().Any())];
+        CpuValues machine = CpuValues.None;
+        if (returnExits.Count == 0) {
+            return machine;
+        }
+        foreach (IrSsaValue value in Enum.GetValues<IrSsaValue>()) {
+            CpuValues bytes = IrSsaValues.MaskOf(value) & outputs;
+            if (bytes == CpuValues.None) {
+                continue;
+            }
+            if (returnExits.All(block => DefinedByUntypedCall(source,
+                    source.Ssa.VersionBefore(block, block.Statements.Count, value)))) {
+                machine |= bytes;
+            }
+        }
+        return machine;
+    }
+
+    private bool DefinedByUntypedCall(PreparedMethod source, int version) {
+        HashSet<int> visited = [];
+        Queue<int> worklist = new([version]);
+        while (worklist.Count > 0) {
+            int current = worklist.Dequeue();
+            if (!visited.Add(current)) {
+                continue;
+            }
+            if (source.Ssa.PhiDefining(current) is { } phi) {
+                foreach ((_, int operand) in phi.Operands) {
+                    worklist.Enqueue(operand);
+                }
+                continue;
+            }
+            if (source.Ssa.DefiningStatement(current) is not { } statement
+                || !HasUntypedCall(statement, IsTypedCall)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static TypedSignature? SignatureOf(PreparedMethod source,
@@ -250,7 +346,8 @@ internal sealed class TypedSignatures {
         Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
         return new TypedSignature {
             Parameters = GenericNames(
-                CpuValueParameters.Decompose(inputs & ~MachineInputs(source, irEntry, inputs)),
+                CpuValueParameters.Decompose(inputs & ~MachineInputs(source, irEntry, inputs,
+                    _ => true)),
                 nameCounters),
             Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
             Distance = distance,
