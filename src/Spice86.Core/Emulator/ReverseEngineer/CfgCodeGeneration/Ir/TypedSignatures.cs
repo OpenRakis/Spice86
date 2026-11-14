@@ -294,7 +294,9 @@ internal sealed class TypedSignatures {
     /// parameters: for each statement, each <see cref="RegisterNode"/> / <see cref="SegmentRegisterNode"/>
     /// / single-flag <see cref="CpuFlagNode"/> occurrence whose used version is the entry version,
     /// keyed by node reference. An assignment target is never substituted: shared node objects can
-    /// sit on both sides of <c>X = X op y</c>, so the write stays on the register.
+    /// sit on both sides of <c>X = X op y</c>, so the write stays on the register. An ALU operand
+    /// that reads the same register bytes as the target operand of the same call keeps the register
+    /// too, so <c>X = op(X, X)</c> prints both operands alike.
     /// </summary>
     public IReadOnlyDictionary<IVisitableAstNode, string> BuildParameterReads(IrMethod method,
         IrSsa ssa, TypedSignature signature) {
@@ -375,8 +377,10 @@ internal sealed class TypedSignatures {
     private static void CollectReads(IVisitableAstNode root,
         Dictionary<IVisitableAstNode, string> table, HashSet<IVisitableAstNode> targets,
         Dictionary<IrSsaValue, TypedParameter> parameterByValue, int[] entryVersions, int[] usedVersions) {
+        HashSet<IVisitableAstNode> keptRegisters = KeptTwinOperands(root, targets);
         foreach (IVisitableAstNode node in IrAstChildren.Descendants(root)) {
             if (targets.Contains(node) || table.ContainsKey(node)
+                || keptRegisters.Contains(node)
                 || ValueOf(node) is not { } value
                 || !parameterByValue.TryGetValue(value, out TypedParameter? parameter)) {
                 continue;
@@ -389,6 +393,38 @@ internal sealed class TypedSignatures {
                 table[node] = text;
             }
         }
+    }
+
+    /// <summary>The register operands of <paramref name="root"/>'s ALU calls that keep the register
+    /// print: when one argument of an <see cref="AluCallValueNode"/> is the assignment-target
+    /// instance itself, every other argument reading the same register bytes is the twin operand of
+    /// <c>X = op(X, X)</c> and is not substituted.</summary>
+    private static HashSet<IVisitableAstNode> KeptTwinOperands(IVisitableAstNode root,
+        HashSet<IVisitableAstNode> targets) {
+        HashSet<IVisitableAstNode> kept = new(ReferenceEqualityComparer.Instance);
+        foreach (IVisitableAstNode node in IrAstChildren.Descendants(root)) {
+            IReadOnlyList<IVisitableAstNode>? arguments = node switch {
+                AluOperationNode alu => alu.Call.CallNode.Arguments,
+                AluStatementNode aluStatement => aluStatement.Call.Arguments,
+                AluCallValueNode call => call.CallNode.Arguments,
+                _ => null
+            };
+            if (arguments is null) {
+                continue;
+            }
+            foreach (IVisitableAstNode argument in arguments) {
+                if (argument is not RegisterNode register || !targets.Contains(argument)) {
+                    continue;
+                }
+                foreach (IVisitableAstNode other in arguments) {
+                    if (!ReferenceEquals(other, argument) && other is RegisterNode otherRegister
+                        && IrValueSets.Of(otherRegister) == IrValueSets.Of(register)) {
+                        kept.Add(other);
+                    }
+                }
+            }
+        }
+        return kept;
     }
 
     /// <summary>The parameter text a read of <paramref name="node"/> substitutes with: the parameter

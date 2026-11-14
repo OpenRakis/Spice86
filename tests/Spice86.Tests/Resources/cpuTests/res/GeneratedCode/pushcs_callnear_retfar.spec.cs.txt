@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F100_0008_F1008(ushort word1) {
         BX = word1;
         CheckExternalEvents(cs1, 0x0008);
-        BX = Alu16.Xor(BX, word1);
+        BX = Alu16.Xor(BX, BX);
         FarReturn();
         return;
     }

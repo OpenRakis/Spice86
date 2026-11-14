@@ -1307,7 +1307,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested interrupt at 017D:0849");
         }
         VerifySpeculativeRunOrFail(cs1, 0x0844, SpeculativeRun_0844);
-        AX = Alu16.Xor(AX, word1);
+        AX = Alu16.Xor(AX, AX);
         NearReturn();
         return;
     }
@@ -4285,7 +4285,7 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         CheckExternalEvents(cs1, 0x1E92);
         VerifySpeculativeRunOrFail(cs1, 0x1E92, SpeculativeRun_1E92);
-        AX = Alu16.Xor(AX, word1);
+        AX = Alu16.Xor(AX, AX);
         NearReturn();
         return;
     }
@@ -4651,7 +4651,7 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = count;
         CheckExternalEvents(cs1, 0x2084);
         Stack.Save(word3, word2);
-        DX = Alu16.Xor(DX, word2);
+        DX = Alu16.Xor(DX, DX);
         DsGlobals.Word0350 = 0;
         DsGlobals.Word030A = 0;
         AX = 0x0390;
@@ -4815,7 +4815,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(BX);
         if (AX >= DsGlobals.Word0320) {
             VerifySpeculativeRunOrFail(cs1, 0x21A7, SpeculativeRun_21A7);
-            AX = Alu16.Xor(AX, word1);
+            AX = Alu16.Xor(AX, AX);
             BX = Stack.Pop16();
             NearReturn();
             return AL;
