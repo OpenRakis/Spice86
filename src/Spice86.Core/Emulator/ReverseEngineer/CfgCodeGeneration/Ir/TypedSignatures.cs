@@ -68,10 +68,9 @@ internal sealed class TypedSignatures {
     /// one entry that returns, every exit a <c>ret</c> / <c>retf</c> of the same distance and popped
     /// byte count or an abort, no <c>int</c> or callback, and at least one input or output.</summary>
     public static TypedSignatures Compute(IReadOnlyList<PreparedMethod> methods,
-        IrCallingConventions conventions, CfgGeneratorContext context,
-        HardwareInterruptEffectBuilder effectBuilder) {
+        IrCallingConventions conventions) {
         Dictionary<string, TypedSignature> byName = methods
-            .Select(source => (source.Method.MethodName, Signature: SignatureOf(source, conventions, context, effectBuilder)))
+            .Select(source => (source.Method.MethodName, Signature: SignatureOf(source, conventions)))
             .Where(pair => pair.Signature is not null)
             .ToDictionary(pair => pair.MethodName,
                 pair => pair.Signature ?? throw new InvalidOperationException("SignatureOf gave no signature."));
@@ -162,8 +161,7 @@ internal sealed class TypedSignatures {
     }
 
     private static TypedSignature? SignatureOf(PreparedMethod source,
-        IrCallingConventions conventions, CfgGeneratorContext context,
-        HardwareInterruptEffectBuilder effectBuilder) {
+        IrCallingConventions conventions) {
         MethodPlan plan = source.Method;
         if (plan.Entries.Count != 1) {
             return null;
@@ -186,8 +184,9 @@ internal sealed class TypedSignatures {
         }
         IrEntry irEntry = method.Entries
             .Single(methodEntry => methodEntry.Node.Equals(entry.Node));
-        if (!ReturnsToCaller(method, source.Ssa, irEntry, distance, plan.MethodName, conventions,
-                effectBuilder)) {
+        IrCallingConventions.CalleeReturnEffect? proved =
+            conventions.ReturnsToCallerOf(plan.MethodName);
+        if (proved is null || proved.Distance != distance || proved.PoppedBytes != poppedBytes) {
             return null;
         }
         Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
@@ -213,63 +212,6 @@ internal sealed class TypedSignatures {
         }
         return named;
     }
-
-    /// <summary>Whether <paramref name="method"/> structurally returns to its caller: every return
-    /// exit reads the stacked return address the caller pushed. Holds when SP at the exit is at
-    /// entry delta 0 (the <see cref="IrFrames.EntryDelta(IrStackOffset)"/> rule, followed only
-    /// through statements that write neither SP nor SS) or the exit block's epilogue is
-    /// <see cref="IrFrameEpilogueKind.MoveSpPopBp"/> / <see cref="IrFrameEpilogueKind.Leave"/> of a
-    /// recognized standard frame (the epilogue itself restores SP to entry delta 0), and no proved
-    /// frame access writes the return frame <c>[0, r)</c> (the method's own return address, saved
-    /// CS or saved FLAGS). A callee that rewrote its return slot or returns with the stack at
-    /// another level is not typed: the typed-call check would fail where an untyped call unwinds.
-    /// </summary>
-    private static bool ReturnsToCaller(IrMethod method, IrSsa ssa, IrEntry entry,
-        CallDistance distance, string methodName, IrCallingConventions conventions,
-        HardwareInterruptEffectBuilder effectBuilder) {
-        IrStackSlots slots = conventions.SlotsOf(methodName);
-        // IrStackSlots.Empty means the method holds no push / pop / peek node: SP then stays at its
-        // entry delta unless a statement writes SP / SS by another route (for example mov sp,ax).
-        bool writesStack = method.Blocks.SelectMany(block => block.Statements).Any(statement =>
-            ((statement.Effects.MustWrite | statement.Effects.MayWrite)
-                & (CpuValues.Esp | CpuValues.Ss)) != CpuValues.None);
-        bool untracked = ReferenceEquals(slots, IrStackSlots.Empty);
-        if (untracked && writesStack) {
-            return false;
-        }
-        IrFrames frames = IrFrames.Compute(method, ssa, slots,
-            statement => {
-                if (statement.Origin is CfgInstruction instruction) {
-                    return effectBuilder.CallTargetWrites(instruction);
-                }
-                return CpuValues.Registers;
-            });
-        int returnBytes = distance == CallDistance.Near ? 2 : 4;
-        if (frames.Accesses.Any(access =>
-                access.IsWrite && access.EntryOffset >= 0 && access.EntryOffset < returnBytes)) {
-            return false;
-        }
-        IrFrame? frame = frames.FrameAt(entry);
-        foreach (IrBlock block in method.Blocks) {
-            if (block.Terminator is not IrExit exit || !IsReturnExit(exit)) {
-                continue;
-            }
-            if (untracked || frames.EntryDelta(slots.OffsetAtBlockEnd(block)) == 0) {
-                continue;
-            }
-            if (frame?.Epilogues.Any(epilogue => epilogue.Exit == exit
-                    && epilogue.Kind is IrFrameEpilogueKind.MoveSpPopBp
-                        or IrFrameEpilogueKind.Leave) == true) {
-                continue;
-            }
-            return false;
-        }
-        return true;
-    }
-
-    private static bool IsReturnExit(IrExit exit) =>
-        IrAstChildren.Descendants(exit.Transfer)
-            .OfType<ProcedureReturnHelperNode>().Any();
 
     /// <summary>Every exit of <paramref name="method"/> is a 16-bit <c>ret</c> / <c>retf</c> of the
     /// same distance popping the same byte count, or an abort (<c>FailAsUntested</c>, throw); at

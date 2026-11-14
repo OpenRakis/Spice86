@@ -101,7 +101,7 @@ internal sealed class StackArguments {
 
     /// <summary>Computes the plan of every method of the program, after the typed signatures.</summary>
     public static StackArguments Compute(IReadOnlyList<PreparedMethod> methods,
-        TypedSignatures signatures, IrCallingConventions conventions, CfgGeneratorContext context,
+        TypedSignatures signatures, CfgGeneratorContext context,
         HardwareInterruptEffectBuilder effectBuilder, ProgramImages images) {
         StackArguments arguments = new(context, effectBuilder, images);
         foreach (PreparedMethod prepared in methods) {
@@ -393,7 +393,8 @@ internal sealed class StackArguments {
             return frames;
         }
         IrMethod method = prepared.IrMethod;
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(prepared.Ssa, _context.Policy));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(prepared.Ssa, _context.Policy),
+            _ => null);
         frames = IrFrames.Compute(method, prepared.Ssa, slots, statement => {
             if (statement.Origin is CfgInstruction instruction) {
                 return _effectBuilder.CallTargetWrites(instruction);

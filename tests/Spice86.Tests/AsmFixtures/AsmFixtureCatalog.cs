@@ -690,6 +690,9 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x0A0A), (0x42, 2, 0x0B0B), (0x44, 2, 0xE1E1), (0x46, 2, 0xF1F1),
                     (0x48, 2, 0x0FFC), (0x4A, 2, 0xFFFF), (0x4C, 2, 0xA1A1), (0x4E, 2, 0xB1B1),
                     (0x50, 2, 0x0007), (0x52, 2, 0xA2A2), (0x54, 2, 0xB2B2)));
+            case "cc_calls_keep_stack_offset":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x44,
+                    (0x40, 2, 0x1234), (0x42, 2, 0x5678)));
             case "cc_call_shapes":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x59,
                     (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 2, 0xAAAA), (0x46, 2, 0xBBBB),

@@ -52,9 +52,15 @@ internal sealed class IrStackSlots {
     private readonly Dictionary<IrStackSlotDefinition, List<IrStackSlotRead>> _readsByDefinition = [];
 
     /// <summary>Runs the analysis on <paramref name="method"/>, using
-    /// <paramref name="alias"/> as the kill oracle.</summary>
-    public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias) {
-        IrStackSlots slots = new(alias);
+    /// <paramref name="alias"/> as the kill oracle and <paramref name="callPopCounts"/> as the
+    /// proved-callee map: for a resolved call whose callee is proved to return to its caller with
+    /// a <c>ret n</c>, it returns the popped byte count <c>n</c>, so the statement keeps the
+    /// offset's base advanced by <c>n</c> instead of rebasing (the callee may still write any
+    /// memory, so the slot contents are dropped like any full memory boundary). A caller without
+    /// that map passes a function returning <c>null</c>.</summary>
+    public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias,
+        Func<IrStatement, int?> callPopCounts) {
+        IrStackSlots slots = new(alias, callPopCounts);
         BlockGraph<IrBlock> graph = method.ToStructuringGraph();
         DepthFirstOrdering<IrBlock> traversal = new(
             [.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
@@ -70,12 +76,14 @@ internal sealed class IrStackSlots {
 
     /// <summary>The slots of a method that holds no stack node at all: no read is ever recorded.
     /// </summary>
-    internal static readonly IrStackSlots Empty = new(null);
+    internal static readonly IrStackSlots Empty = new(null, null);
 
     private readonly IrMemoryAliasAnalysis? _alias;
+    private readonly Func<IrStatement, int?>? _callPopCounts;
 
-    private IrStackSlots(IrMemoryAliasAnalysis? alias) {
+    private IrStackSlots(IrMemoryAliasAnalysis? alias, Func<IrStatement, int?>? callPopCounts) {
         _alias = alias;
+        _callPopCounts = callPopCounts;
     }
 
     /// <summary>The SP offset before <paramref name="statement"/>, null when the analysis has not
@@ -142,6 +150,16 @@ internal sealed class IrStackSlots {
     private IrStackState TransferredState(IrBlock block, int index, IrStatement statement,
         IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         if (alias.IsFullMemoryBoundary(block, index)) {
+            if (_callPopCounts?.Invoke(statement) is { } pop) {
+                // A call proved to return to its caller with "ret n": the return address the call
+                // pushed and the callee popped cancel out, so SP advances by n on the same base.
+                // The slot contents are still dropped - the callee may write any memory.
+                IrStackOffset offset = state.Offset;
+                if (offset.Kind == IrStackOffsetKind.Known) {
+                    offset = IrStackOffset.Known(offset.Base, offset.Delta + pop);
+                }
+                return TrackBp(statement, IrStackState.OfOffset(offset));
+            }
             return IrStackState.Rebase(statement);
         }
         return ApplyStatement(block, index, statement, state, record, alias);

@@ -182,7 +182,7 @@ public class CfgCSharpGeneratorLocationsTest {
             (0x0010, [0xC3])));           // ret
         IrSsa ssa = IrPassPipeline.Run(method, IrPass.Constants, verify: true).Ssa
             ?? throw new InvalidOperationException("The pipeline built no SSA.");
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa), _ => null);
         List<(IrBlock Block, int Index, SegmentedPointerNode Pointer)> reads = method.Blocks
             .SelectMany(block => block.Statements.SelectMany((statement, index) =>
                 IrAstChildren.Descendants(statement.Node).OfType<SegmentedPointerNode>()
@@ -243,7 +243,7 @@ public class CfgCSharpGeneratorLocationsTest {
         IrEditor.WithoutSsa.Replace(block, callIndex, IrStatement.Create(callNode,
             block.Statements[callIndex].Origin));
         IrSsa ssa = IrSsa.Build(method);
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa), _ => null);
         IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());
 
         // Act: DS after `mov ds, ax` follows the call-defined AX version.

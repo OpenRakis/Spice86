@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
@@ -12,6 +13,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using System.Diagnostics.CodeAnalysis;
@@ -77,10 +80,15 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly List<MethodData> _methods = [];
     private readonly bool _observed;
+    private readonly HardwareInterruptEffectBuilder _effectBuilder;
+    private readonly Dictionary<string, CalleeReturnEffect> _provedReturns = new(
+        StringComparer.Ordinal);
 
-    private IrCallingConventions(CfgGeneratorContext context, bool observed) {
+    private IrCallingConventions(CfgGeneratorContext context, bool observed,
+        HardwareInterruptEffectBuilder effectBuilder) {
         _context = context;
         _observed = observed;
+        _effectBuilder = effectBuilder;
         foreach (CfgCodePartition partition in context.Program.Partitions) {
             foreach (CfgCodePartitionEntry entry in partition.Entries) {
                 _entryByNode[entry.Node] = entry;
@@ -101,11 +109,13 @@ internal sealed class IrCallingConventions {
     /// demand (what generated code reads after a call) drives the printed conventions and the
     /// typed signatures.</summary>
     public static IrCallingConventions Compute(IReadOnlyList<PreparedMethod> methods,
-        CfgGeneratorContext context, bool observed, Action<int> roundStarted) {
-        IrCallingConventions conventions = new(context, observed);
+        CfgGeneratorContext context, bool observed, Action<int> roundStarted,
+        HardwareInterruptEffectBuilder effectBuilder) {
+        IrCallingConventions conventions = new(context, observed, effectBuilder);
         conventions.Preprocess(methods);
         conventions.SeedUnknownWays();
         conventions.Iterate(roundStarted);
+        conventions.ProveReturnsToCaller();
         return conventions;
     }
 
@@ -366,6 +376,179 @@ internal sealed class IrCallingConventions {
         return IrStackSlots.Empty;
     }
 
+    /// <summary>The proved return shape of <paramref name="methodName"/>: the distance and the
+    /// popped byte count of its <c>ret</c> when the method is proved to return to its caller, or
+    /// <c>null</c> otherwise. The single owner of the "returns to its caller with <c>ret n</c>"
+    /// fact: <see cref="TypedSignatures"/> gates typed signatures on it and
+    /// <see cref="IrStackSlots"/> advances the offset by the pop count at a proved call.</summary>
+    internal CalleeReturnEffect? ReturnsToCallerOf(string methodName) =>
+        _provedReturns.TryGetValue(methodName, out CalleeReturnEffect? effect) ? effect : null;
+
+    /// <summary>The fact a resolved call consumes: <paramref name="methodName"/> returns to its
+    /// caller at <paramref name="distance"/> popping <paramref name="poppedBytes"/> bytes beyond
+    /// the return address.</summary>
+    internal sealed record CalleeReturnEffect(CallDistance Distance, int PoppedBytes);
+
+    /// <summary>The least fixed point of decision 3: start with no callee proved, prove every
+    /// method that structurally returns to its caller under the current slot map, recompute the
+    /// slots of every method so proved callees advance their callers' offsets, and stop when no
+    /// method newly proves. Recursive cycles stay unproved, which is sound: proving only adds
+    /// information, so the map can only grow. Throws when it has not converged after 8 rounds.</summary>
+    private void ProveReturnsToCaller() {
+        for (int round = 0; ; round++) {
+            bool changed = false;
+            foreach (MethodData method in _methods) {
+                string name = method.Source.Method.MethodName;
+                if (!_provedReturns.ContainsKey(name) && TryProveReturn(method) is { } effect) {
+                    _provedReturns[name] = effect;
+                    changed = true;
+                }
+            }
+            if (!changed) {
+                return;
+            }
+            if (round >= 7) {
+                throw new InvalidOperationException("Returns-to-caller proof did not converge.");
+            }
+            foreach (MethodData method in _methods) {
+                RefreshSlots(method);
+            }
+        }
+    }
+
+    /// <summary>Recomputes <paramref name="method"/>'s slot map under the current proved set and
+    /// the preservation derived from it.</summary>
+    private void RefreshSlots(MethodData method) {
+        IrStackSlots slots = IrStackSlots.Empty;
+        if (NeedsStackSlots(method.Source.IrMethod)) {
+            slots = IrStackSlots.Compute(method.Source.IrMethod,
+                new IrMemoryAliasAnalysis(method.Ssa, method.Source.EntryFacts, _context.Policy),
+                statement => CallPopCount(method, statement));
+        }
+        method.Slots = slots;
+        method.Preservation = CreatePreservation(method.Source, slots);
+    }
+
+    /// <summary>The pop count the call <paramref name="statement"/> of <paramref name="caller"/>
+    /// leaves SP advanced by: a resolved call with exactly one observed target entry, an observed
+    /// continuation and no redirected return, whose target method's only entry is that target and
+    /// is proved to return to its caller with a <c>ret n</c> of the call's distance.
+    /// <c>null</c> for any other statement.</summary>
+    private int? CallPopCount(MethodData caller, IrStatement statement) {
+        if (!caller.CallByStatement.TryGetValue(statement, out CallSite? call)
+            || !call.Resolved || !call.ObservedContinuation || call.RedirectedReturn
+            || call.Targets.Count != 1) {
+            return null;
+        }
+        CfgCodePartitionEntry target = call.Targets[0];
+        if (!_methodByEntry.TryGetValue(target, out MethodData? callee)
+            || callee.Source.Method.Entries.Count != 1
+            || !ReferenceEquals(callee.Source.Method.Entries[0], target)
+            || !_provedReturns.TryGetValue(callee.Source.Method.MethodName,
+                out CalleeReturnEffect? effect)
+            || CallDistanceOf(statement) != effect.Distance) {
+            return null;
+        }
+        return effect.PoppedBytes;
+    }
+
+    /// <summary>The near/far distance of a call statement's call helper, or <c>null</c> when the
+    /// statement is no call.</summary>
+    private static CallDistance? CallDistanceOf(IrStatement statement) =>
+        IrAstChildren.Descendants(statement.Node).OfType<ProcedureCallHelperNode>()
+            .FirstOrDefault()?.Distance;
+
+    /// <summary>Whether <paramref name="data"/>'s method structurally returns to its caller: the
+    /// <see cref="TypedSignatures"/> return rule, moved here. Holds when every return exit reads
+    /// the stacked return address the caller pushed - SP at the exit at entry delta 0, or a
+    /// recognized standard epilogue restoring it - and no proved frame access writes the return
+    /// frame. The effect it returns is the uniform distance and pop count of the method's return
+    /// helpers; a method with no or mixed returns is not proved.</summary>
+    private CalleeReturnEffect? TryProveReturn(MethodData data) {
+        MethodPlan plan = data.Source.Method;
+        if (plan.Entries.Count != 1) {
+            return null;
+        }
+        IrMethod method = data.Source.IrMethod;
+        CallDistance distance = CallDistance.Near;
+        int poppedBytes = 0;
+        int returns = 0;
+        foreach (IrBlock block in method.Blocks) {
+            if (block.Terminator is not IrExit exit) {
+                continue;
+            }
+            foreach (ProcedureReturnHelperNode helper in IrAstChildren
+                    .Descendants(exit.Transfer).OfType<ProcedureReturnHelperNode>()) {
+                int popCount = PopCount(helper);
+                if (helper.Width != BitWidth.WORD_16 || popCount < 0
+                    || (returns > 0 && (helper.Distance != distance || popCount != poppedBytes))) {
+                    return null;
+                }
+                distance = helper.Distance;
+                poppedBytes = popCount;
+                returns++;
+            }
+        }
+        if (returns == 0) {
+            return null;
+        }
+        IrStackSlots slots = data.Slots;
+        bool writesStack = method.Blocks.SelectMany(block => block.Statements).Any(statement =>
+            ((statement.Effects.MustWrite | statement.Effects.MayWrite)
+                & (CpuValues.Esp | CpuValues.Ss)) != CpuValues.None);
+        bool untracked = ReferenceEquals(slots, IrStackSlots.Empty);
+        if (untracked && writesStack) {
+            return null;
+        }
+        IrFrames frames = IrFrames.Compute(method, data.Ssa, slots,
+            statement => statement.Origin is CfgInstruction instruction
+                ? _effectBuilder.CallTargetWrites(instruction)
+                : CpuValues.Registers);
+        int returnBytes = distance == CallDistance.Near ? 2 : 4;
+        if (frames.Accesses.Any(access =>
+                access.IsWrite && access.EntryOffset >= 0 && access.EntryOffset < returnBytes)) {
+            return null;
+        }
+        IrEntry irEntry = method.Entries
+            .Single(methodEntry => methodEntry.Node.Equals(plan.Entries[0].Node));
+        IrFrame? frame = frames.FrameAt(irEntry);
+        foreach (IrBlock block in method.Blocks) {
+            if (block.Terminator is not IrExit exit || !IsReturnHelperExit(exit)) {
+                continue;
+            }
+            if (untracked || frames.EntryDelta(slots.OffsetAtBlockEnd(block)) == 0) {
+                continue;
+            }
+            if (frame?.Epilogues.Any(epilogue => epilogue.Exit == exit
+                    && epilogue.Kind is IrFrameEpilogueKind.MoveSpPopBp
+                        or IrFrameEpilogueKind.Leave) == true) {
+                continue;
+            }
+            return null;
+        }
+        return new CalleeReturnEffect(distance, poppedBytes);
+    }
+
+    private static bool IsReturnHelperExit(IrExit exit) =>
+        IrAstChildren.Descendants(exit.Transfer)
+            .OfType<ProcedureReturnHelperNode>().Any();
+
+    private static int PopCount(ProcedureReturnHelperNode helper) => helper.Arguments switch {
+        [] => 0,
+        [IVisitableAstNode argument] => PopCountArgument(argument),
+        _ => -1
+    };
+
+    private static int PopCountArgument(IVisitableAstNode argument) {
+        while (argument is ExplicitCastNode cast) {
+            argument = cast.Value;
+        }
+        if (ConstantEvaluation.Resolved(argument) is not ConstantNode { Value: <= ushort.MaxValue } constant) {
+            return -1;
+        }
+        return (int)constant.Value;
+    }
+
     /// <summary>The names of a set, in report order (<c>AX, BX</c>, <c>flags</c> for the six status
     /// flags, <c>none</c>, <c>all</c>).</summary>
     internal static string Describe(CpuValues values) {
@@ -473,7 +656,7 @@ internal sealed class IrCallingConventions {
     private sealed class MethodData {
         public required PreparedMethod Source { get; init; }
         public required IrSsa Ssa { get; init; }
-        public required IrStackSlots Slots { get; init; }
+        public required IrStackSlots Slots { get; set; }
         public required List<EntrySite> Entries { get; init; }
         public required List<CallSite> Calls { get; init; }
         public required List<ExitSite> Exits { get; init; }
@@ -504,7 +687,8 @@ internal sealed class IrCallingConventions {
             IrStackSlots slots = IrStackSlots.Empty;
             if (NeedsStackSlots(source.IrMethod)) {
                 slots = IrStackSlots.Compute(source.IrMethod,
-                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts, _context.Policy));
+                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts, _context.Policy),
+                    _ => null);
             }
             _methodByName[source.Method.MethodName] = new MethodData {
                 Source = source,

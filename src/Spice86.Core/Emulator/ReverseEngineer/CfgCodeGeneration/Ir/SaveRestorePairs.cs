@@ -74,7 +74,7 @@ internal static class SaveRestorePairs {
             return SavedPairPlan.Empty;
         }
         IrMemoryAliasAnalysis alias = new(ssa, entryFacts, policy);
-        IrStackSlots slots = IrStackSlots.Compute(method, alias);
+        IrStackSlots slots = IrStackSlots.Compute(method, alias, _ => null);
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> dominators = DominatorTreeBuilder.BuildFromEntries(graph);
         List<IrBlock> exits = [.. graph.Blocks.Where(block => graph.GetSuccessors(block).Count == 0)];

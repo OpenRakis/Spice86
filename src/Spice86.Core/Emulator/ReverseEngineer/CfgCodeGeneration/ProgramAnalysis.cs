@@ -33,20 +33,20 @@ internal sealed record ProgramAnalysis(IrSegmentSummaries SegmentSummaries, IrCa
         IrSegmentSummaries summaries = IrSegmentSummaries.Compute(methods, context, effectBuilder);
         progress.Step(2, PartCount, "calling conventions");
         IrCallingConventions conventions = IrCallingConventions.Compute(methods, context, false,
-            round => progress.Step(2, PartCount, $"calling conventions, round {round}"));
+            round => progress.Step(2, PartCount, $"calling conventions, round {round}"), effectBuilder);
         progress.Detail($"Calling conventions fixed point finished in {conventions.Iterations} iterations");
         progress.Step(3, PartCount, "observed conventions");
         IrCallingConventions observed = IrCallingConventions.Compute(methods, context, true,
-            round => progress.Step(3, PartCount, $"observed conventions, round {round}"));
+            round => progress.Step(3, PartCount, $"observed conventions, round {round}"), effectBuilder);
         progress.Detail($"Observed conventions fixed point finished in {observed.Iterations} iterations");
         progress.Step(4, PartCount, "typed signatures");
-        TypedSignatures signatures = TypedSignatures.Compute(methods, conventions, context, effectBuilder);
+        TypedSignatures signatures = TypedSignatures.Compute(methods, conventions);
         progress.Step(5, PartCount, "globals classification");
         GlobalAccessClassification classes = GlobalAccessClassification.Build(
             methods.Select(method => (method.IrMethod, summaries.ValuesFor(method.Method), method.Ssa)),
             images);
         progress.Step(6, PartCount, "stack arguments");
-        StackArguments stackArguments = StackArguments.Compute(methods, signatures, conventions,
+        StackArguments stackArguments = StackArguments.Compute(methods, signatures,
             context, effectBuilder, images);
         return new ProgramAnalysis(summaries, conventions, observed, signatures, classes,
             stackArguments);
