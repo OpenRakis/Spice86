@@ -39,7 +39,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, ChangedMemoryMap? changedMemoryMap, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, ChangedMemoryMap changedMemoryMap, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _loggerState = loggerState;
         _state = state;

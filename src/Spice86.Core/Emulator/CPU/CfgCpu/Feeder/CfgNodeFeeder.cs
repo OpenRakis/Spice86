@@ -1,10 +1,10 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
-using Microsoft.Extensions.Logging;
-
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.LoadableFile;
@@ -29,7 +29,7 @@ public class CfgNodeFeeder {
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
-        bool enableSpeculativeExploration, ChangedMemoryMap? changedMemoryMap, ILogger? loggerService) {
+        bool enableSpeculativeExploration, ChangedMemoryMap changedMemoryMap, ILogger loggerService) {
         _state = state;
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,

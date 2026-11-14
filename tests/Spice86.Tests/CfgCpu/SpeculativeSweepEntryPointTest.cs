@@ -40,7 +40,7 @@ public sealed class SpeculativeSweepEntryPointTest : SpeculativeTestBase {
         EmulatorBreakpointsManager breakpointsManager = new(new PauseHandler(LoggerService), State, Memory,
             MemoryBreakpoints, new AddressReadWriteBreakpoints());
         return new CfgNodeFeeder(Memory, State, breakpointsManager, isolatedRegistry, Compiler, IdAllocator,
-            enableSpeculativeExploration: false, changedMemoryMap: null, LoggerService);
+            enableSpeculativeExploration: false, ChangedMemoryMap, LoggerService);
     }
 
     /// <summary>

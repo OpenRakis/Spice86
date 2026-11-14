@@ -69,14 +69,14 @@ public class SpeculativeExplorer {
     private readonly InstructionParser _instructionParser;
     private readonly CfgNodeIndex _nodeIndex;
     private readonly NodeLinker _nodeLinker;
-    private readonly ChangedMemoryMap? _changedMemoryMap;
-    private readonly ILogger? _loggerService;
+    private readonly ChangedMemoryMap _changedMemoryMap;
+    private readonly ILogger _loggerService;
     private readonly Dictionary<CfgInstruction, List<DiscoveryCandidate>> _pending = new();
     private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
-        ChangedMemoryMap? changedMemoryMap, ILogger? loggerService) {
+        ChangedMemoryMap changedMemoryMap, ILogger loggerService) {
         _memory = memory;
         _instructionParser = instructionParser;
         _nodeIndex = nodeIndex;
@@ -184,7 +184,7 @@ public class SpeculativeExplorer {
             return true;
         }
         if (_cappedSites.Add(site)) {
-            _loggerService?.LogDebug(
+            _loggerService.LogDebug(
                 "Discovery cap reached at {Address}: over {Max} distinct non-static targets for one site",
                 site.Address, MaxCandidatesPerSite);
         }
@@ -213,9 +213,6 @@ public class SpeculativeExplorer {
     /// with the bytes the CPU would execute.
     /// </summary>
     private bool BytesHoldLoadedValue(CfgInstruction candidate) {
-        if (_changedMemoryMap is null) {
-            return false;
-        }
         for (int i = 0; i < candidate.Length; i++) {
             uint physical = _memory.A20Gate.TransformAddress(
                 _memory.Mmu.TranslateAddress(candidate.Address.Segment, (uint)candidate.Address.Offset + (uint)i));

@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -41,7 +42,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
         Spice86.Core.Emulator.VM.PauseHandler pauseHandler = new(loggerService);
         CfgNodeFeeder feeder = new(Memory, State, new EmulatorBreakpointsManager(
             pauseHandler, State, Memory,
-            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, changedMemoryMap: null, loggerService);
+            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, new ChangedMemoryMap(Memory, memoryBreakpoints, new LoadedImageRegistry()), loggerService);
         ContextManager = new ExecutionContextManager(Memory, State, feeder, replacerRegistry,
             functionCatalogue, false, loggerService, loggerState, null);
     }

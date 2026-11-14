@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
@@ -55,7 +56,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, false, loggerService,
-            loggerState, executionCompiler, new SequentialIdAllocator(), changedMemoryMap: null);
+            loggerState, executionCompiler, new SequentialIdAllocator(), new ChangedMemoryMap(memory, memoryBreakpoints, new LoadedImageRegistry()));
     }
 
     public void RestoreMemoryAfterTest() {

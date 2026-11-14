@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
@@ -53,7 +54,7 @@ public class CfgNodeFeederTest : IDisposable {
         _compiler?.Dispose();
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
-            _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, changedMemoryMap: null, loggerService);
+            _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, new ChangedMemoryMap(_memory, memoryBreakpoints, new LoadedImageRegistry()), loggerService);
         ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, loggerState, null);
         ExecutionContext executionContext = executionContextManager.CurrentExecutionContext;
         return (cfgNodeFeeder, executionContext);
