@@ -38,9 +38,9 @@
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RegisterReads": 2387,
-      "RegisterWrites": 1295,
+      "RegisterWrites": 1485,
       "Statements": 3877,
-      "WriteBacks": 109
+      "WriteBacks": 110
     }
   },
   "support": {

@@ -92,7 +92,8 @@ public partial class CfgGeneratedOverrides {
             AX = Segment2000Globals.Word0E00;
             UInt16[DS, BX + 0x12] = AX;
             CX = UInt16[CS, SI];
-            word3 = CX;
+            Stack.Push16(CX);
+            word3 = Stack.Pop16();
             Stack.Push16(0x7777);
             word5 = word3;
             word6 = Stack.Pop16();

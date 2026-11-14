@@ -985,7 +985,9 @@ internal sealed class IrCallingConventions {
     private static bool NeedsStackSlots(IrMethod method) =>
         method.Blocks.SelectMany(block => block.Statements).Any(statement =>
             statement.Node is StackCallNode
-            || IrAstChildren.Descendants(statement.Node).OfType<StackCallValueNode>().Any());
+            || IrAstChildren.Descendants(statement.Node).OfType<StackCallValueNode>().Any()
+            || ((statement.Effects.MustWrite | statement.Effects.MayWrite)
+                & (CpuValues.Esp | CpuValues.Ss)) != CpuValues.None);
 
     /// <summary>The entries with a way in that no call site explains - the seeded unknown ways:
     /// the program entry, the execution context entries, and the target of every

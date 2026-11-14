@@ -75,7 +75,7 @@ public partial class CfgGeneratedOverrides {
         word4 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
         UInt16[DS, BX + 0x14] = word4;
         DirectionFlag = false;
-        (AX, BP, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_012D_F012D(AX, BP));
+        (AX, BP, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_012D_F012D());
         EsGlobals.Word0E30 = AX;
         word5 = 0x0E2E;
         UInt16[DS, BX + 0x16] = word5;
@@ -153,9 +153,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, BP. Outputs: AX, BP, DF. Changes: AX, CX, BP, DF.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, bool result3) unknown_F000_012D_F012D(ushort word1, ushort word2) {
-        AX = word1;
-        BP = word2;
+    public virtual (ushort result, ushort result2, bool result3) unknown_F000_012D_F012D() {
         CheckExternalEvents(biosSegment, 0x012D);
         DirectionFlag = true;
         NearReturn();
@@ -163,7 +161,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_012D_F012D_Asm() {
-        (AX, BP, DirectionFlag) = unknown_F000_012D_F012D(AX, BP);
+        (AX, BP, DirectionFlag) = unknown_F000_012D_F012D();
         return Returned;
     }
 

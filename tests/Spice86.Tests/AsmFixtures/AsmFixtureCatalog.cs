@@ -700,6 +700,27 @@ internal static class AsmFixtureCatalog {
                     (0x48, 2, 0x000A), (0x4A, 2, 0x3456), (0x4C, 2, 0x1234),
                     (0x4E, 2, 0x0007), (0x50, 2, 0x7777), (0x52, 2, 0x0041), (0x54, 2, 0x8888),
                     (0x56, 2, 0xCAFE), (0x58, 1, 0x01)));
+            case "cc_stack_offset_joins":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.Memory.UInt16[0x2000, 0x40].Should().Be(0x000C,
+                        $"{binName}: section 1, the non-negative arm");
+                    result.Memory.UInt16[0x2000, 0x42].Should().Be(0xFDFE,
+                        $"{binName}: section 1, the negative arm");
+                    result.Memory.UInt16[0x2000, 0x44].Should().Be(0x0003,
+                        $"{binName}: section 2, three leaf calls in a loop");
+                    result.Memory.UInt16[0x2000, 0x46].Should().Be(0x1234,
+                        $"{binName}: section 3, the argument read after a pushing loop");
+                    result.Memory.UInt16[0x2000, 0x48].Should().Be(0x5678,
+                        $"{binName}: section 4, the local read after a callee that pops its argument");
+                    result.Memory.UInt16[0x2000, 0x4A].Should().Be(0xDDDD,
+                        $"{binName}: section 5, a store through the BP the callee changed overwrites the slot pushed after the call");
+                    result.Memory.UInt16[0x2000, 0x4C].Should().Be(0x0006,
+                        $"{binName}: section 6, the saver doubles AX");
+                    result.Memory.UInt16[0x2000, 0x4E].Should().Be(0x7777,
+                        $"{binName}: section 6, the caller's BX reaches the callee's saved slot");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                });
             case "dataflow_stack_save_restore":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x1234), (0x02, 2, 0x3000), (0x04, 2, 0x0002), (0x06, 2, 0x0103), (0x08, 2, 0x0100),

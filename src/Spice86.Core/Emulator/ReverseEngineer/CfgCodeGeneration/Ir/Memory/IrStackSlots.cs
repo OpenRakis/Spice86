@@ -26,7 +26,9 @@ using System.Linq;
 /// pointer read reads the slot at that delta; a peek of constant argument k reads at
 /// <c>delta + k</c>; a constant SP/ESP adjustment moves the delta (an increase frees the slots it
 /// passes); a <c>Leave</c>, <c>PushAll</c>, <c>PopAll</c>, any other SP/ESP or SS write, and any
-/// <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> statement rebase SP on the statement.
+/// <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> statement that may write SP/ESP or SS
+/// rebase SP on the statement. A full memory boundary that may write neither keeps the offset and
+/// the BP copy and only drops the slots.
 /// Every memory write of a statement kills the slots its access is not
 /// <see cref="IrAliasRelation.Disjoint"/> with, against the synthetic
 /// <see cref="IrMemoryAliasAnalysis.StackAccess"/> of the slot. A slot defined on some reaching
@@ -56,8 +58,9 @@ internal sealed class IrStackSlots {
     /// proved-callee map: for a resolved call whose callee is proved to return to its caller with
     /// a <c>ret n</c>, it returns the popped byte count <c>n</c>, so the statement keeps the
     /// offset's base advanced by <c>n</c> instead of rebasing (the callee may still write any
-    /// memory, so the slot contents are dropped like any full memory boundary). A caller without
-    /// that map passes a function returning <c>null</c>.</summary>
+    /// memory, so the slot contents are dropped like any full memory boundary; the BP copy
+    /// survives unless the call may write BP or SS). A caller without that map passes a function
+    /// returning <c>null</c>.</summary>
     public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias,
         Func<IrStatement, int?> callPopCounts) {
         IrStackSlots slots = new(alias, callPopCounts);
@@ -158,7 +161,13 @@ internal sealed class IrStackSlots {
                 if (offset.Kind == IrStackOffsetKind.Known) {
                     offset = IrStackOffset.Known(offset.Base, offset.Delta + pop);
                 }
-                return TrackBp(statement, IrStackState.OfOffset(offset));
+                return TrackBp(statement, state.WithOffset(offset).WithoutSlots());
+            }
+            if (((statement.Effects.MustWrite | statement.Effects.MayWrite) & StackWrites)
+                    == CpuValues.None) {
+                // A boundary that cannot move SP (an event check, a wide store): the offset and
+                // the BP copy survive, only the slot contents are dropped.
+                return TrackBp(statement, state.WithoutSlots());
             }
             return IrStackState.Rebase(statement);
         }

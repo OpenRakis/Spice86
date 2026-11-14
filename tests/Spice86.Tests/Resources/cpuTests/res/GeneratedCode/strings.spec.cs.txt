@@ -126,25 +126,25 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         SI = 0xE319;
         DI = 0x0020;
-        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE012, () => unknown_F000_E100_FE100(0, 0xE319, 0x0020, ES, DS, DirectionFlag));
+        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE012, () => unknown_F000_E100_FE100(DirectionFlag));
         EsGlobals.Word0004 = DI;
         DirectionFlag = false;
         SI = 0xE319;
         DI = 0x0024;
-        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE021, () => unknown_F000_E100_FE100(AL, 0xE319, 0x0024, ES, DS, DirectionFlag));
+        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE021, () => unknown_F000_E100_FE100(DirectionFlag));
         EsGlobals.Word0006 = DI;
         DirectionFlag = false;
         SI = 0xE319;
         DI = 0x0028;
-        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE030, () => unknown_F000_E102_FE102(AL, 0xE319, 0x0028, ES, DS, DirectionFlag));
+        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE030, () => unknown_F000_E102_FE102(DirectionFlag));
         EsGlobals.Word0008 = DI;
         DirectionFlag = true;
         SI = 0xE319;
         DI = 0x002C;
-        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE03F, () => unknown_F000_E102_FE102(AL, 0xE319, 0x002C, ES, DS, DirectionFlag));
+        (AL, DI, ES, DS) = NearCall(biosSegment, 0xE03F, () => unknown_F000_E102_FE102(DirectionFlag));
         EsGlobals.Word000A = DI;
         DirectionFlag = false;
-        (ES, DS, DirectionFlag) = NearCall(biosSegment, 0xE048, () => unknown_F000_E104_FE104(AL, ES, DS, DirectionFlag));
+        (ES, DS, DirectionFlag) = NearCall(biosSegment, 0xE048, () => unknown_F000_E104_FE104(DirectionFlag));
         EsGlobals.Word0030 = DsGlobals.WordE319;
         SI = (ushort)(0xE319 + (ushort)(DirectionFlag ? -2 : 2));
         DI = (ushort)(0x0030 + (ushort)(DirectionFlag ? -2 : 2));
@@ -176,12 +176,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL, SI, DI, ES, DS, DF. Outputs: AL, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte result, ushort result2, ushort result3, ushort result4) unknown_F000_E100_FE100(byte byte1, ushort word1, ushort word2, ushort word3, ushort word4, bool flag1) {
-        AL = byte1;
-        SI = word1;
-        DI = word2;
-        ES = word3;
-        DS = word4;
+    public virtual (byte result, ushort result2, ushort result3, ushort result4) unknown_F000_E100_FE100(bool flag1) {
         DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE100);
         UInt16[ES, DI] = UInt16[DS, SI];
@@ -192,17 +187,12 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_E100_FE100_Asm() {
-        (AL, DI, ES, DS) = unknown_F000_E100_FE100(AL, SI, DI, ES, DS, DirectionFlag);
+        (AL, DI, ES, DS) = unknown_F000_E100_FE100(DirectionFlag);
         return Returned;
     }
 
     /// <summary>Inputs: AL, SI, DI, ES, DS, DF. Outputs: AL, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (byte result, ushort result2, ushort result3, ushort result4) unknown_F000_E102_FE102(byte byte1, ushort word1, ushort word2, ushort word3, ushort word4, bool flag1) {
-        AL = byte1;
-        SI = word1;
-        DI = word2;
-        ES = word3;
-        DS = word4;
+    public virtual (byte result, ushort result2, ushort result3, ushort result4) unknown_F000_E102_FE102(bool flag1) {
         DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE102);
         UInt16[ES, DI] = UInt16[DS, SI];
@@ -213,16 +203,13 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_E102_FE102_Asm() {
-        (AL, DI, ES, DS) = unknown_F000_E102_FE102(AL, SI, DI, ES, DS, DirectionFlag);
+        (AL, DI, ES, DS) = unknown_F000_E102_FE102(DirectionFlag);
         return Returned;
     }
 
     /// <summary>Inputs: AL, ES, DS, DF. Outputs: ES, DS, DF. Changes: all.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, bool result3) unknown_F000_E104_FE104(byte byte1, ushort word1, ushort word2, bool flag1) {
-        AL = byte1;
-        ES = word1;
-        DS = word2;
+    public virtual (ushort result, ushort result2, bool result3) unknown_F000_E104_FE104(bool flag1) {
         DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE104);
         Alu8.And(AL, 1);
@@ -237,7 +224,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_E104_FE104_Asm() {
-        (ES, DS, DirectionFlag) = unknown_F000_E104_FE104(AL, ES, DS, DirectionFlag);
+        (ES, DS, DirectionFlag) = unknown_F000_E104_FE104(DirectionFlag);
         return Returned;
     }
 

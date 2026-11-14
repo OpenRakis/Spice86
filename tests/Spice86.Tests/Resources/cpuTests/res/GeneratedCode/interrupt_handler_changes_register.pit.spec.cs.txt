@@ -18,20 +18,19 @@ public partial class CfgGeneratedOverrides {
         AL = 0x20;
         PicPorts.WritePrimaryCommand(0x20);
         AX = 5;
-        AX = NearCall(biosSegment, 0x003B, () => unknown_F000_003C_F003C(5));
+        AX = NearCall(biosSegment, 0x003B, () => unknown_F000_003C_F003C());
         return InterruptRet();
     }
 
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
-    public virtual ushort unknown_F000_003C_F003C(ushort word1) {
-        AX = word1;
+    public virtual ushort unknown_F000_003C_F003C() {
         CheckExternalEvents(biosSegment, 0x003C);
         NearReturn();
         return AX;
     }
 
     public virtual Action unknown_F000_003C_F003C_Asm() {
-        AX = unknown_F000_003C_F003C(AX);
+        AX = unknown_F000_003C_F003C();
         return Returned;
     }
 

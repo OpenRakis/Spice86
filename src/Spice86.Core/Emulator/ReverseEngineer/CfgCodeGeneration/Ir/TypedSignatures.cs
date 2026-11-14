@@ -160,6 +160,64 @@ internal sealed class TypedSignatures {
         return RoleNames.RoleName(roots, value, null, isSegment, origins);
     }
 
+    /// <summary>The input bytes whose register the method only saves and carries or merges into
+    /// versions it again only saves: a general or segment register is a machine input when the
+    /// worklist over its entry version's uses meets only save pushes
+    /// (<see cref="IrPreservation.IsPushOf"/>), event checks, phis and partial definitions that do
+    /// not read its bytes - the bytes a pop restore writes end the carried value. A machine input
+    /// stays in the convention's inputs, so the typed call reads it from the machine and the body
+    /// reads the machine register wherever it reads that version; only the parameter and its
+    /// copy-in line go. A terminator, exit or other statement read disqualifies; flags never
+    /// qualify.</summary>
+    private static CpuValues MachineInputs(PreparedMethod source, IrEntry irEntry, CpuValues inputs) {
+        CpuValues machine = CpuValues.None;
+        foreach (IrSsaValue value in Enum.GetValues<IrSsaValue>()
+                .Where(value => value <= IrSsaValue.Gs)) {
+            CpuValues bytes0 = IrSsaValues.MaskOf(value) & inputs;
+            if (bytes0 == CpuValues.None) {
+                continue;
+            }
+            Queue<(int Version, CpuValues Bytes)> worklist = new();
+            worklist.Enqueue((source.Ssa.MethodEntryVersion(irEntry.Block, value), bytes0));
+            HashSet<int> visited = [];
+            bool realRead = false;
+            while (worklist.Count > 0 && !realRead) {
+                (int version, CpuValues bytes) = worklist.Dequeue();
+                if (!visited.Add(version)) {
+                    continue;
+                }
+                foreach (IrSsaUse use in source.Ssa.Uses(version)) {
+                    if (use.Phi is { } phi) {
+                        worklist.Enqueue((phi.Result, bytes));
+                        continue;
+                    }
+                    if (use.Statement is not { } statement) {
+                        realRead = true;
+                        break;
+                    }
+                    if (statement.Node is CheckExternalEventsNode
+                        || IrPreservation.IsPushOf(statement, value, out _)) {
+                        continue;
+                    }
+                    if (use.ConditionalNewVersion >= 0
+                        && (statement.Effects.Reads & bytes) == CpuValues.None) {
+                        CpuValues carried = bytes & ~statement.Effects.MustWrite;
+                        if (carried != CpuValues.None) {
+                            worklist.Enqueue((use.ConditionalNewVersion, carried));
+                        }
+                        continue;
+                    }
+                    realRead = true;
+                    break;
+                }
+            }
+            if (!realRead) {
+                machine |= bytes0;
+            }
+        }
+        return machine;
+    }
+
     private static TypedSignature? SignatureOf(PreparedMethod source,
         IrCallingConventions conventions) {
         MethodPlan plan = source.Method;
@@ -191,7 +249,9 @@ internal sealed class TypedSignatures {
         }
         Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
         return new TypedSignature {
-            Parameters = GenericNames(CpuValueParameters.Decompose(inputs), nameCounters),
+            Parameters = GenericNames(
+                CpuValueParameters.Decompose(inputs & ~MachineInputs(source, irEntry, inputs)),
+                nameCounters),
             Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
             Distance = distance,
             PoppedBytes = poppedBytes,
@@ -291,7 +351,8 @@ internal sealed class TypedSignatures {
 
     /// <summary>
     /// The read-position register / flag occurrences of <paramref name="method"/> that print as
-    /// parameters: for each statement, each <see cref="RegisterNode"/> / <see cref="SegmentRegisterNode"/>
+    /// parameters: for each statement and each non-exit terminator root (a branch condition, a
+    /// switch value), each <see cref="RegisterNode"/> / <see cref="SegmentRegisterNode"/>
     /// / single-flag <see cref="CpuFlagNode"/> occurrence whose used version is the entry version,
     /// keyed by node reference. An assignment target is never substituted: shared node objects can
     /// sit on both sides of <c>X = X op y</c>, so the write stays on the register. An ALU operand
@@ -317,6 +378,10 @@ internal sealed class TypedSignatures {
             }
             if (block.Terminator is IrExit exit) {
                 CollectTargets(exit.Transfer, targets);
+            } else {
+                foreach (IVisitableAstNode root in IrAstChildren.RootsOf(block.Terminator)) {
+                    CollectTargets(root, targets);
+                }
             }
         }
         Dictionary<IVisitableAstNode, string> table = new(ReferenceEqualityComparer.Instance);
@@ -329,6 +394,12 @@ internal sealed class TypedSignatures {
             if (block.Terminator is IrExit exit) {
                 int[] used = UsedVersions(usedVersions, value => ssa.VersionUsed(exit, value));
                 CollectReads(exit.Transfer, table, targets, parameterByValue, entryVersions, used);
+            } else {
+                int[] used = UsedVersions(usedVersions,
+                    value => ssa.VersionUsed(block.Terminator, value));
+                foreach (IVisitableAstNode root in IrAstChildren.RootsOf(block.Terminator)) {
+                    CollectReads(root, table, targets, parameterByValue, entryVersions, used);
+                }
             }
         }
         return table;

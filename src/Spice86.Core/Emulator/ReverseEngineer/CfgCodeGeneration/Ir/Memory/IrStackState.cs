@@ -70,6 +70,10 @@ internal sealed class IrStackState : IEquatable<IrStackState> {
         return new IrStackState(Offset, Bp, slots, new HashSet<int>(PartialSlots));
     }
 
+    /// <summary>The same offset and BP copy with every slot dropped.</summary>
+    public IrStackState WithoutSlots() =>
+        new(Offset, Bp, new SortedDictionary<int, HashSet<IrStackSlotDefinition>>(Slots.Comparer), []);
+
     /// <summary>The same offset without the slots at or below <paramref name="delta"/>.</summary>
     public IrStackState WithoutSlotsBelow(int delta) {
         SortedDictionary<int, HashSet<IrStackSlotDefinition>> slots = new(Slots.Comparer);

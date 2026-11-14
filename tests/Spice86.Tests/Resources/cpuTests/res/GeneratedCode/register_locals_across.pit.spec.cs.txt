@@ -25,8 +25,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX. Outputs: DX. Changes: AX, DX, BP, ES.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_01A1_F01A1(ushort word1) {
-        DX = word1;
+    public virtual ushort unknown_F000_01A1_F01A1() {
         CheckExternalEvents(biosSegment, 0x01A1);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x01A2);
@@ -35,7 +34,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_01A1_F01A1_Asm() {
-        DX = unknown_F000_01A1_F01A1(DX);
+        DX = unknown_F000_01A1_F01A1();
         return Returned;
     }
 
@@ -254,7 +253,7 @@ public partial class CfgGeneratedOverrides {
             CX--;
         } while (CX != 0);
         DX = SegmentF000Globals.Word023E;
-        DX = NearCall(biosSegment, 0x00AC, () => unknown_F000_01A1_F01A1(DX));
+        DX = NearCall(biosSegment, 0x00AC, () => unknown_F000_01A1_F01A1());
         Segment2000Globals.Word0054 = DX;
         InterruptFlag = false;
         DX = 0;

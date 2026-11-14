@@ -522,8 +522,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
-    public virtual ushort unknown_F000_00E8_F00E8(ushort word1) {
-        AX = word1;
+    public virtual ushort unknown_F000_00E8_F00E8() {
         CheckExternalEvents(biosSegment, 0x00E8);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
         FarReturn();
@@ -531,7 +530,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_00E8_F00E8_Asm() {
-        AX = unknown_F000_00E8_F00E8(AX);
+        AX = unknown_F000_00E8_F00E8();
         return Returned;
     }
 
@@ -542,7 +541,7 @@ public partial class CfgGeneratedOverrides {
         // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
         Callback(biosSegment, 0x00E9, 0x010C);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
-        AX = FarCall(biosSegment, 0x00F2, biosSegment, () => unknown_F000_00E8_F00E8(AX));
+        AX = FarCall(biosSegment, 0x00F2, biosSegment, () => unknown_F000_00E8_F00E8());
         VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
         // Spice86 callback: MouseDriver.AfterUserHandlerExecution
         Callback(biosSegment, 0x00F2, 0x010D);

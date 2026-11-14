@@ -14,14 +14,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS. Outputs: AX, CX, BX, BP, SI, ES, DS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, bool result8) unknown_F000_02F5_F02F5(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7) {
-        AX = word1;
-        CX = word2;
-        BX = word3;
-        BP = word4;
-        SI = word5;
-        ES = word6;
-        DS = word7;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, bool result8) unknown_F000_02F5_F02F5() {
         CheckExternalEvents(biosSegment, 0x02F5);
         Alu16.Sub(AX, CX);
         NearReturn();
@@ -29,23 +22,16 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_02F5_F02F5_Asm() {
-        (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = unknown_F000_02F5_F02F5(AX, CX, BX, BP, SI, ES, DS);
+        (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = unknown_F000_02F5_F02F5();
         return Returned;
     }
 
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS, CF. Outputs: AX, CX, BX, BP, SI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_F000_02F8_F02F8(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7, bool flag1) {
-        AX = word1;
-        CX = word2;
-        BX = word3;
-        BP = word4;
-        SI = word5;
-        ES = word6;
-        DS = word7;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_F000_02F8_F02F8(bool flag1) {
         CarryFlag = flag1;
         CheckExternalEvents(biosSegment, 0x02F8);
-        if (!CarryFlag) {
+        if (!flag1) {
             UInt8[DS, BX + 0x27] = 2;
         }
         NearReturn();
@@ -53,7 +39,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_F000_02F8_F02F8_Asm() {
-        (AX, CX, BX, BP, SI, ES, DS) = unknown_F000_02F8_F02F8(AX, CX, BX, BP, SI, ES, DS, CarryFlag);
+        (AX, CX, BX, BP, SI, ES, DS) = unknown_F000_02F8_F02F8(CarryFlag);
         return Returned;
     }
 
@@ -273,13 +259,13 @@ public partial class CfgGeneratedOverrides {
             }
             InterruptFlag = false;
             UInt8[DS, BX + 0x26] = 1;
-            (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = NearCall(biosSegment, 0x022A, () => unknown_F000_02F5_F02F5(AX, CX, BX, BP, SI, ES, DS));
+            (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = NearCall(biosSegment, 0x022A, () => unknown_F000_02F5_F02F5());
             if (!CarryFlag) {
                 UInt8[DS, BX + 0x26] = 2;
             }
             UInt8[DS, BX + 0x27] = 1;
             Alu16.Sub(AX, CX);
-            (AX, CX, BX, BP, SI, ES, DS) = NearCall(biosSegment, 0x0239, () => unknown_F000_02F8_F02F8(AX, CX, BX, BP, SI, ES, DS, CarryFlag));
+            (AX, CX, BX, BP, SI, ES, DS) = NearCall(biosSegment, 0x0239, () => unknown_F000_02F8_F02F8(CarryFlag));
             DI = 0;
             UInt8[DS, BX + 0x28] = 1;
             Alu16.Sub(AX, CX);
