@@ -1180,6 +1180,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017D_0776_01F46() {
         ushort index;
         ushort word1;
+        ushort word3 = 0;
         ushort index2;
         ushort word2;
         unknown_017D_0776_01F46Frame frame = new(Memory, State.SegmentRegisters, SP);
@@ -1213,9 +1214,9 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[BP - 6] = 0;
         Alu16.And(SI, SI);
         if (SI != 0) {
-            DX = DI;
+            word3 = DI;
             AX = SI;
-            (CX, SI, DI) = NearCall(cs1, 0x07D9, () => unknown_017D_173D_02F0D(AX, CX, DX, BX, SI, DI, DS, DirectionFlag));
+            (CX, SI, DI) = NearCall(cs1, 0x07D9, () => unknown_017D_173D_02F0D(AX, CX, word3, BX, SI, DI, DS, DirectionFlag));
             word1 = SsUInt16[BP - 0x10];
             DX = SI;
             index2 = (ushort)(SI + CX);
@@ -3382,7 +3383,7 @@ public partial class CfgGeneratedOverrides {
         Alu8.And(flagOperand_1920, 0x20);
         if ((flagOperand_1920 & 0x20) == 0) {
             AX = UInt16[word5, BX + 8];
-            (AX, DX, BX) = NearCall(cs1, 0x192E, () => unknown_017D_205E_0382E(AX, CX, DX, BX, DS));
+            (AX, DX, BX) = NearCall(cs1, 0x192E, () => unknown_017D_205E_0382E(AX, word2, word3, BX, word5));
             Alu16.And(AX, AX);
             if (AX != 0) {
                 UInt8[word5, BX + 7] |= 0x20;
@@ -3760,7 +3761,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(word3);
         Stack.Push16(word2);
         DX = 0;
-        (AX, CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017D_2084_03854(CX, DX, BX, DI, DS, DirectionFlag));
+        (AX, CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017D_2084_03854(word1, 0, word3, word5, word6, count));
         if (DX != 0xFFFF && DX != 0xFFFE) {
             if (DX == 0xFFFD) {
                 goto L_2136;
@@ -3783,7 +3784,7 @@ public partial class CfgGeneratedOverrides {
                 return BP;
             }
         }
-        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017D_2257_03A27(CX, BX, BP, SI, DI, DS));
+        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017D_2257_03A27(CX, BX, word4, previousSi, DI, word6));
         Alu16.And(DX, DX);
         if (DX == 0) {
             VerifySpeculativeRunOrFail(cs1, 0x2129, SpeculativeRun_2129);
@@ -3792,7 +3793,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_2136;
             }
         }
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, CX, DX, BX, SI, DI, DS, DirectionFlag));
+        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017D_209C_0386C(AX, CX, DX, BX, SI, DI, DS, count));
         NearCall(cs1, 0x2133, unknown_017D_2280_03A50Entry);
         DsGlobals.Word030A = AX;
     L_2136:
@@ -4407,7 +4408,7 @@ public partial class CfgGeneratedOverrides {
         DL &= 0xFE;
         if (DX >= word5) {
             AX = word5;
-            AX = NearCall(cs1, 0x1F37, () => unknown_017D_1EFB_036CB(DS));
+            AX = NearCall(cs1, 0x1F37, () => unknown_017D_1EFB_036CB(word4));
             if (AX < DX) {
                 DX -= AX;
             }
@@ -4650,12 +4651,11 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = count;
         CheckExternalEvents(cs1, 0x2084);
         Stack.Save(word3, word2);
-        BX = 0x0101;
         DX = Alu16.Xor(DX, word2);
         DsGlobals.Word0350 = 0;
         DsGlobals.Word030A = 0;
         AX = 0x0390;
-        (AX, CX, DI) = NearCall(cs1, 0x2099, () => unknown_017D_223C_03A0C(AX, CX, DL, BX, DI, DS, DirectionFlag));
+        (AX, CX, DI) = NearCall(cs1, 0x2099, () => unknown_017D_223C_03A0C(0x0390, word1, 0, 0x0101, word4, word5, count));
         (DX, BX) = Stack.Restore2();
         NearReturn();
         return (AX, CX, DX, BX, DI);

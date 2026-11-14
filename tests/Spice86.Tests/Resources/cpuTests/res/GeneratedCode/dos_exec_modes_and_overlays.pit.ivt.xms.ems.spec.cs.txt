@@ -38,7 +38,7 @@ public partial class CfgGeneratedOverrides {
             throw FailAsUntested("Untested return from call at 016D:0123");
         }
         AL = 0x53;
-        NearCall(cs1, 0x011F, () => unknown_016D_02E0_019B0(AL));
+        NearCall(cs1, 0x011F, () => unknown_016D_02E0_019B0(0x53));
         DS = word1;
         word2 = ImageMinus0003Globals.Word002C;
         Alu16.Sub(word2, 0);
@@ -67,9 +67,9 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(word1);
             ES = Stack.Pop16();
             BX = word2;
-            (CX, SI, DI) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(SI, DS));
+            (CX, SI, DI) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(SI, word1));
             AL = 0x45;
-            NearCall(cs1, 0x0155, () => unknown_016D_02E0_019B0(AL));
+            NearCall(cs1, 0x0155, () => unknown_016D_02E0_019B0(0x45));
             (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0020));
             if (!CarryFlag) {
                 ImageMinus0003Globals.Word02E9 = AX;
@@ -80,8 +80,8 @@ public partial class CfgGeneratedOverrides {
                     Stack.Push16(word1);
                     ES = Stack.Pop16();
                     AL = 0x4D;
-                    NearCall(cs1, 0x0179, () => unknown_016D_02E0_019B0(AL));
-                    NearCall(cs1, 0x0185, () => unknown_016D_029F_0196F(DS));
+                    NearCall(cs1, 0x0179, () => unknown_016D_02E0_019B0(0x4D));
+                    NearCall(cs1, 0x0185, () => unknown_016D_029F_0196F(word1));
                     DX = 0x038D;
                     AX = 0x4B00;
                     Stack.Push16(CS);
@@ -94,7 +94,7 @@ public partial class CfgGeneratedOverrides {
                         Alu8.Sub(AL, 0x42);
                         if (AL == 0x42) {
                             AL = 0x43;
-                            NearCall(cs1, 0x01A2, () => unknown_016D_02E0_019B0(AL));
+                            NearCall(cs1, 0x01A2, () => unknown_016D_02E0_019B0(0x43));
                             NearCall(cs1, 0x01AE, () => unknown_016D_029F_0196F(DS));
                             DX = 0x0397;
                             AX = 0x4B00;
@@ -109,7 +109,7 @@ public partial class CfgGeneratedOverrides {
                             Alu8.Sub(AL, 0x5A);
                             if (AL == 0x5A) {
                                 AL = 0x54;
-                                NearCall(cs1, 0x01C9, () => unknown_016D_02E0_019B0(AL));
+                                NearCall(cs1, 0x01C9, () => unknown_016D_02E0_019B0(0x54));
                                 NearCall(cs1, 0x01D5, () => unknown_016D_029F_0196F(DS));
                                 DX = 0x02F1;
                                 AX = 0x4B01;
@@ -124,7 +124,7 @@ public partial class CfgGeneratedOverrides {
                                 Alu16.Sub(AX, 0);
                                 if (AX != 0) {
                                     AL = 0x4C;
-                                    NearCall(cs1, 0x01F2, () => unknown_016D_02E0_019B0(AL));
+                                    NearCall(cs1, 0x01F2, () => unknown_016D_02E0_019B0(0x4C));
                                     (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0040));
                                     if (CarryFlag) {
                                         goto L_0240;
@@ -196,7 +196,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0239_01909() {
         CheckExternalEvents(cs1, 0x0239);
         AL = 0x56;
-        NearCall(cs1, 0x023E, () => unknown_016D_02E0_019B0(AL));
+        NearCall(cs1, 0x023E, () => unknown_016D_02E0_019B0(0x56));
         return Hlt();
     }
 

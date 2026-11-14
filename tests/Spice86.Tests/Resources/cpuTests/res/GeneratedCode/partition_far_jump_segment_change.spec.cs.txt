@@ -20,7 +20,6 @@ public partial class CfgGeneratedOverrides {
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
-        BX = 0;
         CS = cs1;
         CsGlobals.Word8000 = 0xAAAA;
         word1 = CsGlobals.Word8000;
@@ -49,7 +48,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word000A = AX;
         CS = biosSegment;
         CS = cs1;
-        NearCall(cs1, 0x004A, () => unknown_F100_004F_F104F(BX, DS));
+        NearCall(cs1, 0x004A, () => unknown_F100_004F_F104F(0, DS));
         CS = biosSegment;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();

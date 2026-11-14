@@ -19,7 +19,7 @@ public partial class CfgGeneratedOverrides {
         byte byte2;
         CheckExternalEvents(cs1, 0x0100);
         SI = 0x01A5;
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0106, () => unknown_016D_0174_01844(BX, SI, DS, DirectionFlag));
+        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0106, () => unknown_016D_0174_01844(BX, 0x01A5, DS, DirectionFlag));
         DX = 0x0226;
         AL = 1;
         SoundBlasterPorts.WriteDspReset(1);
@@ -47,11 +47,11 @@ public partial class CfgGeneratedOverrides {
         }
         SI = 0x01BB;
         AL = byte1;
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0158, () => unknown_016D_0174_01844(BX, SI, DS, DirectionFlag));
+        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0158, () => unknown_016D_0174_01844(BX, 0x01BB, DS, DirectionFlag));
         AX = CX;
         NearCall(cs1, 0x015D, unknown_016D_0183_01853Entry);
         SI = 0x01CB;
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0163, () => unknown_016D_0174_01844(BX, SI, DS, DirectionFlag));
+        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0163, () => unknown_016D_0174_01844(BX, 0x01CB, DS, DirectionFlag));
         DX = 0x0998;
         byte2 = CL;
         Out8(0x0998, byte2);

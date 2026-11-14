@@ -33,7 +33,7 @@
       "InterruptCalls": 8,
       "LocalReads": 715,
       "LocalVariables": 233,
-      "LocalWrites": 479,
+      "LocalWrites": 480,
       "PlainRegisterAssignments": 1018,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,

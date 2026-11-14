@@ -23,6 +23,7 @@ internal sealed class IrFlattener {
     private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _exitEffects;
     private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _callEffects;
     private readonly IReadOnlyDictionary<ICfgNode, CpuValues> _faultReads;
+    private readonly TypedSignatures? _typedSignatures;
     private readonly List<IrBlock> _blocks = [];
     private readonly Stack<Func<IrBlock>> _breakTargets = new();
     private readonly List<PendingJump> _pendingJumps = [];
@@ -39,11 +40,13 @@ internal sealed class IrFlattener {
     /// statements of every instruction whose handlers and resume targets resolved.</param>
     public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
         IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
-        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        TypedSignatures? typedSignatures) {
         _raw = raw;
         _exitEffects = exitEffects;
         _callEffects = callEffects;
         _faultReads = faultReads;
+        _typedSignatures = typedSignatures;
     }
 
     private IrEffects? ExitEffectsOf(ICfgNode origin) =>
@@ -61,13 +64,39 @@ internal sealed class IrFlattener {
         return new IrStatement(typed, origin, statementEffects);
     }
 
-    private static IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>
+    private IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>
         node switch {
-            ProcedureCallHelperNode call => call with { Summary = effects },
+            ProcedureCallHelperNode call => AttachCallSummary(call, effects),
             ProcedureCallReturnedElsewhereHelperNode returnedElsewhere =>
                 returnedElsewhere with { Summary = effects },
             _ => IrAstChildren.MapChildren(node, child => AttachSummary(child, effects))
         };
+
+    /// <summary>Attaches the summary to a resolved call; a call whose only target is a typed
+    /// method also takes the callee's parameters as operand nodes, just before the
+    /// <see cref="MethodGroupNode"/>, and its summary drops the reads the operands now supply -
+    /// substitution of an operand then drops the read and lets the register write feeding it die.
+    /// An untyped target's call keeps the full reads: its callee reads live machine state.</summary>
+    private ProcedureCallHelperNode AttachCallSummary(ProcedureCallHelperNode call,
+        IrEffects effects) {
+        if (_typedSignatures?.TypedCallOf(call) is not { } signature
+            || signature.Parameters.Count == 0) {
+            return call with { Summary = effects };
+        }
+        CpuValues mask = signature.Parameters.Aggregate(CpuValues.None,
+            (set, parameter) => set | parameter.Mask);
+        IVisitableAstNode[] arguments = [.. call.Arguments.Take(call.Arguments.Count - 1),
+            .. signature.Parameters.Select(parameter => IrValueSets.NodeOf(parameter.Mask)),
+            call.Arguments[^1]];
+        IrEffects operandEffects = new(effects.Reads & ~mask, effects.MustWrite, effects.MayWrite,
+            effects.TokenReads, effects.TokenWrites, effects.MayFault, effects.DeliversInterrupts) {
+            FaultReads = effects.FaultReads
+        };
+        return (ProcedureCallHelperNode)call.WithArguments(arguments) with {
+            Summary = operandEffects,
+            TypedArgumentMask = mask
+        };
+    }
 
     private ValueNode TypeCondition(IVisitableAstNode node, ICfgNode origin, string localSuffix) {
         ValueNode typed = IrNodeTyper.TypeValue((ValueNode)node, localSuffix);

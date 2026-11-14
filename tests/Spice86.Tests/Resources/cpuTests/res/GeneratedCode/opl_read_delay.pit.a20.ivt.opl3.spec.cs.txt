@@ -67,11 +67,11 @@ public partial class CfgGeneratedOverrides {
             AL = 0;
             Out8(0x0999, 0);
             SI = 0x0219;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0193, () => unknown_016D_01E8_018B8(BX, SI, DS, DirectionFlag));
+            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0193, () => unknown_016D_01E8_018B8(BX, 0x0219, DS, DirectionFlag));
             AX = CX;
             NearCall(cs1, 0x0198, unknown_016D_01F7_018C7Entry);
             SI = 0x0235;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x019E, () => unknown_016D_01E8_018B8(BX, SI, DS, DirectionFlag));
+            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x019E, () => unknown_016D_01E8_018B8(BX, 0x0235, DS, DirectionFlag));
             NearCall(cs1, 0x01A1, unknown_016D_01A6_01876Entry);
             NearCall(cs1, 0x01A4, unknown_016D_01B9_01889Entry);
             InterruptCall(cs1, 0x01A6, 0x20);

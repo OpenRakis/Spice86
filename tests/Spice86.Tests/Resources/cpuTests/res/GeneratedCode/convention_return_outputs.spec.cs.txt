@@ -134,7 +134,7 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         Segment2000Globals.Word0400 = 0x0100;
         AX = 1;
-        AX = NearCall(biosSegment, 0x0016, () => unknown_F000_0056_F0056(AX, DS));
+        AX = NearCall(biosSegment, 0x0016, () => unknown_F000_0056_F0056(1, DS));
         Segment2000Globals.Word0200 = AX;
         CarryFlag = NearCall(biosSegment, 0x001C, () => unknown_F000_005B_F005B());
         if (CarryFlag) {

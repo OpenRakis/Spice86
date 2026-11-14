@@ -490,13 +490,13 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x00BA, unknown_F000_020E_F020EEntry);
         Segment2000Globals.Word0056 = BP;
         BP = 0x4321;
-        BP = NearCall(biosSegment, 0x00C4, () => unknown_F000_0221_F0221(BP));
+        BP = NearCall(biosSegment, 0x00C4, () => unknown_F000_0221_F0221(0x4321));
         Segment2000Globals.Word0058 = BP;
         word2 = Segment2000Globals.Word0080;
         Segment2000Globals.Dword0084 = (uint)word2 | (uint)word2 << 16;
         Segment2000Globals.Dword0088 = (uint)word2 | (uint)word2 << 16;
         SI = word2;
-        SI = NearCall(biosSegment, 0x00DF, () => unknown_F000_022E_F022E(SI));
+        SI = NearCall(biosSegment, 0x00DF, () => unknown_F000_022E_F022E(word2));
         Segment2000Globals.Dword005A = (uint)SI | (uint)SI << 16;
         Segment2000Globals.Word008C = SI;
         SP = 4;
@@ -504,7 +504,7 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0084 = (uint)word2 | (uint)word2 << 16;
         Segment2000Globals.Dword0088 = (uint)word2 | (uint)word2 << 16;
         SI = word2;
-        SI = NearCall(biosSegment, 0x0105, () => unknown_F000_022E_F022E(SI));
+        SI = NearCall(biosSegment, 0x0105, () => unknown_F000_022E_F022E(word2));
         SP = 0x1000;
         Segment2000Globals.Dword005E = (uint)SI | (uint)SI << 16;
         Segment2000Globals.Word008E = SI;

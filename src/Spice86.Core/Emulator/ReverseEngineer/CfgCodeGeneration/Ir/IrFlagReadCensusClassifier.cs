@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 
 using System.Linq;
+using System.Numerics;
 
 /// <summary>
 /// The flag read census classification: attributes one <see cref="FlagSetterKind"/>,
@@ -99,10 +100,39 @@ internal static class IrFlagReadCensusClassifier {
                 // either. The results are write targets and never flag reads.
                 yield break;
             }
+            if (node is ProcedureCallHelperNode call) {
+                // A typed call's operand arguments print inside its `() => f(...)` lambda, which
+                // the metrics walker does not count as printed flag reads, so the census must not
+                // count them either. The operand count is the bit count of TypedArgumentMask.
+                int skip = OperandCount(call.TypedArgumentMask);
+                for (int index = 0; index < call.Arguments.Count; index++) {
+                    if (index < call.Arguments.Count - 1 - skip || index == call.Arguments.Count - 1) {
+                        yield return (call.Arguments[index], false);
+                    }
+                }
+                yield break;
+            }
+            if (node is StackArgumentCallNode stackCall) {
+                // Same operand slice, flattened into this node's Arguments after its Call's
+                // arguments; the trailing stack arguments print at invocation level and stay.
+                int callArgumentCount = stackCall.Call.Arguments.Count;
+                int skip = OperandCount(stackCall.Call.TypedArgumentMask);
+                for (int index = 0; index < stackCall.Arguments.Count; index++) {
+                    bool operand = index >= callArgumentCount - 1 - skip && index < callArgumentCount - 1;
+                    if (!operand) {
+                        yield return (stackCall.Arguments[index], false);
+                    }
+                }
+                yield break;
+            }
             foreach (IVisitableAstNode child in IrAstChildren.ChildrenOf(node)) {
                 yield return (child, false);
             }
         }
+
+        /// <summary>The operand count a typed call carries: one operand bit per signature
+        /// parameter, aggregated on <see cref="ProcedureCallHelperNode.TypedArgumentMask"/>.</summary>
+        private static int OperandCount(CpuValues mask) => BitOperations.PopCount((ulong)mask);
 
         private void ClassifyRead((IrBlock Block, int Index) read, IrSsaValue value,
             FlagReadCensus census) {

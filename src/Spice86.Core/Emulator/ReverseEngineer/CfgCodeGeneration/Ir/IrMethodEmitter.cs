@@ -52,7 +52,7 @@ internal sealed class IrMethodEmitter(
     /// <returns>The prepared method to hand to <see cref="Print"/>.</returns>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) =>
         Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads,
-            NoEntryFacts);
+            NoEntryFacts, typedSignatures: null);
 
     /// <summary>No entry fact: the behaviour of a first-round prepare.</summary>
     private static readonly IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> NoEntryFacts =
@@ -67,13 +67,16 @@ internal sealed class IrMethodEmitter(
     /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
     /// <param name="entryFacts">The segment entry facts the previous analysis round proved at
     /// each of the method's entries: the SSA's entry versions resolve through them.</param>
+    /// <param name="typedSignatures">The previous analysis round's typed signatures: a summarized
+    /// call to a typed target takes the callee's parameters as operand arguments.</param>
     public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer,
         IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
         IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
         IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
-        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts) {
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts,
+        TypedSignatures? typedSignatures) {
         IrMethod irMethod = timer.Measure("lift",
-            () => _lifter.Lift(method, exitEffects, callEffects, faultReads));
+            () => _lifter.Lift(method, exitEffects, callEffects, faultReads, typedSignatures));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,

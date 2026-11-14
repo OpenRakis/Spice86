@@ -37,17 +37,21 @@ internal sealed class IrLifter(
         new Dictionary<ICfgNode, CpuValues>();
 
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order.</summary>
-    public IrMethod Lift(MethodPlan method) => Lift(method, NoEffects, NoEffects, NoFaultReads);
+    public IrMethod Lift(MethodPlan method) =>
+        Lift(method, NoEffects, NoEffects, NoFaultReads, typedSignatures: null);
 
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order; an exit
     /// whose origin is a key of <paramref name="exitEffects"/> gets that entry's effect instead of
     /// the transfer's own, and the call statement of an origin in <paramref name="callEffects"/>
     /// gets that summary instead of <see cref="IrEffects.Unknown"/>. A statement of an origin in
-    /// <paramref name="faultReads"/> faults reading that set instead of every value.</summary>
+    /// <paramref name="faultReads"/> faults reading that set instead of every value. A call whose
+    /// summary is applied and whose target <paramref name="typedSignatures"/> types takes the
+    /// callee's parameters as operand arguments.</summary>
     public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
         IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
-        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads) {
-        IrFlattener flattener = new(false, exitEffects, callEffects, faultReads);
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        TypedSignatures? typedSignatures) {
+        IrFlattener flattener = new(false, exitEffects, callEffects, faultReads, typedSignatures);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, IrBlock> startBlocks = [];
         Dictionary<ICfgNode, IrInstructionShape> shapes = [];

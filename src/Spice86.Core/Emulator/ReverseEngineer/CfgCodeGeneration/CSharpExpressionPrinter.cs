@@ -195,9 +195,13 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// <c>AX = NearCall(retCs, retIp, () => f(AX, BX))</c>, the bare call for a void method.</summary>
     private CSharpFragment TypedCall(ProcedureCallHelperNode call, Ir.TypedSignature signature,
         string methodName) {
-        string prefix = string.Join(", ", call.Arguments.Take(call.Arguments.Count - 1)
+        int operandCount = TypedCallOperands(call, signature, out int prefixCount);
+        string prefix = string.Join(", ", call.Arguments.Take(prefixCount)
             .Select(argument => Expr(argument).Text));
-        string argumentList = signature.ArgumentList;
+        string argumentList = operandCount == 0
+            ? signature.ArgumentList
+            : string.Join(", ", call.Arguments.Skip(prefixCount).Take(operandCount)
+                .Select(argument => Expr(argument).Text));
         if (_analysis?.StackArguments.MergeFor(call) is { } merge) {
             string stackList = string.Join(", ", merge.Arguments
                 .Select(argument => Expr(argument).Text));
@@ -208,17 +212,32 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         return CallResult(signature, invocation);
     }
 
+    /// <summary>How many of <paramref name="call"/>'s arguments just before the
+    /// <see cref="MethodGroupNode"/> are the callee's operand nodes: the parameter count when the
+    /// call carries typed operands, zero otherwise. <paramref name="prefixCount"/> is the helper
+    /// argument count (segment, offset, ...).</summary>
+    private static int TypedCallOperands(ProcedureCallHelperNode call, Ir.TypedSignature signature,
+        out int prefixCount) {
+        int operandCount = call.TypedArgumentMask != CpuValues.None ? signature.Parameters.Count : 0;
+        prefixCount = call.Arguments.Count - 1 - operandCount;
+        return operandCount;
+    }
+
     /// <summary>The merged form of a typed call whose pushes folded into the helper:
     /// <c>AX = CallWithStackArguments(retCs, retIp, cleanup, () => f(AX, 0x2222), 0x2222)</c>.</summary>
     private CSharpFragment StackArgumentCall(StackArgumentCallNode node,
         Ir.TypedSignature signature, string methodName) {
         ProcedureCallHelperNode call = node.Call;
-        List<string> arguments = [.. call.Arguments.Take(call.Arguments.Count - 1)
+        int operandCount = TypedCallOperands(call, signature, out int prefixCount);
+        List<string> arguments = [.. call.Arguments.Take(prefixCount)
             .Select(argument => Expr(argument).Text)];
         if (node.CleanupBytes > 0) {
             arguments.Add($"0x{node.CleanupBytes:X}");
         }
-        string argumentList = signature.ArgumentList;
+        string argumentList = operandCount == 0
+            ? signature.ArgumentList
+            : string.Join(", ", call.Arguments.Skip(prefixCount).Take(operandCount)
+                .Select(argument => Expr(argument).Text));
         string stackList = string.Join(", ", node.StackArguments
             .Select(argument => Expr(argument).Text));
         if (stackList.Length > 0) {

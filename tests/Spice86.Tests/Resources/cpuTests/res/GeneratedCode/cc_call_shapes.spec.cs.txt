@@ -185,10 +185,10 @@ public partial class CfgGeneratedOverrides {
         (AX, DX) = NearCall(biosSegment, 0x0018, () => unknown_F000_00D3_F00D3());
         Segment2000Globals.Word0042 = DX;
         CX = 0;
-        (AX, BX) = NearCall(biosSegment, 0x0022, () => unknown_F000_00DA_F00DA(AX, CX, BX));
+        (AX, BX) = NearCall(biosSegment, 0x0022, () => unknown_F000_00DA_F00DA(AX, 0, BX));
         Segment2000Globals.Word0044 = AX;
         CX = 1;
-        (AX, BX) = NearCall(biosSegment, 0x002B, () => unknown_F000_00DA_F00DA(AX, CX, BX));
+        (AX, BX) = NearCall(biosSegment, 0x002B, () => unknown_F000_00DA_F00DA(AX, 1, BX));
         Segment2000Globals.Word0046 = BX;
         CX = 4;
         NearCall(biosSegment, 0x0035, unknown_F000_00E6_F00E6Entry);

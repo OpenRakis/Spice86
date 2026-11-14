@@ -102,13 +102,13 @@ public partial class CfgGeneratedOverrides {
             CarryFlag = false;
             DX &= 0x08D5;
             UInt16[DS, BX + 0x0A] = DX;
-            AX = word5;
-            CarryFlag = NearCall(biosSegment, 0x0090, () => unknown_F000_00C7_F00C7(AX, CX));
+            CarryFlag = NearCall(biosSegment, 0x0090, () => unknown_F000_00C7_F00C7(word5, CX));
             UInt8[DS, BX + 0x0C] = 1;
             if (!CarryFlag) {
                 UInt8[DS, BX + 0x0C] = 2;
             }
             DX = UInt16[CS, SI + 4];
+            AX = word5;
             AX += CX;
             if (CX != 0) {
                 DX = 0x1000;

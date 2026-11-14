@@ -434,6 +434,17 @@ internal static partial class RegisterLocalPromotion {
             }
             return null;
         }
+        // A web read by a typed-call operand loses nothing by staying a register when the
+        // promotion's whole win is the operand read: a non-promotable reader keeps the register
+        // live, so the local would print a declaration and a write-back copy where the register
+        // form prints the definition once - the operand reads the register instead.
+        int operandReads = classification.WebReads.Count(read =>
+            read.Parent is ProcedureCallHelperNode or StackArgumentCallNode);
+        if (writeBackUses.Count > 0 && operandReads > 0
+            && classification.WebReads.Count - operandReads + collected.DefTargets.Count
+                <= writeBackUses.Count + 1) {
+            return null;
+        }
         if (!PrintsFewerRegisterAccesses(collected, classification, uses, preservedByCall, value,
                 writeBackUses)) {
             return null;

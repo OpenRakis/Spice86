@@ -40,7 +40,7 @@ public partial class CfgGeneratedOverrides {
             Alu8.Sub(AL, 0);
             if (AL == 0) {
                 AL = 0x43;
-                BX = NearCall(cs1, 0x0133, () => unknown_016E_01C0_018A0(AX, BX));
+                BX = NearCall(cs1, 0x0133, () => unknown_016E_01C0_018A0(0x1643, BX));
                 DX = 0x01F0;
                 AH = 0x1A;
                 ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x01F0));
@@ -50,7 +50,7 @@ public partial class CfgGeneratedOverrides {
                 Alu8.Sub(AL, 0);
                 if (AL == 0) {
                     AL = 0x57;
-                    BX = NearCall(cs1, 0x014A, () => unknown_016E_01C0_018A0(AX, BX));
+                    BX = NearCall(cs1, 0x014A, () => unknown_016E_01C0_018A0(0x1557, BX));
                     DX = 0x01CB;
                     AH = 0x10;
                     AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
@@ -60,7 +60,7 @@ public partial class CfgGeneratedOverrides {
                     Alu8.Sub(AL, 0);
                     if (AL == 0) {
                         AL = 0x4F;
-                        BX = NearCall(cs1, 0x0161, () => unknown_016E_01C0_018A0(AX, BX));
+                        BX = NearCall(cs1, 0x0161, () => unknown_016E_01C0_018A0(0x0F4F, BX));
                         DX = 0x02EF;
                         BX = 0x02FC;
                         AX = 0x4B00;
@@ -95,7 +95,7 @@ public partial class CfgGeneratedOverrides {
                         }
                         if (ZeroFlag) {
                             AL = 0x52;
-                            BX = NearCall(cs1, 0x0197, () => unknown_016E_01C0_018A0(AX, BX));
+                            BX = NearCall(cs1, 0x0197, () => unknown_016E_01C0_018A0(0x1452, BX));
                             DX = 0x01CB;
                             AH = 0x10;
                             AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));

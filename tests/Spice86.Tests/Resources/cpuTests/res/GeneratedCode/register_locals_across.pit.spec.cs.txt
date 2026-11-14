@@ -186,15 +186,16 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
-        byte byte1;
         ushort word5 = 0;
+        byte byte1;
         ushort word6 = 0;
         ushort word7 = 0;
         ushort word8 = 0;
-        ushort word9;
+        ushort word9 = 0;
         ushort word10;
         ushort word11;
-        ushort word12 = 0;
+        ushort word12;
+        ushort word13 = 0;
         ushort index = 0;
         ushort count = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -218,19 +219,19 @@ public partial class CfgGeneratedOverrides {
         word2 = SegmentF000Globals.Word023E;
         NearCall(biosSegment, 0x0047, unknown_F000_01A0_F01A0Entry);
         Segment2000Globals.Word0046 = word2;
-        BX = SegmentF000Globals.Word0240;
-        NearCall(biosSegment, 0x0051, () => unknown_F000_01F6_F01F6(BX, DI, DS));
+        word3 = SegmentF000Globals.Word0240;
+        NearCall(biosSegment, 0x0051, () => unknown_F000_01F6_F01F6(word3, 0x0040, DS));
         BX = SegmentF000Globals.Word0242;
         BX = NearCall(biosSegment, 0x0058, () => unknown_F000_0204_F0204());
         Segment2000Globals.Word004A = BX;
-        word3 = SegmentF000Globals.Word0244;
+        word4 = SegmentF000Globals.Word0244;
         if (!NearCallReturnedElsewhere(biosSegment, 0x0062, unknown_F000_0208_F0208Entry, [new(biosSegment, 0x0063)])) {
             throw FailAsUntested("Untested return from call at F000:005F");
         }
         if (CS != biosSegment || IP != 0x0063) {
             throw FailAsUntested("Redirected return target not observed at F000:005F");
         }
-        Segment2000Globals.Word004C = word3;
+        Segment2000Globals.Word004C = word4;
         ES = 0;
         Segment0000Globals.Dword0020 = 0x0000020F | (uint)CS << 16;
         AX = DS;
@@ -257,17 +258,16 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0054 = DX;
         InterruptFlag = false;
         DX = 0;
-        word4 = 0x0040;
+        word5 = 0x0040;
         NearCall(biosSegment, 0x00B9, unknown_F000_01A0_F01A0Entry);
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x00BC);
-            BX = word4;
-            NearCall(biosSegment, 0x00BF, () => unknown_F000_01FA_F01FA(BX, DI, DS));
-            Stack.Push16(word4);
+            NearCall(biosSegment, 0x00BF, () => unknown_F000_01FA_F01FA(word5, 0x0040, DS));
+            Stack.Push16(word5);
             AX = Stack.Pop16();
             AX++;
-            word4 = AX;
+            word5 = AX;
             CX--;
         } while (CX != 0);
         BP = 0xF000;
@@ -290,23 +290,23 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x00F5, unknown_F000_01A0_F01A0Entry);
         BX = NearCall(biosSegment, 0x00F8, () => unknown_F000_0204_F0204());
         AX = BX;
-        word5 = AX;
-        Stack.Push16(word5);
-        word6 = Stack.Pop16();
-        Segment2000Globals.Word0096 = word6;
+        word6 = AX;
+        Stack.Push16(word6);
+        word7 = Stack.Pop16();
+        Segment2000Globals.Word0096 = word7;
         NearCall(biosSegment, 0x0104, unknown_F000_01A0_F01A0Entry);
         AX = 0x0040;
         Stack.Push16(0x0040);
-        word7 = Stack.Pop16();
-        Segment2000Globals.Dword009A = (uint)word7 | 0x00400000;
+        word8 = Stack.Pop16();
+        Segment2000Globals.Dword009A = (uint)word8 | 0x00400000;
         Segment2000Globals.Byte0E60 = 0;
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0x0115);
         } while (Segment2000Globals.Byte0E60 == 0);
         InterruptFlag = false;
-        word8 = AX;
-        AX = word8;
+        word9 = AX;
+        AX = word9;
         Stack.Push16(AX);
         DX = Stack.Pop16();
         Segment2000Globals.Word009E = DX;
@@ -314,16 +314,16 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(0);
         CX = Stack.Pop16();
         CX += 0x0100;
-        word9 = SegmentF000Globals.Word023E;
-        (AX, DX) = Div16(divisor: CX, dividend: (uint)word9);
+        word10 = SegmentF000Globals.Word023E;
+        (AX, DX) = Div16(divisor: CX, dividend: (uint)word10);
         DL = 0x55;
-        word10 = DX;
-        word11 = word10;
-        Stack.Push16(word11);
+        word11 = DX;
+        word12 = word11;
+        Stack.Push16(word12);
         BX = Stack.Pop16();
         AX += BX;
-        (word9, DX) = Div16(divisor: CX, dividend: (uint)word11 << 16 | (uint)AX);
-        Segment2000Globals.Dword007C = (uint)word9 | (uint)DX << 16;
+        (word10, DX) = Div16(divisor: CX, dividend: (uint)word12 << 16 | (uint)AX);
+        Segment2000Globals.Dword007C = (uint)word10 | (uint)DX << 16;
         ES = 0x2000;
         AX = 0;
         SI = 0;
@@ -350,10 +350,10 @@ public partial class CfgGeneratedOverrides {
         AX = 1;
         NearCall(biosSegment, 0x0187, unknown_F000_01A4_F01A4Entry);
         Segment2000Globals.Word006E = BX;
-        word12 = 0x5555;
+        word13 = 0x5555;
         index = 0x0058;
         for (count = 5; count != 0; count--) {
-            UInt16[ES, index] = word12;
+            UInt16[ES, index] = word13;
             index += 2;
         }
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;

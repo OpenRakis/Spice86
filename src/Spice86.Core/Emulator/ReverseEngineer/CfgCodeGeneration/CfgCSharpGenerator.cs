@@ -209,7 +209,7 @@ internal sealed class CfgCSharpGenerator {
             MethodPlan methodPlan = plan.Methods[i];
             prepared[i] = timer.Measure("round 2 prepare",
                 () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects,
-                    faultReads, entryFacts));
+                    faultReads, entryFacts, analysis.TypedSignatures));
         }
         progress.Detail($"Resolved calls summarized: {summarizedCalls}; kept Unknown: "
             + string.Join(", ", callSkips
@@ -231,7 +231,7 @@ internal sealed class CfgCSharpGenerator {
             while (true) {
                 List<(int Index, string Reason)> violated = ConsumeViolations(prepared, used,
                     current.ObservedConventions, current.SegmentSummaries,
-                    lowerer.HardwareInterruptEffect, context);
+                    lowerer.HardwareInterruptEffect, context, current.TypedSignatures);
                 if (violated.Count == 0) {
                     analysis = current;
                     break;
@@ -253,7 +253,8 @@ internal sealed class CfgCSharpGenerator {
                     GenerationStepTimer timer = timers[index];
                     prepared[index] = timer.Measure($"round {rounds} prepare",
                         () => methodEmitter.Prepare(plan.Methods[index], timer,
-                            exitEffects, callEffects, facts.FaultReads, facts.EntryFacts));
+                            exitEffects, callEffects, facts.FaultReads, facts.EntryFacts,
+                            current.TypedSignatures));
                 }
                 progress.Detail($"Preparation round {rounds}");
                 current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
@@ -498,7 +499,7 @@ internal sealed class CfgCSharpGenerator {
     private static List<(int Index, string Reason)> ConsumeViolations(
         List<PreparedMethod> prepared, UsedFacts?[] used,
         IrCallingConventions conventions, IrSegmentSummaries summaries, CallEffect contract,
-        CfgGeneratorContext context) {
+        CfgGeneratorContext context, TypedSignatures signatures) {
         List<(int Index, string Reason)> violated = new();
         for (int i = 0; i < prepared.Count; i++) {
             UsedFacts? facts = used[i];
@@ -534,6 +535,26 @@ internal sealed class CfgCSharpGenerator {
                 foreach (ICfgNode origin in facts.CallSummaries.Keys.ToList()) {
                     if (!callSites.TryGetValue(origin, out object? site)) {
                         continue;
+                    }
+                    // The call instruction lowers to several statements (boundary nodes, the call
+                    // itself); the operand check needs the call node wherever it sits, so every
+                    // statement of the origin is scanned rather than the one callSites kept.
+                    foreach (ProcedureCallHelperNode call in prepared[i].IrMethod.Blocks
+                             .SelectMany(block => block.Statements
+                                 .Where(statement => statement.Origin == origin)
+                                 .SelectMany(statement => IrAstChildren.Descendants(statement.Node))
+                                 .Concat(block.HasTerminator && block.Terminator.Origin == origin
+                                     ? IrAstChildren.TerminatorNodes(block.Terminator)
+                                     : []))
+                             .OfType<ProcedureCallHelperNode>()) {
+                        CpuValues expectedMask =
+                            signatures.TypedCallOf(call) is { } callSignature
+                                ? callSignature.Parameters.Aggregate(CpuValues.None,
+                                    (set, parameter) => set | parameter.Mask)
+                                : CpuValues.None;
+                        if (call.TypedArgumentMask != expectedMask) {
+                            reasons.Add($"call {origin.Address} typed arguments are out of date");
+                        }
                     }
                     (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
                         site is IrStatement statement
@@ -748,8 +769,11 @@ internal sealed class CfgCSharpGenerator {
                             .Any(call => call.Summary is not null)) {
                         continue;
                     }
+                    CpuValues operandCovered = IrAstChildren.Descendants(statement.Node)
+                        .OfType<ProcedureCallHelperNode>()
+                        .Aggregate(CpuValues.None, (set, call) => set | call.TypedArgumentMask);
                     CpuValues inputs = conventions.CallTargetsInputsOf(methodName, statement);
-                    if ((inputs & ~statement.Effects.Reads) != CpuValues.None) {
+                    if ((inputs & ~statement.Effects.Reads & ~operandCovered) != CpuValues.None) {
                         throw new InvalidOperationException(
                             $"Resolved call of {methodName} reads {statement.Effects.Reads}," +
                             $" below its targets' observed inputs {inputs}.");

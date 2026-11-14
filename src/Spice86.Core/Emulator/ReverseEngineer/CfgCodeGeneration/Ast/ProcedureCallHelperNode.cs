@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
 
@@ -42,12 +43,21 @@ internal sealed record ProcedureCallHelperNode : MethodCallNode {
     /// <see langword="null"/> when the call must keep <see cref="IrEffects.Unknown"/>.</summary>
     public IrEffects? Summary { get; init; }
 
+    /// <summary>The <see cref="CpuValues"/> the last-but-one arguments of a typed call cover: the
+    /// operand nodes the callee's parameters were attached as, just before the
+    /// <see cref="MethodGroupNode"/>. <see cref="CpuValues.None"/> for a call without operands -
+    /// untyped calls keep <see cref="Summary"/>'s register reads because their callee reads live
+    /// machine state; only a typed call may drop them from the summary reads, its callee receives
+    /// the operands as C# arguments.</summary>
+    public CpuValues TypedArgumentMask { get; init; }
+
     /// <inheritdoc />
     public override MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
         new ProcedureCallHelperNode(Distance, Width, arguments) {
             SingleObservedTarget = SingleObservedTarget,
             ObservedContinuation = ObservedContinuation,
             ObservedLandings = ObservedLandings,
-            Summary = Summary
+            Summary = Summary,
+            TypedArgumentMask = TypedArgumentMask
         };
 }
