@@ -89,6 +89,8 @@ The graph grows at runtime:
 
 The `SpeculativeExplorer` also decodes statically-reachable successors ahead of execution so unobserved arms exist in the graph; it stops at poisoned addresses, at instructions with no static successors, at call continuations (unless seeded known-safe), and at a `00 00` instruction whose two following bytes are also zero - a zero-filled buffer is not decoded and nothing is remembered, so memory a program later fills with code still is.
 
+Exploration targets can also come from sources other than static edges, submitted as `DiscoveryCandidate`s through `SpeculativeExplorer.ExploreCandidates`: a call continuation, a pushed return address, a code variant, or a value read from data (a table entry, a catalogue entry, an interrupt vector, a register value, a pointer). Each candidate carries an `ExploreSource` recorded on the node it creates (`CfgInstruction.DiscoverySource`). Data-sourced candidates are decoded only while every byte of the parsed instruction still holds the value its loader wrote (`ChangedMemoryMap.HoldsLoadedValue`: a byte changed then restored counts as trusted again); until then they stay pending on their trigger and are retried each time it fires via `RetryPending`. Data-sourced targets with an offset or segment of `0x0000`/`0xFFFF` are refused, a site accepts at most 32 distinct non-static targets, and only `Static` items poison the address on an invalid decode - a guess from another source is simply dropped.
+
 ## Instruction Caching
 
 `InstructionsFeeder` maintains a two-tier cache:

@@ -55,7 +55,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, false, loggerService,
-            loggerState, executionCompiler, new SequentialIdAllocator());
+            loggerState, executionCompiler, new SequentialIdAllocator(), changedMemoryMap: null);
     }
 
     public void RestoreMemoryAfterTest() {

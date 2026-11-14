@@ -23,6 +23,8 @@ public sealed class ChangedMemoryMap {
     private readonly AddressReadWriteBreakpoints _writeBreakpoints;
     private readonly BitArray _watched = new(CoveredSize);
     private readonly BitArray _changed = new(CoveredSize);
+    private readonly byte[] _loaded = new byte[CoveredSize];
+    private readonly BitArray _captured = new(CoveredSize);
     private readonly MultiAddressBreakPoint _armed;
 
     /// <summary>
@@ -67,11 +69,23 @@ public sealed class ChangedMemoryMap {
     internal bool IsArmed(uint address) =>
         address < CoveredSize && _watched.Get((int)address) && !_changed.Get((int)address);
 
+    /// <summary>True when a loader captured <paramref name="address"/> and the byte there still
+    /// holds the value it held when its image was registered. Unlike <see cref="IsArmed"/>, a
+    /// byte the program changed and then wrote back is true again: the value matches what the
+    /// loader left. False for bytes no image ever covered.</summary>
+    internal bool HoldsLoadedValue(uint address) =>
+        address < CoveredSize && _captured.Get((int)address) && _memory.SneakilyRead(address) == _loaded[address];
+
     private void OnImageLoaded(object? sender, LoadedImage image) {
         if (image.Kind == LoadedImageKind.EmulatorRoutines) {
             // Emulator-written routines are not watched: the writer registers while it is still
             // writing, so arming the range would mark its own next bytes as changed.
             return;
+        }
+        uint end = Math.Min(image.StartAddress + image.SizeInBytes, CoveredSize);
+        for (uint address = image.StartAddress; address < end; address++) {
+            _loaded[address] = _memory.SneakilyRead(address);
+            _captured.Set((int)address, true);
         }
         Watch(image.StartAddress, image.SizeInBytes);
     }

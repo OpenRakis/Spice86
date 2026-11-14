@@ -353,9 +353,11 @@ public class Spice86DependencyInjection : IDisposable {
 
         SequentialIdAllocator cfgIdAllocator = new();
         CfgIdAllocator = cfgIdAllocator;
+        LoadedImageRegistry loadedImageRegistry = new();
+        ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, changedMemoryMap, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CfgCpu created...");
@@ -414,7 +416,6 @@ public class Spice86DependencyInjection : IDisposable {
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
         // same address (Bios Segment F000)
-        LoadedImageRegistry loadedImageRegistry = new();
         MemoryAsmWriter memoryAsmWriter = new(memory,
             new SegmentedAddress(
                 configuration.ProvidedAsmHandlersSegment, 0),
@@ -483,7 +484,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         InstalledInterruptHandlers installedInterruptHandlers =
             new(dualPic.EnumerateHardwareInterruptVectorNumbers());
-        ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
             functionCatalogue, loggerState, installedInterruptHandlers);
         AssemblyRoutineInstaller assemblyRoutineInstaller =

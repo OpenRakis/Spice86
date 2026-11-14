@@ -87,7 +87,7 @@ public class CfgCpuViewModelTest : IDisposable {
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
             _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false, false);
             SequentialIdAllocator sharedIdAllocator = new();
-            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false);
+            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false, changedMemoryMap: null, _loggerService);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,

@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -166,6 +167,16 @@ public sealed class CfgInstruction : CfgNode {
 
     /// <inheritdoc />
     public override bool IsSpeculative => _isSpeculative;
+
+    /// <summary>
+    /// The discovery source that created this node when it was inserted speculatively
+    /// (<see cref="ExploreSource.Static"/> for observed instructions and for successors the
+    /// explorer reached along static edges). Recorded for diagnostics; never exported.
+    /// </summary>
+    public ExploreSource DiscoverySource { get; private set; } = ExploreSource.Static;
+
+    /// <summary>Records the source a speculative node was discovered from.</summary>
+    internal void SetDiscoverySource(ExploreSource source) => DiscoverySource = source;
 
     /// <inheritdoc />
     /// <remarks>

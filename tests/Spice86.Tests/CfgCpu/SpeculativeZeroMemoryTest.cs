@@ -23,7 +23,7 @@ public sealed class SpeculativeZeroMemoryTest : SpeculativeTestBase {
     private readonly SpeculativeExplorer _explorer;
 
     public SpeculativeZeroMemoryTest() {
-        _explorer = new SpeculativeExplorer(Memory, Parser, NodeIndex, NodeLinker);
+        _explorer = CreateExplorer();
     }
 
     private CfgInstruction ObservedJnzWithCodeFallthrough() {

@@ -3,8 +3,11 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
@@ -30,7 +33,7 @@ public class InstructionsFeeder : IClearable {
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
-        NodeLinker? nodeLinker) {
+        NodeLinker? nodeLinker, ChangedMemoryMap? changedMemoryMap, ILogger? loggerService) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
@@ -39,7 +42,7 @@ public class InstructionsFeeder : IClearable {
         NodeIndex = new(replacerRegistry);
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
-            _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker);
+            _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap, loggerService);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);

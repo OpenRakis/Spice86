@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
@@ -38,6 +39,8 @@ public abstract class SpeculativeTestBase : IDisposable {
     protected readonly SequentialIdAllocator IdAllocator;
     protected readonly CfgNodeExecutionCompiler Compiler;
     protected readonly ILogger LoggerService;
+    protected readonly LoadedImageRegistry ImageRegistry;
+    protected readonly ChangedMemoryMap ChangedMemoryMap;
 
     protected SpeculativeTestBase() {
         IdAllocator = new SequentialIdAllocator();
@@ -50,7 +53,12 @@ public abstract class SpeculativeTestBase : IDisposable {
         LoggerService = Substitute.For<ILogger>();
         Compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(LoggerService), LoggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
         NodeLinker = new NodeLinker(ReplacerRegistry, Compiler, IdAllocator);
+        ImageRegistry = new LoadedImageRegistry();
+        ChangedMemoryMap = new ChangedMemoryMap(Memory, MemoryBreakpoints, ImageRegistry);
     }
+
+    protected SpeculativeExplorer CreateExplorer() =>
+        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {
         uint physAddr = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
@@ -118,7 +126,7 @@ public abstract class SpeculativeTestBase : IDisposable {
         EmulatorBreakpointsManager breakpointsManager =
             new(new PauseHandler(LoggerService), State, Memory, MemoryBreakpoints, ioBreakpoints);
         InstructionsFeeder feeder = new(breakpointsManager, Memory, State, ReplacerRegistry,
-            Compiler, IdAllocator, nodeLinker: NodeLinker);
+            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, LoggerService);
         return feeder;
     }
 

@@ -1,9 +1,12 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 
@@ -45,27 +48,41 @@ using System.Linq;
 /// </summary>
 public class SpeculativeExplorer {
     /// <summary>
-    /// Per-worklist-item data carrying the target address, predecessor, edge type, and trust flag.
-    /// Trust (<see cref="FollowContinuations"/>) propagates along intra-routine successors (Normal edges)
-    /// and also into callees. Only trusted items eagerly wire <see cref="InstructionSuccessorType.CallToReturn"/>
-    /// continuation edges past call/int instructions.
+    /// Per-worklist-item data carrying the target address, predecessor, edge type, trust flag and
+    /// discovery source. Trust (<see cref="FollowContinuations"/>) propagates along intra-routine
+    /// successors (Normal edges) and also into callees. Only trusted items eagerly wire
+    /// <see cref="InstructionSuccessorType.CallToReturn"/> continuation edges past call/int
+    /// instructions. <see cref="Trigger"/> is the instruction a <see cref="DiscoveryCandidate"/>
+    /// was submitted under; a data-sourced item whose bytes are not trusted is kept pending on it.
     /// </summary>
     private readonly record struct ExploreItem(
         SegmentedAddress Target,
         CfgInstruction? Predecessor,
         InstructionSuccessorType EdgeType,
-        bool FollowContinuations);
+        bool FollowContinuations,
+        ExploreSource Source,
+        CfgInstruction? Trigger);
+
+    private const int MaxCandidatesPerSite = 32;
 
     private readonly IMemory _memory;
     private readonly InstructionParser _instructionParser;
     private readonly CfgNodeIndex _nodeIndex;
     private readonly NodeLinker _nodeLinker;
+    private readonly ChangedMemoryMap? _changedMemoryMap;
+    private readonly ILogger? _loggerService;
+    private readonly Dictionary<CfgInstruction, List<DiscoveryCandidate>> _pending = new();
+    private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
+    private readonly HashSet<CfgInstruction> _cappedSites = [];
 
-    public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker) {
+    public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
+        ChangedMemoryMap? changedMemoryMap, ILogger? loggerService) {
         _memory = memory;
         _instructionParser = instructionParser;
         _nodeIndex = nodeIndex;
         _nodeLinker = nodeLinker;
+        _changedMemoryMap = changedMemoryMap;
+        _loggerService = loggerService;
     }
 
     /// <summary>
@@ -97,8 +114,116 @@ public class SpeculativeExplorer {
             return;
         }
         Queue<ExploreItem> worklist = new();
-        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true));
+        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true, ExploreSource.Static, null));
         Drain(worklist);
+    }
+
+    /// <summary>
+    /// Submits discovery targets produced by a trigger firing (a table read, a register value, an
+    /// installed vector, ...). Refused values (data-sourced offset or segment of 0x0000/0xFFFF) are
+    /// dropped, and each site accepts at most 32 distinct non-static targets. Data-sourced
+    /// candidates whose target bytes no longer hold their loaded values are kept pending on
+    /// <paramref name="trigger"/> (dropped when it is null); everything else goes through the same
+    /// decode-and-link pass as static exploration.
+    /// </summary>
+    public void ExploreCandidates(CfgInstruction? trigger, IReadOnlyList<DiscoveryCandidate> candidates) {
+        Queue<ExploreItem> worklist = new();
+        foreach (DiscoveryCandidate candidate in candidates) {
+            TryEnqueueCandidate(trigger, candidate, worklist);
+        }
+        Drain(worklist);
+    }
+
+    /// <summary>
+    /// Re-runs the candidates kept pending on <paramref name="trigger"/> because their target bytes
+    /// were not trusted. Still-untrusted candidates stay pending; decoded, converged, invalid or
+    /// dead-predecessor ones leave the set. One dictionary lookup when nothing is pending.
+    /// </summary>
+    public void RetryPending(CfgInstruction trigger) {
+        if (!_pending.TryGetValue(trigger, out List<DiscoveryCandidate>? pending)) {
+            return;
+        }
+        List<DiscoveryCandidate> retry = new(pending);
+        pending.Clear();
+        Queue<ExploreItem> worklist = new();
+        foreach (DiscoveryCandidate candidate in retry) {
+            if (candidate.Predecessor is { IsLive: false }) {
+                continue;
+            }
+            worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
+                candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger));
+        }
+        Drain(worklist);
+        if (pending.Count == 0) {
+            _pending.Remove(trigger);
+        }
+    }
+
+    private void TryEnqueueCandidate(CfgInstruction? trigger, DiscoveryCandidate candidate, Queue<ExploreItem> worklist) {
+        if (IsDataSource(candidate.Source) && IsRefused(candidate.Target)) {
+            return;
+        }
+        if (candidate.Source != ExploreSource.Static) {
+            CfgInstruction? site = candidate.Predecessor ?? trigger;
+            if (site is not null && !AcceptForSite(site, candidate.Target)) {
+                return;
+            }
+        }
+        worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
+            candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger));
+    }
+
+    private bool AcceptForSite(CfgInstruction site, SegmentedAddress target) {
+        HashSet<SegmentedAddress> targets = _siteTargets.TryGetValue(site, out HashSet<SegmentedAddress>? existing)
+            ? existing
+            : _siteTargets[site] = [];
+        if (!targets.Add(target)) {
+            return true;
+        }
+        if (targets.Count <= MaxCandidatesPerSite) {
+            return true;
+        }
+        if (_cappedSites.Add(site)) {
+            _loggerService?.LogDebug(
+                "Discovery cap reached at {Address}: over {Max} distinct non-static targets for one site",
+                site.Address, MaxCandidatesPerSite);
+        }
+        return false;
+    }
+
+    private void AddPending(CfgInstruction trigger, DiscoveryCandidate candidate) {
+        if (!_pending.TryGetValue(trigger, out List<DiscoveryCandidate>? pending)) {
+            pending = _pending[trigger] = [];
+        }
+        if (!pending.Contains(candidate)) {
+            pending.Add(candidate);
+        }
+    }
+
+    private static bool IsDataSource(ExploreSource source) => source is
+        ExploreSource.TableEntry or ExploreSource.CatalogueEntry or ExploreSource.InterruptVector
+        or ExploreSource.RegisterValue or ExploreSource.PointerValue;
+
+    private static bool IsRefused(SegmentedAddress target) =>
+        target.Offset is 0x0000 or 0xFFFF || target.Segment is 0x0000 or 0xFFFF;
+
+    /// <summary>
+    /// Every byte of the parsed instruction still holds the value its loader wrote. The physical
+    /// address is computed like a code fetch (MMU translation then A20 gate) so the check lines up
+    /// with the bytes the CPU would execute.
+    /// </summary>
+    private bool BytesHoldLoadedValue(CfgInstruction candidate) {
+        if (_changedMemoryMap is null) {
+            return false;
+        }
+        for (int i = 0; i < candidate.Length; i++) {
+            uint physical = _memory.A20Gate.TransformAddress(
+                _memory.Mmu.TranslateAddress(candidate.Address.Segment, (uint)candidate.Address.Offset + (uint)i));
+            if (!_changedMemoryMap.HoldsLoadedValue(physical)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // Iteratively decodes and links all reachable instructions from the worklist.
@@ -111,7 +236,11 @@ public class SpeculativeExplorer {
             }
             CfgInstruction candidate = _instructionParser.ParseInstructionAt(address);
             if (candidate.IsInvalid) {
-                _nodeIndex.PoisonSet.Add(address);
+                // Only static-edge exploration poisons; a guess from any other source is dropped
+                // so the address can be discovered again once its bytes mean something.
+                if (item.Source == ExploreSource.Static) {
+                    _nodeIndex.PoisonSet.Add(address);
+                }
                 continue;
             }
             // Converge only onto a node that is the SAME instruction (same final-field signature)
@@ -133,7 +262,16 @@ public class SpeculativeExplorer {
             if (StartsZeroChain(candidate)) {
                 continue;
             }
+            if (IsDataSource(item.Source) && !BytesHoldLoadedValue(candidate)) {
+                // The target bytes may be garbage the program has not loaded or decompressed yet;
+                // keep the candidate pending on its trigger instead of decoding or poisoning.
+                if (item.Trigger is not null && item.Predecessor is not { IsLive: false }) {
+                    AddPending(item.Trigger, new DiscoveryCandidate(item.Target, item.Predecessor, item.EdgeType, item.Source));
+                }
+                continue;
+            }
             candidate.SetSpeculative(true);
+            candidate.SetDiscoverySource(item.Source);
             _nodeIndex.Insert(candidate);
             if (item.Predecessor is not null) {
                 _nodeLinker.Link(item.EdgeType, item.Predecessor, candidate);
@@ -177,7 +315,7 @@ public class SpeculativeExplorer {
             // Call or INT: static successors are callees (enqueued untrusted, always Normal edges).
             // Continuation is only enqueued if under trust.
             foreach (SegmentedAddress successor in node.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, FollowContinuations: followContinuations));
+                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null));
             }
             if (followContinuations) {
                 EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations);
@@ -206,12 +344,12 @@ public class SpeculativeExplorer {
         if (_nodeIndex.PoisonSet.Contains(continuation)) {
             return;
         }
-        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations));
+        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, ExploreSource.Static, null));
     }
 
     private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations) {
         foreach (SegmentedAddress successor in instruction.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations));
+            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null));
         }
     }
 }
