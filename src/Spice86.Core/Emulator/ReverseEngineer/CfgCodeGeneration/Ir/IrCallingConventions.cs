@@ -33,7 +33,8 @@ using System.Linq;
 /// <para>- <c>Needed(version)</c>, the bytes of a version later code may still observe, is the union
 /// over its uses: a phi operand needs its result's bytes; a call or <c>int</c> needs the bytes its
 /// resolved targets input plus the bytes still needed after the call that no target changes (an
-/// unresolved call needs everything); a push feeding only complete pop-assigns of the same register
+/// unresolved call needs everything; an <c>int</c> also needs the six status flags and DF, which it
+/// pushes); a push feeding only complete pop-assigns of the same register
 /// needs what each popped version needs (other pushes make the value escape into memory); an event
 /// check only forwards through the version it defines (the hardware handler's own reads are not the
 /// method's inputs); a partial definition forwards the bytes it does not write; a return exit needs
@@ -637,6 +638,9 @@ internal sealed class IrCallingConventions {
         public required bool ObservedContinuation { get; init; }
         /// <summary>Whether the call has an observed redirected-return landing.</summary>
         public required bool RedirectedReturn { get; init; }
+        /// <summary>Whether the site is an <c>int</c> that pushes the FLAGS image before its
+        /// target runs: it needs the six status flags and DF on top of the targets' inputs.</summary>
+        public required bool WritesInterruptFrame { get; init; }
     }
 
     private enum ExitKind { Return, Abort, TransferResolved, TransferUnresolved }
@@ -756,7 +760,9 @@ internal sealed class IrCallingConventions {
                 CallSite site = new() {
                     DefinedVersions = defined, Targets = targets, Resolved = resolved,
                     ObservedContinuation = continuation.ObservedContinuationEdge is not null,
-                    RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0
+                    RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0,
+                    WritesInterruptFrame = IrAstChildren.Descendants(statement.Node)
+                        .Any(IsInterruptCallSite)
                 };
                 method.Calls.Add(site);
                 method.CallByStatement[statement] = site;
@@ -797,7 +803,9 @@ internal sealed class IrCallingConventions {
                     CallSite site = new() {
                         DefinedVersions = defined, Targets = targets, Resolved = resolved,
                         ObservedContinuation = continuation.ObservedContinuationEdge is not null,
-                        RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0
+                        RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0,
+                        WritesInterruptFrame = IrAstChildren.TerminatorNodes(block.Terminator)
+                            .Any(IsInterruptCallSite)
                     };
                     method.Calls.Add(site);
                     method.CallByTerminator[block.Terminator] = site;
@@ -1393,10 +1401,20 @@ internal sealed class IrCallingConventions {
         return false;
     }
 
+    /// <summary>Whether <paramref name="node"/> itself is a frame-writing <c>int</c> site: a
+    /// generic <see cref="InterruptCallHelperNode"/> or a <see cref="ProgramInterruptCallHelperNode"/>.</summary>
+    private static bool IsInterruptCallSite(IVisitableAstNode node) =>
+        node is InterruptCallHelperNode or ProgramInterruptCallHelperNode;
+
+    /// <summary>The machine values the site reads at call time: its resolved targets' inputs,
+    /// plus the six status flags and DF when it is an <c>int</c> pushing the FLAGS image.</summary>
     private CpuValues TargetsInputs(CallSite call) {
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in call.Targets) {
             inputs |= _states[target].Inputs;
+        }
+        if (call.WritesInterruptFrame) {
+            inputs |= CpuValues.StatusFlags | CpuValues.Direction;
         }
         return inputs;
     }

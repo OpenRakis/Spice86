@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016C, DS = 0x016C.
     public virtual Action unknown_016C_0100_017C0() {
         CheckExternalEvents(cs1, 0x0100);

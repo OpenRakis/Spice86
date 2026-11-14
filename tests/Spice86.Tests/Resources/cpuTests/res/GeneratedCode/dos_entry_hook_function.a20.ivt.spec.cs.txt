@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:0106");
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0108_017D8() {
         ushort word1 = 0;
@@ -416,7 +416,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, flags, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_00CA_F00CA() {
         CheckExternalEvents(biosSegment, 0x00CA);

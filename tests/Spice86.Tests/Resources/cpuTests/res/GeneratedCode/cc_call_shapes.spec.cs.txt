@@ -87,7 +87,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Does not return.</summary>
+    /// <summary>Inputs: DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_00FC_F00FC() {
@@ -134,7 +134,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: AX, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual Action unknown_F000_0100_F0100() {
         CheckExternalEvents(biosSegment, 0x0100);
@@ -144,7 +144,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: BX, DS. Outputs: AX. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: BX, DS, DF. Outputs: AX, DF. Changes: AX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual Action unknown_F000_0104_F0104() {
         CheckExternalEvents(biosSegment, 0x0104);

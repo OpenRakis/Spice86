@@ -42,7 +42,7 @@ public partial class CfgGeneratedOverrides {
         return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0092_F0092() {
         CheckExternalEvents(biosSegment, 0x0092);
         return unknown_F000_008B_F008B();

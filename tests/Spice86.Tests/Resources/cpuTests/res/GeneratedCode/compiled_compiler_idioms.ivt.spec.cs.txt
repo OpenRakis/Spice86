@@ -934,7 +934,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, ES, DS, ZF. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, ES, DS, flags. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017D_063B_01E0B() {
         byte flagOperand_0681 = 0;

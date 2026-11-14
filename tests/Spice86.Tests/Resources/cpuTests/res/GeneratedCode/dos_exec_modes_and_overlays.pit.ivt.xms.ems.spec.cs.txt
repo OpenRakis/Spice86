@@ -67,7 +67,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(word1);
             ES = Stack.Pop16();
             BX = word2;
-            (CX, SI, DI) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(SI, word1));
+            (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0150, () => unknown_016D_0246_01916(SI, word1));
             AL = 0x45;
             NearCall(cs1, 0x0155, () => unknown_016D_02E0_019B0(0x45));
             (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0020));
@@ -200,9 +200,9 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: SI, DS. Outputs: CX, SI, DI. Changes: AL, CX, BX, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: SI, DS. Outputs: CX, SI, DI, PF, AF, ZF, SF, OF. Changes: AL, CX, BX, SI, DI, ES, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (ushort result, ushort result2, ushort result3) unknown_016D_0246_01916(ushort word1, ushort word2) {
+    public virtual (ushort result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8) unknown_016D_0246_01916(ushort word1, ushort word2) {
         SI = word1;
         DS = word2;
         ushort word3;
@@ -216,7 +216,7 @@ public partial class CfgGeneratedOverrides {
             Alu16.Sub(CX, 0);
             if (CX == 0) {
                 NearReturn();
-                return (CX, SI, DI);
+                return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
             }
             CX--;
             AL = UInt8[ES, DI];
@@ -261,11 +261,11 @@ public partial class CfgGeneratedOverrides {
         UInt8[word2, DI + 3] = 0x30;
         UInt8[word2, DI + 4] = 0;
         NearReturn();
-        return (CX, SI, DI);
+        return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
 
     public virtual Action unknown_016D_0246_01916_Asm() {
-        (CX, SI, DI) = unknown_016D_0246_01916(SI, DS);
+        (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016D_0246_01916(SI, DS);
         return Returned;
     }
 

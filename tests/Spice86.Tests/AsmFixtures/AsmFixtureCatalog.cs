@@ -992,6 +992,20 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x51,
                     (0x40, 1, 0x5A), (0x41, 1, 0x6B), (0x42, 1, 0x01),
                     (0x50, 1, 0x01)));
+            case "interrupt_call_pushed_flags":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    (result.Memory.UInt16[0x2000, 0x40] & 0x0FD5).Should().Be(0x0445,
+                        $"{binName}: section 1 pushes ZF and PF from sub, CF from stc, DF from std");
+                    (result.Memory.UInt16[0x2000, 0x42] & 0x0FD5).Should().Be(0x0091,
+                        $"{binName}: section 2 pushes CF, SF, AF from cmp");
+                    (result.Memory.UInt16[0x2000, 0x44] & 0x0FD5).Should().Be(0x0894,
+                        $"{binName}: section 3 pushes OF, SF, AF, PF from add inside a near call");
+                    (result.Memory.UInt16[0x2000, 0x46] & 0x0FD5).Should().Be(0x0495,
+                        $"{binName}: section 4 pushes CF, PF, AF, SF from the caller's sub and DF from std into an int inside the called method");
+                    result.Memory.UInt16[0x2000, 0x50].Should().Be(0x48, $"{binName}: four handler stores advance the result offset");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                });
             case "data_global_offset_fault":
                 return ResultRegionFixture(new AsmRunSettings {
                         BinName = binName, CpuModel = CpuModel.INTEL_80386 },

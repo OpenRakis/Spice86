@@ -629,6 +629,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("data_segments"),
             PartitionScenario("data_jump_tables"),
             PartitionScenario("interrupt_handler_partial_inputs"),
+            PartitionScenario("interrupt_call_pushed_flags"),
             PartitionScenario("data_global_offset_fault"),
             PartitionScenario("data_jump_tables_segments"),
             AsmScenario.FromFixture("data_jump_tables", AsmFixtureCatalog.DataJumpTablesPatched),
