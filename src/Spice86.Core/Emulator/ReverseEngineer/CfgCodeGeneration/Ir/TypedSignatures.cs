@@ -270,16 +270,24 @@ internal sealed class TypedSignatures {
     }
 
     /// <summary>Whether any statement or terminator of <paramref name="method"/> is an
-    /// <c>int</c> or a callback: either can end the program or move CS:IP, which the typed return
-    /// check would turn into a failure.</summary>
+    /// <c>int</c> or a callback whose effects are not fully described by a service contract:
+    /// either can end the program or move CS:IP, which the typed return check would turn into a
+    /// failure. Only a typed <see cref="InterruptServiceCallNode"/> that does not write the
+    /// interrupt frame (<see cref="InterruptServiceCallNode.WritesFrame"/>) stays allowed: it
+    /// does neither on a normal return and keeps its own statement effects (IS-8). A
+    /// frame-writing call or a <see cref="InterruptSiteKind.BuiltInDispatch"/> site pushes the
+    /// FLAGS image, which would put six status-flag parameters only the frame reads on the
+    /// signature - worse than the untyped method, so those wait for flags as values.</summary>
     private static bool HasInterruptOrCallback(IrMethod method) =>
         method.Blocks.SelectMany(block =>
                 block.Statements.Select(statement => statement.Node)
                     .Concat(IrAstChildren.RootsOf(block.Terminator)))
             .Any(root => IrAstChildren.Descendants(root).Any(node =>
-                node is InterruptCallHelperNode or ProgramInterruptCallHelperNode
-                    or InterruptCallReturnedElsewhereHelperNode or InterruptServiceCallNode
-                    or CallbackHelperNode or CallbackMovedCsIpHelperNode));
+                node is ProgramInterruptCallHelperNode
+                    or InterruptCallHelperNode
+                    or InterruptCallReturnedElsewhereHelperNode
+                    or CallbackHelperNode or CallbackMovedCsIpHelperNode
+                    || node is InterruptServiceCallNode { WritesFrame: true }));
 
     /// <summary>
     /// The read-position register / flag occurrences of <paramref name="method"/> that print as

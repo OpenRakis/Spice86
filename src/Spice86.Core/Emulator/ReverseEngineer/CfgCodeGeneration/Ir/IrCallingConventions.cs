@@ -732,7 +732,7 @@ internal sealed class IrCallingConventions {
             foreach (IrStatement statement in block.Statements) {
                 if (statement.Node is CheckExternalEventsNode
                     || statement.Origin is not CfgInstruction { IsCall: true } instruction
-                    || ChargedByStatementEffects(statement.Node)) {
+                    || ServiceContractEffects.DescribesSite(statement.Node)) {
                     continue;
                 }
                 List<CfgCodePartitionEntry> targets = [];
@@ -775,7 +775,7 @@ internal sealed class IrCallingConventions {
                 if (block.Terminator is not IrExit
                     && block.Terminator.Origin is CfgInstruction { IsCall: true } callInstruction
                     && !IrAstChildren.TerminatorNodes(block.Terminator)
-                        .Any(ChargedByStatementEffects)) {
+                        .Any(ServiceContractEffects.DescribesSite)) {
                     List<CfgCodePartitionEntry> targets = [];
                     bool resolved = true;
                     foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(callInstruction)) {
@@ -966,24 +966,6 @@ internal sealed class IrCallingConventions {
         }
         return resolved;
     }
-
-    /// <summary>Whether <paramref name="node"/> is an <c>int</c> site whose statement effects
-    /// already describe what it observes: a typed <see cref="InterruptServiceCallNode"/>, which
-    /// calls the bound implementation directly, or an <see cref="InterruptCallHelperNode"/> whose
-    /// <see cref="ServiceContractEffects.Of(InterruptCallHelperNode)"/> is the contract's (today a
-    /// <see cref="InterruptSiteKind.BuiltInDispatch"/> site). Such a site is not a call to its stub
-    /// target for the conventions: it is charged by its own statement effects, not by the stub
-    /// partition's convention (IS-8). A site whose effects stay <see cref="IrEffects.Unknown"/>
-    /// (a custom or unresolved dispatch) and a program-handler call keep the target's
-    /// convention.</summary>
-    private static bool ChargedByStatementEffects(IVisitableAstNode node) =>
-        IsChargedByStatementEffects(node)
-            || IrAstChildren.Descendants(node).Any(IsChargedByStatementEffects);
-
-    private static bool IsChargedByStatementEffects(IVisitableAstNode node) =>
-        node is InterruptServiceCallNode
-            || (node is InterruptCallHelperNode helper
-                && ServiceContractEffects.Of(helper) != IrEffects.Unknown);
 
     private static bool IsReturnExit(IrExit exit) =>
         Contains<InterruptReturnNode>(exit.Transfer)

@@ -3382,7 +3382,7 @@ public partial class CfgGeneratedOverrides {
         Alu8.And(flagOperand_1920, 0x20);
         if ((flagOperand_1920 & 0x20) == 0) {
             AX = UInt16[word5, BX + 8];
-            NearCall(cs1, 0x192E, unknown_017D_205E_0382EEntry);
+            (AX, DX, BX) = NearCall(cs1, 0x192E, () => unknown_017D_205E_0382E(AX, CX, DX, BX, DS));
             Alu16.And(AX, AX);
             if (AX != 0) {
                 UInt8[word5, BX + 7] |= 0x20;
@@ -3746,14 +3746,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: BP. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_017D_1BB5_03385(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, ushort word7, bool count) {
+    public virtual ushort unknown_017D_1BB5_03385(ushort word1, ushort word2, ushort word3, ushort word4, ushort previousSi, ushort word5, ushort word6, bool count) {
         CX = word1;
         DX = word2;
         BX = word3;
         BP = word4;
-        SI = word5;
-        DI = word6;
-        DS = word7;
+        SI = previousSi;
+        DI = word5;
+        DS = word6;
         DirectionFlag = count;
         CheckExternalEvents(cs1, 0x1BB5);
         AX = 0;
@@ -3783,7 +3783,7 @@ public partial class CfgGeneratedOverrides {
                 return BP;
             }
         }
-        NearCall(cs1, 0x2125, unknown_017D_2257_03A27Entry);
+        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017D_2257_03A27(CX, BX, BP, SI, DI, DS));
         Alu16.And(DX, DX);
         if (DX == 0) {
             VerifySpeculativeRunOrFail(cs1, 0x2129, SpeculativeRun_2129);
@@ -4600,16 +4600,21 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, CX, DX, BX, DS. Outputs: AX, DX, BX. Changes: AX, DX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_017D_205E_0382E() {
-        ushort word1 = 0;
-        ushort word2 = 0;
+    public virtual (ushort result, ushort result2, ushort result3) unknown_017D_205E_0382E(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5) {
+        AX = word1;
+        CX = word2;
+        DX = word3;
+        BX = word4;
+        DS = word5;
+        ushort word6 = 0;
+        ushort word7 = 0;
         CheckExternalEvents(cs1, 0x205E);
-        Stack.Save(BX, DX);
-        word1 = AX;
-        (AX, word2, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4400, CX, DX, word1, DS));
+        Stack.Save(word4, word3);
+        word6 = word1;
+        (AX, word7, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4400, word2, word3, word6, word5));
         BX = (ushort)(CarryFlag ? 0xFFFF : 0);
         if (BX == 0) {
-            AX = word2;
+            AX = word7;
         }
         if ((short)BX <= 0 && BX != 0) {
             goto L_207F;
@@ -4618,13 +4623,20 @@ public partial class CfgGeneratedOverrides {
         if ((AL & 0x80) != 0) {
             AX = 1;
             (DX, BX) = Stack.Restore2();
-            return NearRet();
+            NearReturn();
+            return (AX, DX, BX);
         }
     L_207F:
         VerifySpeculativeRunOrFail(cs1, 0x207F, SpeculativeRun_207F);
         AX = Alu16.Xor(AX, AX);
         (DX, BX) = Stack.Restore2();
-        return NearRet();
+        NearReturn();
+        return (AX, DX, BX);
+    }
+
+    public virtual Action unknown_017D_205E_0382E_Asm() {
+        (AX, DX, BX) = unknown_017D_205E_0382E(AX, CX, DX, BX, DS);
+        return Returned;
     }
 
     /// <summary>Inputs: CX, DX, BX, DI, DS, DF. Outputs: AX, CX, DX, BX, DI. Changes: AX, CX, DX, BX, DI, ES, flags.</summary>
@@ -4918,36 +4930,47 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: CX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual Action unknown_017D_2257_03A27() {
-        ushort previousDs;
-        ushort previousDs2 = 0;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, ushort result8) unknown_017D_2257_03A27(ushort word1, ushort word2, ushort word3, ushort previousSi, ushort word4, ushort word5) {
+        CX = word1;
+        BX = word2;
+        BP = word3;
+        SI = previousSi;
+        DI = word4;
+        DS = word5;
+        ushort previousDs = 0;
         byte byte1 = 0;
-        ushort word1 = 0;
+        ushort word6 = 0;
         CheckExternalEvents(cs1, 0x2257);
-        Stack.Save(BX, CX, SI, DI, BP);
-        Stack.Push16(DS);
+        Stack.Save(word2, word1, previousSi, word4, word3);
+        Stack.Push16(word5);
         CarryFlag = false;
         AX = 0;
-        previousDs = 0;
+        DS = 0;
         AH = 0x63;
-        (byte1, SI, previousDs2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, SI, previousDs, CarryFlag));
-        word1 = previousDs2;
+        (byte1, SI, previousDs, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, previousSi, DS, CarryFlag));
+        word6 = previousDs;
         if (!CarryFlag && byte1 == 0) {
-            Alu16.And(word1, word1);
-            if (word1 != 0) {
+            Alu16.And(word6, word6);
+            if (word6 != 0) {
                 goto L_2275;
             }
         }
         VerifySpeculativeRunOrFail(cs1, 0x2271, SpeculativeRun_2271);
-        word1 = 0;
+        word6 = 0;
         SI = Alu16.Xor(SI, SI);
     L_2275:
         DS = Stack.Pop16();
         BP = Stack.Pop16();
         AX = SI;
-        DX = word1;
+        DX = word6;
         (DI, SI, CX, BX) = Stack.Restore4();
-        return NearRet();
+        NearReturn();
+        return (AX, CX, DX, BX, BP, SI, DI, DS);
+    }
+
+    public virtual Action unknown_017D_2257_03A27_Asm() {
+        (AX, CX, DX, BX, BP, SI, DI, DS) = unknown_017D_2257_03A27(CX, BX, BP, SI, DI, DS);
+        return Returned;
     }
 
     /// <summary>Inputs: DX, BX, flags, DF. Outputs: AX. Changes: AX, DX, BX, flags.</summary>
@@ -5294,14 +5317,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_017D_1F1D_036ED_AsmEntry;
     private readonly Func<int, Action> unknown_017D_1F62_03732Entry;
     private readonly Func<int, Action> unknown_017D_2035_03805Entry;
-    private readonly Func<int, Action> unknown_017D_205E_0382EEntry;
+    private readonly Func<int, Action> unknown_017D_205E_0382E_AsmEntry;
     private readonly Func<int, Action> unknown_017D_2084_03854_AsmEntry;
     private readonly Func<int, Action> unknown_017D_209C_0386C_AsmEntry;
     private readonly Func<int, Action> unknown_017D_213B_0390B_AsmEntry;
     private readonly Func<int, Action> unknown_017D_2194_03964_AsmEntry;
     private readonly Func<int, Action> unknown_017D_21E5_039B5Entry;
     private readonly Func<int, Action> unknown_017D_223C_03A0C_AsmEntry;
-    private readonly Func<int, Action> unknown_017D_2257_03A27Entry;
+    private readonly Func<int, Action> unknown_017D_2257_03A27_AsmEntry;
     private readonly Func<int, Action> unknown_017D_2280_03A50Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
@@ -5392,14 +5415,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_017D_1F1D_036ED_AsmEntry = _ => unknown_017D_1F1D_036ED_Asm();
         unknown_017D_1F62_03732Entry = _ => unknown_017D_1F62_03732();
         unknown_017D_2035_03805Entry = _ => unknown_017D_2035_03805();
-        unknown_017D_205E_0382EEntry = _ => unknown_017D_205E_0382E();
+        unknown_017D_205E_0382E_AsmEntry = _ => unknown_017D_205E_0382E_Asm();
         unknown_017D_2084_03854_AsmEntry = _ => unknown_017D_2084_03854_Asm();
         unknown_017D_209C_0386C_AsmEntry = _ => unknown_017D_209C_0386C_Asm();
         unknown_017D_213B_0390B_AsmEntry = _ => unknown_017D_213B_0390B_Asm();
         unknown_017D_2194_03964_AsmEntry = _ => unknown_017D_2194_03964_Asm();
         unknown_017D_21E5_039B5Entry = _ => unknown_017D_21E5_039B5();
         unknown_017D_223C_03A0C_AsmEntry = _ => unknown_017D_223C_03A0C_Asm();
-        unknown_017D_2257_03A27Entry = _ => unknown_017D_2257_03A27();
+        unknown_017D_2257_03A27_AsmEntry = _ => unknown_017D_2257_03A27_Asm();
         unknown_017D_2280_03A50Entry = _ => unknown_017D_2280_03A50();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
@@ -5476,14 +5499,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1F1D, unknown_017D_1F1D_036ED_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1F62, unknown_017D_1F62_03732Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2035, unknown_017D_2035_03805Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x205E, unknown_017D_205E_0382EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x205E, unknown_017D_205E_0382E_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2084, unknown_017D_2084_03854_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x209C, unknown_017D_209C_0386C_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x213B, unknown_017D_213B_0390B_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2194, unknown_017D_2194_03964_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x21E5, unknown_017D_21E5_039B5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x223C, unknown_017D_223C_03A0C_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x2257, unknown_017D_2257_03A27Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x2257, unknown_017D_2257_03A27_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2280, unknown_017D_2280_03A50Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");

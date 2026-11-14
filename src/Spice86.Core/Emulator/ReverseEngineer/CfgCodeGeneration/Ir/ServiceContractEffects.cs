@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
@@ -66,4 +67,18 @@ internal static class ServiceContractEffects {
         return new IrEffects(reads, CpuValues.None, entry.Contract.Registers.Writes,
             tokens, tokens, false, false);
     }
+
+    /// <summary>Whether <paramref name="node"/> or one of its descendants is an interrupt site
+    /// whose effects the contract fully describes (IS-8): a typed
+    /// <see cref="InterruptServiceCallNode"/>, or a <see cref="InterruptCallHelperNode"/> whose
+    /// <see cref="Of(InterruptCallHelperNode)"/> is not <see cref="IrEffects.Unknown"/>. Such a
+    /// site is charged by its own statement effects, not by the dispatcher stub's convention.</summary>
+    public static bool DescribesSite(IVisitableAstNode node) =>
+        HasKnownEffects(node) || IrAstChildren.Descendants(node).Any(HasKnownEffects);
+
+    /// <summary>Whether <paramref name="node"/> itself (not a descendant) is a known-effect
+    /// interrupt site.</summary>
+    internal static bool HasKnownEffects(IVisitableAstNode node) =>
+        node is InterruptServiceCallNode
+            || (node is InterruptCallHelperNode helper && Of(helper) != IrEffects.Unknown);
 }

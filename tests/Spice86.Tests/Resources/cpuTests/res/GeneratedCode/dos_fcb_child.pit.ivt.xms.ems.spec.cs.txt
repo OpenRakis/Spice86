@@ -33,14 +33,14 @@ public partial class CfgGeneratedOverrides {
         (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, 0x0051));
         if (!CarryFlag) {
             AL = 0x53;
-            NearCall(cs1, 0x0121, unknown_016E_01C0_018A0Entry);
+            BX = NearCall(cs1, 0x0121, () => unknown_016E_01C0_018A0(AX, BX));
             DX = 0x01CB;
             AH = 0x16;
             AL = ServiceCall(Dos, () => Dos.FcbCreateFile(DS, 0x01CB));
             Alu8.Sub(AL, 0);
             if (AL == 0) {
                 AL = 0x43;
-                NearCall(cs1, 0x0133, unknown_016E_01C0_018A0Entry);
+                BX = NearCall(cs1, 0x0133, () => unknown_016E_01C0_018A0(AX, BX));
                 DX = 0x01F0;
                 AH = 0x1A;
                 ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x01F0));
@@ -50,7 +50,7 @@ public partial class CfgGeneratedOverrides {
                 Alu8.Sub(AL, 0);
                 if (AL == 0) {
                     AL = 0x57;
-                    NearCall(cs1, 0x014A, unknown_016E_01C0_018A0Entry);
+                    BX = NearCall(cs1, 0x014A, () => unknown_016E_01C0_018A0(AX, BX));
                     DX = 0x01CB;
                     AH = 0x10;
                     AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
@@ -60,7 +60,7 @@ public partial class CfgGeneratedOverrides {
                     Alu8.Sub(AL, 0);
                     if (AL == 0) {
                         AL = 0x4F;
-                        NearCall(cs1, 0x0161, unknown_016E_01C0_018A0Entry);
+                        BX = NearCall(cs1, 0x0161, () => unknown_016E_01C0_018A0(AX, BX));
                         DX = 0x02EF;
                         BX = 0x02FC;
                         AX = 0x4B00;
@@ -70,7 +70,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_01B0;
                         }
                         AL = 0x45;
-                        NearCall(cs1, 0x0173, unknown_016E_01C0_018A0Entry);
+                        BX = NearCall(cs1, 0x0173, () => unknown_016E_01C0_018A0(AX, BX));
                         DX = 0x026F;
                         AH = 0x1A;
                         ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x026F));
@@ -95,7 +95,7 @@ public partial class CfgGeneratedOverrides {
                         }
                         if (ZeroFlag) {
                             AL = 0x52;
-                            NearCall(cs1, 0x0197, unknown_016E_01C0_018A0Entry);
+                            BX = NearCall(cs1, 0x0197, () => unknown_016E_01C0_018A0(AX, BX));
                             DX = 0x01CB;
                             AH = 0x10;
                             AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
@@ -116,19 +116,27 @@ public partial class CfgGeneratedOverrides {
     L_01B0:
         VerifySpeculativeRunOrFail(cs1, 0x01B0, SpeculativeRun_01B0);
         AL = 0x46;
-        NearCall(cs1, 0x01B5, unknown_016E_01C0_018A0Entry);
+        NearCall(cs1, 0x01B5, unknown_016E_01C0_018A0_AsmEntry);
         throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
     /// <summary>Inputs: AX, BX. Outputs: BX. Changes: AX, BX.</summary>
-    public virtual Action unknown_016E_01C0_018A0() {
+    public virtual ushort unknown_016E_01C0_018A0(ushort word1, ushort word2) {
+        AX = word1;
+        BX = word2;
         CheckExternalEvents(cs1, 0x01C0);
-        Stack.Save(AX, BX);
+        Stack.Save(word1, word2);
         AH = 0x0E;
         BH = 0;
         ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, BX));
         (BX, AX) = Stack.Restore2();
-        return NearRet();
+        NearReturn();
+        return BX;
+    }
+
+    public virtual Action unknown_016E_01C0_018A0_Asm() {
+        BX = unknown_016E_01C0_018A0(AX, BX);
+        return Returned;
     }
 
 }
@@ -239,7 +247,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
-    private readonly Func<int, Action> unknown_016E_01C0_018A0Entry;
+    private readonly Func<int, Action> unknown_016E_01C0_018A0_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0000_F0000Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
@@ -264,7 +272,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
         unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
-        unknown_016E_01C0_018A0Entry = _ => unknown_016E_01C0_018A0();
+        unknown_016E_01C0_018A0_AsmEntry = _ => unknown_016E_01C0_018A0_Asm();
         unknown_F000_0000_F0000Entry = _ => unknown_F000_0000_F0000();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
@@ -280,7 +288,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01C0, unknown_016E_01C0_018A0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01C0, unknown_016E_01C0_018A0_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0000, unknown_F000_0000_F0000Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");

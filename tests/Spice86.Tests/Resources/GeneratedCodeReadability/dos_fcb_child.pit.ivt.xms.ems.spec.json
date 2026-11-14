@@ -34,11 +34,11 @@
       "LocalReads": 2,
       "LocalVariables": 1,
       "LocalWrites": 2,
-      "PlainRegisterAssignments": 57,
+      "PlainRegisterAssignments": 64,
       "PortWrapperCalls": 0,
       "RawIoCalls": 1,
-      "RegisterReads": 43,
-      "RegisterWrites": 62,
+      "RegisterReads": 56,
+      "RegisterWrites": 71,
       "Statements": 142,
       "WriteBacks": 0
     }
