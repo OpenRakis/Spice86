@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, BP, DI, ES, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: BP, DI, ES, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -548,7 +548,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_001C_F001C() {
         CheckExternalEvents(biosSegment, 0x001C);
@@ -557,7 +557,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0021_F0021() {
         CheckExternalEvents(biosSegment, 0x0021);
@@ -566,7 +566,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, ECX, DX, EBX, CF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0058_F0058() {
         CheckExternalEvents(biosSegment, 0x0058);
@@ -657,7 +657,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

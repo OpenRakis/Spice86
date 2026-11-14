@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, BX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         byte byte1 = 0;
@@ -509,7 +509,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
@@ -545,7 +545,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, EBX, ES, CF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_00CA_F00CA() {
         CheckExternalEvents(biosSegment, 0x00CA);

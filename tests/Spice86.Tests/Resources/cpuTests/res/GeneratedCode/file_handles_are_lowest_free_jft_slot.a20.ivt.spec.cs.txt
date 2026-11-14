@@ -12,12 +12,13 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, ESI, DS, DF. Does not return.</summary>
+    /// <summary>Inputs: DS, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         byte byte1 = 0;
         byte flagOperand_0157 = 0;
+        byte flagOperand_0168 = 0;
         byte flagOperand_018D = 0;
         byte flagOperand_01A4 = 0;
         CheckExternalEvents(cs1, 0x0100);
@@ -33,9 +34,11 @@ public partial class CfgGeneratedOverrides {
         ServiceCall(cs1, 0x011A, () => Dos.SetCurrentPsp(BX));
         DX = 0x01ED;
         NearCall(cs1, 0x0120, unknown_016D_01D8_018A8Entry);
+        Alu16.Sub(AX, 5);
         if (AX == 5) {
             DX = 0x01F3;
             NearCall(cs1, 0x012D, unknown_016D_01D8_018A8Entry);
+            Alu16.Sub(AX, 6);
             if (AX == 6) {
                 DX = 0x01F9;
                 NearCall(cs1, 0x013A, unknown_016D_01D8_018A8Entry);
@@ -51,7 +54,12 @@ public partial class CfgGeneratedOverrides {
                             goto L_01D1;
                         }
                         (AX, CarryFlag) = ServiceCall(cs1, 0x0166, Dos, () => Dos.CloseFile(6, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
-                        if (CarryFlag || EsGlobals.Byte001E != 0xFF) {
+                        if (CarryFlag) {
+                            goto L_01D1;
+                        }
+                        flagOperand_0168 = EsGlobals.Byte001E;
+                        Alu8.Sub(flagOperand_0168, 0xFF);
+                        if (flagOperand_0168 != 0xFF) {
                             goto L_01D1;
                         }
                         DX = 0x01FF;
@@ -115,7 +123,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: EAX, EDX, DS, DF. Outputs: EAX. Changes: EAX, DX, CF.</summary>
+    /// <summary>Inputs: DX, DS, flags, DF. Outputs: AX. Changes: AX, DX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_016D_01D8_018A8() {
         ushort word1 = 0;
@@ -471,7 +479,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

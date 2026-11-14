@@ -120,7 +120,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
-    /// <summary>Inputs: EAX, EBX. Outputs: AL, BX. Changes: AX, BX.</summary>
+    /// <summary>Inputs: AX, BX. Outputs: BX. Changes: AX, BX.</summary>
     public virtual Action unknown_016E_01C0_018A0() {
         CheckExternalEvents(cs1, 0x01C0);
         Stack.Save(AX, BX);

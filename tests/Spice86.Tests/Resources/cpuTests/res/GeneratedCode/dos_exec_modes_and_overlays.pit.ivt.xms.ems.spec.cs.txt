@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, EBP, ESI, FS, GS, DF. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: EDX, EBX, EBP, ESI, FS, GS, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
@@ -192,7 +192,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016D:015B");
     }
 
-    /// <summary>Inputs: EAX. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_016D_0239_01909() {
         CheckExternalEvents(cs1, 0x0239);
         AL = 0x56;
@@ -293,7 +293,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX. Outputs: AH, BX. Changes: AH, BX.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: AH, BX.</summary>
     public virtual Action unknown_016D_02E0_019B0() {
         CheckExternalEvents(cs1, 0x02E0);
         AH = 0x0E;

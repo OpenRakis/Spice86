@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX. Does not return.</summary>
+    /// <summary>Inputs: DX. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
@@ -308,7 +308,7 @@ public partial class CfgGeneratedOverrides {
         return FarRet();
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, EDX, BX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F100_0000_F1000() {
         CheckExternalEvents(cs2, 0x0000);

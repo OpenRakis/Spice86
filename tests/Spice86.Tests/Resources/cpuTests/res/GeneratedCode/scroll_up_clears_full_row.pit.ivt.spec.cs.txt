@@ -226,7 +226,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
