@@ -752,6 +752,16 @@ public class Spice86DependencyInjection : IDisposable {
 
         _shutdownCoordinator = shutdownCoordinator;
 
+        // Reload a previously dumped CFG graph into live state, if requested and available. Must run
+        // before the ProgramExecutor constructor (which loads the initial program image and raises
+        // LoadedImageRegistry events that seed speculative exploration): restored nodes must already
+        // be in the node index when those seeds decode, or duplicate nodes appear at the same
+        // addresses. Reconstruction parses each node's own stored bytes, so it does not depend on
+        // the program image already being loaded in memory; that image only matters later, when
+        // resumed execution memory-matches a reloaded node.
+        CfgReloadDump? reloadDump = ReloadCfgGraphIfRequested(configuration, emulationStateDataReader,
+            cfgCpu, state, cfgNodeExecutionCompiler, loggerService, cfgIdAllocator);
+
         ProgramLoadOptions programLoadOptions = RuntimeOptionsMapper.ToProgramLoadOptions(configuration, dosRuntimeState);
         ProgramBootstrapper programBootstrapper = new ProgramBootstrapper(
             programLoadOptions, memory, state, dos.DosInt21Handler, loadedImageRegistry, loggerService);
@@ -767,13 +777,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("Program executor created...");
         }
 
-        // Reload a previously dumped CFG graph into live state, if requested and available. Must run
-        // before CfgCpu.SignalEntry (later, in EmulationLoop) so resumed execution reconnects to the
-        // reloaded graph instead of building a disconnected one. Reconstruction parses each node's own
-        // stored bytes, so it does not depend on the program image already being loaded in memory; that
-        // image only matters later, when resumed execution memory-matches a reloaded node.
-        ReloadCfgGraphIfRequested(configuration, emulationStateDataReader, cfgCpu, state,
-            cfgNodeExecutionCompiler, loggerService, cfgIdAllocator, changedMemoryMap);
+        // The changed-memory snapshot part of the dump is applied only now, after the initial
+        // program image load: restoring it earlier would let the loader's own writes be counted
+        // as runtime changes by ChangedMemoryMap.
+        if (reloadDump?.WatchedAreas is not null || reloadDump?.ChangedRanges is not null) {
+            changedMemoryMap.Restore(ChangedMemorySnapshot.FromReloadDump(reloadDump));
+        }
 
         // Seed emulator-installed hardware interrupt (external event) handlers for speculative
         // exploration and register them as CFG generation roots. The addresses were captured at
@@ -944,24 +953,22 @@ public class Spice86DependencyInjection : IDisposable {
         return configuration;
     }
 
-    private static void ReloadCfgGraphIfRequested(Configuration configuration,
+    private static CfgReloadDump? ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILogger loggerService,
-        SequentialIdAllocator cfgIdAllocator, ChangedMemoryMap changedMemoryMap) {
+        SequentialIdAllocator cfgIdAllocator) {
         if (!configuration.ReloadCfgGraph) {
-            return;
+            return null;
         }
         CfgReloadDump? reloadDump = emulationStateDataReader.ReadCfgReloadFromFileOrNull();
         if (reloadDump == null) {
-            return;
+            return null;
         }
         new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator).Reload(reloadDump);
-        if (reloadDump.WatchedAreas is not null || reloadDump.ChangedRanges is not null) {
-            changedMemoryMap.Restore(ChangedMemorySnapshot.FromReloadDump(reloadDump));
-        }
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CFG graph reloaded from dump...");
         }
+        return reloadDump;
     }
 
     private static IReadOnlyList<CompiledLogExpression> BuildCompiledLogExpressions(
