@@ -2,14 +2,21 @@ namespace Spice86.Tests.InterruptHandlers;
 
 using FluentAssertions;
 
+using System.Numerics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
@@ -156,6 +163,9 @@ internal static class ServiceContractHarness {
         RunResult second = RunCase(testCase, 1, mode);
         InterruptServiceEntry entry = first.Entry;
         ServiceContract contract = entry.Contract;
+        if (mode == ServiceRunMode.Callback && entry.Implementation is not null) {
+            AssertTypedImplementation(testCase, first);
+        }
 
         foreach (RegisterField field in Fields) {
             if (!contract.Registers.Writes.HasFlag(field.Bit)) {
@@ -488,5 +498,232 @@ internal static class ServiceContractHarness {
             snapshot[i] = view[i];
         }
         return snapshot;
+    }
+
+    private sealed record TypedRun(InterruptServiceEntry Entry, object? Result,
+        IReadOnlyDictionary<RegisterField, uint> Outputs, ushort OutputFlags,
+        byte[] MemoryAfter, IReadOnlySet<int> FrameBytes);
+
+    /// <summary>Invokes the case's typed <see cref="InterruptServiceEntry.Implementation"/> twice on
+    /// fresh machines prepared exactly like the first contract run: the argument values come from the
+    /// prepared <see cref="State"/> the way generated code binds <see cref="InterruptServiceEntry.Inputs"/>,
+    /// then every register and flag - the declared inputs included, since they are stale where a typed
+    /// call runs - is set to a different pattern per run. The return values and the memory must be
+    /// identical, and the outputs the return value maps to must equal the contract run's.</summary>
+    private static void AssertTypedImplementation(ServiceContractCase testCase, RunResult run) {
+        TypedRun first = RunTyped(testCase, 0x5A5A5A5A, true);
+        TypedRun second = RunTyped(testCase, 0xA5A5A5A5, false);
+        InterruptServiceEntry entry = first.Entry;
+        second.Result.Should().Be(first.Result,
+            "the typed implementation of {0} read machine state behind its declared Inputs",
+            entry.Name);
+        int differingOffset = FirstDifference(first.MemoryAfter, second.MemoryAfter, first.FrameBytes);
+        differingOffset.Should().Be(-1,
+            "the typed implementation of {0} accessed memory through machine state behind its "
+            + "declared Inputs; the runs differ at offset 0x{1:X}",
+            entry.Name, Math.Max(differingOffset, 0));
+        foreach (RegisterField field in Fields.Where(field =>
+                     entry.Contract.Registers.Writes.HasFlag(field.Bit))) {
+            first.Outputs[field].Should().Be(run.Outputs[field],
+                "the typed output of {0} mapped to {1} differs from the service's output",
+                entry.Name, field.Name);
+        }
+        ushort flagMask = FrameFlagsOf(entry.Contract.Registers.Writes);
+        (first.OutputFlags & flagMask).Should().Be(run.OutputFrameFlags & flagMask,
+            "the typed output of {0} mapped to frame flags differs from the service's output",
+            entry.Name);
+    }
+
+    private static TypedRun RunTyped(ServiceContractCase testCase, uint scrambleWord,
+        bool scrambleFlag) {
+        using ServiceContractMachine machine = new(testCase.NeedsEms, testCase.NeedsXms);
+        Spice86DependencyInjection spice86 = machine.Spice86;
+        (object target, InterruptServiceEntry entry, InterruptHandler? handler,
+            ServiceSelector? selector) = ResolveTypedTarget(spice86, testCase);
+        State state = spice86.Machine.CpuState;
+        // Same prepared inputs as the first contract run.
+        Random random = new(testCase.Vector * 131071 + testCase.SelectorValue * 131);
+        RandomizeInputs(state, random);
+        FillContractReads(state, selector, testCase.SelectorValue, entry.Contract);
+        testCase.Setup?.Invoke(machine);
+        SetSelector(state, selector, testCase.SelectorValue);
+        if (testCase.Al != InterruptServiceAttribute.NoAl) {
+            state.AL = (byte)testCase.Al;
+        }
+        if (entry.Implementation is not { } implementation) {
+            throw new InvalidOperationException($"{testCase}: no typed implementation to invoke");
+        }
+        object?[] arguments = entry.Inputs
+            .Select((input, index) => ArgumentOf(entry, target, state, input,
+                implementation.GetParameters()[index].ParameterType))
+            .ToArray();
+        Scramble(state, scrambleWord, scrambleFlag);
+        // The same invocation shape as CSharpOverrideHelper.ServiceCallCore.
+        state.InterruptFlag = false;
+        spice86.Machine.Stack.Push16(state.Flags.FlagRegister16);
+        spice86.Machine.Stack.PushSegmentedAddress(new SegmentedAddress(0xF000, 0x0100));
+        HashSet<int> frameBytes = new();
+        for (int i = 0; i < 6; i++) {
+            frameBytes.Add((int)MemoryUtils.ToPhysicalAddress(state.SS, (ushort)(state.SP + i)));
+        }
+        handler?.OnInterruptEntry();
+        object? result = implementation.Invoke(target, arguments);
+        ApplyOutputs(state, entry, result);
+        IReadOnlyDictionary<RegisterField, uint> outputs = SnapshotRegisters(state);
+        ushort outputFlags = state.Flags.FlagRegister16;
+        spice86.Machine.Stack.Pop16();
+        spice86.Machine.Stack.Pop16();
+        spice86.Machine.Stack.Pop16();
+        return new TypedRun(entry, result, outputs, outputFlags,
+            SnapshotMemory(spice86.Machine.Memory), frameBytes);
+    }
+
+    /// <summary>The object generated code invokes the implementation on: the vector's handler, or the
+    /// callback runnable's target instance.</summary>
+    private static (object Target, InterruptServiceEntry Entry, InterruptHandler? Handler,
+        ServiceSelector? Selector) ResolveTypedTarget(Spice86DependencyInjection spice86,
+        ServiceContractCase testCase) {
+        if (testCase.CallbackNumber is { } callbackNumber) {
+            Callback? registered = spice86.Machine.CallbackHandler.AllRunnables
+                .OfType<Callback>().FirstOrDefault(runnable => runnable.Index == callbackNumber)
+                ?? throw new InvalidOperationException(
+                    $"No callback registered for number 0x{callbackNumber:X3}");
+            InterruptServiceEntry callbackEntry = HardwareInterruptSetup.ServiceEntryOf(registered.Runnable)
+                ?? throw new InvalidOperationException(
+                    $"No service entry declared for callback 0x{callbackNumber:X3}");
+            return (registered.Runnable.Target
+                    ?? throw new InvalidOperationException(
+                        $"callback 0x{callbackNumber:X3} has no instance to invoke"),
+                callbackEntry, null, null);
+        }
+        if (!spice86.Machine.InstalledInterruptHandlers.Handlers.TryGetValue(testCase.Vector,
+                out IInterruptHandler? handler)) {
+            throw new InvalidOperationException(
+                $"No handler installed on vector 0x{testCase.Vector:X2}");
+        }
+        InterruptServiceEntry? entry = EntryOf(handler, testCase.SelectorValue)
+            ?? throw new InvalidOperationException(
+                $"No service entry declared for {testCase}");
+        if (testCase.Al != InterruptServiceAttribute.NoAl) {
+            entry = entry.Variants.FirstOrDefault(variant => variant.Al == testCase.Al)
+                ?? throw new InvalidOperationException(
+                    $"No AL=0x{testCase.Al:X2} variant declared for {testCase}");
+        }
+        return (handler, entry, handler as InterruptHandler, SelectorOf(handler));
+    }
+
+    /// <summary>The value a generated typed call passes for the <paramref name="input"/> binding,
+    /// read from the prepared <paramref name="state"/>.</summary>
+    private static object? ArgumentOf(InterruptServiceEntry entry, object target, State state,
+        CpuValues input, Type parameterType) {
+        if (input == (CpuValues.Ds | CpuValues.Dx)
+            && entry.StringArgument is not ServiceStringArgument.None) {
+            if (target.GetType().GetProperty("StringDecoder")?.GetValue(target)
+                is not DosStringDecoder decoder) {
+                throw new InvalidOperationException(
+                    $"{entry.Name}: a string argument needs a StringDecoder on the handler");
+            }
+            return decoder.GetDosString(state.DS, state.DX,
+                (char)(entry.StringArgument.Terminator() ?? 0));
+        }
+        if (parameterType == typeof(bool)) {
+            return RawValueOf(state, input) != 0;
+        }
+        uint raw = RawValueOf(state, input);
+        if (parameterType.IsEnum) {
+            return Enum.ToObject(parameterType, raw);
+        }
+        return Convert.ChangeType(raw, parameterType);
+    }
+
+    /// <summary>The register or flag value <paramref name="mask"/> covers in
+    /// <paramref name="state"/> (0 or 1 for a flag). The byte index of a
+    /// <see cref="RegisterField"/> inside its 32-bit register is its bit index modulo four:
+    /// the <see cref="CpuValues"/> layout gives each register four consecutive bits, one
+    /// per byte.</summary>
+    private static uint RawValueOf(State state, CpuValues mask) {
+        uint value = 0;
+        bool found = false;
+        int firstByte = BitOperations.TrailingZeroCount((ulong)mask) % 4;
+        foreach (RegisterField field in Fields) {
+            if (field.Bit >= CpuValues.Es) {
+                if (mask.HasFlag(field.Bit)) {
+                    return field.Get(state);
+                }
+                continue;
+            }
+            if ((mask & field.Bit) == field.Bit) {
+                int byteIndex = BitOperations.TrailingZeroCount((ulong)field.Bit) % 4 - firstByte;
+                value |= field.Get(state) << (byteIndex * 8);
+                found = true;
+            }
+        }
+        if (found) {
+            return value;
+        }
+        foreach ((CpuValues bit, _, ushort flagMask, _) in FlagFields) {
+            if (mask.HasFlag(bit)) {
+                return (uint)((state.Flags.FlagRegister16 & flagMask) != 0 ? 1 : 0);
+            }
+        }
+        throw new InvalidOperationException($"no state value for input mask {mask}");
+    }
+
+    /// <summary>Writes the typed result of the invocation into the registers and flags its
+    /// contract declares, the way the printed call assigns <c>Results</c> (flags through the
+    /// stacked frame end in <see cref="Flags.FlagRegister16"/> the same way).</summary>
+    private static void ApplyOutputs(State state, InterruptServiceEntry entry, object? result) {
+        IReadOnlyList<TypedParameter> outputs = ServiceCallSignature.Outputs(entry.Contract);
+        for (int i = 0; i < outputs.Count; i++) {
+            if ((result is ITuple tuple ? tuple[i] : result) is { } item) {
+                SetRawValue(state, outputs[i].Mask, item);
+            }
+        }
+    }
+
+    private static void SetRawValue(State state, CpuValues mask, object value) {
+        uint raw = value is bool flag ? (uint)(flag ? 1 : 0) : Convert.ToUInt32(value);
+        bool found = false;
+        int firstByte = BitOperations.TrailingZeroCount((ulong)mask) % 4;
+        foreach (RegisterField field in Fields) {
+            if (field.Bit >= CpuValues.Es) {
+                if (mask.HasFlag(field.Bit)) {
+                    field.Set(state, raw);
+                    return;
+                }
+                continue;
+            }
+            if ((mask & field.Bit) == field.Bit) {
+                int byteIndex = BitOperations.TrailingZeroCount((ulong)field.Bit) % 4 - firstByte;
+                field.Set(state, raw >> (byteIndex * 8));
+                found = true;
+            }
+        }
+        if (found) {
+            return;
+        }
+        foreach ((CpuValues bit, _, _, Action<State, bool> set) in FlagFields) {
+            if (mask.HasFlag(bit)) {
+                set(state, Convert.ToBoolean(value));
+                return;
+            }
+        }
+        throw new InvalidOperationException($"no state value for output mask {mask}");
+    }
+
+    /// <summary>Overwrites every register and flag with the run's pattern - the declared inputs
+    /// included: where a typed call runs in generated code those registers are stale, so an
+    /// implementation that still reads them must produce different results. SS:SP and CS keep
+    /// their prepared values so the stack frame and flow stay valid.</summary>
+    private static void Scramble(State state, uint word, bool flagValue) {
+        foreach (RegisterField field in Fields) {
+            if (field.Bit is CpuValues.Ss or CpuValues.Cs or CpuValues.Sp) {
+                continue;
+            }
+            field.Set(state, word);
+        }
+        foreach ((_, _, _, Action<State, bool> set) in FlagFields) {
+            set(state, flagValue);
+        }
     }
 }
