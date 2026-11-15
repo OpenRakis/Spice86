@@ -50,4 +50,15 @@ public class MiscVectorsServiceContractTest {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContract(testCase);
     }
+
+    /// <summary>The IRQ 3 default handler's declared contract (its BDA record of the
+    /// unexpected IRQ, its PIC acknowledge and mask) holds through its installed stub.
+    /// Run through the stub only: <c>DefaultIrqHandler</c> is not an
+    /// <c>InterruptHandler</c> and the callback mode cannot invoke it.</summary>
+    [Fact]
+    public void DefaultIrqHandlerHonoursDeclaredContractThroughStub() {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertContractThroughStub(
+            new ServiceContractCase { Vector = 0x0B, SelectorValue = 0 });
+    }
 }

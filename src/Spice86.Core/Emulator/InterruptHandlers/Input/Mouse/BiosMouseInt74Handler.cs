@@ -62,7 +62,8 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Prepares execution before the Mouse handler is called.
     /// </summary>
-    /// <remarks>Far calls the user mouse driver, so its effects are not bounded.</remarks>
-    [InterruptService(Unknown = true)]
+    /// <remarks>The callback itself only acknowledges the PIC; the far call to the user driver
+    /// is the stub's own instruction, not an effect of this callback.</remarks>
+    [InterruptService(Io = true)]
     public void AfterMouseDriverExecution() => _hardwareInterruptHandler.AcknowledgeInterrupt(12);
 }

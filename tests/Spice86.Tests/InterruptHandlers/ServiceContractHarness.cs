@@ -244,7 +244,7 @@ internal static class ServiceContractHarness {
                 $"No service entry declared for {testCase} (handler selector is {selector})");
         }
 
-        if (handler is not InterruptHandler interruptHandler) {
+        if (mode != ServiceRunMode.Stub && handler is not InterruptHandler) {
             throw new InvalidOperationException(
                 $"Handler on vector 0x{testCase.Vector:X2} ({handler.GetType().Name}) does not derive " +
                 "from InterruptHandler and cannot be run by the harness");
@@ -337,7 +337,7 @@ internal static class ServiceContractHarness {
             if (mode == ServiceRunMode.Stub) {
                 RunThroughStub(spice86, state, testCase, entry);
             } else {
-                interruptHandler.Run();
+                ((InterruptHandler)handler).Run();
             }
         } finally {
             breakpoints.ToggleBreakPoint(ioBreakpoint, false);
