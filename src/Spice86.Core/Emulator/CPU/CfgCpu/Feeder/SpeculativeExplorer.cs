@@ -63,6 +63,7 @@ public class SpeculativeExplorer {
     /// <see cref="InstructionSuccessorType.CallToReturn"/> continuation edges past call/int
     /// instructions. <see cref="Trigger"/> is the instruction a <see cref="DiscoveryCandidate"/>
     /// was submitted under; a data-sourced item whose bytes are not trusted is kept pending on it.
+    /// <see cref="FromGuess"/> is true for items descended from a guessed root: they never poison.
     /// </summary>
     private readonly record struct ExploreItem(
         SegmentedAddress Target,
@@ -72,7 +73,8 @@ public class SpeculativeExplorer {
         ExploreSource Source,
         CfgInstruction? Trigger,
         ushort KnownRegisters,
-        CfgInstruction? Anchor);
+        CfgInstruction? Anchor,
+        bool FromGuess);
 
     private const int MaxCandidatesPerSite = 32;
     private const int MaxTableEntries = 1024;
@@ -192,9 +194,9 @@ public class SpeculativeExplorer {
         // before it executes: every register it does not write stays known down the speculative
         // path it opens, and it becomes the anchor that re-evaluates them on later executions.
         ushort known = (ushort)((ushort)RegisterBits.All & ~RegisterWriteSet.MayWrite(observed));
-        EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, known == 0 ? null : observed);
+        EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, known == 0 ? null : observed, fromGuess: false);
         if (observed.IsCall) {
-            TryExploreCallContinuation(observed, worklist);
+            TryExploreCallContinuation(observed, worklist, false);
         }
         TryExplorePushedReturn(observed, worklist);
         Drain(worklist);
@@ -216,7 +218,7 @@ public class SpeculativeExplorer {
             return;
         }
         Queue<ExploreItem> worklist = new();
-        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true, ExploreSource.Static, null, 0, null));
+        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true, ExploreSource.Static, null, 0, null, FromGuess: false));
         Drain(worklist);
     }
 
@@ -323,7 +325,7 @@ public class SpeculativeExplorer {
             return;
         }
         if (_calleeReturnEvidence.IsKnownToReturn(calleeEntry) || IsProvenFor(calleeEntry, callNode)) {
-            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, false);
         } else {
             AddPendingCallSite(calleeEntry, callNode);
         }
@@ -346,7 +348,8 @@ public class SpeculativeExplorer {
                 continue;
             }
             worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
-                candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null));
+                candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null,
+                FromGuess: IsGuess(candidate.Source)));
         }
         Drain(worklist);
         if (pending.Count == 0) {
@@ -378,7 +381,8 @@ public class SpeculativeExplorer {
             }
         }
         worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
-            candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null));
+            candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null,
+            FromGuess: IsGuess(candidate.Source)));
     }
 
     private bool AcceptForSite(CfgInstruction site, SegmentedAddress target) {
@@ -411,6 +415,9 @@ public class SpeculativeExplorer {
     private static bool IsDataSource(ExploreSource source) => source is
         ExploreSource.TableEntry or ExploreSource.CatalogueEntry or ExploreSource.InterruptVector
         or ExploreSource.RegisterValue or ExploreSource.PointerValue;
+
+    private static bool IsGuess(ExploreSource source) =>
+        IsDataSource(source) || source is ExploreSource.PushedReturn;
 
     private static bool IsRefused(SegmentedAddress target) =>
         target.Offset is 0x0000 or 0xFFFF || target.Segment is 0x0000 or 0xFFFF;
@@ -454,9 +461,10 @@ public class SpeculativeExplorer {
             }
             CfgInstruction candidate = _instructionParser.ParseInstructionAt(address);
             if (candidate.IsInvalid) {
-                // Only static-edge exploration poisons; a guess from any other source is dropped
-                // so the address can be discovered again once its bytes mean something.
-                if (item.Source == ExploreSource.Static) {
+                // Only static-edge exploration poisons, and only when the item does not descend
+                // from a guessed root: a guess's descendants are dropped so the address can be
+                // discovered again once its bytes mean something.
+                if (item.Source == ExploreSource.Static && !item.FromGuess) {
                     _nodeIndex.PoisonSet.Add(address);
                 }
                 continue;
@@ -564,25 +572,25 @@ public class SpeculativeExplorer {
             // Call or INT: static successors are callees (enqueued untrusted, always Normal edges).
             // Continuation is only enqueued if under trust, or when the callee is known to return.
             foreach (SegmentedAddress successor in node.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, nextAnchor));
+                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, nextAnchor, item.FromGuess));
             }
             if (followContinuations) {
-                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static);
+                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static, item.FromGuess);
             } else {
-                TryExploreCallContinuation(node, worklist);
+                TryExploreCallContinuation(node, worklist, item.FromGuess);
             }
             return;
         }
         if (node.StaticSuccessorAddresses.Count > 0) {
             // Non-call instructions with known static successors: propagate trust through intra-routine successors.
             // Static successors are always Normal edges.
-            EnqueueStaticSuccessors(node, worklist, followContinuations, nextKnown, nextAnchor);
+            EnqueueStaticSuccessors(node, worklist, followContinuations, nextKnown, nextAnchor, item.FromGuess);
             return;
         }
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.
         // Only callback instructions have a meaningful memory continuation; follow it under trust.
         if (followContinuations && node.MaxSuccessorsCount is null && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
-            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static);
+            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, item.FromGuess);
         }
         TryExplorePushedReturn(node, worklist);
     }
@@ -633,7 +641,7 @@ public class SpeculativeExplorer {
         }
         worklist.Enqueue(new ExploreItem(
             target, node, InstructionSuccessorType.Normal, FollowContinuations: false,
-            ExploreSource.PushedReturn, null, 0, null));
+            ExploreSource.PushedReturn, null, 0, null, FromGuess: true));
     }
 
     /// <summary>
@@ -851,7 +859,7 @@ public class SpeculativeExplorer {
         }
         Queue<ExploreItem> worklist = new();
         foreach (CfgInstruction callNode in callNodes) {
-            TryExploreCallContinuation(callNode, worklist);
+            TryExploreCallContinuation(callNode, worklist, false);
         }
         Drain(worklist);
     }
@@ -914,13 +922,13 @@ public class SpeculativeExplorer {
     /// node pending on its callee entry so it is retried when aligned return evidence appears.
     /// Nodes that already carry a CallToReturn successor or left the index are skipped.
     /// </summary>
-    private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist) {
+    private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, bool fromGuess) {
         if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
             return;
         }
 
         if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
-            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, fromGuess);
         } else if (callee is not null) {
             AddPendingCallSite(callee.Value, callNode);
         }
@@ -1097,7 +1105,7 @@ public class SpeculativeExplorer {
             if (!_nodeIndex.Contains(site) || !IsUsable(site) || HasCallToReturnSuccessor(site)) {
                 continue;
             }
-            EnqueueContinuation(site, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+            EnqueueContinuation(site, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, false);
         }
         Drain(worklist);
     }
@@ -1107,17 +1115,17 @@ public class SpeculativeExplorer {
     /// edge type and source. The continuation address is computed from instruction length, never
     /// by decoding the operand.
     /// </summary>
-    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations, ExploreSource source) {
+    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations, ExploreSource source, bool fromGuess) {
         SegmentedAddress continuation = callNode.NextInMemoryAddress32.ToSegmentedAddress();
         if (_nodeIndex.PoisonSet.Contains(continuation)) {
             return;
         }
-        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null, 0, null));
+        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null, 0, null, fromGuess));
     }
 
-    private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations, ushort knownRegisters, CfgInstruction? anchor) {
+    private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations, ushort knownRegisters, CfgInstruction? anchor, bool fromGuess) {
         foreach (SegmentedAddress successor in instruction.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, knownRegisters, anchor));
+            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, knownRegisters, anchor, fromGuess));
         }
     }
 }

@@ -76,6 +76,49 @@ public sealed class SpeculativeExplorerCandidateTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void GuessedCandidateFallThroughInvalidDecodeDoesNotPoison() {
+        // Arrange: a TableEntry candidate lands on a valid NOP whose fall-through is invalid.
+        SegmentedAddress entry = new(0x200, 0x40);
+        SegmentedAddress fallThrough = new(0x200, 0x41);
+        uint phys = MemoryUtils.ToPhysicalAddress(entry.Segment, entry.Offset);
+        Memory.UInt8[phys] = 0x90;
+        Memory.UInt8[phys + 1] = 0x0F;
+        Memory.UInt8[phys + 2] = 0xFF;
+        RegisterImage();
+        CfgInstruction trigger = CreateTrigger();
+
+        // Act
+        _explorer.ExploreCandidates(trigger, [
+            new DiscoveryCandidate(entry, null, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
+        ]);
+
+        // Assert: the item decoded from the guess enqueues its successors, but nothing it
+        // descends into poisons - the fall-through stays discoverable.
+        NodeIndex.HasAddress(entry).Should().BeTrue();
+        NodeIndex.PoisonSet.Should().NotContain(fallThrough,
+            "an invalid decode descended from a guessed root is dropped, never poisoned");
+    }
+
+    [Fact]
+    public void StaticExplorationFallThroughInvalidDecodeStillPoisons() {
+        // Arrange: an observed NOP's static successors walk a valid NOP into invalid bytes.
+        CfgInstruction observed = CreateObservedNode(new SegmentedAddress(0x200, 0x10));
+        uint phys = MemoryUtils.ToPhysicalAddress(0x200, 0x11);
+        Memory.UInt8[phys] = 0x90;
+        Memory.UInt8[phys + 1] = 0x0F;
+        Memory.UInt8[phys + 2] = 0xFF;
+        RegisterImage();
+        SegmentedAddress fallThrough = new(0x200, 0x12);
+
+        // Act
+        _explorer.ExploreFrom(observed);
+
+        // Assert
+        NodeIndex.PoisonSet.Should().Contain(fallThrough,
+            "static exploration from an observed node keeps poisoning invalid decodes");
+    }
+
+    [Fact]
     public void DataSourcedCandidateOverChangedBytesIsPendingUntilBytesAreRestored() {
         // Arrange: NOP;RET inside the image, then the first byte is overwritten.
         SegmentedAddress target = new(0x200, 0x50);

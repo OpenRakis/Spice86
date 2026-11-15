@@ -60,6 +60,7 @@
 ;   [0x040B] = 0xDD or 0x88 (P8: and-mask bound)
 ;   [0x040C] = 0x99 (S: speculative anchor table - only on the unobserved run)
 ;   [0x040D] = 0xDD or 0xBB (U: unscaled mask index, entry = selector*2)
+;   [0x040E] = 0xDD or 0xCC (W: self-patched code at a guess's fall-through - unobserved only)
 ;   [0x0407] = 0xAA (done)
 
 use16
@@ -68,6 +69,7 @@ start:
     mov byte [0x0400], 0x01
     mov byte [0x0408], 0x01 ; poison marker initial value (low RAM may be nonzero)
     mov byte [0x040C], 0x00 ; S marker initial value (low RAM may be nonzero)
+    mov byte [0x040E], 0xDD ; W marker initial value (low RAM may be nonzero)
     mov ax, cs
     mov es, ax              ; es = cs for the self-patch; ds stays 0 for markers
 
@@ -326,10 +328,10 @@ u_switch:
     jmp word [cs:bx+u_table]
 u_case0:
     mov byte [0x040D], 0xDD
-    jmp poison_section
+    jmp w_switch
 u_case1:
     mov byte [0x040D], 0xBB
-    jmp poison_section
+    jmp w_switch
 u_case2:
     hlt
 u_case3:
@@ -358,6 +360,42 @@ u_case14:
     hlt
 u_case15:
     hlt
+    ; W: w_table's third entry is never executed: it lands on a lone nop whose
+    ; fall-through f holds 0xFF bytes while the table resolves, so a guess's
+    ; fall-through must not poison f. The program then writes real code at f
+    ; (a marker store and a jump back), and the jnz takes f only on the
+    ; unobserved run.
+w_switch:
+    mov al, byte [0x0500]
+    mov ah, 0
+    shl ax, 1
+    cmp ax, 4
+    ja w_default
+    mov bx, ax
+    jmp word [cs:bx+w_table]
+w_default:
+    hlt
+w_case0:
+    jmp w_write
+w_case1:
+    jmp w_write
+w_case2:
+    nop
+f:
+    times 8 db 0xFF
+w_write:
+    mov word [es:f], 0x06C6              ; C6 06 = mov byte [m],imm8
+    mov word [es:f+2], 0x040E            ; m = 0x040E
+    mov byte [es:f+4], 0xCC              ; imm
+    mov byte [es:f+5], 0xE9              ; jmp near
+    mov word [es:f+6], poison_section-(f+8)
+    ; The branch block is only reached through this indirect jump, so static
+    ; speculation cannot walk to jnz f before the patch above has run.
+    mov bx, w_branch
+    jmp bx
+w_branch:
+    cmp byte [0x0500], 0
+    jnz f
 poison_section:
     ; X: poison section. Forced index 0 keeps both runs on p6_case0; the second
     ; entry names poison_target, which still holds FF bytes at resolution time
@@ -501,6 +539,7 @@ p6_table:      dw p6_case0, poison_target
 ; at an odd table offset lands inside the stub block (junk target).
 u_table:       dw u_s0, u_s1, u_s2, u_s3, u_s4, u_s5, u_s6, u_s7
                dw u_s8, u_s9, u_s10, u_s11, u_s12, u_s13, u_s14, u_s15
+w_table:       dw w_case0, w_case1, w_case2
 u_s0:          jmp near u_case0
 u_s1:          jmp near u_case1
 u_s2:          jmp near u_case2
@@ -518,12 +557,12 @@ u_s13:         jmp near u_case13
 u_s14:         jmp near u_case14
 u_s15:         jmp near u_case15
 
-; Half-entry reads of u_table land in this span (entry N's high byte 0x07 plus
-; entry N+1's low byte, e.g. 0x3707): a reader that treats every byte offset as
-; an entry finds hlt decoys here, so the junk targets survive in the dump.
-rb 0x3707-$
+; Half-entry reads of u_table land in this span (entry N's high byte plus
+; entry N+1's low byte): a reader that treats every byte offset as an entry
+; finds hlt decoys here, so the junk targets survive in the dump.
+rb 0x1A07-$
 u_junk:
-    times 0xB201 db 0xF4
+    times 0xCF01 db 0xF4
 
 rb 65520-$
 jmp start

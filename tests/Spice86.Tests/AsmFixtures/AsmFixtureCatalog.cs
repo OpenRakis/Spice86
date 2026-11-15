@@ -549,7 +549,7 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs speculative_switch_table on the observed (index 0) or unobserved (index 2)
     /// path: the unobserved markers live in switch-table entries discovered speculatively.</summary>
     public static AsmFixture SpeculativeSwitchTable(SpeculativeArm arm) {
-        byte[] expectedMemory = new byte[0x40E];
+        byte[] expectedMemory = new byte[0x40F];
         expectedMemory[0x400] = 0x01;
         expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0x11 : (byte)0xDD;
         expectedMemory[0x402] = arm == SpeculativeArm.Unobserved ? (byte)0x22 : (byte)0xDD;
@@ -563,6 +563,7 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x40A] = arm == SpeculativeArm.Unobserved ? (byte)0x77 : (byte)0xDD;
         expectedMemory[0x40B] = arm == SpeculativeArm.Unobserved ? (byte)0x88 : (byte)0xDD;
         expectedMemory[0x40D] = arm == SpeculativeArm.Unobserved ? (byte)0xBB : (byte)0xDD;
+        expectedMemory[0x40E] = arm == SpeculativeArm.Unobserved ? (byte)0xCC : (byte)0xDD;
         if (arm == SpeculativeArm.Unobserved) {
             expectedMemory[0x40C] = 0x99;
         }
