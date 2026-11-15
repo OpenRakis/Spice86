@@ -193,9 +193,13 @@ public class SpeculativeExplorer {
             }
             entries.Add(entry);
         }
-        // Every observed target of the transfer must be one of the entries, else this is not a
-        // plain table (e.g. an indirect call to an address computed elsewhere).
-        foreach (ICfgNode successor in transfer.Successors) {
+        // Every observed jump/call target of the transfer must be one of the entries, else this is
+        // not a plain table. Only Normal edges carry table targets: CallToReturn and misaligned or
+        // redirected continuation edges name the code after the call, never a table entry.
+        if (!transfer.SuccessorsPerType.TryGetValue(InstructionSuccessorType.Normal, out ISet<ICfgNode>? targetSuccessors)) {
+            targetSuccessors = new HashSet<ICfgNode>();
+        }
+        foreach (ICfgNode successor in targetSuccessors) {
             if (!successor.IsSpeculative
                 && !(successor.Address.Segment == transfer.Address.Segment && entries.Contains(successor.Address.Offset))) {
                 _loggerService.LogDebug("Switch table at {Address} refused: observed target {Target} is not an entry",

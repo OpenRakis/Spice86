@@ -562,13 +562,17 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_switch_table", expectedMemory, arm);
     }
 
-    /// <summary>Runs speculative_call_table on the observed (index 0) or unobserved (index 2)
-    /// path: the unobserved call target is discovered from the call table speculatively.</summary>
+    /// <summary>Runs speculative_call_table on the observed (entries 0 and 1, the second call
+    /// after the first returned) or unobserved (entry 2) path: the unobserved call target is
+    /// discovered from the call table speculatively on the second resolution.</summary>
     public static AsmFixture SpeculativeCallTable(SpeculativeArm arm) {
-        byte[] expectedMemory = new byte[0x403];
+        byte[] expectedMemory = new byte[0x404];
         expectedMemory[0x400] = 0x01;
-        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0x22 : (byte)0xDD;
-        expectedMemory[0x402] = 0xAA;
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0x22 : (byte)0x11;
+        expectedMemory[0x402] = arm == SpeculativeArm.Unobserved ? (byte)0x01 : (byte)0x02;
+        if (arm == SpeculativeArm.Observed) {
+            expectedMemory[0x403] = 0x77;
+        }
         return SpeculativeFixture("speculative_call_table", expectedMemory, arm);
     }
 

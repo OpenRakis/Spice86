@@ -12,40 +12,75 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: CX, DS. Outputs: none. Changes: AX, BX, flags.</summary>
+    public virtual Action unknown_F000_003E_F003E() {
+        CheckExternalEvents(biosSegment, 0x003E);
+        AX = CX;
+        Alu16.Sub(AX, 2);
+        if (AX > 2) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0052, Signature_0052_hlt);
+            return Hlt();
+        }
+        BX = AX;
+        BX = Alu16.Shl(BX, 1);
+        switch (UInt16[CS, BX + 0x66]) {
+            case 0x0053:
+                NearCall(biosSegment, 0x004D, unknown_F000_0053_F0053_AsmEntry);
+                break;
+            case 0x0059:
+                NearCall(biosSegment, 0x004D, unknown_F000_0059_F0059_AsmEntry);
+                break;
+            case 0x005F:
+                NearCall(biosSegment, 0x004D, unknown_F000_005F_F005F_AsmEntry);
+                break;
+            default:
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, BX + 0x66]:X4} at F000:0049");
+        }
+        DsGlobals.Byte0402 = Alu8.Inc(DsGlobals.Byte0402);
+        return NearRet();
+    }
+
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
-    public virtual void unknown_F000_0021_F0021(ushort word1) {
+    public virtual void unknown_F000_0053_F0053(ushort word1) {
         DS = word1;
-        CheckExternalEvents(biosSegment, 0x0021);
-        DsGlobals.Byte0401 = 0xDD;
+        CheckExternalEvents(biosSegment, 0x0053);
+        DsGlobals.Byte0401 = 0x11;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_0021_F0021_Asm() {
-        unknown_F000_0021_F0021(DS);
+    public virtual Action unknown_F000_0053_F0053_Asm() {
+        unknown_F000_0053_F0053(DS);
         return Returned;
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
-    public virtual Action unknown_F000_0027_F0027() {
-        CheckExternalEvents(biosSegment, 0x0027);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0027, Signature_0027_hlt);
-        return Hlt();
-    }
-
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
-    public virtual void unknown_F000_0028_F0028(ushort word1) {
+    public virtual void unknown_F000_0059_F0059(ushort word1) {
         DS = word1;
-        CheckExternalEvents(biosSegment, 0x0028);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0028, Signature_0028_mov);
-        DsGlobals.Byte0401 = 0x22;
-        VerifySpeculativeEntryOrFail(biosSegment, 0x002D, Signature_002D_ret);
+        CheckExternalEvents(biosSegment, 0x0059);
+        DsGlobals.Byte0403 = 0x77;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_0028_F0028_Asm() {
-        unknown_F000_0028_F0028(DS);
+    public virtual Action unknown_F000_0059_F0059_Asm() {
+        unknown_F000_0059_F0059(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    public virtual void unknown_F000_005F_F005F(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x005F);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x005F, Signature_005F_mov);
+        DsGlobals.Byte0401 = 0x22;
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0064, Signature_0064_ret);
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_005F_F005F_Asm() {
+        unknown_F000_005F_F005F(DS);
         return Returned;
     }
 
@@ -53,30 +88,24 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Byte0400 = 1;
+        DsGlobals.Byte0401 = 0;
+        DsGlobals.Byte0402 = 0;
+        DsGlobals.Byte0403 = 0;
         AL = DsGlobals.Byte0500;
-        AH = 0;
-        AX <<= 1;
-        Alu16.Sub(AX, 2);
-        if (AX > 2) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0020, Signature_0020_hlt);
-            return Hlt();
+        if (AL != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0030, Signature_0030_mov);
+            SegmentF000Globals.Word006A = 0x005F;
+            VerifySpeculativeRunOrFail(biosSegment, 0x0037, SpeculativeRun_0037);
+            CX = 2;
+            NearCall(biosSegment, 0x003D, unknown_F000_003E_F003EEntry);
         }
-        BX = AX;
-        BX = Alu16.Shl(BX, 1);
-        switch (UInt16[CS, BX + 0x30]) {
-            case 0x0021:
-                NearCall(biosSegment, 0x0019, unknown_F000_0021_F0021_AsmEntry);
-                break;
-            case 0x0027:
-                NearCall(biosSegment, 0x0019, unknown_F000_0027_F0027Entry);
-                break;
-            case 0x0028:
-                NearCall(biosSegment, 0x0019, unknown_F000_0028_F0028_AsmEntry);
-                break;
-            default:
-                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, BX + 0x30]:X4} at F000:0015");
+        else {
+            CX = 0;
+            NearCall(biosSegment, 0x0021, unknown_F000_003E_F003EEntry);
+            SegmentF000Globals.Word006A = 0x005F;
+            CX = 1;
+            NearCall(biosSegment, 0x002E, unknown_F000_003E_F003EEntry);
         }
-        DsGlobals.Byte0402 = 0xAA;
         return Hlt();
     }
 
@@ -109,8 +138,30 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
     /// DS:0x0402, whatever DS holds at the access.
     public byte Byte0402 { get => _memory.UInt8[Segment, 0x0402]; set => _memory.UInt8[Segment, 0x0402] = value; }
 
+    /// DS:0x0403, whatever DS holds at the access.
+    public byte Byte0403 { get => _memory.UInt8[Segment, 0x0403]; set => _memory.UInt8[Segment, 0x0403] = value; }
+
     /// DS:0x0500, whatever DS holds at the access.
     public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
+}
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public ushort Word006A { get => _memory.UInt16[Segment, 0x006A]; set => _memory.UInt16[Segment, 0x006A] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -129,24 +180,29 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0021_F0021_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0027_F0027Entry;
-    private readonly Func<int, Action> unknown_F000_0028_F0028_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_003E_F003EEntry;
+    private readonly Func<int, Action> unknown_F000_0053_F0053_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0059_F0059_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_005F_F005F_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_F000_0021_F0021_AsmEntry = _ => unknown_F000_0021_F0021_Asm();
-        unknown_F000_0027_F0027Entry = _ => unknown_F000_0027_F0027();
-        unknown_F000_0028_F0028_AsmEntry = _ => unknown_F000_0028_F0028_Asm();
+        unknown_F000_003E_F003EEntry = _ => unknown_F000_003E_F003E();
+        unknown_F000_0053_F0053_AsmEntry = _ => unknown_F000_0053_F0053_Asm();
+        unknown_F000_0059_F0059_AsmEntry = _ => unknown_F000_0059_F0059_Asm();
+        unknown_F000_005F_F005F_AsmEntry = _ => unknown_F000_005F_F005F_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0021, unknown_F000_0021_F0021_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0027, unknown_F000_0027_F0027Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0028, unknown_F000_0028_F0028_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x003E, unknown_F000_003E_F003EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0053, unknown_F000_0053_F0053_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0059, unknown_F000_0059_F0059_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005F, unknown_F000_005F_F005F_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
@@ -167,10 +223,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_0020_hlt = [0xF4];
-    private static readonly byte?[] Signature_0027_hlt = [0xF4];
-    private static readonly byte?[] Signature_0028_mov = [0xC6, 0x06, 0x01, 0x04, 0x22];
-    private static readonly byte?[] Signature_002D_ret = [0xC3];
+    private static readonly byte?[] Signature_0030_mov = [0x2E, 0xC7, 0x06, 0x6A, 0x00, 0x5F, 0x00];
+    private static readonly byte?[] Signature_0037_mov = [0xB9, 0x02, 0x00];
+    private static readonly byte?[] Signature_003A_call = [0xE8, 0x01, 0x00];
+    private static readonly byte?[] Signature_0052_hlt = [0xF4];
+    private static readonly byte?[] Signature_005F_mov = [0xC6, 0x06, 0x01, 0x04, 0x22];
+    private static readonly byte?[] Signature_0064_ret = [0xC3];
+
+    private static readonly byte?[][] SpeculativeRun_0037 = [Signature_0037_mov, Signature_003A_call];
 
 }
 
