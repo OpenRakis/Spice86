@@ -70,6 +70,117 @@ public sealed class IrPreservationTest {
                 "the version after the call feeds the same phi: it is exactly as preserved as the loop head");
     }
 
+    /// <summary>A loop of <see cref="Joins"/> sequential if/else joins, each left arm partially
+    /// writing EAX (so EAX merges at every join and the preservation recursion doubles per join),
+    /// each right arm writing a register cycling through <see cref="ArmRegisters"/>. EBX is never
+    /// written, so every EBX version keeps all its entry bytes. The recursive algorithm revisits the
+    /// whole join chain for each EAX operand inside the loop-head frame: about 2^<see cref="Joins"/>
+    /// evaluations; the fixed point answers after a few linear passes.</summary>
+    [Fact]
+    public void ManyJoinsInALoopPreserveAnUnwrittenRegisterFast() {
+        (IrMethod method, IrBlock head, IrBlock exit) = LoopWithJoins(-1);
+        IrSsa ssa = IrSsa.Build(method);
+        IrPreservation preservation = new(method, ssa, IrStackSlots.Empty, _ => null);
+        int exitEbx = ssa.VersionBefore(exit, 0, IrSsaValue.Ebx);
+
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        foreach (IrSsaValue value in Enum.GetValues<IrSsaValue>()) {
+            foreach ((IrBlock _, int version) in AllVersions(ssa, value)) {
+                preservation.Preserved(value, version);
+            }
+        }
+        watch.Stop();
+
+        preservation.Preserved(IrSsaValue.Ebx, exitEbx)
+            .Should().Be(IrSsaValues.MaskOf(IrSsaValue.Ebx), "EBX is never written in the loop");
+        watch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1),
+            "preservation is a fixed point per value, not an exponential recursion");
+    }
+
+    /// <summary>The same shape with one arm writing EBX: the write clobbers it, so no EBX byte is
+    /// preserved at the loop head nor at the exit.</summary>
+    [Fact]
+    public void ManyJoinsInALoopDoNotPreserveAWrittenRegister() {
+        (IrMethod method, IrBlock head, IrBlock exit) = LoopWithJoins(3);
+        IrSsa ssa = IrSsa.Build(method);
+        IrPreservation preservation = new(method, ssa, IrStackSlots.Empty, _ => null);
+
+        int headPhi = ssa.PhisOf(head).Single(phi => phi.Value == IrSsaValue.Ebx).Result;
+        preservation.Preserved(IrSsaValue.Ebx, headPhi).Should().Be(CpuValues.None,
+            "one arm of the loop writes EBX");
+        preservation.Preserved(IrSsaValue.Ebx, ssa.VersionBefore(exit, 0, IrSsaValue.Ebx))
+            .Should().Be(CpuValues.None, "the exit sees the clobbered loop-head version");
+    }
+
+    private const int Joins = 30;
+
+    private static readonly IrSsaValue[] ArmRegisters =
+        [IrSsaValue.Ecx, IrSsaValue.Edx, IrSsaValue.Ebp, IrSsaValue.Esi, IrSsaValue.Edi];
+
+    /// <summary>The versions SSA assigned to <paramref name="value"/>, as (block, version).</summary>
+    private static IEnumerable<(IrBlock, int)> AllVersions(IrSsa ssa, IrSsaValue value) {
+        for (int version = 0; version < ssa.VersionCount; version++) {
+            IrSsaVersionInfo info = ssa.Info(version);
+            if (info.Value == value) {
+                yield return (info.Block, version);
+            }
+        }
+    }
+
+    /// <summary>Builds entry -> head -> <see cref="Joins"/> sequential if/else joins whose last join
+    /// jumps back to head; head also has an exit edge. Each left arm partially writes EAX, each
+    /// right arm fully writes a register cycling through <see cref="ArmRegisters"/>. Arm
+    /// <paramref name="ebxArm"/> (a flat arm index) writes EBX instead when non-negative.</summary>
+    private static (IrMethod, IrBlock Head, IrBlock Exit) LoopWithJoins(int ebxArm) {
+        CfgInstruction instruction = Instruction(0);
+        IrBlock entry = Block(0);
+        IrBlock head = Block(1);
+        IrBlock join = Block(2);
+        IrBlock exit = Block(3);
+        List<IrBlock> blocks = [entry, head, join, exit];
+        IrEditor.WithoutSsa.SetTerminator(entry,
+            new IrJump(instruction, new IrEdge(head, false)));
+        IrEditor.WithoutSsa.SetTerminator(head,
+            new IrBranch(instruction, new CpuFlagNode(Flags.Zero),
+                new IrEdge(join, false), new IrEdge(exit, false)));
+        IrEditor.WithoutSsa.SetTerminator(exit, new IrExit(instruction, ReturnValue()));
+        int nextId = 4;
+        int arm = 0;
+        for (int i = 0; i < Joins; i++) {
+            IrBlock target = i == Joins - 1 ? head : Block(nextId++);
+            if (i != Joins - 1) {
+                blocks.Add(target);
+            }
+            IrBlock left = Block(nextId++);
+            IrBlock right = Block(nextId++);
+            blocks.Add(left);
+            blocks.Add(right);
+            IrSsaValue leftValue = arm == ebxArm ? IrSsaValue.Ebx : IrSsaValue.Eax;
+            arm++;
+            IrSsaValue rightValue = arm == ebxArm ? IrSsaValue.Ebx : ArmRegisters[arm % ArmRegisters.Length];
+            arm++;
+            IrEditor.WithoutSsa.Append(left, PartialWrites(instruction, IrSsaValues.MaskOf(leftValue)));
+            IrEditor.WithoutSsa.Append(right, Writes(instruction, IrSsaValues.MaskOf(rightValue)));
+            IrEditor.WithoutSsa.SetTerminator(left,
+                new IrJump(instruction, new IrEdge(target, false)));
+            IrEditor.WithoutSsa.SetTerminator(right,
+                new IrJump(instruction, new IrEdge(target, false)));
+            IrEditor.WithoutSsa.SetTerminator(join,
+                new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+                    new IrEdge(left, false), new IrEdge(right, false)));
+            join = target;
+        }
+        IrMethod method = Method([Entry(instruction, entry)], [instruction], [.. blocks]);
+        return (method, head, exit);
+    }
+
+    /// <summary>A statement that may write the register bytes of <paramref name="mask"/> without a
+    /// guaranteed full write: a partial definition whose new version still depends on the previous
+    /// one, which is what chains the preservation recursion through the join phis.</summary>
+    private static IrStatement PartialWrites(ICfgNode origin, CpuValues mask) =>
+        new(new CommentNode("p"), origin,
+            new IrEffects(CpuValues.None, CpuValues.None, mask, IrTokens.None, IrTokens.None, false, false));
+
     /// <summary>A call-shaped statement: it defines versions for every value the call site covers,
     /// while its transfer effect only reports the callee's real changes.</summary>
     private static IrStatement CallDefining(ICfgNode origin) =>

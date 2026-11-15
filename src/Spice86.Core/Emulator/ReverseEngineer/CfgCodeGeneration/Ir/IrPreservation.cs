@@ -18,25 +18,20 @@ using System.Linq;
 /// matched to pushes of preserved bytes restores them; a full definition preserves nothing; a
 /// partial definition by a statement whose transfer effect the caller knows (a call, an event
 /// check) preserves the previous bytes the transfer does not change; anything else preserves the
-/// previous bytes the statement does not write. A cycle back-edge contributes the in-progress
-/// version's current hypothesis, which starts at the full mask and shrinks until stable; a result
-/// computed under a hypothesis still in progress is never memoized.
+/// previous bytes the statement does not write. The first query for a value computes the
+/// preservation of all its versions at once, as a greatest fixed point: every version starts at
+/// the full mask and the rules re-apply reading the current table until nothing changes, which
+/// converges in a few passes because every rule only narrows when its inputs narrow. A loop back
+/// edge is then just a dependency on a later table entry, so loops no longer take exponential
+/// time.
 /// </summary>
 internal sealed class IrPreservation {
-    private sealed class PreservationFrame(int version, CpuValues hypothesis) {
-        public int Version { get; } = version;
-        public CpuValues Hypothesis { get; set; } = hypothesis;
-        public bool Revisited { get; set; }
-    }
-
     private readonly IrSsa _ssa;
     private readonly IrStackSlots _slots;
     private readonly Func<IrStatement, CpuValues?> _transferChanges;
     private readonly Dictionary<IrSsaPhi, IrBlock> _phiBlocks = new();
     private readonly Dictionary<int, IrSsaPhi> _phiByResult = new();
-    private readonly Dictionary<int, CpuValues> _memo = new();
-    private readonly List<PreservationFrame> _stack = new();
-    private int _dependencyDepth;
+    private readonly Dictionary<IrSsaValue, CpuValues?[]> _tables = new();
 
     /// <summary>Creates the shared preservation rule set for <paramref name="method"/>.</summary>
     /// <param name="transferChanges">For a statement whose effect is a transfer the caller knows
@@ -60,61 +55,59 @@ internal sealed class IrPreservation {
         if (version < 0) {
             return CpuValues.None;
         }
-        if (_memo.TryGetValue(version, out CpuValues memoized)) {
-            return memoized;
+        if (!_tables.TryGetValue(value, out CpuValues?[]? table)) {
+            table = ComputeTable(value);
+            _tables[value] = table;
         }
-        IrSsaVersionInfo info = _ssa.Info(version);
-        if (info.Value != value) {
-            return CpuValues.None;
-        }
-        if (info.Kind == IrSsaDefinitionKind.MethodEntry) {
-            return IrSsaValues.MaskOf(value);
-        }
-        int index = _stack.FindIndex(frame => frame.Version == version);
-        if (index >= 0) {
-            _stack[index].Revisited = true;
-            _dependencyDepth = Math.Min(_dependencyDepth, index);
-            return _stack[index].Hypothesis & IrSsaValues.MaskOf(value);
-        }
-        PreservationFrame frame = new(version, IrSsaValues.MaskOf(value));
-        _stack.Add(frame);
-        int depth = _stack.Count - 1;
-        CpuValues result;
-        int dependency;
-        while (true) {
-            frame.Revisited = false;
-            int outerDependency = _dependencyDepth;
-            _dependencyDepth = int.MaxValue;
-            result = PreservedUncached(value, version, info);
-            dependency = _dependencyDepth;
-            _dependencyDepth = Math.Min(outerDependency, dependency);
-            if (!frame.Revisited) {
-                break;
-            }
-            CpuValues next = frame.Hypothesis & result;
-            if (next == frame.Hypothesis) {
-                result = frame.Hypothesis;
-                break;
-            }
-            frame.Hypothesis = next;
-        }
-        _stack.RemoveAt(depth);
-        if (dependency >= depth) {
-            _memo[version] = result;
-        }
-        return result;
+        return version < table.Length ? table[version] ?? CpuValues.None : CpuValues.None;
     }
 
-    private CpuValues PreservedUncached(IrSsaValue value, int version, IrSsaVersionInfo info) {
+    /// <summary>All versions of <paramref name="value"/>, solved together as a greatest fixed
+    /// point: the table is indexed by version and holds null where the version is not
+    /// <paramref name="value"/>'s.</summary>
+    private CpuValues?[] ComputeTable(IrSsaValue value) {
+        CpuValues mask = IrSsaValues.MaskOf(value);
+        CpuValues?[] table = new CpuValues?[_ssa.VersionCount];
+        for (int version = 0; version < table.Length; version++) {
+            if (_ssa.Info(version).Value == value) {
+                table[version] = mask;
+            }
+        }
+        bool changed;
+        do {
+            changed = false;
+            for (int version = 0; version < table.Length; version++) {
+                if (table[version] is not { } current) {
+                    continue;
+                }
+                IrSsaVersionInfo info = _ssa.Info(version);
+                if (info.Kind == IrSsaDefinitionKind.MethodEntry) {
+                    continue;
+                }
+                CpuValues next = ApplyRules(value, version, info, table);
+                if (next != current) {
+                    table[version] = next;
+                    changed = true;
+                }
+            }
+        } while (changed);
+        return table;
+    }
+
+    private CpuValues Lookup(CpuValues?[] table, int version) =>
+        version >= 0 && version < table.Length ? table[version] ?? CpuValues.None : CpuValues.None;
+
+    private CpuValues ApplyRules(IrSsaValue value, int version, IrSsaVersionInfo info,
+        CpuValues?[] table) {
         CpuValues mask = IrSsaValues.MaskOf(value);
         if (info.Kind == IrSsaDefinitionKind.Phi) {
             IrSsaPhi phi = _phiByResult[version];
             CpuValues result = mask;
             foreach ((IrBlock _, int operand) in phi.Operands) {
-                result &= Preserved(value, operand);
+                result &= Lookup(table, operand);
             }
             if (phi.HasEntryOperand && _phiBlocks.TryGetValue(phi, out IrBlock? phiBlock)) {
-                result &= Preserved(value, _ssa.VersionBefore(phiBlock, 0, value));
+                result &= Lookup(table, _ssa.VersionBefore(phiBlock, 0, value));
             }
             return result;
         }
@@ -124,18 +117,18 @@ internal sealed class IrPreservation {
             }
             CpuValues terminatorWritten =
                 (terminator.Effects.MustWrite | terminator.Effects.MayWrite) & mask;
-            return Preserved(value, info.Previous) & ~terminatorWritten;
+            return Lookup(table, info.Previous) & ~terminatorWritten;
         }
         if (_ssa.DefiningStatement(version) is not { } definition) {
             if (info.Kind == IrSsaDefinitionKind.Definition || info.Previous < 0) {
                 return CpuValues.None;
             }
-            return Preserved(value, info.Previous);
+            return Lookup(table, info.Previous);
         }
-        CpuValues previous = info.Previous >= 0 ? Preserved(value, info.Previous) : CpuValues.None;
+        CpuValues previous = Lookup(table, info.Previous);
         CpuValues written = (definition.Effects.MustWrite | definition.Effects.MayWrite) & mask;
         if (IsPopRestore(definition) && PopRestoresPushedBytes(definition, value, written,
-                out CpuValues restored)) {
+                table, out CpuValues restored)) {
             return previous | (written & restored);
         }
         if (info.Kind == IrSsaDefinitionKind.Definition) {
@@ -152,7 +145,7 @@ internal sealed class IrPreservation {
     /// the union of the pushed bytes: only those bytes of the popped register are proven restored
     /// (a wider pop keeps the pushed bytes, not the unread upper ones).</summary>
     private bool PopRestoresPushedBytes(IrStatement pop, IrSsaValue value, CpuValues written,
-        out CpuValues restored) {
+        CpuValues?[] table, out CpuValues restored) {
         restored = CpuValues.None;
         IReadOnlyList<IrStackSlotRead> reads = _slots.ReadsOf(pop);
         if (reads.Count == 0) {
@@ -168,7 +161,7 @@ internal sealed class IrPreservation {
                 }
                 int pushedVersion = _ssa.VersionUsed(definition.Statement, value);
                 if (pushedVersion < 0
-                    || (Preserved(value, pushedVersion) & pushed & written) != (pushed & written)) {
+                    || (Lookup(table, pushedVersion) & pushed & written) != (pushed & written)) {
                     return false;
                 }
                 restored |= pushed;
