@@ -117,6 +117,7 @@ public class SpeculativeExplorer {
         if (observed.IsCall) {
             TryExploreCallContinuation(observed, worklist);
         }
+        TryExplorePushedReturn(observed, worklist);
         Drain(worklist);
     }
 
@@ -447,6 +448,56 @@ public class SpeculativeExplorer {
         if (followContinuations && node.MaxSuccessorsCount is null && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
             EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static);
         }
+        TryExplorePushedReturn(node, worklist);
+    }
+
+    /// <summary>
+    /// The D4 manufactured-return rule: when an indirect near jump's block touches the stack
+    /// exactly once between its leader and the jump, and that instruction is <c>push imm16</c> or
+    /// <c>push r16</c> last set by <c>mov r16, imm16</c>, the pushed address is the return address
+    /// a hand-built call's callee lands on. Enqueue it as a <see cref="ExploreSource.PushedReturn"/>
+    /// item with a Normal edge on the jump (what an observed unmatched ret records); the generated
+    /// ret only pops and dispatches, so no generator change is needed.
+    /// </summary>
+    private void TryExplorePushedReturn(CfgInstruction node, Queue<ExploreItem> worklist) {
+        if (!PushedAddressMatcher.IsIndirectNearJump(node)
+            || node is not { IsLive: true } and not { IsSpeculative: true }
+            || node.ContainingBlock is null) {
+            return;
+        }
+        List<CfgInstruction> prior = new();
+        foreach (ICfgNode blockNode in node.ContainingBlock.Instructions) {
+            if (ReferenceEquals(blockNode, node)) {
+                break;
+            }
+            if (blockNode is CfgInstruction instruction) {
+                prior.Add(instruction);
+            }
+        }
+        List<CfgInstruction> stackTouches = prior.Where(PushedAddressMatcher.TouchesStack).ToList();
+        if (stackTouches.Count != 1) {
+            return;
+        }
+        CfgInstruction push = stackTouches[0];
+        if (!PushedAddressMatcher.TryMatchPush(push, out int pushedRegister, out ushort immediate)) {
+            return;
+        }
+        if (pushedRegister >= 0) {
+            List<CfgInstruction> newestFirst = prior.TakeWhile(instruction => !ReferenceEquals(instruction, push)).Reverse<CfgInstruction>().ToList();
+            if (PushedAddressMatcher.ResolvePushedImmediate(pushedRegister, newestFirst) is not ushort resolved) {
+                return;
+            }
+            immediate = resolved;
+        }
+        SegmentedAddress target = new(node.Address.Segment, immediate);
+        if (_nodeIndex.HasAddress(target)) {
+            // The address is already decoded; wiring the jump to it would only add a possibly
+            // cyclic edge (e.g. `push r16; jmp sp` where SP was set by an immediate move).
+            return;
+        }
+        worklist.Enqueue(new ExploreItem(
+            target, node, InstructionSuccessorType.Normal, FollowContinuations: false,
+            ExploreSource.PushedReturn, null));
     }
 
     /// <summary>

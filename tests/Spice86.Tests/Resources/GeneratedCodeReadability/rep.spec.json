@@ -34,7 +34,7 @@
       "BookkeepingCalls": 0,
       "Casts": 56,
       "CheckExternalEvents": 12,
-      "GotoStatements": 0,
+      "GotoStatements": 1,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
       "LocalReads": 103,
@@ -46,7 +46,7 @@
       "RawMemoryAccesses": 61,
       "RegisterReads": 232,
       "RegisterWrites": 99,
-      "Statements": 376,
+      "Statements": 378,
       "StatusFlagReads": 0,
       "WriteBacks": 1
     }

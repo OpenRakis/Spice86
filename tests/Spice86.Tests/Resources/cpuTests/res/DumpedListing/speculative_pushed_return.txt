@@ -1,0 +1,72 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov byte ptr DS:[0x0401],0
+F000:000A mov byte ptr DS:[0x0402],0
+F000:000F mov byte ptr DS:[0x0403],0
+F000:0014 mov byte ptr DS:[0x0404],0
+F000:0019 mov byte ptr DS:[0x0405],0
+F000:001E mov byte ptr DS:[0x0408],0
+F000:0023 mov byte ptr DS:[0x0409],0
+F000:0028 mov byte ptr CS:[0x9000],0xF4
+F000:002E mov byte ptr CS:[0x9001],0xF4
+F000:0034 mov AL,byte ptr DS:[0x0500]
+F000:0037 cmp AL,0
+F000:0039 jne short 0x0040
+F000:003B mov AX,0
+F000:003E jmp short 0x0045
+F000:0040 mov AX,2
+F000:0043 jmp short 0x0045
+F000:0045 cmp AX,2
+F000:0048 ja short 0x005D
+F000:004A mov BX,AX
+F000:004C shl BX,1
+F000:004E push 0x0056
+F000:0051 jmp near word ptr CS:[BX+0x00DE]
+F000:0056 mov byte ptr DS:[0x0402],0xBB
+F000:005B jmp short 0x006B
+F000:005D hlt
+F000:005E mov byte ptr DS:[0x0401],0xC0
+F000:0063 ret near
+F000:0064 hlt
+F000:0065 mov byte ptr DS:[0x0401],0xC2
+F000:006A ret near
+F000:006B mov BX,0x007B
+F000:006E mov DX,0x0074
+F000:0071 push DX
+F000:0072 jmp near BX
+F000:0074 mov byte ptr DS:[0x0403],0xCC
+F000:0079 jmp short 0x007C
+F000:007B ret near
+F000:007C mov byte ptr DS:[0x0406],0
+F000:0081 mov byte ptr DS:[0x0407],0x90
+F000:0086 mov BX,0x0090
+F000:0089 mov DX,word ptr DS:[0x0406]
+F000:008D push DX
+F000:008E jmp near BX
+F000:0090 pop CX
+F000:0091 mov byte ptr DS:[0x0408],0xDD
+F000:0096 jmp short 0x0098
+F000:0098 mov BX,0x009D
+F000:009B jmp near BX
+F000:009D mov byte ptr DS:[0x0404],0xEE
+F000:00A2 jmp short 0x00A4
+F000:00A4 mov byte ptr DS:[0x0406],0
+F000:00A9 mov byte ptr DS:[0x0407],0x90
+F000:00AE mov DX,word ptr DS:[0x0406]
+F000:00B2 mov AX,0
+F000:00B5 cmp AX,1
+F000:00B8 ja short 0x00C4
+F000:00BA mov BX,AX
+F000:00BC shl BX,1
+F000:00BE push DX
+F000:00BF jmp near word ptr CS:[BX+0x00E4]
+F000:00C4 hlt
+F000:00C5 mov byte ptr DS:[0x0405],0x55
+F000:00CA jmp short 0x00CD
+F000:00CD mov BX,0x00D5
+F000:00D0 push 0x9000
+F000:00D3 jmp near BX
+F000:00D5 mov byte ptr DS:[0x0409],0x66
+F000:00DA jmp short 0x00DC
+F000:00DC hlt
+F000:9000 hlt
+F000:FFF0 jmp short 0

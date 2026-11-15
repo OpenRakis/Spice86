@@ -576,6 +576,22 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_call_table", expectedMemory, arm);
     }
 
+    /// <summary>Runs speculative_pushed_return on the observed (entry 0) or unobserved (entry 2)
+    /// path: the callee's ret lands on the address pushed before the indirect jump.</summary>
+    public static AsmFixture SpeculativePushedReturn(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x40A];
+        expectedMemory[0x400] = 0x01;
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0xC2 : (byte)0xC0;
+        expectedMemory[0x402] = 0xBB;
+        expectedMemory[0x403] = 0xCC;
+        expectedMemory[0x404] = 0xEE;
+        expectedMemory[0x405] = 0x55;
+        expectedMemory[0x407] = 0x90;
+        expectedMemory[0x408] = 0xDD;
+        expectedMemory[0x409] = 0x66;
+        return SpeculativeFixture("speculative_pushed_return", expectedMemory, arm);
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);

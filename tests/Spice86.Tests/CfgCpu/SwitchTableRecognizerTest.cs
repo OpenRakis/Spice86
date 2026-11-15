@@ -143,6 +143,67 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void RecognizesPushImmBeforeTransfer() {
+        // cmp ax,2 ; ja +7 ; mov bx,ax ; shl bx,1 ; push 0x0030 ; jmp [cs:bx+T]
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xF8, 0x02,
+            0x77, 0x07,
+            0x89, 0xC3,
+            0xD1, 0xE3,
+            0x68, 0x30, 0x00,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(2, shape.Bound);
+        Assert.Equal(Table, shape.TableOffset);
+    }
+
+    [Fact]
+    public void RecognizesPushRegSetByMovImm() {
+        // cmp ax,2 ; ja +9 ; mov bx,ax ; mov dx,0x0030 ; shl bx,1 ; push dx ; jmp [cs:bx+T]
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xF8, 0x02,
+            0x77, 0x09,
+            0x89, 0xC3,
+            0xBA, 0x30, 0x00,
+            0xD1, 0xE3,
+            0x52,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(2, shape.Bound);
+    }
+
+    [Fact]
+    public void RefusesPushRegSetByNonMovImm() {
+        // cmp ax,2 ; ja +8 ; mov dx,ax ; mov bx,ax ; shl bx,1 ; push dx ; jmp [cs:bx+T]
+        // dx's last write is `mov dx,ax`, not an immediate setter: argument push.
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xF8, 0x02,
+            0x77, 0x08,
+            0x89, 0xC2,
+            0x89, 0xC3,
+            0xD1, 0xE3,
+            0x52,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
+    }
+
+    [Fact]
+    public void RefusesPushOfIndexRegister() {
+        // cmp ax,2 ; ja +6 ; mov bx,ax ; shl bx,1 ; push bx ; jmp [cs:bx+T]
+        // Pushing the index register itself can never be a manufactured return.
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xF8, 0x02,
+            0x77, 0x06,
+            0x89, 0xC3,
+            0xD1, 0xE3,
+            0x53,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
+    }
+
+    [Fact]
     public void RecognizesIndirectCall() {
         // cmp ax,2 ; ja +5 ; mov bx,ax ; shl bx,1 ; call [cs:bx+T]
         CfgInstruction transfer = Chain(0x100,
@@ -156,3 +217,4 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
         Assert.True(shape.IsCall);
     }
 }
+

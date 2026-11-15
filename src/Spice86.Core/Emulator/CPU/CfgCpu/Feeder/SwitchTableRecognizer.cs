@@ -15,7 +15,9 @@ using Spice86.Shared.Emulator.Memory;
 /// Matches on instruction display ASTs (<see cref="InstructionNode"/> operation and operand nodes),
 /// walking backwards at most eight instructions from the transfer through the transfer's block and
 /// single-predecessor blocks, reading only live nodes. Requires exactly
-/// guard -&gt; [widen] -&gt; [copy] -&gt; scale -&gt; transfer with nothing else in between.
+/// guard -&gt; [widen] -&gt; [copy] -&gt; scale -&gt; [push] -&gt; transfer with nothing else in
+/// between, where the optional push is a manufactured return (<c>push imm16</c>, or
+/// <c>push r16</c> set only by <c>mov r16, imm16</c>, never the index register).
 /// Recognition results, including negative ones, are cached per transfer node.
 /// </summary>
 internal class SwitchTableRecognizer {
@@ -70,22 +72,41 @@ internal class SwitchTableRecognizer {
         // chain[0] is the instruction immediately before the transfer.
         List<CfgInstruction> chain = WalkBack(transfer);
         int i = 0;
+        // Optional manufactured return: `push imm16`, or `push r16` (never the index register)
+        // whose only writes in the walk window are `mov r16, imm16`. The setter movs may sit
+        // anywhere in the window, so they are skipped before each expected element.
+        int pushedRegister = -1;
+        if (i < chain.Count && PushedAddressMatcher.TryMatchPush(chain[i], out int preg, out _)
+            && preg != indexRegister) {
+            pushedRegister = preg;
+            i++;
+        }
+        void SkipSetterMovs() {
+            while (i < chain.Count && pushedRegister >= 0
+                   && PushedAddressMatcher.IsSetterMov(chain[i], pushedRegister)) {
+                i++;
+            }
+        }
+        SkipSetterMovs();
         if (i >= chain.Count || !IsScale(chain[i], indexRegister)) {
             return null;
         }
         i++;
         int comparedRegister16 = indexRegister;
+        SkipSetterMovs();
         if (i < chain.Count && TryGetCopy(chain[i], indexRegister, out int copiedFrom)) {
             comparedRegister16 = copiedFrom;
             i++;
         }
         bool widened = false;
         bool widenedByCbw = false;
+        SkipSetterMovs();
         if (i < chain.Count && IsWiden(chain[i], comparedRegister16, out bool byCbw)) {
             widened = true;
             widenedByCbw = byCbw;
             i++;
         }
+        SkipSetterMovs();
         if (i >= chain.Count || !TryMatchConditionalJump(chain[i], out bool jumpOnAbove)) {
             return null;
         }
@@ -107,6 +128,12 @@ internal class SwitchTableRecognizer {
         }
         // cbw sign-extends a byte index; a bound of 0x80 or more would read negative indices.
         if (widenedByCbw && bound >= 0x80) {
+            return null;
+        }
+        // A `push r16` manufactured return needs a `mov r16, imm16` setter as its only write to
+        // the register in the walk window; anything else is an argument push.
+        if (pushedRegister >= 0
+            && PushedAddressMatcher.ResolvePushedImmediate(pushedRegister, chain) is null) {
             return null;
         }
         return new TableShape(bound, segmentRegisterIndex, displacement,

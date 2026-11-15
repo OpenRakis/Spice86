@@ -84,6 +84,18 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Pushed return: the program pushes a return address then jumps through a table; the callee's
+    /// ret lands on the pushed address.
+    /// </summary>
+    [Fact]
+    public void SpeculativePushedReturnExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,
