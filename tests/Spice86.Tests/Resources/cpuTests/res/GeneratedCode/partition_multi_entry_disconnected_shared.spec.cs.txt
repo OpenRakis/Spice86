@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_0039_F0039() {
         CheckExternalEvents(biosSegment, 0x0039);
         if (AL == 0) {
@@ -21,7 +21,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_004B_F004B();
     }
 
-    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_003F_F003F() {
         CheckExternalEvents(biosSegment, 0x003F);
         if (AL != 0) {
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX, flags. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_0045_F0045() {
         CheckExternalEvents(biosSegment, 0x0045);
         if (AL == 0) {
@@ -61,7 +61,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0055_F0055_Asm();
     }
 
-    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX, flags. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL, CX, BX. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_004B_F004B() {
         CheckExternalEvents(biosSegment, 0x004B);
         if (AL == 0) {
@@ -70,31 +70,31 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0055_F0055_Asm();
     }
 
-    /// <summary>Inputs: BX. Outputs: BX, flags. Changes: BX, flags.</summary>
-    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_F000_0051_F0051(ushort word1) {
+    /// <summary>Inputs: BX. Outputs: BX. Changes: BX.</summary>
+    public virtual ushort unknown_F000_0051_F0051(ushort word1) {
         BX = word1;
         CheckExternalEvents(biosSegment, 0x0051);
-        BX = Alu16.Add(BX, 1);
+        BX++;
         NearReturn();
-        return (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return BX;
     }
 
     public virtual Action unknown_F000_0051_F0051_Asm() {
-        (BX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_F000_0051_F0051(BX);
+        BX = unknown_F000_0051_F0051(BX);
         return Returned;
     }
 
-    /// <summary>Inputs: CX. Outputs: CX, flags. Changes: CX, flags.</summary>
-    public virtual (ushort result, bool result2, bool result3, bool result4, bool result5, bool result6, bool result7) unknown_F000_0055_F0055(ushort word1) {
+    /// <summary>Inputs: CX. Outputs: CX. Changes: CX.</summary>
+    public virtual ushort unknown_F000_0055_F0055(ushort word1) {
         CX = word1;
         CheckExternalEvents(biosSegment, 0x0055);
-        CX = Alu16.Add(CX, 0x0010);
+        CX += 0x0010;
         NearReturn();
-        return (CX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return CX;
     }
 
     public virtual Action unknown_F000_0055_F0055_Asm() {
-        (CX, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_F000_0055_F0055(CX);
+        CX = unknown_F000_0055_F0055(CX);
         return Returned;
     }
 

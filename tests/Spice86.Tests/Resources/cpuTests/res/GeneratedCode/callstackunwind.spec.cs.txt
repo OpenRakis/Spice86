@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0100_F0100() {
         CheckExternalEvents(biosSegment, 0x0100);
@@ -21,26 +21,25 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: AX, BX.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0200_F0200() {
         ushort word1;
         CheckExternalEvents(biosSegment, 0x0200);
         word1 = Stack.Pop16();
         Stack.Push16(word1);
-        AX = 0x0300;
         Stack.Push16(0x0300);
         return NearRet();
     }
 
-    /// <summary>Inputs: AH, DS. Outputs: AX, flags. Changes: AX, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, flags.</summary>
     public virtual Action unknown_F000_0300_F0300() {
         CheckExternalEvents(biosSegment, 0x0300);
         NearCall(biosSegment, 0x0303, unknown_F000_0400_F0400Entry);
         return NearRet();
     }
 
-    /// <summary>Inputs: AH, DS. Outputs: AX, flags. Changes: AX, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, flags.</summary>
     public virtual Action unknown_F000_0400_F0400() {
         byte byte1 = 0;
         CheckExternalEvents(biosSegment, 0x0400);
@@ -54,7 +53,6 @@ public partial class CfgGeneratedOverrides {
             return NearRet();
         }
         DsGlobals.Byte0012 = 0xDD;
-        AL = byte1;
         return NearRet();
     }
 

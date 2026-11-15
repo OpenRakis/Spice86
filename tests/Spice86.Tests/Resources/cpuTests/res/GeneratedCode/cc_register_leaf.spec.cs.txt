@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: ES = 0x1000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_00E1_F00E1(ushort word1, ushort word2) {
         AX = word1;
         BX = word2;
         CheckExternalEvents(biosSegment, 0x00E1);
-        AX = Alu16.Add(AX, word2);
+        AX += word2;
         NearReturn();
         return AX;
     }
@@ -98,14 +98,14 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_0103_F0103(ushort word1) {
         AX = word1;
         CheckExternalEvents(biosSegment, 0x0103);
         AX = NearCall(biosSegment, 0x0106, () => unknown_F000_0109_F0109(word1));
-        AX = Alu16.Add(AX, AX);
+        AX += AX;
         NearReturn();
         return AX;
     }
@@ -115,18 +115,17 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_0109_F0109(ushort word1) {
         AX = word1;
         CheckExternalEvents(biosSegment, 0x0109);
-        Alu16.Sub(word1, 0x0100);
         if (word1 >= 0x0100) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0110, Signature_0110_int);
             throw FailAsUntested("Untested interrupt at F000:0110");
         }
-        AX = Alu16.Inc(AX);
+        AX++;
         NearReturn();
         return AX;
     }
@@ -136,7 +135,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, SI, DS. Outputs: AX. Changes: AX, SI, flags.</summary>
+    /// <summary>Inputs: AX, SI, DS. Outputs: AX. Changes: AX, SI, PF, AF, ZF, SF, OF.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_0113_F0113(ushort word1, ushort index, ushort word2) {
@@ -146,7 +145,7 @@ public partial class CfgGeneratedOverrides {
         do {
             CheckExternalEvents(biosSegment, 0x0113);
             AX += UInt16[word2, SI];
-            SI = Alu16.Add(SI, 2);
+            SI += 2;
             Segment2000Globals.Word0058 = Alu16.Dec(Segment2000Globals.Word0058);
         } while (!ZeroFlag);
         NearReturn();

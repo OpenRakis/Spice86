@@ -120,7 +120,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016F:01B2");
     }
 
-    /// <summary>Inputs: AX, BX. Outputs: BX. Changes: AX, BX.</summary>
+    /// <summary>Inputs: AX, BX. Outputs: BX. Changes: AH, BX.</summary>
     public virtual ushort unknown_016F_01C0_018B0(ushort word1, ushort word2) {
         AX = word1;
         BX = word2;
@@ -129,7 +129,7 @@ public partial class CfgGeneratedOverrides {
         AH = 0x0E;
         BH = 0;
         ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, BX));
-        (BX, AX) = Stack.Restore2();
+        (BX, _) = Stack.Restore2();
         NearReturn();
         return BX;
     }

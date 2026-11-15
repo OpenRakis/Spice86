@@ -12,10 +12,9 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
     public virtual Action unknown_F000_FEFD_FFEFD() {
         CheckExternalEvents(biosSegment, 0xFEFD);
-        AX = 1;
         Stack.Push16(0xFFEF);
         Stack.Push16(0x000D);
         return FarRet();

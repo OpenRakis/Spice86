@@ -1335,6 +1335,25 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs convention_landing_outputs: the stored results prove an entry reached by a
+    /// tail jump still outputs what the landings of its returns read - the call continuations its
+    /// ret was observed to reach - so a wrongly narrowed outputs set drops a write the landing
+    /// observes.</summary>
+    public static AsmFixture ConventionLandingOutputs() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_landing_outputs", MaxCycles = 1000 }, result => {
+            result.Memory.UInt16[0x2000, 0x0200].Should().Be(0x0111, "call way: AX is read after the call, so it stays an output");
+            result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x0111, "tail-jump way: AX is read at the call's landing, so it stays an output");
+            result.Memory.UInt16[0x2000, 0x0204].Should().Be(0xAAA0, "first call site reads AX");
+            result.Memory.UInt16[0x2000, 0x0206].Should().Be(0xBBB0, "second call site reads BX, so BX is an output too");
+            result.Memory.UInt16[0x2000, 0x0208].Should().Be(0xAAA0, "the tail-jump landing reads AX");
+            result.Memory.UInt16[0x2000, 0x020A].Should().Be(0xDDD0,
+                "the callee returns to the call's continuation, which reads BX, so BX stays an output");
+            result.Memory.UInt16[0x2000, 0x020C].Should().Be(0xCCC0, "the direct call site reads AX");
+            result.Memory.UInt16[0x2000, 0x020E].Should().Be(0xEEE0,
+                "nested: the landing is the call continuation inside s4_m, which itself returns to a BX reader, so BX stays an output");
+        });
+    }
+
     /// <summary>Runs stack_esp_high_bits: the dwords stored at 2000:0200/0204/0208 keep the ESP
     /// high half <c>mov esp</c> set, with the low half back where the balanced stack ops left it,
     /// and a 16-bit / 32-bit <c>enter</c> of nesting level 2 push the frame pointer plus one

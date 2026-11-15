@@ -28,16 +28,16 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX, ES.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_009D_F009D(ushort word1) {
         DS = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x009D);
-        AX = Segment2000Globals.Word0032;
-        BX = 0x2000;
+        word2 = Segment2000Globals.Word0032;
         ES = 0x2000;
-        Segment2000Globals.Word0050 = AX;
+        Segment2000Globals.Word0050 = word2;
         NearReturn();
         return;
     }

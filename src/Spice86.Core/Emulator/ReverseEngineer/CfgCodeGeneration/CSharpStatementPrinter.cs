@@ -178,7 +178,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 PrintInterruptServiceCall(serviceCall);
                 return;
             case StackRestoreNode restore:
-                writer.Line($"({string.Join(", ", restore.Targets.Select(target => expressions.Print(target).Text))}) = Stack.{restore.MethodName}();");
+                writer.Line($"({string.Join(", ", restore.Targets.Select(target => target is null ? "_" : expressions.Print(target).Text))}) = Stack.{restore.MethodName}();");
                 return;
             default:
                 writer.Line(expressions.Print(node).Text + ";");

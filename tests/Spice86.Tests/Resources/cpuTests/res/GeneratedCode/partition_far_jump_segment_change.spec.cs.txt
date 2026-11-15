@@ -75,10 +75,11 @@ public partial class CfgGeneratedOverrides {
     public virtual void unknown_F100_004F_F104F(ushort index, ushort word1) {
         BX = index;
         DS = word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x004F);
         Stack.Push16(CS);
-        AX = Stack.Pop16();
-        UInt16[word1, index + 0x0C] = AX;
+        word2 = Stack.Pop16();
+        UInt16[word1, index + 0x0C] = word2;
         NearReturn();
         return;
     }

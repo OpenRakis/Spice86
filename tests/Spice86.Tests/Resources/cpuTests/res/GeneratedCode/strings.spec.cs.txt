@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, SI, DI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: CX, SI, DI, ES, DS, DF. Outputs: SI, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0046_F0046() {
         CheckExternalEvents(biosSegment, 0x0046);
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -22,7 +22,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, SI, DI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: CX, SI, DI, ES, DS, DF. Outputs: SI, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0082_F0082() {
         CheckExternalEvents(biosSegment, 0x0082);
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -32,7 +32,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, SI, DI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: CX, SI, DI, ES, DS, DF. Outputs: SI, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0097_F0097() {
         CheckExternalEvents(biosSegment, 0x0097);
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -42,7 +42,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, SI, DI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: CX, SI, DI, ES, DS, DF. Outputs: CX, SI, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0812_F0812() {
         CheckExternalEvents(biosSegment, 0x0812);
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
@@ -243,7 +243,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, FS, GS, DF. Outputs: none. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: DF. Outputs: none. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         CX = 0xF000;

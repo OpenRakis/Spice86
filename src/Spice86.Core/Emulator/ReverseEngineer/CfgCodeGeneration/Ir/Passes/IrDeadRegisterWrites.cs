@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using System.Linq;
@@ -29,6 +30,7 @@ internal static class IrDeadRegisterWrites {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, List<IrOrigins.Located>> byOrigin = IrOrigins.ByOrigin(method);
         HashSet<IrBlock> observed = ObservingBlocks(method);
+        HashSet<IrStatement> frameStatements = FrameStatements(method, ssa);
         List<(IrBlock Block, int Index, IrStatement? Replacement)> edits = [];
         foreach (IrBlock block in method.Blocks) {
             if (!observed.Contains(block)) {
@@ -36,6 +38,9 @@ internal static class IrDeadRegisterWrites {
             }
             for (int index = 0; index < block.Statements.Count; index++) {
                 IrStatement statement = block.Statements[index];
+                if (frameStatements.Contains(statement)) {
+                    continue;
+                }
                 if (Drops(statement, entryNodes, ssa)
                     && OriginIsJustTheWrite(byOrigin[statement.Origin], statement)) {
                     edits.Add((block, index, null));
@@ -55,6 +60,33 @@ internal static class IrDeadRegisterWrites {
             }
             editor.Replace(block, index, replacement);
         }
+    }
+
+    /// <summary>The statements the frame recognition claims: the <c>mov bp,sp</c> of each
+    /// recognized frame and the <c>pop bp</c> of each pop epilogue. Their register writes stay so
+    /// <see cref="Memory.IrFrames"/> sees the same prologue and epilogue at emission; without them
+    /// no frame is recognized, the frame's arguments stop printing and the epilogue prints a bare
+    /// pop or a release.</summary>
+    private static HashSet<IrStatement> FrameStatements(IrMethod method, IrSsa ssa) {
+        HashSet<IrStatement> statements = [];
+        if (!method.Blocks.SelectMany(block => block.Statements).Any(IrFrames.IsPushBp)) {
+            return statements;
+        }
+        IrMemoryAliasAnalysis alias = new(ssa);
+        IrFrames frames = IrFrames.Compute(method, ssa,
+            IrStackSlots.Compute(method, alias, _ => null), _ => CpuValues.Registers);
+        foreach (IrEntry entry in method.Entries) {
+            if (frames.FrameAt(entry) is not { } frame) {
+                continue;
+            }
+            statements.Add(frame.SetBp);
+            foreach (IrFrameEpilogue epilogue in frame.Epilogues) {
+                if (epilogue.Restore is { } restore) {
+                    statements.Add(restore);
+                }
+            }
+        }
+        return statements;
     }
 
     /// <summary>The bare pop a dead register pop becomes: a statement

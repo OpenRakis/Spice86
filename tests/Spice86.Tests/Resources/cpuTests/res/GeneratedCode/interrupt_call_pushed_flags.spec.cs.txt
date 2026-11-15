@@ -50,7 +50,7 @@ public partial class CfgGeneratedOverrides {
         index = Segment2000Globals.Word0050;
         savedFlags = frame.SavedFlags;
         UInt16[DS, index] = savedFlags;
-        Segment2000Globals.Word0050 = Alu16.Add(Segment2000Globals.Word0050, 2);
+        Segment2000Globals.Word0050 += 2;
         (SI, AX, BP) = Stack.Restore3();
         return InterruptRet();
     }

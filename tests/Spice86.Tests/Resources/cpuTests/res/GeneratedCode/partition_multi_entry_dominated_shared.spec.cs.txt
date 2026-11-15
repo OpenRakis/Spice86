@@ -12,20 +12,18 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AL. Outputs: none. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_0035_F0035() {
         CheckExternalEvents(biosSegment, 0x0035);
-        Alu8.Sub(AL, 0);
         if (AL == 0) {
             return unknown_F000_0041_F0041();
         }
         return unknown_F000_0046_F0046();
     }
 
-    /// <summary>Inputs: AL. Outputs: CX, BX. Changes: CX, BX, flags.</summary>
+    /// <summary>Inputs: AL. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_003B_F003B() {
         CheckExternalEvents(biosSegment, 0x003B);
-        Alu8.Sub(AL, 0);
         if (AL == 0) {
             return unknown_F000_0041_F0041();
         }

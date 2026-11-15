@@ -29,14 +29,14 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: SI, DI. Outputs: none. Changes: SI, DI.</summary>
+    /// <summary>Inputs: SI, DI. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_0080_F0080() {
         CheckExternalEvents(biosSegment, 0x0080);
         Stack.Save(SI, DI);
         NearCall(biosSegment, 0x0085, unknown_F000_00B1_F00B1Entry);
-        (DI, SI) = Stack.Restore2();
+        Stack.Release(2);
         NearReturn();
         return;
     }
@@ -46,18 +46,19 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: BX, DS. Outputs: none. Changes: AX, BX.</summary>
+    /// <summary>Inputs: BX, DS. Outputs: none. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_008E_F008E(ushort word1) {
         DS = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x008E);
         Stack.Push16(BX);
         Stack.Push16(SP);
         NearCall(biosSegment, 0x0093, unknown_F000_00B1_F00B1Entry);
-        AX = Stack.Pop16();
-        Segment2000Globals.Word0048 = AX;
-        BX = Stack.Pop16();
+        word2 = Stack.Pop16();
+        Segment2000Globals.Word0048 = word2;
+        Stack.Release(1);
         NearReturn();
         return;
     }
@@ -67,7 +68,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, SI, DI. Outputs: AX, SI, DI. Changes: AX, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, SI, DI. Outputs: AX, SI, DI. Changes: AX, SI, DI.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3) unknown_F000_0099_F0099(ushort word1, ushort word2) {
@@ -76,7 +77,6 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x0099);
         Stack.Save(SI, DI);
         NearCall(biosSegment, 0x009E, unknown_F000_00B1_F00B1Entry);
-        Alu16.And(word2, word2);
         if (word2 != 0) {
             DI = Stack.Pop16();
             AX = 7;

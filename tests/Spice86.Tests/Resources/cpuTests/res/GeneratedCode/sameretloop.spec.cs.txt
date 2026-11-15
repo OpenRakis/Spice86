@@ -12,15 +12,12 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: flags. Changes: flags.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
     public virtual Action unknown_F000_0013_F0013() {
-        byte flagOperand_0018 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0013);
             SegmentF000Globals.Byte0035 += 1;
-            flagOperand_0018 = SegmentF000Globals.Byte0035;
-            Alu8.Sub(flagOperand_0018, 4);
-            if (flagOperand_0018 >= 4) {
+            if (SegmentF000Globals.Byte0035 >= 4) {
                 break;
             }
             Stack.Push16(0x0013);

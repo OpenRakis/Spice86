@@ -12,11 +12,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_0032_F0032(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x0032);
-        DX = Alu16.Add(DX, 1);
+        DX++;
         FarReturn();
         return DX;
     }
@@ -26,11 +26,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_0036_F0036(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x0036);
-        DX = Alu16.Add(DX, 0x0010);
+        DX += 0x0010;
         FarReturn();
         return DX;
     }
@@ -40,11 +40,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_003A_F003A(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x003A);
-        DX = Alu16.Add(DX, 0x0100);
+        DX += 0x0100;
         FarReturn();
         return DX;
     }
@@ -54,11 +54,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_003F_F003F(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x003F);
-        DX = Alu16.Add(DX, 0x1000);
+        DX += 0x1000;
         FarReturn();
         return DX;
     }
@@ -68,16 +68,17 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F000_0044_F0044(ushort index, ushort word1) {
         DI = index;
         DS = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x0044);
         Stack.Push16(CS);
-        AX = Stack.Pop16();
-        UInt16[word1, index] = AX;
+        word2 = Stack.Pop16();
+        UInt16[word1, index] = word2;
         UInt16[word1, index + 2] = 0x1000;
-        DI = Alu16.Add(DI, 4);
+        DI += 4;
         FarReturn();
         return;
     }
@@ -87,16 +88,17 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F000_0151_F0151(ushort index, ushort word1) {
         DI = index;
         DS = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x0151);
         Stack.Push16(CS);
-        AX = Stack.Pop16();
-        UInt16[word1, index] = AX;
+        word2 = Stack.Pop16();
+        UInt16[word1, index] = word2;
         UInt16[word1, index + 2] = 0x3000;
-        DI = Alu16.Add(DI, 4);
+        DI += 4;
         FarReturn();
         return;
     }
@@ -176,16 +178,17 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F001_0141_F0151(ushort index, ushort word1) {
         DI = index;
         DS = word1;
+        ushort word2;
         CheckExternalEvents(cs1, 0x0141);
         Stack.Push16(CS);
-        AX = Stack.Pop16();
-        UInt16[word1, index] = AX;
+        word2 = Stack.Pop16();
+        UInt16[word1, index] = word2;
         UInt16[word1, index + 2] = 0x3000;
-        DI = Alu16.Add(DI, 4);
+        DI += 4;
         FarReturn();
         return;
     }
@@ -211,16 +214,17 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI, flags.</summary>
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F010_0044_F0144(ushort index, ushort word1) {
         DI = index;
         DS = word1;
+        ushort word2;
         CheckExternalEvents(cs2, 0x0044);
         Stack.Push16(CS);
-        AX = Stack.Pop16();
-        UInt16[word1, index] = AX;
+        word2 = Stack.Pop16();
+        UInt16[word1, index] = word2;
         UInt16[word1, index + 2] = 0x2000;
-        DI = Alu16.Add(DI, 4);
+        DI += 4;
         FarReturn();
         return;
     }

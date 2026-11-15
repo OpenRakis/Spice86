@@ -557,7 +557,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: AX, DF. Outputs: none. Changes: AX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_001C_F001C() {
         CheckExternalEvents(biosSegment, 0x001C);
@@ -566,7 +566,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: AX, DF. Outputs: none. Changes: AX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0021_F0021() {
         CheckExternalEvents(biosSegment, 0x0021);

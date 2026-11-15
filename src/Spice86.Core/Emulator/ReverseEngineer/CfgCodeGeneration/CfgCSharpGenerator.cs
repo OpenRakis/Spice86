@@ -173,7 +173,8 @@ internal sealed class CfgCSharpGenerator {
         List<IReadOnlyDictionary<ICfgNode, IrEffects>> callEffectsByMethod = new(prepared.Count);
         for (int i = 0; i < prepared.Count; i++) {
             IReadOnlyDictionary<ICfgNode, CpuValues> exitReads =
-                ExitReadsOf(prepared[i], analysis.ObservedConventions);
+                ExitReadsOf(prepared[i], analysis.ObservedConventions,
+                    lowerer.HardwareInterruptEffect);
             IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects = ExitEffectsFromReads(exitReads);
             IReadOnlyDictionary<ICfgNode, IrEffects> callEffects =
                 CallEffectsOf(prepared[i], analysis.ObservedConventions,
@@ -261,7 +262,8 @@ internal sealed class CfgCSharpGenerator {
                     program.Inputs.ProgramImages, progress);
             }
             if (_verify) {
-                VerifyObservedExitReads(prepared, analysis.ObservedConventions);
+                VerifyObservedExitReads(prepared, analysis.ObservedConventions,
+                    lowerer.HardwareInterruptEffect);
                 VerifyObservedCallReads(prepared, callEffectsByMethod, analysis.ObservedConventions);
                 VerifyObservedFaultReads(prepared, used, analysis.ObservedConventions, context);
             }
@@ -406,9 +408,10 @@ internal sealed class CfgCSharpGenerator {
     /// keeps that pop's write live even though the register is not in <c>Changes</c>. A resolved
     /// transfer reads the union of its targets' observed inputs plus the non-reportable values.
     /// Includes exits that still demand every value - the fixed point needs the full demand to
-    /// detect growth back to it.</summary>
+    /// detect growth back to it. A return also demands the hardware contract's reads: a handler
+    /// delivered at an event check after the landing observes them.</summary>
     private static IReadOnlyDictionary<ICfgNode, CpuValues> ExitReadsOf(
-        PreparedMethod prepared, IrCallingConventions conventions) {
+        PreparedMethod prepared, IrCallingConventions conventions, CallEffect contract) {
         string methodName = prepared.Method.MethodName;
         List<(IrExit Exit, CpuValues? TerminalReads)> exits = prepared.IrMethod.Blocks
             .Where(block => block.HasTerminator && block.Terminator is IrExit)
@@ -434,7 +437,8 @@ internal sealed class CfgCSharpGenerator {
             CpuValues demand = terminalReads ?? (conventions.IsResolvedTransferExit(methodName, exit)
                 ? conventions.TransferInputsOf(methodName, exit) | nonReportable
                 : outputs | nonReportable
-                    | (conventions.LandingInputsOf(methodName, exit) & (changes | restored)));
+                    | ((conventions.LandingInputsOf(methodName, exit) | contract.Reads)
+                        & (changes | restored)));
             reads[exit.Origin] = reads.GetValueOrDefault(exit.Origin) | demand;
         }
         return reads;
@@ -508,7 +512,7 @@ internal sealed class CfgCSharpGenerator {
             }
             List<string> reasons = new();
             foreach ((ICfgNode origin, CpuValues demand) in
-                     ExitReadsOf(prepared[i], conventions)) {
+                     ExitReadsOf(prepared[i], conventions, contract)) {
                 CpuValues was = facts.ExitReads.GetValueOrDefault(origin, CpuValues.All);
                 CpuValues grew = demand & ~was;
                 if (grew != CpuValues.None) {
@@ -804,7 +808,7 @@ internal sealed class CfgCSharpGenerator {
     /// machine state would lose the register. Only the promotable bytes are checked: the rest of
     /// the demand lives in the machine registers, which are never locals.</summary>
     private static void VerifyObservedExitReads(List<PreparedMethod> prepared,
-        IrCallingConventions conventions) {
+        IrCallingConventions conventions, CallEffect contract) {
         CpuValues nonReportable = CpuValues.All & ~IrCallingConventions.Reportable;
         foreach (PreparedMethod method in prepared) {
             string methodName = method.Method.MethodName;
@@ -824,7 +828,8 @@ internal sealed class CfgCSharpGenerator {
                         & RegisterLocalPromotion.PromotableMask;
                 } else if (conventions.IsReturnExit(methodName, exit)) {
                     required = (outputs | nonReportable
-                        | (conventions.LandingInputsOf(methodName, exit) & changes))
+                        | ((conventions.LandingInputsOf(methodName, exit) | contract.Reads)
+                            & changes))
                         & RegisterLocalPromotion.PromotableMask;
                 } else {
                     continue;

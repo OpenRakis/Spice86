@@ -14,14 +14,13 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, CX, DX, BX, EBP, SI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, SI, ES, DS, DF. Outputs: AX, CX, DX, BX, BP, SI, DI, flags, DF. Changes: AX, CX, DX, BX, BP, SI, DI, flags, DF.</summary>
     public virtual Action unknown_F000_006A_F006A() {
         ushort word1;
         ushort index = 0;
         ushort word2;
         ushort word3 = 0;
-        ushort word4 = 0;
-        ushort word5;
+        ushort word4;
         ushort index2 = 0;
         ushort index3 = 0;
     entrydispatcher:
@@ -59,8 +58,8 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, BX + 0x0C] = CX;
         word2 = DsGlobals.Word0E10;
         UInt16[DS, BX + 0x0E] = word2;
-        word3 = DsGlobals.Word0E14;
-        UInt16[DS, BX + 0x10] = word3;
+        DX = DsGlobals.Word0E14;
+        UInt16[DS, BX + 0x10] = DX;
         AH = UInt8[CS, SI + 6];
         AL = 3;
         InterruptCall(biosSegment, 0x00B5, 0x60, biosSegment, 0x0128, unknown_F000_0128_F0128Entry);
@@ -72,13 +71,13 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00BC);
         AX = UInt16[CS, SI + 8];
         EsGlobals.Word0E20 = AX;
-        word4 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
-        UInt16[DS, BX + 0x14] = word4;
+        word3 = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
+        UInt16[DS, BX + 0x14] = word3;
         DirectionFlag = false;
-        (AX, BP, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_012D_F012D());
+        (AX, DirectionFlag) = NearCall(biosSegment, 0x00CB, () => unknown_F000_012D_F012D());
         EsGlobals.Word0E30 = AX;
-        word5 = 0x0E2E;
-        UInt16[DS, BX + 0x16] = word5;
+        word4 = 0x0E2E;
+        UInt16[DS, BX + 0x16] = word4;
         DirectionFlag = false;
         Stack.Push16(SI);
         index2 = 0x0E20;
@@ -93,12 +92,10 @@ public partial class CfgGeneratedOverrides {
         } while (CX != 0);
         SI = Stack.Pop16();
         UInt16[DS, BX + 0x18] = index3;
-        DX = DsGlobals.Word0E40;
-        UInt16[DS, BX + 0x1A] = DX;
+        UInt16[DS, BX + 0x1A] = DsGlobals.Word0E40;
         BX += 0x0040;
-        SI = Alu16.Add(SI, 0x000A);
+        SI += 0x000A;
         DsGlobals.Word0F00 = Alu16.Dec(DsGlobals.Word0F00);
-        DI = index3;
         if (!ZeroFlag) {
             if (JumpDispatcher.Jump(unknown_F000_0058_F0058Entry, 0x0000)) {
                 goto entrydispatcher;
@@ -143,7 +140,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: AX, BP. Outputs: AX, BP, flags. Changes: AX, CX, BP, flags, DF.</summary>
+    /// <summary>Inputs: AX. Outputs: AX, flags. Changes: AX, CX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_0128_F0128() {
         CheckExternalEvents(biosSegment, 0x0128);
         AL = Alu8.Add(AL, AH);
@@ -151,21 +148,21 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: AX, BP. Outputs: AX, BP, DF. Changes: AX, CX, BP, DF.</summary>
+    /// <summary>Inputs: AX. Outputs: AX, DF. Changes: AX, CX, BP, DF.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, bool result3) unknown_F000_012D_F012D() {
+    public virtual (ushort result, bool result2) unknown_F000_012D_F012D() {
         CheckExternalEvents(biosSegment, 0x012D);
         DirectionFlag = true;
         NearReturn();
-        return (AX, BP, DirectionFlag);
+        return (AX, DirectionFlag);
     }
 
     public virtual Action unknown_F000_012D_F012D_Asm() {
-        (AX, BP, DirectionFlag) = unknown_F000_012D_F012D();
+        (AX, DirectionFlag) = unknown_F000_012D_F012D();
         return Returned;
     }
 
-    /// <summary>Inputs: EBP, FS, GS. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags, DF.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -190,7 +187,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0058_F0058();
     }
 
-    /// <summary>Inputs: BX, EBP, SI, ES, DS, FS, GS, DF. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: BX, SI, ES, DS, DF. Outputs: AX, CX, DX, BX, BP, SI, DI, flags, DF. Changes: AX, CX, DX, BX, BP, SI, DI, flags, DF.</summary>
     public virtual Action unknown_F000_0058_F0058() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0058);

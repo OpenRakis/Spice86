@@ -19,7 +19,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0025_F0025_Asm();
     }
 
-    /// <summary>Inputs: none. Outputs: BX. Changes: BX.</summary>
+    /// <summary>Inputs: AX. Outputs: BX. Changes: BX.</summary>
     public virtual Action unknown_F000_0029_F0029() {
         CheckExternalEvents(biosSegment, 0x0029);
         return unknown_F000_0025_F0025_Asm();

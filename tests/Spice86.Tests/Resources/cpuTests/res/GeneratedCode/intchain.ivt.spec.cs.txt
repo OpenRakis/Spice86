@@ -146,7 +146,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: none. Changes: flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: none. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0005_F0005() {
         CheckExternalEvents(biosSegment, 0x0005);
         return InterruptRet();
@@ -163,8 +163,7 @@ public partial class CfgGeneratedOverrides {
         ServiceCall(UserTimer, () => UserTimer.Tick());
         // Spice86 callback: TimerInt8Handler.AfterInt8Execution
         Callback(biosSegment, 0x000F, 0x0101);
-        DX = Stack.Pop16();
-        AX = Stack.Pop16();
+        Stack.Release(2);
         DS = Stack.Pop16();
         return InterruptRet();
     }

@@ -12,14 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_002C_F002C() {
         CheckExternalEvents(biosSegment, 0x002C);
         NearCall(biosSegment, 0x002F, unknown_F000_0030_F0030Entry);
         throw FailAsUntested("Untested return from call at F000:002C");
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     public virtual Action unknown_F000_0030_F0030() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0030);
@@ -51,10 +51,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Outputs: none. Changes: AX, DS.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: DS.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        AX = 0;
         DS = 0;
         SS = 0;
         SP = 0x0100;
@@ -62,7 +61,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0010_F0010();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_0010_F0010() {
         ushort flagOperand_0017 = 0;
         CheckExternalEvents(biosSegment, 0x0010);

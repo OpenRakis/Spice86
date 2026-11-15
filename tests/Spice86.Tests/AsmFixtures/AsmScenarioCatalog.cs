@@ -486,6 +486,9 @@ internal static class AsmScenarioCatalog {
             // convention_return_outputs proves a return exit reads the method's outputs and its
             // landings' inputs: dead flags and writes go, needed ones stay (G8.1).
             AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs),
+            // convention_landing_outputs proves an UnknownWay entry outputs what its returns'
+            // resolved call-continuation landings read (G32).
+            AsmScenario.FromFixture("convention_landing_outputs", AsmFixtureCatalog.ConventionLandingOutputs),
             // convention_resolved_calls proves a resolved call takes the callee's convention as its
             // summary; a fault-reachable or redirected call keeps Unknown (G8.2).
             AsmScenario.FromFixture("convention_resolved_calls", AsmFixtureCatalog.ConventionResolvedCalls),

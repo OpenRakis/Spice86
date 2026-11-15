@@ -32,14 +32,14 @@
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 4,
       "LocalReads": 2,
-      "LocalVariables": 1,
-      "LocalWrites": 1,
+      "LocalVariables": 2,
+      "LocalWrites": 2,
       "PlainRegisterAssignments": 34,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RegisterReads": 50,
       "RegisterWrites": 48,
-      "Statements": 119,
+      "Statements": 120,
       "WriteBacks": 0
     }
   },

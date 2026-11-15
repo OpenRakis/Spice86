@@ -212,7 +212,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: none. Changes: flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: none. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0005_D0005() {
         CheckExternalEvents(cs1, 0x0005);
         return InterruptRet();

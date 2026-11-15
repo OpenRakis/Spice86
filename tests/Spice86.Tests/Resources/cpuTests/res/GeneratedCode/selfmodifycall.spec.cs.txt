@@ -12,24 +12,18 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, ES, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: ES.</summary>
     public virtual void unknown_F000_0017_F0017(ushort word1) {
         DS = word1;
-        byte flagOperand_0017 = 0;
         CheckExternalEvents(biosSegment, 0x0017);
-        flagOperand_0017 = DsGlobals.Byte0045;
-        Alu8.Sub(flagOperand_0017, 0);
-        if (flagOperand_0017 == 0) {
+        if (DsGlobals.Byte0045 == 0) {
             NearReturn();
             return;
         }
         SsUInt16[0x0602] = SS;
         SsUInt16[0x0610] = word1;
         SsUInt16[0x0612] = 0x0045;
-        AX = SP;
-        AX = Alu16.Add(AX, 2);
-        SsUInt16[0x0600] = AX;
-        AX = 0xF000;
+        SsUInt16[0x0600] = (ushort)(SP + 2);
         ES = 0xF000;
         SegmentF000Globals.Byte0010 = 0xF4;
         NearReturn();

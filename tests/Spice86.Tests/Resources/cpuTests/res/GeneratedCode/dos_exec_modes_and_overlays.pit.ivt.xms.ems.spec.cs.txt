@@ -208,9 +208,10 @@ public partial class CfgGeneratedOverrides {
         SI = word1;
         DS = word2;
         ushort word3;
+        ushort word4;
         CheckExternalEvents(cs1, 0x0246);
-        BX = ImageMinus0001Globals.Word002C;
-        ES = BX;
+        word3 = ImageMinus0001Globals.Word002C;
+        ES = word3;
         DI = 0;
         CX = 0x0400;
         while (true) {
@@ -230,8 +231,8 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        word3 = (ushort)(DI + 3);
-        SI = word3;
+        word4 = (ushort)(DI + 3);
+        SI = word4;
         DI = 0x02F1;
         do {
             CheckExternalEvents(cs1, 0x026F);
@@ -243,7 +244,6 @@ public partial class CfgGeneratedOverrides {
         DI--;
         while (true) {
             CheckExternalEvents(cs1, 0x027B);
-            Alu16.Sub(DI, 0x02F1);
             if (DI == 0x02F1) {
                 break;
             }
@@ -295,12 +295,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AL. Outputs: none. Changes: AH, BX.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: AH.</summary>
     public virtual void unknown_016F_02E0_019D0(byte byte1) {
         AL = byte1;
         CheckExternalEvents(cs1, 0x02E0);
         AH = 0x0E;
-        BX = 7;
         ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         NearReturn();
         return;
@@ -350,7 +349,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_0238_0000_02380() {
         CheckExternalEvents(cs3, 0x0000);
         Stack.Push16(CS);
@@ -769,7 +768,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         // INT 10h: Video services selected by AH

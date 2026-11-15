@@ -32,7 +32,7 @@ public partial class CfgGeneratedOverrides {
         frame.Local4 = 0xD4D4;
         (BP, DS) = NearCall(biosSegment, 0x02BB, () => unknown_F000_02C3_F02C3());
         AL = SsUInt8[BP - 2];
-        SP = Alu16.Add(SP, 2);
+        SP += 2;
         BP = Stack.Pop16();
         NearReturn();
         return (AL, DS);
@@ -93,53 +93,53 @@ public partial class CfgGeneratedOverrides {
         public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
     }
 
-    /// <summary>Inputs: EBX, EBP, ESI, EDI, FS, GS. Outputs: EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// <summary>Inputs: BP. Outputs: BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (uint result, uint result2, uint result3, uint result4, ushort result5, ushort result6, ushort result7) unknown_F000_02EB_F02EB() {
+    public virtual (ushort result, ushort result2) unknown_F000_02EB_F02EB() {
         CheckExternalEvents(biosSegment, 0x02EB);
         AX = 0x2001;
         DS = 0x2001;
         NearReturn();
-        return (EBX, EBP, ESI, EDI, DS, FS, GS);
+        return (BP, DS);
     }
 
     public virtual Action unknown_F000_02EB_F02EB_Asm() {
-        (EBX, EBP, ESI, EDI, DS, FS, GS) = unknown_F000_02EB_F02EB();
+        (BP, DS) = unknown_F000_02EB_F02EB();
         return Returned;
     }
 
-    /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: AL, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02F1_F02F1() {
+    public virtual (byte result, ushort result2, ushort result3) unknown_F000_02F1_F02F1() {
         CheckExternalEvents(biosSegment, 0x02F1);
         AL = DsGlobals.Byte0064;
         NearReturn();
-        return (AL, EBX, EBP, ESI, EDI, DS, FS, GS);
+        return (AL, BP, DS);
     }
 
     public virtual Action unknown_F000_02F1_F02F1_Asm() {
-        (AL, EBX, EBP, ESI, EDI, DS, FS, GS) = unknown_F000_02F1_F02F1();
+        (AL, BP, DS) = unknown_F000_02F1_F02F1();
         return Returned;
     }
 
-    /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AL, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: AL, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02F5_F02F5() {
+    public virtual (byte result, ushort result2, ushort result3) unknown_F000_02F5_F02F5() {
         CheckExternalEvents(biosSegment, 0x02F5);
         AL = DsGlobals.Byte0065;
         NearReturn();
-        return (AL, EBX, EBP, ESI, EDI, DS, FS, GS);
+        return (AL, BP, DS);
     }
 
     public virtual Action unknown_F000_02F5_F02F5_Asm() {
-        (AL, EBX, EBP, ESI, EDI, DS, FS, GS) = unknown_F000_02F5_F02F5();
+        (AL, BP, DS) = unknown_F000_02F5_F02F5();
         return Returned;
     }
 
-    /// <summary>Inputs: EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: AH, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: AH, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (byte result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_02F9_F02F9() {
+    public virtual (byte result, ushort result2, ushort result3) unknown_F000_02F9_F02F9() {
         CheckExternalEvents(biosSegment, 0x02F9);
         Stack.Push16(DS);
         AX = 0x2001;
@@ -147,15 +147,15 @@ public partial class CfgGeneratedOverrides {
         Segment2001Globals.Byte0067 = 0xCC;
         DS = Stack.Pop16();
         NearReturn();
-        return (AH, EBX, EBP, ESI, EDI, DS, FS, GS);
+        return (AH, BP, DS);
     }
 
     public virtual Action unknown_F000_02F9_F02F9_Asm() {
-        (AH, EBX, EBP, ESI, EDI, DS, FS, GS) = unknown_F000_02F9_F02F9();
+        (AH, BP, DS) = unknown_F000_02F9_F02F9();
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, CF, DF. Outputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Changes: all.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: BP, ES, DS. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_0306_F0306() {
@@ -166,24 +166,24 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS. Outputs: EAX, EBX, EBP, ESI, EDI, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: AL, BP. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000.
-    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7) unknown_F000_030E_F030E() {
+    public virtual (byte result, ushort result2) unknown_F000_030E_F030E() {
         CheckExternalEvents(biosSegment, 0x030E);
         AX = DS;
         ES = AX;
-        (EAX, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0315, () => unknown_F000_0316_F0316());
+        (AL, BP, DS) = NearCall(biosSegment, 0x0315, () => unknown_F000_0316_F0316());
         NearReturn();
-        return (EAX, EBX, EBP, ESI, EDI, FS, GS);
+        return (AL, BP);
     }
 
     public virtual Action unknown_F000_030E_F030E_Asm() {
-        (EAX, EBX, EBP, ESI, EDI, FS, GS) = unknown_F000_030E_F030E();
+        (AL, BP) = unknown_F000_030E_F030E();
         return Returned;
     }
 
-    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, ushort result6, ushort result7, ushort result8) unknown_F000_0316_F0316() {
+    /// <summary>Inputs: BP, ES, DS. Outputs: AL, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    public virtual (byte result, ushort result2, ushort result3) unknown_F000_0316_F0316() {
         CheckExternalEvents(biosSegment, 0x0316);
         AL = EsGlobals.Byte0063;
         Stack.Push16(DS);
@@ -191,22 +191,22 @@ public partial class CfgGeneratedOverrides {
         DS = Stack.Pop16();
         ES = Stack.Pop16();
         NearReturn();
-        return (EAX, EBX, EBP, ESI, EDI, DS, FS, GS);
+        return (AL, BP, DS);
     }
 
     public virtual Action unknown_F000_0316_F0316_Asm() {
-        (EAX, EBX, EBP, ESI, EDI, DS, FS, GS) = unknown_F000_0316_F0316();
+        (AL, BP, DS) = unknown_F000_0316_F0316();
         return Returned;
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: AL, CX, BP, DS. Outputs: AL, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000.
     public virtual Action unknown_F000_031F_F031F() {
         CheckExternalEvents(biosSegment, 0x031F);
         return unknown_F000_0328_F0328(0x0000);
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: CX, BP, DS. Outputs: AL, BP, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0321_F0321() {
         CheckExternalEvents(biosSegment, 0x0321);
         AX = 0x4000;
@@ -214,7 +214,7 @@ public partial class CfgGeneratedOverrides {
         return unknown_F000_0328_F0328(0x032E);
     }
 
-    /// <summary>Inputs: EBX, EBP, ESI, FS, GS. Does not return.</summary>
+    /// <summary>Inputs: BP. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1;
         byte byte1;
@@ -304,23 +304,23 @@ public partial class CfgGeneratedOverrides {
             ES = AX;
             CX--;
         } while (CX != 0);
-        (EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0132, () => unknown_F000_02EB_F02EB());
+        (BP, DS) = NearCall(biosSegment, 0x0132, () => unknown_F000_02EB_F02EB());
         AL = Segment2001Globals.Byte0063;
         BX = 0x2000;
         ES = 0x2000;
         Segment2000Globals.Byte004B = AL;
         DS = 0x2000;
-        (AL, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0143, () => unknown_F000_02F1_F02F1());
+        (AL, BP, DS) = NearCall(biosSegment, 0x0143, () => unknown_F000_02F1_F02F1());
         DsGlobals.Byte004C = AL;
         AX = 0x2001;
         DS = 0x2001;
-        (AL, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x014E, () => unknown_F000_02F1_F02F1());
+        (AL, BP, DS) = NearCall(biosSegment, 0x014E, () => unknown_F000_02F1_F02F1());
         BX = 0x2000;
         DS = 0x2000;
         Segment2000Globals.Byte004D = AL;
-        (AL, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0159, () => unknown_F000_02F5_F02F5());
+        (AL, BP, DS) = NearCall(biosSegment, 0x0159, () => unknown_F000_02F5_F02F5());
         DsGlobals.Byte004E = AL;
-        (AH, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x015F, () => unknown_F000_02F9_F02F9());
+        (AH, BP, DS) = NearCall(biosSegment, 0x015F, () => unknown_F000_02F9_F02F9());
         AL = DsGlobals.Byte0067;
         DsGlobals.Byte004F = AL;
         AX = Alu16.Xor(AX, AX);
@@ -358,7 +358,6 @@ public partial class CfgGeneratedOverrides {
             CheckExternalEvents(biosSegment, 0x01B0);
             CX = (ushort)(DX - 1);
             if (CX == 0) {
-                CarryFlag = SP < 2;
                 SP -= 2;
             }
             else {
@@ -369,7 +368,7 @@ public partial class CfgGeneratedOverrides {
             AL = EsGlobals.Byte0062;
             UInt8[DS, SI] = AL;
             SI = 0x0055;
-            DX = Alu16.Dec(DX);
+            DX--;
         } while (DX != 0);
         Stack.Push16(DS);
         AX = DsGlobals.Word0090;
@@ -384,14 +383,14 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         BX = DsGlobals.Word0094;
         DS = DsGlobals.Word0096;
-        (EAX, EBX, EBP, ESI, EDI, FS, GS) = NearCall(biosSegment, 0x01F0, () => unknown_F000_030E_F030E());
+        (AL, BP) = NearCall(biosSegment, 0x01F0, () => unknown_F000_030E_F030E());
         DS = Stack.Pop16();
         BX = 0x0057;
         DsGlobals.Byte0057 = AL;
         AX = 0x2000;
         DS = 0x2000;
         ES = 0x2000;
-        (EAX, EBX, EBP, ESI, EDI, DS, FS, GS) = NearCall(biosSegment, 0x0200, () => unknown_F000_0316_F0316());
+        (AL, BP, DS) = NearCall(biosSegment, 0x0200, () => unknown_F000_0316_F0316());
         DsGlobals.Byte0058 = AL;
         byte1 = DsGlobals.Byte0062;
         BX = 0x0059;
@@ -453,8 +452,8 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>
-    /// Entry F000:0328: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS; outputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags; changes EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.
-    /// Entry F000:032E: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS; outputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags; changes EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.
+    /// Entry F000:0328: inputs AL, CX, BP, DS; outputs AL, BP, DS; changes EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.
+    /// Entry F000:032E: inputs CX, BP, ES, DS; outputs AL, BP, DS; changes EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.
     /// </summary>
     public virtual Action unknown_F000_0328_F0328(int loadOffset) {
         switch (loadOffset) {

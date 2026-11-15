@@ -1318,7 +1318,7 @@ public partial class CfgGeneratedOverrides {
         if (SP != AX) {
             return unknown_F000_15C7_F15C7();
         }
-        AX = Alu16.Add(AX, 2);
+        AX += 2;
         CarryFlag = true;
         return NearRet();
     }
@@ -1331,7 +1331,7 @@ public partial class CfgGeneratedOverrides {
         if (SP != AX) {
             return unknown_F000_15C7_F15C7();
         }
-        AX = Alu16.Add(AX, 4);
+        AX += 4;
         CarryFlag = true;
         return NearRet32();
     }
@@ -1344,7 +1344,7 @@ public partial class CfgGeneratedOverrides {
         if (SP != AX) {
             return unknown_F000_15C7_F15C7();
         }
-        AX = Alu16.Add(AX, 4);
+        AX += 4;
         CarryFlag = true;
         return FarRet();
     }
@@ -1357,7 +1357,7 @@ public partial class CfgGeneratedOverrides {
         if (SP != AX) {
             return unknown_F000_15C7_F15C7();
         }
-        AX = Alu16.Add(AX, 8);
+        AX += 8;
         CarryFlag = true;
         return FarRet32();
     }

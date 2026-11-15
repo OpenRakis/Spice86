@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using System.Diagnostics.CodeAnalysis;
@@ -55,10 +56,22 @@ using System.Linq;
 /// <c>iret</c> exit also changes the six status flags and DF (a handler can patch the stacked FLAGS
 /// image); a resolved exit to another partition adds the targets' changes; an unresolved non-return,
 /// non-abort exit changes everything; an abort exit changes nothing.</para>
-/// <para>- <c>OutputsOf(E)</c> is <c>EffectOf(E).Writes</c> intersected with what is live after E: every
-/// reported value when E has a non-call way in (program entry, execution context entry, a transfer
-/// other than <see cref="CfgCodePartitionTransferKind.CallOut"/>), else the union over the call
-/// sites targeting E of the bytes needed after each call.</para>
+/// <para>- <c>OutputsOf(E)</c> is <c>EffectOf(E).Writes</c> intersected with what is live after E.
+/// When E's only ways in are calls, that is the union over the call sites targeting E of the bytes
+/// needed after each call. A non-call way in (<see cref="CfgCodePartitionTransferKind.CallOut"/>
+/// excepted) narrows the same way: E's method still leaves only through its return exits, so what
+/// is read after E is the union of those exits' landing demands - the inputs of the entries the
+/// returns land on plus the live-after-call of every call site whose continuation is a landing.
+/// It widens back to every reported value for an execution context entry, when a return's landing
+/// is unresolved (a machine-leaving way out the model does not describe), or when the method has a
+/// transfer exit; the program entry keeps the terminal-observation rule instead.</para>
+/// <para>- The live-after-call of a call site is itself fixed-point state: it is the union over
+/// values of <c>Needed</c> of the version right after the call - the call's defined version when it
+/// has one, else the version that reaches the call - restricted to uses that can run after the
+/// call (the reaching version's use at the call itself and uses before it do not count, and a
+/// version is not demanded just because it was needed earlier; a block a cycle can re-enter counts
+/// its earlier uses since they run again). A <c>ret</c> that lands on a call site's continuation
+/// node reads that set instead of widening to <c>Reportable</c>.</para>
 /// </summary>
 internal sealed class IrCallingConventions {
     /// <summary>The values the sets report: the general register bytes except ESP, the segment
@@ -77,6 +90,7 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<CfgCodePartitionEntry, EntryState> _states = new();
     private readonly Dictionary<string, MethodData> _methodByName = new();
     private readonly Dictionary<CfgCodePartitionEntry, List<(MethodData Caller, CallSite Site)>> _callersOf = new();
+    private readonly Dictionary<ICfgNode, List<(MethodData Caller, CallSite Site)>> _callSitesByContinuation = new();
     private readonly Dictionary<CfgCodePartitionEntry, MethodData> _methodByEntry = new();
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly List<MethodData> _methods = [];
@@ -663,6 +677,26 @@ internal sealed class IrCallingConventions {
 
     private sealed class CallSite {
         public required int[] DefinedVersions { get; init; }
+        /// <summary>The version of every value right after the call: the defined version when the
+        /// call defines it, else the version that reaches the call, so values restored or
+        /// preserved across the call count too.</summary>
+        public required int[] VersionsAfter { get; init; }
+        /// <summary>The node the call's observed continuation edge targets, or
+        /// <see langword="null"/> when no continuation was observed. A callee return that lands
+        /// on it reads this site's <see cref="LiveAfterCall"/>.</summary>
+        public required ICfgNode? ContinuationNode { get; init; }
+        /// <summary>The statement or terminator the call is. The reaching version's use at it -
+        /// the callee's own inputs - is not part of <see cref="LiveAfterCall"/>.</summary>
+        public required object Node { get; init; }
+        /// <summary>The block the call sits in.</summary>
+        public required IrBlock Block { get; init; }
+        /// <summary>The call's statement index in <see cref="Block"/> - the block's statement
+        /// count for a call that is the terminator, so only uses after it count.</summary>
+        public required int StatementIndex { get; init; }
+        /// <summary>The blocks control can reach after the call's continuation - plus
+        /// <see cref="Block"/> itself when a cycle returns to it, since its earlier statements
+        /// then run again after the call.</summary>
+        public HashSet<IrBlock>? AfterBlocks { get; set; }
         public required List<CfgCodePartitionEntry> Targets { get; init; }
         public required bool Resolved { get; init; }
         /// <summary>Whether a continuation was observed after the call during discovery.</summary>
@@ -672,6 +706,13 @@ internal sealed class IrCallingConventions {
         /// <summary>Whether the site is an <c>int</c> that pushes the FLAGS image before its
         /// target runs: it needs the six status flags and DF on top of the targets' inputs.</summary>
         public required bool WritesInterruptFrame { get; init; }
+        /// <summary>The bytes still needed right after the call, over the versions
+        /// <see cref="VersionsAfter"/> - fixed-point state: starts at <see cref="CpuValues.None"/>
+        /// and only grows.</summary>
+        public CpuValues LiveAfterCall { get; set; }
+        /// <summary>The methods whose return exits land on <see cref="ContinuationNode"/>: their
+        /// landing demand reads <see cref="LiveAfterCall"/>.</summary>
+        public List<MethodData> LandingMethods { get; } = [];
     }
 
     private enum ExitKind { Return, Abort, TransferResolved, TransferUnresolved }
@@ -682,9 +723,14 @@ internal sealed class IrCallingConventions {
         public required ExitKind Kind { get; init; }
         public required bool Iret { get; init; }
         public List<CfgCodePartitionEntry> Targets { get; init; } = [];
+        /// <summary>For a return exit: the modelled call sites whose continuation node is an
+        /// observed landing of the <c>ret</c>.</summary>
+        public List<CallSite> LandingCalls { get; init; } = [];
         /// <summary>For a return exit: every observed landing of the <c>ret</c> mapped to a
-        /// partition entry, so <see cref="Targets"/> is the complete landing demand. False when a
-        /// landing is not a generated-code entry - what it needs then is not modelled.</summary>
+        /// partition entry or to the continuation node of a modelled call site, so
+        /// <see cref="Targets"/> and <see cref="LandingCalls"/> together are the complete landing
+        /// demand. False when a landing is neither - an iret into arbitrary code or code that is
+        /// not generated.</summary>
         public bool LandingsResolved { get; init; }
     }
 
@@ -710,6 +756,9 @@ internal sealed class IrCallingConventions {
             .SelectMany(block => block.Statements)
             .Any(statement => statement.Effects.MayFault);
         public bool Returns { get; set; }
+        /// <summary>The method's block graph, built on first use - only methods that hold a call
+        /// site a return lands on need it, to bound after-call liveness by position.</summary>
+        public BlockGraph<IrBlock>? BlockGraph { get; set; }
         /// <summary><see langword="true"/> when a state the memos were computed under changed and
         /// they must be cleared before the next <see cref="Needed"/> or <see cref="Preservation"/> call.</summary>
         public bool MemoStale { get; set; }
@@ -744,6 +793,13 @@ internal sealed class IrCallingConventions {
             PreprocessMethod(method);
             _methods.Add(method);
         }
+        // Exit classification runs in a second pass: a return landing can be the continuation
+        // node of a call site in any method, so every call site must be indexed first, and a
+        // transfer target resolves through the target method's EntryByLoadOffset, which exists
+        // only once that method has been preprocessed.
+        foreach (MethodData method in _methods) {
+            PreprocessExits(method);
+        }
     }
 
     private void PreprocessMethod(MethodData method) {
@@ -764,7 +820,8 @@ internal sealed class IrCallingConventions {
             _methodByEntry[mapped] = method;
         }
         foreach (IrBlock block in irMethod.Blocks) {
-            foreach (IrStatement statement in block.Statements) {
+            for (int statementIndex = 0; statementIndex < block.Statements.Count; statementIndex++) {
+                IrStatement statement = block.Statements[statementIndex];
                 if (statement.Node is CheckExternalEventsNode
                     || statement.Origin is not CfgInstruction { IsCall: true } instruction
                     || ServiceContractEffects.DescribesSite(statement.Node)) {
@@ -787,9 +844,13 @@ internal sealed class IrCallingConventions {
                         defined[(int)value] = version;
                     }
                 }
+                int[] versionsAfter = VersionsAfterOf(ssa, defined, block, statementIndex);
                 CallContinuation continuation = _context.ResolveCallContinuation(instruction);
                 CallSite site = new() {
-                    DefinedVersions = defined, Targets = targets, Resolved = resolved,
+                    DefinedVersions = defined, VersionsAfter = versionsAfter,
+                    ContinuationNode = continuation.ObservedContinuationEdge?.Target,
+                    Node = statement, Block = block, StatementIndex = statementIndex,
+                    Targets = targets, Resolved = resolved,
                     ObservedContinuation = continuation.ObservedContinuationEdge is not null,
                     RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0,
                     WritesInterruptFrame = IrAstChildren.Descendants(statement.Node)
@@ -797,6 +858,7 @@ internal sealed class IrCallingConventions {
                 };
                 method.Calls.Add(site);
                 method.CallByStatement[statement] = site;
+                IndexCallSite(method, site);
                 if (resolved) {
                     foreach (CfgCodePartitionEntry target in targets) {
                         if (!_callersOf.TryGetValue(target, out List<(MethodData, CallSite)>? callers)) {
@@ -830,9 +892,14 @@ internal sealed class IrCallingConventions {
                             defined[(int)value] = version;
                         }
                     }
+                    int[] versionsAfter = VersionsAfterOf(ssa, defined, block, block.Statements.Count);
                     CallContinuation continuation = _context.ResolveCallContinuation(callInstruction);
                     CallSite site = new() {
-                        DefinedVersions = defined, Targets = targets, Resolved = resolved,
+                        DefinedVersions = defined, VersionsAfter = versionsAfter,
+                        ContinuationNode = continuation.ObservedContinuationEdge?.Target,
+                        Node = block.Terminator, Block = block,
+                        StatementIndex = block.Statements.Count,
+                        Targets = targets, Resolved = resolved,
                         ObservedContinuation = continuation.ObservedContinuationEdge is not null,
                         RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0,
                         WritesInterruptFrame = IrAstChildren.TerminatorNodes(block.Terminator)
@@ -840,6 +907,7 @@ internal sealed class IrCallingConventions {
                     };
                     method.Calls.Add(site);
                     method.CallByTerminator[block.Terminator] = site;
+                    IndexCallSite(method, site);
                     if (resolved) {
                         foreach (CfgCodePartitionEntry target in targets) {
                             if (!_callersOf.TryGetValue(target, out List<(MethodData, CallSite)>? callers)) {
@@ -851,14 +919,49 @@ internal sealed class IrCallingConventions {
                         }
                     }
                 }
-                foreach (IVisitableAstNode root in IrAstChildren.TerminatorNodes(block.Terminator)) {
-                    (bool found, bool resolved) = CollectTransferNodes(root, method.TransferTargets,
-                        TransferTargetOf);
-                    method.HasUnresolvedTransfer |= found && !resolved;
-                }
             }
-            if (block.HasTerminator && block.Terminator is IrExit exit) {
-                ExitSite site = ClassifyExit(exit, block);
+        }
+    }
+
+    /// <summary>The version of every value right after a call at
+    /// <paramref name="statementIndex"/> in <paramref name="block"/>: the version the call
+    /// defines when it has one, else the version that reaches it.</summary>
+    private static int[] VersionsAfterOf(IrSsa ssa, int[] defined, IrBlock block, int statementIndex) {
+        int[] versionsAfter = new int[ValueCount];
+        for (int v = 0; v < ValueCount; v++) {
+            versionsAfter[v] = defined[v] >= 0
+                ? defined[v]
+                : ssa.VersionBefore(block, statementIndex, (IrSsaValue)v);
+        }
+        return versionsAfter;
+    }
+
+    /// <summary>Indexes <paramref name="site"/> by its observed continuation node so a return
+    /// landing on it can find the site's <see cref="CallSite.LiveAfterCall"/>.</summary>
+    private void IndexCallSite(MethodData method, CallSite site) {
+        if (site.ContinuationNode is not { } continuationNode) {
+            return;
+        }
+        if (!_callSitesByContinuation.TryGetValue(continuationNode,
+                out List<(MethodData, CallSite)>? landing)) {
+            landing = [];
+            _callSitesByContinuation[continuationNode] = landing;
+        }
+        landing.Add((method, site));
+    }
+
+    private void PreprocessExits(MethodData method) {
+        foreach (IrBlock block in method.Source.IrMethod.Blocks) {
+            if (!block.HasTerminator) {
+                continue;
+            }
+            foreach (IVisitableAstNode root in IrAstChildren.TerminatorNodes(block.Terminator)) {
+                (bool found, bool resolved) = CollectTransferNodes(root, method.TransferTargets,
+                    TransferTargetOf);
+                method.HasUnresolvedTransfer |= found && !resolved;
+            }
+            if (block.Terminator is IrExit exit) {
+                ExitSite site = ClassifyExit(exit, block, method);
                 method.Exits.Add(site);
                 method.ExitByTerminator[exit] = site;
                 method.Returns |= site.Kind is ExitKind.Return or ExitKind.TransferResolved;
@@ -874,15 +977,17 @@ internal sealed class IrCallingConventions {
         }
     }
 
-    private ExitSite ClassifyExit(IrExit exit, IrBlock block) {
+    private ExitSite ClassifyExit(IrExit exit, IrBlock block, MethodData method) {
         bool iret = Contains<InterruptReturnNode>(exit.Transfer);
         if (iret || exit.Origin is CfgInstruction { IsReturn: true }) {
             List<CfgCodePartitionEntry> landings = [];
+            List<CallSite> landingCalls = [];
             bool landingsResolved = exit.Origin is CfgInstruction instruction
-                && ReturnLandings(instruction, landings);
+                && ReturnLandings(instruction, landings, landingCalls, method);
             return new ExitSite {
                 Exit = exit, Block = block, Kind = ExitKind.Return, Iret = iret,
-                Targets = landings, LandingsResolved = landingsResolved
+                Targets = landings, LandingCalls = landingCalls,
+                LandingsResolved = landingsResolved
             };
         }
         List<CfgCodePartitionEntry> targets = [];
@@ -991,16 +1096,26 @@ internal sealed class IrCallingConventions {
         return target.EntryByLoadOffset.TryGetValue(loadOffset.Value, out entry);
     }
 
-    /// <summary>Fills <paramref name="targets"/> with the partition entries the return
-    /// <paramref name="instruction"/> was observed to land on. False when a landing has no entry -
-    /// an unobserved way out whose demand is not modelled - or when no landing was recorded.</summary>
-    private bool ReturnLandings(CfgInstruction instruction, List<CfgCodePartitionEntry> targets) {
+    /// <summary>Fills <paramref name="targets"/> with the landings of the return
+    /// <paramref name="instruction"/> that are partition entries, and <paramref name="landingCalls"/>
+    /// with the modelled call sites whose continuation node it lands on. False when a landing is
+    /// neither - an iret into arbitrary code or code that is not generated - or when no landing
+    /// was recorded.</summary>
+    private bool ReturnLandings(CfgInstruction instruction, List<CfgCodePartitionEntry> targets,
+        List<CallSite> landingCalls, MethodData method) {
         bool resolved = false;
         foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
-            if (!_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
+            if (_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
+                targets.Add(mapped);
+            } else if (_callSitesByContinuation.TryGetValue(target,
+                    out List<(MethodData Caller, CallSite Site)>? sites)) {
+                foreach ((_, CallSite site) in sites) {
+                    landingCalls.Add(site);
+                    site.LandingMethods.Add(method);
+                }
+            } else {
                 return false;
             }
-            targets.Add(mapped);
             resolved = true;
         }
         return resolved;
@@ -1146,6 +1261,32 @@ internal sealed class IrCallingConventions {
                     }
                 }
             }
+            // The live-after-call of every site a return can land on is fixed-point state too:
+            // it only grows. A grown value widens the landing demand of the exits that land on
+            // it, so the methods that own those exits - and their unknown-way entries' outputs -
+            // recompute.
+            foreach (List<(MethodData Caller, CallSite Site)> sites
+                     in _callSitesByContinuation.Values) {
+                foreach ((MethodData caller, CallSite call) in sites) {
+                    ClearMemosIfStale(caller);
+                    CpuValues live = call.LiveAfterCall;
+                    for (int v = 0; v < ValueCount; v++) {
+                        live |= NeededAfterCall(caller, (IrSsaValue)v, call, []);
+                    }
+                    if (live != call.LiveAfterCall) {
+                        call.LiveAfterCall = live;
+                        changed = true;
+                        foreach (MethodData landing in call.LandingMethods) {
+                            MarkDirtyMethod(landing, sitesDirty, outputsDirty);
+                            foreach (EntrySite entrySite in landing.Entries) {
+                                if (_states[entrySite.Entry].UnknownWay) {
+                                    outputsDirty.Add(entrySite.Entry);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (!changed) {
                 Iterations = iteration + 1;
                 return;
@@ -1206,16 +1347,35 @@ internal sealed class IrCallingConventions {
         return changes & Reportable;
     }
 
-    /// <summary>What callers read after <paramref name="entry"/>: everything when it has a non-call
-    /// way in, else the union over its call sites of the bytes still needed after the call. The
-    /// program entry's non-call way is the terminal observation: a program-ending hlt reads no
-    /// register, so it falls through to the callers' union. Other non-call ways - execution
-    /// context entries and non-call transfer targets - return into code that still observes the
-    /// machine, so they keep the whole reportable demand.</summary>
+    /// <summary>What callers read after <paramref name="entry"/>: the union over its call sites of
+    /// the bytes still needed after the call. The program entry's non-call way is the terminal
+    /// observation: a program-ending hlt reads no register, so it falls through to the callers'
+    /// union. An execution context entry returns into code that still observes the machine, so it
+    /// keeps the whole reportable demand. Any other non-call way in - a transfer target - still
+    /// returns only through the method's return exits, so what is read after it is the union of
+    /// their landing demands (<see cref="LandingInputs"/>); it widens back to every reportable
+    /// value when a return's landing is unresolved - a machine-leaving way out the model does not
+    /// describe - or when the method has a transfer exit, which hands control elsewhere before any
+    /// return runs.</summary>
     private CpuValues LiveAfter(CfgCodePartitionEntry entry, EntryState state) {
         if (state.UnknownWay
             && !entry.Address.Equals(_context.Program.Inputs.ProgramEntryPoint)) {
-            return Reportable;
+            if (entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry
+                || !_methodByEntry.TryGetValue(entry, out MethodData? method)) {
+                return Reportable;
+            }
+            if (method.Exits.Any(exit => exit.Kind is ExitKind.TransferResolved
+                    or ExitKind.TransferUnresolved
+                    || (exit.Kind == ExitKind.Return && !exit.LandingsResolved))) {
+                return Reportable;
+            }
+            CpuValues landings = CpuValues.None;
+            foreach (ExitSite exit in method.Exits) {
+                if (exit.Kind == ExitKind.Return) {
+                    landings |= LandingInputs(exit);
+                }
+            }
+            return landings;
         }
         if (!_callersOf.TryGetValue(entry, out List<(MethodData, CallSite)>? callers)) {
             return CpuValues.None;
@@ -1233,6 +1393,86 @@ internal sealed class IrCallingConventions {
     }
 
     /// <summary>The bytes the resolved targets of <paramref name="call"/> input.</summary>
+
+    /// <summary>The bytes of a value still needed right after <paramref name="call"/> runs: the
+    /// <see cref="Needed"/> of the version after the call, except that a value the call does not
+    /// define reaches the continuation under the version that reaches the call - and that
+    /// version's use at the call itself (the callee's inputs) is not part of the after-call
+    /// demand. Not memoized: it differs from <see cref="Needed"/> on exactly that one use.</summary>
+    private CpuValues NeededAfterCall(MethodData method, IrSsaValue value, CallSite call,
+        HashSet<int> visiting) {
+        int version = call.VersionsAfter[(int)value];
+        if (version < 0) {
+            return CpuValues.None;
+        }
+        if (call.DefinedVersions[(int)value] >= 0) {
+            return Needed(method, value, version, visiting);
+        }
+        visiting.Add(version);
+        bool cyclic = AfterBlocks(method, call).Contains(call.Block);
+        SegmentedAddress callAddress = call.Node is IrStatement callStatement
+            ? callStatement.Origin.Address
+            : ((IrTerminator)call.Node).Origin.Address;
+        CpuValues result = CpuValues.None;
+        foreach (IrSsaUse use in method.Ssa.Uses(version)) {
+            if (!cyclic
+                && (ReferenceEquals(use.Statement, call.Node)
+                    || ReferenceEquals(use.Terminator, call.Node)
+                    || use.Statement?.Origin.Address.Equals(callAddress) == true
+                    || use.Terminator?.Origin.Address.Equals(callAddress) == true)) {
+                continue;
+            }
+            if (!MayFollowCall(method, call, use)) {
+                continue;
+            }
+            result |= NeededUse(method, value, use, visiting);
+        }
+        visiting.Remove(version);
+        return result;
+    }
+
+    /// <summary>Whether <paramref name="use"/> can run after <paramref name="call"/>: a use in
+    /// another block counts when the block is reachable from the call's continuation; a use in the
+    /// call's own block counts when it sits after the call - or anywhere when a cycle returns to
+    /// the block, since it then runs again after the call. A phi operand's use sits on the edge
+    /// from its predecessor.</summary>
+    private static bool MayFollowCall(MethodData method, CallSite call, IrSsaUse use) {
+        if (use.Phi is not null) {
+            return use.OperandPredecessor is { } predecessor
+                && (ReferenceEquals(predecessor, call.Block)
+                    || AfterBlocks(method, call).Contains(predecessor));
+        }
+        if (!ReferenceEquals(use.Block, call.Block)) {
+            return AfterBlocks(method, call).Contains(use.Block);
+        }
+        if (AfterBlocks(method, call).Contains(call.Block)) {
+            return true;
+        }
+        return use.Terminator is not null
+            || use.Statement is { } statement
+                && call.Block.IndexOfStatement(statement) > call.StatementIndex;
+    }
+
+    /// <summary>The blocks reachable from <paramref name="call"/>'s continuation, computed once
+    /// per call site.</summary>
+    private static HashSet<IrBlock> AfterBlocks(MethodData method, CallSite call) {
+        if (call.AfterBlocks is { } cached) {
+            return cached;
+        }
+        method.BlockGraph ??= method.Source.IrMethod.ToBlockGraph();
+        HashSet<IrBlock> reachable = [];
+        Queue<IrBlock> work = new(method.BlockGraph.GetSuccessors(call.Block));
+        while (work.Count > 0) {
+            IrBlock next = work.Dequeue();
+            if (reachable.Add(next)) {
+                foreach (IrBlock successor in method.BlockGraph.GetSuccessors(next)) {
+                    work.Enqueue(successor);
+                }
+            }
+        }
+        call.AfterBlocks = reachable;
+        return reachable;
+    }
 
     /// <summary>The bytes of <paramref name="version"/> that later code may still observe: the
     /// union over its uses, memoized for the current iteration.</summary>
@@ -1345,18 +1585,21 @@ internal sealed class IrCallingConventions {
     }
 
     /// <summary>The bytes a return exit must still deliver to what it lands on: the union of the
-    /// inputs of every partition entry its <c>ret</c> was observed to reach. A landing that is not
-    /// a partition entry - a normal call continuation inside the caller's method - is already
-    /// covered by the caller's needed-after-call; an unmodelled landing adds every reportable
-    /// value under the observed demand only, since machine state leaving generated code is
-    /// observed, not a read generated code does. A byte the callee did not change keeps its entry
-    /// value in the machine state either way, so the caller masks this set by its changes: a
-    /// normal post-call continuation then adds nothing the <see cref="LiveAfter"/> outputs do not
-    /// already demand, while a redirected return still delivers the bytes its landing reads.</summary>
+    /// inputs of every partition entry its <c>ret</c> was observed to reach, plus the
+    /// <see cref="CallSite.LiveAfterCall"/> of every modelled call site whose continuation node is
+    /// a landing - the bytes still needed after that call, over the versions that reach its
+    /// continuation. An unmodelled landing - an iret into arbitrary code or code that is not
+    /// generated - adds every reportable value under the observed demand only, since machine
+    /// state leaving generated code is observed, not a read generated code does. A byte the
+    /// callee did not change keeps its entry value in the machine state either way, so the caller
+    /// masks this set by its changes.</summary>
     private CpuValues LandingInputs(ExitSite site) {
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in site.Targets) {
             inputs |= _states[target].Inputs | ObservedEntryReads(target);
+        }
+        foreach (CallSite call in site.LandingCalls) {
+            inputs |= call.LiveAfterCall;
         }
         if (!site.LandingsResolved && _observed) {
             inputs |= Reportable;

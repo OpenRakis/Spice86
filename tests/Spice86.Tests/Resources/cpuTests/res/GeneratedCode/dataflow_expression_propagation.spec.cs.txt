@@ -26,7 +26,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DF. Outputs: AX, DF. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: AX, DF. Changes: AX, flags, DF.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_0168_F0168() {
         CheckExternalEvents(biosSegment, 0x0168);

@@ -12,15 +12,15 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, AF, DF. Does not return.</summary>
+    /// <summary>Inputs: SI, DS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     public virtual Action unknown_F000_0006_F0006() {
         CheckExternalEvents(biosSegment, 0x0006);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_sar);
-        UInt8[DS, SI + 0x1000] = Alu8.Sar(UInt8[DS, SI + 0x1000], 1);
+        UInt8[DS, SI + 0x1000] = (byte)((sbyte)UInt8[DS, SI + 0x1000] >> 1);
         return unknown_F000_000A_F000A(0x0000);
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: DS, CF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     public virtual Action unknown_F000_0017_F0017() {
         CheckExternalEvents(biosSegment, 0x0017);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_push);
@@ -34,7 +34,7 @@ public partial class CfgGeneratedOverrides {
         }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;

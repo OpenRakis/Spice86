@@ -235,7 +235,6 @@ public partial class CfgGeneratedOverrides {
         Segment3000Globals.Byte00E8 = 0x5A;
         Segment3000Globals.Byte00E9 = 0x24;
         AX = 0x2000;
-        DS = 0x2000;
         CX = 0;
         NearCall(cs1, 0x0383, unknown_016F_03EB_01ADBEntry);
         EsGlobals.Byte0082 = AL;
@@ -314,14 +313,14 @@ public partial class CfgGeneratedOverrides {
         public ushort SavedFlags { get => _slots.GetWord(0x0004); set => _slots.SetWord(0x0004, value); }
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
-    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Outputs: AL, ECX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Changes: all.</summary>
+    /// Segment values at entry, from every call site: DS = 0x3000.
     public virtual Action unknown_016F_03EB_01ADB() {
         CheckExternalEvents(cs1, 0x03EB);
         return unknown_016F_03F4_01AE4(0x0000);
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: ECX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_016F_03ED_01ADD() {
         CheckExternalEvents(cs1, 0x03ED);
         AX = 0x3000;
@@ -331,21 +330,21 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_016F_042B_01B1B() {
+        ushort word1;
         CheckExternalEvents(cs1, 0x042B);
         AX = 0x675A;
         BX = 0x0014;
         InterruptCall(cs1, 0x0434, 0x21);
         EsGlobals.Word0086 = AX;
         Stack.Push16(FlagRegister16);
-        AX = Stack.Pop16();
-        AX = Alu16.And(AX, 1);
-        EsGlobals.Word0088 = AX;
+        word1 = Stack.Pop16();
+        EsGlobals.Word0088 = (ushort)(word1 & 1);
         return NearRet();
     }
 
     /// <summary>
-    /// Entry 016F:03F4: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
-    /// Entry 016F:03FA: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
+    /// Entry 016F:03F4: inputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF; outputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF; changes all.
+    /// Entry 016F:03FA: inputs ECX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF; changes all.
     /// </summary>
     public virtual Action unknown_016F_03F4_01AE4(int loadOffset) {
         switch (loadOffset) {

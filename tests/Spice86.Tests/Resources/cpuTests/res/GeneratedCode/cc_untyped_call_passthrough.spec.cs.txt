@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x0036);
         NearCall(biosSegment, 0x0039, unknown_F000_003E_F003EEntry);
         CX = AX;
-        CX = Alu16.Add(CX, CX);
+        CX += CX;
         NearReturn();
         return CX;
     }
@@ -40,7 +40,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual Action unknown_F000_0041_F0041() {
         CheckExternalEvents(biosSegment, 0x0041);
-        AX = Alu16.Add(AX, BX);
+        AX += BX;
         return InterruptRet();
     }
 

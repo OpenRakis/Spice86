@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0052_F0052(ushort word1) {
         AX = word1;
@@ -23,7 +23,7 @@ public partial class CfgGeneratedOverrides {
         else {
             AX = NearCall(biosSegment, 0x005A, () => unknown_F000_006C_F006C(word1));
         }
-        AX = Alu16.Add(AX, AX);
+        AX += AX;
         NearReturn();
         return AX;
     }
@@ -33,13 +33,13 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, CX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0062_F0062(ushort word1) {
         AX = word1;
         CheckExternalEvents(biosSegment, 0x0062);
         CX = word1;
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         do {
             CheckExternalEvents(biosSegment, 0x0066);
             AX = NearCall(biosSegment, 0x0069, () => unknown_F000_006C_F006C(AX));
@@ -54,12 +54,12 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, PF, AF, ZF, SF, OF.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_006C_F006C(ushort word1) {
         AX = word1;
         CheckExternalEvents(biosSegment, 0x006C);
-        AX = Alu16.Inc(AX);
+        AX++;
         NearReturn();
         return AX;
     }
@@ -69,12 +69,12 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, PF, AF, ZF, SF, OF.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_006E_F006E(ushort word1) {
         AX = word1;
         CheckExternalEvents(biosSegment, 0x006E);
-        AX = Alu16.Dec(AX);
+        AX--;
         NearReturn();
         return AX;
     }
@@ -84,7 +84,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX, CX, BP, flags.</summary>
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_0070_F0070() {
         CheckExternalEvents(biosSegment, 0x0070);
@@ -94,13 +94,12 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CX);
             CX--;
         } while (CX != 0);
-        BP = SP;
-        AX = SsUInt16[BP + 6];
-        SP = Alu16.Add(SP, 4);
+        AX = SsUInt16[SP + 6];
+        SP += 4;
         return NearRet();
     }
 
-    /// <summary>Inputs: none. Outputs: AX, BP. Changes: AX, CX, BP, flags.</summary>
+    /// <summary>Inputs: none. Outputs: AX, BP. Changes: AX, CX, BP.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_007F_F007F() {
         CheckExternalEvents(biosSegment, 0x007F);
@@ -109,11 +108,11 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x0088, unknown_F000_0091_F0091Entry);
         BP = SP;
         AX = SsUInt16[BP];
-        SP = Alu16.Add(SP, 2);
+        SP += 2;
         return NearRet();
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: CX, flags.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_0091_F0091() {
         CheckExternalEvents(biosSegment, 0x0091);
@@ -123,7 +122,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(CX);
             CX--;
         } while (CX != 0);
-        SP = Alu16.Add(SP, 4);
+        SP += 4;
         return NearRet(2);
     }
 
@@ -136,7 +135,7 @@ public partial class CfgGeneratedOverrides {
         BP = NearCall(biosSegment, 0x00A3, () => unknown_F000_00AE_F00AE());
         Stack.Push16(0xBBBB);
         SsUInt16[BP] = 0xDDDD;
-        (AX, BP) = Stack.Restore2();
+        (AX, _) = Stack.Restore2();
         NearReturn();
         return AX;
     }
@@ -160,7 +159,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, DS. Outputs: AX. Changes: AX, DX, BX, BP, flags.</summary>
+    /// <summary>Inputs: AX, DS. Outputs: AX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_00B1_F00B1(ushort word1, ushort word2) {
         AX = word1;
@@ -168,10 +167,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00B1);
         BX = 0x7777;
         AX = NearCall(biosSegment, 0x00B7, () => unknown_F000_00C4_F00C4(word1));
-        BX = 1;
-        BP = SP;
-        DX = SsUInt16[BP - 4];
-        Segment2000Globals.Word004E = DX;
+        Segment2000Globals.Word004E = SsUInt16[SP - 4];
         NearReturn();
         return AX;
     }
@@ -181,16 +177,16 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_00C4_F00C4(ushort word1) {
         AX = word1;
+        ushort word2;
         CheckExternalEvents(biosSegment, 0x00C4);
         Stack.Push16(BX);
-        BX = word1;
-        BX = Alu16.Add(BX, BX);
-        AX = BX;
-        BX = Stack.Pop16();
+        word2 = word1;
+        AX = (ushort)(word2 + word2);
+        Stack.Release(1);
         NearReturn();
         return AX;
     }

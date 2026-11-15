@@ -195,7 +195,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: none. Changes: flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: none. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0005_F0005() {
         CheckExternalEvents(biosSegment, 0x0005);
         return InterruptRet();
@@ -348,7 +348,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: flags, DF.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: none. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_00D9_F00D9() {
         CheckExternalEvents(biosSegment, 0x00D9);
         // INT 28h: DosIdle.Idle

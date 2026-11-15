@@ -135,16 +135,70 @@ internal static class StackRuns {
                     edits.AddRange(Merge(children, entries, index, last,
                         new StackSaveNode([.. Values(entries, index, last)])));
                     break;
-                case Kind.PopAssign when RestoreFollows(entries, runEnd):
-                    if (count is >= 2 and <= 6 && DistinctTargets(entries, index, last)) {
-                        edits.AddRange(Merge(children, entries, index, last,
-                            new StackRestoreNode([.. Targets(entries, index, last)])));
-                    }
-                    break;
+                case Kind.PopAssign:
                 case Kind.BarePop:
-                    edits.AddRange(Merge(children, entries, index, last,
-                        new StackReleaseNode(count)));
-                    break;
+                case Kind.Release: {
+                    int familyEnd = index;
+                    while (familyEnd + 1 < entries.Count
+                        && (IsPopMember(entries[familyEnd + 1].Node)
+                            || entries[familyEnd + 1].Node is InstructionStartNode)) {
+                        familyEnd++;
+                    }
+                    int familyRunEnd = familyEnd + 1;
+                    while (entries[familyEnd].Node is InstructionStartNode) {
+                        familyEnd--;
+                    }
+                    int pops = PopCount(entries, index, familyEnd);
+                    if (Count(entries, index, familyEnd, Kind.PopAssign) == 0) {
+                        edits.AddRange(Merge(children, entries, index, familyEnd,
+                            new StackReleaseNode(pops)));
+                    } else if (RestoreFollows(entries, familyRunEnd) && pops is >= 2 and <= 6
+                        && DistinctTargets(entries, index, familyEnd)) {
+                        edits.AddRange(Merge(children, entries, index, familyEnd,
+                            new StackRestoreNode([.. Targets(entries, index, familyEnd)])));
+                    } else {
+                        edits.AddRange(HomogeneousMerges(children, entries, index, familyEnd));
+                    }
+                    index = familyRunEnd;
+                    continue;
+                }
+            }
+            index = runEnd;
+        }
+        return edits;
+    }
+
+    /// <summary>The family-wide merge refused: walk the run again one kind at a time so the bare
+    /// pops still release and a pop-assign run merges exactly when the homogeneous rules allow
+    /// it.</summary>
+    private static List<Edit> HomogeneousMerges(List<IVisitableAstNode> children,
+        List<Entry> entries, int start, int end) {
+        List<Edit> edits = [];
+        int index = start;
+        while (index <= end) {
+            Kind kind = KindOf(entries[index].Node);
+            if (kind == Kind.None) {
+                index++;
+                continue;
+            }
+            int last = index;
+            while (last + 1 <= end
+                && (KindOf(entries[last + 1].Node) == kind
+                    || entries[last + 1].Node is InstructionStartNode)) {
+                last++;
+            }
+            int runEnd = last + 1;
+            while (entries[last].Node is InstructionStartNode) {
+                last--;
+            }
+            int count = Count(entries, index, last, kind);
+            if (kind == Kind.BarePop) {
+                edits.AddRange(Merge(children, entries, index, last,
+                    new StackReleaseNode(count)));
+            } else if (RestoreFollows(entries, runEnd) && count is >= 2 and <= 6
+                && DistinctTargets(entries, index, last)) {
+                edits.AddRange(Merge(children, entries, index, last,
+                    new StackRestoreNode([.. Targets(entries, index, last)])));
             }
             index = runEnd;
         }
@@ -189,12 +243,50 @@ internal static class StackRuns {
         Candidates(entries, start, end)
             .Select(node => (ValueNode)((StackCallNode)node).Arguments[0]);
 
-    private static IEnumerable<ValueNode> Targets(List<Entry> entries, int start, int end) =>
-        Candidates(entries, start, end)
-            .Select(node => (ValueNode)((BinaryOperationNode)node).Left);
+    /// <summary>Whether <paramref name="node"/> can join a pop run: a pop-assign, a bare pop, or a
+    /// <see cref="StackReleaseNode"/> an inner boundary body's merge already folded dead pops into -
+    /// its slots are discard positions of the wider run.</summary>
+    private static bool IsPopMember(IVisitableAstNode node) =>
+        KindOf(node) is Kind.PopAssign or Kind.BarePop or Kind.Release;
 
-    private static bool DistinctTargets(List<Entry> entries, int start, int end) =>
-        Targets(entries, start, end).Distinct().Count() == Candidates(entries, start, end).Count();
+    private static IEnumerable<ValueNode?> Targets(List<Entry> entries, int start, int end) {
+        for (int index = start; index <= end; index++) {
+            IVisitableAstNode node = entries[index].Node;
+            if (node is StackReleaseNode release) {
+                for (int slot = 0; slot < release.Count; slot++) {
+                    yield return null;
+                }
+                continue;
+            }
+            switch (KindOf(node)) {
+                case Kind.PopAssign:
+                    yield return (ValueNode)((BinaryOperationNode)node).Left;
+                    break;
+                case Kind.BarePop:
+                    yield return null;
+                    break;
+            }
+        }
+    }
+
+    private static bool DistinctTargets(List<Entry> entries, int start, int end) {
+        List<ValueNode?> live = [.. Targets(entries, start, end)
+            .Where(target => target is not null)];
+        return live.Distinct().Count() == live.Count;
+    }
+
+    private static int PopCount(List<Entry> entries, int start, int end) {
+        int count = 0;
+        for (int index = start; index <= end; index++) {
+            IVisitableAstNode node = entries[index].Node;
+            if (node is StackReleaseNode release) {
+                count += release.Count;
+            } else if (KindOf(node) is Kind.PopAssign or Kind.BarePop) {
+                count++;
+            }
+        }
+        return count;
+    }
 
     private static IEnumerable<IVisitableAstNode> Candidates(List<Entry> entries, int start,
         int end) {
@@ -241,6 +333,7 @@ internal static class StackRuns {
             Right: StackCallValueNode { Operation: StackOperation.Pop, Width: BitWidth.WORD_16 } }
             when IsSaveRegister(target) => Kind.PopAssign,
         StackCallNode { Operation: StackOperation.Pop, Width: BitWidth.WORD_16 } => Kind.BarePop,
+        StackReleaseNode => Kind.Release,
         _ => Kind.None
     };
 
@@ -262,7 +355,8 @@ internal static class StackRuns {
         None,
         Push,
         PopAssign,
-        BarePop
+        BarePop,
+        Release
     }
 
     private sealed record Entry(int Child, int Inner, IVisitableAstNode Node);

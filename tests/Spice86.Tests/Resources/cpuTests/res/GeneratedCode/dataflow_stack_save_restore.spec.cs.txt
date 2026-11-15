@@ -14,15 +14,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: none. Outputs: DX. Changes: DX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_00C7_F00C7(ushort arg0) {
         unknown_F000_00C7_F00C7Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x00C7);
         Stack.Push16(BP);
-        DX = arg0;
-        DX = Alu16.Add(DX, 3);
+        DX = (ushort)(arg0 + 3);
         BP = Stack.Pop16();
         NearReturn();
         return DX;
@@ -56,7 +55,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: DX. Changes: DX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_00D5_F00D5(ushort word1) {
@@ -65,12 +64,12 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(word1);
         if (word1 == 0) {
             DX = Stack.Pop16();
-            DX = Alu16.Add(DX, 0x0020);
+            DX += 0x0020;
             NearReturn();
             return DX;
         }
         DX = Stack.Pop16();
-        DX = Alu16.Add(DX, 0x0010);
+        DX += 0x0010;
         NearReturn();
         return DX;
     }

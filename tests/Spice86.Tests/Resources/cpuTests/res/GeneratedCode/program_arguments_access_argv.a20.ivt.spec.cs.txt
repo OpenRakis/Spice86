@@ -12,62 +12,48 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: AX, BX, DI, ES, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort flagOperand_0103 = 0;
-        byte flagOperand_010C = 0;
-        byte flagOperand_0112 = 0;
-        byte flagOperand_0119 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        EDI = NearCall(cs1, 0x0103, () => unknown_016E_013C_0181C());
-        flagOperand_0103 = UInt16[ES, DI];
-        Alu16.Sub(flagOperand_0103, 1);
-        if (flagOperand_0103 != 1) {
+        DI = NearCall(cs1, 0x0103, () => unknown_016E_013C_0181C());
+        if (UInt16[ES, DI] != 1) {
             return unknown_016E_0124_01804(0x0000);
         }
         DI += 2;
-        flagOperand_010C = UInt8[ES, DI];
-        Alu8.Sub(flagOperand_010C, 0x43);
-        if (flagOperand_010C != 0x43) {
+        if (UInt8[ES, DI] != 0x43) {
             return unknown_016E_0124_01804(0x0000);
         }
-        flagOperand_0112 = UInt8[ES, DI + 1];
-        Alu8.Sub(flagOperand_0112, 0x3A);
-        if (flagOperand_0112 != 0x3A) {
+        if (UInt8[ES, DI + 1] != 0x3A) {
             return unknown_016E_0124_01804(0x0000);
         }
-        flagOperand_0119 = UInt8[ES, DI + 2];
-        Alu8.Sub(flagOperand_0119, 0x5C);
-        if (flagOperand_0119 != 0x5C) {
+        if (UInt8[ES, DI + 2] != 0x5C) {
             return unknown_016E_0124_01804(0x0000);
         }
         AL = 0;
         return unknown_016E_0124_01804(0x0126);
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: none. Outputs: ES. Changes: AX, BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_012B_0180B() {
         ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x012B);
         AH = 0x62;
-        BX = Dos.ReadPspAddress();
-        ES = BX;
-        word1 = EsGlobals.Word002C;
-        Alu16.And(word1, word1);
-        AX = word1;
-        if (word1 == 0) {
+        word1 = Dos.ReadPspAddress();
+        ES = word1;
+        word2 = EsGlobals.Word002C;
+        if (word2 == 0) {
             return unknown_016E_0124_01804(0x0000);
         }
-        ES = word1;
-        AX = word1;
+        ES = word2;
         return NearRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: none. Outputs: DI, ES. Changes: AX, BX, DI, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
-    public virtual uint unknown_016E_013C_0181C() {
+    public virtual ushort unknown_016E_013C_0181C() {
         CheckExternalEvents(cs1, 0x013C);
         NearCall(cs1, 0x013F, unknown_016E_012B_0180BEntry);
         DI = 0;
@@ -78,13 +64,13 @@ public partial class CfgGeneratedOverrides {
             }
             DI++;
         }
-        DI = Alu16.Add(DI, 2);
+        DI += 2;
         NearReturn();
-        return EDI;
+        return DI;
     }
 
     public virtual Action unknown_016E_013C_0181C_Asm() {
-        EDI = unknown_016E_013C_0181C();
+        DI = unknown_016E_013C_0181C();
         return Returned;
     }
 

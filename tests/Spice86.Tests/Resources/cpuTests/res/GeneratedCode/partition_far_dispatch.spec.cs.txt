@@ -12,11 +12,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_003D_F003D(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x003D);
-        DX = Alu16.Add(DX, 1);
+        DX++;
         FarReturn();
         return DX;
     }
@@ -26,11 +26,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
     public virtual ushort unknown_F000_0041_F0041(ushort word1) {
         DX = word1;
         CheckExternalEvents(biosSegment, 0x0041);
-        DX = Alu16.Add(DX, 0x0010);
+        DX += 0x0010;
         FarReturn();
         return DX;
     }

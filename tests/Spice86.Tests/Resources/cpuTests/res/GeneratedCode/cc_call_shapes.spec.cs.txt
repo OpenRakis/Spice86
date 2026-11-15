@@ -30,7 +30,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, BX. Outputs: AX, BX. Changes: AX, BX, flags.</summary>
+    /// <summary>Inputs: AX, CX, BX. Outputs: AX, BX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_F000_00DA_F00DA(ushort word1, ushort word2, ushort word3) {
@@ -38,7 +38,6 @@ public partial class CfgGeneratedOverrides {
         CX = word2;
         BX = word3;
         CheckExternalEvents(biosSegment, 0x00DA);
-        Alu16.And(word2, word2);
         if (word2 == 0) {
             AX = 0xAAAA;
             NearReturn();
@@ -54,11 +53,12 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX. Outputs: AX. Changes: AX, CX, flags.</summary>
+    /// <summary>Inputs: AX, CX. Outputs: AX. Changes: AX, CX.</summary>
     public virtual Action unknown_F000_00E6_F00E6() {
+        ushort word1;
         CheckExternalEvents(biosSegment, 0x00E6);
         if (CX == 0) {
-            AX = Alu16.Xor(AX, AX);
+            AX = 0;
             return NearRet();
         }
         else {
@@ -67,8 +67,8 @@ public partial class CfgGeneratedOverrides {
             NearCall(biosSegment, 0x00EF, unknown_F000_00E6_F00E6Entry);
         }
         CheckExternalEvents(biosSegment, 0x00EF);
-        CX = Stack.Pop16();
-        AX = Alu16.Add(AX, CX);
+        word1 = Stack.Pop16();
+        AX += word1;
         return NearRet();
     }
 
@@ -158,7 +158,8 @@ public partial class CfgGeneratedOverrides {
         unknown_F000_0107_F0107Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x0107);
         Stack.Push16(BP);
-        frame.SavedFlags = Alu16.Or(frame.SavedFlags, 1);
+        CarryFlag = false;
+        frame.SavedFlags |= 1;
         BP = Stack.Pop16();
         return InterruptRet();
     }

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, CX, SI, ES, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: CX, SI, ES.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_1000_F1000(ushort word1) {
@@ -21,14 +21,10 @@ public partial class CfgGeneratedOverrides {
         CX = 4;
         do {
             CheckExternalEvents(biosSegment, 0x1003);
-            Alu16.Sub(CX, 4);
             if (CX != 4) {
-                Alu16.Sub(CX, 3);
                 if (CX != 3) {
                     SI = (ushort)(CX - 1 << 1);
-                    AX = 0xF000;
                     ES = 0xF000;
-                    Alu16.Sub(SI, 2);
                     if (SI > 2) {
                         break;
                     }
@@ -47,7 +43,7 @@ public partial class CfgGeneratedOverrides {
         L_1027:
             Segment2000Globals.Word0042 += 1;
         L_1021:
-            CX = Alu16.Dec(CX);
+            CX--;
         } while (CX != 0);
         FarReturn();
         return;
@@ -88,7 +84,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, CX, SI, ES, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: CX, SI, ES.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F100_1000_F2000(ushort word1) {
@@ -97,14 +93,10 @@ public partial class CfgGeneratedOverrides {
         CX = 4;
         do {
             CheckExternalEvents(cs1, 0x1003);
-            Alu16.Sub(CX, 4);
             if (CX != 4) {
-                Alu16.Sub(CX, 3);
                 if (CX != 3) {
                     SI = (ushort)(CX - 1 << 1);
-                    AX = 0xF100;
                     ES = 0xF100;
-                    Alu16.Sub(SI, 2);
                     if (SI > 2) {
                         break;
                     }
@@ -123,7 +115,7 @@ public partial class CfgGeneratedOverrides {
         L_1027:
             Segment2000Globals.Word0046 += 1;
         L_1021:
-            CX = Alu16.Dec(CX);
+            CX--;
         } while (CX != 0);
         FarReturn();
         return;

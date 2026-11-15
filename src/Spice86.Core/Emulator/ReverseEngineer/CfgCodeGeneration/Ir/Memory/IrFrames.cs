@@ -331,24 +331,27 @@ internal sealed class IrFrames {
         [.. method.Blocks
             .Where(block => block.Terminator is IrExit { Origin: CfgInstruction instruction }
                 && instruction.Kind.HasFlag(InstructionKind.Return))
-            .Select(block => new IrFrameEpilogue((IrExit)block.Terminator, EpilogueKind(block)))];
+            .Select(block => EpilogueOf(block))];
 
-    private IrFrameEpilogueKind EpilogueKind(IrBlock block) {
+    private IrFrameEpilogue EpilogueOf(IrBlock block) {
         IReadOnlyList<IrStatement> stackStatements = [.. block.Statements.Where(TouchesFrameRegister)];
-        if (stackStatements.Count == 0) {
-            return IrFrameEpilogueKind.Other;
+        IrStatement? last = stackStatements.Count == 0 ? null : stackStatements[^1];
+        IrFrameEpilogueKind kind = IrFrameEpilogueKind.Other;
+        if (last is not null) {
+            if (last.Node is StackCallNode { Operation: StackOperation.Leave }) {
+                kind = IrFrameEpilogueKind.Leave;
+            } else if (IsPopBp(last)) {
+                if (stackStatements.Count >= 2 && IsSetBpFromCopy(stackStatements[^2])) {
+                    kind = IrFrameEpilogueKind.MoveSpPopBp;
+                } else if (EntryDelta(last, -2)) {
+                    kind = IrFrameEpilogueKind.PopBp;
+                }
+            }
         }
-        IrStatement last = stackStatements[^1];
-        if (last.Node is StackCallNode { Operation: StackOperation.Leave }) {
-            return IrFrameEpilogueKind.Leave;
-        }
-        if (!IsPopBp(last)) {
-            return IrFrameEpilogueKind.Other;
-        }
-        if (stackStatements.Count >= 2 && IsSetBpFromCopy(stackStatements[^2])) {
-            return IrFrameEpilogueKind.MoveSpPopBp;
-        }
-        return EntryDelta(last, -2) ? IrFrameEpilogueKind.PopBp : IrFrameEpilogueKind.Other;
+        IrStatement? restore = kind is IrFrameEpilogueKind.PopBp or IrFrameEpilogueKind.MoveSpPopBp
+            ? last
+            : null;
+        return new IrFrameEpilogue((IrExit)block.Terminator, kind, restore);
     }
 
     /// <summary>2 / 4 / 6 when every return exit is uniformly a near <c>ret</c>, a <c>retf</c> or an
@@ -408,7 +411,7 @@ internal sealed class IrFrames {
             descendant is ProcedureReturnHelperNode or InterruptReturnNode);
     }
 
-    private static bool IsPushBp(IrStatement statement) =>
+    internal static bool IsPushBp(IrStatement statement) =>
         statement.Node is StackCallNode {
             Operation: StackOperation.Push,
             Arguments: [RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
@@ -425,7 +428,9 @@ internal sealed class IrFrames {
         };
 
     private static bool IsPopBp(IrStatement statement) =>
-        statement.Node is BinaryOperationNode {
+        statement.Node is StackCallNode {
+            Operation: StackOperation.Pop, Width: BitWidth.WORD_16 }
+        || statement.Node is BinaryOperationNode {
             BinaryOperation: BinaryOperation.ASSIGN,
             Left: RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
                 RegisterIndex: (int)RegisterIndex.BpIndex },

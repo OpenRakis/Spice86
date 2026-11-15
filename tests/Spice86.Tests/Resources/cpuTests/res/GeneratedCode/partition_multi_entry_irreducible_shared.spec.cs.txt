@@ -12,24 +12,24 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: CX, DX, BX, DS, DF. Outputs: DX, BX. Changes: DX, BX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_006B_F006B() {
         CheckExternalEvents(biosSegment, 0x006B);
         return unknown_F000_006F_F006F(0x0000);
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: CX, DX, BX, DS, DF. Outputs: DX, BX. Changes: DX, BX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_006D_F006D() {
         CheckExternalEvents(biosSegment, 0x006D);
         return unknown_F000_006F_F006F(0x007D);
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: CX, DX, BX, DS, DF. Outputs: DX, BX, flags. Changes: DX, BX, flags.</summary>
     public virtual Action unknown_F000_008B_F008B() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x008B);
-        Alu16.Sub(DX, 3);
         if (DX == 3) {
             if (JumpDispatcher.Jump(unknown_F000_006F_F006F, 0x0000)) {
                 goto entrydispatcher;
@@ -42,20 +42,23 @@ public partial class CfgGeneratedOverrides {
         return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: CX, DX, BX, DS, DF. Outputs: DX, BX, flags. Changes: DX, BX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0092_F0092() {
         CheckExternalEvents(biosSegment, 0x0092);
         return unknown_F000_008B_F008B();
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0094_F0094() {
         CheckExternalEvents(biosSegment, 0x0094);
         Stack.Push16(0x009A);
         return NearRet();
     }
 
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_0098_F0098() {
     entrydispatcher:
         CheckExternalEvents(biosSegment, 0x0098);
@@ -72,7 +75,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: AX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: AX, BX, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = Alu16.Xor(AX, AX);
@@ -90,8 +93,7 @@ public partial class CfgGeneratedOverrides {
         BX = 0;
         DX = 3;
         NearCall(biosSegment, 0x002A, unknown_F000_0092_F0092Entry);
-        DsGlobals.Word0200 = 0x009A;
-        DsGlobals.Word0202 = CS;
+        Segment0000Globals.Dword0200 = 0x0000009A | (uint)CS << 16;
         SI = 0;
         InterruptCall(biosSegment, 0x0039, 0x80, biosSegment, 0x009A, unknown_F000_009A_F009AEntry);
         Stack.Push16(FlagRegister16);
@@ -103,19 +105,16 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(FlagRegister16);
         Stack.Push16(CS);
         NearCall(biosSegment, 0x0048, unknown_F000_0098_F0098Entry);
-        SsUInt16[0x0600] = SP;
-        SsUInt16[0x0602] = SS;
-        SsUInt16[0x0604] = AX;
-        SsUInt16[0x0606] = BX;
-        SsUInt16[0x0608] = CX;
-        SsUInt16[0x060A] = DX;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
+        SsUInt32[0x0604] = 0x00001000 | (uint)BX << 16;
+        SsUInt32[0x0608] = 2 | (uint)DX << 16;
         SsUInt16[0x060C] = SI;
         return Hlt();
     }
 
     /// <summary>
-    /// Entry F000:006F: inputs EAX, ECX, DX, BX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
-    /// Entry F000:007D: inputs EAX, ECX, DX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF; outputs all; changes all.
+    /// Entry F000:006F: inputs CX, DX, BX, DS, DF; outputs DX, BX, flags; changes DX, BX, flags.
+    /// Entry F000:007D: inputs CX, DX, BX, DS, DF; outputs DX, BX, flags; changes DX, BX, flags.
     /// </summary>
     public virtual Action unknown_F000_006F_F006F(int loadOffset) {
     entrydispatcher:
@@ -165,29 +164,23 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-// ==== file: DsGlobals.cs ====
+// ==== file: Segment0000Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
-    private readonly SegmentRegisters _segmentRegisters;
+    private readonly ushort Segment;
 
-    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
-
-    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
         _memory = memory;
-        _segmentRegisters = segmentRegisters;
+        Segment = 0x0000;
     }
 
-    /// DS:0x0200, whatever DS holds at the access.
-    public ushort Word0200 { get => _memory.UInt16[Segment, 0x0200]; set => _memory.UInt16[Segment, 0x0200] = value; }
-
-    /// DS:0x0202, whatever DS holds at the access.
-    public ushort Word0202 { get => _memory.UInt16[Segment, 0x0202]; set => _memory.UInt16[Segment, 0x0202] = value; }
+    public uint Dword0200 { get => _memory.UInt32[Segment, 0x0200]; set => _memory.UInt32[Segment, 0x0200] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -215,11 +208,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_009A_F009AEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
-    protected readonly DsGlobals DsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
-        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
         unknown_F000_006B_F006BEntry = _ => unknown_F000_006B_F006B();
         unknown_F000_006D_F006DEntry = _ => unknown_F000_006D_F006D();

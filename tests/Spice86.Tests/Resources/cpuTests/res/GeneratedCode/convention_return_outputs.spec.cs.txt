@@ -26,13 +26,13 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: AX, DS. Outputs: AX. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX, DS. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0056_F0056(ushort word1, ushort word2) {
         AX = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x0056);
-        AX = Alu16.Add(AX, Segment2000Globals.Word0400);
+        AX += Segment2000Globals.Word0400;
         NearReturn();
         return AX;
     }
@@ -91,7 +91,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: SI, DI, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: SI, DI.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual void unknown_F000_0069_F0069(ushort word1) {
         DS = word1;
@@ -99,8 +99,6 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x0069);
         word2 = Segment2000Globals.Word0400;
         DI = (ushort)(word2 + word2);
-        DI = Alu16.Add(DI, word2);
-        SI = word2;
         NearReturn();
         return;
     }
@@ -126,7 +124,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: none. Outputs: none. Changes: AX, CX, DX, SI, DI, DS, flags.</summary>
+    /// <summary>Inputs: BX. Outputs: none. Changes: AX, CX, DX, SI, DI, DS, CF.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -147,7 +145,6 @@ public partial class CfgGeneratedOverrides {
         DX = NearCall(biosSegment, 0x002D, () => unknown_F000_005D_F005D());
         Segment2000Globals.Word0204 = DX;
         NearCall(biosSegment, 0x0034, unknown_F000_0061_F0061Entry);
-        DX = 9;
         Segment2000Globals.Word0206 = 9;
         NearCall(biosSegment, 0x003E, () => unknown_F000_0069_F0069(DS));
         NearCall(biosSegment, 0x0041, unknown_F000_0065_F0065_AsmEntry);

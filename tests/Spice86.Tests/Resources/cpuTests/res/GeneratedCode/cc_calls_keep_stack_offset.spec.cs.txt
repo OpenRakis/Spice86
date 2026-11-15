@@ -14,13 +14,12 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: AX, DX. Changes: AX, DX, BX.</summary>
+    /// <summary>Inputs: none. Outputs: AX, DX. Changes: AX, DX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_F000_0023_F0023() {
         AX = CallWithStackArguments(biosSegment, 0x0029, () => unknown_F000_0032_F0032(0x1234), 0x1234);
-        BX = SP;
-        DX = SsUInt16[BX + 2];
+        DX = SsUInt16[SP + 2];
         NearReturn(2);
         return (AX, DX);
     }

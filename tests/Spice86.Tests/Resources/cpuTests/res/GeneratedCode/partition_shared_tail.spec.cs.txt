@@ -12,21 +12,21 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX, CX.</summary>
+    /// <summary>Inputs: BX. Outputs: AX. Changes: AX, CX.</summary>
     public virtual Action unknown_F000_0027_F0027() {
         CheckExternalEvents(biosSegment, 0x0027);
         AX = 0x1111;
         return unknown_F000_0031_F0031_Asm();
     }
 
-    /// <summary>Inputs: none. Outputs: CX, BX. Changes: CX, BX.</summary>
+    /// <summary>Inputs: AX. Outputs: CX, BX. Changes: CX, BX.</summary>
     public virtual Action unknown_F000_002C_F002C() {
         CheckExternalEvents(biosSegment, 0x002C);
         BX = 0x2222;
         return unknown_F000_0031_F0031_Asm();
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
+    /// <summary>Inputs: BX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x1000;

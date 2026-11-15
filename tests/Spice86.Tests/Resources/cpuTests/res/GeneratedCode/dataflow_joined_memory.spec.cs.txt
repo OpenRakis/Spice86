@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, BX, DS, DF. Outputs: DF. Changes: DX, flags, DF.</summary>
+    /// <summary>Inputs: AX, BX, DS, flags, DF. Outputs: DF. Changes: DX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x2100, DS = 0x2000.
     public virtual Action unknown_F000_0107_F0107() {
         ushort word1;
