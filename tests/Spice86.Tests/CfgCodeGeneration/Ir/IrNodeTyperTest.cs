@@ -169,7 +169,7 @@ public class IrNodeTyperTest {
 
     [Fact]
     public void CallbackStaysACallbackHelperNode() {
-        IrNodeTyper.TypeStatement(new CallbackHelperNode(Ax))
+        IrNodeTyper.TypeStatement(new CallbackHelperNode(null, Ax))
             .Should().BeOfType<CallbackHelperNode>();
     }
 

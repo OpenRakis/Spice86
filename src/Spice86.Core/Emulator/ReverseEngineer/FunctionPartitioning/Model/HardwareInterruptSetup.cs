@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
+using System.Reflection;
 
 /// <summary>
 /// What a partitioned program knows about the hardware interrupts that can fire during its
@@ -41,6 +42,11 @@ internal sealed record HardwareInterruptSetup {
 
     /// <summary>A one-line description of every registered callback, keyed by callback number.</summary>
     public required IReadOnlyDictionary<ushort, string> CallbackDescriptions { get; init; }
+
+    /// <summary>The service contract of every registered callback whose contract is known
+    /// (a single-service interrupt handler's <c>Run</c>, or a method carrying exactly one
+    /// selectorless <see cref="InterruptServiceAttribute"/>), keyed by callback number.</summary>
+    public required IReadOnlyDictionary<ushort, ServiceContract> CallbackContracts { get; init; }
 
     /// <summary>A mouse user subroutine was registered at some point of the run, so the int 74h
     /// path may run program code at a mouse event.</summary>
@@ -75,10 +81,41 @@ internal sealed record HardwareInterruptSetup {
             ChainedVectorTargets = chainedTargets,
             ServiceVectors = CaptureServiceVectors(installed),
             CallbackDescriptions = Emulator.InterruptHandlers.Common.Callback.CallbackDescriptions.Describe(callbackHandler),
+            CallbackContracts = CaptureCallbackContracts(callbackHandler),
             MouseUserSubroutineRegistered = mouseUserSubroutineRegistered,
             ProgramSetCurrentPsp = installed.Handlers.Values
                 .OfType<DosInt21Handler>().Any(handler => handler.ProgramSetCurrentPsp)
         };
+    }
+
+    private static Dictionary<ushort, ServiceContract> CaptureCallbackContracts(
+        CallbackHandler callbackHandler) {
+        Dictionary<ushort, ServiceContract> contracts = new();
+        foreach (Callback callback in callbackHandler.AllRunnables.OfType<Callback>()) {
+            if (ContractOf(callback.Runnable) is { } contract) {
+                contracts[callback.Index] = contract;
+            }
+        }
+        return contracts;
+    }
+
+    private static ServiceContract? ContractOf(Action runnable) {
+        if (runnable.Target is IInterruptHandler handler
+            && runnable.Method.Name == nameof(InterruptHandler.Run)) {
+            return handler.Services is HandlerServices.SingleService single
+                && !ReferenceEquals(single.Service.Contract, ServiceContract.Unknown)
+                ? single.Service.Contract
+                : null;
+        }
+        List<InterruptServiceAttribute> attributes = [.. runnable.Method
+            .GetCustomAttributes<InterruptServiceAttribute>()
+            .Where(attribute => attribute.SelectorValue is null)];
+        if (attributes.Count != 1) {
+            return null;
+        }
+        ServiceContract contract = attributes[0]
+            .ToEntry(runnable.Method.Name, runnable.Method.DeclaringType?.Name ?? "").Contract;
+        return ReferenceEquals(contract, ServiceContract.Unknown) ? null : contract;
     }
 
     private static Dictionary<byte, InterruptServiceVector> CaptureServiceVectors(

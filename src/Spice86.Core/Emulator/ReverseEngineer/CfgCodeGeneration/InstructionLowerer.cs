@@ -266,11 +266,17 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     /// Lowers a callback whose handler kept CS:IP at the callback during discovery: a direct
     /// <c>Callback</c> call that returns into the emitted fallthrough.
     /// </summary>
-    private static MethodCallNode EmitDirectCallback(CallbackNode node) =>
-        new CallbackHelperNode(
+    private MethodCallNode EmitDirectCallback(CallbackNode node) {
+        ServiceContract? contract = null;
+        if (TryGetConstantWord(node.CallbackNumber) is ushort callbackNumber) {
+            Context.Program.Inputs.HardwareInterrupts.CallbackContracts
+                .TryGetValue(callbackNumber, out contract);
+        }
+        return new CallbackHelperNode(contract,
             new SegmentVariableNode(node.Instruction.Address.Segment),
             new OffsetLiteralNode(node.Instruction.Address.Offset),
             new ExplicitCastNode(DataType.UINT16, node.CallbackNumber));
+    }
 
     /// <summary>
     /// Lowers a callback whose handler moved CS:IP during discovery (DOS EXEC, terminate, TSR): run the

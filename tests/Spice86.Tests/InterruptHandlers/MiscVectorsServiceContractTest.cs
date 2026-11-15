@@ -1,5 +1,8 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.IOPorts;
+
 using Xunit;
 
 /// <summary>
@@ -17,6 +20,21 @@ public class MiscVectorsServiceContractTest {
             foreach (byte vector in vectors) {
                 yield return new ServiceContractCase { Vector = vector, SelectorValue = 0 };
             }
+            // A second INT 70h run with a periodic interrupt pending and a BIOS WAIT
+            // timeout to decrement: the handler reads and writes the BIOS data area,
+            // which the contract's Memory = ReadWrite covers.
+            yield return new ServiceContractCase {
+                Vector = 0x70, SelectorValue = 0,
+                Setup = machine => {
+                    IOPortDispatcher io = machine.Spice86.Machine.IoPortDispatcher;
+                    io.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterB);
+                    io.WriteByte(CmosPorts.Data, 0x42);
+                    io.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterC);
+                    io.WriteByte(CmosPorts.Data, 0x40);
+                    machine.Spice86.Machine.Memory.UInt32[0x49C] = 2000;
+                    machine.Spice86.Machine.Memory.UInt8[0x4A0] = 1;
+                }
+            };
         }
     }
 

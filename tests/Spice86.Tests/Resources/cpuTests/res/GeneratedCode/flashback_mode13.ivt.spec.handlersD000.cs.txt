@@ -213,7 +213,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_005D_D005D() {
         CheckExternalEvents(cs1, 0x005D);
         VerifySpeculativeEntryOrFail(cs1, 0x005D, Signature_005D_callback);

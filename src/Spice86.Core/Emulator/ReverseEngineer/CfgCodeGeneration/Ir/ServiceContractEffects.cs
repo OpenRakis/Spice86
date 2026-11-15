@@ -61,11 +61,36 @@ internal static class ServiceContractEffects {
         if (entry is null || ReferenceEquals(entry.Contract, ServiceContract.Unknown)) {
             return IrEffects.Unknown;
         }
-        CpuValues reads = entry.Contract.Registers.Reads | CpuValues.Ss | CpuValues.Sp
+        IrEffects effects = Of(entry.Contract);
+        CpuValues reads = effects.Reads | CpuValues.Ss | CpuValues.Sp
             | CpuValues.Cs | CpuValues.StatusFlags | CpuValues.Direction;
-        IrTokens tokens = entry.Contract.Io ? IrTokens.All : IrTokens.Memory;
-        return new IrEffects(reads, CpuValues.None, entry.Contract.Registers.Writes,
-            tokens, tokens, false, false);
+        // The int writes the FLAGS/CS/IP frame and its iret reads it back, whatever the service
+        // itself does to memory.
+        return new IrEffects(reads, effects.MustWrite, effects.MayWrite,
+            effects.TokenReads | IrTokens.Memory, effects.TokenWrites | IrTokens.Memory,
+            effects.MayFault, effects.DeliversInterrupts);
+    }
+
+    /// <summary>The effects a service performs per its <paramref name="contract"/> alone, without
+    /// any frame or dispatch reads: the contract's register inputs are read, nothing is
+    /// must-written and the contract's outputs may be written; the memory token is read, written
+    /// or both per the contract's memory effect, and I/O adds the I/O token both ways. The call
+    /// cannot fault and delivers no hardware interrupt.</summary>
+    public static IrEffects Of(ServiceContract contract) {
+        IrTokens tokenReads = IrTokens.None;
+        IrTokens tokenWrites = IrTokens.None;
+        if (contract.Memory is ServiceMemoryEffect.Read or ServiceMemoryEffect.ReadWrite) {
+            tokenReads |= IrTokens.Memory;
+        }
+        if (contract.Memory is ServiceMemoryEffect.Write or ServiceMemoryEffect.ReadWrite) {
+            tokenWrites |= IrTokens.Memory;
+        }
+        if (contract.Io) {
+            tokenReads |= IrTokens.Io;
+            tokenWrites |= IrTokens.Io;
+        }
+        return new IrEffects(contract.Registers.Reads, CpuValues.None,
+            contract.Registers.Writes, tokenReads, tokenWrites, false, false);
     }
 
     /// <summary>Whether <paramref name="node"/> or one of its descendants is an interrupt site

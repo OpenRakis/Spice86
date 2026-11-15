@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Shared.Emulator.Memory;
 
@@ -26,6 +27,7 @@ internal sealed record GeneratorInputs(
             ChainedVectorTargets = new Dictionary<byte, SegmentedAddress>(),
             ServiceVectors = new Dictionary<byte, InterruptServiceVector>(),
             CallbackDescriptions = new Dictionary<ushort, string>(),
+            CallbackContracts = new Dictionary<ushort, ServiceContract>(),
             MouseUserSubroutineRegistered = false,
             ProgramSetCurrentPsp = false
         },

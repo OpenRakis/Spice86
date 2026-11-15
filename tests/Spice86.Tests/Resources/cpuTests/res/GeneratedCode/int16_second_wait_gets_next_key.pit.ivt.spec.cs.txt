@@ -401,7 +401,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: AX, flags, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
     public virtual Action unknown_F000_005D_F005D() {
         CheckExternalEvents(biosSegment, 0x005D);
         VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
