@@ -29,9 +29,10 @@ internal sealed record HardwareInterruptSetup {
     /// <summary>The IVT target of each hardware vector, read from memory when the snapshot is taken.</summary>
     public required IReadOnlyDictionary<byte, SegmentedAddress> HardwareVectorTargets { get; init; }
 
-    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
-    /// a program can re-hook a vector, so its delivery targets are not recoverable from the
-    /// snapshot IVT alone.</summary>
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run,
+    /// plus every handler the program installed on a hardware vector (delivered or not): a program
+    /// can re-hook a vector, so its delivery targets are not recoverable from the snapshot IVT
+    /// alone.</summary>
     public required IReadOnlyList<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; init; }
 
     /// <summary>The IVT target of each vector an installed hardware handler raises itself (the

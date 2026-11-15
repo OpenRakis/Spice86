@@ -579,6 +579,8 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_pushed_return", () => AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_catalogue_entry", () => AsmFixtureCatalog.SpeculativeCatalogueEntry(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_catalogue_entry", () => AsmFixtureCatalog.SpeculativeCatalogueEntry(SpeculativeArm.Unobserved)),
+            AsmScenario.FromFixture("speculative_set_vector", () => AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed)),
+            AsmScenario.FromFixture("speculative_set_vector", () => AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode),
             AsmScenario.FromFixture("speculative_zero_memory", AsmFixtureCatalog.SpeculativeZeroMemory),
             // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the

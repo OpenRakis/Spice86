@@ -5,13 +5,13 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        34,
-        37,
-        88
+        65,
+        67,
+        77
       ],
       "entries": [
         {
-          "block": 34,
+          "block": 65,
           "address": "F000:0056",
           "kind": "returnTargetEntry"
         }
@@ -22,23 +22,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        42,
-        45,
-        99,
-        102,
+        80,
+        82,
+        97,
+        100,
+        108,
         110,
-        112,
-        121,
         119,
+        117,
+        136,
         138,
-        140,
-        151,
-        153,
-        144
+        147,
+        149
       ],
       "entries": [
         {
-          "block": 42,
+          "block": 80,
           "address": "F000:0074",
           "kind": "returnTargetEntry"
         }
@@ -55,9 +54,9 @@
         23,
         29,
         27,
-        74,
-        76,
-        78,
+        56,
+        58,
+        60,
         2
       ],
       "entries": [
@@ -71,38 +70,20 @@
   ],
   "transfers": [
     {
-      "kind": "crossPartitionFlow",
-      "fromPartition": 1,
-      "toPartition": 2,
-      "fromBlock": 37,
-      "toBlock": 42,
-      "from": "F000:0072",
-      "target": "F000:0074"
-    },
-    {
       "kind": "dynamicReturn",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 88,
-      "toBlock": 42,
+      "fromBlock": 77,
+      "toBlock": 80,
       "from": "F000:007B",
       "target": "F000:0074"
     },
     {
-      "kind": "crossPartitionFlow",
-      "fromPartition": 3,
-      "toPartition": 1,
-      "fromBlock": 29,
-      "toBlock": 34,
-      "from": "F000:0051",
-      "target": "F000:0056"
-    },
-    {
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 74,
-      "toBlock": 34,
+      "fromBlock": 56,
+      "toBlock": 65,
       "from": "F000:0063",
       "target": "F000:0056"
     }

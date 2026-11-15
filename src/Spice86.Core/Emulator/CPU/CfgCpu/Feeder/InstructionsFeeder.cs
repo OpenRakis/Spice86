@@ -90,6 +90,24 @@ public class InstructionsFeeder : IClearable {
     }
 
     /// <summary>
+    /// Explores an interrupt handler the program just installed (through int 21h AH=25h): first
+    /// retries the candidates still pending on <paramref name="trigger"/> — the previous install on
+    /// the same <c>int</c> node may have pointed at bytes the program has since filled — then
+    /// submits the handler as an <see cref="ExploreSource.InterruptVector"/> candidate. No-op when
+    /// speculative exploration is disabled.
+    /// </summary>
+    internal void ExploreInstalledHandler(SegmentedAddress handler, CfgInstruction? trigger) {
+        if (_speculativeExplorer is null) {
+            return;
+        }
+        if (trigger is not null) {
+            _speculativeExplorer.RetryPending(trigger);
+        }
+        _speculativeExplorer.ExploreCandidates(trigger,
+            [new DiscoveryCandidate(handler, null, InstructionSuccessorType.Normal, ExploreSource.InterruptVector)]);
+    }
+
+    /// <summary>
     /// Rebuilds the speculative call-return evidence index after a CFG graph reload and re-runs the
     /// call-continuation rule on every reloaded call node. No-op when speculative exploration is
     /// disabled.

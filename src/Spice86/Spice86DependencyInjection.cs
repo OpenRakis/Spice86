@@ -540,7 +540,7 @@ public class Spice86DependencyInjection : IDisposable {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
             mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager,
-            loadedImageRegistry, emulatedClock);
+            loadedImageRegistry, emulatedClock, cfgCpu.ExecutionContextManager);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("DOS XMS driver created...");

@@ -109,6 +109,48 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Installed handlers: the program installs an IRQ0 handler through int 21h AH=25h. The install
+    /// seam explores the handler and registers it as a generation root because the machine can
+    /// invoke vector 8 itself, so the unobserved run (which programs the PIT) receives the delivery
+    /// through the generated HardwareInterruptFunction dispatch.
+    /// </summary>
+    [Fact]
+    public void SpeculativeSetVectorExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
+    /// The negative twin of <see cref="SpeculativeSetVectorExecutesCorrectlyOnBothPaths"/>: int 9h
+    /// is installed at RAM outside the loaded image, so its candidate stays pending and no entry is
+    /// generated. The interpreter run of selector=2 executes it; the generated run must fail as
+    /// untested when int 9h is reached.
+    /// </summary>
+    [Fact]
+    public void PendingInstalledHandlerFailsAsUntestedOnGeneratedPath() {
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed);
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // Selector 2: the PIT fires (the IRQ0 handler runs) and then int 9h is reached.
+        AsmRunSettings negativeSettings = fixture.Settings with {
+            ConfigureMachine = machine => machine.Memory.UInt8[0, 0x9000] = 0x02
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(negativeSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Untested*");
+
+        runner.CompareGeneratedSourceWithExpected(GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,

@@ -96,6 +96,7 @@ public class CfgCpuViewModelTest : IDisposable {
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,
                 new Spice86.Core.Emulator.Function.FunctionCatalogue(),
+                new Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.InstalledInterruptHandlers([]),
                 useCodeOverride: false,
                 loggerService: _loggerService,
                 loggerState: _loggerState,

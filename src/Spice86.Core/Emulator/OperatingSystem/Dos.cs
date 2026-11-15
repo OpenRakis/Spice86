@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
@@ -215,7 +216,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         MemoryAsmWriter memoryAsmWriter,
         ExpandedMemoryManager? emsManager,
         LoadedImageRegistry loadedImageRegistry,
-        IEmulatedClock emulatedClock) {
+        IEmulatedClock emulatedClock,
+        ExecutionContextManager executionContextManager) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -276,7 +278,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
-            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock);
+            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock,
+            executionContextManager);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);

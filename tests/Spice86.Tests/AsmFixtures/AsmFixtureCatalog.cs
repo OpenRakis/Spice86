@@ -533,7 +533,7 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture SpeculativeCallContinuation(SpeculativeArm arm) {
         AsmRunSettings settings = new() {
             BinName = "speculative_call_continuation", MaxCycles = 200000,
-            InstallInterruptVectors = true
+            InstallInterruptVectors = true, AsmHandlersSegment = 0xD000
         };
         if (arm == SpeculativeArm.Unobserved) {
             settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
@@ -616,6 +616,27 @@ internal static class AsmFixtureCatalog {
         }
         settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
         return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs speculative_set_vector: on the observed arm the program installs an IRQ0
+    /// handler with int 21h AH=25h but never programs the PIT; on the unobserved arm the PIT fires
+    /// and the handler writes its marker through the dynamically registered entry point.</summary>
+    public static AsmFixture SpeculativeSetVector(SpeculativeArm arm) {
+        AsmRunSettings settings = new() {
+            BinName = "speculative_set_vector",
+            MaxCycles = 0x400000,
+            EnablePit = true,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000
+        };
+        if (arm == SpeculativeArm.Observed) {
+            return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x0000)));
+        }
+        settings = settings with {
+            ConfigureMachine = machine => machine.Memory.UInt8[0, 0x9000] = 0x01,
+            VariantName = "unobserved"
+        };
+        return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x5AA5), (0x42, 1, 0x77)));
     }
 
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>

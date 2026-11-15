@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -26,12 +27,25 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     private readonly bool _useCodeOverride;
     private readonly ExecutionContextReturns _executionContextReturns = new();
     private readonly CpuHeavyLogger? _cpuHeavyLogger;
+    private readonly InstalledInterruptHandlers _installedInterruptHandlers;
+    // Addresses of program-installed handlers on machine-invokable vectors that are still waiting
+    // for their entry node to be decoded (first decode is pending on untrusted bytes, or the
+    // install call came before the bytes held their loaded values).
+    private readonly HashSet<SegmentedAddress> _pendingEntryPoints = new();
+
+    // DOS vectors the emulator itself routes to program code, so a handler the program installs on
+    // one can be invoked by the machine: terminate (22h, via the patched frame the terminate path
+    // writes), break (1Bh) and Ctrl-C (23h), critical error (24h), and the idle call (28h) the
+    // int 21h stdin-wait stub raises. Hardware vectors and the chained vectors the installed
+    // handlers declare are covered through InstalledInterruptHandlers instead.
+    private static readonly HashSet<byte> MachineInvocableDosVectors = [0x1B, 0x22, 0x23, 0x24, 0x28];
 
     public ExecutionContextManager(IMemory memory,
         State state,
         CfgNodeFeeder cfgNodeFeeder,
         InstructionReplacerRegistry replacerRegistry,
         FunctionCatalogue functionCatalogue,
+        InstalledInterruptHandlers installedInterruptHandlers,
         bool useCodeOverride,
         ILogger loggerService,
         Spice86LoggerState loggerState,
@@ -42,6 +56,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
+        _installedInterruptHandlers = installedInterruptHandlers;
         _useCodeOverride = useCodeOverride;
         _cpuHeavyLogger = cpuHeavyLogger;
         // Initial fake but non-null context at init
@@ -64,9 +79,10 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     /// </summary>
     public Dictionary<SegmentedAddress, ISet<CfgInstruction>> ExecutionContextEntryPoints { get; } = new();
 
-    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
-    /// a program can re-hook a vector, so a vector's delivery targets are not recoverable from the
-    /// final IVT alone.</summary>
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run,
+    /// plus every handler the program installed on a hardware vector (delivered or not): a program
+    /// can re-hook a vector, so a vector's delivery targets are not recoverable from the final IVT
+    /// alone.</summary>
     public HashSet<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; } = new();
 
     public ExecutionContext CurrentExecutionContext { get; private set; }
@@ -168,8 +184,53 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         }
     }
 
+    /// <summary>
+    /// Explores an interrupt handler the program just installed through <c>int 21h AH=25h</c> and,
+    /// when <paramref name="vector"/> is one the machine can invoke on its own (hardware IRQs,
+    /// chained vectors the installed handlers raise, and the DOS vectors the emulator routes to
+    /// program code), registers the handler entry node as a generation root once it exists with a
+    /// block. Handlers on other vectors are explored but not registered: nothing outside the
+    /// program can invoke them. No-op for the exploration itself when speculation is off.
+    /// </summary>
+    /// <param name="vector">The interrupt vector the handler was installed on.</param>
+    /// <param name="handler">The installed handler's entry address.</param>
+    /// <param name="trigger">The <c>int 21h</c> node that invoked the install; pending candidates
+    /// are keyed on it and retried on each install from the same node.</param>
+    public void ExploreInstalledHandler(byte vector, SegmentedAddress handler, CfgInstruction? trigger) {
+        if (!IsMachineInvocableVector(vector)) {
+            _cfgNodeFeeder.ExploreInstalledHandler(handler, trigger);
+            return;
+        }
+        // Registered before the exploration call: the seed event fires synchronously when the
+        // handler decodes and needs this marker to turn the new node into an entry point.
+        _pendingEntryPoints.Add(handler);
+        _cfgNodeFeeder.ExploreInstalledHandler(handler, trigger);
+        TryRegisterPendingEntryPoint(handler);
+        if (_installedInterruptHandlers.HardwareVectorNumbers.Contains(vector)) {
+            // A hardware vector can deliver to this handler whether or not a delivery was
+            // observed; the generated dispatch only emits an arm when the handler entry was
+            // registered, so a handler that never decoded keeps failing as untested.
+            HardwareInterruptDeliveries.Add((vector, handler));
+        }
+    }
+
+    private bool IsMachineInvocableVector(byte vector) =>
+        _installedInterruptHandlers.HardwareVectorNumbers.Contains(vector)
+        || _installedInterruptHandlers.ChainedVectorNumbers.Contains(vector)
+        || MachineInvocableDosVectors.Contains(vector);
+
+    private void TryRegisterPendingEntryPoint(SegmentedAddress address) {
+        CfgInstruction? node = _cfgNodeFeeder.NodeIndex.GetAtAddress(address)
+            .FirstOrDefault(n => n.ContainingBlock is not null);
+        if (node is not null) {
+            RegisterEntryPoint(node);
+            _pendingEntryPoints.Remove(address);
+        }
+    }
+
     private void OnSpeculativeSeedCreated(CfgInstruction node) {
-        if (node.DiscoverySource == ExploreSource.CatalogueEntry) {
+        if (node.DiscoverySource == ExploreSource.CatalogueEntry
+            || _pendingEntryPoints.Remove(node.Address)) {
             RegisterEntryPoint(node);
         }
     }

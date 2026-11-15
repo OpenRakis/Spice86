@@ -353,6 +353,10 @@ public class FunctionHandler {
         get => _callerStack.Current;
     }
 
+    /// <summary>The instruction that initiated the call on top of the stack: the <c>int</c> node
+    /// when the current function was entered through a software interrupt, <c>null</c> for machine
+    /// calls and emulator entries with no initiator instruction.</summary>
+    internal CfgInstruction? CurrentCallInitiator => CurrentFunctionCall?.Initiator;
 
     private SegmentedAddress CurrentStackAddress => new(_state.SS, _state.SP);
 

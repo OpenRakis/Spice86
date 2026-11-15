@@ -46,7 +46,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
             memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, new ChangedMemoryMap(Memory, memoryBreakpoints, new LoadedImageRegistry()),
             new InstalledInterruptHandlers([]), new InterruptVectorTable(Memory), new FunctionCatalogue(), loggerService);
         ContextManager = new ExecutionContextManager(Memory, State, feeder, replacerRegistry,
-            functionCatalogue, false, loggerService, loggerState, null);
+            functionCatalogue, new InstalledInterruptHandlers([]), false, loggerService, loggerState, null);
     }
 
     public void Dispose() {

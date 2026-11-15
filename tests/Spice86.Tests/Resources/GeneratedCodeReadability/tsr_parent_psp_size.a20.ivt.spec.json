@@ -42,7 +42,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 4,
       "RegisterWrites": 8,
-      "Statements": 16,
+      "Statements": 19,
       "WriteBacks": 0
     }
   },

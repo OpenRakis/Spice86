@@ -53,6 +53,13 @@ public class CfgNodeFeeder {
     public void SeedKnownSafeHandlers(IReadOnlyList<SegmentedAddress> handlerAddresses) =>
         InstructionsFeeder.SeedKnownSafeHandlers(handlerAddresses);
 
+    /// <summary>
+    /// Explores an interrupt handler the program just installed, keyed on the <c>int</c> node that
+    /// invoked the installation. No-op when speculative exploration is disabled.
+    /// </summary>
+    internal void ExploreInstalledHandler(SegmentedAddress handler, CfgInstruction? trigger) =>
+        InstructionsFeeder.ExploreInstalledHandler(handler, trigger);
+
     /// <summary>Forwards the feeder's <see cref="InstructionsFeeder.SpeculativeSeedCreated"/>.</summary>
     internal event Action<CfgInstruction>? SpeculativeSeedCreated {
         add => InstructionsFeeder.SpeculativeSeedCreated += value;

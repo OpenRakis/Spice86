@@ -222,18 +222,12 @@ public partial class CfgGeneratedOverrides {
         }
         CX = 0x110A;
         Stack.Push16(0x110A);
-        switch (SP) {
-            case 0x0FFC:
-                break;
-            case 0x110A:
-                goto L_110A;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:100C");
+        if (SP != 0x0FFC) {
+            throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:100C");
         }
         if (CX != 0x110A) {
             throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:100E");
         }
-    L_110A:
         Stack.Push16(0);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x1112);

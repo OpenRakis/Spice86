@@ -434,7 +434,7 @@ public class SpeculativeExplorer {
                 _nodeLinker.Link(item.EdgeType, item.Predecessor, candidate);
             }
             EnqueueSuccessorsForNode(candidate, worklist, item.FollowContinuations);
-            if (item.Predecessor is null && item.Source is ExploreSource.CatalogueEntry) {
+            if (item.Predecessor is null && item.Source is ExploreSource.CatalogueEntry or ExploreSource.InterruptVector) {
                 // A seed with no successors (a lone ret, for instance) never goes through Link,
                 // so nothing opens its block. The partition collector needs one; known-safe
                 // handler seeds deliberately stay blockless until something links them.

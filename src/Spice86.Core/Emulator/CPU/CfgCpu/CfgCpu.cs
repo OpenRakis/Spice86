@@ -50,7 +50,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration, changedMemoryMap, installedInterruptHandlers, interruptVectorTable, functionCatalogue, loggerService);
-        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
+        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, installedInterruptHandlers, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }
 

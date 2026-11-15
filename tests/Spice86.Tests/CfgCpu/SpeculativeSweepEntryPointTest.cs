@@ -29,7 +29,7 @@ public sealed class SpeculativeSweepEntryPointTest : SpeculativeTestBase {
         _pruner = new SpeculativeReachabilityPruner(ReplacerRegistry);
         Spice86LoggerState loggerState = new();
         _contextManager = new ExecutionContextManager(Memory, State, BuildIsolatedFeeder(), ReplacerRegistry,
-            new FunctionCatalogue(), false, LoggerService, loggerState, null);
+            new FunctionCatalogue(), InstalledInterrupts, false, LoggerService, loggerState, null);
     }
 
     // The feeder is built on its own throwaway registry so the only subscriber joining the shared

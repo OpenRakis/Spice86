@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -49,6 +50,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosSysVars _dosSysVars;
     private readonly DosJobFileTable _jobFileTable;
     private readonly IEmulatedClock _emulatedClock;
+    private readonly ExecutionContextManager _executionContextManager;
     private uint _stdinReadyFlagLinearAddress;
     private SegmentedAddress? _stdinWaitLoopAddress;
     private bool _isCtrlCFlag;
@@ -92,7 +94,7 @@ public class DosInt21Handler : InterruptHandler {
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILogger loggerService, DosFcbManager dosFcbManager,
-        IEmulatedClock emulatedClock)
+        IEmulatedClock emulatedClock, ExecutionContextManager executionContextManager)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
@@ -109,6 +111,7 @@ public class DosInt21Handler : InterruptHandler {
         _interruptVectorTable = new InterruptVectorTable(memory);
         _dosFcbManager = dosFcbManager;
         _emulatedClock = emulatedClock;
+        _executionContextManager = executionContextManager;
         _jobFileTable = new DosJobFileTable(memory);
     }
 
@@ -2551,6 +2554,13 @@ public class DosInt21Handler : InterruptHandler {
                     segment, offset));
         }
         _interruptVectorTable[vectorNumber] = new(segment, offset);
+        // The int 21h node that invoked this service is the current function call's initiator:
+        // a software int keeps the caller's execution context and pushes its FunctionCall with the
+        // int instruction as Initiator, and no call has been pushed since. Pending candidates are
+        // keyed on it so a second install from the same node retries them first. When speculative
+        // exploration is off the call is a no-op inside the feeder.
+        _executionContextManager.ExploreInstalledHandler(vectorNumber, new SegmentedAddress(segment, offset),
+            FunctionHandlerProvider.FunctionHandlerInUse.CurrentCallInitiator);
     }
 
     /// <summary>
