@@ -72,7 +72,7 @@ public partial class CfgGeneratedOverrides {
         DS = word1;
         CheckExternalEvents(cs1, 0x0100);
         if (DsGlobals.Byte0500 != 0) {
-            VerifySpeculativeRunOrFail(cs1, 0x010D, SpeculativeRun_010D_Signature_010D_mov_30_Signature_010F_mov_34_Signature_0111_add_36_Signature_0113_mov_37);
+            VerifySpeculativeRunOrFail(cs1, 0x010D, SpeculativeRun_010D_Signature_010D_mov_44_Signature_010F_mov_48_Signature_0111_add_50_Signature_0113_mov_51);
             BL = 0x0C;
             AL = 0xCC;
             CarryFlag = false;
@@ -82,7 +82,7 @@ public partial class CfgGeneratedOverrides {
             SignFlag = true;
             OverflowFlag = false;
             DsGlobals.Byte0402 = 0xCC;
-            VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_ret_38);
+            VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_ret_52);
             FarReturn();
             return;
         }
@@ -187,14 +187,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0111_add_15 = [0x00, 0xD8];
     private static readonly byte?[] Signature_0113_mov_16 = [0xA2, 0x01, 0x04];
     private static readonly byte?[] Signature_0116_ret_17 = [0xCB];
-    private static readonly byte?[] Signature_010D_mov_30 = [0xB0, 0xC0];
-    private static readonly byte?[] Signature_010F_mov_34 = [0xB3, 0x0C];
-    private static readonly byte?[] Signature_0111_add_36 = [0x00, 0xD8];
-    private static readonly byte?[] Signature_0113_mov_37 = [0xA2, 0x02, 0x04];
-    private static readonly byte?[] Signature_0116_ret_38 = [0xCB];
+    private static readonly byte?[] Signature_010D_mov_44 = [0xB0, 0xC0];
+    private static readonly byte?[] Signature_010F_mov_48 = [0xB3, 0x0C];
+    private static readonly byte?[] Signature_0111_add_50 = [0x00, 0xD8];
+    private static readonly byte?[] Signature_0113_mov_51 = [0xA2, 0x02, 0x04];
+    private static readonly byte?[] Signature_0116_ret_52 = [0xCB];
 
     private static readonly byte?[][] SpeculativeRun_010D_Signature_010D_mov_9_Signature_010F_mov_13_Signature_0111_add_15_Signature_0113_mov_16 = [Signature_010D_mov_9, Signature_010F_mov_13, Signature_0111_add_15, Signature_0113_mov_16];
-    private static readonly byte?[][] SpeculativeRun_010D_Signature_010D_mov_30_Signature_010F_mov_34_Signature_0111_add_36_Signature_0113_mov_37 = [Signature_010D_mov_30, Signature_010F_mov_34, Signature_0111_add_36, Signature_0113_mov_37];
+    private static readonly byte?[][] SpeculativeRun_010D_Signature_010D_mov_44_Signature_010F_mov_48_Signature_0111_add_50_Signature_0113_mov_51 = [Signature_010D_mov_44, Signature_010F_mov_48, Signature_0111_add_50, Signature_0113_mov_51];
 
 }
 

@@ -32,7 +32,7 @@
     "maximum": {
       "AluCalls": 22,
       "BookkeepingCalls": 0,
-      "Casts": 16,
+      "Casts": 17,
       "CheckExternalEvents": 18,
       "GotoStatements": 9,
       "InterruptCallReturnedElsewhere": 0,
@@ -44,9 +44,9 @@
       "PortWrapperCalls": 0,
       "RawIoCalls": 8,
       "RawMemoryAccesses": 74,
-      "RegisterReads": 645,
+      "RegisterReads": 646,
       "RegisterWrites": 566,
-      "Statements": 1537,
+      "Statements": 1541,
       "StatusFlagReads": 137,
       "WriteBacks": 13
     }

@@ -36,7 +36,7 @@ public partial class CfgGeneratedOverrides {
             default:
                 throw FailAsUntested($"Untested near call target 0x{UInt16[CS, BX + 0x66]:X4} at F000:0049");
         }
-        DsGlobals.Byte0402 = Alu8.Inc(DsGlobals.Byte0402);
+        DsGlobals.Byte0402 += 1;
         return NearRet();
     }
 

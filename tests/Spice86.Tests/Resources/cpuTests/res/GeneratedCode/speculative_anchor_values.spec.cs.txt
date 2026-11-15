@@ -113,15 +113,12 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, DS. Outputs: none. Changes: flags.</summary>
+    /// <summary>Inputs: AX, DS. Outputs: none. Changes: none.</summary>
     public virtual void unknown_F000_00B5_F00B5(ushort word1, ushort word2) {
         AX = word1;
         DS = word2;
-        byte flagOperand_00B5 = 0;
         CheckExternalEvents(biosSegment, 0x00B5);
-        flagOperand_00B5 = DsGlobals.Byte0500;
-        Alu8.Sub(flagOperand_00B5, 0xFF);
-        if (flagOperand_00B5 == 0xFF) {
+        if (DsGlobals.Byte0500 == 0xFF) {
             VerifySpeculativeRunOrFail(biosSegment, 0x00BD, SpeculativeRun_00BD);
             DI = word1;
             throw FailAsUntested("Untested indirect call at F000:00BF");
@@ -135,14 +132,11 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     public virtual void unknown_F000_00C2_F00C2(ushort word1) {
         DS = word1;
-        byte flagOperand_00C2 = 0;
         CheckExternalEvents(biosSegment, 0x00C2);
-        flagOperand_00C2 = DsGlobals.Byte0500;
-        Alu8.Sub(flagOperand_00C2, 0xFF);
-        if (flagOperand_00C2 == 0xFF) {
+        if (DsGlobals.Byte0500 == 0xFF) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x00CA, Signature_00CA_call);
             throw FailAsUntested("Untested indirect call at F000:00CA");
         }
