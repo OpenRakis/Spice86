@@ -759,7 +759,7 @@ public class Spice86DependencyInjection : IDisposable {
         // addresses. Reconstruction parses each node's own stored bytes, so it does not depend on
         // the program image already being loaded in memory; that image only matters later, when
         // resumed execution memory-matches a reloaded node.
-        CfgReloadDump? reloadDump = ReloadCfgGraphIfRequested(configuration, emulationStateDataReader,
+        CfgGraphReloader? cfgGraphReloader = ReloadCfgGraphIfRequested(configuration, emulationStateDataReader,
             cfgCpu, state, cfgNodeExecutionCompiler, loggerService, cfgIdAllocator);
 
         ProgramLoadOptions programLoadOptions = RuntimeOptionsMapper.ToProgramLoadOptions(configuration, dosRuntimeState);
@@ -777,9 +777,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("Program executor created...");
         }
 
-        // The changed-memory snapshot part of the dump is applied only now, after the initial
-        // program image load: restoring it earlier would let the loader's own writes be counted
-        // as runtime changes by ChangedMemoryMap.
+        // The post-restore passes run only now, after the initial program image load: the
+        // call-return evidence rebuild decodes live memory for continuations, and restoring the
+        // changed-memory snapshot earlier would let the loader's own writes be counted as runtime
+        // changes by ChangedMemoryMap.
+        cfgGraphReloader?.RebuildCallReturnEvidence();
+        CfgReloadDump? reloadDump = cfgGraphReloader?.Dump;
         if (reloadDump?.WatchedAreas is not null || reloadDump?.ChangedRanges is not null) {
             changedMemoryMap.Restore(ChangedMemorySnapshot.FromReloadDump(reloadDump));
         }
@@ -953,7 +956,7 @@ public class Spice86DependencyInjection : IDisposable {
         return configuration;
     }
 
-    private static CfgReloadDump? ReloadCfgGraphIfRequested(Configuration configuration,
+    private static CfgGraphReloader? ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILogger loggerService,
         SequentialIdAllocator cfgIdAllocator) {
@@ -964,11 +967,12 @@ public class Spice86DependencyInjection : IDisposable {
         if (reloadDump == null) {
             return null;
         }
-        new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator).Reload(reloadDump);
+        CfgGraphReloader reloader = new(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator);
+        reloader.Reload(reloadDump);
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CFG graph reloaded from dump...");
         }
-        return reloadDump;
+        return reloader;
     }
 
     private static IReadOnlyList<CompiledLogExpression> BuildCompiledLogExpressions(

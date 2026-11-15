@@ -36,6 +36,7 @@ internal sealed class CfgGraphReloader {
     private readonly SequentialIdAllocator _idAllocator;
     private readonly CfgNodeExecutionCompiler _executionCompiler;
     private readonly CfgNodeIndex _nodeIndex;
+    private Dictionary<int, ICfgNode>? _nodesById;
 
     public CfgGraphReloader(CfgCpu cfgCpu, State state, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
         _state = state;
@@ -48,9 +49,15 @@ internal sealed class CfgGraphReloader {
     }
 
     /// <summary>
+    /// The dump most recently passed to <see cref="Reload"/>.
+    /// </summary>
+    public CfgReloadDump? Dump { get; private set; }
+
+    /// <summary>
     /// Reconstructs the graph described by <paramref name="dump"/> into live emulator state.
     /// </summary>
     public void Reload(CfgReloadDump dump) {
+        Dump = dump;
         CfgNodeReconstructor reconstructor = new(_state, _executionCompiler);
 
         // 1. Materialize all nodes with their dumped ids, compile each, build the id -> node map.
@@ -103,12 +110,22 @@ internal sealed class CfgGraphReloader {
         // 8. Restore the poison set (addresses proven byte-unstable by prior runs).
         RestorePoisonSet(dump);
 
-        // 9. Rebuild the call-return evidence index from the reloaded typed edges and re-run the
-        //    call-continuation rule on every reloaded call node, so continuations are wired again
-        //    without re-executing the program.
-        _instructionsFeeder.RebuildCallReturnEvidence(nodesById.Values);
+        _nodesById = nodesById;
 
-        // 10. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
+        // 9. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
+    }
+
+    /// <summary>
+    /// Rebuilds the call-return evidence index from the reloaded typed edges and re-runs the
+    /// call-continuation rule on every reloaded call node, so continuations are wired again
+    /// without re-executing the program. Runs separately from <see cref="Reload"/> because the
+    /// continuation pass decodes live memory: it must run only after the program image is loaded,
+    /// which on the DI path happens after the graph restore itself.
+    /// </summary>
+    public void RebuildCallReturnEvidence() {
+        if (_nodesById is not null) {
+            _instructionsFeeder.RebuildCallReturnEvidence(_nodesById.Values);
+        }
     }
 
     private void RestoreEdges(CfgReloadDump dump, Dictionary<int, ICfgNode> nodesById) {

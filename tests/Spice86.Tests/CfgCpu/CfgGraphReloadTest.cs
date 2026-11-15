@@ -290,7 +290,11 @@ public class CfgGraphReloadTest {
         Machine machine = reloadDi.Machine;
         RestoreInstructionBytes(machine.Memory, memoryImage, strippedDump);
         using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
-        new CfgGraphReloader(machine.CfgCpu, machine.CpuState, compiler, reloadDi.CfgIdAllocator).Reload(strippedDump);
+        CfgGraphReloader reloader = new(machine.CfgCpu, machine.CpuState, compiler, reloadDi.CfgIdAllocator);
+        reloader.Reload(strippedDump);
+        // The continuation pass decodes live memory, so on the DI path it runs after the image
+        // load; this machine already has the image in memory, so invoke it directly.
+        reloader.RebuildCallReturnEvidence();
 
         CfgNodeIndex index = machine.CfgCpu.CfgNodeFeeder.NodeIndex;
         AssertCallContinuation(index, callF, "F000:0036");
