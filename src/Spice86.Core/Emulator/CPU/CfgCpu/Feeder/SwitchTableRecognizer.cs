@@ -180,10 +180,10 @@ internal class SwitchTableRecognizer {
 
     // --- shape matchers on display ASTs ---
 
-    private static RegisterNode? AsRegister(IVisitableAstNode node) =>
+    internal static RegisterNode? AsRegister(IVisitableAstNode node) =>
         node is TypeConversionNode conversion ? conversion.Value as RegisterNode : node as RegisterNode;
 
-    private static ulong? AsConstant(IVisitableAstNode node) => node switch {
+    internal static ulong? AsConstant(IVisitableAstNode node) => node switch {
         TypeConversionNode { Value: var inner } => AsConstant(inner),
         ConstantNode constant => constant.Value,
         InstructionFieldNode field => field.ConstantValue,
@@ -192,7 +192,7 @@ internal class SwitchTableRecognizer {
 
     /// <summary>Extracts [R + disp] from the pointer offset: a 16-bit register optionally added to
     /// a constant displacement (disp may be 0).</summary>
-    private static bool TryGetIndexExpression(ValueNode offset, out int registerIndex, out ushort displacement) {
+    internal static bool TryGetIndexExpression(ValueNode offset, out int registerIndex, out ushort displacement) {
         registerIndex = 0;
         displacement = 0;
         ValueNode inner = offset is TypeConversionNode conversion ? conversion.Value : offset;
@@ -218,7 +218,7 @@ internal class SwitchTableRecognizer {
 
     /// <summary>The segment register index of an explicit override segment, else the default
     /// segment. Null when neither is a segment register node.</summary>
-    private static int? GetSegmentRegisterIndex(SegmentedPointerNode pointer) {
+    internal static int? GetSegmentRegisterIndex(SegmentedPointerNode pointer) {
         ValueNode? segment = pointer.Segment ?? pointer.DefaultSegment;
         return segment is SegmentRegisterNode node ? node.RegisterIndex : null;
     }

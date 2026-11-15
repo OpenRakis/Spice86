@@ -1,0 +1,77 @@
+F000:0000 mov byte ptr DS:[0x0400],0
+F000:0005 mov byte ptr DS:[0x0401],0
+F000:000A mov byte ptr DS:[0x0402],0
+F000:000F mov byte ptr DS:[0x0403],0
+F000:0014 mov byte ptr DS:[0x0404],0
+F000:0019 mov byte ptr DS:[0x0405],0
+F000:001E mov byte ptr DS:[0x0406],0
+F000:0023 call near 0x00D2
+F000:0026 call near 0x00D7
+F000:0029 call near 0x00DC
+F000:002C call near 0x00E1
+F000:002F call near 0x00E6
+F000:0032 call near 0x00EB
+F000:0035 mov DI,0x00D2
+F000:0038 call near 0x007C
+F000:003B call near 0x007C
+F000:003E mov DI,0x00D7
+F000:0041 call near 0x007C
+F000:0044 call near 0x0087
+F000:0047 call near 0x0087
+F000:004A call near 0x0097
+F000:004D call near 0x0097
+F000:0050 mov word ptr CS:[0x00A5],0x00E6
+F000:0057 cmp byte ptr DS:[0x0500],0
+F000:005C je short 0x0061
+F000:005E call near 0x0097
+F000:0061 mov BX,0x00B3
+F000:0064 call near 0x00A7
+F000:0067 call near 0x00A7
+F000:006A call near 0x00B5
+F000:006D call near 0x00B5
+F000:0070 call near 0x00C2
+F000:0073 call near 0x00C2
+F000:0076 mov byte ptr DS:[0x0400],2
+F000:007B hlt
+F000:007C cmp byte ptr DS:[0x0500],0
+F000:0081 jne short 0x0084
+F000:0083 ret near
+F000:0084 call near DI
+F000:0086 ret near
+F000:0087 cmp byte ptr DS:[0x0500],0
+F000:008C jne short 0x008F
+F000:008E ret near
+F000:008F call near word ptr CS:[0x0095]
+F000:0094 ret near
+F000:0097 cmp byte ptr DS:[0x0500],0
+F000:009C jne short 0x009F
+F000:009E ret near
+F000:009F call near word ptr CS:[0x00A5]
+F000:00A4 ret near
+F000:00A7 cmp byte ptr DS:[0x0500],0
+F000:00AC jne short 0x00AF
+F000:00AE ret near
+F000:00AF call near word ptr CS:[BX]
+F000:00B2 ret near
+F000:00B5 cmp byte ptr DS:[0x0500],0xFF
+F000:00BA je short 0x00BD
+F000:00BC ret near
+F000:00BD mov DI,AX
+F000:00BF call near DI
+F000:00C2 cmp byte ptr DS:[0x0500],0xFF
+F000:00C7 je short 0x00CA
+F000:00C9 ret near
+F000:00CA call near word ptr CS:[0x00D0]
+F000:00D2 inc byte ptr DS:[0x0401]
+F000:00D6 ret near
+F000:00D7 inc byte ptr DS:[0x0402]
+F000:00DB ret near
+F000:00DC inc byte ptr DS:[0x0403]
+F000:00E0 ret near
+F000:00E1 inc byte ptr DS:[0x0404]
+F000:00E5 ret near
+F000:00E6 inc byte ptr DS:[0x0405]
+F000:00EA ret near
+F000:00EB inc byte ptr DS:[0x0406]
+F000:00EF ret near
+F000:FFF0 jmp short 0

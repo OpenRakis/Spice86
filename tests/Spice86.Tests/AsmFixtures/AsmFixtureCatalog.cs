@@ -661,6 +661,35 @@ internal static class AsmFixtureCatalog {
         return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x5AA5), (0x42, 1, 0x77)));
     }
 
+    /// <summary>Runs speculative_anchor_values: each dispatcher's call arm stays untaken during
+    /// discovery, so the indirect call sites are registered as dependents of their anchor. On the
+    /// unobserved arm every call arm runs: callbacks are dispatched through the register value,
+    /// the constant cell, the rewritten watched cell and the BX-indexed cell the anchor
+    /// evaluations proposed. The two dead arms (a path write to DI, a zero cell) stay
+    /// undiscovered.</summary>
+    public static AsmFixture SpeculativeAnchorValues(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x407];
+        expectedMemory[0x400] = 0x02;
+        if (arm == SpeculativeArm.Unobserved) {
+            expectedMemory[0x401] = 0x03;
+            expectedMemory[0x402] = 0x02;
+            expectedMemory[0x403] = 0x03;
+            expectedMemory[0x404] = 0x03;
+            expectedMemory[0x405] = 0x02;
+            expectedMemory[0x406] = 0x03;
+        } else {
+            for (int i = 0x401; i <= 0x406; i++) {
+                expectedMemory[i] = 0x01;
+            }
+        }
+        AsmRunSettings settings = new() { BinName = "speculative_anchor_values", MaxCycles = 0x4000 };
+        if (arm == SpeculativeArm.Observed) {
+            return MemoryFixture(settings, expectedMemory);
+        }
+        settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);

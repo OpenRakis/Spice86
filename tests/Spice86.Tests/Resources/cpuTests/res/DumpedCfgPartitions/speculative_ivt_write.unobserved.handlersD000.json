@@ -201,11 +201,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        131
+        610
       ],
       "entries": [
         {
-          "block": 131,
+          "block": 610,
           "address": "F000:0080",
           "kind": "executionContextEntry"
         }
@@ -216,11 +216,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        140
+        694
       ],
       "entries": [
         {
-          "block": 140,
+          "block": 694,
           "address": "F000:008F",
           "kind": "executionContextEntry"
         }
@@ -231,11 +231,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        149
+        774
       ],
       "entries": [
         {
-          "block": 149,
+          "block": 774,
           "address": "F000:009E",
           "kind": "executionContextEntry"
         }

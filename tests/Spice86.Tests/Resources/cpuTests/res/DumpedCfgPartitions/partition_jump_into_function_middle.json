@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        21
+        42
       ],
       "entries": [
         {
-          "block": 21,
+          "block": 42,
           "address": "F000:0029",
           "kind": "functionEntry"
         }
@@ -36,8 +36,8 @@
       "name": "unknown",
       "blocks": [
         3,
-        20,
-        27,
+        41,
+        49,
         2
       ],
       "entries": [
@@ -53,11 +53,11 @@
       "kind": "synthetic",
       "name": "unknown",
       "blocks": [
-        23
+        44
       ],
       "entries": [
         {
-          "block": 23,
+          "block": 44,
           "address": "F000:0025",
           "kind": "sharedEntry"
         }
@@ -70,7 +70,7 @@
       "fromPartition": 1,
       "toPartition": 4,
       "fromBlock": 8,
-      "toBlock": 23,
+      "toBlock": 44,
       "from": "F000:0022",
       "target": "F000:0025"
     },
@@ -78,8 +78,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 4,
-      "fromBlock": 21,
-      "toBlock": 23,
+      "fromBlock": 42,
+      "toBlock": 44,
       "from": "F000:0029",
       "target": "F000:0025"
     },
@@ -91,26 +91,26 @@
       "toBlock": 8,
       "from": "F000:0008",
       "target": "F000:0022",
-      "callContinuationBlock": 20,
+      "callContinuationBlock": 41,
       "callContinuationAddress": "F000:000B"
     },
     {
       "kind": "callOut",
       "fromPartition": 3,
       "toPartition": 2,
-      "fromBlock": 20,
-      "toBlock": 21,
+      "fromBlock": 41,
+      "toBlock": 42,
       "from": "F000:000B",
       "target": "F000:0029",
-      "callContinuationBlock": 27,
+      "callContinuationBlock": 49,
       "callContinuationAddress": "F000:000E"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 4,
       "toPartition": 3,
-      "fromBlock": 23,
-      "toBlock": 20,
+      "fromBlock": 44,
+      "toBlock": 41,
       "from": "F000:0028",
       "target": "F000:000B"
     },
@@ -118,8 +118,8 @@
       "kind": "alignedReturn",
       "fromPartition": 4,
       "toPartition": 3,
-      "fromBlock": 23,
-      "toBlock": 27,
+      "fromBlock": 44,
+      "toBlock": 49,
       "from": "F000:0028",
       "target": "F000:000E"
     }

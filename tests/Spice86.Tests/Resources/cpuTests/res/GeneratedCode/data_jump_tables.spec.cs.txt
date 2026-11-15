@@ -214,11 +214,20 @@ public partial class CfgGeneratedOverrides {
         if (Segment2000Globals.Word0104 != 0x01BE) {
             throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01BA");
         }
-        Segment2000Globals.Word004E = 1;
-        Segment2000Globals.Word0104 = 0x01CE;
-        if (Segment2000Globals.Word0104 != 0x01CE) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01CA");
+        while (true) {
+            CheckExternalEvents(biosSegment, 0x01BE);
+            Segment2000Globals.Word004E = 1;
+            Segment2000Globals.Word0104 = 0x01CE;
+            switch (Segment2000Globals.Word0104) {
+                case 0x01BE:
+                    break;
+                case 0x01CE:
+                    goto L_01CE;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x0104]:X4} at F000:01CA");
+            }
         }
+    L_01CE:
         Segment2000Globals.Word0050 = 2;
         Segment2000Globals.Dword0106 = 0x02ED02E6;
         BX = 0;

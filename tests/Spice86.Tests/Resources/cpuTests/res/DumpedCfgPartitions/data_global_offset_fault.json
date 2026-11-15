@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        42
+        197
       ],
       "entries": [
         {
-          "block": 42,
+          "block": 197,
           "address": "F000:002A",
           "kind": "returnTargetEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        50
+        226
       ],
       "entries": [
         {
-          "block": 50,
+          "block": 226,
           "address": "F000:0033",
           "kind": "returnTargetEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        32
+        158
       ],
       "entries": [
         {
-          "block": 32,
+          "block": 158,
           "address": "F000:0047",
           "kind": "executionContextEntry"
         }
@@ -67,8 +67,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 42,
-      "toBlock": 50,
+      "fromBlock": 197,
+      "toBlock": 226,
       "from": "F000:002D",
       "target": "F000:0033"
     },
@@ -76,8 +76,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 42,
-      "toBlock": 32,
+      "fromBlock": 197,
+      "toBlock": 158,
       "from": "F000:002D",
       "target": "F000:0047"
     },
@@ -85,8 +85,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 32,
-      "toBlock": 42,
+      "fromBlock": 158,
+      "toBlock": 197,
       "from": "F000:0053",
       "target": "F000:002A"
     },
@@ -94,8 +94,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 2,
-      "fromBlock": 32,
-      "toBlock": 50,
+      "fromBlock": 158,
+      "toBlock": 226,
       "from": "F000:0053",
       "target": "F000:0033"
     },
@@ -104,7 +104,7 @@
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 3,
-      "toBlock": 42,
+      "toBlock": 197,
       "from": "F000:0024",
       "target": "F000:002A"
     },
@@ -113,7 +113,7 @@
       "fromPartition": 4,
       "toPartition": 3,
       "fromBlock": 3,
-      "toBlock": 32,
+      "toBlock": 158,
       "from": "F000:0024",
       "target": "F000:0047"
     }

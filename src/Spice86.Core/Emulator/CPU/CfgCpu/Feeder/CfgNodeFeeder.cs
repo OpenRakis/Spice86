@@ -39,7 +39,7 @@ public class CfgNodeFeeder {
         WatchedPointerCells = new(memory, emulatorBreakpointsManager.MemoryReadWriteBreakpoints);
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
             enableSpeculativeExploration ? _nodeLinker : null, changedMemoryMap,
-            installedInterruptHandlers, interruptVectorTable, functionCatalogue, loggerService);
+            installedInterruptHandlers, interruptVectorTable, functionCatalogue, WatchedPointerCells, loggerService);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
@@ -80,6 +80,9 @@ public class CfgNodeFeeder {
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
         WatchedPointerCells.EvaluateQueued(executionContext.LastExecuted as CfgInstruction);
         ICfgNode toExecute = DetermineToExecute(executionContext);
+        if (toExecute is CfgInstruction { HasDiscoveryDependents: true } anchor) {
+            InstructionsFeeder.EvaluateAnchorDependents(anchor);
+        }
         ICfgNode? lastExecuted = executionContext.LastExecuted;
         if (lastExecuted is not { CanHaveMoreSuccessors: true }) {
             return toExecute;

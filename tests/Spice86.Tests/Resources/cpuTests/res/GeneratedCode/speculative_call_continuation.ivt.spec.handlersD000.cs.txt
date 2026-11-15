@@ -302,7 +302,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_005A_int = [0xCD, 0x21];
     private static readonly byte?[] Signature_005C_mov = [0xC6, 0x06, 0x04, 0x04, 0x30];
     private static readonly byte?[] Signature_0061_jmp = [0xEB, 0x24];
-    private static readonly byte?[] Signature_0063_call_139 = [0xE8, 0x16, 0x00];
+    private static readonly byte?[] Signature_0063_call_168 = [0xE8, 0x16, 0x00];
     private static readonly byte?[] Signature_006D_mov = [0xB4, 0x4C];
     private static readonly byte?[] Signature_006F_int = [0xCD, 0x21];
 

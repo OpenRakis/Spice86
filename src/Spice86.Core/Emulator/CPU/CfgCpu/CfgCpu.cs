@@ -175,6 +175,10 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
                 return lastExecuted;
             }
 
+            if (node is CfgInstruction { HasDiscoveryDependents: true } anchor) {
+                CfgNodeFeeder.InstructionsFeeder.EvaluateAnchorDependents(anchor);
+            }
+
             bool ok = ExecuteOneNode(node);
             lastExecuted = node;
 

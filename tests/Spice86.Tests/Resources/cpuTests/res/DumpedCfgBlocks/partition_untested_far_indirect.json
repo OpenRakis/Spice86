@@ -81,7 +81,9 @@
       "pred": [
         11
       ],
-      "succ": [],
+      "succ": [
+        105
+      ],
       "asm": [
         "2EFF1F|call far dword ptr CS:[BX]"
       ]
@@ -94,9 +96,26 @@
       "pred": [
         3
       ],
-      "succ": [],
+      "succ": [
+        105
+      ],
       "asm": [
         "2EFF2F|jmp far dword ptr CS:[BX]"
+      ]
+    },
+    {
+      "id": 105,
+      "entry": "F000:0031",
+      "dead": true,
+      "term": "F000:0034",
+      "pred": [
+        13,
+        18
+      ],
+      "succ": [],
+      "asm": [
+        "B90300|mov CX,3",
+        "CB|ret far"
       ]
     }
   ],

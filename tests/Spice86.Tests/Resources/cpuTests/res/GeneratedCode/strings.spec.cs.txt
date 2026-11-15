@@ -78,17 +78,23 @@ public partial class CfgGeneratedOverrides {
         DI = 0xFFFE;
         DS = 0x1000;
         Segment1000Globals.ByteFFFE = 0xC2;
-        if (Segment1000Globals.WordFFFE != 0x80C2) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI]:X4} at F000:C20E");
+        switch (Segment1000Globals.WordFFFE) {
+            case 0x80C2:
+                break;
+            case 0x80FF:
+                goto L_80FF;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI]:X4} at F000:C20E");
         }
         DS = CX;
         Segment1000Globals.WordFFFE = UInt16[DS, index3];
-        SI = (ushort)(index3 - 2);
+        index3 -= 2;
         DI = 0xFFFC;
         DS = 0x1000;
         if (Segment1000Globals.WordFFFE != 0x80FF) {
             throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI + 2]:X4} at F000:80C7");
         }
+    L_80FF:
         ES = CX;
         DirectionFlag = false;
         Alu8.Sub(AL, EsGlobals.Byte2002);

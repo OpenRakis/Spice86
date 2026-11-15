@@ -13,7 +13,7 @@ F000:002E jmp short 0x0043
 F000:0030 add byte ptr DS:[BX+SI],AL
 F000:0032 mov byte ptr DS:[0x0403],0x77
 F000:0037 jmp short 0x0048
-F000:0043 mov byte ptr DS:[0x0401],0xDD
+F000:0043 mov byte ptr DS:[word ptr [0x000F0045]],byte ptr [0x000F0047]
 F000:0048 mov byte ptr DS:[0x0402],0xEE
 F000:004D hlt
 F000:FFF0 jmp short 0

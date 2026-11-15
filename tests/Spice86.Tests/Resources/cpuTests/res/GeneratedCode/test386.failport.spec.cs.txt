@@ -1102,6 +1102,7 @@ public partial class CfgGeneratedOverrides {
         if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7();
         }
+        Alu32.Sub(EDI, 0x0001FFFF);
         if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7();
         }
@@ -1167,10 +1168,16 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, SI + 4] = 0xF000;
         ushort targetSegment_1414 = UInt16[DS, SI + 4];
         ushort targetOffset_1414 = (ushort)UInt32[DS, SI];
-        if (targetSegment_1414 != biosSegment || targetOffset_1414 != 0x13E5) {
-            throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
+        switch ((uint)(targetSegment_1414 << 16 | targetOffset_1414)) {
+            case 0xF000_13C5:
+                FarCall32(biosSegment, 0x1417, biosSegment, unknown_F000_13C5_F13C5Entry);
+                break;
+            case 0xF000_13E5:
+                FarCall32(biosSegment, 0x1417, biosSegment, unknown_F000_13E5_F13E5Entry);
+                break;
+            default:
+                throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
         }
-        FarCall32(biosSegment, 0x1417, biosSegment, unknown_F000_13E5_F13E5Entry);
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7();
         }

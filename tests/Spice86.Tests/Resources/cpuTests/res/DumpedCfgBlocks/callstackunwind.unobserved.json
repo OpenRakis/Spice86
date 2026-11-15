@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0012",
-  "lastExecutedBlockId": 52,
+  "lastExecutedBlockId": 128,
   "blocks": [
     {
-      "id": 52,
+      "id": 128,
       "entry": "F000:000D",
       "term": "F000:0012",
       "pred": [
         3,
-        48
+        124
       ],
       "succ": [],
       "asm": [
@@ -35,15 +35,15 @@
       ]
     },
     {
-      "id": 48,
+      "id": 124,
       "entry": "F000:0103",
       "term": "F000:0108",
       "pred": [
         9,
-        34
+        89
       ],
       "succ": [
-        52
+        128
       ],
       "asm": [
         "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
@@ -59,7 +59,7 @@
       ],
       "succ": [
         9,
-        52
+        128
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -70,14 +70,14 @@
       ]
     },
     {
-      "id": 34,
+      "id": 89,
       "entry": "F000:040D",
       "term": "F000:0413",
       "pred": [
-        30
+        85
       ],
       "succ": [
-        48
+        124
       ],
       "asm": [
         "C6061200EE|mov byte ptr DS:[0x0012],0xEE",
@@ -94,22 +94,22 @@
       ],
       "succ": [
         11,
-        48
+        124
       ],
       "asm": [
         "E8FD00|call near 0x0200"
       ]
     },
     {
-      "id": 30,
+      "id": 85,
       "entry": "F000:0400",
       "term": "F000:0405",
       "pred": [
-        29
+        84
       ],
       "succ": [
-        34,
-        36
+        89,
+        91
       ],
       "asm": [
         "A00005|mov AL,byte ptr DS:[0x0500]",
@@ -125,7 +125,7 @@
         9
       ],
       "succ": [
-        29
+        84
       ],
       "asm": [
         "5B|pop BX",
@@ -136,12 +136,12 @@
       ]
     },
     {
-      "id": 36,
+      "id": 91,
       "entry": "F000:0407",
       "dead": true,
       "term": "F000:040C",
       "pred": [
-        30
+        85
       ],
       "succ": [],
       "asm": [
@@ -150,14 +150,14 @@
       ]
     },
     {
-      "id": 29,
+      "id": 84,
       "entry": "F000:0300",
       "term": "F000:0300",
       "pred": [
         11
       ],
       "succ": [
-        30
+        85
       ],
       "asm": [
         "E8FD00|call near 0x0400"

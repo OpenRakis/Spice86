@@ -56,7 +56,8 @@ public class InstructionsFeederTest : IDisposable {
 
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
             _compiler, new SequentialIdAllocator(), nodeLinker: null, new ChangedMemoryMap(_memory, memoryBreakpoints, new LoadedImageRegistry()),
-            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), new FunctionCatalogue(), loggerService);
+            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), new FunctionCatalogue(),
+            new WatchedPointerCells(_memory, memoryBreakpoints), loggerService);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

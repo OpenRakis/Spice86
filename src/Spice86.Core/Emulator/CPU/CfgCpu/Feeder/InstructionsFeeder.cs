@@ -37,7 +37,7 @@ public class InstructionsFeeder : IClearable {
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
         NodeLinker? nodeLinker, ChangedMemoryMap changedMemoryMap,
         InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable,
-        FunctionCatalogue functionCatalogue, ILogger loggerService) {
+        FunctionCatalogue functionCatalogue, WatchedPointerCells watchedCells, ILogger loggerService) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
@@ -47,7 +47,7 @@ public class InstructionsFeeder : IClearable {
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
             _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap,
-                installedInterruptHandlers, interruptVectorTable, functionCatalogue, cpuState, loggerService);
+                installedInterruptHandlers, interruptVectorTable, functionCatalogue, watchedCells, cpuState, loggerService);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);
@@ -106,6 +106,15 @@ public class InstructionsFeeder : IClearable {
         _speculativeExplorer.ExploreCandidates(trigger,
             [new DiscoveryCandidate(handler, null, InstructionSuccessorType.Normal, ExploreSource.InterruptVector)]);
     }
+
+    /// <summary>
+    /// Re-evaluates the speculative-site dependents an anchor carries (register values, pointer
+    /// cells) with the pre-execution CPU state. Called once per execution of a node flagged
+    /// <see cref="CfgInstruction.HasDiscoveryDependents"/>. No-op when speculative exploration is
+    /// disabled.
+    /// </summary>
+    internal void EvaluateAnchorDependents(CfgInstruction anchor) =>
+        _speculativeExplorer?.EvaluateAnchorDependents(anchor);
 
     /// <summary>
     /// Rebuilds the speculative call-return evidence index after a CFG graph reload and re-runs the
@@ -175,6 +184,10 @@ public class InstructionsFeeder : IClearable {
             existingSpeculative = matchingSpeculative;
         }
         if (_speculativeReconciler.Reconcile(existingSpeculative, parsed, address)) {
+            // A promoted speculative node is now observed too: give it the same anchored walk a
+            // freshly parsed instruction gets so it can claim discovery dependents on the
+            // speculative paths it opens.
+            _speculativeExplorer?.ExploreFrom(existingSpeculative);
             return existingSpeculative;
         }
         // Signatures differ: run the full uniqueness check (signature reduction against

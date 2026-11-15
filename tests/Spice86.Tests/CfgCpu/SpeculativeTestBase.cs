@@ -65,7 +65,8 @@ public abstract class SpeculativeTestBase : IDisposable {
     }
 
     protected SpeculativeExplorer CreateExplorer() =>
-        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue, State, LoggerService);
+        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue,
+            new WatchedPointerCells(Memory, MemoryBreakpoints), State, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {
         uint physAddr = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
@@ -133,7 +134,8 @@ public abstract class SpeculativeTestBase : IDisposable {
         EmulatorBreakpointsManager breakpointsManager =
             new(new PauseHandler(LoggerService), State, Memory, MemoryBreakpoints, ioBreakpoints);
         InstructionsFeeder feeder = new(breakpointsManager, Memory, State, ReplacerRegistry,
-            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue, LoggerService);
+            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue,
+            new WatchedPointerCells(Memory, MemoryBreakpoints), LoggerService);
         return feeder;
     }
 

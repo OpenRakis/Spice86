@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0012",
-  "lastExecutedBlockId": 44,
+  "lastExecutedBlockId": 106,
   "blocks": [
     {
-      "id": 44,
+      "id": 106,
       "entry": "F000:0012",
       "term": "F000:0012",
       "pred": [
-        27,
-        33
+        73,
+        79
       ],
       "succ": [],
       "asm": [
@@ -34,14 +34,14 @@
       ]
     },
     {
-      "id": 33,
+      "id": 79,
       "entry": "F010:0107",
       "term": "F010:010C",
       "pred": [
-        28
+        74
       ],
       "succ": [
-        44
+        106
       ],
       "asm": [
         "C6060204BB|mov byte ptr DS:[0x0402],0xBB",
@@ -49,7 +49,7 @@
       ]
     },
     {
-      "id": 27,
+      "id": 73,
       "entry": "F000:000D",
       "term": "F000:000D",
       "pred": [
@@ -57,8 +57,8 @@
         12
       ],
       "succ": [
-        28,
-        44
+        74,
+        106
       ],
       "asm": [
         "9A000110F0|call far F010:0100"
@@ -73,7 +73,7 @@
       ],
       "succ": [
         7,
-        27
+        73
       ],
       "asm": [
         "C606000401|mov byte ptr DS:[0x0400],1",
@@ -82,15 +82,15 @@
       ]
     },
     {
-      "id": 28,
+      "id": 74,
       "entry": "F010:0100",
       "term": "F010:0105",
       "pred": [
-        27
+        73
       ],
       "succ": [
-        31,
-        33
+        77,
+        79
       ],
       "asm": [
         "803E000500|cmp byte ptr DS:[0x0500],0",
@@ -105,7 +105,7 @@
         7
       ],
       "succ": [
-        27
+        73
       ],
       "asm": [
         "C6060104DD|mov byte ptr DS:[0x0401],0xDD",
@@ -129,12 +129,12 @@
       ]
     },
     {
-      "id": 31,
+      "id": 77,
       "entry": "F010:010D",
       "dead": true,
       "term": "F010:0116",
       "pred": [
-        28
+        74
       ],
       "succ": [],
       "asm": [

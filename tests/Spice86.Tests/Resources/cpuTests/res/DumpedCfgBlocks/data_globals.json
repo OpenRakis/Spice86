@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0095",
-  "lastExecutedBlockId": 87,
+  "lastExecutedBlockId": 658,
   "blocks": [
     {
-      "id": 87,
+      "id": 658,
       "entry": "F000:0075",
       "term": "F000:0095",
       "pred": [
-        74,
-        75
+        635,
+        636
       ],
       "succ": [],
       "asm": [
@@ -43,14 +43,14 @@
       ]
     },
     {
-      "id": 75,
+      "id": 636,
       "entry": "F000:009D",
       "term": "F000:00A9",
       "pred": [
-        74
+        635
       ],
       "succ": [
-        87
+        658
       ],
       "asm": [
         "A13200|mov AX,word ptr DS:[0x0032]",
@@ -61,7 +61,7 @@
       ]
     },
     {
-      "id": 74,
+      "id": 635,
       "entry": "F000:0072",
       "term": "F000:0072",
       "pred": [
@@ -69,8 +69,8 @@
         36
       ],
       "succ": [
-        75,
-        87
+        636,
+        658
       ],
       "asm": [
         "E82800|call near 0x009D"
@@ -85,7 +85,7 @@
       ],
       "succ": [
         36,
-        74
+        635
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -130,7 +130,7 @@
         3
       ],
       "succ": [
-        74
+        635
       ],
       "asm": [
         "C70632005555|mov word ptr DS:[0x0032],0x5555",

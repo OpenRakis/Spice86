@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        30,
-        31
+        57,
+        58
       ],
       "entries": [
         {
-          "block": 30,
+          "block": 57,
           "address": "FFEF:000D",
           "kind": "returnTargetEntry"
         }
@@ -21,12 +21,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        20,
-        19
+        41,
+        40
       ],
       "entries": [
         {
-          "block": 19,
+          "block": 40,
           "address": "F000:FEFD",
           "kind": "returnTargetEntry"
         }
@@ -54,8 +54,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 20,
-      "toBlock": 30,
+      "fromBlock": 41,
+      "toBlock": 57,
       "from": "F000:0007",
       "target": "FFEF:000D"
     },
@@ -64,7 +64,7 @@
       "fromPartition": 3,
       "toPartition": 2,
       "fromBlock": 3,
-      "toBlock": 19,
+      "toBlock": 40,
       "from": "F000:0019",
       "target": "F000:FEFD"
     }

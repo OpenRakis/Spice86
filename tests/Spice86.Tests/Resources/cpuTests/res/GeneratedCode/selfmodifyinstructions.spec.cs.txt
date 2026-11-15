@@ -31,23 +31,23 @@ public partial class CfgGeneratedOverrides {
                 DI += (ushort)(DirectionFlag ? -2 : 2);
                 CX--;
             }
-            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_26)) {
-                goto L_1400_26;
+            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_91)) {
+                goto L_1400_91;
             }
-            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_49)) {
+            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_135)) {
                 break;
             }
-            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_36)) {
-                goto L_1400_36;
+            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_112)) {
+                goto L_1400_112;
             }
             else {
                 throw FailAsUntested("Untested code variant at F000:1400");
             }
-        L_1400_26:
+        L_1400_91:
             Stack.Push16(1);
             index = 0x0C00;
             continue;
-        L_1400_36:
+        L_1400_112:
             Stack.Push16(2);
             index = 0x1000;
         }
@@ -99,9 +99,9 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_1400_mov_26 = [0xB8, 0x01, 0x00];
-    private static readonly byte?[] Signature_1400_mov_36 = [0xBB, 0x01, 0x00];
-    private static readonly byte?[] Signature_1400_mov_49 = [0xB9, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_91 = [0xB8, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_112 = [0xBB, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_135 = [0xB9, 0x01, 0x00];
 
 }
 

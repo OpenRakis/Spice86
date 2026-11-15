@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        44,
-        74
+        237,
+        466
       ],
       "entries": [
         {
-          "block": 44,
+          "block": 237,
           "address": "F000:0031",
           "kind": "executionContextEntry"
         }
@@ -21,11 +21,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        49
+        242
       ],
       "entries": [
         {
-          "block": 49,
+          "block": 242,
           "address": "F000:003C",
           "kind": "functionEntry"
         }
@@ -40,7 +40,7 @@
         24,
         27,
         31,
-        33,
+        34,
         2
       ],
       "entries": [
@@ -57,19 +57,19 @@
       "kind": "callOut",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 44,
-      "toBlock": 49,
+      "fromBlock": 237,
+      "toBlock": 242,
       "from": "F000:0038",
       "target": "F000:003C",
-      "callContinuationBlock": 74,
+      "callContinuationBlock": 466,
       "callContinuationAddress": "F000:003B"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 49,
-      "toBlock": 74,
+      "fromBlock": 242,
+      "toBlock": 466,
       "from": "F000:003D",
       "target": "F000:003B"
     }

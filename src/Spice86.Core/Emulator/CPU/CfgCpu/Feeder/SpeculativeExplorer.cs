@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -69,7 +70,9 @@ public class SpeculativeExplorer {
         InstructionSuccessorType EdgeType,
         bool FollowContinuations,
         ExploreSource Source,
-        CfgInstruction? Trigger);
+        CfgInstruction? Trigger,
+        ushort KnownRegisters,
+        CfgInstruction? Anchor);
 
     private const int MaxCandidatesPerSite = 32;
     private const int MaxTableEntries = 1024;
@@ -88,13 +91,31 @@ public class SpeculativeExplorer {
     private readonly CalleeReturnEvidence _calleeReturnEvidence = new();
     private readonly Dictionary<CfgInstruction, List<DiscoveryCandidate>> _pending = new();
     private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
+    private readonly WatchedPointerCells _watchedCells;
+    private readonly Dictionary<CfgInstruction, List<AnchorDependent>> _anchorDependents = new();
+    private readonly HashSet<(CfgInstruction Site, CfgInstruction Anchor)> _anchorSitePairs = new();
+    private readonly HashSet<(CfgInstruction Node, ushort KnownRegisters, CfgInstruction Anchor)> _anchorTraversed = new();
+    private readonly HashSet<(uint Start, int Size, CfgInstruction Site)> _watchedSiteCells = new();
+    private int _refusedAnchorSiteForms;
+
+    /// <summary>One evaluation a site registered on its anchor asks to run at each anchor
+    /// execution: either "read register <see cref="IndexRegister"/> and propose CS:that", or
+    /// "read the <see cref="CellSize"/>-byte pointer cell the operand formula resolves to and
+    /// propose what it holds".</summary>
+    private sealed record AnchorDependent(
+        CfgInstruction Site,
+        bool IsCall,
+        int CellSize,
+        int SegmentRegisterIndex,
+        int IndexRegister,
+        ushort Displacement);
     private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
         ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
         InterruptVectorTable interruptVectorTable, FunctionCatalogue functionCatalogue,
-        State state, ILogger loggerService) {
+        WatchedPointerCells watchedCells, State state, ILogger loggerService) {
         _memory = memory;
         _state = state;
         _instructionParser = instructionParser;
@@ -104,6 +125,7 @@ public class SpeculativeExplorer {
         _installedInterruptHandlers = installedInterruptHandlers;
         _interruptVectorTable = interruptVectorTable;
         _functionCatalogue = functionCatalogue;
+        _watchedCells = watchedCells;
         _loggerService = loggerService;
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
         // Catalogue entries are trust-checked against the loaded bytes, so they can only be
@@ -157,7 +179,11 @@ public class SpeculativeExplorer {
     /// </summary>
     public void ExploreFrom(CfgInstruction observed) {
         Queue<ExploreItem> worklist = new();
-        EnqueueStaticSuccessors(observed, worklist, followContinuations: false);
+        // The successors of the just-observed node inherit the register values the CPU holds right
+        // before it executes: every register it does not write stays known down the speculative
+        // path it opens, and it becomes the anchor that re-evaluates them on later executions.
+        ushort known = (ushort)((ushort)RegisterBits.All & ~RegisterWriteSet.MayWrite(observed));
+        EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, observed);
         if (observed.IsCall) {
             TryExploreCallContinuation(observed, worklist);
         }
@@ -181,7 +207,7 @@ public class SpeculativeExplorer {
             return;
         }
         Queue<ExploreItem> worklist = new();
-        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true, ExploreSource.Static, null));
+        worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true, ExploreSource.Static, null, 0, null));
         Drain(worklist);
     }
 
@@ -311,7 +337,7 @@ public class SpeculativeExplorer {
                 continue;
             }
             worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
-                candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger));
+                candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null));
         }
         Drain(worklist);
         if (pending.Count == 0) {
@@ -330,7 +356,7 @@ public class SpeculativeExplorer {
             }
         }
         worklist.Enqueue(new ExploreItem(candidate.Target, candidate.Predecessor,
-            candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger));
+            candidate.EdgeType, FollowContinuations: false, candidate.Source, trigger, 0, null));
     }
 
     private bool AcceptForSite(CfgInstruction site, SegmentedAddress target) {
@@ -414,6 +440,16 @@ public class SpeculativeExplorer {
                 if (item.Predecessor is not null) {
                     _nodeLinker.Link(item.EdgeType, item.Predecessor, existing);
                 }
+                TryRegisterAnchorSite(item, existing);
+                // Anchored items keep walking through already-decoded speculative nodes so
+                // sites deeper than the convergence frontier are still reached. Each (node,
+                // incoming known-mask) pair expands once: a node re-traversed with the same
+                // register knowledge would enqueue identical items.
+                if (item.Anchor is not null
+                    && existing.IsSpeculative
+                    && _anchorTraversed.Add((existing, item.KnownRegisters, item.Anchor))) {
+                    EnqueueSuccessorsForNode(existing, worklist, item);
+                }
                 continue;
             }
             if (StartsZeroChain(candidate)) {
@@ -433,7 +469,8 @@ public class SpeculativeExplorer {
             if (item.Predecessor is not null) {
                 _nodeLinker.Link(item.EdgeType, item.Predecessor, candidate);
             }
-            EnqueueSuccessorsForNode(candidate, worklist, item.FollowContinuations);
+            TryRegisterAnchorSite(item, candidate);
+            EnqueueSuccessorsForNode(candidate, worklist, item);
             if (item.Predecessor is null && item.Source is ExploreSource.CatalogueEntry or ExploreSource.InterruptVector) {
                 // A seed with no successors (a lone ret, for instance) never goes through Link,
                 // so nothing opens its block. The partition collector needs one; known-safe
@@ -474,12 +511,16 @@ public class SpeculativeExplorer {
     /// For callback instructions (Kind=None, MaxSuccessorsCount=null) under trust, the continuation
     /// is enqueued as a Normal successor since the parser does not register static successors for them.
     /// </summary>
-    private void EnqueueSuccessorsForNode(CfgInstruction node, Queue<ExploreItem> worklist, bool followContinuations) {
+    private void EnqueueSuccessorsForNode(CfgInstruction node, Queue<ExploreItem> worklist, ExploreItem item) {
+        bool followContinuations = item.FollowContinuations;
+        // The register values the anchor's state can still predict past this node: everything the
+        // node itself does not write.
+        ushort nextKnown = (ushort)(item.KnownRegisters & ~RegisterWriteSet.MayWrite(node));
         if (node.IsCall) {
             // Call or INT: static successors are callees (enqueued untrusted, always Normal edges).
             // Continuation is only enqueued if under trust, or when the callee is known to return.
             foreach (SegmentedAddress successor in node.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null));
+                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, item.Anchor));
             }
             if (followContinuations) {
                 EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static);
@@ -491,7 +532,7 @@ public class SpeculativeExplorer {
         if (node.StaticSuccessorAddresses.Count > 0) {
             // Non-call instructions with known static successors: propagate trust through intra-routine successors.
             // Static successors are always Normal edges.
-            EnqueueStaticSuccessors(node, worklist, followContinuations);
+            EnqueueStaticSuccessors(node, worklist, followContinuations, nextKnown, item.Anchor);
             return;
         }
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.
@@ -548,7 +589,146 @@ public class SpeculativeExplorer {
         }
         worklist.Enqueue(new ExploreItem(
             target, node, InstructionSuccessorType.Normal, FollowContinuations: false,
-            ExploreSource.PushedReturn, null));
+            ExploreSource.PushedReturn, null, 0, null));
+    }
+
+    /// <summary>
+    /// When a speculative node reached from an anchor is an indirect near or far jmp/call whose
+    /// operand reads only registers still known from the anchor's state, register it as a dependent
+    /// on the anchor so each anchor execution proposes its current target. Anything outside the
+    /// handled shapes (register or segment unknown, base+index, scaled forms) is refused.
+    /// </summary>
+    private void TryRegisterAnchorSite(ExploreItem item, CfgInstruction site) {
+        // Every anchor whose known registers cover the operand may register its own dependent:
+        // each anchor's executions evaluate the same operand at a different observed point on the
+        // path, and the per-site target set deduplicates the values they propose. A refusal under
+        // one anchor is not recorded: a later anchor may know more registers.
+        if (item.Anchor is null || !site.IsSpeculative || _anchorSitePairs.Contains((site, item.Anchor))) {
+            return;
+        }
+        if (site.DisplayAst is not InstructionNode { Parameters: [var parameter] } display
+            || display.Operation is not (InstructionOperation.JMP_NEAR or InstructionOperation.CALL_NEAR
+                or InstructionOperation.JMP_FAR or InstructionOperation.CALL_FAR)) {
+            return;
+        }
+        bool isCall = display.Operation is InstructionOperation.CALL_NEAR or InstructionOperation.CALL_FAR;
+        bool isFar = display.Operation is InstructionOperation.JMP_FAR or InstructionOperation.CALL_FAR;
+        if (!isFar && SwitchTableRecognizer.AsRegister(parameter) is { DataType.BitWidth: BitWidth.WORD_16 } register) {
+            if (!IsKnown(item.KnownRegisters, register.RegisterIndex)) {
+                _refusedAnchorSiteForms++;
+                return;
+            }
+            AddDependent(item.Anchor, new AnchorDependent(site, isCall, 0, -1, register.RegisterIndex, 0));
+            return;
+        }
+        if (parameter is not SegmentedPointerNode pointer
+            || SwitchTableRecognizer.GetSegmentRegisterIndex(pointer) is not int segmentRegisterIndex
+            || !IsKnown(item.KnownRegisters, 8 + segmentRegisterIndex)) {
+            _refusedAnchorSiteForms++;
+            return;
+        }
+        int expectedSize = isFar ? 4 : 2;
+        if (pointer.DataType.BitWidth is not (BitWidth.WORD_16 or BitWidth.DWORD_32)
+            || pointer.DataType.BitWidth != (isFar ? BitWidth.DWORD_32 : BitWidth.WORD_16)) {
+            _refusedAnchorSiteForms++;
+            return;
+        }
+        if (SwitchTableRecognizer.AsConstant(pointer.Offset) is ulong constOffset) {
+            if (constOffset > 0xFFFF) {
+                _refusedAnchorSiteForms++;
+                return;
+            }
+            AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, -1, (ushort)constOffset));
+            return;
+        }
+        if (!SwitchTableRecognizer.TryGetIndexExpression(pointer.Offset, out int indexRegister, out ushort displacement)
+            || !IsKnown(item.KnownRegisters, indexRegister)) {
+            _refusedAnchorSiteForms++;
+            return;
+        }
+        AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, indexRegister, displacement));
+    }
+
+    private void AddDependent(CfgInstruction anchor, AnchorDependent dependent) {
+        _anchorSitePairs.Add((dependent.Site, anchor));
+        if (!_anchorDependents.TryGetValue(anchor, out List<AnchorDependent>? dependents)) {
+            dependents = _anchorDependents[anchor] = [];
+        }
+        dependents.Add(dependent);
+        anchor.HasDiscoveryDependents = true;
+    }
+
+    private static bool IsKnown(ushort known, int bitIndex) => (known & (1 << bitIndex)) != 0;
+
+    /// <summary>
+    /// Called on every execution of a node that carries speculative-site dependents: retries the
+    /// candidates pending on it, then proposes each dependent's current value - a register target
+    /// (CS:register for a near site) or a pointer-cell target (CS:word for a near cell, the cell's
+    /// own segment word for a far one). Cell reads also arm a watched cell so a later program
+    /// write proposes the new value under the writing instruction as trigger.
+    /// </summary>
+    public void EvaluateAnchorDependents(CfgInstruction anchor) {
+        RetryPending(anchor);
+        if (!_anchorDependents.TryGetValue(anchor, out List<AnchorDependent>? dependents)) {
+            return;
+        }
+        foreach (AnchorDependent dependent in dependents) {
+            EvaluateDependent(anchor, dependent);
+        }
+    }
+
+    private void EvaluateDependent(CfgInstruction anchor, AnchorDependent dependent) {
+        if (dependent.CellSize == 0) {
+            ushort offset = _state.GeneralRegisters.UInt16[(uint)dependent.IndexRegister];
+            SubmitAnchorCandidate(anchor, dependent,
+                new SegmentedAddress(dependent.Site.Address.Segment, offset), ExploreSource.RegisterValue);
+            return;
+        }
+        ushort segment = _state.SegmentRegisters.UInt16[(uint)dependent.SegmentRegisterIndex];
+        uint cellOffset = dependent.IndexRegister >= 0
+            ? (uint)(_state.GeneralRegisters.UInt16[(uint)dependent.IndexRegister] + dependent.Displacement)
+            : dependent.Displacement;
+        uint physical = _memory.A20Gate.TransformAddress(_memory.Mmu.TranslateAddress(segment, cellOffset));
+        uint value = 0;
+        for (int i = 0; i < dependent.CellSize; i++) {
+            value |= (uint)_memory.SneakilyRead(physical + (uint)i) << (8 * i);
+        }
+        WatchSiteCell(dependent, physical);
+        SubmitAnchorCandidate(anchor, dependent, CellTarget(dependent, value), ExploreSource.PointerValue);
+    }
+
+    private void WatchSiteCell(AnchorDependent dependent, uint physical) {
+        if (!_watchedSiteCells.Add((physical, dependent.CellSize, dependent.Site))) {
+            return;
+        }
+        _watchedCells.Watch(physical, dependent.CellSize, new WatchedPointerCells.WatchedCellDependent(
+            (value, trigger) => OnSiteCellValue(dependent, value, trigger)));
+    }
+
+    private void OnSiteCellValue(AnchorDependent dependent, uint value, CfgInstruction? trigger) {
+        ExploreCandidates(trigger,
+            [new DiscoveryCandidate(CellTarget(dependent, value), dependent.Site,
+                InstructionSuccessorType.Normal, ExploreSource.PointerValue)]);
+        if (dependent.IsCall) {
+            Queue<ExploreItem> worklist = new();
+            TryExploreCallContinuationForCallee(dependent.Site, CellTarget(dependent, value), worklist);
+            Drain(worklist);
+        }
+    }
+
+    private static SegmentedAddress CellTarget(AnchorDependent dependent, uint cellValue) =>
+        new(dependent.CellSize == 4 ? (ushort)(cellValue >> 16) : dependent.Site.Address.Segment,
+            (ushort)cellValue);
+
+    private void SubmitAnchorCandidate(CfgInstruction anchor, AnchorDependent dependent,
+        SegmentedAddress target, ExploreSource source) {
+        ExploreCandidates(anchor,
+            [new DiscoveryCandidate(target, dependent.Site, InstructionSuccessorType.Normal, source)]);
+        if (dependent.IsCall) {
+            Queue<ExploreItem> worklist = new();
+            TryExploreCallContinuationForCallee(dependent.Site, target, worklist);
+            Drain(worklist);
+        }
     }
 
     /// <summary>
@@ -767,12 +947,12 @@ public class SpeculativeExplorer {
         if (_nodeIndex.PoisonSet.Contains(continuation)) {
             return;
         }
-        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null));
+        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null, 0, null));
     }
 
-    private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations) {
+    private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations, ushort knownRegisters, CfgInstruction? anchor) {
         foreach (SegmentedAddress successor in instruction.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null));
+            worklist.Enqueue(new ExploreItem(successor, instruction, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, knownRegisters, anchor));
         }
     }
 }

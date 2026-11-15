@@ -178,6 +178,13 @@ public sealed class CfgInstruction : CfgNode {
     /// <summary>Records the source a speculative node was discovered from.</summary>
     internal void SetDiscoverySource(ExploreSource source) => DiscoverySource = source;
 
+    /// <summary>
+    /// Whether dependents proposed by the speculative explorer are attached to this node and must
+    /// be re-evaluated each time it executes. Set by the explorer; read on the fetch/link hot path
+    /// as a single test that skips the anchor-dependents work for every other instruction.
+    /// </summary>
+    public bool HasDiscoveryDependents { get; internal set; }
+
     /// <inheritdoc />
     /// <remarks>
     /// Re-evaluated on every read so that any change to <see cref="CfgNode.MaxSuccessorsCount"/>
