@@ -89,7 +89,8 @@ public partial class CfgGeneratedOverrides {
         DX = segment;
         DsGlobals.Word0006 = DX;
         DI = 5;
-        DsGlobals.Word0008 = (ushort)(BP + 0x001C);
+        SI = (ushort)(BP + 0x001C);
+        DsGlobals.Word0008 = SI;
         BX = 5;
         AX = 5;
         DsGlobals.Word000A = 0x2345;

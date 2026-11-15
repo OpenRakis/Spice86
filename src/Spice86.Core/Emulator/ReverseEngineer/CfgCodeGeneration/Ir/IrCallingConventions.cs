@@ -182,7 +182,7 @@ internal sealed class IrCallingConventions {
     private CpuValues TransferExitReads(ExitSite site) {
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in site.Targets) {
-            inputs |= _states[target].Inputs;
+            inputs |= _states[target].Inputs | ObservedEntryReads(target);
             if (!_methodByEntry.TryGetValue(target, out MethodData? targetData)) {
                 continue;
             }
@@ -194,6 +194,37 @@ internal sealed class IrCallingConventions {
             }
         }
         return inputs;
+    }
+
+    /// <summary>The bytes observers at <paramref name="entry"/> read of the versions that arrive
+    /// at the entry before any write - a hardware interrupt handler delivered at the entry's
+    /// event checks reads machine registers under the charged contract. Observed demand only:
+    /// under the code conventions this is <see cref="CpuValues.None"/> so the printed inputs stay
+    /// code demand; under the observed conventions it widens what a transfer or a return landing
+    /// on the entry must deliver.</summary>
+    private CpuValues ObservedEntryReads(CfgCodePartitionEntry entry) {
+        if (!_observed || !_methodByEntry.TryGetValue(entry, out MethodData? target)) {
+            return CpuValues.None;
+        }
+        CpuValues reads = CpuValues.None;
+        foreach (EntrySite site in target.Entries) {
+            if (!site.Entry.Equals(entry)) {
+                continue;
+            }
+            for (int v = 0; v < ValueCount; v++) {
+                int version = site.EntryVersions[v];
+                if (version < 0) {
+                    continue;
+                }
+                foreach (IrSsaUse use in target.Ssa.Uses(version)) {
+                    if (use.Statement?.Node is CheckExternalEventsNode) {
+                        reads |= IrSsaValues.MaskOf((IrSsaValue)v);
+                        break;
+                    }
+                }
+            }
+        }
+        return reads;
     }
 
 
@@ -274,8 +305,8 @@ internal sealed class IrCallingConventions {
         }
         EntryState state = _states[target];
         IrEffects effect = new(
-            state.Inputs | CpuValues.Sp | CpuValues.Ss | CpuValues.Cs | contract.Reads
-                | PushedBytesReachable(target),
+            state.Inputs | ObservedEntryReads(target) | CpuValues.Sp | CpuValues.Ss | CpuValues.Cs
+                | contract.Reads | PushedBytesReachable(target),
             CpuValues.None, state.Changes | CpuValues.Sp | contract.Writes,
             IrTokens.All, IrTokens.All, siteEffects.MayFault, true);
         return (effect, CallSummarySkip.NotCallSite);
@@ -1325,7 +1356,7 @@ internal sealed class IrCallingConventions {
     private CpuValues LandingInputs(ExitSite site) {
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in site.Targets) {
-            inputs |= _states[target].Inputs;
+            inputs |= _states[target].Inputs | ObservedEntryReads(target);
         }
         if (!site.LandingsResolved && _observed) {
             inputs |= Reportable;
@@ -1413,7 +1444,7 @@ internal sealed class IrCallingConventions {
     private CpuValues TargetsInputs(CallSite call) {
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in call.Targets) {
-            inputs |= _states[target].Inputs;
+            inputs |= _states[target].Inputs | ObservedEntryReads(target);
         }
         if (call.WritesInterruptFrame) {
             inputs |= CpuValues.StatusFlags | CpuValues.Direction;
