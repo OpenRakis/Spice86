@@ -13,6 +13,8 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
+using Spice86.Shared.Emulator.Keyboard;
+using Spice86.ViewModels.Services;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
 internal static class AsmFixtureCatalog {
@@ -405,6 +407,28 @@ internal static class AsmFixtureCatalog {
         return ResultFixture(new AsmRunSettings { BinName = "sticli", MaxCycles = 1000 }, result => {
             result.Memory.UInt16[0x1000, 0x0000].Should().Be(0x1234, "sticli: mov [si], ax stores AX at DS:SI");
         });
+    }
+
+    /// <summary>Runs int9_keeps_interrupted_flags: the run presses a key while the program spins on
+    /// the BIOS keyboard buffer head/tail with flag-free instructions only, so the FLAGS word it
+    /// stores at 2000h:40h is the interrupted code's flags as the keyboard interrupt left them.</summary>
+    public static AsmFixture Int9KeepsInterruptedFlags() {
+        return ResultFixture(new AsmRunSettings {
+                BinName = "int9_keeps_interrupted_flags",
+                InstallInterruptVectors = true,
+                // The program is a BIOS image at F000: the BIOS callbacks go to D000 so the
+                // installed int9 stub does not overwrite the program's own code.
+                AsmHandlersSegment = 0xD000,
+                MaxCycles = 10000,
+                InstructionTimeScale = 1000,
+                HeadlessKeyInjections = [new HeadlessKeyInjection(50,
+                    gui => gui.SimulateKeyPress(PhysicalKey.A))]
+            }, result => {
+                result.Memory.UInt16[0x2000, 0x42].Should().Be(1,
+                    "int9_keeps_interrupted_flags: a key arrived in the BIOS keyboard buffer");
+                (result.Memory.UInt16[0x2000, 0x40] & 1).Should().Be(0,
+                    "int9_keeps_interrupted_flags: the keyboard interrupt must not change the interrupted code's CF");
+            });
     }
 
     /// <summary>Runs speculative_branch on the observed or unobserved arm and checks the arm's result bytes.</summary>

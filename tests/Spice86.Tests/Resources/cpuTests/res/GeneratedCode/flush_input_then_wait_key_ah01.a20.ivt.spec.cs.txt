@@ -218,7 +218,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0017_F0017() {
         CheckExternalEvents(biosSegment, 0x0017);
         // INT 09h: BiosKeyboardInt9Handler

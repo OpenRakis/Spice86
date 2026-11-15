@@ -1,6 +1,7 @@
 namespace Spice86.Tests.InterruptHandlers;
 
 using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 
 using Xunit;
@@ -34,6 +35,16 @@ public class MiscVectorsServiceContractTest {
                     machine.Spice86.Machine.Memory.UInt32[0x49C] = 2000;
                     machine.Spice86.Machine.Memory.UInt8[0x4A0] = 1;
                 }
+            };
+            // INT 9 with a scan code waiting in the 8042: the handler reads the
+            // keyboard ports, updates the BDA keyboard flags and enqueues the key
+            // code in the BIOS keyboard buffer, which the contract's
+            // Memory = ReadWrite, Io = true covers.
+            yield return new ServiceContractCase {
+                Vector = 0x09, SelectorValue = 0,
+                Setup = machine =>
+                    machine.Spice86.Machine.KeyboardController.KeyboardDevice
+                        .EnqueueKeyEvent(PcKeyboardKey.A, true)
             };
         }
     }

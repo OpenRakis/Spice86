@@ -409,7 +409,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at F000:000D");
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0017_F0017() {
         CheckExternalEvents(biosSegment, 0x0017);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);

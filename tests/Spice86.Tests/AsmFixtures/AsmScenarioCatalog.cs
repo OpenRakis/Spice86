@@ -632,6 +632,9 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("data_jump_tables"),
             PartitionScenario("interrupt_handler_partial_inputs"),
             PartitionScenario("interrupt_call_pushed_flags"),
+            AsmScenario.FromFixture("int9_keeps_interrupted_flags",
+                    AsmFixtureCatalog.Int9KeepsInterruptedFlags)
+                .WithoutGeneratedExecution("the IRQ1 frame lands at a run-dependent instruction boundary, so the stale pushed frame bytes differ between modes"),
             PartitionScenario("data_global_offset_fault"),
             PartitionScenario("data_jump_tables_segments"),
             AsmScenario.FromFixture("data_jump_tables", AsmFixtureCatalog.DataJumpTablesPatched),
