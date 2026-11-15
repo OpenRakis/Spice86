@@ -248,7 +248,6 @@ public class SpeculativeExplorer {
     /// call-continuation rule is then applied with each entry as an explicit callee.
     /// </summary>
     public void ExploreIndirectTransfer(CfgInstruction transfer, bool newTargetEdge) {
-        RetryPending(transfer);
         if (!newTargetEdge) {
             return;
         }
@@ -410,6 +409,7 @@ public class SpeculativeExplorer {
         if (!pending.Contains(candidate)) {
             pending.Add(candidate);
         }
+        trigger.HasDiscoveryDependents = true;
     }
 
     private static bool IsDataSource(ExploreSource source) => source is

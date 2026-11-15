@@ -135,6 +135,10 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
             _pauseHandler.WaitIfPaused();
         }
 
+        if (node is CfgInstruction { HasDiscoveryDependents: true } anchor) {
+            CfgNodeFeeder.InstructionsFeeder.EvaluateAnchorDependents(anchor);
+        }
+
         bool faulted = false;
         try {
             _loggerState.CsIp = node.Address;
@@ -153,6 +157,8 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
 
         CurrentExecutionContext.LastExecuted = node;
         CurrentExecutionContext.NodeToExecuteNextAccordingToGraph = nextToExecute;
+
+        CfgNodeFeeder.WatchedPointerCells.EvaluateQueued(node as CfgInstruction);
 
         return !faulted;
     }
@@ -173,10 +179,6 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
             if (!node.IsLive) {
                 CurrentExecutionContext.NodeToExecuteNextAccordingToGraph = null;
                 return lastExecuted;
-            }
-
-            if (node is CfgInstruction { HasDiscoveryDependents: true } anchor) {
-                CfgNodeFeeder.InstructionsFeeder.EvaluateAnchorDependents(anchor);
             }
 
             bool ok = ExecuteOneNode(node);

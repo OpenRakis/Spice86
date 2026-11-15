@@ -12,8 +12,9 @@ using System.Linq;
 /// writes that change them, and re-evaluates the cell's value at the next instruction boundary.
 /// A single <see cref="MultiAddressBreakPoint"/> armed on every watched byte keeps a write outside
 /// the cells at one bit test. Write breakpoints fire before the byte is stored, so the hit only
-/// marks the touched word and queues the cell: evaluation runs on the fetch/link path, when memory
-/// already holds the new value, at the cost of one emptiness test when nothing is queued.
+/// marks the touched word and queues the cell: evaluation runs after the instruction that wrote
+/// finishes, when memory already holds the new value, at the cost of one emptiness test when
+/// nothing is queued.
 /// A cell re-evaluates only once every word it is made of was written since its last evaluation,
 /// so a half-written far pointer is never read; a word counts as written on any write that touches
 /// it, even a store of the same value (a re-install in the same segment rewrites the segment word
@@ -105,7 +106,8 @@ public sealed class WatchedPointerCells {
     /// reports the ones whose value changed. Called once per instruction boundary; costs one
     /// emptiness test when nothing is queued.
     /// </summary>
-    /// <param name="trigger">The instruction that executed just before this boundary.</param>
+    /// <param name="trigger">The instruction that just executed; writes made between instructions
+    /// (devices) are attributed to it.</param>
     internal void EvaluateQueued(CfgInstruction? trigger) {
         while (_queued.Count != 0) {
             WatchedPointerCell cell = _queued.Dequeue();

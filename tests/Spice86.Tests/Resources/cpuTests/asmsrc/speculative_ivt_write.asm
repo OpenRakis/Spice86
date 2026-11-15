@@ -15,6 +15,11 @@
 ;       its OFFSET word is rewritten to neg_handler - a half-written far
 ;       pointer must never be evaluated, so neg_handler is never discovered
 ;       (golden-only negative).
+;   S4: a two-iteration loop installs IRQ0 each pass and ends with int 21h
+;       AH=30h. Iteration 2 runs on the hot path and installs s4_handler_b:
+;       the write is attributed to the instruction that made it, not to the
+;       block's last instruction. The unobserved run's PIT reaches
+;       s4_handler_b, which writes 0xB17 at DS:0x44 next to the 5AA5 marker.
 ;
 ; Selector byte at physical [0x9000]: 0 = discovery run (no PIT),
 ;   1 = unobserved run (PIT fires IRQ0). DS = SS = 2000h;
@@ -51,6 +56,25 @@ start:
     mov word [es:24h], int9_legit
     mov word [es:26h], cs
     mov word [es:24h], neg_handler
+
+    ; S4 (hot-path install): a two-iteration loop whose body stores IRQ0's IVT
+    ; entry directly and ends with int 21h AH=30h. The first iteration
+    ; discovers the block and installs s4_handler_a; the second runs on the hot
+    ; path and installs s4_handler_b. Evaluating the queued cell at the next
+    ; block boundary would attribute the write to the block's last instruction
+    ; - the int 21h node - and drop it, so the cell is re-evaluated right after
+    ; the instruction that wrote it.
+    xor di, di
+s4_loop:
+    mov bx, di
+    mov ax, [cs:s4_handlers+bx]
+    mov word [es:20h], ax
+    mov word [es:22h], cs
+    mov ah, 30h
+    int 21h
+    add di, 2
+    cmp di, 4
+    jb s4_loop
 
     ; selector byte lives at physical 0x9000
     mov al, [es:9000h]
@@ -112,6 +136,27 @@ int9_legit:
 
 neg_handler:
     hlt
+
+s4_handler_a:
+    mov word [0x40], 0AA22h
+    mov al, 0FFh
+    out 21h, al                      ; no second IRQ0: later deliveries would race
+    mov al, 20h
+    out 20h, al
+    iret
+
+s4_handler_b:
+    mov word [0x40], 5AA5h
+    mov word [0x44], 0B17h           ; marker proving the hot-path install ran
+    mov al, 0FFh
+    out 21h, al
+    mov al, 20h
+    out 20h, al
+    iret
+
+s4_handlers:
+    dw s4_handler_a
+    dw s4_handler_b
 
 rb 65520-$
     jmp start

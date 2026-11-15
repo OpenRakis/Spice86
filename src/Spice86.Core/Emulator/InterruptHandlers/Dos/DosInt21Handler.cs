@@ -2557,7 +2557,7 @@ public class DosInt21Handler : InterruptHandler {
         // The int 21h node that invoked this service is the current function call's initiator:
         // a software int keeps the caller's execution context and pushes its FunctionCall with the
         // int instruction as Initiator, and no call has been pushed since. Pending candidates are
-        // keyed on it so a second install from the same node retries them first. When speculative
+        // keyed on it so they are retried at the start of each of its executions. When speculative
         // exploration is off the call is a no-op inside the feeder.
         _executionContextManager.ExploreInstalledHandler(vectorNumber, new SegmentedAddress(segment, offset),
             FunctionHandlerProvider.FunctionHandlerInUse.CurrentCallInitiator);

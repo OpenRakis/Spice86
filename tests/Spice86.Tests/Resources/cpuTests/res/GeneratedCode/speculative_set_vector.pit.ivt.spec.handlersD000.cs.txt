@@ -12,27 +12,35 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: all. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    public virtual Action unknown_F000_00A6_F00A6() {
+        CheckExternalEvents(biosSegment, 0x00A6);
+        InterruptCall(biosSegment, 0x00A8, 0x21);
+        return NearRet();
+    }
+
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0085_F0085() {
-        CheckExternalEvents(biosSegment, 0x0085);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_mov);
+    public virtual Action unknown_F000_00B0_F00B0() {
+        CheckExternalEvents(biosSegment, 0x00B0);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00B0, Signature_00B0_mov);
         DsGlobals.Word0040 = 0x5AA5;
-        VerifySpeculativeRunOrFail(biosSegment, 0x008B, SpeculativeRun_008B);
+        VerifySpeculativeRunOrFail(biosSegment, 0x00B6, SpeculativeRun_00B6);
         PicPorts.WritePrimaryData(0xFF);
-        VerifySpeculativeRunOrFail(biosSegment, 0x008F, SpeculativeRun_008F);
+        VerifySpeculativeRunOrFail(biosSegment, 0x00BA, SpeculativeRun_00BA);
         AL = 0x20;
         PicPorts.WritePrimaryCommand(0x20);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0093, Signature_0093_iret);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00BE, Signature_00BE_iret);
         return InterruptRet();
     }
 
-    /// <summary>Inputs: DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, flags, DF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1 = 0;
         ushort word2 = 0;
         ushort segment;
-        ushort flagOperand_0057 = 0;
-        byte flagOperand_005E = 0;
+        ushort word3;
+        ushort flagOperand_0078 = 0;
+        byte flagOperand_007F = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         word1 = 0x2000;
@@ -43,42 +51,52 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(word1);
         word2 = CS;
         segment = word2;
-        ServiceCall(Dos, () => Dos.SetInterruptVector(8, segment, 0x0085));
-        DX = 0x0100;
+        ServiceCall(Dos, () => Dos.SetInterruptVector(8, segment, 0x00B0));
         segment = 0x3000;
         ServiceCall(Dos, () => Dos.SetInterruptVector(9, segment, 0x0100));
-        DS = Stack.Pop16();
+        segment = Stack.Pop16();
         ES = 0x3000;
         Segment3000Globals.Byte0100 = 0xCF;
+        CsGlobals.Byte00A9 = 0x90;
+        Stack.Push16(segment);
+        word3 = CS;
+        DS = word3;
+        DX = 0x00A9;
+        AX = 0x2560;
+        NearCall(biosSegment, 0x0049, unknown_F000_00A6_F00A6Entry);
+        DS = Stack.Pop16();
+        CsGlobals.Byte00A9 = 0xC7;
+        AX = 0x3000;
+        NearCall(biosSegment, 0x0056, unknown_F000_00A6_F00A6Entry);
         AX = 0;
         ES = 0;
         AL = Segment0000Globals.Byte9000;
         if (AL != 0) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0041, Signature_0041_mov);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0062, Signature_0062_mov);
             DsGlobals.Byte0042 = 0x77;
-            VerifySpeculativeRunOrFail(biosSegment, 0x0046, SpeculativeRun_0046);
+            VerifySpeculativeRunOrFail(biosSegment, 0x0067, SpeculativeRun_0067);
             AL = 0xFE;
             PicPorts.WritePrimaryData(0xFE);
-            VerifySpeculativeEntryOrFail(biosSegment, 0x004A, Signature_004A_sti);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x006B, Signature_006B_sti);
             InterruptFlag = true;
-            CheckExternalEvents(biosSegment, 0x004B);
-            VerifySpeculativeRunOrFail(biosSegment, 0x004B, SpeculativeRun_004B);
+            CheckExternalEvents(biosSegment, 0x006C);
+            VerifySpeculativeRunOrFail(biosSegment, 0x006C, SpeculativeRun_006C);
             PitPorts.WriteControlWord(0x36);
-            VerifySpeculativeRunOrFail(biosSegment, 0x004F, SpeculativeRun_004F);
+            VerifySpeculativeRunOrFail(biosSegment, 0x0070, SpeculativeRun_0070);
             PitPorts.WriteChannel0Data(0x51);
-            VerifySpeculativeRunOrFail(biosSegment, 0x0053, SpeculativeRun_0053);
+            VerifySpeculativeRunOrFail(biosSegment, 0x0074, SpeculativeRun_0074);
             AL = 0x22;
             PitPorts.WriteChannel0Data(0x22);
             do {
-                CheckExternalEvents(biosSegment, 0x0057);
-                VerifySpeculativeRunOrFail(biosSegment, 0x0057, SpeculativeRun_0057);
-                flagOperand_0057 = DsGlobals.Word0040;
-            } while (flagOperand_0057 == 0);
-            VerifySpeculativeRunOrFail(biosSegment, 0x005E, SpeculativeRun_005E);
-            flagOperand_005E = EsGlobals.Byte9000;
-            if (flagOperand_005E >= 2) {
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0066, Signature_0066_int);
-                throw FailAsUntested("Untested interrupt at F000:0066");
+                CheckExternalEvents(biosSegment, 0x0078);
+                VerifySpeculativeRunOrFail(biosSegment, 0x0078, SpeculativeRun_0078);
+                flagOperand_0078 = DsGlobals.Word0040;
+            } while (flagOperand_0078 == 0);
+            VerifySpeculativeRunOrFail(biosSegment, 0x007F, SpeculativeRun_007F);
+            flagOperand_007F = EsGlobals.Byte9000;
+            if (flagOperand_007F >= 2) {
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0087, Signature_0087_int);
+                throw FailAsUntested("Untested interrupt at F000:0087");
             }
         }
         InterruptFlag = false;
@@ -90,7 +108,7 @@ public partial class CfgGeneratedOverrides {
         CX = 0x0080;
         AX = 0;
         do {
-            CheckExternalEvents(biosSegment, 0x0081);
+            CheckExternalEvents(biosSegment, 0x00A2);
             UInt16[ES, DI] = AX;
             DI += (ushort)(DirectionFlag ? -2 : 2);
             CX--;
@@ -167,6 +185,9 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
 
     /// CS:0x0095, whatever CS holds at the access.
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
+
+    /// CS:0x00A9, whatever CS holds at the access.
+    public byte Byte00A9 { get => _memory.UInt8[Segment, 0x00A9]; set => _memory.UInt8[Segment, 0x00A9] = value; }
 }
 
 // ==== file: Segment0000Globals.cs ====
@@ -237,7 +258,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_D000_0096_D0096Entry;
     private readonly Func<int, Action> unknown_D000_00E8_D00E8_AsmEntry;
     private readonly Func<int, Action> unknown_D000_00E9_D00E9Entry;
-    private readonly Func<int, Action> unknown_F000_0085_F0085Entry;
+    private readonly Func<int, Action> unknown_F000_00A6_F00A6Entry;
+    private readonly Func<int, Action> unknown_F000_00B0_F00B0Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
@@ -268,7 +290,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_D000_0096_D0096Entry = _ => unknown_D000_0096_D0096();
         unknown_D000_00E8_D00E8_AsmEntry = _ => unknown_D000_00E8_D00E8_Asm();
         unknown_D000_00E9_D00E9Entry = _ => unknown_D000_00E9_D00E9();
-        unknown_F000_0085_F0085Entry = _ => unknown_F000_0085_F0085();
+        unknown_F000_00A6_F00A6Entry = _ => unknown_F000_00A6_F00A6();
+        unknown_F000_00B0_F00B0Entry = _ => unknown_F000_00B0_F00B0();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0006, unknown_D000_0006_D0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0017, unknown_D000_0017_D0017Entry, "unknown");
@@ -283,13 +306,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0096, unknown_D000_0096_D0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x00E8, unknown_D000_00E8_D00E8_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x00E9, unknown_D000_00E9_D00E9Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0085, unknown_F000_0085_F0085Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00A6, unknown_F000_00A6_F00A6Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00B0, unknown_F000_00B0_F00B0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
     protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
         (vectorNumber, target.Segment, target.Offset) switch {
-            (0x08, 0xF000, 0x0085) => unknown_F000_0085_F0085Entry,
+            (0x08, 0xF000, 0x00B0) => unknown_F000_00B0_F00B0Entry,
             _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
         };
 
@@ -352,37 +376,37 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xD0];
     private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
-    private static readonly byte?[] Signature_0041_mov = [0xC6, 0x06, 0x42, 0x00, 0x77];
-    private static readonly byte?[] Signature_0046_mov = [0xB0, 0xFE];
-    private static readonly byte?[] Signature_0048_out = [0xE6, 0x21];
-    private static readonly byte?[] Signature_004A_sti = [0xFB];
-    private static readonly byte?[] Signature_004B_mov = [0xB0, 0x36];
-    private static readonly byte?[] Signature_004D_out = [0xE6, 0x43];
-    private static readonly byte?[] Signature_004F_mov = [0xB0, 0x51];
-    private static readonly byte?[] Signature_0051_out = [0xE6, 0x40];
-    private static readonly byte?[] Signature_0053_mov = [0xB0, 0x22];
-    private static readonly byte?[] Signature_0055_out = [0xE6, 0x40];
-    private static readonly byte?[] Signature_0057_cmp = [0x83, 0x3E, 0x40, 0x00, 0x00];
-    private static readonly byte?[] Signature_005C_je = [0x74, 0xF9];
-    private static readonly byte?[] Signature_005E_cmp = [0x26, 0x80, 0x3E, 0x00, 0x90, 0x02];
-    private static readonly byte?[] Signature_0064_jb = [0x72, 0x02];
-    private static readonly byte?[] Signature_0066_int = [0xCD, 0x09];
-    private static readonly byte?[] Signature_0085_mov = [0xC7, 0x06, 0x40, 0x00, 0xA5, 0x5A];
-    private static readonly byte?[] Signature_008B_mov = [0xB0, 0xFF];
-    private static readonly byte?[] Signature_008D_out = [0xE6, 0x21];
-    private static readonly byte?[] Signature_008F_mov = [0xB0, 0x20];
-    private static readonly byte?[] Signature_0091_out = [0xE6, 0x20];
-    private static readonly byte?[] Signature_0093_iret = [0xCF];
+    private static readonly byte?[] Signature_0062_mov = [0xC6, 0x06, 0x42, 0x00, 0x77];
+    private static readonly byte?[] Signature_0067_mov = [0xB0, 0xFE];
+    private static readonly byte?[] Signature_0069_out = [0xE6, 0x21];
+    private static readonly byte?[] Signature_006B_sti = [0xFB];
+    private static readonly byte?[] Signature_006C_mov = [0xB0, 0x36];
+    private static readonly byte?[] Signature_006E_out = [0xE6, 0x43];
+    private static readonly byte?[] Signature_0070_mov = [0xB0, 0x51];
+    private static readonly byte?[] Signature_0072_out = [0xE6, 0x40];
+    private static readonly byte?[] Signature_0074_mov = [0xB0, 0x22];
+    private static readonly byte?[] Signature_0076_out = [0xE6, 0x40];
+    private static readonly byte?[] Signature_0078_cmp = [0x83, 0x3E, 0x40, 0x00, 0x00];
+    private static readonly byte?[] Signature_007D_je = [0x74, 0xF9];
+    private static readonly byte?[] Signature_007F_cmp = [0x26, 0x80, 0x3E, 0x00, 0x90, 0x02];
+    private static readonly byte?[] Signature_0085_jb = [0x72, 0x02];
+    private static readonly byte?[] Signature_0087_int = [0xCD, 0x09];
+    private static readonly byte?[] Signature_00B0_mov = [0xC7, 0x06, 0x40, 0x00, 0xA5, 0x5A];
+    private static readonly byte?[] Signature_00B6_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_00B8_out = [0xE6, 0x21];
+    private static readonly byte?[] Signature_00BA_mov = [0xB0, 0x20];
+    private static readonly byte?[] Signature_00BC_out = [0xE6, 0x20];
+    private static readonly byte?[] Signature_00BE_iret = [0xCF];
 
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
-    private static readonly byte?[][] SpeculativeRun_0046 = [Signature_0046_mov, Signature_0048_out];
-    private static readonly byte?[][] SpeculativeRun_004B = [Signature_004B_mov, Signature_004D_out];
-    private static readonly byte?[][] SpeculativeRun_004F = [Signature_004F_mov, Signature_0051_out];
-    private static readonly byte?[][] SpeculativeRun_0053 = [Signature_0053_mov, Signature_0055_out];
-    private static readonly byte?[][] SpeculativeRun_0057 = [Signature_0057_cmp, Signature_005C_je];
-    private static readonly byte?[][] SpeculativeRun_005E = [Signature_005E_cmp, Signature_0064_jb];
-    private static readonly byte?[][] SpeculativeRun_008B = [Signature_008B_mov, Signature_008D_out];
-    private static readonly byte?[][] SpeculativeRun_008F = [Signature_008F_mov, Signature_0091_out];
+    private static readonly byte?[][] SpeculativeRun_0067 = [Signature_0067_mov, Signature_0069_out];
+    private static readonly byte?[][] SpeculativeRun_006C = [Signature_006C_mov, Signature_006E_out];
+    private static readonly byte?[][] SpeculativeRun_0070 = [Signature_0070_mov, Signature_0072_out];
+    private static readonly byte?[][] SpeculativeRun_0074 = [Signature_0074_mov, Signature_0076_out];
+    private static readonly byte?[][] SpeculativeRun_0078 = [Signature_0078_cmp, Signature_007D_je];
+    private static readonly byte?[][] SpeculativeRun_007F = [Signature_007F_cmp, Signature_0085_jb];
+    private static readonly byte?[][] SpeculativeRun_00B6 = [Signature_00B6_mov, Signature_00B8_out];
+    private static readonly byte?[][] SpeculativeRun_00BA = [Signature_00BA_mov, Signature_00BC_out];
 
 }
 
@@ -508,7 +532,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_D000_0096_D0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(cs1, 0x0096);

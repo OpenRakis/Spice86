@@ -168,6 +168,32 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        254,
+        258,
+        266,
+        275,
+        281,
+        256,
+        260,
+        263,
+        272,
+        279,
+        270,
+        277
+      ],
+      "entries": [
+        {
+          "block": 254,
+          "address": "D000:0096",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
         33
       ],
       "entries": [
@@ -179,7 +205,7 @@
       ]
     },
     {
-      "id": 12,
+      "id": 13,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -197,31 +223,16 @@
       ]
     },
     {
-      "id": 13,
-      "kind": "observed",
-      "name": "unknown",
-      "blocks": [
-        190
-      ],
-      "entries": [
-        {
-          "block": 190,
-          "address": "F000:0080",
-          "kind": "executionContextEntry"
-        }
-      ]
-    },
-    {
       "id": 14,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        201
+        198
       ],
       "entries": [
         {
-          "block": 201,
-          "address": "F000:008F",
+          "block": 198,
+          "address": "F000:009E",
           "kind": "executionContextEntry"
         }
       ]
@@ -231,12 +242,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        212
+        209
       ],
       "entries": [
         {
-          "block": 212,
-          "address": "F000:009E",
+          "block": 209,
+          "address": "F000:00AD",
           "kind": "executionContextEntry"
         }
       ]
@@ -246,14 +257,62 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        220
+      ],
+      "entries": [
+        {
+          "block": 220,
+          "address": "F000:00BC",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        243
+      ],
+      "entries": [
+        {
+          "block": 243,
+          "address": "F000:00BE",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        352
+      ],
+      "entries": [
+        {
+          "block": 352,
+          "address": "F000:00CD",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
         65,
         70,
-        88,
-        97,
-        117,
-        86,
-        113,
-        115,
+        94,
+        90,
+        96,
+        102,
+        111,
+        131,
+        100,
+        127,
+        129,
         64
       ],
       "entries": [
@@ -269,7 +328,7 @@
     {
       "kind": "callOut",
       "fromPartition": 4,
-      "toPartition": 12,
+      "toPartition": 13,
       "fromBlock": 24,
       "toBlock": 25,
       "from": "D000:0063",
@@ -278,15 +337,35 @@
       "callContinuationAddress": "D000:0068"
     },
     {
+      "kind": "alignedReturn",
+      "fromPartition": 11,
+      "toPartition": 19,
+      "fromBlock": 281,
+      "toBlock": 90,
+      "from": "D000:00A9",
+      "target": "F000:0054"
+    },
+    {
       "kind": "callOut",
-      "fromPartition": 12,
-      "toPartition": 11,
+      "fromPartition": 13,
+      "toPartition": 12,
       "fromBlock": 29,
       "toBlock": 33,
       "from": "D000:00ED",
       "target": "D000:00E8",
       "callContinuationBlock": 35,
       "callContinuationAddress": "D000:00F2"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 19,
+      "toPartition": 11,
+      "fromBlock": 94,
+      "toBlock": 254,
+      "from": "F000:0052",
+      "target": "D000:0096",
+      "callContinuationBlock": 90,
+      "callContinuationAddress": "F000:0054"
     }
   ]
 }

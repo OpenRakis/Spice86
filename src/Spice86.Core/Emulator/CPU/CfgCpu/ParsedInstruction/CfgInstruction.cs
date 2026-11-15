@@ -180,8 +180,8 @@ public sealed class CfgInstruction : CfgNode {
 
     /// <summary>
     /// Whether dependents proposed by the speculative explorer are attached to this node and must
-    /// be re-evaluated each time it executes. Set by the explorer; read on the fetch/link hot path
-    /// as a single test that skips the anchor-dependents work for every other instruction.
+    /// be re-evaluated each time it executes. Set by the explorer; read before each execution as a
+    /// single test that skips the anchor-dependents work for every other instruction.
     /// </summary>
     public bool HasDiscoveryDependents { get; internal set; }
 

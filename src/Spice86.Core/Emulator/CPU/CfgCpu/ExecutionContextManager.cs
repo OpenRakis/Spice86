@@ -197,7 +197,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     /// <param name="vector">The interrupt vector the handler was installed on.</param>
     /// <param name="handler">The installed handler's entry address.</param>
     /// <param name="trigger">The <c>int 21h</c> node that invoked the install; pending candidates
-    /// are keyed on it and retried on each install from the same node.</param>
+    /// are keyed on it and retried at the start of each of its executions.</param>
     public void ExploreInstalledHandler(byte vector, SegmentedAddress handler, CfgInstruction? trigger) {
         if (!IsMachineInvocableVector(vector)) {
             _cfgNodeFeeder.ExploreInstalledHandler(handler, trigger);

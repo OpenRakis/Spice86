@@ -7,9 +7,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Spice86.Tests.AsmFixtures;
 
@@ -120,6 +123,27 @@ public sealed class SpeculativeCfgTest {
             AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed),
             [AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed),
              AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
+    /// The p2 section of speculative_set_vector: a handler installed while its image bytes are
+    /// overwritten pends on the shared int 21h node; the bytes are restored and the same int node
+    /// executes again with AH=30h. The pending candidate must decode at that execution, before the
+    /// program halts: a check after the run would only see the dump-time completion retry and could
+    /// not tell a per-execution retry from one that never fires while the program runs. The
+    /// breakpoint sits on the hlt that ends the observed run (F000:00A5 in the fixture layout).
+    /// </summary>
+    [Fact]
+    public void PendingInstallDecodesAtTriggerExecutionBeforeHalt() {
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Observed);
+        AsmRunSettings settings = fixture.Settings with {
+            ConfigureMachine = machine => machine.EmulatorBreakpointsManager.ToggleBreakPoint(
+                new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, 0xF00A5,
+                    (_, _) => Assert.NotEmpty(
+                        machine.CfgCpu.CfgNodeFeeder.NodeIndex.GetAtAddress(new SegmentedAddress(0xF000, 0x00A9))),
+                    isRemovedOnTrigger: true), true)
+        };
+        using AsmFixtureRun run = AsmFixtureRunner.RunSettings(settings, JitMode.InterpretedOnly);
     }
 
     /// <summary>

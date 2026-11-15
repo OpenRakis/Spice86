@@ -82,11 +82,7 @@ public class CfgNodeFeeder {
         InstructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
 
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
-        WatchedPointerCells.EvaluateQueued(executionContext.LastExecuted as CfgInstruction);
         ICfgNode toExecute = DetermineToExecute(executionContext);
-        if (toExecute is CfgInstruction { HasDiscoveryDependents: true } anchor) {
-            InstructionsFeeder.EvaluateAnchorDependents(anchor);
-        }
         ICfgNode? lastExecuted = executionContext.LastExecuted;
         if (lastExecuted is not { CanHaveMoreSuccessors: true }) {
             return toExecute;

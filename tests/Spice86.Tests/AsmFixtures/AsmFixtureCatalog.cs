@@ -627,8 +627,10 @@ internal static class AsmFixtureCatalog {
     }
 
     /// <summary>Runs speculative_set_vector: on the observed arm the program installs an IRQ0
-    /// handler with int 21h AH=25h but never programs the PIT; on the unobserved arm the PIT fires
-    /// and the handler writes its marker through the dynamically registered entry point.</summary>
+    /// handler with int 21h AH=25h but never programs the PIT, then installs a second handler while
+    /// its bytes are overwritten, restores them, and executes the same int node again so the
+    /// pending candidate retries at that execution; on the unobserved arm the PIT fires and the
+    /// first handler writes its marker through the dynamically registered entry point.</summary>
     public static AsmFixture SpeculativeSetVector(SpeculativeArm arm) {
         AsmRunSettings settings = new() {
             BinName = "speculative_set_vector",
@@ -648,9 +650,11 @@ internal static class AsmFixtureCatalog {
     }
 
     /// <summary>Runs speculative_ivt_write: on the observed arm the program installs two IRQ0
-    /// handlers straight into the IVT (the second store writes the same segment value) and
-    /// half-writes vector 9, but never programs the PIT; on the unobserved arm the PIT fires and
-    /// the second handler writes its marker through the dynamically registered entry point.</summary>
+    /// handlers straight into the IVT (the second store writes the same segment value),
+    /// half-writes vector 9, then installs IRQ0 twice more in a hot-path loop ending on an
+    /// int 21h node, but never programs the PIT; on the unobserved arm the PIT fires and the
+    /// loop's second handler writes its markers through the dynamically registered entry
+    /// point.</summary>
     public static AsmFixture SpeculativeIvtWrite(SpeculativeArm arm) {
         AsmRunSettings settings = new() {
             BinName = "speculative_ivt_write",
@@ -666,7 +670,7 @@ internal static class AsmFixtureCatalog {
             ConfigureMachine = machine => machine.Memory.UInt8[0, 0x9000] = 0x01,
             VariantName = "unobserved"
         };
-        return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x5AA5), (0x42, 1, 0x77)));
+        return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x5AA5), (0x42, 1, 0x77), (0x44, 2, 0x0B17)));
     }
 
     /// <summary>Runs speculative_dump_retry on the observed arm: an IRQ0 handler installed while
