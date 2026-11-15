@@ -117,6 +117,14 @@ public class InstructionsFeeder : IClearable {
         _speculativeExplorer?.EvaluateAnchorDependents(anchor);
 
     /// <summary>
+    /// Dump-time completion: retries every pending data-sourced candidate and evaluates every
+    /// half-written far watched cell on the memory state as it is now. No-op when speculative
+    /// exploration is disabled.
+    /// </summary>
+    internal void RetryAllPending() =>
+        _speculativeExplorer?.RetryAllPending();
+
+    /// <summary>
     /// Rebuilds the speculative call-return evidence index after a CFG graph reload and re-runs the
     /// call-continuation rule on every reloaded call node. No-op when speculative exploration is
     /// disabled.

@@ -345,6 +345,19 @@ public class SpeculativeExplorer {
         }
     }
 
+    /// <summary>
+    /// Dump-time completion: retries every data-sourced candidate still pending on its trigger
+    /// (the trust check decodes only those whose bytes hold their loaded value again; the rest
+    /// stay pending), and evaluates every far watched cell whose second word never came with the
+    /// value in memory now, through its dependents.
+    /// </summary>
+    internal void RetryAllPending() {
+        _watchedCells.EvaluatePartiallyWritten();
+        foreach (CfgInstruction trigger in _pending.Keys.ToList()) {
+            RetryPending(trigger);
+        }
+    }
+
     private void TryEnqueueCandidate(CfgInstruction? trigger, DiscoveryCandidate candidate, Queue<ExploreItem> worklist) {
         if (IsDataSource(candidate.Source) && IsRefused(candidate.Target)) {
             return;

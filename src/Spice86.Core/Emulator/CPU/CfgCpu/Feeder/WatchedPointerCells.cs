@@ -82,6 +82,25 @@ public sealed class WatchedPointerCells {
         _cells.Where(cell => cell.PartiallyWritten).ToList();
 
     /// <summary>
+    /// Dump-time completion: evaluates every cell still waiting for a second write (a far pointer
+    /// whose other word never came) on the value memory holds now, with no trigger instruction.
+    /// The read pairs the newly written word with the old value of the missing one; dependents
+    /// apply the same trust checks as boundary evaluations, so a pointer that mixes a program
+    /// write with an unrelated previous owner decodes only when its target bytes are trusted.
+    /// </summary>
+    internal void EvaluatePartiallyWritten() {
+        foreach (WatchedPointerCell cell in PartiallyWrittenCells) {
+            cell.WrittenWords = 0;
+            uint value = ReadValue(cell.Start, cell.Size);
+            if (value == cell.LastValue) {
+                continue;
+            }
+            cell.LastValue = value;
+            cell.Dependent.OnValue(value, null);
+        }
+    }
+
+    /// <summary>
     /// Re-evaluates every queued cell whose words were all written since its last evaluation, then
     /// reports the ones whose value changed. Called once per instruction boundary; costs one
     /// emptiness test when nothing is queued.

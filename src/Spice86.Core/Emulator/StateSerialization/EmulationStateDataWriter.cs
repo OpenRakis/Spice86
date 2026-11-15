@@ -118,6 +118,10 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
                             Path.GetFileName(CfgBlocksFile), Path.GetFileName(CfgPartitionsFile), Path.GetFileName(CfgReloadFile), Path.GetFileName(ExecutionFlowFile));
                     }
                 } else {
+                    // Last chance for pending speculative discovery: a candidate whose bytes
+                    // only regained their loaded value after its trigger last fired, and a
+                    // half-written far pointer cell, are re-evaluated before the snapshot.
+                    _executionContextManager.CompleteSpeculativeDiscovery();
                     _progress.BeginPhase(DumpPhase.CfgSnapshot);
                     CfgCpuSnapshot cfgCpuSnapshot = _cfgCpuSnapshotBuilder.Build(_executionContextManager, null);
                     _progress.EndPhase();

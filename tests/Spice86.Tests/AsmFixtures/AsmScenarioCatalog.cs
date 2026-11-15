@@ -583,6 +583,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_set_vector", () => AsmFixtureCatalog.SpeculativeSetVector(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_ivt_write", () => AsmFixtureCatalog.SpeculativeIvtWrite(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_ivt_write", () => AsmFixtureCatalog.SpeculativeIvtWrite(SpeculativeArm.Unobserved)),
+            AsmScenario.FromFixture("speculative_dump_retry", () => AsmFixtureCatalog.SpeculativeDumpRetry()),
             AsmScenario.FromFixture("speculative_anchor_values", () => AsmFixtureCatalog.SpeculativeAnchorValues(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_anchor_values", () => AsmFixtureCatalog.SpeculativeAnchorValues(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode),

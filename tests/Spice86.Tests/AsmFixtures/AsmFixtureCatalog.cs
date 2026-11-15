@@ -661,6 +661,20 @@ internal static class AsmFixtureCatalog {
         return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x5AA5), (0x42, 1, 0x77)));
     }
 
+    /// <summary>Runs speculative_dump_retry on the observed arm: an IRQ0 handler installed while
+    /// its bytes were untrusted stays pending, is restored, and decodes only at dump time; a
+    /// vector whose target bytes stay changed is never decoded, and a half-written IVT far
+    /// pointer is evaluated at dump time but refused for lack of a program trigger.</summary>
+    public static AsmFixture SpeculativeDumpRetry() {
+        AsmRunSettings settings = new() {
+            BinName = "speculative_dump_retry",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000
+        };
+        return ResultRegionFixture(settings, ResultRegion(0x4A, (0x40, 2, 0x0001)));
+    }
+
     /// <summary>Runs speculative_anchor_values: each dispatcher's call arm stays untaken during
     /// discovery, so the indirect call sites are registered as dependents of their anchor. On the
     /// unobserved arm every call arm runs: callbacks are dispatched through the register value,

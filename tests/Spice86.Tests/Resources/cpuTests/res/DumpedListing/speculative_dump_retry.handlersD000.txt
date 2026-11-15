@@ -1,0 +1,82 @@
+D000:0006 callback 8
+D000:000A push DS
+D000:000B push AX
+D000:000C push DX
+D000:000D int 0x1C
+D000:000F callback 0x0101
+D000:0013 pop DX
+D000:0014 pop AX
+D000:0015 pop DS
+D000:0016 iret
+D000:0017 callback 9
+D000:001B iret
+D000:005D callback 0x0070
+D000:0061 iret
+D000:0063 call far D000:00E9
+D000:0068 callback 0x0074
+D000:006C iret
+D000:006D callback 0x0104
+D000:0071 iret
+D000:0072 callback 0x0105
+D000:0076 iret
+D000:0077 callback 0x0106
+D000:007B iret
+D000:007C callback 0x0107
+D000:0080 iret
+D000:0081 callback 0x0108
+D000:0085 iret
+D000:0086 callback 0x0109
+D000:008A iret
+D000:0096 cmp AH,7
+D000:0099 je short 0x00AA
+D000:009B cmp AH,8
+D000:009E je short 0x00AA
+D000:00A0 cmp AH,0x0A
+D000:00A3 je short 0x00AA
+D000:00A5 callback 0x0021
+D000:00A9 iret
+D000:00AA sti
+D000:00AB callback 0x010A
+D000:00AF cmp byte ptr CS:[0x0095],0
+D000:00B5 jne short 0x00BB
+D000:00B7 int 0x28
+D000:00B9 jmp short 0x00AA
+D000:00BB callback 0x010B
+D000:00BF iret
+D000:00E8 ret far
+D000:00E9 callback 0x010C
+D000:00ED call far D000:00E8
+D000:00F2 callback 0x010D
+D000:00F6 ret far
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A cli
+F000:000B mov AL,0xFF
+F000:000D out 0x21,AL
+F000:000F xor AX,AX
+F000:0011 mov ES,AX
+F000:0013 push DS
+F000:0014 push CS
+F000:0015 pop DS
+F000:0016 mov byte ptr CS:[0x0053],0x90
+F000:001C mov AH,0x25
+F000:001E mov AL,8
+F000:0020 mov DX,0x0053
+F000:0023 int 0x21
+F000:0025 mov byte ptr CS:[0x0053],0xC7
+F000:002B mov byte ptr CS:[0x005A],0
+F000:0031 mov AH,0x25
+F000:0033 mov AL,0x60
+F000:0035 mov DX,0x005A
+F000:0038 int 0x21
+F000:003A pop DS
+F000:003B mov word ptr ES:[0x0024],0x005B
+F000:0042 mov word ptr DS:[0x0040],1
+F000:0048 mov word ptr SS:[0x0600],SP
+F000:004D mov word ptr SS:[0x0602],SS
+F000:0052 hlt
+F000:0053 mov word ptr DS:[0x0040],0x00AA
+F000:0059 iret
+F000:FFF0 jmp short 0

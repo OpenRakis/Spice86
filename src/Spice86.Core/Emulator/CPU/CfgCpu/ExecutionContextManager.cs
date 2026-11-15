@@ -216,6 +216,14 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         }
     }
 
+    /// <summary>
+    /// Dump-time completion of speculative discovery: retries every data-sourced candidate still
+    /// pending on its trigger and evaluates every half-written far watched cell on the memory
+    /// state as it is now. Called before the CFG snapshot so a handler whose bytes the program
+    /// restored to their loaded values, or a far pointer completed late, still lands in the dump.
+    /// </summary>
+    public void CompleteSpeculativeDiscovery() => _cfgNodeFeeder.RetryAllPending();
+
     private bool IsMachineInvocableVector(byte vector) =>
         _installedInterruptHandlers.HardwareVectorNumbers.Contains(vector)
         || _installedInterruptHandlers.ChainedVectorNumbers.Contains(vector)

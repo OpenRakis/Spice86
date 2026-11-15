@@ -64,6 +64,10 @@ public class CfgNodeFeeder {
     internal void ExploreInstalledHandler(SegmentedAddress handler, CfgInstruction? trigger) =>
         InstructionsFeeder.ExploreInstalledHandler(handler, trigger);
 
+    /// <summary>Forwards <see cref="InstructionsFeeder.RetryAllPending"/>.</summary>
+    internal void RetryAllPending() =>
+        InstructionsFeeder.RetryAllPending();
+
     /// <summary>Forwards the feeder's <see cref="InstructionsFeeder.SpeculativeSeedCreated"/>.</summary>
     internal event Action<CfgInstruction>? SpeculativeSeedCreated {
         add => InstructionsFeeder.SpeculativeSeedCreated += value;
