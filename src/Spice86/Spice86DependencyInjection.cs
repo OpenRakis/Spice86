@@ -355,9 +355,11 @@ public class Spice86DependencyInjection : IDisposable {
         CfgIdAllocator = cfgIdAllocator;
         LoadedImageRegistry loadedImageRegistry = new();
         ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
+        InstalledInterruptHandlers installedInterruptHandlers =
+            new(dualPic.EnumerateHardwareInterruptVectorNumbers());
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, changedMemoryMap, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, changedMemoryMap, installedInterruptHandlers, interruptVectorTable, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CfgCpu created...");
@@ -482,8 +484,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         ListingExporter listingExporter = new(cfgCpu, nodeToString);
 
-        InstalledInterruptHandlers installedInterruptHandlers =
-            new(dualPic.EnumerateHardwareInterruptVectorNumbers());
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
             functionCatalogue, loggerState, installedInterruptHandlers);
         AssemblyRoutineInstaller assemblyRoutineInstaller =

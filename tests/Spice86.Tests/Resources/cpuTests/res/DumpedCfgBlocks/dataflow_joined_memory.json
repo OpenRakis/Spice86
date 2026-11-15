@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0106",
-  "lastExecutedBlockId": 167,
+  "lastExecutedBlockId": 161,
   "blocks": [
     {
-      "id": 167,
+      "id": 161,
       "entry": "F000:00FC",
       "term": "F000:0106",
       "pred": [
-        143
+        136
       ],
       "succ": [],
       "asm": [
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "id": 143,
+      "id": 136,
       "entry": "F000:00B3",
       "term": "F000:00F8",
       "pred": [
@@ -43,8 +43,8 @@
         129
       ],
       "succ": [
-        165,
-        167
+        159,
+        161
       ],
       "asm": [
         "8B160208|mov DX,word ptr DS:[0x0802]",
@@ -79,7 +79,7 @@
         2
       ],
       "succ": [
-        165
+        159
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -100,12 +100,12 @@
       ]
     },
     {
-      "id": 165,
+      "id": 159,
       "entry": "F000:002A",
       "term": "F000:009A",
       "pred": [
         3,
-        143
+        136
       ],
       "succ": [
         117,
@@ -156,37 +156,16 @@
       ]
     },
     {
-      "id": 117,
-      "entry": "F000:0107",
-      "term": "F000:0117",
-      "pred": [
-        129,
-        165
-      ],
-      "succ": [
-        129,
-        143
-      ],
-      "asm": [
-        "89471C|mov word ptr DS:[BX\u002B0x1C],AX",
-        "8B5712|mov DX,word ptr DS:[BX\u002B0x12]",
-        "89571E|mov word ptr DS:[BX\u002B0x1E],DX",
-        "8B164A00|mov DX,word ptr DS:[0x004A]",
-        "895722|mov word ptr DS:[BX\u002B0x22],DX",
-        "CF|iret"
-      ]
-    },
-    {
       "id": 129,
       "entry": "F000:009C",
       "term": "F000:00B1",
       "pred": [
         117,
-        165
+        159
       ],
       "succ": [
         117,
-        143
+        136
       ],
       "asm": [
         "8B160208|mov DX,word ptr DS:[0x0802]",
@@ -196,6 +175,27 @@
         "A10008|mov AX,word ptr DS:[0x0800]",
         "A34800|mov word ptr DS:[0x0048],AX",
         "CD64|int 0x64"
+      ]
+    },
+    {
+      "id": 117,
+      "entry": "F000:0107",
+      "term": "F000:0117",
+      "pred": [
+        129,
+        159
+      ],
+      "succ": [
+        129,
+        136
+      ],
+      "asm": [
+        "89471C|mov word ptr DS:[BX\u002B0x1C],AX",
+        "8B5712|mov DX,word ptr DS:[BX\u002B0x12]",
+        "89571E|mov word ptr DS:[BX\u002B0x1E],DX",
+        "8B164A00|mov DX,word ptr DS:[0x004A]",
+        "895722|mov word ptr DS:[BX\u002B0x22],DX",
+        "CF|iret"
       ]
     }
   ],

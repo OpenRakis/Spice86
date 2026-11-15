@@ -31,6 +31,7 @@ using System.Linq;
 internal sealed class CfgGraphReloader {
     private readonly State _state;
     private readonly ExecutionContextManager _executionContextManager;
+    private readonly InstructionsFeeder _instructionsFeeder;
     private readonly PreviousInstructions _previousInstructions;
     private readonly SequentialIdAllocator _idAllocator;
     private readonly CfgNodeExecutionCompiler _executionCompiler;
@@ -40,7 +41,8 @@ internal sealed class CfgGraphReloader {
         _state = state;
         _executionCompiler = executionCompiler;
         _executionContextManager = cfgCpu.ExecutionContextManager;
-        _previousInstructions = cfgCpu.CfgNodeFeeder.InstructionsFeeder.PreviousInstructions;
+        _instructionsFeeder = cfgCpu.CfgNodeFeeder.InstructionsFeeder;
+        _previousInstructions = _instructionsFeeder.PreviousInstructions;
         _nodeIndex = cfgCpu.CfgNodeFeeder.NodeIndex;
         _idAllocator = idAllocator;
     }
@@ -101,7 +103,12 @@ internal sealed class CfgGraphReloader {
         // 8. Restore the poison set (addresses proven byte-unstable by prior runs).
         RestorePoisonSet(dump);
 
-        // 9. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
+        // 9. Rebuild the call-return evidence index from the reloaded typed edges and re-run the
+        //    call-continuation rule on every reloaded call node, so continuations are wired again
+        //    without re-executing the program.
+        _instructionsFeeder.RebuildCallReturnEvidence(nodesById.Values);
+
+        // 10. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
     }
 
     private void RestoreEdges(CfgReloadDump dump, Dictionary<int, ICfgNode> nodesById) {

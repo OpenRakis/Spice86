@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -29,11 +30,14 @@ public class CfgNodeFeeder {
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
-        bool enableSpeculativeExploration, ChangedMemoryMap changedMemoryMap, ILogger loggerService) {
+        bool enableSpeculativeExploration, ChangedMemoryMap changedMemoryMap,
+        InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable,
+        ILogger loggerService) {
         _state = state;
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
-            enableSpeculativeExploration ? _nodeLinker : null, changedMemoryMap, loggerService);
+            enableSpeculativeExploration ? _nodeLinker : null, changedMemoryMap,
+            installedInterruptHandlers, interruptVectorTable, loggerService);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }

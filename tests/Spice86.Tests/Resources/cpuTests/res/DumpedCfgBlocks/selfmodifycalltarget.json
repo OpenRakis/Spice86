@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0027",
-  "lastExecutedBlockId": 67,
+  "lastExecutedBlockId": 62,
   "blocks": [
     {
-      "id": 67,
+      "id": 62,
       "entry": "F000:0027",
       "term": "F000:0027",
       "pred": [
-        58,
-        61
+        59,
+        64
       ],
       "succ": [],
       "asm": [
@@ -34,34 +34,34 @@
       ]
     },
     {
-      "id": 61,
+      "id": 59,
+      "entry": "F000:0022",
+      "term": "F000:0022",
+      "pred": [
+        44,
+        48
+      ],
+      "succ": [
+        60,
+        62
+      ],
+      "asm": [
+        "9A280000F0|call far F000:0028"
+      ]
+    },
+    {
+      "id": 64,
       "entry": "F000:003A",
       "term": "F000:003F",
       "pred": [
-        59
+        60
       ],
       "succ": [
-        67
+        62
       ],
       "asm": [
         "C6061200CC|mov byte ptr DS:[0x0012],0xCC",
         "CB|ret far"
-      ]
-    },
-    {
-      "id": 58,
-      "entry": "F000:0022",
-      "term": "F000:0022",
-      "pred": [
-        51,
-        52
-      ],
-      "succ": [
-        59,
-        67
-      ],
-      "asm": [
-        "9A280000F0|call far F000:0028"
       ]
     },
     {
@@ -86,28 +86,28 @@
       ]
     },
     {
-      "id": 59,
+      "id": 60,
       "entry": "F000:0028",
       "term": "F000:0028",
       "pred": [
-        58
+        59
       ],
       "succ": [
-        61
+        64
       ],
       "asm": [
         "EA3A0000F0|jmp far F000:003A"
       ]
     },
     {
-      "id": 52,
+      "id": 48,
       "entry": "F000:0050",
       "term": "F000:0057",
       "pred": [
-        51
+        44
       ],
       "succ": [
-        58
+        59
       ],
       "asm": [
         "26C70629003A00|mov word ptr ES:[0x0029],0x003A",
@@ -115,16 +115,16 @@
       ]
     },
     {
-      "id": 51,
+      "id": 44,
       "entry": "F000:001F",
       "term": "F000:001F",
       "pred": [
         41,
-        44
+        46
       ],
       "succ": [
-        52,
-        58
+        48,
+        59
       ],
       "asm": [
         "E82E00|call near 0x0050"
@@ -162,21 +162,6 @@
       ]
     },
     {
-      "id": 44,
-      "entry": "F000:0034",
-      "term": "F000:0039",
-      "pred": [
-        42
-      ],
-      "succ": [
-        51
-      ],
-      "asm": [
-        "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
-        "CB|ret far"
-      ]
-    },
-    {
       "id": 41,
       "entry": "F000:001A",
       "term": "F000:001A",
@@ -186,10 +171,25 @@
       ],
       "succ": [
         42,
-        51
+        44
       ],
       "asm": [
         "9A280000F0|call far F000:0028"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:0034",
+      "term": "F000:0039",
+      "pred": [
+        42
+      ],
+      "succ": [
+        44
+      ],
+      "asm": [
+        "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
+        "CB|ret far"
       ]
     },
     {
@@ -232,7 +232,7 @@
         41
       ],
       "succ": [
-        44
+        46
       ],
       "asm": [
         "EA340000F0|jmp far F000:0034"

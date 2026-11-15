@@ -81,11 +81,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        128
+        126
       ],
       "entries": [
         {
-          "block": 128,
+          "block": 126,
           "address": "F000:0098",
           "kind": "functionEntry"
         }
@@ -123,8 +123,8 @@
         95,
         107,
         118,
-        125,
-        135,
+        122,
+        136,
         2
       ],
       "entries": [
@@ -221,7 +221,7 @@
       "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 6,
       "toPartition": 7,
-      "fromBlock": 128,
+      "fromBlock": 126,
       "toBlock": 103,
       "from": "F000:0098",
       "target": "F000:009A"
@@ -249,7 +249,7 @@
       "fromPartition": 7,
       "toPartition": 8,
       "fromBlock": 103,
-      "toBlock": 125,
+      "toBlock": 122,
       "from": "F000:009B",
       "target": "F000:0043"
     },
@@ -258,7 +258,7 @@
       "fromPartition": 7,
       "toPartition": 8,
       "fromBlock": 103,
-      "toBlock": 135,
+      "toBlock": 136,
       "from": "F000:009B",
       "target": "F000:0048"
     },
@@ -321,11 +321,11 @@
       "kind": "callOut",
       "fromPartition": 8,
       "toPartition": 6,
-      "fromBlock": 125,
-      "toBlock": 128,
+      "fromBlock": 122,
+      "toBlock": 126,
       "from": "F000:0045",
       "target": "F000:0098",
-      "callContinuationBlock": 135,
+      "callContinuationBlock": 136,
       "callContinuationAddress": "F000:0048"
     },
     {
@@ -347,7 +347,7 @@
       "toBlock": 103,
       "from": "F000:0040",
       "target": "F000:009A",
-      "callContinuationBlock": 125,
+      "callContinuationBlock": 122,
       "callContinuationAddress": "F000:0043"
     },
     {

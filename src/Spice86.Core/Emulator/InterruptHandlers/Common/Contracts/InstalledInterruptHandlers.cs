@@ -16,6 +16,7 @@ public sealed class InstalledInterruptHandlers {
     private readonly HashSet<byte> _hardwareVectorNumbers;
     private readonly List<(IInterruptHandler Handler, SegmentedAddress Address)> _installed = new();
     private readonly Dictionary<byte, int> _installedIndexByVector = new();
+    private readonly HashSet<SegmentedAddress> _installedAddresses = new();
 
     /// <summary>
     /// Initializes a new instance.
@@ -66,7 +67,15 @@ public sealed class InstalledInterruptHandlers {
                 $"A handler is already installed on interrupt vector 0x{vector:X2}");
         }
         _installed.Add((handler, address));
+        _installedAddresses.Add(address);
     }
+
+    /// <summary>
+    /// Returns whether <paramref name="address"/> is the entry stub of a handler installed by the
+    /// emulator, whatever its vector. Compare against an address read from the IVT to decide whether
+    /// a software interrupt still targets emulator code.
+    /// </summary>
+    public bool IsInstalledHandler(SegmentedAddress address) => _installedAddresses.Contains(address);
 
     /// <summary>
     /// Returns the address the entry stub of the handler installed on

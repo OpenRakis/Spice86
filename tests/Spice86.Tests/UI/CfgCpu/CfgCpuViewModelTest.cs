@@ -20,6 +20,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -88,7 +89,8 @@ public class CfgCpuViewModelTest : IDisposable {
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
             _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false, false);
             SequentialIdAllocator sharedIdAllocator = new();
-            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false, new ChangedMemoryMap(Memory, memoryBreakpoints, new LoadedImageRegistry()), _loggerService);
+            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false, new ChangedMemoryMap(Memory, memoryBreakpoints, new LoadedImageRegistry()),
+                new InstalledInterruptHandlers([]), new InterruptVectorTable(Memory), _loggerService);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,

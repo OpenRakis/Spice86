@@ -89,7 +89,7 @@
       "AluCalls+StatusFlagReads": 4,
       "BookkeepingCalls": 0,
       "Casts": 1,
-      "CheckExternalEvents": 14,
+      "CheckExternalEvents": 15,
       "GotoStatements": 0,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 2,

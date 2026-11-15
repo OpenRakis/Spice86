@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -71,18 +72,26 @@ public class SpeculativeExplorer {
     private readonly NodeLinker _nodeLinker;
     private readonly ChangedMemoryMap _changedMemoryMap;
     private readonly ILogger _loggerService;
+    private readonly InstalledInterruptHandlers _installedInterruptHandlers;
+    private readonly InterruptVectorTable _interruptVectorTable;
+    private readonly CalleeReturnEvidence _calleeReturnEvidence = new();
     private readonly Dictionary<CfgInstruction, List<DiscoveryCandidate>> _pending = new();
     private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
+    private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
-        ChangedMemoryMap changedMemoryMap, ILogger loggerService) {
+        ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
+        InterruptVectorTable interruptVectorTable, ILogger loggerService) {
         _memory = memory;
         _instructionParser = instructionParser;
         _nodeIndex = nodeIndex;
         _nodeLinker = nodeLinker;
         _changedMemoryMap = changedMemoryMap;
+        _installedInterruptHandlers = installedInterruptHandlers;
+        _interruptVectorTable = interruptVectorTable;
         _loggerService = loggerService;
+        _nodeLinker.CallReturnLinked += OnCallReturnLinked;
     }
 
     /// <summary>
@@ -95,6 +104,9 @@ public class SpeculativeExplorer {
     public void ExploreFrom(CfgInstruction observed) {
         Queue<ExploreItem> worklist = new();
         EnqueueStaticSuccessors(observed, worklist, followContinuations: false);
+        if (observed.IsCall) {
+            TryExploreCallContinuation(observed, worklist);
+        }
         Drain(worklist);
     }
 
@@ -310,12 +322,14 @@ public class SpeculativeExplorer {
     private void EnqueueSuccessorsForNode(CfgInstruction node, Queue<ExploreItem> worklist, bool followContinuations) {
         if (node.IsCall) {
             // Call or INT: static successors are callees (enqueued untrusted, always Normal edges).
-            // Continuation is only enqueued if under trust.
+            // Continuation is only enqueued if under trust, or when the callee is known to return.
             foreach (SegmentedAddress successor in node.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
                 worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null));
             }
             if (followContinuations) {
-                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations);
+                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static);
+            } else {
+                TryExploreCallContinuation(node, worklist);
             }
             return;
         }
@@ -328,20 +342,200 @@ public class SpeculativeExplorer {
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.
         // Only callback instructions have a meaningful memory continuation; follow it under trust.
         if (followContinuations && node.MaxSuccessorsCount is null && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
-            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations);
+            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static);
         }
     }
 
     /// <summary>
-    /// Enqueues the call/int continuation address (NextInMemoryAddress32) as a CallToReturn item.
-    /// The continuation address is computed from instruction length, never by decoding the operand.
+    /// Records one observed call-to-return-target link in <see cref="CalleeReturnEvidence"/> for the
+    /// given call node and explicit callee entry, then drains the call sites pending on that callee
+    /// when it becomes known to return for the first time.
     /// </summary>
-    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations) {
+    internal void RecordCallReturnEvidence(CfgInstruction call, SegmentedAddress calleeEntry, bool aligned) {
+        if (_calleeReturnEvidence.Record(calleeEntry, aligned)) {
+            DrainPendingCallSites(calleeEntry);
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the return evidence index from a reloaded graph and re-runs the call-continuation
+    /// rule on every reloaded call node, so continuations that a dump contains only as evidence
+    /// are wired again without re-executing the program. Called once at the end of
+    /// <c>CfgGraphReloader.Reload</c>.
+    /// </summary>
+    public void RebuildReturnEvidence(IEnumerable<ICfgNode> nodes) {
+        List<CfgInstruction> callNodes = nodes.OfType<CfgInstruction>().Where(node => node.IsCall).ToList();
+        foreach (CfgInstruction callNode in callNodes) {
+            SegmentedAddress? callee = CalleeEntry(callNode);
+            if (callee is null) {
+                continue;
+            }
+            // Speculative wiring provenance is not reloaded: only edges landing on a non-speculative
+            // target are observed evidence.
+            foreach ((InstructionSuccessorType type, bool aligned) in ReturnEdgeTypes) {
+                if (!callNode.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? targets)) {
+                    continue;
+                }
+                if (targets.Any(target => !target.IsSpeculative)) {
+                    _calleeReturnEvidence.Record(callee.Value, aligned);
+                }
+            }
+        }
+        Queue<ExploreItem> worklist = new();
+        foreach (CfgInstruction callNode in callNodes) {
+            TryExploreCallContinuation(callNode, worklist);
+        }
+        Drain(worklist);
+    }
+
+    private static readonly (InstructionSuccessorType Type, bool Aligned)[] ReturnEdgeTypes = [
+        (InstructionSuccessorType.CallToReturn, true),
+        (InstructionSuccessorType.CallToMisalignedReturn, false),
+        (InstructionSuccessorType.CallToRedirectedReturn, false)];
+
+    private void OnCallReturnLinked(CfgInstruction call, InstructionSuccessorType type) {
+        bool? aligned = type switch {
+            InstructionSuccessorType.CallToReturn => true,
+            InstructionSuccessorType.CallToMisalignedReturn => false,
+            InstructionSuccessorType.CallToRedirectedReturn => false,
+            _ => null
+        };
+        if (aligned is null) {
+            return;
+        }
+        SegmentedAddress? callee = CalleeEntry(call);
+        if (callee is not null) {
+            RecordCallReturnEvidence(call, callee.Value, aligned.Value);
+        }
+    }
+
+    /// <summary>
+    /// The entry address of the callee this call or int node transfers to: the single static
+    /// successor of a direct call, or the IVT entry of a software interrupt read from memory at
+    /// the moment the fact is needed. Calls with no statically-known target are out of scope.
+    /// </summary>
+    private SegmentedAddress? CalleeEntry(CfgInstruction callNode) {
+        if (callNode.StaticSuccessorAddresses.Count == 1) {
+            return callNode.StaticSuccessorAddresses[0];
+        }
+        if (TryGetInterruptVector(callNode, out byte vector)) {
+            return _interruptVectorTable[vector];
+        }
+        return null;
+    }
+
+    private static bool TryGetInterruptVector(CfgInstruction node, out byte vector) {
+        vector = node.OpcodeField.Value switch {
+            0xCC => 3,
+            0xCE => 4,
+            0xCD => node.FieldsInOrder.OfType<InstructionField<byte>>().LastOrDefault()?.Value ?? 0,
+            _ => 0
+        };
+        return node.OpcodeField.Value is 0xCC or 0xCD or 0xCE;
+    }
+
+    /// <summary>
+    /// Enqueues the call/int continuation when the callee is known to return, or records the call
+    /// node pending on its callee entry so it is retried when aligned return evidence appears.
+    /// Nodes that already carry a CallToReturn successor or left the index are skipped.
+    /// </summary>
+    private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist) {
+        if (!_nodeIndex.Contains(callNode) || HasCallToReturnSuccessor(callNode)) {
+            return;
+        }
+        if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+        } else if (callee is not null) {
+            AddPendingCallSite(callee.Value, callNode);
+        }
+    }
+
+    private bool IsCalleeKnownToReturn(CfgInstruction callNode, out SegmentedAddress? callee) {
+        callee = CalleeEntry(callNode);
+        if (callee is null) {
+            return false;
+        }
+        if (TryGetInterruptVector(callNode, out byte vector)
+            && _installedInterruptHandlers.IsInstalledHandler(callee.Value)) {
+            // An int that still targets an emulator-installed handler returns, except the
+            // DOS termination services.
+            if (vector is 0x20 or 0x27) {
+                return false;
+            }
+            return vector != 0x21 || !IsDosExitMovPredecessor(callNode);
+        }
+        return _calleeReturnEvidence.IsKnownToReturn(callee.Value);
+    }
+
+    /// <summary>
+    /// True when the single predecessor of <paramref name="node"/> inside its own block is a
+    /// <c>mov ah, imm8</c> or <c>mov ax, imm16</c> loading a DOS exit function (00h, 31h, 4Ch) into
+    /// AH, the canonical setup of the terminating int 21h calls.
+    /// </summary>
+    private static bool IsDosExitMovPredecessor(CfgInstruction node) {
+        CfgInstruction? previous = null;
+        foreach (ICfgNode predecessor in node.Predecessors) {
+            if (predecessor is CfgInstruction instruction && instruction.ContainingBlock == node.ContainingBlock) {
+                if (previous is not null) {
+                    return false;
+                }
+                previous = instruction;
+            }
+        }
+        if (previous is null) {
+            return false;
+        }
+        return previous.OpcodeField.Value switch {
+            // mov ah, imm8
+            0xB4 => previous.FieldsInOrder.OfType<InstructionField<byte>>().LastOrDefault()?.Value is 0x00 or 0x31 or 0x4C,
+            // mov ax, imm16 whose high byte lands in AH
+            0xB8 => (previous.FieldsInOrder.OfType<InstructionField<ushort>>().LastOrDefault()?.Value >> 8) is 0x00 or 0x31 or 0x4C,
+            _ => false
+        };
+    }
+
+    private static bool HasCallToReturnSuccessor(CfgInstruction callNode) =>
+        callNode.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CallToReturn, out ISet<ICfgNode>? targets)
+            && targets.Count > 0;
+
+    private void AddPendingCallSite(SegmentedAddress callee, CfgInstruction callNode) {
+        if (!_pendingCallSites.TryGetValue(callee, out List<CfgInstruction>? sites)) {
+            sites = _pendingCallSites[callee] = [];
+        }
+        if (!sites.Contains(callNode)) {
+            sites.Add(callNode);
+        }
+    }
+
+    /// <summary>
+    /// The callee just became known to return: wire the continuation of every pending call site
+    /// still in the index. Sites pruned or already holding a CallToReturn successor are skipped.
+    /// </summary>
+    private void DrainPendingCallSites(SegmentedAddress callee) {
+        if (!_pendingCallSites.Remove(callee, out List<CfgInstruction>? sites)) {
+            return;
+        }
+        Queue<ExploreItem> worklist = new();
+        foreach (CfgInstruction site in sites) {
+            if (!_nodeIndex.Contains(site) || HasCallToReturnSuccessor(site)) {
+                continue;
+            }
+            EnqueueContinuation(site, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+        }
+        Drain(worklist);
+    }
+
+    /// <summary>
+    /// Enqueues the call/int continuation address (NextInMemoryAddress32) as an item of the given
+    /// edge type and source. The continuation address is computed from instruction length, never
+    /// by decoding the operand.
+    /// </summary>
+    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations, ExploreSource source) {
         SegmentedAddress continuation = callNode.NextInMemoryAddress32.ToSegmentedAddress();
         if (_nodeIndex.PoisonSet.Contains(continuation)) {
             return;
         }
-        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, ExploreSource.Static, null));
+        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null));
     }
 
     private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations) {

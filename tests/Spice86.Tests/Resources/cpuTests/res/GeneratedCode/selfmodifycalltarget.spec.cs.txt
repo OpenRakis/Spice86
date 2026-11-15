@@ -44,7 +44,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x0000.
-    public virtual void unknown_57_F000_0028_F0028(ushort word1) {
+    public virtual void unknown_58_F000_0028_F0028(ushort word1) {
         DS = word1;
         CheckExternalEvents(biosSegment, 0x0028);
         Segment0000Globals.Byte0012 = 0xCC;
@@ -52,8 +52,8 @@ public partial class CfgGeneratedOverrides {
         return;
     }
 
-    public virtual Action unknown_57_F000_0028_F0028_Asm() {
-        unknown_57_F000_0028_F0028(DS);
+    public virtual Action unknown_58_F000_0028_F0028_Asm() {
+        unknown_58_F000_0028_F0028(DS);
         return Returned;
     }
 
@@ -116,7 +116,7 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x001A, () => unknown_F000_0048_F0048(word2));
         FarCall(biosSegment, 0x001F, biosSegment, () => unknown_40_F000_0028_F0028(word1));
         NearCall(biosSegment, 0x0022, () => unknown_F000_0050_F0050(word2));
-        FarCall(biosSegment, 0x0027, biosSegment, () => unknown_57_F000_0028_F0028(word1));
+        FarCall(biosSegment, 0x0027, biosSegment, () => unknown_58_F000_0028_F0028(word1));
         return Hlt();
     }
 

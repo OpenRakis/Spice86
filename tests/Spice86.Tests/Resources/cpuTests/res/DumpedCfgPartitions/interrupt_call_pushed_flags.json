@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        68,
-        75
+        65,
+        69
       ],
       "entries": [
         {
-          "block": 68,
+          "block": 65,
           "address": "F000:004D",
           "kind": "functionEntry"
         }
@@ -21,12 +21,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        82,
-        88
+        84,
+        86
       ],
       "entries": [
         {
-          "block": 82,
+          "block": 84,
           "address": "F000:0056",
           "kind": "functionEntry"
         }
@@ -54,9 +54,9 @@
       "blocks": [
         3,
         59,
-        67,
-        78,
-        91,
+        63,
+        80,
+        94,
         2
       ],
       "entries": [
@@ -73,19 +73,19 @@
       "kind": "callOut",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 68,
+      "fromBlock": 65,
       "toBlock": 35,
       "from": "F000:0053",
       "target": "F000:0059",
-      "callContinuationBlock": 75,
+      "callContinuationBlock": 69,
       "callContinuationAddress": "F000:0055"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 4,
-      "fromBlock": 75,
-      "toBlock": 78,
+      "fromBlock": 69,
+      "toBlock": 80,
       "from": "F000:0055",
       "target": "F000:0037"
     },
@@ -93,19 +93,19 @@
       "kind": "callOut",
       "fromPartition": 2,
       "toPartition": 3,
-      "fromBlock": 82,
+      "fromBlock": 84,
       "toBlock": 35,
       "from": "F000:0056",
       "target": "F000:0059",
-      "callContinuationBlock": 88,
+      "callContinuationBlock": 86,
       "callContinuationAddress": "F000:0058"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 4,
-      "fromBlock": 88,
-      "toBlock": 91,
+      "fromBlock": 86,
+      "toBlock": 94,
       "from": "F000:0058",
       "target": "F000:0041"
     },
@@ -114,7 +114,7 @@
       "fromPartition": 3,
       "toPartition": 1,
       "fromBlock": 35,
-      "toBlock": 75,
+      "toBlock": 69,
       "from": "F000:006F",
       "target": "F000:0055"
     },
@@ -123,7 +123,7 @@
       "fromPartition": 3,
       "toPartition": 2,
       "fromBlock": 35,
-      "toBlock": 88,
+      "toBlock": 86,
       "from": "F000:006F",
       "target": "F000:0058"
     },
@@ -141,7 +141,7 @@
       "fromPartition": 3,
       "toPartition": 4,
       "fromBlock": 35,
-      "toBlock": 67,
+      "toBlock": 63,
       "from": "F000:006F",
       "target": "F000:0034"
     },
@@ -149,22 +149,22 @@
       "kind": "callOut",
       "fromPartition": 4,
       "toPartition": 1,
-      "fromBlock": 67,
-      "toBlock": 68,
+      "fromBlock": 63,
+      "toBlock": 65,
       "from": "F000:0034",
       "target": "F000:004D",
-      "callContinuationBlock": 78,
+      "callContinuationBlock": 80,
       "callContinuationAddress": "F000:0037"
     },
     {
       "kind": "callOut",
       "fromPartition": 4,
       "toPartition": 2,
-      "fromBlock": 78,
-      "toBlock": 82,
+      "fromBlock": 80,
+      "toBlock": 84,
       "from": "F000:003E",
       "target": "F000:0056",
-      "callContinuationBlock": 91,
+      "callContinuationBlock": 94,
       "callContinuationAddress": "F000:0041"
     },
     {
@@ -186,7 +186,7 @@
       "toBlock": 35,
       "from": "F000:0032",
       "target": "F000:0059",
-      "callContinuationBlock": 67,
+      "callContinuationBlock": 63,
       "callContinuationAddress": "F000:0034"
     }
   ]

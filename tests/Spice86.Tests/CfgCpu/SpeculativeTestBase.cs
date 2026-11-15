@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -41,6 +42,8 @@ public abstract class SpeculativeTestBase : IDisposable {
     protected readonly ILogger LoggerService;
     protected readonly LoadedImageRegistry ImageRegistry;
     protected readonly ChangedMemoryMap ChangedMemoryMap;
+    protected readonly InstalledInterruptHandlers InstalledInterrupts;
+    protected readonly InterruptVectorTable InterruptVectors;
 
     protected SpeculativeTestBase() {
         IdAllocator = new SequentialIdAllocator();
@@ -55,10 +58,12 @@ public abstract class SpeculativeTestBase : IDisposable {
         NodeLinker = new NodeLinker(ReplacerRegistry, Compiler, IdAllocator);
         ImageRegistry = new LoadedImageRegistry();
         ChangedMemoryMap = new ChangedMemoryMap(Memory, MemoryBreakpoints, ImageRegistry);
+        InstalledInterrupts = new InstalledInterruptHandlers([]);
+        InterruptVectors = new InterruptVectorTable(Memory);
     }
 
     protected SpeculativeExplorer CreateExplorer() =>
-        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, LoggerService);
+        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {
         uint physAddr = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
@@ -126,7 +131,7 @@ public abstract class SpeculativeTestBase : IDisposable {
         EmulatorBreakpointsManager breakpointsManager =
             new(new PauseHandler(LoggerService), State, Memory, MemoryBreakpoints, ioBreakpoints);
         InstructionsFeeder feeder = new(breakpointsManager, Memory, State, ReplacerRegistry,
-            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, LoggerService);
+            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, LoggerService);
         return feeder;
     }
 

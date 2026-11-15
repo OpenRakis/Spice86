@@ -30,17 +30,30 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     internal IReadOnlyDictionary<SegmentedAddress, CallLandingListNode> CallLandings => _callLandings;
 
     /// <summary>Records the landings of the call site expecting to return to
-    /// <paramref name="expectedReturn"/>; recording the same address twice with the same arms is a no-op.</summary>
+    /// <paramref name="expectedReturn"/>; recording the same address twice with the same arms is a no-op, and a
+    /// later recording merges new landing addresses in, because an arm maps a landing address to the generated
+    /// entry running there, which does not depend on which callee is running.</summary>
     /// <exception cref="InvalidOperationException">Two call sites with the same return address
-    /// observed different landings.</exception>
+    /// map one landing address to different generated entries.</exception>
     internal void RecordCallLandings(SegmentedAddress expectedReturn, CallLandingListNode? landings) {
         if (landings is null) {
             return;
         }
         if (_callLandings.TryGetValue(expectedReturn, out CallLandingListNode? existing)) {
-            if (!existing.Arms.SequenceEqual(landings.Arms)) {
-                throw new InvalidOperationException(
-                    $"Two call sites returning to {expectedReturn} observed different landing tables.");
+            Dictionary<SegmentedAddress, MethodGroupNode> merged =
+                existing.Arms.ToDictionary(arm => arm.Address, arm => arm.Entry);
+            foreach ((SegmentedAddress address, MethodGroupNode entry) in landings.Arms) {
+                if (merged.TryGetValue(address, out MethodGroupNode? other) && !Equals(other, entry)) {
+                    throw new InvalidOperationException(
+                        $"Two call sites returning to {expectedReturn} map landing {address} to different generated entries.");
+                }
+                merged[address] = entry;
+            }
+            if (merged.Count != existing.Arms.Count) {
+                _callLandings[expectedReturn] = new CallLandingListNode(merged
+                    .Select(pair => (pair.Key, pair.Value))
+                    .OrderBy(arm => arm.Key.Linear)
+                    .ToList());
             }
             return;
         }

@@ -18,6 +18,7 @@ using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Tests.AsmFixtures;
 using Spice86.Tests.Utility;
 
 using System.Text.Json;
@@ -240,6 +241,81 @@ public class CfgGraphReloadTest {
         Assert.DoesNotContain(discovered.Id, reloadedIds);
         Assert.True(discovered.Id > maxReloadedId,
             $"newly discovered node id {discovered.Id} must be past the reloaded range (max {maxReloadedId})");
+    }
+
+    /// <summary>
+    /// A dump containing speculative call continuations (the unobserved arm of
+    /// speculative_call_continuation) restores its typed CallTo* evidence; stripping the
+    /// continuation edges of the two unobserved call sites before reloading proves the
+    /// reload-time rebuild pass wires them again from the observed evidence alone, without
+    /// executing the arm. The unaligned <c>call g</c> and the <c>mov ah,4Ch; int 21h</c>
+    /// termination site must stay continuation-free.
+    /// </summary>
+    [Fact]
+    public void ReloadRebuildsSpeculativeCallContinuationsFromTypedEdges() {
+        // The fixture settings need interrupt vectors installed away from the flat bin's segment.
+        AsmRunSettings settings = new() {
+            BinName = "speculative_call_continuation", MaxCycles = 200000,
+            InstallInterruptVectors = true, AsmHandlersSegment = 0xD000
+        };
+        CfgReloadDump dump;
+        byte[] memoryImage;
+        using (Spice86Creator creator = new(settings, JitMode.InterpretedOnly, null))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.ProgramExecutor.Run();
+            Machine capture = di.Machine;
+            dump = new CfgReloadExporter().Export(capture.CfgCpu.ExecutionContextManager, null,
+                di.GeneratorInputsCollector.Capture(capture.CfgCpu.ExecutionContextManager).ChangedMemory);
+            memoryImage = capture.Memory.ReadRam();
+        }
+
+        // The unobserved call/int sites (call f, call f2 and the AH=30h int 21h): strip their
+        // CallToReturn edges so the reload rebuild is the only thing that can restore them. The
+        // observed call edges - the evidence - stay.
+        const string callF = "F000:0033";
+        const string callF2 = "F000:003B";
+        const string int21 = "F000:005A";
+        HashSet<int> callSiteIds = new[] { callF, callF2, int21 }
+            .Select(addr => dump.Nodes.Where(n => n.Addr == addr).Select(n => n.Id).Single())
+            .ToHashSet();
+        CfgReloadEdgeInfo[] strippedEdges = dump.Edges
+            .Where(e => !(callSiteIds.Contains(e.From) && e.Type == nameof(InstructionSuccessorType.CallToReturn)))
+            .ToArray();
+        Assert.Equal(dump.Edges.Length - 3, strippedEdges.Length);
+        CfgReloadDump strippedDump = dump with { Edges = strippedEdges };
+
+        ILogger loggerService = Substitute.For<ILogger>();
+        using Spice86Creator reloadCreator = new(settings, JitMode.InterpretedOnly, null);
+        using Spice86DependencyInjection reloadDi = reloadCreator.Create();
+        Machine machine = reloadDi.Machine;
+        RestoreInstructionBytes(machine.Memory, memoryImage, strippedDump);
+        using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
+        new CfgGraphReloader(machine.CfgCpu, machine.CpuState, compiler, reloadDi.CfgIdAllocator).Reload(strippedDump);
+
+        CfgNodeIndex index = machine.CfgCpu.CfgNodeFeeder.NodeIndex;
+        AssertCallContinuation(index, callF, "F000:0036");
+        AssertCallContinuation(index, callF2, "F000:003E");
+        AssertCallContinuation(index, int21, "F000:005C");
+
+        // The callee of the never-taken call g only has redirected-return evidence: no continuation.
+        AssertNoCallContinuation(index, "F000:0063");
+        // The int 21h termination pattern: no continuation either.
+        AssertNoCallContinuation(index, "F000:006F");
+    }
+
+    private static void AssertCallContinuation(CfgNodeIndex index, string callSiteAddr, string continuationAddr) {
+        CfgInstruction callSite = index.GetAtAddress(ParseAddress(callSiteAddr)).Single();
+        SegmentedAddress continuation = ParseAddress(continuationAddr);
+        Assert.True(callSite.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CallToReturn, out ISet<ICfgNode>? targets)
+            && targets.Any(target => target.Address == continuation),
+            $"call site {callSiteAddr} must have a CallToReturn edge to {continuationAddr} after reload");
+    }
+
+    private static void AssertNoCallContinuation(CfgNodeIndex index, string callSiteAddr) {
+        CfgInstruction callSite = index.GetAtAddress(ParseAddress(callSiteAddr)).Single();
+        Assert.False(callSite.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CallToReturn, out ISet<ICfgNode>? targets)
+            && targets.Count > 0,
+            $"call site {callSiteAddr} must not have a CallToReturn edge after reload");
     }
 
     /// <summary>

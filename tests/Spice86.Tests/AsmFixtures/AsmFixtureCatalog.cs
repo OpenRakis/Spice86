@@ -528,6 +528,24 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_call_entry", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs speculative_call_continuation on the observed or unobserved arm: the unobserved
+    /// arm's markers live in the continuations of calls and ints whose callees are known to return.</summary>
+    public static AsmFixture SpeculativeCallContinuation(SpeculativeArm arm) {
+        AsmRunSettings settings = new() {
+            BinName = "speculative_call_continuation", MaxCycles = 200000,
+            InstallInterruptVectors = true, AsmHandlersSegment = 0xD000
+        };
+        if (arm == SpeculativeArm.Unobserved) {
+            settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        }
+        return ResultFixture(settings, result => {
+            foreach ((int offset, byte expected) in CallContinuationChecks(arm)) {
+                result.Memory.UInt8[0, offset].Should().Be(expected,
+                    $"speculative_call_continuation: marker at 0x{offset:X3}");
+            }
+        });
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
@@ -1816,6 +1834,15 @@ internal static class AsmFixtureCatalog {
             region[0x60] = 0x02;
         }
         return region;
+    }
+
+    private static IEnumerable<(int Offset, byte Value)> CallContinuationChecks(SpeculativeArm arm) {
+        yield return (0x400, 0x01);
+        yield return (0x401, arm == SpeculativeArm.Unobserved ? (byte)0x42 : (byte)0xDD);
+        if (arm == SpeculativeArm.Unobserved) {
+            yield return (0x402, 0x33);
+        }
+        yield return (0x405, 0xAA);
     }
 
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {

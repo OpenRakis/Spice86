@@ -96,6 +96,7 @@ public partial class CfgGeneratedOverrides {
             }
         }
     L_00AA:
+        CheckExternalEvents(biosSegment, 0x00AA);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
         // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
@@ -280,6 +281,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
     private static readonly byte?[] Signature_008A_iret = [0xCF];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
     private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
     private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];

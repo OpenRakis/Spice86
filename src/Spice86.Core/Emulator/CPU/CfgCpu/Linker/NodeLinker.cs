@@ -24,6 +24,14 @@ public class NodeLinker : InstructionReplacer {
     }
 
     /// <summary>
+    /// Raised when an observed return links its corresponding call instruction to the return target
+    /// with a CallTo* successor type, but only when that call-to-target link is a new edge or a
+    /// retype confirming a speculatively-wired edge. Repeat executions of the same return do not
+    /// raise it. Speculative continuation edges wired by the explorer never go through this event.
+    /// </summary>
+    public event Action<CfgInstruction, InstructionSuccessorType>? CallReturnLinked;
+
+    /// <summary>
     /// Ensure current and next are linked together.
     /// Returns the resolved node to execute (may differ from <paramref name="next"/> when a SelectorNode is injected).
     /// </summary>
@@ -39,7 +47,7 @@ public class NodeLinker : InstructionReplacer {
                 // This involves recording data via the Call Flow Handler and linking it in a special way here.
                 return LinkRetInstruction(linkToNextType, cfgInstr, next);
             case CfgInstruction currentCfgInstruction:
-                return LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next);
+                return LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next, out _);
             case SelectorNode selectorNode:
                 LinkSelectorNode(selectorNode, next);
                 return next;
@@ -50,7 +58,7 @@ public class NodeLinker : InstructionReplacer {
     }
 
     private ICfgNode LinkRetInstruction(InstructionSuccessorType linkToNextType, CfgInstruction returnInstruction, ICfgNode next) {
-        ICfgNode resolvedForRet = LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
+        ICfgNode resolvedForRet = LinkCfgInstructionWithType(linkToNextType, returnInstruction, next, out _);
         // Link the call instruction now that ret target is known
         CorrespondingCall? correspondingCall = returnInstruction.CurrentCorrespondingCall;
         returnInstruction.CurrentCorrespondingCall = null;
@@ -64,16 +72,21 @@ public class NodeLinker : InstructionReplacer {
         }
         InstructionSuccessorType type = correspondingCall.Value.Type;
         // call->next is bookkeeping only, do not return the resolved value
-        LinkCfgInstructionWithType(type, callInstruction, next);
+        LinkCfgInstructionWithType(type, callInstruction, next, out bool callEdgeRecorded);
+        if (callEdgeRecorded) {
+            CallReturnLinked?.Invoke(callInstruction, type);
+        }
         return resolvedForRet;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ICfgNode LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next) {
+    private ICfgNode LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next, out bool edgeRecorded) {
+        edgeRecorded = false;
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
             AttachNewLink(linkToNextType, current, next);
+            edgeRecorded = true;
             return next;
         }
 
@@ -89,6 +102,7 @@ public class NodeLinker : InstructionReplacer {
                 && existingForType.Contains(next);
             if (!alreadyTyped) {
                 RetypeSuccessor(current, linkToNextType, next);
+                edgeRecorded = true;
             }
             current.SpeculativelyWiredSuccessors.Remove(next);
         }

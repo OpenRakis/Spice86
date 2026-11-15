@@ -44,6 +44,20 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Call continuations: a single discovery run (selector=0) observes aligned returns for f, f2 and
+    /// the int 60h handler, while the arm's call/int sites are speculated. The generated code must
+    /// execute the continuations after each call on the unobserved arm (selector=1) instead of
+    /// failing "Untested return from call"; the int sites are explored only and stay untested.
+    /// </summary>
+    [Fact]
+    public void SpeculativeCallContinuationExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeCallContinuation(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeCallContinuation(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeCallContinuation(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,

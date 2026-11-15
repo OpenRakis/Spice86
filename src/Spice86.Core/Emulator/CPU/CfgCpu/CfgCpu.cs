@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
@@ -39,7 +40,8 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, ChangedMemoryMap changedMemoryMap, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, ChangedMemoryMap changedMemoryMap,
+        InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _loggerState = loggerState;
         _state = state;
@@ -47,7 +49,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         _cpuHeavyLogger = cpuHeavyLogger;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration, changedMemoryMap, loggerService);
+        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration, changedMemoryMap, installedInterruptHandlers, interruptVectorTable, loggerService);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }

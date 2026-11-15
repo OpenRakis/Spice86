@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -33,7 +34,9 @@ public class InstructionsFeeder : IClearable {
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
-        NodeLinker? nodeLinker, ChangedMemoryMap changedMemoryMap, ILogger loggerService) {
+        NodeLinker? nodeLinker, ChangedMemoryMap changedMemoryMap,
+        InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable,
+        ILogger loggerService) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
@@ -42,7 +45,8 @@ public class InstructionsFeeder : IClearable {
         NodeIndex = new(replacerRegistry);
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
-            _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap, loggerService);
+            _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap,
+                installedInterruptHandlers, interruptVectorTable, loggerService);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);
@@ -68,6 +72,14 @@ public class InstructionsFeeder : IClearable {
             _speculativeExplorer.SeedKnownSafe(entry);
         }
     }
+
+    /// <summary>
+    /// Rebuilds the speculative call-return evidence index after a CFG graph reload and re-runs the
+    /// call-continuation rule on every reloaded call node. No-op when speculative exploration is
+    /// disabled.
+    /// </summary>
+    internal void RebuildCallReturnEvidence(IEnumerable<ICfgNode> nodes) =>
+        _speculativeExplorer?.RebuildReturnEvidence(nodes);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
