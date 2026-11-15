@@ -243,6 +243,11 @@ internal static class ServiceContractHarness {
             throw new InvalidOperationException(
                 $"No service entry declared for {testCase} (handler selector is {selector})");
         }
+        if (testCase.Al != InterruptServiceAttribute.NoAl) {
+            entry = entry.Variants.FirstOrDefault(variant => variant.Al == testCase.Al)
+                ?? throw new InvalidOperationException(
+                    $"No AL=0x{testCase.Al:X2} variant declared for {testCase}");
+        }
 
         if (mode != ServiceRunMode.Stub && handler is not InterruptHandler) {
             throw new InvalidOperationException(
@@ -262,6 +267,9 @@ internal static class ServiceContractHarness {
         SelectorValue(state, selector).Should().Be((uint)testCase.SelectorValue,
             "the selector register must hold the case value when {0} runs",
             entry.Name);
+        if (testCase.Al != InterruptServiceAttribute.NoAl) {
+            state.AL = (byte)testCase.Al;
+        }
 
         ushort inputFrameFlags;
         ushort frameBaseOffset;

@@ -17,6 +17,8 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016D_0100_017D0() {
         ushort word1 = 0;
         ushort word2 = 0;
+        ushort word3 = 0;
+        ushort word4 = 0;
         byte flagOperand_0145 = 0;
         CheckExternalEvents(cs1, 0x0100);
         word1 = CS;
@@ -112,32 +114,30 @@ public partial class CfgGeneratedOverrides {
                                 NearCall(cs1, 0x01C9, () => unknown_016D_02E0_019B0(0x54));
                                 NearCall(cs1, 0x01D5, () => unknown_016D_029F_0196F(DS));
                                 DX = 0x02F1;
-                                AX = 0x4B01;
                                 Stack.Push16(CS);
                                 ES = Stack.Pop16();
                                 BX = 0x0371;
-                                InterruptCall(cs1, 0x01E3, 0x21);
+                                (word3, CarryFlag) = ServiceCall(cs1, 0x01E3, Dos, () => Dos.LoadProgramOnly(Dos.StringDecoder.GetDosString(DS, 0x02F1, '\0'), ES, 0x0371, 0x4B01), r => CarryOnInterruptStack(r.carryFlag));
                                 if (CarryFlag) {
                                     goto L_01F4;
                                 }
-                                AX = DsGlobals.Word0383;
-                                Alu16.Sub(AX, 0);
-                                if (AX != 0) {
+                                word3 = DsGlobals.Word0383;
+                                Alu16.Sub(word3, 0);
+                                if (word3 != 0) {
+                                    AX = word3;
                                     AL = 0x4C;
                                     NearCall(cs1, 0x01F2, () => unknown_016D_02E0_019B0(0x4C));
-                                    (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0040));
+                                    (word4, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0040));
                                     if (CarryFlag) {
                                         goto L_0240;
                                     }
-                                    DsGlobals.Word02EB = AX;
-                                    DsGlobals.Word0387 = AX;
+                                    DsGlobals.Word02EB = word4;
+                                    DsGlobals.Word0387 = word4;
                                     DsGlobals.Word0389 = 0;
-                                    DX = 0x02F1;
-                                    AX = 0x4B03;
                                     Stack.Push16(CS);
                                     ES = Stack.Pop16();
                                     BX = 0x0387;
-                                    InterruptCall(cs1, 0x021E, 0x21);
+                                    (word4, DX, CarryFlag) = ServiceCall(Dos, () => Dos.LoadProgramOverlay(Dos.StringDecoder.GetDosString(DS, 0x02F1, '\0'), ES, 0x0387, 0x4B03, 0x02F1));
                                     if (!CarryFlag) {
                                         DsGlobals.Word02ED = 0;
                                         AX = DsGlobals.Word02EB;
@@ -150,12 +150,14 @@ public partial class CfgGeneratedOverrides {
                                     }
                                 L_0240:
                                     VerifySpeculativeRunOrFail(cs1, 0x0240, SpeculativeRun_0240);
+                                    AX = word4;
                                     AL = 0x76;
                                     NearCall(cs1, 0x0245, unknown_016D_02E0_019B0_AsmEntry);
                                     throw FailAsUntested("Untested return from call at 016D:0242");
                                 }
                             L_01F4:
                                 VerifySpeculativeRunOrFail(cs1, 0x01F4, SpeculativeRun_01F4);
+                                AX = word3;
                                 AL = 0x6C;
                                 NearCall(cs1, 0x01F9, unknown_016D_02E0_019B0_AsmEntry);
                                 throw FailAsUntested("Untested return from call at 016D:01F6");
@@ -377,7 +379,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

@@ -17,6 +17,13 @@ public sealed record ServiceContractCase {
     /// </summary>
     public required int SelectorValue { get; init; }
 
+    /// <summary>
+    /// The AL sub-selector value written into AL before the service runs, when the case
+    /// exercises an AL variant of the service; <see cref="InterruptServiceAttribute.NoAl"/>
+    /// for the base service.
+    /// </summary>
+    public int Al { get; init; } = InterruptServiceAttribute.NoAl;
+
     /// <summary>Whether the machine is built with XMS enabled.</summary>
     public bool NeedsXms { get; init; }
 

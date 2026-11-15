@@ -18,6 +18,8 @@ public class DosInt21ServiceContractTest {
     private const uint BufferAddress = 0x8000;
     private const uint FcbAddress = 0x8100;
     private const uint StringAddress = 0x8200;
+    private const uint ExecBlockAddress = 0x8300;
+    private const ushort ExecBlockSegment = 0x830;
 
     /// <summary>One case per declared non-Unknown INT 21h service.</summary>
     public static IEnumerable<ServiceContractCase> ContractCases {
@@ -542,6 +544,47 @@ public class DosInt21ServiceContractTest {
                 Setup = machine => {
                     machine.Spice86.Machine.CpuState.AL = 0;
                     machine.Spice86.Machine.CpuState.BX = 0x14;
+                }
+            };
+            // EXEC load-only (AL=01h) loads a COM image into a fresh segment and fills
+            // the caller's EXEC parameter block with the child entry state.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x4B, Al = 0x01,
+                Setup = machine => {
+                    File.WriteAllBytes(Path.Join(machine.CDrivePath, "LOAD.COM"), new byte[0x40]);
+                    WriteBytes(machine, StringAddress, "LOAD.COM\0"u8.ToArray());
+                    SetDsDx(machine, StringAddress);
+                    // EXEC parameter block: inherit the environment, empty command tail,
+                    // zeroed FCBs; the block's output fields stay zeroed.
+                    WriteBytes(machine, BufferAddress, [0x00, 0x0D]);
+                    WriteBytes(machine, ExecBlockAddress,
+                        [0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                         0x00, 0x00, 0x00, 0x00]);
+                    machine.Spice86.Machine.CpuState.ES = ExecBlockSegment;
+                    machine.Spice86.Machine.CpuState.BX = 0;
+                }
+            };
+            // EXEC load-overlay (AL=03h) loads an EXE image at the segment the overlay
+            // parameter block names and returns AX=0, DX=0.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x4B, Al = 0x03,
+                Setup = machine => {
+                    byte[] exe = new byte[0x30];
+                    exe[0x00] = (byte)'M';
+                    exe[0x01] = (byte)'Z';
+                    exe[0x02] = 0x10; // LenFinalPage: 16 bytes on the last page
+                    exe[0x04] = 0x01; // Pages: one 512-byte page
+                    exe[0x08] = 0x02; // HeaderSizeInParagraphs: 32 bytes
+                    exe[0x0C] = 0x10; // MaxAlloc
+                    exe[0x10] = 0x01; // InitSP
+                    File.WriteAllBytes(Path.Join(machine.CDrivePath, "OVL.EXE"), exe);
+                    WriteBytes(machine, StringAddress, "OVL.EXE\0"u8.ToArray());
+                    SetDsDx(machine, StringAddress);
+                    // Overlay parameter block: load segment and relocation factor.
+                    WriteBytes(machine, ExecBlockAddress, [0x00, 0x50, 0x00, 0x50]);
+                    machine.Spice86.Machine.CpuState.ES = ExecBlockSegment;
+                    machine.Spice86.Machine.CpuState.BX = 0;
                 }
             };
         }

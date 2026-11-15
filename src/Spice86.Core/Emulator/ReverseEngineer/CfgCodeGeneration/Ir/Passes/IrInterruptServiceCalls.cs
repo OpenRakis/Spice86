@@ -116,6 +116,13 @@ internal static class IrInterruptServiceCalls {
             selector = selected.Selector;
             selectorValue = value;
             entry = selected.Services.GetValueOrDefault(value);
+            if (entry is { Variants.Count: > 0 } baseEntry) {
+                RegisterNode al = (RegisterNode)IrValueSets.NodeOf(CpuValues.Al);
+                if (facts.TryGetBefore(block, index, al, out ulong alValue)) {
+                    entry = baseEntry.Variants
+                        .FirstOrDefault(variant => variant.Al == (int)alValue) ?? entry;
+                }
+            }
         }
         if (!hasOnlyBuiltInTargets(service)) {
             return new InterruptCallHelperNode(InterruptSiteKind.Hooked, service, selectorValue,
@@ -134,7 +141,7 @@ internal static class IrInterruptServiceCalls {
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
             RunsEntryHook = RunsEntryHook(entry),
-            WritesFrame = programSetCurrentPsp,
+            WritesFrame = programSetCurrentPsp || entry.ReadsFrame,
             Results = [.. ServiceCallSignature.Outputs(entry.Contract)
                 .Select(output => IrValueSets.NodeOf(output.Mask))],
             ReturnSegment = call.Arguments[0],

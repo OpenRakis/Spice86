@@ -55,26 +55,54 @@ public static class InterruptServiceAttributes {
                 $"({singles[0].Method.Name}, {singles[1].Method.Name})");
         }
 
-        List<(MethodInfo Method, InterruptServiceEntry Entry)> services = attributes
+        List<(MethodInfo Method, InterruptServiceAttribute Attribute, InterruptServiceEntry Entry)> declared = attributes
             .Where(pair => pair.Attribute.SelectorValue is not null)
-            .Select(pair => (pair.Method, EntryOf(pair.Attribute, pair.Method, type, selector)))
+            .Select(pair => (pair.Method, pair.Attribute,
+                EntryOf(pair.Attribute, pair.Method, type, selector)))
             .ToList();
-        if (singles.Count == 1 && services.Count > 0) {
+        if (singles.Count == 1 && declared.Count > 0) {
             throw new InvalidOperationException(
                 $"{type.Name}: [InterruptService] cannot mix the parameterless form " +
                 "with the selector form");
         }
-        int duplicate = services
-            .GroupBy(pair => pair.Entry.SelectorValue)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .FirstOrDefault(-1);
-        if (duplicate != -1) {
-            throw new InvalidOperationException(
-                $"{type.Name}: selector value {duplicate} is declared more than once");
+
+        // A declaration with Al set is a sub-selector variant of the base entry of the
+        // same selector value: it needs that base, and no two variants share an AL value.
+        List<(MethodInfo Method, InterruptServiceEntry Entry)> services = new();
+        foreach (IGrouping<int, (MethodInfo Method, InterruptServiceAttribute Attribute,
+            InterruptServiceEntry Entry)> group in declared.GroupBy(pair => pair.Entry.SelectorValue)) {
+            List<(MethodInfo Method, InterruptServiceAttribute Attribute, InterruptServiceEntry Entry)> bases =
+                group.Where(pair => pair.Entry.Al == InterruptServiceAttribute.NoAl).ToList();
+            List<(MethodInfo Method, InterruptServiceAttribute Attribute, InterruptServiceEntry Entry)> variants =
+                group.Where(pair => pair.Entry.Al != InterruptServiceAttribute.NoAl).ToList();
+            if (bases.Count > 1) {
+                throw new InvalidOperationException(
+                    $"{type.Name}: selector value {group.Key} is declared more than once");
+            }
+            if (variants.Count > 0 && bases.Count == 0) {
+                throw new InvalidOperationException(
+                    $"{type.Name}.{variants[0].Entry.Name}: an AL sub-selector variant of " +
+                    $"selector value {group.Key} needs a base entry for that selector value");
+            }
+            int duplicateAl = variants
+                .GroupBy(pair => pair.Entry.Al)
+                .Where(alGroup => alGroup.Count() > 1)
+                .Select(alGroup => alGroup.Key)
+                .FirstOrDefault(-1);
+            if (duplicateAl != -1) {
+                throw new InvalidOperationException(
+                    $"{type.Name}: AL sub-selector value {duplicateAl} of selector value " +
+                    $"{group.Key} is declared more than once");
+            }
+            if (bases.Count == 1) {
+                (MethodInfo Method, InterruptServiceAttribute Attribute, InterruptServiceEntry Entry) basePair = bases[0];
+                services.Add((basePair.Method, basePair.Entry with {
+                    Variants = [.. variants.Select(pair => pair.Entry)]
+                }));
+            }
         }
 
-        foreach (MethodInfo method in services.Select(pair => pair.Method)) {
+        foreach (MethodInfo method in declared.Select(pair => pair.Method)) {
             CheckShape(method, type.Name);
         }
 

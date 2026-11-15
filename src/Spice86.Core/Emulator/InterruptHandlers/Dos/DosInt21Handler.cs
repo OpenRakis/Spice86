@@ -1901,29 +1901,57 @@ public class DosInt21Handler : InterruptHandler {
     /// </para>
     /// </summary>
     [InterruptService(0x4B, Unknown = true, StringArgument = ServiceStringArgument.AsciiZ)]
+    [InterruptService(0x4B, Al = 0x01, Name = "LoadProgramOnly",
+        StringArgument = ServiceStringArgument.AsciiZ,
+        Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx | CpuValues.Es
+            | CpuValues.Bx | CpuValues.Ss | CpuValues.Sp | CpuValues.Ax,
+        Writes = CpuValues.Ax | CpuValues.Carry,
+        Memory = ServiceMemoryEffect.ReadWrite, ReadsFrame = true,
+        Implementation = nameof(LoadProgramOnly),
+        Inputs = [CpuValues.Ds | CpuValues.Dx, CpuValues.Es, CpuValues.Bx, CpuValues.Ax])]
+    [InterruptService(0x4B, Al = 0x03, Name = "LoadProgramOverlay",
+        StringArgument = ServiceStringArgument.AsciiZ,
+        Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx | CpuValues.Es
+            | CpuValues.Bx | CpuValues.Ss | CpuValues.Sp | CpuValues.Ax,
+        Writes = CpuValues.Ax | CpuValues.Dx | CpuValues.Carry,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(LoadProgramOverlay),
+        Inputs = [CpuValues.Ds | CpuValues.Dx, CpuValues.Es, CpuValues.Bx, CpuValues.Ax,
+            CpuValues.Dx])]
     public void LoadAndOrExecute() {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         DosExecLoadType loadType = (DosExecLoadType)State.AL;
-        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
 
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
                 State.DS, State.DX, programName, loadType);
         }
 
-        DosExecResult result;
-
-        if (loadType == DosExecLoadType.LoadOverlay) {
-            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
-            result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
-        } else {
-            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
-            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
-            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
-            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
-            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment);
-        }
+        DosExecResult result = ExecFromParameterBlock(programName, State.ES, State.BX, loadType);
         HandleDosExecResult(result);
+    }
+
+    /// <summary>Runs the EXEC mode <paramref name="loadType"/> of <see cref="LoadAndOrExecute"/>:
+    /// the parameter block sits at
+    /// <paramref name="paramBlockSegment"/>:<paramref name="paramBlockOffset"/>: the 4-byte
+    /// overlay block for <see cref="DosExecLoadType.LoadOverlay"/>, the 14-byte EXEC block with
+    /// command tail, FCBs and environment segment otherwise.</summary>
+    private DosExecResult ExecFromParameterBlock(string programName, ushort paramBlockSegment,
+        ushort paramBlockOffset, DosExecLoadType loadType) {
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory,
+                MemoryUtils.ToPhysicalAddress(paramBlockSegment, paramBlockOffset));
+            return _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment,
+                overlayParamBlock.RelocationFactor);
+        }
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(paramBlockSegment, paramBlockOffset);
+        DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+        uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment,
+            paramBlock.CommandTailOffset);
+        DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+        string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
+        return _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail,
+            loadType, paramBlock.EnvironmentSegment);
     }
 
     private void HandleDosExecResult(DosExecResult result) {
@@ -1941,6 +1969,43 @@ public class DosInt21Handler : InterruptHandler {
             State.AX = (ushort)result.ErrorCode;
             LogDosError();
         }
+    }
+
+    /// <summary>Loads the program <paramref name="programName"/> without executing it
+    /// (EXEC AL=01h): the child PSP, image and environment are set up from the EXEC
+    /// parameter block at <paramref name="paramBlockSegment"/>:<paramref name="paramBlockOffset"/>,
+    /// the block receives the child entry state, and the caller's interrupt frame supplies
+    /// the CS:IP the child PSP records as its terminate address. On failure AX is the DOS
+    /// error code and carry is set; on success AX is preserved.</summary>
+    /// <param name="paramBlockSegment">Segment of the 14-byte EXEC parameter block.</param>
+    /// <param name="paramBlockOffset">Offset of the EXEC parameter block.</param>
+    /// <param name="ax">The caller's AX, returned unchanged on success (the load-only result
+    /// carries no register value).</param>
+    public (ushort ax, bool carryFlag) LoadProgramOnly(string programName,
+        ushort paramBlockSegment, ushort paramBlockOffset, ushort ax) {
+        DosExecResult result = ExecFromParameterBlock(programName, paramBlockSegment,
+            paramBlockOffset, DosExecLoadType.LoadOnly);
+        return result.Success ? (result.AX ?? ax, false) : ((ushort)result.ErrorCode, true);
+    }
+
+    /// <summary>Loads the program <paramref name="programName"/> as an overlay (EXEC AL=03h):
+    /// the image is loaded at the load segment of the overlay parameter block at
+    /// <paramref name="paramBlockSegment"/>:<paramref name="paramBlockOffset"/> and relocated by
+    /// its relocation factor. On success AX and DX are 0; on failure AX is the DOS error code
+    /// and carry is set.</summary>
+    /// <param name="paramBlockSegment">Segment of the 4-byte overlay parameter block.</param>
+    /// <param name="paramBlockOffset">Offset of the overlay parameter block.</param>
+    /// <param name="ax">The caller's AX, returned on success when the result carries no AX.</param>
+    /// <param name="dx">The caller's DX, returned unchanged on failure (the failure path writes
+    /// no DX).</param>
+    public (ushort ax, ushort dx, bool carryFlag) LoadProgramOverlay(string programName,
+        ushort paramBlockSegment, ushort paramBlockOffset, ushort ax, ushort dx) {
+        DosExecResult result = ExecFromParameterBlock(programName, paramBlockSegment,
+            paramBlockOffset, DosExecLoadType.LoadOverlay);
+        if (!result.Success) {
+            return ((ushort)result.ErrorCode, dx, true);
+        }
+        return (result.AX ?? ax, result.DX ?? dx, false);
     }
 
     public DosExecResult LoadOverlay(string programName, DosExecOverlayParameterBlock overlayParamBlock) {
