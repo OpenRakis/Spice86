@@ -2,6 +2,11 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Microsoft.Extensions.Logging;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -348,10 +353,10 @@ public class SpeculativeExplorer {
 
     /// <summary>
     /// Records one observed call-to-return-target link in <see cref="CalleeReturnEvidence"/> for the
-    /// given call node and explicit callee entry, then drains the call sites pending on that callee
+    /// given callee entry, then drains the call sites pending on that callee
     /// when it becomes known to return for the first time.
     /// </summary>
-    internal void RecordCallReturnEvidence(CfgInstruction call, SegmentedAddress calleeEntry, bool aligned) {
+    internal void RecordCallReturnEvidence(SegmentedAddress calleeEntry, bool aligned) {
         if (_calleeReturnEvidence.Record(calleeEntry, aligned)) {
             DrainPendingCallSites(calleeEntry);
         }
@@ -405,7 +410,7 @@ public class SpeculativeExplorer {
         }
         SegmentedAddress? callee = CalleeEntry(call);
         if (callee is not null) {
-            RecordCallReturnEvidence(call, callee.Value, aligned.Value);
+            RecordCallReturnEvidence(callee.Value, aligned.Value);
         }
     }
 
@@ -425,13 +430,20 @@ public class SpeculativeExplorer {
     }
 
     private static bool TryGetInterruptVector(CfgInstruction node, out byte vector) {
-        vector = node.OpcodeField.Value switch {
-            0xCC => 3,
-            0xCE => 4,
-            0xCD => node.FieldsInOrder.OfType<InstructionField<byte>>().LastOrDefault()?.Value ?? 0,
-            _ => 0
+        vector = 0;
+        if (node.ExecutionAst is not InterruptCallNode call) {
+            return false;
+        }
+        ulong? number = call.VectorNumber switch {
+            ConstantNode constant => constant.Value,
+            InstructionFieldNode field => field.ConstantValue,
+            _ => null
         };
-        return node.OpcodeField.Value is 0xCC or 0xCD or 0xCE;
+        if (number is null) {
+            return false;
+        }
+        vector = (byte)number.Value;
+        return true;
     }
 
     /// <summary>
@@ -440,7 +452,7 @@ public class SpeculativeExplorer {
     /// Nodes that already carry a CallToReturn successor or left the index are skipped.
     /// </summary>
     private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist) {
-        if (!_nodeIndex.Contains(callNode) || HasCallToReturnSuccessor(callNode)) {
+        if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
             return;
         }
         if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
@@ -485,14 +497,34 @@ public class SpeculativeExplorer {
         if (previous is null) {
             return false;
         }
-        return previous.OpcodeField.Value switch {
-            // mov ah, imm8
-            0xB4 => previous.FieldsInOrder.OfType<InstructionField<byte>>().LastOrDefault()?.Value is 0x00 or 0x31 or 0x4C,
-            // mov ax, imm16 whose high byte lands in AH
-            0xB8 => (previous.FieldsInOrder.OfType<InstructionField<ushort>>().LastOrDefault()?.Value >> 8) is 0x00 or 0x31 or 0x4C,
-            _ => false
+        if (previous.ExecutionAst is not BlockNode block || block.Statements.Count == 0
+            || block.Statements[0] is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: RegisterNode destination
+            } assign) {
+            return false;
+        }
+        ulong? immediate = assign.Right switch {
+            ConstantNode constant => constant.Value,
+            InstructionFieldNode field => field.ConstantValue,
+            _ => null
         };
+        if (immediate is null) {
+            return false;
+        }
+        // The byte the mov loads into AH: the immediate itself for mov ah,imm8, the high byte for mov ax,imm16.
+        ulong? ah = destination switch {
+            { DataType.BitWidth: BitWidth.BYTE_8, RegisterIndex: 4 } => immediate.Value,
+            { DataType.BitWidth: BitWidth.WORD_16, RegisterIndex: 0 } => immediate.Value >> 8,
+            _ => null
+        };
+        return ah is 0x00 or 0x31 or 0x4C;
     }
+
+    // A call site is usable while it is a live observed instruction or still a speculative
+    // node in the index (a speculative instruction is never IsLive; pruning removes it from the
+    // index). Dead observed nodes fail both tests.
+    private static bool IsUsable(CfgInstruction node) => node.IsLive || node.IsSpeculative;
 
     private static bool HasCallToReturnSuccessor(CfgInstruction callNode) =>
         callNode.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CallToReturn, out ISet<ICfgNode>? targets)
@@ -517,7 +549,7 @@ public class SpeculativeExplorer {
         }
         Queue<ExploreItem> worklist = new();
         foreach (CfgInstruction site in sites) {
-            if (!_nodeIndex.Contains(site) || HasCallToReturnSuccessor(site)) {
+            if (!_nodeIndex.Contains(site) || !IsUsable(site) || HasCallToReturnSuccessor(site)) {
                 continue;
             }
             EnqueueContinuation(site, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
