@@ -1,23 +1,40 @@
 {
   "currentContextDepth": 1,
   "currentContextEntryPoint": "F000:FFF0",
-  "totalEntryPoints": 1,
+  "totalEntryPoints": 2,
   "entryPointAddresses": [
-    "F000:FFF0"
+    "F000:FFF0",
+    "F000:0038"
   ],
-  "lastExecutedAddress": "F000:0031",
-  "lastExecutedBlockId": 24,
+  "lastExecutedAddress": "F000:0037",
+  "lastExecutedBlockId": 60,
   "blocks": [
     {
-      "id": 24,
-      "entry": "F000:0031",
-      "term": "F000:0031",
+      "id": 60,
+      "entry": "F000:0036",
+      "term": "F000:0037",
       "pred": [
-        20
+        59
       ],
       "succ": [],
       "asm": [
+        "FA|cli",
         "F4|hlt"
+      ]
+    },
+    {
+      "id": 47,
+      "entry": "F000:0038",
+      "term": "F000:0041",
+      "pred": [],
+      "succ": [],
+      "asm": [
+        "50|push AX",
+        "BA0100|mov DX,1",
+        "B020|mov AL,0x20",
+        "E620|out 0x20,AL",
+        "58|pop AX",
+        "CF|iret"
       ]
     },
     {
@@ -33,19 +50,17 @@
       ]
     },
     {
-      "id": 20,
-      "entry": "F000:002C",
-      "term": "F000:0030",
+      "id": 59,
+      "entry": "F000:0032",
+      "term": "F000:0032",
       "pred": [
-        3
-      ],
-      "succ": [
         24
       ],
+      "succ": [
+        60
+      ],
       "asm": [
-        "FA|cli",
-        "BA0000|mov DX,0",
-        "FB|sti"
+        "89160000|mov word ptr DS:[0],DX"
       ]
     },
     {
@@ -75,6 +90,36 @@
         "B000|mov AL,0",
         "E621|out 0x21,AL",
         "C6060200AA|mov byte ptr DS:[2],0xAA"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:0031",
+      "term": "F000:0031",
+      "pred": [
+        20
+      ],
+      "succ": [
+        59
+      ],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 20,
+      "entry": "F000:002C",
+      "term": "F000:0030",
+      "pred": [
+        3
+      ],
+      "succ": [
+        24
+      ],
+      "asm": [
+        "FA|cli",
+        "BA0000|mov DX,0",
+        "FB|sti"
       ]
     }
   ],

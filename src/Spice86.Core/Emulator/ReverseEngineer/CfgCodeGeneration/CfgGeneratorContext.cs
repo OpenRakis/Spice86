@@ -33,7 +33,8 @@ internal sealed class CfgGeneratorContext {
         Dictionary<ushort, string> segmentVariables,
         Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> transfersByEdge,
         Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> entriesByPartition,
-        IReadOnlyList<SignatureFieldPlan> signatureFields) {
+        IReadOnlyList<SignatureFieldPlan> signatureFields,
+        bool hltWaitsForInterrupt) {
         Program = program;
         _partitionByNode = partitionByNode;
         _methodNames = methodNames;
@@ -55,12 +56,20 @@ internal sealed class CfgGeneratorContext {
         _signatureFieldByInstruction = signatureFields.ToDictionary(
             field => field.Instruction,
             field => field.FieldName);
+        HltWaitsForInterrupt = hltWaitsForInterrupt;
     }
 
     public CfgPartitionedProgram Program { get; }
 
     /// <summary>Every signature field the generated class declares, in emission order.</summary>
     public IReadOnlyList<SignatureFieldPlan> SignatureFields { get; }
+
+    /// <summary>
+    /// Whether HLT with interrupts enabled is generated as a wait for the hardware interrupt that resumes
+    /// the CPU (<c>HltWait</c>), instead of exiting the program. Follows the run's
+    /// <c>Configuration.HltStopsEmulation</c> setting.
+    /// </summary>
+    public bool HltWaitsForInterrupt { get; }
 
     /// <summary>
     /// The name of the generated field holding <paramref name="instruction"/>'s signature bytes.

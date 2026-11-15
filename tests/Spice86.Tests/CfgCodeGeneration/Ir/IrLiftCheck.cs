@@ -93,7 +93,7 @@ internal static class IrLiftCheck {
             return;
         }
         AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
-        CfgGeneratorContext context = GeneratorAnalysis.Build(program, new InstructionMnemonic(renderer)).Context;
+        CfgGeneratorContext context = GeneratorAnalysis.Build(program, new InstructionMnemonic(renderer), hltWaitsForInterrupt: false).Context;
         lock (FileLock) {
             if (!_dumpInitialized) {
                 File.Delete(path);

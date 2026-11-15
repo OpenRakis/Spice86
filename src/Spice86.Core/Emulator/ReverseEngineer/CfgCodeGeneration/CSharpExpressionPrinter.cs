@@ -1077,6 +1077,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitFailAsUntestedNode(FailAsUntestedNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCommentNode(CommentNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCheckExternalEventsNode(CheckExternalEventsNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitHltWaitNode(HltWaitNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSpeculativeGuardNode(SpeculativeGuardNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionBoundaryNode(InstructionBoundaryNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitDivisionNode(DivisionNode node) => throw NotAnExpression(node);

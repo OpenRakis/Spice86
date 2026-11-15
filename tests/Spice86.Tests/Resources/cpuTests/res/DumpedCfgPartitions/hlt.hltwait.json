@@ -5,9 +5,26 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        47
+      ],
+      "entries": [
+        {
+          "block": 47,
+          "address": "F000:0038",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
         3,
         20,
         24,
+        59,
+        60,
         2
       ],
       "entries": [
