@@ -185,7 +185,7 @@ internal static class IrAstChildren {
                 or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
                 or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
                 or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
-                or SegmentedAddressListNode or RegisterLocalNode:
+                or SegmentedAddressListNode or RegisterLocalNode or HltWaitNode:
                 break;
             default:
                 throw new NotSupportedException(
@@ -289,7 +289,7 @@ internal static class IrAstChildren {
             or ContinueNode or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
             or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
             or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
-            or SegmentedAddressListNode or RegisterLocalNode => node,
+            or SegmentedAddressListNode or RegisterLocalNode or HltWaitNode => node,
         RegisterWriteBackNode writeBack => Map(node, map, [writeBack.Register, writeBack.Local],
             c => new RegisterWriteBackNode(Child<RegisterNode>(c[0]), Child<RegisterLocalNode>(c[1]))),
         _ => throw new NotSupportedException(

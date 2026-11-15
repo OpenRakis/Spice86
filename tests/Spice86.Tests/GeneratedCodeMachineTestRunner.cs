@@ -271,7 +271,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <summary>Compares the generated source to its golden.</summary>
     public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
         List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
-        WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
+        // WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
         string resPath = GetGoldenPath(goldenKey + ".cs.txt");
         File.Exists(resPath).Should().BeTrue(
             $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running the generated entry points once, then re-commenting it");
@@ -386,7 +386,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
     private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram =
-            new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
+            new CfgCSharpGenerator(collectCensuses: true, verify: true, maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile,
+                hltWaitsForInterrupt: !scope.Fixture.Settings.HltStopsEmulation).Generate(program);
         IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);

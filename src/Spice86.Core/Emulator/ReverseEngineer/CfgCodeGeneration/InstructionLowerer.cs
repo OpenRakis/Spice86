@@ -557,7 +557,25 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     public IVisitableAstNode VisitWhileWithExitNode(WhileWithExitNode node) =>
         new WhileNode(node.Condition, Sequence(node.Body.Accept(this), new IfElseNode(node.ExitCondition, new BlockNode(new BreakNode()), Empty())));
 
-    public IVisitableAstNode VisitHltNode(HltNode node) => new ReturnNode(new HltHelperNode());
+    /// <summary>
+    /// HLT with an observed fallthrough successor in wait mode lowers to the <c>HltWait</c> wait loop, whose
+    /// delivered interrupt resumes the CPU at the successor; every other HLT exits the program. The fallthrough
+    /// itself is the normal one, added by <see cref="LowerForIr"/>.
+    /// </summary>
+    public IVisitableAstNode VisitHltNode(HltNode node) {
+        CfgInstruction instruction = node.Instruction;
+        if (Context.HltWaitsForInterrupt && HasFallthrough(instruction)) {
+            return new HltWaitNode(
+                new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset),
+                HardwareInterruptEffect);
+        }
+        return new ReturnNode(new HltHelperNode());
+    }
+
+    /// <summary>True when discovery observed the HLT falling through to the next address in memory.</summary>
+    private bool HasFallthrough(CfgInstruction instruction) =>
+        Context.TryResolveEdge(instruction, InstructionSuccessorType.Normal,
+            instruction.NextInMemoryAddress32.ToSegmentedAddress()) is not null;
 
     public IVisitableAstNode VisitInvalidInstructionNode(InvalidInstructionNode node) =>
         new ThrowNode(node.CpuException.GetType(), node.CpuException.Message);

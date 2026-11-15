@@ -46,7 +46,7 @@ internal static class MachineGoldens {
     /// <param name="machine">Machine of the finished run.</param>
     public static void CompareListingWithExpected(string goldenKey, Machine machine) {
         List<string> actualLines = Dumper.ToAssemblyListing(machine.CfgCpu);
-        WriteExpectedListing(goldenKey, actualLines);
+        // WriteExpectedListing(goldenKey, actualLines);
         List<string> expectedLines = GetExpectedListing(goldenKey);
         Assert.Equal(expectedLines, actualLines);
     }
@@ -58,7 +58,7 @@ internal static class MachineGoldens {
         ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
         string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
         string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
-        WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
+        // WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgBlocks"), actualBlocksJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgPartitions"), actualPartitionsJson);
     }

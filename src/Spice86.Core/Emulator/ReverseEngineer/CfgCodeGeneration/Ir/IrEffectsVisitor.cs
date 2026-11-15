@@ -213,6 +213,13 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(node.HardwareInterruptEffect.Reads, CpuValues.None, node.HardwareInterruptEffect.Writes,
             IrTokens.All, IrTokens.All, false, true);
 
+    /// <summary>The wait delivers the same hardware interrupt as the check: the handler reads the
+    /// effect's <see cref="CallEffect.Reads"/>, may write its <see cref="CallEffect.Writes"/> and the
+    /// iret restores FLAGS, so the same tokens and the same flag behavior apply.</summary>
+    public IrEffects VisitHltWaitNode(HltWaitNode node) =>
+        new(node.HardwareInterruptEffect.Reads, CpuValues.None, node.HardwareInterruptEffect.Writes,
+            IrTokens.All, IrTokens.All, false, true);
+
     public IrEffects VisitReturnNode(ReturnNode node) => node.Value.Accept(this).Then(IrEffects.ExitUse);
 
     public IrEffects VisitFailAsUntestedNode(FailAsUntestedNode node) {
