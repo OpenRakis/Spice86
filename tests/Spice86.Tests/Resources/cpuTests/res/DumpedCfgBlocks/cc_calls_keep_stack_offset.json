@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0022",
-  "lastExecutedBlockId": 62,
+  "lastExecutedBlockId": 65,
   "blocks": [
     {
-      "id": 62,
+      "id": 65,
       "entry": "F000:0011",
       "term": "F000:0022",
       "pred": [
         3,
-        55
+        20
       ],
       "succ": [],
       "asm": [
@@ -38,7 +38,7 @@
       ]
     },
     {
-      "id": 55,
+      "id": 20,
       "entry": "F000:0029",
       "term": "F000:002F",
       "pred": [
@@ -46,7 +46,7 @@
         14
       ],
       "succ": [
-        62
+        65
       ],
       "asm": [
         "89E3|mov BX,SP",
@@ -63,7 +63,7 @@
       ],
       "succ": [
         11,
-        62
+        65
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -76,24 +76,6 @@
       ]
     },
     {
-      "id": 14,
-      "entry": "F000:0032",
-      "term": "F000:0039",
-      "pred": [
-        11
-      ],
-      "succ": [
-        55
-      ],
-      "asm": [
-        "55|push BP",
-        "89E5|mov BP,SP",
-        "8B4604|mov AX,word ptr SS:[BP\u002B4]",
-        "5D|pop BP",
-        "C20200|ret near 2"
-      ]
-    },
-    {
       "id": 11,
       "entry": "F000:0023",
       "term": "F000:0026",
@@ -102,11 +84,29 @@
       ],
       "succ": [
         14,
-        55
+        20
       ],
       "asm": [
         "683412|push 0x1234",
         "E80900|call near 0x0032"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0032",
+      "term": "F000:0039",
+      "pred": [
+        11
+      ],
+      "succ": [
+        20
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "8B4604|mov AX,word ptr SS:[BP\u002B4]",
+        "5D|pop BP",
+        "C20200|ret near 2"
       ]
     }
   ],

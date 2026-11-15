@@ -13,7 +13,8 @@
       "entry": "F000:001E",
       "term": "F000:0030",
       "pred": [
-        11
+        11,
+        18
       ],
       "succ": [],
       "asm": [
@@ -53,6 +54,22 @@
       ]
     },
     {
+      "id": 18,
+      "entry": "F000:001B",
+      "dead": true,
+      "term": "F000:001B",
+      "pred": [
+        11
+      ],
+      "succ": [
+        16,
+        78
+      ],
+      "asm": [
+        "2EFF1F|call far dword ptr CS:[BX]"
+      ]
+    },
+    {
       "id": 3,
       "entry": "F000:0000",
       "term": "F000:0011",
@@ -74,18 +91,18 @@
       ]
     },
     {
-      "id": 18,
-      "entry": "F000:001B",
+      "id": 78,
+      "entry": "F000:0031",
       "dead": true,
-      "term": "F000:001B",
+      "term": "F000:0034",
       "pred": [
-        11
+        13,
+        18
       ],
-      "succ": [
-        78
-      ],
+      "succ": [],
       "asm": [
-        "2EFF1F|call far dword ptr CS:[BX]"
+        "B90300|mov CX,3",
+        "CB|ret far"
       ]
     },
     {
@@ -101,21 +118,6 @@
       ],
       "asm": [
         "2EFF2F|jmp far dword ptr CS:[BX]"
-      ]
-    },
-    {
-      "id": 78,
-      "entry": "F000:0031",
-      "dead": true,
-      "term": "F000:0034",
-      "pred": [
-        13,
-        18
-      ],
-      "succ": [],
-      "asm": [
-        "B90300|mov CX,3",
-        "CB|ret far"
       ]
     }
   ],

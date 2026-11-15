@@ -2005,6 +2005,9 @@ internal static class AsmFixtureCatalog {
         yield return (0x401, arm == SpeculativeArm.Unobserved ? (byte)0x42 : (byte)0xDD);
         if (arm == SpeculativeArm.Unobserved) {
             yield return (0x402, 0x33);
+            // S6: the never-called balanced callee is proven to return by its
+            // speculative subgraph, so its continuation is explored and runs.
+            yield return (0x406, 0x44);
         }
         yield return (0x405, 0xAA);
     }

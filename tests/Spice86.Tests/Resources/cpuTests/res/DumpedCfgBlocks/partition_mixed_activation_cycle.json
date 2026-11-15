@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0027",
-  "lastExecutedBlockId": 60,
+  "lastExecutedBlockId": 55,
   "blocks": [
     {
-      "id": 60,
+      "id": 55,
       "entry": "F000:0014",
       "term": "F000:0027",
       "pred": [
@@ -38,22 +38,6 @@
       ]
     },
     {
-      "id": 49,
-      "entry": "F000:0031",
-      "term": "F000:0031",
-      "pred": [
-        9,
-        16
-      ],
-      "succ": [
-        52,
-        60
-      ],
-      "asm": [
-        "C3|ret near"
-      ]
-    },
-    {
       "id": 52,
       "entry": "F000:000E",
       "term": "F000:0011",
@@ -63,11 +47,27 @@
       ],
       "succ": [
         13,
-        60
+        55
       ],
       "asm": [
         "B90200|mov CX,2",
         "E81400|call near 0x0028"
+      ]
+    },
+    {
+      "id": 49,
+      "entry": "F000:0031",
+      "term": "F000:0031",
+      "pred": [
+        9,
+        16
+      ],
+      "succ": [
+        52,
+        55
+      ],
+      "asm": [
+        "C3|ret near"
       ]
     },
     {
@@ -87,6 +87,23 @@
         "BC0001|mov SP,0x0100",
         "B90100|mov CX,1",
         "E82000|call near 0x002E"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:0028",
+      "term": "F000:0029",
+      "pred": [
+        11,
+        52
+      ],
+      "succ": [
+        16,
+        18
+      ],
+      "asm": [
+        "49|dec CX",
+        "7402|je short 0x002D"
       ]
     },
     {
@@ -120,20 +137,17 @@
       ]
     },
     {
-      "id": 13,
-      "entry": "F000:0028",
-      "term": "F000:0029",
+      "id": 18,
+      "entry": "F000:002B",
+      "term": "F000:002B",
       "pred": [
-        11,
-        52
+        13
       ],
       "succ": [
-        16,
-        18
+        9
       ],
       "asm": [
-        "49|dec CX",
-        "7402|je short 0x002D"
+        "EB01|jmp short 0x002E"
       ]
     },
     {
@@ -148,20 +162,6 @@
       ],
       "asm": [
         "EBF4|jmp short 0x0028"
-      ]
-    },
-    {
-      "id": 18,
-      "entry": "F000:002B",
-      "term": "F000:002B",
-      "pred": [
-        13
-      ],
-      "succ": [
-        9
-      ],
-      "asm": [
-        "EB01|jmp short 0x002E"
       ]
     }
   ],

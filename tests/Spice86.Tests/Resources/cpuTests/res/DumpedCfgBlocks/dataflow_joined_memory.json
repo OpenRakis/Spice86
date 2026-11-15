@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0106",
-  "lastExecutedBlockId": 548,
+  "lastExecutedBlockId": 538,
   "blocks": [
     {
-      "id": 548,
+      "id": 538,
       "entry": "F000:00FC",
       "term": "F000:0106",
       "pred": [
-        523
+        513
       ],
       "succ": [],
       "asm": [
@@ -35,16 +35,16 @@
       ]
     },
     {
-      "id": 523,
+      "id": 513,
       "entry": "F000:00B3",
       "term": "F000:00F8",
       "pred": [
         499,
-        516
+        505
       ],
       "succ": [
-        546,
-        548
+        536,
+        538
       ],
       "asm": [
         "8B160208|mov DX,word ptr DS:[0x0802]",
@@ -79,7 +79,7 @@
         2
       ],
       "succ": [
-        546
+        536
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -100,16 +100,16 @@
       ]
     },
     {
-      "id": 546,
+      "id": 536,
       "entry": "F000:002A",
       "term": "F000:009A",
       "pred": [
         3,
-        523
+        513
       ],
       "succ": [
         499,
-        516
+        505
       ],
       "asm": [
         "A10008|mov AX,word ptr DS:[0x0800]",
@@ -156,16 +156,16 @@
       ]
     },
     {
-      "id": 516,
+      "id": 505,
       "entry": "F000:009C",
       "term": "F000:00B1",
       "pred": [
         499,
-        546
+        536
       ],
       "succ": [
         499,
-        523
+        513
       ],
       "asm": [
         "8B160208|mov DX,word ptr DS:[0x0802]",
@@ -182,12 +182,12 @@
       "entry": "F000:0107",
       "term": "F000:0117",
       "pred": [
-        516,
-        546
+        505,
+        536
       ],
       "succ": [
-        516,
-        523
+        505,
+        513
       ],
       "asm": [
         "89471C|mov word ptr DS:[BX\u002B0x1C],AX",

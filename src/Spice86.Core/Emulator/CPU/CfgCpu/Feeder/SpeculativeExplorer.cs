@@ -113,6 +113,12 @@ public class SpeculativeExplorer {
         int Bound = 0);
     private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
+    private readonly CalleeReturnScanner _calleeReturnScanner;
+    private readonly Dictionary<SegmentedAddress, CallDistance> _provedReturnKind = new();
+    private readonly HashSet<SegmentedAddress> _refusedCalleeProof = [];
+    private readonly HashSet<SegmentedAddress> _incompleteCalleeProof = [];
+    private int _drainNesting;
+    private bool _drainInserted;
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
         ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
@@ -129,6 +135,7 @@ public class SpeculativeExplorer {
         _functionCatalogue = functionCatalogue;
         _watchedCells = watchedCells;
         _loggerService = loggerService;
+        _calleeReturnScanner = new CalleeReturnScanner(nodeIndex);
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
         // Catalogue entries are trust-checked against the loaded bytes, so they can only be
         // submitted after the image capture ran. ImageCaptured fires at the end of that capture,
@@ -315,7 +322,7 @@ public class SpeculativeExplorer {
         if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
             return;
         }
-        if (_calleeReturnEvidence.IsKnownToReturn(calleeEntry)) {
+        if (_calleeReturnEvidence.IsKnownToReturn(calleeEntry) || IsProvenFor(calleeEntry, callNode)) {
             EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
         } else {
             AddPendingCallSite(calleeEntry, callNode);
@@ -424,8 +431,21 @@ public class SpeculativeExplorer {
         return true;
     }
 
-    // Iteratively decodes and links all reachable instructions from the worklist.
+    // Iteratively decodes and links all reachable instructions from the worklist. When the
+    // outermost drain completes, call sites still pending on their callee get one proof round:
+    // the callee-return scan runs only here, never per item.
     private void Drain(Queue<ExploreItem> worklist) {
+        _drainNesting++;
+        try {
+            DrainLoop(worklist);
+        } finally {
+            if (--_drainNesting == 0) {
+                ScanPendingCallCallees();
+            }
+        }
+    }
+
+    private void DrainLoop(Queue<ExploreItem> worklist) {
         while (worklist.Count > 0) {
             ExploreItem item = worklist.Dequeue();
             SegmentedAddress address = item.Target;
@@ -483,6 +503,7 @@ public class SpeculativeExplorer {
             candidate.SetSpeculative(true);
             candidate.SetDiscoverySource(item.Source);
             _nodeIndex.Insert(candidate);
+            _drainInserted = true;
             if (item.Predecessor is not null) {
                 _nodeLinker.Link(item.EdgeType, item.Predecessor, candidate);
             }
@@ -897,6 +918,7 @@ public class SpeculativeExplorer {
         if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
             return;
         }
+
         if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
             EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
         } else if (callee is not null) {
@@ -918,7 +940,79 @@ public class SpeculativeExplorer {
             }
             return vector != 0x21 || !IsDosExitMovPredecessor(callNode);
         }
-        return _calleeReturnEvidence.IsKnownToReturn(callee.Value);
+        if (_calleeReturnEvidence.IsKnownToReturn(callee.Value)) {
+            return true;
+        }
+        // A callee the scan proved to return also qualifies, for sites of the distance its
+        // endings are uniform on - unless observed unaligned evidence has disproved it since.
+        return IsProvenFor(callee.Value, callNode);
+    }
+
+    private bool IsProvenFor(SegmentedAddress calleeEntry, CfgInstruction callNode) =>
+        _provedReturnKind.TryGetValue(calleeEntry, out CallDistance kind)
+            && kind == SiteDistance(callNode)
+            && !_calleeReturnEvidence.IsDisproved(calleeEntry);
+
+    /// <summary>The call/return distance of a call or int node.</summary>
+    private static CallDistance SiteDistance(CfgInstruction callNode) => callNode.ExecutionAst switch {
+        CallFarNode => CallDistance.Far,
+        InterruptCallNode => CallDistance.Interrupt,
+        _ => CallDistance.Near
+    };
+
+    /// <summary>
+    /// Runs the callee-return scan on every callee that still has pending call sites and is not
+    /// already proven or refused. Called only when the outermost <see cref="Drain"/> completes;
+    /// a callee refused because its subgraph was incomplete is rescanned only after a drain
+    /// inserted nodes. A proof drains the pending sites of the matching distance, which may
+    /// insert nodes and let further callees prove in the same round.
+    /// </summary>
+    private void ScanPendingCallCallees() {
+        if (_pendingCallSites.Count == 0) {
+            return;
+        }
+        bool progress = true;
+        while (progress) {
+            progress = false;
+            foreach (SegmentedAddress callee in _pendingCallSites.Keys.ToList()) {
+                if (_provedReturnKind.ContainsKey(callee) || _refusedCalleeProof.Contains(callee)
+                    || _calleeReturnEvidence.IsDisproved(callee)
+                    || (_incompleteCalleeProof.Contains(callee) && !_drainInserted)) {
+                    continue;
+                }
+                _incompleteCalleeProof.Remove(callee);
+                switch (_calleeReturnScanner.Scan(callee, node => IsCalleeKnownToReturn(node, out _))) {
+                    case CalleeReturnScanner.Outcome.Near:
+                        ProveCallee(callee, CallDistance.Near);
+                        progress = true;
+                        break;
+                    case CalleeReturnScanner.Outcome.Far:
+                        ProveCallee(callee, CallDistance.Far);
+                        progress = true;
+                        break;
+                    case CalleeReturnScanner.Outcome.Interrupt:
+                        ProveCallee(callee, CallDistance.Interrupt);
+                        progress = true;
+                        break;
+                    case CalleeReturnScanner.Outcome.Incomplete:
+                        _incompleteCalleeProof.Add(callee);
+                        break;
+                    default:
+                        _refusedCalleeProof.Add(callee);
+                        break;
+                }
+            }
+            _drainInserted = false;
+        }
+    }
+
+    /// <summary>Records <paramref name="kind"/> as the return distance the scan proved for
+    /// <paramref name="callee"/> and drains the pending call sites of that distance.</summary>
+    private void ProveCallee(SegmentedAddress callee, CallDistance kind) {
+        _provedReturnKind[callee] = kind;
+        _loggerService.LogDebug("Callee {Address} proven to return ({Kind}) by its speculative subgraph",
+            callee, kind);
+        DrainPendingCallSites(callee, kind);
     }
 
     /// <summary>
@@ -978,6 +1072,7 @@ public class SpeculativeExplorer {
         }
         if (!sites.Contains(callNode)) {
             sites.Add(callNode);
+
         }
     }
 
@@ -985,12 +1080,20 @@ public class SpeculativeExplorer {
     /// The callee just became known to return: wire the continuation of every pending call site
     /// still in the index. Sites pruned or already holding a CallToReturn successor are skipped.
     /// </summary>
-    private void DrainPendingCallSites(SegmentedAddress callee) {
-        if (!_pendingCallSites.Remove(callee, out List<CfgInstruction>? sites)) {
+    private void DrainPendingCallSites(SegmentedAddress callee, CallDistance? provenDistance = null) {
+        if (!_pendingCallSites.TryGetValue(callee, out List<CfgInstruction>? sites)) {
             return;
         }
+        // A proof is uniform per distance: sites of another distance stay pending.
+        List<CfgInstruction> matching = sites
+            .Where(site => provenDistance is null || SiteDistance(site) == provenDistance.Value)
+            .ToList();
+        sites.RemoveAll(matching.Contains);
+        if (sites.Count == 0) {
+            _pendingCallSites.Remove(callee);
+        }
         Queue<ExploreItem> worklist = new();
-        foreach (CfgInstruction site in sites) {
+        foreach (CfgInstruction site in matching) {
             if (!_nodeIndex.Contains(site) || !IsUsable(site) || HasCallToReturnSuccessor(site)) {
                 continue;
             }

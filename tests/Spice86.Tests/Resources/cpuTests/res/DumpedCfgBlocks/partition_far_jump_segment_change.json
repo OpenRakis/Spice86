@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0025",
-  "lastExecutedBlockId": 184,
+  "lastExecutedBlockId": 47,
   "blocks": [
     {
-      "id": 184,
+      "id": 47,
       "entry": "F000:001B",
       "term": "F000:0025",
       "pred": [
-        183
+        45
       ],
       "succ": [],
       "asm": [
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "id": 183,
+      "id": 45,
       "entry": "F100:004A",
       "term": "F100:004A",
       "pred": [
@@ -43,7 +43,7 @@
         40
       ],
       "succ": [
-        184
+        47
       ],
       "asm": [
         "EA1B0000F0|jmp far F000:001B"
@@ -69,23 +69,6 @@
       ]
     },
     {
-      "id": 40,
-      "entry": "F100:004F",
-      "term": "F100:0054",
-      "pred": [
-        38
-      ],
-      "succ": [
-        183
-      ],
-      "asm": [
-        "0E|push CS",
-        "58|pop AX",
-        "89470C|mov word ptr DS:[BX\u002B0x0C],AX",
-        "C3|ret near"
-      ]
-    },
-    {
       "id": 38,
       "entry": "F100:0047",
       "term": "F100:0047",
@@ -94,10 +77,27 @@
       ],
       "succ": [
         40,
-        183
+        45
       ],
       "asm": [
         "E80500|call near 0x004F"
+      ]
+    },
+    {
+      "id": 40,
+      "entry": "F100:004F",
+      "term": "F100:0054",
+      "pred": [
+        38
+      ],
+      "succ": [
+        45
+      ],
+      "asm": [
+        "0E|push CS",
+        "58|pop AX",
+        "89470C|mov word ptr DS:[BX\u002B0x0C],AX",
+        "C3|ret near"
       ]
     },
     {

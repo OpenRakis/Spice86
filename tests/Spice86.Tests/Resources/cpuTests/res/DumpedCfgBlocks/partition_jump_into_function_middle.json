@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0021",
-  "lastExecutedBlockId": 36,
+  "lastExecutedBlockId": 18,
   "blocks": [
     {
-      "id": 36,
+      "id": 18,
       "entry": "F000:000E",
       "term": "F000:0021",
       "pred": [
-        28,
-        31
+        12,
+        16
       ],
       "succ": [],
       "asm": [
@@ -38,36 +38,36 @@
       ]
     },
     {
-      "id": 31,
-      "entry": "F000:0025",
-      "term": "F000:0028",
-      "pred": [
-        8,
-        29
-      ],
-      "succ": [
-        28,
-        36
-      ],
-      "asm": [
-        "BB2222|mov BX,0x2222",
-        "C3|ret near"
-      ]
-    },
-    {
-      "id": 28,
+      "id": 12,
       "entry": "F000:000B",
       "term": "F000:000B",
       "pred": [
         3,
-        31
+        16
       ],
       "succ": [
-        29,
-        36
+        14,
+        18
       ],
       "asm": [
         "E81B00|call near 0x0029"
+      ]
+    },
+    {
+      "id": 16,
+      "entry": "F000:0025",
+      "term": "F000:0028",
+      "pred": [
+        8,
+        14
+      ],
+      "succ": [
+        12,
+        18
+      ],
+      "asm": [
+        "BB2222|mov BX,0x2222",
+        "C3|ret near"
       ]
     },
     {
@@ -79,13 +79,27 @@
       ],
       "succ": [
         8,
-        28
+        12
       ],
       "asm": [
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
         "E81700|call near 0x0022"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0029",
+      "term": "F000:0029",
+      "pred": [
+        12
+      ],
+      "succ": [
+        16
+      ],
+      "asm": [
+        "EBFA|jmp short 0x0025"
       ]
     },
     {
@@ -96,24 +110,10 @@
         3
       ],
       "succ": [
-        31
+        16
       ],
       "asm": [
         "B81111|mov AX,0x1111"
-      ]
-    },
-    {
-      "id": 29,
-      "entry": "F000:0029",
-      "term": "F000:0029",
-      "pred": [
-        28
-      ],
-      "succ": [
-        31
-      ],
-      "asm": [
-        "EBFA|jmp short 0x0025"
       ]
     }
   ],

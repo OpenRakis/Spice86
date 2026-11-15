@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        35
+        16
       ],
       "entries": [
         {
-          "block": 35,
+          "block": 16,
           "address": "F000:002C",
           "kind": "functionEntry"
         }
@@ -36,8 +36,8 @@
       "name": "unknown",
       "blocks": [
         3,
-        34,
-        45,
+        14,
+        20,
         2
       ],
       "entries": [
@@ -78,7 +78,7 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 4,
-      "fromBlock": 35,
+      "fromBlock": 16,
       "toBlock": 11,
       "from": "F000:002F",
       "target": "F000:0031"
@@ -91,18 +91,18 @@
       "toBlock": 8,
       "from": "F000:0008",
       "target": "F000:0027",
-      "callContinuationBlock": 34,
+      "callContinuationBlock": 14,
       "callContinuationAddress": "F000:000B"
     },
     {
       "kind": "callOut",
       "fromPartition": 3,
       "toPartition": 2,
-      "fromBlock": 34,
-      "toBlock": 35,
+      "fromBlock": 14,
+      "toBlock": 16,
       "from": "F000:000B",
       "target": "F000:002C",
-      "callContinuationBlock": 45,
+      "callContinuationBlock": 20,
       "callContinuationAddress": "F000:000E"
     },
     {
@@ -110,7 +110,7 @@
       "fromPartition": 4,
       "toPartition": 3,
       "fromBlock": 11,
-      "toBlock": 34,
+      "toBlock": 14,
       "from": "F000:0034",
       "target": "F000:000B"
     },
@@ -119,7 +119,7 @@
       "fromPartition": 4,
       "toPartition": 3,
       "fromBlock": 11,
-      "toBlock": 45,
+      "toBlock": 20,
       "from": "F000:0034",
       "target": "F000:000E"
     }

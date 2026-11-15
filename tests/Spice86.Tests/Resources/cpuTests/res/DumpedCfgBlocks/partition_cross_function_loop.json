@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0027",
-  "lastExecutedBlockId": 70,
+  "lastExecutedBlockId": 28,
   "blocks": [
     {
-      "id": 70,
+      "id": 28,
       "entry": "F000:0014",
       "term": "F000:0027",
       "pred": [
         12,
-        61
+        24
       ],
       "succ": [],
       "asm": [
@@ -38,21 +38,7 @@
       ]
     },
     {
-      "id": 12,
-      "entry": "F000:002D",
-      "term": "F000:002D",
-      "pred": [
-        9
-      ],
-      "succ": [
-        70
-      ],
-      "asm": [
-        "C3|ret near"
-      ]
-    },
-    {
-      "id": 61,
+      "id": 24,
       "entry": "F000:000E",
       "term": "F000:0011",
       "pred": [
@@ -61,11 +47,25 @@
       ],
       "succ": [
         16,
-        70
+        28
       ],
       "asm": [
         "B90200|mov CX,2",
         "E81A00|call near 0x002E"
+      ]
+    },
+    {
+      "id": 12,
+      "entry": "F000:002D",
+      "term": "F000:002D",
+      "pred": [
+        9
+      ],
+      "succ": [
+        28
+      ],
+      "asm": [
+        "C3|ret near"
       ]
     },
     {
@@ -77,7 +77,7 @@
       ],
       "succ": [
         9,
-        61
+        24
       ],
       "asm": [
         "B80010|mov AX,0x1000",
@@ -85,6 +85,37 @@
         "BC0001|mov SP,0x0100",
         "B90200|mov CX,2",
         "E81A00|call near 0x0028"
+      ]
+    },
+    {
+      "id": 16,
+      "entry": "F000:002E",
+      "term": "F000:002F",
+      "pred": [
+        14,
+        24
+      ],
+      "succ": [
+        19,
+        21
+      ],
+      "asm": [
+        "49|dec CX",
+        "7402|je short 0x0033"
+      ]
+    },
+    {
+      "id": 19,
+      "entry": "F000:0033",
+      "term": "F000:0033",
+      "pred": [
+        16
+      ],
+      "succ": [
+        24
+      ],
+      "asm": [
+        "C3|ret near"
       ]
     },
     {
@@ -105,34 +136,17 @@
       ]
     },
     {
-      "id": 16,
-      "entry": "F000:002E",
-      "term": "F000:002F",
-      "pred": [
-        14,
-        61
-      ],
-      "succ": [
-        19,
-        21
-      ],
-      "asm": [
-        "49|dec CX",
-        "7402|je short 0x0033"
-      ]
-    },
-    {
-      "id": 19,
-      "entry": "F000:0033",
-      "term": "F000:0033",
+      "id": 21,
+      "entry": "F000:0031",
+      "term": "F000:0031",
       "pred": [
         16
       ],
       "succ": [
-        61
+        9
       ],
       "asm": [
-        "C3|ret near"
+        "EBF5|jmp short 0x0028"
       ]
     },
     {
@@ -147,20 +161,6 @@
       ],
       "asm": [
         "EB01|jmp short 0x002E"
-      ]
-    },
-    {
-      "id": 21,
-      "entry": "F000:0031",
-      "term": "F000:0031",
-      "pred": [
-        16
-      ],
-      "succ": [
-        9
-      ],
-      "asm": [
-        "EBF5|jmp short 0x0028"
       ]
     }
   ],

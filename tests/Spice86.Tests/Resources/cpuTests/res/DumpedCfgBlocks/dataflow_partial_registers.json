@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:00AD",
-  "lastExecutedBlockId": 234,
+  "lastExecutedBlockId": 68,
   "blocks": [
     {
-      "id": 234,
+      "id": 68,
       "entry": "F000:00A3",
       "term": "F000:00AD",
       "pred": [
-        221
+        55
       ],
       "succ": [],
       "asm": [
@@ -35,16 +35,16 @@
       ]
     },
     {
-      "id": 221,
+      "id": 55,
       "entry": "F000:0086",
       "term": "F000:009F",
       "pred": [
         41,
-        210
+        43
       ],
       "succ": [
-        232,
-        234
+        66,
+        68
       ],
       "asm": [
         "268B0E0200|mov CX,word ptr ES:[2]",
@@ -67,7 +67,7 @@
         2
       ],
       "succ": [
-        232
+        66
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -82,16 +82,16 @@
       ]
     },
     {
-      "id": 232,
+      "id": 66,
       "entry": "F000:0018",
       "term": "F000:0066",
       "pred": [
         3,
-        221
+        55
       ],
       "succ": [
         41,
-        210
+        43
       ],
       "asm": [
         "2E8B04|mov AX,word ptr CS:[SI]",
@@ -125,16 +125,16 @@
       ]
     },
     {
-      "id": 210,
+      "id": 43,
       "entry": "F000:0069",
       "term": "F000:0083",
       "pred": [
         41,
-        232
+        66
       ],
       "succ": [
         41,
-        221
+        55
       ],
       "asm": [
         "8B0E0000|mov CX,word ptr DS:[0]",
@@ -154,12 +154,12 @@
       "entry": "F000:00AE",
       "term": "F000:00AE",
       "pred": [
-        210,
-        232
+        43,
+        66
       ],
       "succ": [
-        210,
-        221
+        43,
+        55
       ],
       "asm": [
         "C3|ret near"

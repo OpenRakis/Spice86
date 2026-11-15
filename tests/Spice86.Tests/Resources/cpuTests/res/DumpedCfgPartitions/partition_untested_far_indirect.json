@@ -53,7 +53,9 @@
       "fromBlock": 18,
       "toBlock": 78,
       "from": "F000:001B",
-      "target": "F000:0031"
+      "target": "F000:0031",
+      "callContinuationBlock": 16,
+      "callContinuationAddress": "F000:001E"
     }
   ]
 }

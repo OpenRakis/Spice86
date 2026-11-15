@@ -12,6 +12,7 @@ F000:001F call near 0x0050
 F000:0022 call far F000:0028
 F000:0027 hlt
 F000:0028 jmp far F000:003A
+F000:0028 selector
 F000:0028 jmp far F000:0034
 F000:0028 jmp far F000:002E
 F000:002E mov byte ptr DS:[0x0010],0xAA

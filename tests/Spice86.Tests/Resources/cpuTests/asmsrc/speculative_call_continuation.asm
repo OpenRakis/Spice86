@@ -18,12 +18,25 @@
 ;   S2: call g, which only ever returned by redirecting its stacked return address
 ;   S5': mov ah,4Ch; int 21h (program termination) - continuation must stay untested
 ;
+; Sections added by the callee-return scan:
+;   S6: call p on the executed unobserved path - p is never called anywhere, so no
+;       return evidence exists; the scan proves it returns (balanced push bp frame,
+;       a store through [bp-2] that does not touch the return address) and the
+;       continuation is explored so the unobserved run reaches its marker.
+;   T1: call unbal on a never-taken arm - an unbalanced pop refuses the proof,
+;       the marker stays unexplored (golden only).
+;   T2: call framebad on a never-taken arm - the write through [bp+2] inside its
+;       push bp; mov bp,sp frame may hit the return address and refuses the
+;       proof; the marker stays unexplored (golden only).
+;
 ; Expected memory:
 ;   [0x0400] = 0x01
 ;   [0x0401] = 0xDD (discovery) or 0x42 (unobserved: S1 marker)
 ;   [0x0402] = 0x00 (discovery) or 0x33 (unobserved: S3 marker)
 ;   [0x0403]/[0x0404] = 0x00 (the S4/S5 markers are explored, never run - golden only)
 ;   [0x0405] = 0xAA (done marker, both runs)
+;   [0x0406] = 0x00 (discovery) or 0x44 (unobserved: S6 marker)
+;   [0x040B]/[0x040C] = 0x00 (the T1/T2 markers are never explored)
 
 use16
 
@@ -64,6 +77,8 @@ unobserved_arm:
     mov byte [0x0401], 0x42
     call f2                 ; S3: pending until the discovery path's call f2 returns
     mov byte [0x0402], 0x33
+    call p                  ; S6: never called - proven to return by the subgraph scan
+    mov byte [0x0406], 0x44
     ; Never-taken branches keep the int sites and the negative twins in the graph
     ; without running them: a never-delivered int lowers to an untested abort, and
     ; code after a call without a known return is not explored, so every site needs
@@ -73,6 +88,8 @@ unobserved_arm:
     jnz s5_arm
     jnz neg_g
     jnz neg_21
+    jnz t1_arm
+    jnz t2_arm
     jmp done
 
 s4_arm:
@@ -97,6 +114,16 @@ neg_21:
     mov byte [0x040A], 0x55
     jmp done
 
+t1_arm:
+    call unbal              ; T1: unbalanced callee - no continuation
+    mov byte [0x040B], 0x55
+    jmp done
+
+t2_arm:
+    call framebad           ; T2: writes the return address - no continuation
+    mov byte [0x040C], 0x55
+    jmp done
+
 f:
     mov al, 0x42
     ret
@@ -107,6 +134,27 @@ f2:
 g:
     mov bp, sp
     add word [bp], gskip_label - after_gcall
+    ret
+
+p:
+    push bp
+    mov bp, sp
+    sub sp, 4
+    mov word [bp-2], 5      ; local frame store, below the return address
+    mov sp, bp
+    pop bp
+    ret
+
+unbal:
+    pop cx                  ; pops the caller's return address - unbalanced
+    ret
+
+framebad:
+    push bp
+    mov bp, sp
+    mov word [bp+2], 0      ; writes the stacked return address
+    mov sp, bp
+    pop bp
     ret
 
 handler60:

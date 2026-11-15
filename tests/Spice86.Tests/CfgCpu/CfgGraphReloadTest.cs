@@ -272,9 +272,9 @@ public class CfgGraphReloadTest {
         // The unobserved call/int sites (call f, call f2 and the AH=30h int 21h): strip their
         // CallToReturn edges so the reload rebuild is the only thing that can restore them. The
         // observed call edges - the evidence - stay.
-        const string callF = "F000:0033";
-        const string callF2 = "F000:003B";
-        const string int21 = "F000:005A";
+        const string callF = "F000:0034";
+        const string callF2 = "F000:003C";
+        const string int21 = "F000:0067";
         HashSet<int> callSiteIds = new[] { callF, callF2, int21 }
             .Select(addr => dump.Nodes.Where(n => n.Addr == addr).Select(n => n.Id).Single())
             .ToHashSet();
@@ -297,14 +297,14 @@ public class CfgGraphReloadTest {
         reloader.RebuildCallReturnEvidence();
 
         CfgNodeIndex index = machine.CfgCpu.CfgNodeFeeder.NodeIndex;
-        AssertCallContinuation(index, callF, "F000:0036");
-        AssertCallContinuation(index, callF2, "F000:003E");
-        AssertCallContinuation(index, int21, "F000:005C");
+        AssertCallContinuation(index, callF, "F000:0037");
+        AssertCallContinuation(index, callF2, "F000:003F");
+        AssertCallContinuation(index, int21, "F000:0069");
 
         // The callee of the never-taken call g only has redirected-return evidence: no continuation.
-        AssertNoCallContinuation(index, "F000:0063");
+        AssertNoCallContinuation(index, "F000:0070");
         // The int 21h termination pattern: no continuation either.
-        AssertNoCallContinuation(index, "F000:006F");
+        AssertNoCallContinuation(index, "F000:007C");
     }
 
     private static void AssertCallContinuation(CfgNodeIndex index, string callSiteAddr, string continuationAddr) {

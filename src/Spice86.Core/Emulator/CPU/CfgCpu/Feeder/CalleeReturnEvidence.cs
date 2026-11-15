@@ -31,4 +31,8 @@ internal sealed class CalleeReturnEvidence {
     /// <summary>True when the callee has aligned return evidence and no unaligned one.</summary>
     public bool IsKnownToReturn(SegmentedAddress calleeEntry) =>
         _aligned.Contains(calleeEntry) && !_unaligned.Contains(calleeEntry);
+
+    /// <summary>True when observed evidence shows the callee returning unaligned: misaligned
+    /// or redirected. Such a callee is never trusted again, even by a speculative proof.</summary>
+    public bool IsDisproved(SegmentedAddress calleeEntry) => _unaligned.Contains(calleeEntry);
 }

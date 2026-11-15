@@ -13,7 +13,8 @@
       "entry": "F000:001C",
       "term": "F000:002E",
       "pred": [
-        11
+        11,
+        18
       ],
       "succ": [],
       "asm": [
@@ -53,6 +54,22 @@
       ]
     },
     {
+      "id": 18,
+      "entry": "F000:001A",
+      "dead": true,
+      "term": "F000:001A",
+      "pred": [
+        11
+      ],
+      "succ": [
+        16,
+        78
+      ],
+      "asm": [
+        "FFD3|call near BX"
+      ]
+    },
+    {
       "id": 3,
       "entry": "F000:0000",
       "term": "F000:0011",
@@ -74,18 +91,18 @@
       ]
     },
     {
-      "id": 18,
-      "entry": "F000:001A",
+      "id": 78,
+      "entry": "F000:002F",
       "dead": true,
-      "term": "F000:001A",
+      "term": "F000:0032",
       "pred": [
-        11
+        13,
+        18
       ],
-      "succ": [
-        78
-      ],
+      "succ": [],
       "asm": [
-        "FFD3|call near BX"
+        "B90300|mov CX,3",
+        "C3|ret near"
       ]
     },
     {
@@ -101,21 +118,6 @@
       ],
       "asm": [
         "FFE3|jmp near BX"
-      ]
-    },
-    {
-      "id": 78,
-      "entry": "F000:002F",
-      "dead": true,
-      "term": "F000:0032",
-      "pred": [
-        13,
-        18
-      ],
-      "succ": [],
-      "asm": [
-        "B90300|mov CX,3",
-        "C3|ret near"
       ]
     }
   ],

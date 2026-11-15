@@ -266,8 +266,9 @@ public sealed class SpeculativeExplorerEdgeWiringTest : SpeculativeTestBase {
         Memory.UInt8[physA] = 0xE8; // CALL rel16
         Memory.UInt16[physA + 1] = 0x001D; // rel16 = 0x1D -> target = 0x703 + 0x1D = 0x720
 
-        // Write a RET at the callee so exploration terminates there
-        WriteRet(addrCallee);
+        // Write a HLT at the callee so exploration terminates there without the callee-return
+        // scan being able to prove the callee returns
+        Memory.UInt8[MemoryUtils.ToPhysicalAddress(addrCallee.Segment, addrCallee.Offset)] = 0xF4;
         // Write a NOP at the continuation
         WriteNop(addrContinuation);
 
@@ -645,8 +646,8 @@ public sealed class SpeculativeExplorerEdgeWiringTest : SpeculativeTestBase {
         // CALL NEAR 0xE10: E8 rel16 where rel16 = 0xE10 - 0xE03 = 0x0D
         Memory.UInt8[physA] = 0xE8;
         Memory.UInt16[physA + 1] = 0x000D;
-        // RET at callee 0xE10
-        WriteRet(new SegmentedAddress(0, 0xE10));
+        // HLT at callee 0xE10: the callee-return scan cannot prove it returns
+        Memory.UInt8[MemoryUtils.ToPhysicalAddress(0, 0xE10)] = 0xF4;
         // NOP at continuation 0xE03
         WriteNop(new SegmentedAddress(0, 0xE03));
 

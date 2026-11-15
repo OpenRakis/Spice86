@@ -31,16 +31,16 @@
       "Casts": 2,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 1,
-      "LocalReads": 3,
-      "LocalVariables": 2,
-      "LocalWrites": 2,
-      "PlainRegisterAssignments": 9,
+      "LocalReads": 6,
+      "LocalVariables": 5,
+      "LocalWrites": 5,
+      "PlainRegisterAssignments": 18,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 9,
-      "RegisterWrites": 9,
-      "Statements": 52,
-      "WriteBacks": 1
+      "RegisterReads": 19,
+      "RegisterWrites": 18,
+      "Statements": 93,
+      "WriteBacks": 2
     }
   },
   "support": {
@@ -82,7 +82,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 3,
       "RegisterWrites": 0,
-      "Statements": 109,
+      "Statements": 115,
       "WriteBacks": 0
     }
   }

@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0026",
-  "lastExecutedBlockId": 45,
+  "lastExecutedBlockId": 20,
   "blocks": [
     {
-      "id": 45,
+      "id": 20,
       "entry": "F000:000E",
       "term": "F000:0026",
       "pred": [
         11,
-        34
+        14
       ],
       "succ": [],
       "asm": [
@@ -39,24 +39,7 @@
       ]
     },
     {
-      "id": 11,
-      "entry": "F000:0031",
-      "term": "F000:0034",
-      "pred": [
-        8,
-        35
-      ],
-      "succ": [
-        34,
-        45
-      ],
-      "asm": [
-        "B93333|mov CX,0x3333",
-        "C3|ret near"
-      ]
-    },
-    {
-      "id": 34,
+      "id": 14,
       "entry": "F000:000B",
       "term": "F000:000B",
       "pred": [
@@ -64,11 +47,28 @@
         11
       ],
       "succ": [
-        35,
-        45
+        16,
+        20
       ],
       "asm": [
         "E81E00|call near 0x002C"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:0031",
+      "term": "F000:0034",
+      "pred": [
+        8,
+        16
+      ],
+      "succ": [
+        14,
+        20
+      ],
+      "asm": [
+        "B93333|mov CX,0x3333",
+        "C3|ret near"
       ]
     },
     {
@@ -80,13 +80,28 @@
       ],
       "succ": [
         8,
-        34
+        14
       ],
       "asm": [
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
         "E81C00|call near 0x0027"
+      ]
+    },
+    {
+      "id": 16,
+      "entry": "F000:002C",
+      "term": "F000:002F",
+      "pred": [
+        14
+      ],
+      "succ": [
+        11
+      ],
+      "asm": [
+        "BB2222|mov BX,0x2222",
+        "EB00|jmp short 0x0031"
       ]
     },
     {
@@ -102,21 +117,6 @@
       "asm": [
         "B81111|mov AX,0x1111",
         "EB05|jmp short 0x0031"
-      ]
-    },
-    {
-      "id": 35,
-      "entry": "F000:002C",
-      "term": "F000:002F",
-      "pred": [
-        34
-      ],
-      "succ": [
-        11
-      ],
-      "asm": [
-        "BB2222|mov BX,0x2222",
-        "EB00|jmp short 0x0031"
       ]
     }
   ],
