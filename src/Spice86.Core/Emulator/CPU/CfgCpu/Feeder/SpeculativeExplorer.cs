@@ -512,7 +512,7 @@ public class SpeculativeExplorer {
     /// </summary>
     private void TryExplorePushedReturn(CfgInstruction node, Queue<ExploreItem> worklist) {
         if (!PushedAddressMatcher.IsIndirectNearJump(node)
-            || !node.IsLive
+            || !IsUsable(node)
             || node.ContainingBlock is null) {
             return;
         }

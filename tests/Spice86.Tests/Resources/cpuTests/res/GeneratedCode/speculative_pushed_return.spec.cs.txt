@@ -19,8 +19,13 @@ public partial class CfgGeneratedOverrides {
         BX = 0x007B;
         DX = 0x0074;
         Stack.Push16(0x0074);
-        if (BX != 0x007B) {
-            throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:0072");
+        switch (BX) {
+            case 0x0074:
+                return unknown_F000_0074_F0074();
+            case 0x007B:
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:0072");
         }
         return NearRet();
     }
@@ -57,14 +62,19 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0405 = 0x55;
         BX = 0x00D5;
         Stack.Push16(0x9000);
-        if (BX != 0x00D5) {
-            throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:00D3");
+        switch (BX) {
+            case 0x00D5:
+                DsGlobals.Byte0409 = 0x66;
+                return Hlt();
+            case 0x9000:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x9000, Signature_9000_hlt);
+                return Hlt();
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:00D3");
         }
-        DsGlobals.Byte0409 = 0x66;
-        return Hlt();
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX, flags.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, DX, BX, flags.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         byte byte1 = 0;
         ushort word1 = 0;
@@ -96,6 +106,8 @@ public partial class CfgGeneratedOverrides {
         BX = Alu16.Shl(BX, 1);
         Stack.Push16(0x0056);
         switch (UInt16[CS, BX + 0x00DE]) {
+            case 0x0056:
+                return unknown_F000_0056_F0056();
             case 0x005E:
                 DsGlobals.Byte0401 = 0xC0;
                 return NearRet();
@@ -253,6 +265,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0065_mov = [0xC6, 0x06, 0x01, 0x04, 0xC2];
     private static readonly byte?[] Signature_006A_ret = [0xC3];
     private static readonly byte?[] Signature_00C4_hlt = [0xF4];
+    private static readonly byte?[] Signature_9000_hlt = [0xF4];
 
     private static readonly byte?[][] SpeculativeRun_0040 = [Signature_0040_mov, Signature_0043_jmp];
 

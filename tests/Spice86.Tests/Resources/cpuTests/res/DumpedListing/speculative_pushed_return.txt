@@ -68,4 +68,5 @@ F000:00D3 jmp near BX
 F000:00D5 mov byte ptr DS:[0x0409],0x66
 F000:00DA jmp short 0x00DC
 F000:00DC hlt
+F000:9000 hlt
 F000:FFF0 jmp short 0
