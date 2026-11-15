@@ -984,13 +984,12 @@ public class DosInt21Handler : InterruptHandler {
     /// CF=0 and the destination buffer holds the canonical path on success; <br/>
     /// CF=1 and AX holds the error code on failure.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     [InterruptService(0x60, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Si | CpuValues.Es | CpuValues.Di | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite,
         Implementation = nameof(GetTrueName), Inputs = [CpuValues.Ds, CpuValues.Si, CpuValues.Es, CpuValues.Di])]
-    public void GetTrueNameFromVm(bool calledFromVm) {
+    public void GetTrueName() {
         (ushort ax, bool carryFlag) = GetTrueName(State.DS, State.SI, State.ES, State.DI);
         State.AX = ax;
-        ApplyCarryFlag(calledFromVm, carryFlag);
+        ApplyCarryFlag(carryFlag);
     }
 
     /// <summary>
