@@ -254,6 +254,10 @@ F000:02D3 mov BP,SP
 F000:02D5 add word ptr SS:[BP],3
 F000:02D9 mov byte ptr DS:[0x0084],0x0C
 F000:02DE iret
+F000:02DF mov BP,SP
+F000:02E1 add word ptr SS:[BP],3
+F000:02E5 mov byte ptr DS:[0x0085],0x0D
+F000:02EA iret
 F000:02EB mov AX,0x2001
 F000:02EE mov DS,AX
 F000:02F0 ret near

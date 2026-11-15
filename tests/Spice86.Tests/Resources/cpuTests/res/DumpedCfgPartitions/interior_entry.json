@@ -33,11 +33,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        196
+        197
       ],
       "entries": [
         {
-          "block": 196,
+          "block": 197,
           "address": "F000:0300",
           "kind": "executionContextEntry"
         }
@@ -58,7 +58,7 @@
         78,
         80,
         82,
-        252,
+        253,
         2
       ],
       "entries": [
@@ -76,7 +76,7 @@
       "fromPartition": 1,
       "toPartition": 3,
       "fromBlock": 101,
-      "toBlock": 252,
+      "toBlock": 253,
       "from": "F000:0235",
       "target": "F000:00CC"
     },
@@ -88,7 +88,7 @@
       "toBlock": 85,
       "from": "F000:00C9",
       "target": "F000:0200",
-      "callContinuationBlock": 252,
+      "callContinuationBlock": 253,
       "callContinuationAddress": "F000:00CC"
     }
   ]

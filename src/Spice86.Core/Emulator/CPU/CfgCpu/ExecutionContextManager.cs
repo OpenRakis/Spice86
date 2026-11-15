@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Logging;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -57,6 +58,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _state = state;
         _functionCatalogue = functionCatalogue;
         _installedInterruptHandlers = installedInterruptHandlers;
+        WatchMachineInvocableVectorCells();
         _useCodeOverride = useCodeOverride;
         _cpuHeavyLogger = cpuHeavyLogger;
         // Initial fake but non-null context at init
@@ -218,6 +220,43 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _installedInterruptHandlers.HardwareVectorNumbers.Contains(vector)
         || _installedInterruptHandlers.ChainedVectorNumbers.Contains(vector)
         || MachineInvocableDosVectors.Contains(vector);
+
+    /// <summary>
+    /// Watches the four-byte IVT entry of every vector <see cref="ExploreInstalledHandler"/> can
+    /// register: hardware vectors, chained vectors, and the DOS vectors the emulator routes to
+    /// program code. A program that writes a handler directly into the table (no int 21h call)
+    /// gets the same exploration as one that installs through AH=25h: each write re-evaluates the
+    /// far pointer at the next instruction boundary and the new handler is explored with the
+    /// writing instruction as trigger. The IVT always sits at physical 0, so watching can start at
+    /// construction.
+    /// </summary>
+    private void WatchMachineInvocableVectorCells() {
+        IEnumerable<byte> vectors = _installedInterruptHandlers.HardwareVectorNumbers
+            .Concat(_installedInterruptHandlers.ChainedVectorNumbers)
+            .Concat(MachineInvocableDosVectors);
+        foreach (byte vector in vectors) {
+            _cfgNodeFeeder.WatchedPointerCells.Watch((uint)vector * 4, 4,
+                new WatchedPointerCells.WatchedCellDependent(
+                    (value, trigger) => OnIvtVectorValue(vector, value, trigger)));
+        }
+    }
+
+    private void OnIvtVectorValue(byte vector, uint value, CfgInstruction? trigger) {
+        SegmentedAddress handler = new((ushort)(value >> 16), (ushort)value);
+        if (_installedInterruptHandlers.IsInstalledHandler(handler)) {
+            // The emulator's own installs write these cells too; their handlers are already
+            // seeded known-safe and must not be explored again.
+            return;
+        }
+        if (trigger is null || trigger.ExecutionAst is InterruptCallNode or CallbackNode) {
+            // Only a program instruction that stores to memory is a real install: writes made
+            // inside an emulated interrupt service or callback (the BIOS installs, DOS exec
+            // recording a child's vectors, the int 21h AH=25h path the handler seam already
+            // reports) would otherwise seed DOS bookkeeping as handlers.
+            return;
+        }
+        ExploreInstalledHandler(vector, handler, trigger);
+    }
 
     private void TryRegisterPendingEntryPoint(SegmentedAddress address) {
         CfgInstruction? node = _cfgNodeFeeder.NodeIndex.GetAtAddress(address)

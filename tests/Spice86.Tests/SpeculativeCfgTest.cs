@@ -151,6 +151,22 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Watched IVT cells: the program writes its IRQ0 handler straight into the interrupt vector
+    /// table (no DOS call). The watched far cell re-evaluates once both words were written and the
+    /// new handler is explored, so the unobserved run (which programs the PIT) receives the
+    /// delivery through the generated HardwareInterruptFunction dispatch - at the second handler,
+    /// whose install rewrote the segment word with the same value. The half-written vector 9 entry
+    /// is never evaluated.
+    /// </summary>
+    [Fact]
+    public void SpeculativeIvtWriteExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeIvtWrite(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeIvtWrite(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeIvtWrite(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,

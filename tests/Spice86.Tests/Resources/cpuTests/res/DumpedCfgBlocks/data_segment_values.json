@@ -1,21 +1,23 @@
 {
   "currentContextDepth": 1,
   "currentContextEntryPoint": "F000:FFF0",
-  "totalEntryPoints": 2,
+  "totalEntryPoints": 4,
   "entryPointAddresses": [
     "F000:FFF0",
-    "F000:02C6"
+    "F000:02C6",
+    "F000:02D3",
+    "F000:02DF"
   ],
   "lastExecutedAddress": "F000:02AC",
-  "lastExecutedBlockId": 643,
+  "lastExecutedBlockId": 650,
   "blocks": [
     {
-      "id": 643,
+      "id": 650,
       "entry": "F000:02A2",
       "term": "F000:02AC",
       "pred": [
-        609,
-        640
+        610,
+        634
       ],
       "succ": [],
       "asm": [
@@ -25,7 +27,7 @@
       ]
     },
     {
-      "id": 589,
+      "id": 566,
       "entry": "F000:02C6",
       "term": "F000:02D2",
       "pred": [],
@@ -35,6 +37,37 @@
         "C606600E01|mov byte ptr DS:[0x0E60],1",
         "B020|mov AL,0x20",
         "E620|out 0x20,AL",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 634,
+      "entry": "F000:02D3",
+      "term": "F000:02DE",
+      "pred": [
+        610
+      ],
+      "succ": [
+        650
+      ],
+      "asm": [
+        "89E5|mov BP,SP",
+        "83460003|add word ptr SS:[BP],3",
+        "C60684000C|mov byte ptr DS:[0x0084],0x0C",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 641,
+      "entry": "F000:02DF",
+      "dead": true,
+      "term": "F000:02EA",
+      "pred": [],
+      "succ": [],
+      "asm": [
+        "89E5|mov BP,SP",
+        "83460003|add word ptr SS:[BP],3",
+        "C60685000D|mov byte ptr DS:[0x0085],0x0D",
         "CF|iret"
       ]
     },
@@ -51,15 +84,15 @@
       ]
     },
     {
-      "id": 609,
+      "id": 610,
       "entry": "F000:0276",
       "term": "F000:029F",
       "pred": [
-        608
+        609
       ],
       "succ": [
-        640,
-        643
+        634,
+        650
       ],
       "asm": [
         "FA|cli",
@@ -75,23 +108,6 @@
         "8EC0|mov ES,AX",
         "BDFFFF|mov BP,0xFFFF",
         "8B4600|mov AX,word ptr SS:[BP]"
-      ]
-    },
-    {
-      "id": 640,
-      "entry": "F000:02D3",
-      "term": "F000:02DE",
-      "pred": [
-        609
-      ],
-      "succ": [
-        643
-      ],
-      "asm": [
-        "89E5|mov BP,SP",
-        "83460003|add word ptr SS:[BP],3",
-        "C60684000C|mov byte ptr DS:[0x0084],0x0C",
-        "CF|iret"
       ]
     },
     {
@@ -173,15 +189,15 @@
       ]
     },
     {
-      "id": 608,
+      "id": 609,
       "entry": "F000:0273",
       "term": "F000:0273",
       "pred": [
         547,
-        600
+        601
       ],
       "succ": [
-        609
+        610
       ],
       "asm": [
         "A28300|mov byte ptr DS:[0x0083],AL"
@@ -206,7 +222,7 @@
       ]
     },
     {
-      "id": 600,
+      "id": 601,
       "entry": "F000:02BB",
       "term": "F000:02C2",
       "pred": [
@@ -214,7 +230,7 @@
         557
       ],
       "succ": [
-        608
+        609
       ],
       "asm": [
         "8A46FE|mov AL,byte ptr SS:[BP-2]",
@@ -232,7 +248,7 @@
       ],
       "succ": [
         549,
-        608
+        609
       ],
       "asm": [
         "E83A00|call near 0x02AD"
@@ -297,7 +313,7 @@
         555
       ],
       "succ": [
-        600
+        601
       ],
       "asm": [
         "90|nop",
@@ -313,7 +329,7 @@
       ],
       "succ": [
         555,
-        600
+        601
       ],
       "asm": [
         "55|push BP",

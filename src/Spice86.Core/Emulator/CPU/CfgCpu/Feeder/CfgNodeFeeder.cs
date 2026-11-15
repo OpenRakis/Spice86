@@ -36,12 +36,16 @@ public class CfgNodeFeeder {
         FunctionCatalogue functionCatalogue, ILogger loggerService) {
         _state = state;
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
+        WatchedPointerCells = new(memory, emulatorBreakpointsManager.MemoryReadWriteBreakpoints);
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
             enableSpeculativeExploration ? _nodeLinker : null, changedMemoryMap,
             installedInterruptHandlers, interruptVectorTable, functionCatalogue, loggerService);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
+
+    /// <summary>Pointer cells whose writes are re-evaluated at each instruction boundary.</summary>
+    internal WatchedPointerCells WatchedPointerCells { get; }
 
     /// <summary>Persistent graph index spanning all nodes (observed + speculative).</summary>
     public CfgNodeIndex NodeIndex => InstructionsFeeder.NodeIndex;
@@ -74,6 +78,7 @@ public class CfgNodeFeeder {
         InstructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
 
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
+        WatchedPointerCells.EvaluateQueued(executionContext.LastExecuted as CfgInstruction);
         ICfgNode toExecute = DetermineToExecute(executionContext);
         ICfgNode? lastExecuted = executionContext.LastExecuted;
         if (lastExecuted is not { CanHaveMoreSuccessors: true }) {

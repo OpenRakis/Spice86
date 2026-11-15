@@ -42,7 +42,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 14,
       "RegisterWrites": 11,
-      "Statements": 23,
+      "Statements": 25,
       "WriteBacks": 0
     }
   },
@@ -88,7 +88,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 0,
       "RegisterWrites": 0,
-      "Statements": 5,
+      "Statements": 7,
       "WriteBacks": 0
     }
   }

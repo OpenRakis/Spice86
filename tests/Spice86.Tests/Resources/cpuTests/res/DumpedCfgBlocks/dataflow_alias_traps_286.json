@@ -1,20 +1,21 @@
 {
   "currentContextDepth": 1,
   "currentContextEntryPoint": "F000:FFF0",
-  "totalEntryPoints": 1,
+  "totalEntryPoints": 2,
   "entryPointAddresses": [
-    "F000:FFF0"
+    "F000:FFF0",
+    "F000:0042"
   ],
   "lastExecutedAddress": "F000:0041",
-  "lastExecutedBlockId": 41,
+  "lastExecutedBlockId": 42,
   "blocks": [
     {
-      "id": 41,
+      "id": 42,
       "entry": "F000:002F",
       "term": "F000:0041",
       "pred": [
         3,
-        36
+        31
       ],
       "succ": [],
       "asm": [
@@ -23,6 +24,25 @@
         "3689260006|mov word ptr SS:[0x0600],SP",
         "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
+      ]
+    },
+    {
+      "id": 31,
+      "entry": "F000:0042",
+      "term": "F000:004E",
+      "pred": [
+        3
+      ],
+      "succ": [
+        42
+      ],
+      "asm": [
+        "FE065700|inc byte ptr DS:[0x0057]",
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "83460206|add word ptr SS:[BP\u002B2],6",
+        "5D|pop BP",
+        "CF|iret"
       ]
     },
     {
@@ -45,8 +65,8 @@
         2
       ],
       "succ": [
-        36,
-        41
+        31,
+        42
       ],
       "asm": [
         "B80020|mov AX,0x2000",
@@ -62,25 +82,6 @@
         "8EC0|mov ES,AX",
         "26C606100011|mov byte ptr ES:[0x0010],0x11",
         "C706FFFF3322|mov word ptr DS:[0xFFFF],0x2233"
-      ]
-    },
-    {
-      "id": 36,
-      "entry": "F000:0042",
-      "term": "F000:004E",
-      "pred": [
-        3
-      ],
-      "succ": [
-        41
-      ],
-      "asm": [
-        "FE065700|inc byte ptr DS:[0x0057]",
-        "55|push BP",
-        "89E5|mov BP,SP",
-        "83460206|add word ptr SS:[BP\u002B2],6",
-        "5D|pop BP",
-        "CF|iret"
       ]
     }
   ],

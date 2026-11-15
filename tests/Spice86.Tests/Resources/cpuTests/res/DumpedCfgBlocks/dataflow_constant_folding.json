@@ -1,19 +1,20 @@
 {
   "currentContextDepth": 1,
   "currentContextEntryPoint": "F000:FFF0",
-  "totalEntryPoints": 1,
+  "totalEntryPoints": 2,
   "entryPointAddresses": [
-    "F000:FFF0"
+    "F000:FFF0",
+    "F000:018E"
   ],
   "lastExecutedAddress": "F000:0185",
-  "lastExecutedBlockId": 259,
+  "lastExecutedBlockId": 260,
   "blocks": [
     {
-      "id": 259,
+      "id": 260,
       "entry": "F000:0139",
       "term": "F000:0185",
       "pred": [
-        261
+        262
       ],
       "succ": [],
       "asm": [
@@ -52,6 +53,21 @@
       ]
     },
     {
+      "id": 253,
+      "entry": "F000:018E",
+      "term": "F000:0191",
+      "pred": [
+        262
+      ],
+      "succ": [
+        262
+      ],
+      "asm": [
+        "BB2001|mov BX,0x0120",
+        "CF|iret"
+      ]
+    },
+    {
       "id": 2,
       "entry": "F000:FFF0",
       "term": "F000:FFF0",
@@ -64,18 +80,18 @@
       ]
     },
     {
-      "id": 261,
+      "id": 262,
       "entry": "F000:0137",
       "term": "F000:0137",
       "pred": [
         187,
-        258,
-        261
+        253,
+        262
       ],
       "succ": [
-        258,
-        259,
-        261
+        253,
+        260,
+        262
       ],
       "asm": [
         "8B07|mov AX,word ptr DS:[BX]"
@@ -106,21 +122,6 @@
       ]
     },
     {
-      "id": 258,
-      "entry": "F000:018E",
-      "term": "F000:0191",
-      "pred": [
-        261
-      ],
-      "succ": [
-        261
-      ],
-      "asm": [
-        "BB2001|mov BX,0x0120",
-        "CF|iret"
-      ]
-    },
-    {
       "id": 187,
       "entry": "F000:0109",
       "term": "F000:0134",
@@ -129,7 +130,7 @@
         189
       ],
       "succ": [
-        261
+        262
       ],
       "asm": [
         "C7060002CDAB|mov word ptr DS:[0x0200],0xABCD",

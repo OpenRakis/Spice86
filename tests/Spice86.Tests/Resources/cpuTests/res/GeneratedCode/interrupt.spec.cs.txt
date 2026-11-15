@@ -12,13 +12,12 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: BX, DS, flags, DF. Outputs: AX, BX, DS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_E342_EBE0_F2000() {
         CheckExternalEvents(cs1, 0xEBE0);
-        DsGlobals.Byte0001 = 1;
+        Segment0000Globals.Byte0001 = 1;
         Stack.Push16(FlagRegister16);
         AX = Stack.Pop16();
-        CarryFlag = false;
         return InterruptRet();
     }
 
@@ -38,10 +37,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, BX, DS. Outputs: AX, CX, BX, DS. Changes: all.</summary>
+    /// <summary>Inputs: AX, DS. Outputs: AX, CX. Changes: AX, CX, flags, DF.</summary>
+    /// Segment values at entry, from every call site: DS = 0x0000.
     public virtual Action unknown_F000_3001_F3001() {
         CheckExternalEvents(biosSegment, 0x3001);
-        DsGlobals.Byte0005 = 5;
+        Segment0000Globals.Byte0005 = 5;
         Stack.Release(1);
         CX = 0x4002;
         Stack.Push16(0x4002);
@@ -59,7 +59,7 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: BX. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
         DX = 0;
@@ -71,21 +71,19 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(0x0EFF);
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(biosSegment, 0x001B);
-        DsGlobals.Byte0000 = 0;
+        Segment0000Globals.Byte0000 = 0;
         InterruptCall(biosSegment, 0x0022, 0x0D, cs1, 0xEBE0, unknown_E342_EBE0_F2000Entry);
-        DsGlobals.Byte0002 = 2;
+        Segment0000Globals.Byte0002 = 2;
         if (AX != 0x0CD7) {
             throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0027");
         }
-        DsGlobals.Byte0003 = 3;
+        Segment0000Globals.Byte0003 = 3;
         Stack.Push16(FlagRegister16);
         BX = Stack.Pop16();
-        DsGlobals.Word000C = 0xEBE0;
-        DsGlobals.Word000E = 0xE342;
+        Segment0000Globals.Dword000C = 0xE342EBE0u;
         InterruptCall(biosSegment, 0x0CEC, 3, cs1, 0xEBE0, unknown_E342_EBE0_F2000Entry);
-        DsGlobals.Byte0004 = 4;
-        DsGlobals.Word0010 = 0x3001;
-        DsGlobals.Word0012 = 0xF000;
+        Segment0000Globals.Byte0004 = 4;
+        Segment0000Globals.Dword0010 = 0xF0003001u;
         if (!OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0CFD");
         }
@@ -129,24 +127,6 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
         _segmentRegisters = segmentRegisters;
     }
 
-    /// DS:0x0000, whatever DS holds at the access.
-    public byte Byte0000 { get => _memory.UInt8[Segment, 0x0000]; set => _memory.UInt8[Segment, 0x0000] = value; }
-
-    /// DS:0x0001, whatever DS holds at the access.
-    public byte Byte0001 { get => _memory.UInt8[Segment, 0x0001]; set => _memory.UInt8[Segment, 0x0001] = value; }
-
-    /// DS:0x0002, whatever DS holds at the access.
-    public byte Byte0002 { get => _memory.UInt8[Segment, 0x0002]; set => _memory.UInt8[Segment, 0x0002] = value; }
-
-    /// DS:0x0003, whatever DS holds at the access.
-    public byte Byte0003 { get => _memory.UInt8[Segment, 0x0003]; set => _memory.UInt8[Segment, 0x0003] = value; }
-
-    /// DS:0x0004, whatever DS holds at the access.
-    public byte Byte0004 { get => _memory.UInt8[Segment, 0x0004]; set => _memory.UInt8[Segment, 0x0004] = value; }
-
-    /// DS:0x0005, whatever DS holds at the access.
-    public byte Byte0005 { get => _memory.UInt8[Segment, 0x0005]; set => _memory.UInt8[Segment, 0x0005] = value; }
-
     /// DS:0x0006, whatever DS holds at the access.
     public byte Byte0006 { get => _memory.UInt8[Segment, 0x0006]; set => _memory.UInt8[Segment, 0x0006] = value; }
 
@@ -164,9 +144,6 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
 
     /// DS:0x0010, whatever DS holds at the access.
     public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
-
-    /// DS:0x0012, whatever DS holds at the access.
-    public ushort Word0012 { get => _memory.UInt16[Segment, 0x0012]; set => _memory.UInt16[Segment, 0x0012] = value; }
 }
 
 // ==== file: Segment0000Globals.cs ====
@@ -184,6 +161,22 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         _memory = memory;
         Segment = 0x0000;
     }
+
+    public byte Byte0000 { get => _memory.UInt8[Segment, 0x0000]; set => _memory.UInt8[Segment, 0x0000] = value; }
+
+    public byte Byte0001 { get => _memory.UInt8[Segment, 0x0001]; set => _memory.UInt8[Segment, 0x0001] = value; }
+
+    public byte Byte0002 { get => _memory.UInt8[Segment, 0x0002]; set => _memory.UInt8[Segment, 0x0002] = value; }
+
+    public byte Byte0003 { get => _memory.UInt8[Segment, 0x0003]; set => _memory.UInt8[Segment, 0x0003] = value; }
+
+    public byte Byte0004 { get => _memory.UInt8[Segment, 0x0004]; set => _memory.UInt8[Segment, 0x0004] = value; }
+
+    public byte Byte0005 { get => _memory.UInt8[Segment, 0x0005]; set => _memory.UInt8[Segment, 0x0005] = value; }
+
+    public uint Dword000C { get => _memory.UInt32[Segment, 0x000C]; set => _memory.UInt32[Segment, 0x000C] = value; }
+
+    public uint Dword0010 { get => _memory.UInt32[Segment, 0x0010]; set => _memory.UInt32[Segment, 0x0010] = value; }
 
     public uint Dword0034 { get => _memory.UInt32[Segment, 0x0034]; set => _memory.UInt32[Segment, 0x0034] = value; }
 }
@@ -228,6 +221,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x4013, unknown_F000_4013_F4013Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
+
+    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
+        (vectorNumber, target.Segment, target.Offset) switch {
+            (0x0D, 0xE342, 0xEBE0) => unknown_E342_EBE0_F2000Entry,
+            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
+        };
 
     protected override bool ObservedTransfersOnly => true;
 }

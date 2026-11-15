@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DX. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: DX. Outputs: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual Action unknown_F000_0633_F0633() {
         ushort flagOperand_0680 = 0;
         CheckExternalEvents(biosSegment, 0x0633);
@@ -52,7 +52,7 @@ public partial class CfgGeneratedOverrides {
         }
     }
 
-    /// <summary>Inputs: FS, GS. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: FS, GS. Outputs: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags, DF.</summary>
     public virtual Action unknown_F000_06A8_F06A8() {
         byte flagOperand_0754 = 0;
         ushort flagOperand_0835 = 0;
@@ -1310,7 +1310,8 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// Segment values at entry, from every call site: ES = 0x6200, DS = 0x2200.
     /// Direction flag at entry, from every call site: set.
     public virtual Action unknown_F000_136F_F136F() {
         CheckExternalEvents(biosSegment, 0x136F);
@@ -1323,7 +1324,8 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// Segment values at entry, from every call site: ES = 0x6200, DS = 0x2200.
     /// Direction flag at entry, from every call site: set.
     public virtual Action unknown_F000_138D_F138D() {
         CheckExternalEvents(biosSegment, 0x138D);
@@ -1336,7 +1338,8 @@ public partial class CfgGeneratedOverrides {
         return NearRet32();
     }
 
-    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// Segment values at entry, from every call site: ES = 0x6200, DS = 0x2200.
     /// Direction flag at entry, from every call site: set.
     public virtual Action unknown_F000_13C5_F13C5() {
         CheckExternalEvents(biosSegment, 0x13C5);
@@ -1349,7 +1352,8 @@ public partial class CfgGeneratedOverrides {
         return FarRet();
     }
 
-    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// <summary>Inputs: AX, SI, DS, FS, GS. Outputs: AX, SI, DS, FS, GS, CF. Changes: EAX, ECX, DX, EBX, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    /// Segment values at entry, from every call site: ES = 0x6200, DS = 0x2200.
     /// Direction flag at entry, from every call site: set.
     public virtual Action unknown_F000_13E5_F13E5() {
         CheckExternalEvents(biosSegment, 0x13E5);
@@ -1362,7 +1366,23 @@ public partial class CfgGeneratedOverrides {
         return FarRet32();
     }
 
-    /// <summary>Inputs: DF. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_15C7_F15C7() {
+        while (true) {
+            CheckExternalEvents(biosSegment, 0x15C7);
+            VerifySpeculativeRunOrFail(biosSegment, 0x15C7, SpeculativeRun_15C7);
+            AX = CS;
+            Alu16.And(AX, 7);
+            do {
+                CheckExternalEvents(biosSegment, 0x15CC);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x15CC, Signature_15CC_jne);
+            } while (!ZeroFlag);
+            VerifySpeculativeRunOrFail(biosSegment, 0x15CE, SpeculativeRun_15CE);
+            InterruptFlag = false;
+        }
+    }
+
+    /// <summary>Inputs: DF. Outputs: none. Changes: EAX, ECX, EDX, EBX, ESI, EDI, ES, DS, FS, GS, flags, DF.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         uint dword1;
         uint dword2;
@@ -1933,22 +1953,6 @@ public partial class CfgGeneratedOverrides {
         return Hlt();
     }
 
-    /// <summary>Inputs: none. Does not return.</summary>
-    public virtual Action unknown_F000_15C7_F15C7() {
-        while (true) {
-            CheckExternalEvents(biosSegment, 0x15C7);
-            VerifySpeculativeRunOrFail(biosSegment, 0x15C7, SpeculativeRun_15C7);
-            AX = CS;
-            Alu16.And(AX, 7);
-            do {
-                CheckExternalEvents(biosSegment, 0x15CC);
-                VerifySpeculativeEntryOrFail(biosSegment, 0x15CC, Signature_15CC_jne);
-            } while (!ZeroFlag);
-            VerifySpeculativeRunOrFail(biosSegment, 0x15CE, SpeculativeRun_15CE);
-            InterruptFlag = false;
-        }
-    }
-
 }
 
 // ==== file: DsGlobals.cs ====
@@ -2118,8 +2122,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_138D_F138DEntry;
     private readonly Func<int, Action> unknown_F000_13C5_F13C5Entry;
     private readonly Func<int, Action> unknown_F000_13E5_F13E5Entry;
-    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
     private readonly Func<int, Action> unknown_F000_15C7_F15C7Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly DsGlobals DsGlobals;
     protected readonly Segment0000Globals Segment0000Globals;
@@ -2143,16 +2147,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_138D_F138DEntry = _ => unknown_F000_138D_F138D();
         unknown_F000_13C5_F13C5Entry = _ => unknown_F000_13C5_F13C5();
         unknown_F000_13E5_F13E5Entry = _ => unknown_F000_13E5_F13E5();
-        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         unknown_F000_15C7_F15C7Entry = _ => unknown_F000_15C7_F15C7();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0633, unknown_F000_0633_F0633Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x06A8, unknown_F000_06A8_F06A8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x136F, unknown_F000_136F_F136FEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x138D, unknown_F000_138D_F138DEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x13C5, unknown_F000_13C5_F13C5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x13E5, unknown_F000_13E5_F13E5Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x15C7, unknown_F000_15C7_F15C7Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
         DefineCallLandings(new(biosSegment, 0x1369), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
         DefineCallLandings(new(biosSegment, 0x1387), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
         DefineCallLandings(new(biosSegment, 0x13A5), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
@@ -2162,6 +2166,19 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineCallLandings(new(biosSegment, 0x1403), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
         DefineCallLandings(new(biosSegment, 0x1417), new CallLanding(new(biosSegment, 0x15C7), unknown_F000_15C7_F15C7Entry));
     }
+
+    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
+        (vectorNumber, target.Segment, target.Offset) switch {
+            (0x08, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x09, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0A, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0B, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0C, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0D, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0E, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            (0x0F, 0xF000, 0x15C7) => unknown_F000_15C7_F15C7Entry,
+            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
+        };
 
     protected override bool ObservedTransfersOnly => true;
 }

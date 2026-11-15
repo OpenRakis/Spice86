@@ -12,6 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: flags, DF. Outputs: DX, flags, DF. Changes: DX, flags, DF.</summary>
+    public virtual Action unknown_F000_003C_F003C() {
+        CheckExternalEvents(biosSegment, 0x003C);
+        VerifySpeculativeRunOrFail(biosSegment, 0x003C, SpeculativeRun_003C);
+        DX = 0x5AA5;
+        return InterruptRet();
+    }
+
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -21,19 +29,17 @@ public partial class CfgGeneratedOverrides {
         ES = 0;
         Segment0000Globals.Dword0020 = 0x0000003C | (uint)CS << 16;
         AX = DS;
-        ES = AX;
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x001F);
-        BX = 0x0042;
         CX = 4;
         DI = 0x0040;
         do {
             CheckExternalEvents(biosSegment, 0x0028);
-            UInt16[DS, DI] = BX;
+            UInt16[DS, DI] = 0x0042;
             DI += 2;
             CX--;
         } while (CX != 0);
-        UInt16[DS, DI] = BX;
+        UInt16[DS, DI] = 0x0042;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
@@ -75,6 +81,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
+    private readonly Func<int, Action> unknown_F000_003C_F003CEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
@@ -83,9 +90,17 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
+        unknown_F000_003C_F003CEntry = _ => unknown_F000_003C_F003C();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x003C, unknown_F000_003C_F003CEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
+
+    protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>
+        (vectorNumber, target.Segment, target.Offset) switch {
+            (0x08, 0xF000, 0x003C) => unknown_F000_003C_F003CEntry,
+            _ => throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector")
+        };
 
     protected override bool ObservedTransfersOnly => true;
 }
@@ -104,6 +119,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_003C_mov = [0xBA, 0xA5, 0x5A];
+    private static readonly byte?[] Signature_003F_iret = [0xCF];
+
+    private static readonly byte?[][] SpeculativeRun_003C = [Signature_003C_mov, Signature_003F_iret];
+
 }
 
 // ==== file: CfgGeneratedOverrideSupplier.cs ====
