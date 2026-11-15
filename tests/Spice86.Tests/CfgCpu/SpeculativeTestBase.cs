@@ -63,7 +63,7 @@ public abstract class SpeculativeTestBase : IDisposable {
     }
 
     protected SpeculativeExplorer CreateExplorer() =>
-        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, LoggerService);
+        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, State, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {
         uint physAddr = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);

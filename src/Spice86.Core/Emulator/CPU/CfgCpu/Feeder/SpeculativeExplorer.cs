@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Microsoft.Extensions.Logging;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -70,8 +71,11 @@ public class SpeculativeExplorer {
         CfgInstruction? Trigger);
 
     private const int MaxCandidatesPerSite = 32;
+    private const int MaxTableEntries = 1024;
 
     private readonly IMemory _memory;
+    private readonly State _state;
+    private readonly SwitchTableRecognizer _tableRecognizer = new();
     private readonly InstructionParser _instructionParser;
     private readonly CfgNodeIndex _nodeIndex;
     private readonly NodeLinker _nodeLinker;
@@ -87,8 +91,9 @@ public class SpeculativeExplorer {
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
         ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
-        InterruptVectorTable interruptVectorTable, ILogger loggerService) {
+        InterruptVectorTable interruptVectorTable, State state, ILogger loggerService) {
         _memory = memory;
+        _state = state;
         _instructionParser = instructionParser;
         _nodeIndex = nodeIndex;
         _nodeLinker = nodeLinker;
@@ -149,6 +154,95 @@ public class SpeculativeExplorer {
             TryEnqueueCandidate(trigger, candidate, worklist);
         }
         Drain(worklist);
+    }
+
+    /// <summary>
+    /// Called on every execution of an observed near indirect jmp/call through a word memory
+    /// operand. Retries the data-sourced candidates pending on it, and when the execution linked a
+    /// target edge never seen before, resolves the switch/call table the transfer may read: reads
+    /// the N+1 entries at the pointer's segment and displacement, refuses the table when an entry
+    /// is a refused value or an observed target is missing from it, else submits every entry as a
+    /// <see cref="ExploreSource.TableEntry"/> candidate. For an indirect call the D2 rule is then
+    /// applied with each entry as an explicit callee.
+    /// </summary>
+    public void ExploreIndirectTransfer(CfgInstruction transfer, bool newTargetEdge) {
+        RetryPending(transfer);
+        if (!newTargetEdge) {
+            return;
+        }
+        SwitchTableRecognizer.TableShape? table = _tableRecognizer.Recognize(transfer);
+        if (table is null) {
+            return;
+        }
+        int count = table.Bound + 1;
+        if (count > MaxTableEntries) {
+            _loggerService.LogDebug("Switch table at {Address} refused: {Count} entries over the {Max} maximum",
+                transfer.Address, count, MaxTableEntries);
+            return;
+        }
+        ushort segment = _state.SegmentRegisters.UInt16[(uint)table.SegmentRegisterIndex];
+        HashSet<ushort> entries = new(count);
+        for (int i = 0; i < count; i++) {
+            ushort offset = (ushort)(table.TableOffset + 2 * i);
+            ushort entry = (ushort)(SneakilyReadCodeByte(segment, offset)
+                | SneakilyReadCodeByte(segment, (uint)offset + 1) << 8);
+            if (entry is 0x0000 or 0xFFFF) {
+                _loggerService.LogDebug("Switch table at {Address} refused: entry {Index} is 0x{Entry:X4}",
+                    transfer.Address, i, entry);
+                return;
+            }
+            entries.Add(entry);
+        }
+        // Every observed target of the transfer must be one of the entries, else this is not a
+        // plain table (e.g. an indirect call to an address computed elsewhere).
+        foreach (ICfgNode successor in transfer.Successors) {
+            if (!successor.IsSpeculative
+                && !(successor.Address.Segment == transfer.Address.Segment && entries.Contains(successor.Address.Offset))) {
+                _loggerService.LogDebug("Switch table at {Address} refused: observed target {Target} is not an entry",
+                    transfer.Address, successor.Address);
+                return;
+            }
+        }
+        List<DiscoveryCandidate> candidates = entries
+            .Select(entry => new SegmentedAddress(transfer.Address.Segment, entry))
+            .Where(address => !transfer.SuccessorsPerAddress.ContainsKey(address))
+            .Select(address => new DiscoveryCandidate(address, transfer, InstructionSuccessorType.Normal,
+                ExploreSource.TableEntry))
+            .ToList();
+        ExploreCandidates(transfer, candidates);
+        if (!table.IsCall) {
+            return;
+        }
+        // Indirect call: apply the call-continuation rule once per entry as explicit callee. The
+        // first known-returning entry wires the continuation; others leave the site pending.
+        Queue<ExploreItem> worklist = new();
+        foreach (ushort entry in entries) {
+            TryExploreCallContinuationForCallee(transfer, new SegmentedAddress(transfer.Address.Segment, entry), worklist);
+        }
+        Drain(worklist);
+    }
+
+    /// <summary>
+    /// The D2 call-continuation rule with an explicitly given callee entry, for callers that know
+    /// the callee without a static successor on the call node (table entries now, other sources
+    /// later). Enqueues the continuation when the callee is known to return, else records the call
+    /// site pending on it.
+    /// </summary>
+    internal void ExploreCallContinuationForCallee(CfgInstruction callNode, SegmentedAddress calleeEntry) {
+        Queue<ExploreItem> worklist = new();
+        TryExploreCallContinuationForCallee(callNode, calleeEntry, worklist);
+        Drain(worklist);
+    }
+
+    private void TryExploreCallContinuationForCallee(CfgInstruction callNode, SegmentedAddress calleeEntry, Queue<ExploreItem> worklist) {
+        if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
+            return;
+        }
+        if (_calleeReturnEvidence.IsKnownToReturn(calleeEntry)) {
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation);
+        } else {
+            AddPendingCallSite(calleeEntry, callNode);
+        }
     }
 
     /// <summary>

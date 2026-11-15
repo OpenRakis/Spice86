@@ -46,7 +46,7 @@ public class InstructionsFeeder : IClearable {
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
             _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap,
-                installedInterruptHandlers, interruptVectorTable, loggerService);
+                installedInterruptHandlers, interruptVectorTable, cpuState, loggerService);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);
@@ -80,6 +80,14 @@ public class InstructionsFeeder : IClearable {
     /// </summary>
     internal void RebuildCallReturnEvidence(IEnumerable<ICfgNode> nodes) =>
         _speculativeExplorer?.RebuildReturnEvidence(nodes);
+
+    /// <summary>
+    /// Called on every execution of an observed near indirect jmp/call through a word memory
+    /// operand: retries its pending data-sourced candidates, and resolves the switch/call table it
+    /// reads when a new target edge was just linked. No-op when speculative exploration is off.
+    /// </summary>
+    internal void ExploreIndirectTransfer(CfgInstruction transfer, bool newTargetEdge) =>
+        _speculativeExplorer?.ExploreIndirectTransfer(transfer, newTargetEdge);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {

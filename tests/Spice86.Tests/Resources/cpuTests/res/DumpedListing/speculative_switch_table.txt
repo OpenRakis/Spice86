@@ -1,0 +1,157 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov byte ptr DS:[0x0408],1
+F000:000A mov AX,CS
+F000:000C mov ES,AX
+F000:000E mov byte ptr ES:[0x0126],0x90
+F000:0014 mov byte ptr ES:[0x0127],0x90
+F000:001A mov byte ptr ES:[0x0128],0x90
+F000:0020 mov AL,byte ptr DS:[0x0500]
+F000:0023 mov AH,0
+F000:0025 shl AX,1
+F000:0027 cmp AX,2
+F000:002A ja short 0x0034
+F000:002C xchg BX,AX
+F000:002D shl BX,1
+F000:002F jmp near word ptr CS:[BX+0x01BE]
+F000:0034 hlt
+F000:0035 mov byte ptr DS:[0x0401],0xDD
+F000:003A jmp short 0x0044
+F000:003C hlt
+F000:003D mov byte ptr DS:[0x0401],0x11
+F000:0042 jmp short 0x0044
+F000:0044 mov AL,byte ptr DS:[0x0500]
+F000:0047 mov AH,0
+F000:0049 shl AX,1
+F000:004B cmp AX,2
+F000:004E jbe short 0x0051
+F000:0050 hlt
+F000:0051 mov BX,AX
+F000:0053 shl BX,1
+F000:0055 jmp near word ptr CS:[BX+0x01C4]
+F000:005A mov byte ptr DS:[0x0402],0xDD
+F000:005F jmp short 0x0069
+F000:0061 hlt
+F000:0062 mov byte ptr DS:[0x0402],0x22
+F000:0067 jmp short 0x0069
+F000:0069 mov AL,byte ptr DS:[0x0500]
+F000:006C mov AH,0
+F000:006E shl AX,1
+F000:0070 cmp AX,0x012C
+F000:0073 ja short 0x007E
+F000:0075 mov BX,AX
+F000:0077 shl BX,1
+F000:0079 jmp near word ptr CS:[BX+0x01CA]
+F000:007E hlt
+F000:007F mov byte ptr DS:[0x0403],0xDD
+F000:0084 jmp short 0x008E
+F000:0086 hlt
+F000:0087 mov byte ptr DS:[0x0403],0x33
+F000:008C jmp short 0x008E
+F000:008E mov AL,byte ptr DS:[0x0500]
+F000:0091 shl AL,1
+F000:0093 cmp AL,2
+F000:0095 ja short 0x00A2
+F000:0097 xor AH,AH
+F000:0099 mov BX,AX
+F000:009B shl BX,1
+F000:009D jmp near word ptr CS:[BX+0x0424]
+F000:00A2 hlt
+F000:00A3 mov byte ptr DS:[0x0404],0xDD
+F000:00A8 jmp short 0x00B2
+F000:00AA hlt
+F000:00AB mov byte ptr DS:[0x0404],0x44
+F000:00B0 jmp short 0x00B2
+F000:00B2 mov CL,byte ptr DS:[0x0500]
+F000:00B6 mov AX,CS
+F000:00B8 mov DS,AX
+F000:00BA mov AL,CL
+F000:00BC mov AH,0
+F000:00BE shl AX,1
+F000:00C0 cmp AX,2
+F000:00C3 ja short 0x00CD
+F000:00C5 mov BX,AX
+F000:00C7 shl BX,1
+F000:00C9 jmp near word ptr DS:[BX+0x042A]
+F000:00CD hlt
+F000:00CE xor DX,DX
+F000:00D0 mov DS,DX
+F000:00D2 mov byte ptr DS:[0x0405],0xDD
+F000:00D7 jmp short 0x00E5
+F000:00D9 hlt
+F000:00DA xor DX,DX
+F000:00DC mov DS,DX
+F000:00DE mov byte ptr DS:[0x0405],0x55
+F000:00E3 jmp short 0x00E5
+F000:00E5 xor AX,AX
+F000:00E7 mov DS,AX
+F000:00E9 cmp AX,1
+F000:00EC ja short 0x00F7
+F000:00EE mov BX,AX
+F000:00F0 shl BX,1
+F000:00F2 jmp near word ptr CS:[BX+0x05D4]
+F000:00F7 hlt
+F000:00F8 cmp byte ptr DS:[0x0501],0
+F000:00FD jne short 0x0124
+F000:00FF mov byte ptr DS:[0x0501],1
+F000:0104 mov byte ptr ES:[0x0126],0xC6
+F000:010A mov byte ptr ES:[0x0127],6
+F000:0110 mov word ptr ES:[0x0128],0x0406
+F000:0117 mov byte ptr ES:[0x012A],0x77
+F000:011D mov AL,byte ptr DS:[0x0500]
+F000:0120 mov AH,0
+F000:0122 jmp short 0x00E9
+F000:0124 jmp short 0x012B
+F000:0126 mov byte ptr DS:[0x0406],0x77
+F000:012B xor AX,AX
+F000:012D cmp AX,1
+F000:0130 ja short 0x013B
+F000:0132 mov BX,AX
+F000:0134 shl BX,1
+F000:0136 jmp near word ptr CS:[BX+0x05D8]
+F000:013B hlt
+F000:013C mov byte ptr ES:[0x016E],0xC6
+F000:0142 mov byte ptr ES:[0x016F],6
+F000:0148 mov word ptr ES:[0x0170],0x0408
+F000:014F mov byte ptr ES:[0x0172],0x66
+F000:0155 mov byte ptr ES:[0x0173],0xF4
+F000:015B mov BX,0x0160
+F000:015E jmp near BX
+F000:0160 mov byte ptr DS:[0x0407],0xAA
+F000:0165 cmp byte ptr DS:[0x0500],0
+F000:016A jne short 0x016E
+F000:016C jmp short 0x0176
+F000:016E mov byte ptr DS:[0x0408],0x66
+F000:0173 hlt
+F000:0176 xor AX,AX
+F000:0178 mov BX,AX
+F000:017A shl BX,1
+F000:017C cmp AX,2
+F000:017F ja short 0x0186
+F000:0181 jmp near word ptr CS:[BX+0x0430]
+F000:0186 hlt
+F000:0187 xor AX,AX
+F000:0189 cmp AX,2
+F000:018C ja short 0x0198
+F000:018E mov BX,AX
+F000:0190 inc CX
+F000:0191 shl BX,1
+F000:0193 jmp near word ptr CS:[BX+0x0436]
+F000:0198 hlt
+F000:0199 xor AX,AX
+F000:019B cmp AX,2
+F000:019E ja short 0x01A9
+F000:01A0 mov BX,AX
+F000:01A2 shl BX,1
+F000:01A4 jmp near word ptr CS:[BX+0x043C]
+F000:01A9 hlt
+F000:01AA xor AX,AX
+F000:01AC cmp AL,0xC8
+F000:01AE ja short 0x01BA
+F000:01B0 cbw
+F000:01B1 mov BX,AX
+F000:01B3 shl BX,1
+F000:01B5 jmp near word ptr CS:[BX+0x0442]
+F000:01BA hlt
+F000:01BB jmp short 0x01BD
+F000:01BD hlt
+F000:FFF0 jmp short 0

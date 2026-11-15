@@ -546,6 +546,32 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs speculative_switch_table on the observed (index 0) or unobserved (index 2)
+    /// path: the unobserved markers live in switch-table entries discovered speculatively.</summary>
+    public static AsmFixture SpeculativeSwitchTable(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x409];
+        expectedMemory[0x400] = 0x01;
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0x11 : (byte)0xDD;
+        expectedMemory[0x402] = arm == SpeculativeArm.Unobserved ? (byte)0x22 : (byte)0xDD;
+        expectedMemory[0x403] = arm == SpeculativeArm.Unobserved ? (byte)0x33 : (byte)0xDD;
+        expectedMemory[0x404] = arm == SpeculativeArm.Unobserved ? (byte)0x44 : (byte)0xDD;
+        expectedMemory[0x405] = arm == SpeculativeArm.Unobserved ? (byte)0x55 : (byte)0xDD;
+        expectedMemory[0x406] = arm == SpeculativeArm.Unobserved ? (byte)0x77 : (byte)0xE8;
+        expectedMemory[0x407] = 0xAA;
+        expectedMemory[0x408] = arm == SpeculativeArm.Unobserved ? (byte)0x66 : (byte)0x01;
+        return SpeculativeFixture("speculative_switch_table", expectedMemory, arm);
+    }
+
+    /// <summary>Runs speculative_call_table on the observed (index 0) or unobserved (index 2)
+    /// path: the unobserved call target is discovered from the call table speculatively.</summary>
+    public static AsmFixture SpeculativeCallTable(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x403];
+        expectedMemory[0x400] = 0x01;
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0x22 : (byte)0xDD;
+        expectedMemory[0x402] = 0xAA;
+        return SpeculativeFixture("speculative_call_table", expectedMemory, arm);
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);

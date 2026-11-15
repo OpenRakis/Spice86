@@ -1,0 +1,147 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:002E",
+  "lastExecutedBlockId": 37,
+  "blocks": [
+    {
+      "id": 37,
+      "entry": "F000:002E",
+      "term": "F000:002E",
+      "pred": [
+        35
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 35,
+      "entry": "F000:0019",
+      "term": "F000:001E",
+      "pred": [
+        12,
+        26
+      ],
+      "succ": [
+        37
+      ],
+      "asm": [
+        "C6060204AA|mov byte ptr DS:[0x0402],0xAA",
+        "EB0E|jmp short 0x002E"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000F",
+      "pred": [
+        2
+      ],
+      "succ": [
+        10,
+        12
+      ],
+      "asm": [
+        "C606000401|mov byte ptr DS:[0x0400],1",
+        "A00005|mov AL,byte ptr DS:[0x0500]",
+        "B400|mov AH,0",
+        "D1E0|shl AX,1",
+        "83F802|cmp AX,2",
+        "770F|ja short 0x0020"
+      ]
+    },
+    {
+      "id": 26,
+      "entry": "F000:0028",
+      "term": "F000:002D",
+      "pred": [
+        12
+      ],
+      "succ": [
+        35
+      ],
+      "asm": [
+        "C606010422|mov byte ptr DS:[0x0401],0x22",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 12,
+      "entry": "F000:0011",
+      "term": "F000:0015",
+      "pred": [
+        3
+      ],
+      "succ": [
+        26,
+        28,
+        30,
+        35
+      ],
+      "asm": [
+        "89C3|mov BX,AX",
+        "D1E3|shl BX,1",
+        "2EFF5730|call near word ptr CS:[BX\u002B0x30]"
+      ]
+    },
+    {
+      "id": 10,
+      "entry": "F000:0020",
+      "dead": true,
+      "term": "F000:0020",
+      "pred": [
+        3
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 28,
+      "entry": "F000:0021",
+      "dead": true,
+      "term": "F000:0026",
+      "pred": [
+        12
+      ],
+      "succ": [],
+      "asm": [
+        "C6060104DD|mov byte ptr DS:[0x0401],0xDD",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 30,
+      "entry": "F000:0027",
+      "dead": true,
+      "term": "F000:0027",
+      "pred": [
+        12
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    }
+  ],
+  "truncated": false
+}

@@ -73,6 +73,17 @@ public class CfgNodeFeeder {
         // Reset it
         executionContext.CpuFault = false;
 
+        if (lastExecuted is CfgInstruction transfer && SwitchTableRecognizer.IsIndirectTransfer(transfer)) {
+            // Observed near indirect jmp/call through a word memory operand: retry its pending
+            // table-entry candidates on every execution, and resolve the table it may read when
+            // this execution links a target never seen before.
+            bool newTargetEdge = type == InstructionSuccessorType.Normal
+                && !transfer.SuccessorsPerAddress.ContainsKey(toExecute.Address);
+            ICfgNode linked = _nodeLinker.Link(type, lastExecuted, toExecute);
+            InstructionsFeeder.ExploreIndirectTransfer(transfer, newTargetEdge);
+            return linked;
+        }
+
         return _nodeLinker.Link(type, lastExecuted, toExecute);
     }
 

@@ -58,6 +58,32 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Switch tables: a single discovery run (selector=0) executes every switch at index 0 while
+    /// the recognizer resolves the guarded tables. The generated code must run the index-2 cases
+    /// on the unobserved run (selector=1) instead of failing "Untested near jump target"; the
+    /// negative twins stay untested.
+    /// </summary>
+    [Fact]
+    public void SpeculativeSwitchTableExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeSwitchTable(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeSwitchTable(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeSwitchTable(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
+    /// Call tables: same as the switch fixture but for an indirect near call: the index-2 callee is
+    /// discovered from the table and the D2 continuation rule explores the code after the call.
+    /// </summary>
+    [Fact]
+    public void SpeculativeCallTableExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeCallTable(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeCallTable(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeCallTable(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,
