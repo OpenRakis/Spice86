@@ -200,12 +200,24 @@ F000:0288 mov word ptr DS:[0x007A],1
 F000:028E jmp short 0x0217
 F000:0290 mov word ptr DS:[0x007C],1
 F000:0296 jmp near 0x0217
+F000:0299 jmp short 0x02A7
 F000:029B jmp short 0x02B0
+F000:029D jmp short 0x02B9
+F000:02A1 jmp short 0x02CB
 F000:02A3 jmp short 0x02D4
+F000:02A5 jmp short 0x02DD
+F000:02A7 mov word ptr DS:[0x0068],0x1100
+F000:02AD jmp near 0x012A
 F000:02B0 mov word ptr DS:[0x006A],0x1111
 F000:02B6 jmp near 0x012A
+F000:02B9 mov word ptr DS:[0x006C],0x1122
+F000:02BF jmp near 0x012A
+F000:02CB mov word ptr DS:[0x0072],0x1144
+F000:02D1 jmp near 0x014C
 F000:02D4 mov word ptr DS:[0x0074],0x1155
 F000:02DA jmp near 0x014C
+F000:02DD mov word ptr DS:[0x0076],0x1166
+F000:02E3 jmp near 0x014C
 F000:02E6 mov word ptr DS:[0x0052],0xF0F0
 F000:02EC ret near
 F000:02ED mov word ptr DS:[0x0054],0xF1F1

@@ -7,7 +7,7 @@
       "blocks": [
         34,
         37,
-        130
+        144
       ],
       "entries": [
         {
@@ -24,17 +24,17 @@
       "blocks": [
         42,
         45,
-        155,
-        158,
-        171,
-        173,
-        182,
-        180,
-        221,
-        223,
+        169,
+        172,
+        185,
+        187,
+        196,
+        194,
+        235,
         237,
-        239,
-        227
+        251,
+        253,
+        241
       ],
       "entries": [
         {
@@ -55,9 +55,9 @@
         23,
         29,
         27,
-        106,
-        108,
-        110,
+        52,
+        55,
+        57,
         2
       ],
       "entries": [
@@ -83,7 +83,7 @@
       "kind": "dynamicReturn",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 130,
+      "fromBlock": 144,
       "toBlock": 42,
       "from": "F000:007B",
       "target": "F000:0074"
@@ -101,7 +101,7 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 106,
+      "fromBlock": 52,
       "toBlock": 34,
       "from": "F000:0063",
       "target": "F000:0056"

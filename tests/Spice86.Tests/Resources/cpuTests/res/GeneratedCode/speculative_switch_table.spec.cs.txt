@@ -17,198 +17,282 @@ public partial class CfgGeneratedOverrides {
         byte byte1;
         ushort word1;
         ushort word2 = 0;
+        ushort word3;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DsGlobals.Byte0400 = 1;
         DsGlobals.Byte0408 = 1;
+        DsGlobals.Byte040C = 0;
         AX = CS;
         ES = AX;
-        SegmentF000Globals.Byte0126 = 0x90;
-        SegmentF000Globals.Byte0127 = 0x90;
-        SegmentF000Globals.Byte0128 = 0x90;
+        SegmentF000Globals.Byte01BE = 0x90;
+        SegmentF000Globals.Byte01BF = 0x90;
+        SegmentF000Globals.Byte01C0 = 0x90;
+        DsGlobals.Word0502 = 1;
         AL = DsGlobals.Byte0500;
         AH = 0;
         AX <<= 1;
         if (AX > 2) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0034, Signature_0034_hlt);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x003F, Signature_003F_hlt);
             return Hlt();
         }
         (BX, AX) = (AX, BX);
         BX <<= 1;
-        switch (UInt16[CS, BX + 0x01BE]) {
-            case 0x0035:
+        switch (UInt16[CS, BX + 0x028A]) {
+            case 0x0040:
                 DsGlobals.Byte0401 = 0xDD;
                 break;
-            case 0x003C:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x003C, Signature_003C_hlt);
-                return Hlt();
-            case 0x003D:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x003D, Signature_003D_mov);
+            case 0x0048:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0048, Signature_0048_mov);
                 DsGlobals.Byte0401 = 0x11;
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0042, Signature_0042_jmp);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x004D, Signature_004D_jmp);
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x01BE]:X4} at F000:002F");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x028A]:X4} at F000:003A");
         }
         AL = DsGlobals.Byte0500;
         AH = 0;
         AX <<= 1;
         if (AX > 2) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0050, Signature_0050_hlt);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x005B, Signature_005B_hlt);
             return Hlt();
         }
         BX = (ushort)(AX << 1);
-        switch (UInt16[CS, BX + 0x01C4]) {
-            case 0x005A:
+        switch (UInt16[CS, BX + 0x0290]) {
+            case 0x0065:
                 DsGlobals.Byte0402 = 0xDD;
                 break;
-            case 0x0061:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_hlt);
-                return Hlt();
-            case 0x0062:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0062, Signature_0062_mov);
+            case 0x006D:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x006D, Signature_006D_mov);
                 DsGlobals.Byte0402 = 0x22;
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0067, Signature_0067_jmp);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0072, Signature_0072_jmp);
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x01C4]:X4} at F000:0055");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0290]:X4} at F000:0060");
         }
         AL = DsGlobals.Byte0500;
         AH = 0;
         AX <<= 1;
         if (AX > 0x012C) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x007E, Signature_007E_hlt);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0089, Signature_0089_hlt);
             return Hlt();
         }
         BX = (ushort)(AX << 1);
-        switch (UInt16[CS, BX + 0x01CA]) {
-            case 0x007F:
+        switch (UInt16[CS, BX + 0x0296]) {
+            case 0x008A:
                 DsGlobals.Byte0403 = 0xDD;
                 break;
-            case 0x0086:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0086, Signature_0086_hlt);
+            case 0x0091:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0091, Signature_0091_hlt);
                 return Hlt();
-            case 0x0087:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x0087, Signature_0087_mov);
+            case 0x0092:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0092, Signature_0092_mov);
                 DsGlobals.Byte0403 = 0x33;
-                VerifySpeculativeEntryOrFail(biosSegment, 0x008C, Signature_008C_jmp);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0097, Signature_0097_jmp);
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x01CA]:X4} at F000:0079");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0296]:X4} at F000:0084");
         }
         AL = (byte)(DsGlobals.Byte0500 << 1);
         if (AL > 2) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00A2, Signature_00A2_hlt);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00AD, Signature_00AD_hlt);
             return Hlt();
         }
         AH = 0;
         BX = (ushort)(AX << 1);
-        switch (UInt16[CS, BX + 0x0424]) {
-            case 0x00A3:
+        switch (UInt16[CS, BX + 0x04F0]) {
+            case 0x00AE:
                 DsGlobals.Byte0404 = 0xDD;
                 break;
-            case 0x00AA:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_hlt);
-                return Hlt();
-            case 0x00AB:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_mov);
+            case 0x00B6:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x00B6, Signature_00B6_mov);
                 DsGlobals.Byte0404 = 0x44;
-                VerifySpeculativeEntryOrFail(biosSegment, 0x00B0, Signature_00B0_jmp);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_jmp);
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0424]:X4} at F000:009D");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x04F0]:X4} at F000:00A8");
         }
         byte1 = DsGlobals.Byte0500;
         word1 = CS;
         DS = word1;
         word2 = (ushort)((byte1 | 0) << 1);
         if (word2 > 2) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00CD, Signature_00CD_hlt);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00D8, Signature_00D8_hlt);
             return Hlt();
         }
         BX = (ushort)(word2 << 1);
-        switch (UInt16[DS, BX + 0x042A]) {
-            case 0x00CE:
+        switch (UInt16[DS, BX + 0x04F6]) {
+            case 0x00D9:
                 DS = 0;
                 Segment0000Globals.Byte0405 = 0xDD;
                 break;
-            case 0x00D9:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x00D9, Signature_00D9_hlt);
-                return Hlt();
-            case 0x00DA:
-                VerifySpeculativeRunOrFail(biosSegment, 0x00DA, SpeculativeRun_00DA);
+            case 0x00E5:
+                VerifySpeculativeRunOrFail(biosSegment, 0x00E5, SpeculativeRun_00E5);
                 DS = 0;
                 Segment0000Globals.Byte0405 = 0x55;
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x042A]:X4} at F000:00C9");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, BX + 0x04F6]:X4} at F000:00D4");
+        }
+        AX = word2;
+        AL = Segment0000Globals.Byte0500;
+        AH = 0;
+        AX <<= 1;
+        if (AX > 2) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0105, Signature_0105_hlt);
+            return Hlt();
+        }
+        BX = AX;
+        BX += BX;
+        switch (UInt16[CS, BX + 0x04FC]) {
+            case 0x0106:
+                Segment0000Globals.Byte0409 = 0xDD;
+                break;
+            case 0x010E:
+                VerifySpeculativeRunOrFail(biosSegment, 0x010E, SpeculativeRun_010E);
+                Segment0000Globals.Byte0409 = 0x66;
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x04FC]:X4} at F000:0100");
+        }
+        AL = Segment0000Globals.Byte0500;
+        AH = 0;
+        AX <<= 1;
+        if (AX > 2) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x012D, Signature_012D_hlt);
+            return Hlt();
+        }
+        word3 = AX;
+        BX = (ushort)(word3 + word3 + 4);
+        switch (UInt16[CS, BX + 0x0502]) {
+            case 0x012E:
+                Segment0000Globals.Byte040A = 0xDD;
+                break;
+            case 0x0136:
+                VerifySpeculativeRunOrFail(biosSegment, 0x0136, SpeculativeRun_0136);
+                Segment0000Globals.Byte040A = 0x77;
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0502]:X4} at F000:0128");
+        }
+        AL = Segment0000Globals.Byte0500;
+        AH = 0;
+        AX <<= 1;
+        BX = (ushort)(AX & 3);
+        BX += BX;
+        switch (UInt16[CS, BX + 0x050C]) {
+            case 0x0150:
+                Segment0000Globals.Byte040B = 0xDD;
+                break;
+            case 0x0158:
+                VerifySpeculativeRunOrFail(biosSegment, 0x0158, SpeculativeRun_0158);
+                Segment0000Globals.Byte040B = 0x88;
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x050C]:X4} at F000:014B");
+        }
+        if (Segment0000Globals.Byte0500 != 0) {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0169, SpeculativeRun_0169);
+            SI = Segment0000Globals.Word0502;
+            SI &= 1;
+            SI += SI;
+            switch (UInt16[ES, SI + 0x0514]) {
+                case 0x0177:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x0177, Signature_0177_hlt);
+                    return Hlt();
+                case 0x0178:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x0178, Signature_0178_mov);
+                    Segment0000Globals.Byte040C = 0x99;
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0514]:X4} at F000:0172");
+            }
+        }
+        else {
         }
         AX = 0;
         DS = 0;
         while (true) {
-            CheckExternalEvents(biosSegment, 0x00E9);
+            CheckExternalEvents(biosSegment, 0x0181);
             if (AX > 1) {
-                VerifySpeculativeEntryOrFail(biosSegment, 0x00F7, Signature_00F7_hlt);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x018F, Signature_018F_hlt);
                 return Hlt();
             }
             BX = (ushort)(AX << 1);
-            switch (UInt16[CS, BX + 0x05D4]) {
-                case 0x00F8:
+            switch (UInt16[CS, BX + 0x06CE]) {
+                case 0x0190:
                     break;
-                case 0x0126:
-                    goto L_0126;
+                case 0x01BE:
+                    goto L_01BE;
                 default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x05D4]:X4} at F000:00F2");
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x06CE]:X4} at F000:018A");
             }
             if (Segment0000Globals.Byte0501 != 0) {
                 break;
             }
             Segment0000Globals.Byte0501 = 1;
-            SegmentF000Globals.Byte0126 = 0xC6;
-            SegmentF000Globals.Byte0127 = 6;
-            SegmentF000Globals.Word0128 = 0x0406;
-            SegmentF000Globals.Byte012A = 0x77;
+            SegmentF000Globals.Byte01BE = 0xC6;
+            SegmentF000Globals.Byte01BF = 6;
+            SegmentF000Globals.Word01C0 = 0x0406;
+            SegmentF000Globals.Byte01C2 = 0x77;
             AL = Segment0000Globals.Byte0500;
             AH = 0;
         }
-        goto L_012B;
-    L_0126:
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0126, Signature_0126_mov);
+        goto L_01C3;
+    L_01BE:
+        VerifySpeculativeEntryOrFail(biosSegment, 0x01BE, Signature_01BE_mov);
         Segment0000Globals.Byte0406 = 0x77;
-    L_012B:
+    L_01C3:
         BX = 0;
-        if (SegmentF000Globals.Word05D8 != 0x013C) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x05D8]:X4} at F000:0136");
+        if (SegmentF000Globals.Word06D2 != 0x01D4) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x06D2]:X4} at F000:01CE");
         }
-        SegmentF000Globals.Byte016E = 0xC6;
-        SegmentF000Globals.Byte016F = 6;
-        SegmentF000Globals.Word0170 = 0x0408;
-        SegmentF000Globals.Byte0172 = 0x66;
-        SegmentF000Globals.Byte0173 = 0xF4;
-        BX = 0x0160;
-        if (BX != 0x0160) {
-            throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:015E");
+        SegmentF000Globals.Byte0206 = 0xC6;
+        SegmentF000Globals.Byte0207 = 6;
+        SegmentF000Globals.Word0208 = 0x0408;
+        SegmentF000Globals.Byte020A = 0x66;
+        SegmentF000Globals.Byte020B = 0xF4;
+        BX = 0x01F8;
+        if (BX != 0x01F8) {
+            throw FailAsUntested($"Untested near jump target 0x{BX:X4} at F000:01F6");
         }
         Segment0000Globals.Byte0407 = 0xAA;
         if (Segment0000Globals.Byte0500 != 0) {
-            VerifySpeculativeRunOrFail(biosSegment, 0x016E, SpeculativeRun_016E);
+            VerifySpeculativeRunOrFail(biosSegment, 0x0206, SpeculativeRun_0206);
             Segment0000Globals.Byte0408 = 0x66;
             return Hlt();
         }
         BX = 0;
-        if (SegmentF000Globals.Word0430 != 0x0187) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0430]:X4} at F000:0181");
+        switch (SegmentF000Globals.Word0518) {
+            case 0x021F:
+                break;
+            case 0x0289:
+                return Hlt();
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0518]:X4} at F000:0219");
         }
         BX = 0;
-        if (SegmentF000Globals.Word0436 != 0x0199) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0436]:X4} at F000:0193");
+        if (SegmentF000Globals.Word051E != 0x0232) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x051E]:X4} at F000:022C");
         }
         BX = 0;
-        if (SegmentF000Globals.Word043C != 0x01AA) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x043C]:X4} at F000:01A4");
+        if (SegmentF000Globals.Word0524 != 0x0243) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0524]:X4} at F000:023D");
         }
         BX = 0;
-        if (SegmentF000Globals.Word0442 != 0x01BB) {
-            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0442]:X4} at F000:01B5");
+        if (SegmentF000Globals.Word052A != 0x0254) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x052A]:X4} at F000:024E");
+        }
+        BX = 0;
+        if (SegmentF000Globals.Word06BC != 0x0267) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x06BC]:X4} at F000:0261");
+        }
+        BX = 0;
+        if (SegmentF000Globals.Word06C2 != 0x0275) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x06C2]:X4} at F000:0270");
+        }
+        BX = 0;
+        if (SegmentF000Globals.Word06C8 != 0x0287) {
+            throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x06C8]:X4} at F000:0281");
         }
         return Hlt();
     }
@@ -251,8 +335,14 @@ public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
     /// DS:0x0408, whatever DS holds at the access.
     public byte Byte0408 { get => _memory.UInt8[Segment, 0x0408]; set => _memory.UInt8[Segment, 0x0408] = value; }
 
+    /// DS:0x040C, whatever DS holds at the access.
+    public byte Byte040C { get => _memory.UInt8[Segment, 0x040C]; set => _memory.UInt8[Segment, 0x040C] = value; }
+
     /// DS:0x0500, whatever DS holds at the access.
     public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
+
+    /// DS:0x0502, whatever DS holds at the access.
+    public ushort Word0502 { get => _memory.UInt16[Segment, 0x0502]; set => _memory.UInt16[Segment, 0x0502] = value; }
 }
 
 // ==== file: Segment0000Globals.cs ====
@@ -279,9 +369,19 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public byte Byte0408 { get => _memory.UInt8[Segment, 0x0408]; set => _memory.UInt8[Segment, 0x0408] = value; }
 
+    public byte Byte0409 { get => _memory.UInt8[Segment, 0x0409]; set => _memory.UInt8[Segment, 0x0409] = value; }
+
+    public byte Byte040A { get => _memory.UInt8[Segment, 0x040A]; set => _memory.UInt8[Segment, 0x040A] = value; }
+
+    public byte Byte040B { get => _memory.UInt8[Segment, 0x040B]; set => _memory.UInt8[Segment, 0x040B] = value; }
+
+    public byte Byte040C { get => _memory.UInt8[Segment, 0x040C]; set => _memory.UInt8[Segment, 0x040C] = value; }
+
     public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
 
     public byte Byte0501 { get => _memory.UInt8[Segment, 0x0501]; set => _memory.UInt8[Segment, 0x0501] = value; }
+
+    public ushort Word0502 { get => _memory.UInt16[Segment, 0x0502]; set => _memory.UInt16[Segment, 0x0502] = value; }
 }
 
 // ==== file: SegmentF000Globals.cs ====
@@ -300,35 +400,41 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
         Segment = 0xF000;
     }
 
-    public byte Byte0126 { get => _memory.UInt8[Segment, 0x0126]; set => _memory.UInt8[Segment, 0x0126] = value; }
+    public byte Byte01BE { get => _memory.UInt8[Segment, 0x01BE]; set => _memory.UInt8[Segment, 0x01BE] = value; }
 
-    public byte Byte0127 { get => _memory.UInt8[Segment, 0x0127]; set => _memory.UInt8[Segment, 0x0127] = value; }
+    public byte Byte01BF { get => _memory.UInt8[Segment, 0x01BF]; set => _memory.UInt8[Segment, 0x01BF] = value; }
 
-    public byte Byte0128 { get => _memory.UInt8[Segment, 0x0128]; set => _memory.UInt8[Segment, 0x0128] = value; }
+    public byte Byte01C0 { get => _memory.UInt8[Segment, 0x01C0]; set => _memory.UInt8[Segment, 0x01C0] = value; }
 
-    public ushort Word0128 { get => _memory.UInt16[Segment, 0x0128]; set => _memory.UInt16[Segment, 0x0128] = value; }
+    public ushort Word01C0 { get => _memory.UInt16[Segment, 0x01C0]; set => _memory.UInt16[Segment, 0x01C0] = value; }
 
-    public byte Byte012A { get => _memory.UInt8[Segment, 0x012A]; set => _memory.UInt8[Segment, 0x012A] = value; }
+    public byte Byte01C2 { get => _memory.UInt8[Segment, 0x01C2]; set => _memory.UInt8[Segment, 0x01C2] = value; }
 
-    public byte Byte016E { get => _memory.UInt8[Segment, 0x016E]; set => _memory.UInt8[Segment, 0x016E] = value; }
+    public byte Byte0206 { get => _memory.UInt8[Segment, 0x0206]; set => _memory.UInt8[Segment, 0x0206] = value; }
 
-    public byte Byte016F { get => _memory.UInt8[Segment, 0x016F]; set => _memory.UInt8[Segment, 0x016F] = value; }
+    public byte Byte0207 { get => _memory.UInt8[Segment, 0x0207]; set => _memory.UInt8[Segment, 0x0207] = value; }
 
-    public ushort Word0170 { get => _memory.UInt16[Segment, 0x0170]; set => _memory.UInt16[Segment, 0x0170] = value; }
+    public ushort Word0208 { get => _memory.UInt16[Segment, 0x0208]; set => _memory.UInt16[Segment, 0x0208] = value; }
 
-    public byte Byte0172 { get => _memory.UInt8[Segment, 0x0172]; set => _memory.UInt8[Segment, 0x0172] = value; }
+    public byte Byte020A { get => _memory.UInt8[Segment, 0x020A]; set => _memory.UInt8[Segment, 0x020A] = value; }
 
-    public byte Byte0173 { get => _memory.UInt8[Segment, 0x0173]; set => _memory.UInt8[Segment, 0x0173] = value; }
+    public byte Byte020B { get => _memory.UInt8[Segment, 0x020B]; set => _memory.UInt8[Segment, 0x020B] = value; }
 
-    public ushort Word0430 { get => _memory.UInt16[Segment, 0x0430]; set => _memory.UInt16[Segment, 0x0430] = value; }
+    public ushort Word0518 { get => _memory.UInt16[Segment, 0x0518]; set => _memory.UInt16[Segment, 0x0518] = value; }
 
-    public ushort Word0436 { get => _memory.UInt16[Segment, 0x0436]; set => _memory.UInt16[Segment, 0x0436] = value; }
+    public ushort Word051E { get => _memory.UInt16[Segment, 0x051E]; set => _memory.UInt16[Segment, 0x051E] = value; }
 
-    public ushort Word043C { get => _memory.UInt16[Segment, 0x043C]; set => _memory.UInt16[Segment, 0x043C] = value; }
+    public ushort Word0524 { get => _memory.UInt16[Segment, 0x0524]; set => _memory.UInt16[Segment, 0x0524] = value; }
 
-    public ushort Word0442 { get => _memory.UInt16[Segment, 0x0442]; set => _memory.UInt16[Segment, 0x0442] = value; }
+    public ushort Word052A { get => _memory.UInt16[Segment, 0x052A]; set => _memory.UInt16[Segment, 0x052A] = value; }
 
-    public ushort Word05D8 { get => _memory.UInt16[Segment, 0x05D8]; set => _memory.UInt16[Segment, 0x05D8] = value; }
+    public ushort Word06BC { get => _memory.UInt16[Segment, 0x06BC]; set => _memory.UInt16[Segment, 0x06BC] = value; }
+
+    public ushort Word06C2 { get => _memory.UInt16[Segment, 0x06C2]; set => _memory.UInt16[Segment, 0x06C2] = value; }
+
+    public ushort Word06C8 { get => _memory.UInt16[Segment, 0x06C8]; set => _memory.UInt16[Segment, 0x06C8] = value; }
+
+    public ushort Word06D2 { get => _memory.UInt16[Segment, 0x06D2]; set => _memory.UInt16[Segment, 0x06D2] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -380,40 +486,56 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_0034_hlt = [0xF4];
-    private static readonly byte?[] Signature_003C_hlt = [0xF4];
-    private static readonly byte?[] Signature_003D_mov = [0xC6, 0x06, 0x01, 0x04, 0x11];
-    private static readonly byte?[] Signature_0042_jmp = [0xEB, 0x00];
-    private static readonly byte?[] Signature_0050_hlt = [0xF4];
-    private static readonly byte?[] Signature_0061_hlt = [0xF4];
-    private static readonly byte?[] Signature_0062_mov = [0xC6, 0x06, 0x02, 0x04, 0x22];
-    private static readonly byte?[] Signature_0067_jmp = [0xEB, 0x00];
-    private static readonly byte?[] Signature_007E_hlt = [0xF4];
-    private static readonly byte?[] Signature_0086_hlt = [0xF4];
-    private static readonly byte?[] Signature_0087_mov = [0xC6, 0x06, 0x03, 0x04, 0x33];
-    private static readonly byte?[] Signature_008C_jmp = [0xEB, 0x00];
-    private static readonly byte?[] Signature_00A2_hlt = [0xF4];
-    private static readonly byte?[] Signature_00AA_hlt = [0xF4];
-    private static readonly byte?[] Signature_00AB_mov = [0xC6, 0x06, 0x04, 0x04, 0x44];
-    private static readonly byte?[] Signature_00B0_jmp = [0xEB, 0x00];
-    private static readonly byte?[] Signature_00CD_hlt = [0xF4];
-    private static readonly byte?[] Signature_00D9_hlt = [0xF4];
-    private static readonly byte?[] Signature_00DA_xor = [0x31, 0xD2];
-    private static readonly byte?[] Signature_00DC_mov = [0x8E, 0xDA];
-    private static readonly byte?[] Signature_00DE_mov = [0xC6, 0x06, 0x05, 0x04, 0x55];
-    private static readonly byte?[] Signature_00E3_jmp = [0xEB, 0x00];
-    private static readonly byte?[] Signature_00F7_hlt = [0xF4];
-    private static readonly byte?[] Signature_0126_mov = [0xC6, 0x06, 0x06, 0x04, 0x77];
-    private static readonly byte?[] Signature_013B_hlt = [0xF4];
-    private static readonly byte?[] Signature_016E_mov = [0xC6, 0x06, 0x08, 0x04, 0x66];
-    private static readonly byte?[] Signature_0173_hlt = [0xF4];
-    private static readonly byte?[] Signature_0186_hlt = [0xF4];
-    private static readonly byte?[] Signature_0198_hlt = [0xF4];
-    private static readonly byte?[] Signature_01A9_hlt = [0xF4];
-    private static readonly byte?[] Signature_01BA_hlt = [0xF4];
+    private static readonly byte?[] Signature_003F_hlt = [0xF4];
+    private static readonly byte?[] Signature_0048_mov = [0xC6, 0x06, 0x01, 0x04, 0x11];
+    private static readonly byte?[] Signature_004D_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_005B_hlt = [0xF4];
+    private static readonly byte?[] Signature_006D_mov = [0xC6, 0x06, 0x02, 0x04, 0x22];
+    private static readonly byte?[] Signature_0072_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_0089_hlt = [0xF4];
+    private static readonly byte?[] Signature_0091_hlt = [0xF4];
+    private static readonly byte?[] Signature_0092_mov = [0xC6, 0x06, 0x03, 0x04, 0x33];
+    private static readonly byte?[] Signature_0097_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_00AD_hlt = [0xF4];
+    private static readonly byte?[] Signature_00B6_mov = [0xC6, 0x06, 0x04, 0x04, 0x44];
+    private static readonly byte?[] Signature_00BB_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_00D8_hlt = [0xF4];
+    private static readonly byte?[] Signature_00E5_xor = [0x31, 0xD2];
+    private static readonly byte?[] Signature_00E7_mov = [0x8E, 0xDA];
+    private static readonly byte?[] Signature_00E9_mov = [0xC6, 0x06, 0x05, 0x04, 0x55];
+    private static readonly byte?[] Signature_00EE_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_0105_hlt = [0xF4];
+    private static readonly byte?[] Signature_010E_mov = [0xC6, 0x06, 0x09, 0x04, 0x66];
+    private static readonly byte?[] Signature_0113_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_012D_hlt = [0xF4];
+    private static readonly byte?[] Signature_0136_mov = [0xC6, 0x06, 0x0A, 0x04, 0x77];
+    private static readonly byte?[] Signature_013B_jmp = [0xEB, 0x00];
+    private static readonly byte?[] Signature_0158_mov = [0xC6, 0x06, 0x0B, 0x04, 0x88];
+    private static readonly byte?[] Signature_015D_jmp = [0xEB, 0x01];
+    private static readonly byte?[] Signature_0169_mov = [0x8B, 0x36, 0x02, 0x05];
+    private static readonly byte?[] Signature_016D_and = [0x83, 0xE6, 0x01];
+    private static readonly byte?[] Signature_0170_add = [0x01, 0xF6];
+    private static readonly byte?[] Signature_0172_jmp = [0x26, 0xFF, 0xA4, 0x14, 0x05];
+    private static readonly byte?[] Signature_0177_hlt = [0xF4];
+    private static readonly byte?[] Signature_0178_mov = [0xC6, 0x06, 0x0C, 0x04, 0x99];
+    private static readonly byte?[] Signature_018F_hlt = [0xF4];
+    private static readonly byte?[] Signature_01BE_mov = [0xC6, 0x06, 0x06, 0x04, 0x77];
+    private static readonly byte?[] Signature_01D3_hlt = [0xF4];
+    private static readonly byte?[] Signature_0206_mov = [0xC6, 0x06, 0x08, 0x04, 0x66];
+    private static readonly byte?[] Signature_020B_hlt = [0xF4];
+    private static readonly byte?[] Signature_021E_hlt = [0xF4];
+    private static readonly byte?[] Signature_0231_hlt = [0xF4];
+    private static readonly byte?[] Signature_0242_hlt = [0xF4];
+    private static readonly byte?[] Signature_0253_hlt = [0xF4];
+    private static readonly byte?[] Signature_0266_hlt = [0xF4];
+    private static readonly byte?[] Signature_0286_hlt = [0xF4];
 
-    private static readonly byte?[][] SpeculativeRun_00DA = [Signature_00DA_xor, Signature_00DC_mov, Signature_00DE_mov, Signature_00E3_jmp];
-    private static readonly byte?[][] SpeculativeRun_016E = [Signature_016E_mov, Signature_0173_hlt];
+    private static readonly byte?[][] SpeculativeRun_00E5 = [Signature_00E5_xor, Signature_00E7_mov, Signature_00E9_mov, Signature_00EE_jmp];
+    private static readonly byte?[][] SpeculativeRun_010E = [Signature_010E_mov, Signature_0113_jmp];
+    private static readonly byte?[][] SpeculativeRun_0136 = [Signature_0136_mov, Signature_013B_jmp];
+    private static readonly byte?[][] SpeculativeRun_0158 = [Signature_0158_mov, Signature_015D_jmp];
+    private static readonly byte?[][] SpeculativeRun_0169 = [Signature_0169_mov, Signature_016D_and, Signature_0170_add, Signature_0172_jmp];
+    private static readonly byte?[][] SpeculativeRun_0206 = [Signature_0206_mov, Signature_020B_hlt];
 
 }
 

@@ -108,7 +108,9 @@ public class SpeculativeExplorer {
         int CellSize,
         int SegmentRegisterIndex,
         int IndexRegister,
-        ushort Displacement);
+        ushort Displacement,
+        int Step = 0,
+        int Bound = 0);
     private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
 
@@ -254,7 +256,7 @@ public class SpeculativeExplorer {
         ushort segment = _state.SegmentRegisters.UInt16[(uint)table.SegmentRegisterIndex];
         HashSet<ushort> entries = new(count);
         for (int i = 0; i < count; i++) {
-            ushort offset = (ushort)(table.TableOffset + 2 * i);
+            ushort offset = (ushort)(table.BaseOffset + table.Step * i);
             ushort entry = (ushort)(SneakilyReadCodeByte(segment, offset)
                 | SneakilyReadCodeByte(segment, (uint)offset + 1) << 8);
             if (entry is 0x0000 or 0xFFFF) {
@@ -662,9 +664,20 @@ public class SpeculativeExplorer {
             AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, -1, (ushort)constOffset));
             return;
         }
-        if (!SwitchTableRecognizer.TryGetIndexExpression(pointer.Offset, out int indexRegister, out ushort displacement)
-            || !IsKnown(item.KnownRegisters, indexRegister)) {
+        if (!SwitchTableRecognizer.TryGetIndexExpression(pointer.Offset, out int indexRegister, out ushort displacement)) {
             _refusedAnchorSiteForms++;
+            return;
+        }
+        if (!IsKnown(item.KnownRegisters, indexRegister)) {
+            // Bounded indexed-table form: the backward walk supplies the reachable entry offsets,
+            // so the index register itself need not be known, only the segment.
+            if (isFar || SwitchTableRecognizer.RecognizeSpeculative(site) is not { } table
+                || table.Bound + 1 > MaxTableEntries) {
+                _refusedAnchorSiteForms++;
+                return;
+            }
+            AddDependent(item.Anchor, new AnchorDependent(site, isCall, 2, segmentRegisterIndex, -1,
+                table.BaseOffset, table.Step, table.Bound));
             return;
         }
         AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, indexRegister, displacement));
@@ -699,6 +712,10 @@ public class SpeculativeExplorer {
     }
 
     private void EvaluateDependent(CfgInstruction anchor, AnchorDependent dependent) {
+        if (dependent.Step != 0) {
+            EvaluateTableDependent(anchor, dependent);
+            return;
+        }
         if (dependent.CellSize == 0) {
             ushort offset = _state.GeneralRegisters.UInt16[(uint)dependent.IndexRegister];
             SubmitAnchorCandidate(anchor, dependent,
@@ -716,6 +733,30 @@ public class SpeculativeExplorer {
         }
         WatchSiteCell(dependent, physical);
         SubmitAnchorCandidate(anchor, dependent, CellTarget(dependent, value), ExploreSource.PointerValue);
+    }
+
+    /// <summary>
+    /// Reads every entry of a bounded indexed table under the anchor's current segment value and
+    /// proposes each as a candidate for the site. The walk's bound and step give the offsets, so
+    /// the index register itself is never consulted.
+    /// </summary>
+    private void EvaluateTableDependent(CfgInstruction anchor, AnchorDependent dependent) {
+        ushort segment = _state.SegmentRegisters.UInt16[(uint)dependent.SegmentRegisterIndex];
+        HashSet<ushort> entries = new();
+        for (int i = 0; i <= dependent.Bound; i++) {
+            uint offset = (uint)(dependent.Displacement + dependent.Step * i);
+            uint physical = _memory.A20Gate.TransformAddress(_memory.Mmu.TranslateAddress(segment, offset));
+            WatchSiteCell(dependent, physical);
+            ushort entry = (ushort)(_memory.SneakilyRead(physical) | _memory.SneakilyRead(physical + 1) << 8);
+            if (entry is 0x0000 or 0xFFFF) {
+                return;
+            }
+            entries.Add(entry);
+        }
+        foreach (ushort entry in entries) {
+            SubmitAnchorCandidate(anchor, dependent,
+                new SegmentedAddress(dependent.Site.Address.Segment, entry), ExploreSource.TableEntry);
+        }
     }
 
     private void WatchSiteCell(AnchorDependent dependent, uint physical) {

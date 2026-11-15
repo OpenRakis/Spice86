@@ -50,7 +50,7 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
         SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
         Assert.NotNull(shape);
         Assert.Equal(0x37, shape.Bound);
-        Assert.Equal(Table, shape.TableOffset);
+        Assert.Equal(Table, shape.BaseOffset);
         Assert.False(shape.IsCall);
     }
 
@@ -92,25 +92,32 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
     }
 
     [Fact]
-    public void RefusesShlBeforeCompare() {
-        // mov bx,ax ; shl bx,1 ; cmp ax,2 ; ja ; jmp [cs:bx+T] - wrong order
+    public void RecognizesCompareOnPreTransformRegister() {
+        // mov bx,ax ; shl bx,1 ; cmp ax,2 ; ja ; jmp [cs:bx+T]
+        // The compare bounds the register the index was copied from: bx = 2*ax <= 4, so only the
+        // even entries 0,2,4 are reachable. The fixed chain refused this order on purpose; the
+        // backward walk carries the bound on AX through the mov and resolves it.
         CfgInstruction transfer = Chain(0x100,
             0x89, 0xC3,
             0xD1, 0xE3,
             0x83, 0xF8, 0x02,
             0x77, 0x02,
             0x2E, 0xFF, 0xA7, 0x24, 0x0E);
-        Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(2, shape.Bound);
+        Assert.Equal(2, shape.Step);
     }
 
     [Fact]
-    public void RefusesForeignInstructionInChain() {
-        // cmp ax,2 ; ja ; mov bx,ax ; inc cx ; shl bx,1 ; jmp
+    public void RefusesForeignWriteToTrackedRegister() {
+        // cmp ax,2 ; ja ; mov bx,ax ; inc bx ; shl bx,1 ; jmp
+        // inc writes the tracked index register and is not an accepted transformation.
         CfgInstruction transfer = Chain(0x100,
             0x83, 0xF8, 0x02,
             0x77, 0x07,
             0x89, 0xC3,
-            0x41,
+            0x43,
             0xD1, 0xE3,
             0x2E, 0xFF, 0xA7, 0x24, 0x0E);
         Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
@@ -155,7 +162,7 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
         SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
         Assert.NotNull(shape);
         Assert.Equal(2, shape.Bound);
-        Assert.Equal(Table, shape.TableOffset);
+        Assert.Equal(Table, shape.BaseOffset);
     }
 
     [Fact]
@@ -215,6 +222,75 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
         SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
         Assert.NotNull(shape);
         Assert.True(shape.IsCall);
+    }
+
+    [Fact]
+    public void RecognizesCompareOnScaledValue() {
+        // mov al,[500] ; mov ah,0 ; shl ax,1 ; cmp ax,2 ; ja +5 ; xchg bx,ax ; shl bx,1 ; jmp
+        // The compare bounds the already scaled ax, so the reachable bx indices are the even
+        // multiples {0,4}: bound 1, step 4.
+        CfgInstruction transfer = Chain(0x100,
+            0xA0, 0x00, 0x05,
+            0xB4, 0x00,
+            0xD1, 0xE0,
+            0x83, 0xF8, 0x02,
+            0x77, 0x05,
+            0x93,
+            0xD1, 0xE3,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(1, shape.Bound);
+        Assert.Equal(4, shape.Step);
+        Assert.Equal(Table, shape.BaseOffset);
+    }
+
+    [Fact]
+    public void RecognizesLowerAndUpperBounds() {
+        // mov si,bx ; shl si,1 ; cmp si,4 ; jb out ; cmp si,8 ; ja out ; jmp [es:si+T]
+        // The scaled si stays in [4,8], so the unscaled index stays in [2,4]: three entries
+        // read at T+4, T+6, T+8 - the lower bound folds into BaseOffset.
+        CfgInstruction transfer = Chain(0x100,
+            0x89, 0xDE,
+            0xD1, 0xE6,
+            0x83, 0xFE, 0x04,
+            0x72, 0x0A,
+            0x83, 0xFE, 0x08,
+            0x77, 0x05,
+            0x26, 0xFF, 0xA4, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(2, shape.Bound);
+        Assert.Equal(2, shape.Step);
+        Assert.Equal(Table + 4, shape.BaseOffset);
+    }
+
+    [Fact]
+    public void RefusesSignedGuardJump() {
+        // cmp si,4 ; jl out ; cmp si,8 ; ja out ; jmp [es:si+T]
+        // jl is a signed condition the polarity table does not cover: the bound of the second
+        // guard is still valid, but the jl compare has no verifiable guard.
+        CfgInstruction transfer = Chain(0x100,
+            0x89, 0xDE,
+            0xD1, 0xE6,
+            0x83, 0xFE, 0x04,
+            0x7C, 0x0A,
+            0x83, 0xFE, 0x08,
+            0x77, 0x05,
+            0x26, 0xFF, 0xA4, 0x24, 0x0E);
+        Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
+    }
+
+    [Fact]
+    public void RefusesGuardWithBothEdgesReachingTransfer() {
+        // cmp si,4 ; jbe +0 ; jmp [es:si+T]
+        // jbe jumps to its own fallthrough: both edges reach the transfer, so the compare
+        // constrains nothing and no bound exists.
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xFE, 0x04,
+            0x76, 0x00,
+            0x26, 0xFF, 0xA4, 0x24, 0x0E);
+        Assert.Null(new SwitchTableRecognizer().Recognize(transfer));
     }
 }
 
