@@ -52,9 +52,9 @@ public class RegisterWriteSetTest : SpeculativeTestBase {
     }
 
     [Fact]
-    public void XchgIsConservative() {
-        // xchg ax,bx - a helper the walker does not unpack
-        Assert.Equal((ushort)RegisterBits.AllExceptCs, RegisterWriteSet.MayWrite(Parse(0x93)));
+    public void XchgMarksSwappedRegisters() {
+        // xchg ax,bx - expands to temp/assign statements naming AX and BX
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Bx), RegisterWriteSet.MayWrite(Parse(0x93)));
     }
 
     [Fact]
@@ -73,6 +73,30 @@ public class RegisterWriteSetTest : SpeculativeTestBase {
     public void MemoryWriteMarksNoRegister() {
         // mov [bx],ax
         Assert.Equal(0, RegisterWriteSet.MayWrite(Parse(0x89, 0x07)));
+    }
+
+    [Fact]
+    public void PopRegisterMarksRegisterAndSp() {
+        // pop ax - the popped value is a StackCallValueNode that increments SP
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Sp), RegisterWriteSet.MayWrite(Parse(0x58)));
+    }
+
+    [Fact]
+    public void PopMemoryMarksSp() {
+        // pop word [bx] - the memory target marks nothing, the pop still writes SP
+        Assert.Equal(Regs(RegisterBits.Sp), RegisterWriteSet.MayWrite(Parse(0x8F, 0x07)));
+    }
+
+    [Fact]
+    public void MovRegRegMarksOnlyTarget() {
+        // mov ax,bx - the source register is a pure read
+        Assert.Equal(Regs(RegisterBits.Ax), RegisterWriteSet.MayWrite(Parse(0x89, 0xD8)));
+    }
+
+    [Fact]
+    public void MovRegMemMarksOnlyTarget() {
+        // mov ax,[bx+si+4] - pointer segment/offset reads are pure
+        Assert.Equal(Regs(RegisterBits.Ax), RegisterWriteSet.MayWrite(Parse(0x8B, 0x40, 0x04)));
     }
 
     [Fact]

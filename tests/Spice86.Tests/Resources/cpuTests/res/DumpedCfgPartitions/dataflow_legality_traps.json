@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        922
+        1064
       ],
       "entries": [
         {
-          "block": 922,
+          "block": 1064,
           "address": "F000:0383",
           "kind": "functionEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        268
+        300
       ],
       "entries": [
         {
-          "block": 268,
+          "block": 300,
           "address": "F000:0387",
           "kind": "executionContextEntry"
         }
@@ -50,11 +50,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        1426
+        1568
       ],
       "entries": [
         {
-          "block": 1426,
+          "block": 1568,
           "address": "F000:0394",
           "kind": "executionContextEntry"
         }
@@ -66,7 +66,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        1095,
+        1237,
         50,
         48,
         55,
@@ -95,17 +95,17 @@
         164,
         162,
         171,
-        924,
-        938,
-        942,
-        967,
-        971,
-        973,
-        993,
-        991,
-        1000,
-        1002,
-        1097,
+        1066,
+        1080,
+        1084,
+        1109,
+        1113,
+        1115,
+        1135,
+        1133,
+        1142,
+        1144,
+        1239,
         2
       ],
       "entries": [
@@ -131,8 +131,8 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 5,
-      "fromBlock": 922,
-      "toBlock": 924,
+      "fromBlock": 1064,
+      "toBlock": 1066,
       "from": "F000:0386",
       "target": "F000:01AF"
     },
@@ -152,10 +152,10 @@
       "fromPartition": 5,
       "toPartition": 2,
       "fromBlock": 171,
-      "toBlock": 922,
+      "toBlock": 1064,
       "from": "F000:01AD",
       "target": "F000:0383",
-      "callContinuationBlock": 924,
+      "callContinuationBlock": 1066,
       "callContinuationAddress": "F000:01AF"
     }
   ]

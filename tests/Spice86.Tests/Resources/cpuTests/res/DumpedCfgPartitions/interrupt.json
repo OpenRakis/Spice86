@@ -40,11 +40,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        150
+        151
       ],
       "entries": [
         {
-          "block": 150,
+          "block": 151,
           "address": "F000:4013",
           "kind": "functionEntry"
         }
@@ -61,9 +61,9 @@
         56,
         77,
         103,
-        131,
-        134,
-        136,
+        132,
+        135,
+        137,
         2
       ],
       "entries": [
@@ -99,7 +99,7 @@
       "fromPartition": 2,
       "toPartition": 4,
       "fromBlock": 118,
-      "toBlock": 131,
+      "toBlock": 132,
       "from": "F000:300B",
       "target": "F000:4002"
     },
@@ -133,15 +133,15 @@
       "toBlock": 118,
       "from": "F000:0CFD",
       "target": "F000:3001",
-      "callContinuationBlock": 131,
+      "callContinuationBlock": 132,
       "callContinuationAddress": "F000:4002"
     },
     {
       "kind": "callOut",
       "fromPartition": 4,
       "toPartition": 3,
-      "fromBlock": 136,
-      "toBlock": 150,
+      "fromBlock": 137,
+      "toBlock": 151,
       "from": "F000:4012",
       "target": "F000:4013"
     }

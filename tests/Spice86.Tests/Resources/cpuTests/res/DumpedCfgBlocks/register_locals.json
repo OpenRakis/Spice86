@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:01DD",
-  "lastExecutedBlockId": 974,
+  "lastExecutedBlockId": 1087,
   "blocks": [
     {
-      "id": 974,
+      "id": 1087,
       "entry": "F000:01D3",
       "term": "F000:01DD",
       "pred": [
-        967,
-        969
+        1080,
+        1082
       ],
       "succ": [],
       "asm": [
@@ -36,29 +36,29 @@
       ]
     },
     {
-      "id": 967,
+      "id": 1080,
       "entry": "F000:01CF",
       "dead": true,
       "term": "F000:01CF",
       "pred": [
-        959
+        1072
       ],
       "succ": [
-        974
+        1087
       ],
       "asm": [
         "C6454A00|mov byte ptr DS:[DI\u002B0x4A],0"
       ]
     },
     {
-      "id": 969,
+      "id": 1082,
       "entry": "F000:01C9",
       "term": "F000:01CD",
       "pred": [
-        959
+        1072
       ],
       "succ": [
-        974
+        1087
       ],
       "asm": [
         "C6454A01|mov byte ptr DS:[DI\u002B0x4A],1",
@@ -101,16 +101,16 @@
       ]
     },
     {
-      "id": 959,
+      "id": 1072,
       "entry": "F000:01B5",
       "term": "F000:01C7",
       "pred": [
-        952,
-        954
+        1065,
+        1067
       ],
       "succ": [
-        967,
-        969
+        1080,
+        1082
       ],
       "asm": [
         "BB0300|mov BX,3",
@@ -205,29 +205,29 @@
       ]
     },
     {
-      "id": 952,
+      "id": 1065,
       "entry": "F000:01B1",
       "dead": true,
       "term": "F000:01B1",
       "pred": [
-        950
+        1063
       ],
       "succ": [
-        959
+        1072
       ],
       "asm": [
         "C6454500|mov byte ptr DS:[DI\u002B0x45],0"
       ]
     },
     {
-      "id": 954,
+      "id": 1067,
       "entry": "F000:01AB",
       "term": "F000:01AF",
       "pred": [
-        950
+        1063
       ],
       "succ": [
-        959
+        1072
       ],
       "asm": [
         "C6454501|mov byte ptr DS:[DI\u002B0x45],1",
@@ -265,16 +265,16 @@
       ]
     },
     {
-      "id": 950,
+      "id": 1063,
       "entry": "F000:01A6",
       "term": "F000:01A9",
       "pred": [
-        943,
-        945
+        1056,
+        1058
       ],
       "succ": [
-        952,
-        954
+        1065,
+        1067
       ],
       "asm": [
         "83FAFF|cmp DX,-1",
@@ -298,29 +298,29 @@
       ]
     },
     {
-      "id": 943,
+      "id": 1056,
       "entry": "F000:01A2",
       "dead": true,
       "term": "F000:01A2",
       "pred": [
-        933
+        1046
       ],
       "succ": [
-        950
+        1063
       ],
       "asm": [
         "C6454400|mov byte ptr DS:[DI\u002B0x44],0"
       ]
     },
     {
-      "id": 945,
+      "id": 1058,
       "entry": "F000:019C",
       "term": "F000:01A0",
       "pred": [
-        933
+        1046
       ],
       "succ": [
-        950
+        1063
       ],
       "asm": [
         "C6454401|mov byte ptr DS:[DI\u002B0x44],1",
@@ -358,16 +358,16 @@
       ]
     },
     {
-      "id": 933,
+      "id": 1046,
       "entry": "F000:0183",
       "term": "F000:019A",
       "pred": [
         263,
-        931
+        1044
       ],
       "succ": [
-        943,
-        945
+        1056,
+        1058
       ],
       "asm": [
         "2E0FBE4412|movsx AX,byte ptr CS:[SI\u002B0x12]",
@@ -406,8 +406,8 @@
         258
       ],
       "succ": [
-        931,
-        933
+        1044,
+        1046
       ],
       "asm": [
         "50|push AX",
@@ -444,14 +444,14 @@
       ]
     },
     {
-      "id": 931,
+      "id": 1044,
       "entry": "F000:01E2",
       "term": "F000:01E5",
       "pred": [
         263
       ],
       "succ": [
-        933
+        1046
       ],
       "asm": [
         "89453E|mov word ptr DS:[DI\u002B0x3E],AX",

@@ -7,15 +7,15 @@
     "F000:0136"
   ],
   "lastExecutedAddress": "F000:0135",
-  "lastExecutedBlockId": 484,
+  "lastExecutedBlockId": 577,
   "blocks": [
     {
-      "id": 484,
+      "id": 577,
       "entry": "F000:012B",
       "term": "F000:0135",
       "pred": [
         3,
-        455
+        548
       ],
       "succ": [],
       "asm": [
@@ -25,14 +25,14 @@
       ]
     },
     {
-      "id": 455,
+      "id": 548,
       "entry": "F000:0136",
       "term": "F000:0148",
       "pred": [
         3
       ],
       "succ": [
-        484
+        577
       ],
       "asm": [
         "55|push BP",
@@ -64,8 +64,8 @@
         2
       ],
       "succ": [
-        455,
-        484
+        548,
+        577
       ],
       "asm": [
         "B80020|mov AX,0x2000",
