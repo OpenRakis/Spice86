@@ -7,15 +7,15 @@
     "F000:0042"
   ],
   "lastExecutedAddress": "F000:0041",
-  "lastExecutedBlockId": 190,
+  "lastExecutedBlockId": 114,
   "blocks": [
     {
-      "id": 190,
+      "id": 114,
       "entry": "F000:002F",
       "term": "F000:0041",
       "pred": [
         3,
-        148
+        83
       ],
       "succ": [],
       "asm": [
@@ -27,14 +27,14 @@
       ]
     },
     {
-      "id": 148,
+      "id": 83,
       "entry": "F000:0042",
       "term": "F000:004E",
       "pred": [
         3
       ],
       "succ": [
-        190
+        114
       ],
       "asm": [
         "FE065700|inc byte ptr DS:[0x0057]",
@@ -65,8 +65,8 @@
         2
       ],
       "succ": [
-        148,
-        190
+        83,
+        114
       ],
       "asm": [
         "B80020|mov AX,0x2000",

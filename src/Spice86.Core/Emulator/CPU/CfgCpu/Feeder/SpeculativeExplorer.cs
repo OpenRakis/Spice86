@@ -94,7 +94,7 @@ public class SpeculativeExplorer {
     private readonly WatchedPointerCells _watchedCells;
     private readonly Dictionary<CfgInstruction, List<AnchorDependent>> _anchorDependents = new();
     private readonly HashSet<(CfgInstruction Site, CfgInstruction Anchor)> _anchorSitePairs = new();
-    private readonly HashSet<(CfgInstruction Node, ushort KnownRegisters, CfgInstruction Anchor)> _anchorTraversed = new();
+    private readonly Dictionary<CfgInstruction, ushort> _anchorKnownUnion = new();
     private readonly HashSet<(uint Start, int Size, CfgInstruction Site)> _watchedSiteCells = new();
     private int _refusedAnchorSiteForms;
 
@@ -183,7 +183,7 @@ public class SpeculativeExplorer {
         // before it executes: every register it does not write stays known down the speculative
         // path it opens, and it becomes the anchor that re-evaluates them on later executions.
         ushort known = (ushort)((ushort)RegisterBits.All & ~RegisterWriteSet.MayWrite(observed));
-        EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, observed);
+        EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, known == 0 ? null : observed);
         if (observed.IsCall) {
             TryExploreCallContinuation(observed, worklist);
         }
@@ -442,13 +442,15 @@ public class SpeculativeExplorer {
                 }
                 TryRegisterAnchorSite(item, existing);
                 // Anchored items keep walking through already-decoded speculative nodes so
-                // sites deeper than the convergence frontier are still reached. Each (node,
-                // incoming known-mask) pair expands once: a node re-traversed with the same
-                // register knowledge would enqueue identical items.
-                if (item.Anchor is not null
-                    && existing.IsSpeculative
-                    && _anchorTraversed.Add((existing, item.KnownRegisters, item.Anchor))) {
-                    EnqueueSuccessorsForNode(existing, worklist, item);
+                // sites deeper than the convergence frontier are still reached. A node is
+                // re-walked only when the item knows a register no earlier traversal knew:
+                // re-walking with a subset of the union would enqueue nothing new.
+                if (item.Anchor is not null && existing.IsSpeculative) {
+                    _anchorKnownUnion.TryGetValue(existing, out ushort union);
+                    if ((item.KnownRegisters & ~union) != 0) {
+                        _anchorKnownUnion[existing] = (ushort)(union | item.KnownRegisters);
+                        EnqueueSuccessorsForNode(existing, worklist, item);
+                    }
                 }
                 continue;
             }
@@ -471,6 +473,9 @@ public class SpeculativeExplorer {
             }
             TryRegisterAnchorSite(item, candidate);
             EnqueueSuccessorsForNode(candidate, worklist, item);
+            if (item.Anchor is not null) {
+                _anchorKnownUnion[candidate] = item.KnownRegisters;
+            }
             if (item.Predecessor is null && item.Source is ExploreSource.CatalogueEntry or ExploreSource.InterruptVector) {
                 // A seed with no successors (a lone ret, for instance) never goes through Link,
                 // so nothing opens its block. The partition collector needs one; known-safe
@@ -516,11 +521,14 @@ public class SpeculativeExplorer {
         // The register values the anchor's state can still predict past this node: everything the
         // node itself does not write.
         ushort nextKnown = (ushort)(item.KnownRegisters & ~RegisterWriteSet.MayWrite(node));
+        // Nothing left that the anchor's state can predict: the items below can no longer
+        // resolve a site, so the anchor stops here instead of growing the re-traversal.
+        CfgInstruction? nextAnchor = nextKnown == 0 ? null : item.Anchor;
         if (node.IsCall) {
             // Call or INT: static successors are callees (enqueued untrusted, always Normal edges).
             // Continuation is only enqueued if under trust, or when the callee is known to return.
             foreach (SegmentedAddress successor in node.StaticSuccessorAddresses.Where(address => !_nodeIndex.PoisonSet.Contains(address))) {
-                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, item.Anchor));
+                worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, nextAnchor));
             }
             if (followContinuations) {
                 EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static);
@@ -532,7 +540,7 @@ public class SpeculativeExplorer {
         if (node.StaticSuccessorAddresses.Count > 0) {
             // Non-call instructions with known static successors: propagate trust through intra-routine successors.
             // Static successors are always Normal edges.
-            EnqueueStaticSuccessors(node, worklist, followContinuations, nextKnown, item.Anchor);
+            EnqueueStaticSuccessors(node, worklist, followContinuations, nextKnown, nextAnchor);
             return;
         }
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.

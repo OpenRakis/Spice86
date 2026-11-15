@@ -14,10 +14,25 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x0000.
-    public virtual void unknown_59_F000_0028_F0028(ushort word1) {
+    public virtual void unknown_38_F000_0028_F0028(ushort word1) {
         DS = word1;
         CheckExternalEvents(biosSegment, 0x0028);
         Segment0000Globals.Byte0010 = 0xAA;
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_38_F000_0028_F0028_Asm() {
+        unknown_38_F000_0028_F0028(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x0000.
+    public virtual void unknown_59_F000_0028_F0028(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x0028);
+        Segment0000Globals.Byte0011 = 0xBB;
         FarReturn();
         return;
     }
@@ -29,22 +44,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x0000.
-    public virtual void unknown_80_F000_0028_F0028(ushort word1) {
-        DS = word1;
-        CheckExternalEvents(biosSegment, 0x0028);
-        Segment0000Globals.Byte0011 = 0xBB;
-        FarReturn();
-        return;
-    }
-
-    public virtual Action unknown_80_F000_0028_F0028_Asm() {
-        unknown_80_F000_0028_F0028(DS);
-        return Returned;
-    }
-
-    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
-    /// Segment values at entry, from every call site: ES = 0xF000, DS = 0x0000.
-    public virtual void unknown_104_F000_0028_F0028(ushort word1) {
+    public virtual void unknown_83_F000_0028_F0028(ushort word1) {
         DS = word1;
         CheckExternalEvents(biosSegment, 0x0028);
         Segment0000Globals.Byte0012 = 0xCC;
@@ -52,8 +52,8 @@ public partial class CfgGeneratedOverrides {
         return;
     }
 
-    public virtual Action unknown_104_F000_0028_F0028_Asm() {
-        unknown_104_F000_0028_F0028(DS);
+    public virtual Action unknown_83_F000_0028_F0028_Asm() {
+        unknown_83_F000_0028_F0028(DS);
         return Returned;
     }
 
@@ -112,11 +112,11 @@ public partial class CfgGeneratedOverrides {
         SP = 0x0100;
         word2 = 0xF000;
         NearCall(biosSegment, 0x0012, () => unknown_F000_0040_F0040(word2));
-        FarCall(biosSegment, 0x0017, biosSegment, () => unknown_59_F000_0028_F0028(word1));
+        FarCall(biosSegment, 0x0017, biosSegment, () => unknown_38_F000_0028_F0028(word1));
         NearCall(biosSegment, 0x001A, () => unknown_F000_0048_F0048(word2));
-        FarCall(biosSegment, 0x001F, biosSegment, () => unknown_80_F000_0028_F0028(word1));
+        FarCall(biosSegment, 0x001F, biosSegment, () => unknown_59_F000_0028_F0028(word1));
         NearCall(biosSegment, 0x0022, () => unknown_F000_0050_F0050(word2));
-        FarCall(biosSegment, 0x0027, biosSegment, () => unknown_104_F000_0028_F0028(word1));
+        FarCall(biosSegment, 0x0027, biosSegment, () => unknown_83_F000_0028_F0028(word1));
         return Hlt();
     }
 
@@ -180,7 +180,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_59_F000_0028_F0028_AsmEntry;
+    private readonly Func<int, Action> unknown_38_F000_0028_F0028_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0040_F0040_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0048_F0048_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0050_F0050_AsmEntry;
@@ -194,12 +194,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
-        unknown_59_F000_0028_F0028_AsmEntry = _ => unknown_59_F000_0028_F0028_Asm();
+        unknown_38_F000_0028_F0028_AsmEntry = _ => unknown_38_F000_0028_F0028_Asm();
         unknown_F000_0040_F0040_AsmEntry = _ => unknown_F000_0040_F0040_Asm();
         unknown_F000_0048_F0048_AsmEntry = _ => unknown_F000_0048_F0048_Asm();
         unknown_F000_0050_F0050_AsmEntry = _ => unknown_F000_0050_F0050_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0028, unknown_59_F000_0028_F0028_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0028, unknown_38_F000_0028_F0028_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0040, unknown_F000_0040_F0040_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0048, unknown_F000_0048_F0048_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0050, unknown_F000_0050_F0050_AsmEntry, "unknown");

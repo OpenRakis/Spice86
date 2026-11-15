@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        88
+        74
       ],
       "entries": [
         {
-          "block": 88,
+          "block": 74,
           "address": "F000:0381",
           "kind": "functionEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        4697
+        844
       ],
       "entries": [
         {
-          "block": 4697,
+          "block": 844,
           "address": "F000:0383",
           "kind": "functionEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        979
+        168
       ],
       "entries": [
         {
-          "block": 979,
+          "block": 168,
           "address": "F000:0387",
           "kind": "executionContextEntry"
         }
@@ -50,11 +50,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        10811
+        1183
       ],
       "entries": [
         {
-          "block": 10811,
+          "block": 1183,
           "address": "F000:0394",
           "kind": "executionContextEntry"
         }
@@ -66,46 +66,46 @@
       "name": "unknown",
       "blocks": [
         3,
-        5017,
+        1018,
         50,
         48,
         55,
+        64,
+        62,
         69,
-        67,
-        77,
-        2241,
-        2244,
-        2242,
-        2249,
-        2277,
-        2275,
-        2286,
-        2284,
-        2300,
-        2309,
-        2307,
-        2318,
-        2338,
-        2336,
-        2362,
-        2365,
-        2378,
-        2376,
-        2390,
-        2388,
-        2386,
-        2400,
-        4701,
-        4714,
-        4718,
-        4768,
-        4774,
-        4777,
-        4815,
-        4813,
-        4829,
-        4831,
-        5019,
+        412,
+        415,
+        413,
+        420,
+        436,
+        434,
+        442,
+        440,
+        449,
+        454,
+        452,
+        459,
+        470,
+        468,
+        482,
+        484,
+        492,
+        490,
+        500,
+        498,
+        496,
+        505,
+        848,
+        861,
+        865,
+        890,
+        894,
+        896,
+        916,
+        914,
+        923,
+        925,
+        1020,
         2
       ],
       "entries": [
@@ -122,8 +122,8 @@
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 5,
-      "fromBlock": 88,
-      "toBlock": 2241,
+      "fromBlock": 74,
+      "toBlock": 412,
       "from": "F000:0382",
       "target": "F000:00CE"
     },
@@ -131,8 +131,8 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 5,
-      "fromBlock": 4697,
-      "toBlock": 4701,
+      "fromBlock": 844,
+      "toBlock": 848,
       "from": "F000:0386",
       "target": "F000:01AF"
     },
@@ -140,22 +140,22 @@
       "kind": "callOut",
       "fromPartition": 5,
       "toPartition": 1,
-      "fromBlock": 77,
-      "toBlock": 88,
+      "fromBlock": 69,
+      "toBlock": 74,
       "from": "F000:00CB",
       "target": "F000:0381",
-      "callContinuationBlock": 2241,
+      "callContinuationBlock": 412,
       "callContinuationAddress": "F000:00CE"
     },
     {
       "kind": "callOut",
       "fromPartition": 5,
       "toPartition": 2,
-      "fromBlock": 2400,
-      "toBlock": 4697,
+      "fromBlock": 505,
+      "toBlock": 844,
       "from": "F000:01AD",
       "target": "F000:0383",
-      "callContinuationBlock": 4701,
+      "callContinuationBlock": 848,
       "callContinuationAddress": "F000:01AF"
     }
   ]

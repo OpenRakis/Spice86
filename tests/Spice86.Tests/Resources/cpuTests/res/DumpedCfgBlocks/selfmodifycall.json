@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0010",
-  "lastExecutedBlockId": 197,
+  "lastExecutedBlockId": 86,
   "blocks": [
     {
-      "id": 197,
+      "id": 86,
       "entry": "F000:0010",
       "term": "F000:0010",
       "pred": [
-        199
+        88
       ],
       "succ": [],
       "asm": [
@@ -33,17 +33,17 @@
       ]
     },
     {
-      "id": 199,
+      "id": 88,
       "entry": "F000:0010",
       "term": "F000:0010",
       "pred": [
         12,
         14,
-        135
+        59
       ],
       "succ": [
-        132,
-        197
+        56,
+        86
       ],
       "asm": [
         "selector"
@@ -57,7 +57,7 @@
         2
       ],
       "succ": [
-        135
+        59
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -67,15 +67,15 @@
       ]
     },
     {
-      "id": 132,
+      "id": 56,
       "entry": "F000:0010",
       "dead": true,
       "term": "F000:0015",
       "pred": [
-        199
+        88
       ],
       "succ": [
-        135
+        59
       ],
       "asm": [
         "90|nop",
@@ -91,23 +91,23 @@
         9
       ],
       "succ": [
-        199
+        88
       ],
       "asm": [
         "C3|ret near"
       ]
     },
     {
-      "id": 135,
+      "id": 59,
       "entry": "F000:000D",
       "term": "F000:000D",
       "pred": [
         3,
-        132
+        56
       ],
       "succ": [
         9,
-        199
+        88
       ],
       "asm": [
         "E80700|call near 0x0017"
@@ -121,7 +121,7 @@
         9
       ],
       "succ": [
-        199
+        88
       ],
       "asm": [
         "368C160206|mov word ptr SS:[0x0602],SS",
@@ -141,7 +141,7 @@
       "entry": "F000:0017",
       "term": "F000:001C",
       "pred": [
-        135
+        59
       ],
       "succ": [
         12,

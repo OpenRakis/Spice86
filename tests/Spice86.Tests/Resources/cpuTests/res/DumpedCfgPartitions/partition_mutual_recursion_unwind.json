@@ -40,8 +40,8 @@
       "name": "unknown",
       "blocks": [
         3,
-        200,
-        215,
+        88,
+        101,
         2
       ],
       "entries": [
@@ -68,7 +68,7 @@
       "fromPartition": 1,
       "toPartition": 3,
       "fromBlock": 12,
-      "toBlock": 200,
+      "toBlock": 88,
       "from": "F000:0024",
       "target": "F000:000E"
     },
@@ -86,7 +86,7 @@
       "fromPartition": 2,
       "toPartition": 3,
       "fromBlock": 22,
-      "toBlock": 215,
+      "toBlock": 101,
       "from": "F000:0034",
       "target": "F000:0014"
     },
@@ -98,18 +98,18 @@
       "toBlock": 9,
       "from": "F000:000B",
       "target": "F000:0015",
-      "callContinuationBlock": 200,
+      "callContinuationBlock": 88,
       "callContinuationAddress": "F000:000E"
     },
     {
       "kind": "callOut",
       "fromPartition": 3,
       "toPartition": 2,
-      "fromBlock": 200,
+      "fromBlock": 88,
       "toBlock": 17,
       "from": "F000:0011",
       "target": "F000:0025",
-      "callContinuationBlock": 215,
+      "callContinuationBlock": 101,
       "callContinuationAddress": "F000:0014"
     }
   ]

@@ -82,7 +82,7 @@
         11
       ],
       "succ": [
-        105
+        78
       ],
       "asm": [
         "FFD3|call near BX"
@@ -97,14 +97,14 @@
         3
       ],
       "succ": [
-        105
+        78
       ],
       "asm": [
         "FFE3|jmp near BX"
       ]
     },
     {
-      "id": 105,
+      "id": 78,
       "entry": "F000:002F",
       "dead": true,
       "term": "F000:0032",

@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0025",
-  "lastExecutedBlockId": 390,
+  "lastExecutedBlockId": 184,
   "blocks": [
     {
-      "id": 390,
+      "id": 184,
       "entry": "F000:001B",
       "term": "F000:0025",
       "pred": [
-        389
+        183
       ],
       "succ": [],
       "asm": [
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "id": 389,
+      "id": 183,
       "entry": "F100:004A",
       "term": "F100:004A",
       "pred": [
@@ -43,7 +43,7 @@
         40
       ],
       "succ": [
-        390
+        184
       ],
       "asm": [
         "EA1B0000F0|jmp far F000:001B"
@@ -76,7 +76,7 @@
         38
       ],
       "succ": [
-        389
+        183
       ],
       "asm": [
         "0E|push CS",
@@ -94,7 +94,7 @@
       ],
       "succ": [
         40,
-        389
+        183
       ],
       "asm": [
         "E80500|call near 0x004F"

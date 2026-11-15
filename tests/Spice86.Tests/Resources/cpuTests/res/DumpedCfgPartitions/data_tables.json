@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        3414
+        484
       ],
       "entries": [
         {
-          "block": 3414,
+          "block": 484,
           "address": "F000:012B",
           "kind": "returnTargetEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        3378
+        455
       ],
       "entries": [
         {
-          "block": 3378,
+          "block": 455,
           "address": "F000:0136",
           "kind": "executionContextEntry"
         }
@@ -52,8 +52,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 3378,
-      "toBlock": 3414,
+      "fromBlock": 455,
+      "toBlock": 484,
       "from": "F000:0148",
       "target": "F000:012B"
     },
@@ -62,7 +62,7 @@
       "fromPartition": 3,
       "toPartition": 1,
       "fromBlock": 3,
-      "toBlock": 3414,
+      "toBlock": 484,
       "from": "F000:0124",
       "target": "F000:012B"
     },
@@ -71,7 +71,7 @@
       "fromPartition": 3,
       "toPartition": 2,
       "fromBlock": 3,
-      "toBlock": 3378,
+      "toBlock": 455,
       "from": "F000:0124",
       "target": "F000:0136"
     }

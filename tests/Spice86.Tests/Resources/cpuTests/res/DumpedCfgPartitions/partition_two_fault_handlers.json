@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        201,
-        179
+        103,
+        87
       ],
       "entries": [
         {
-          "block": 201,
+          "block": 103,
           "address": "F000:001A",
           "kind": "returnTargetEntry"
         }
@@ -21,11 +21,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        173
+        81
       ],
       "entries": [
         {
-          "block": 173,
+          "block": 81,
           "address": "F000:003A",
           "kind": "executionContextEntry"
         }
@@ -36,11 +36,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        204
+        106
       ],
       "entries": [
         {
-          "block": 204,
+          "block": 106,
           "address": "F000:004D",
           "kind": "executionContextEntry"
         }
@@ -68,8 +68,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 201,
-      "toBlock": 173,
+      "fromBlock": 103,
+      "toBlock": 81,
       "from": "F000:001F",
       "target": "F000:003A"
     },
@@ -77,8 +77,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 201,
-      "toBlock": 204,
+      "fromBlock": 103,
+      "toBlock": 106,
       "from": "F000:001F",
       "target": "F000:004D"
     },
@@ -86,8 +86,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 173,
-      "toBlock": 201,
+      "fromBlock": 81,
+      "toBlock": 103,
       "from": "F000:004C",
       "target": "F000:001A"
     },
@@ -95,8 +95,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 204,
-      "toBlock": 201,
+      "fromBlock": 106,
+      "toBlock": 103,
       "from": "F000:005C",
       "target": "F000:001A"
     },
@@ -105,7 +105,7 @@
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 3,
-      "toBlock": 201,
+      "toBlock": 103,
       "from": "F000:0018",
       "target": "F000:001A"
     }

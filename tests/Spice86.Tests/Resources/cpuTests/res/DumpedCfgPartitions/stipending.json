@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        279
+        79
       ],
       "entries": [
         {
-          "block": 279,
+          "block": 79,
           "address": "F000:004E",
           "kind": "executionContextEntry"
         }
@@ -24,12 +24,12 @@
         19,
         24,
         26,
-        30,
-        37,
-        40,
-        49,
-        51,
-        55,
+        28,
+        32,
+        34,
+        39,
+        41,
+        43,
         2
       ],
       "entries": [

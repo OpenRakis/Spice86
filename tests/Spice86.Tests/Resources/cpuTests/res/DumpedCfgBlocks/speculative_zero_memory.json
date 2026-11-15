@@ -14,7 +14,7 @@
       "term": "F000:004D",
       "pred": [
         12,
-        145
+        67
       ],
       "succ": [],
       "asm": [
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "id": 145,
+      "id": 67,
       "entry": "F000:0043",
       "term": "F000:0043",
       "pred": [
@@ -62,7 +62,7 @@
         20
       ],
       "asm": [
-        "C606______|mov byte ptr DS:[word ptr [0x000F0045]],byte ptr [0x000F0047]"
+        "C6060104DD|mov byte ptr DS:[0x0401],0xDD"
       ]
     },
     {
@@ -106,7 +106,7 @@
         9
       ],
       "succ": [
-        145
+        67
       ],
       "asm": [
         "2EC6064300C6|mov byte ptr CS:[0x0043],0xC6",

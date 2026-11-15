@@ -7,15 +7,15 @@
     "F000:0047"
   ],
   "lastExecutedAddress": "F000:0046",
-  "lastExecutedBlockId": 226,
+  "lastExecutedBlockId": 118,
   "blocks": [
     {
-      "id": 226,
+      "id": 118,
       "entry": "F000:0033",
       "term": "F000:0046",
       "pred": [
-        158,
-        197
+        81,
+        99
       ],
       "succ": [],
       "asm": [
@@ -27,16 +27,16 @@
       ]
     },
     {
-      "id": 158,
+      "id": 81,
       "entry": "F000:0047",
       "term": "F000:0053",
       "pred": [
         3,
-        197
+        99
       ],
       "succ": [
-        197,
-        226
+        99,
+        118
       ],
       "asm": [
         "FF064000|inc word ptr DS:[0x0040]",
@@ -60,16 +60,16 @@
       ]
     },
     {
-      "id": 197,
+      "id": 99,
       "entry": "F000:002A",
       "term": "F000:002D",
       "pred": [
         3,
-        158
+        81
       ],
       "succ": [
-        158,
-        226
+        81,
+        118
       ],
       "asm": [
         "A34200|mov word ptr DS:[0x0042],AX",
@@ -84,8 +84,8 @@
         2
       ],
       "succ": [
-        158,
-        197
+        81,
+        99
       ],
       "asm": [
         "FA|cli",

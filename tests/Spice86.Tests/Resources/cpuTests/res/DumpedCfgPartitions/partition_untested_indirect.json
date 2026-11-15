@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        105
+        78
       ],
       "entries": [
         {
-          "block": 105,
+          "block": 78,
           "address": "F000:002F",
           "kind": "functionEntry"
         }
@@ -42,7 +42,7 @@
       "fromPartition": 2,
       "toPartition": 1,
       "fromBlock": 13,
-      "toBlock": 105,
+      "toBlock": 78,
       "from": "F000:0013",
       "target": "F000:002F"
     },
@@ -51,7 +51,7 @@
       "fromPartition": 2,
       "toPartition": 1,
       "fromBlock": 18,
-      "toBlock": 105,
+      "toBlock": 78,
       "from": "F000:001A",
       "target": "F000:002F"
     }

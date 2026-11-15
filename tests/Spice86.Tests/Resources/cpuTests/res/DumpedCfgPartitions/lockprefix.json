@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        158
+        96
       ],
       "entries": [
         {
-          "block": 158,
+          "block": 96,
           "address": "F000:0045",
           "kind": "returnTargetEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        164
+        102
       ],
       "entries": [
         {
-          "block": 164,
+          "block": 102,
           "address": "F000:004E",
           "kind": "returnTargetEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        168
+        106
       ],
       "entries": [
         {
-          "block": 168,
+          "block": 106,
           "address": "F000:0057",
           "kind": "returnTargetEntry"
         }
@@ -50,11 +50,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        128
+        68
       ],
       "entries": [
         {
-          "block": 128,
+          "block": 68,
           "address": "F000:005A",
           "kind": "executionContextEntry"
         }
@@ -82,8 +82,8 @@
       "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 158,
-      "toBlock": 164,
+      "fromBlock": 96,
+      "toBlock": 102,
       "from": "F000:004B",
       "target": "F000:004E"
     },
@@ -91,8 +91,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 4,
-      "fromBlock": 158,
-      "toBlock": 128,
+      "fromBlock": 96,
+      "toBlock": 68,
       "from": "F000:004B",
       "target": "F000:005A"
     },
@@ -100,8 +100,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 3,
-      "fromBlock": 164,
-      "toBlock": 168,
+      "fromBlock": 102,
+      "toBlock": 106,
       "from": "F000:0054",
       "target": "F000:0057"
     },
@@ -109,8 +109,8 @@
       "kind": "cpuFault",
       "fromPartition": 2,
       "toPartition": 4,
-      "fromBlock": 164,
-      "toBlock": 128,
+      "fromBlock": 102,
+      "toBlock": 68,
       "from": "F000:0054",
       "target": "F000:005A"
     },
@@ -118,8 +118,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 4,
       "toPartition": 1,
-      "fromBlock": 128,
-      "toBlock": 158,
+      "fromBlock": 68,
+      "toBlock": 96,
       "from": "F000:0068",
       "target": "F000:0045"
     },
@@ -127,8 +127,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 4,
       "toPartition": 2,
-      "fromBlock": 128,
-      "toBlock": 164,
+      "fromBlock": 68,
+      "toBlock": 102,
       "from": "F000:0068",
       "target": "F000:004E"
     },
@@ -136,8 +136,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 4,
       "toPartition": 3,
-      "fromBlock": 128,
-      "toBlock": 168,
+      "fromBlock": 68,
+      "toBlock": 106,
       "from": "F000:0068",
       "target": "F000:0057"
     },
@@ -146,7 +146,7 @@
       "fromPartition": 5,
       "toPartition": 1,
       "fromBlock": 3,
-      "toBlock": 158,
+      "toBlock": 96,
       "from": "F000:0040",
       "target": "F000:0045"
     },
@@ -155,7 +155,7 @@
       "fromPartition": 5,
       "toPartition": 4,
       "fromBlock": 3,
-      "toBlock": 128,
+      "toBlock": 68,
       "from": "F000:0040",
       "target": "F000:005A"
     }
