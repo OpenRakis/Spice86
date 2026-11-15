@@ -16,7 +16,7 @@
     "016E:0100"
   ],
   "lastExecutedAddress": "016E:0113",
-  "lastExecutedBlockId": 112,
+  "lastExecutedBlockId": 76,
   "blocks": [
     {
       "id": 64,
@@ -24,8 +24,8 @@
       "term": "016E:0103",
       "pred": [],
       "succ": [
-        68,
-        103
+        66,
+        81
       ],
       "asm": [
         "B80163|mov AX,0x6301",
@@ -33,12 +33,12 @@
       ]
     },
     {
-      "id": 112,
+      "id": 76,
       "entry": "016E:010F",
       "term": "016E:0113",
       "pred": [
-        105,
-        107
+        69,
+        71
       ],
       "succ": [],
       "asm": [
@@ -179,32 +179,16 @@
       ]
     },
     {
-      "id": 68,
-      "entry": "F000:0096",
-      "term": "F000:0099",
-      "pred": [
-        64
-      ],
-      "succ": [
-        70,
-        72
-      ],
-      "asm": [
-        "80FC07|cmp AH,7",
-        "740F|je short 0x00AA"
-      ]
-    },
-    {
-      "id": 103,
+      "id": 66,
       "entry": "016E:0105",
       "term": "016E:0107",
       "pred": [
         64,
-        93
+        108
       ],
       "succ": [
-        105,
-        107
+        69,
+        71
       ],
       "asm": [
         "3CFF|cmp AL,0xFF",
@@ -212,29 +196,45 @@
       ]
     },
     {
-      "id": 105,
+      "id": 81,
+      "entry": "F000:0096",
+      "term": "F000:0099",
+      "pred": [
+        64
+      ],
+      "succ": [
+        83,
+        85
+      ],
+      "asm": [
+        "80FC07|cmp AH,7",
+        "740F|je short 0x00AA"
+      ]
+    },
+    {
+      "id": 69,
       "entry": "016E:010D",
       "dead": true,
       "term": "016E:010D",
       "pred": [
-        103
+        66
       ],
       "succ": [
-        112
+        76
       ],
       "asm": [
         "B0FF|mov AL,0xFF"
       ]
     },
     {
-      "id": 107,
+      "id": 71,
       "entry": "016E:0109",
       "term": "016E:010B",
       "pred": [
-        103
+        66
       ],
       "succ": [
-        112
+        76
       ],
       "asm": [
         "B000|mov AL,0",
@@ -394,50 +394,51 @@
       ]
     },
     {
-      "id": 70,
+      "id": 108,
+      "entry": "F000:00A9",
+      "term": "F000:00A9",
+      "pred": [
+        102
+      ],
+      "succ": [
+        66
+      ],
+      "asm": [
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 83,
       "entry": "F000:00AA",
       "dead": true,
       "term": "F000:00AA",
       "pred": [
-        68,
-        72,
-        80
+        81,
+        85,
+        93,
+        106
       ],
       "succ": [
-        74
+        87
       ],
       "asm": [
         "FB|sti"
       ]
     },
     {
-      "id": 72,
+      "id": 85,
       "entry": "F000:009B",
       "term": "F000:009E",
       "pred": [
-        68
+        81
       ],
       "succ": [
-        70,
-        80
+        83,
+        93
       ],
       "asm": [
         "80FC08|cmp AH,8",
         "740A|je short 0x00AA"
-      ]
-    },
-    {
-      "id": 93,
-      "entry": "F000:00A9",
-      "term": "F000:00A9",
-      "pred": [
-        89
-      ],
-      "succ": [
-        103
-      ],
-      "asm": [
-        "CF|iret"
       ]
     },
     {
@@ -485,30 +486,44 @@
       ]
     },
     {
-      "id": 74,
+      "id": 102,
+      "entry": "F000:00A5",
+      "term": "F000:00A5",
+      "pred": [
+        93
+      ],
+      "succ": [
+        108
+      ],
+      "asm": [
+        "FE382100|callback 0x0021"
+      ]
+    },
+    {
+      "id": 87,
       "entry": "F000:00AB",
       "dead": true,
       "term": "F000:00AB",
       "pred": [
-        70
+        83
       ],
       "succ": [
-        77
+        90
       ],
       "asm": [
         "FE380A01|callback 0x010A"
       ]
     },
     {
-      "id": 80,
+      "id": 93,
       "entry": "F000:00A0",
       "term": "F000:00A3",
       "pred": [
-        72
+        85
       ],
       "succ": [
-        70,
-        89
+        83,
+        102
       ],
       "asm": [
         "80FC0A|cmp AH,0x0A",
@@ -516,17 +531,18 @@
       ]
     },
     {
-      "id": 89,
-      "entry": "F000:00A5",
-      "term": "F000:00A5",
+      "id": 106,
+      "entry": "F000:00B9",
+      "dead": true,
+      "term": "F000:00B9",
       "pred": [
-        80
+        99
       ],
       "succ": [
-        93
+        83
       ],
       "asm": [
-        "FE382100|callback 0x0021"
+        "EBEF|jmp short 0x00AA"
       ]
     },
     {
@@ -574,20 +590,35 @@
       ]
     },
     {
-      "id": 77,
+      "id": 90,
       "entry": "F000:00AF",
       "dead": true,
       "term": "F000:00B5",
       "pred": [
-        74
+        87
       ],
       "succ": [
-        84,
-        86
+        97,
+        99
       ],
       "asm": [
         "2E803E950000|cmp byte ptr CS:[0x0095],0",
         "7504|jne short 0x00BB"
+      ]
+    },
+    {
+      "id": 99,
+      "entry": "F000:00B7",
+      "dead": true,
+      "term": "F000:00B7",
+      "pred": [
+        90
+      ],
+      "succ": [
+        106
+      ],
+      "asm": [
+        "CD28|int 0x28"
       ]
     },
     {
@@ -604,40 +635,27 @@
       ]
     },
     {
-      "id": 84,
+      "id": 97,
       "entry": "F000:00BB",
       "dead": true,
       "term": "F000:00BB",
       "pred": [
-        77
+        90
       ],
       "succ": [
-        91
+        104
       ],
       "asm": [
         "FE380B01|callback 0x010B"
       ]
     },
     {
-      "id": 86,
-      "entry": "F000:00B7",
-      "dead": true,
-      "term": "F000:00B7",
-      "pred": [
-        77
-      ],
-      "succ": [],
-      "asm": [
-        "CD28|int 0x28"
-      ]
-    },
-    {
-      "id": 91,
+      "id": 104,
       "entry": "F000:00BF",
       "dead": true,
       "term": "F000:00BF",
       "pred": [
-        84
+        97
       ],
       "succ": [],
       "asm": [

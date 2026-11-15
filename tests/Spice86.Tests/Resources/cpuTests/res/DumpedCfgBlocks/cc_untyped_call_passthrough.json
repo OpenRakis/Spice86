@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0035",
-  "lastExecutedBlockId": 47,
+  "lastExecutedBlockId": 84,
   "blocks": [
     {
-      "id": 47,
+      "id": 84,
       "entry": "F000:0024",
       "term": "F000:0035",
       "pred": [
         3,
-        41
+        77
       ],
       "succ": [],
       "asm": [
@@ -38,15 +38,15 @@
       ]
     },
     {
-      "id": 41,
+      "id": 77,
       "entry": "F000:0039",
       "term": "F000:003D",
       "pred": [
         16,
-        38
+        72
       ],
       "succ": [
-        47
+        84
       ],
       "asm": [
         "89C1|mov CX,AX",
@@ -63,7 +63,7 @@
       ],
       "succ": [
         16,
-        47
+        84
       ],
       "asm": [
         "FA|cli",
@@ -81,15 +81,15 @@
       ]
     },
     {
-      "id": 38,
+      "id": 72,
       "entry": "F000:0040",
       "term": "F000:0040",
       "pred": [
         18,
-        35
+        70
       ],
       "succ": [
-        41
+        77
       ],
       "asm": [
         "C3|ret near"
@@ -104,25 +104,10 @@
       ],
       "succ": [
         18,
-        41
+        77
       ],
       "asm": [
         "E80500|call near 0x003E"
-      ]
-    },
-    {
-      "id": 35,
-      "entry": "F000:0041",
-      "term": "F000:0043",
-      "pred": [
-        18
-      ],
-      "succ": [
-        38
-      ],
-      "asm": [
-        "01D8|add AX,BX",
-        "CF|iret"
       ]
     },
     {
@@ -133,11 +118,26 @@
         16
       ],
       "succ": [
-        35,
-        38
+        70,
+        72
       ],
       "asm": [
         "CD60|int 0x60"
+      ]
+    },
+    {
+      "id": 70,
+      "entry": "F000:0041",
+      "term": "F000:0043",
+      "pred": [
+        18
+      ],
+      "succ": [
+        72
+      ],
+      "asm": [
+        "01D8|add AX,BX",
+        "CF|iret"
       ]
     }
   ],

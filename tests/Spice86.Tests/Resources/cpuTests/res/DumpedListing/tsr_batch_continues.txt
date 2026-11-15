@@ -5,6 +5,7 @@
 016E:0109 mov AX,0x3100
 016E:010C mov DX,8
 016E:010F int 0x21
+016E:0111 hlt
 0177:0100 mov AX,0xB800
 0177:0103 mov ES,AX
 0177:0105 mov DI,0
@@ -55,6 +56,7 @@ F000:00AB callback 0x010A
 F000:00AF cmp byte ptr CS:[0x0095],0
 F000:00B5 jne short 0x00BB
 F000:00B7 int 0x28
+F000:00B9 jmp short 0x00AA
 F000:00BB callback 0x010B
 F000:00BF iret
 F000:00E8 ret far

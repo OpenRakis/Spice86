@@ -468,18 +468,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
-    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, uint result6, uint result7, ushort result8, ushort result9, ushort result10, ushort result11) unknown_D000_00E8_D00E8(uint dword1, uint dword2, uint dword3, uint dword4, uint dword5, uint dword6, uint dword7, ushort word1, ushort word2, ushort word3, ushort word4) {
-        EAX = dword1;
-        ECX = dword2;
-        EDX = dword3;
-        EBX = dword4;
-        EBP = dword5;
-        ESI = dword6;
-        EDI = dword7;
-        ES = word1;
-        DS = word2;
-        FS = word3;
-        GS = word4;
+    public virtual (uint result, uint result2, uint result3, uint result4, uint result5, uint result6, uint result7, ushort result8, ushort result9, ushort result10, ushort result11) unknown_D000_00E8_D00E8() {
         CheckExternalEvents(cs1, 0x00E8);
         VerifySpeculativeEntryOrFail(cs1, 0x00E8, Signature_00E8_ret);
         FarReturn();
@@ -487,7 +476,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     public virtual Action unknown_D000_00E8_D00E8_Asm() {
-        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS) = unknown_D000_00E8_D00E8(EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS);
+        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS) = unknown_D000_00E8_D00E8();
         return Returned;
     }
 
@@ -498,7 +487,7 @@ public partial class CfgGeneratedOverrides {
         // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
         Callback(cs1, 0x00E9, 0x010C);
         VerifySpeculativeEntryOrFail(cs1, 0x00ED, Signature_00ED_call);
-        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS) = FarCall(cs1, 0x00F2, cs1, () => unknown_D000_00E8_D00E8(EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS));
+        (EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS) = FarCall(cs1, 0x00F2, cs1, () => unknown_D000_00E8_D00E8());
         VerifySpeculativeEntryOrFail(cs1, 0x00F2, Signature_00F2_callback);
         // Spice86 callback: MouseDriver.AfterUserHandlerExecution
         Callback(cs1, 0x00F2, 0x010D);

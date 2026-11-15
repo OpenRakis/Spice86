@@ -9,6 +9,7 @@
 016F:0114 mov DX,word ptr ES:[2]
 016F:0119 mov AX,0x3100
 016F:011C int 0x21
+016F:011E hlt
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX

@@ -60,25 +60,25 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: BP. Outputs: none. Changes: BP, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000.
-    public virtual void unknown_F000_00A4_F00A4(ushort word1) {
-        BP = word1;
+    public virtual void unknown_F000_00A4_F00A4() {
+        ushort index;
         unknown_F000_00A4_F00A4Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x00A4);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00A4, Signature_00A4_push);
-        Stack.Push16(word1);
+        Stack.Push16(BP);
         VerifySpeculativeRunOrFail(biosSegment, 0x00A5, SpeculativeRun_00A5);
-        BP = SP;
+        index = SP;
         SP = Alu16.Sub(SP, 4);
         frame.Local4 = 5;
         VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
-        SP = BP;
+        SP = index;
         BP = Stack.Pop16();
         NearReturn();
         return;
     }
 
     public virtual Action unknown_F000_00A4_F00A4_Asm() {
-        unknown_F000_00A4_F00A4(BP);
+        unknown_F000_00A4_F00A4();
         return Returned;
     }
 
@@ -154,7 +154,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(biosSegment, 0x003F, Signature_003F_mov);
             DsGlobals.Byte0402 = 0x33;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0044, Signature_0044_call);
-            NearCall(biosSegment, 0x0047, () => unknown_F000_00A4_F00A4(BP));
+            NearCall(biosSegment, 0x0047, () => unknown_F000_00A4_F00A4());
             VerifySpeculativeEntryOrFail(biosSegment, 0x0047, Signature_0047_mov);
             DsGlobals.Byte0406 = 0x44;
             VerifySpeculativeRunOrFail(biosSegment, 0x004C, SpeculativeRun_004C);
@@ -452,7 +452,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at D000:000D");
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0017_D0017() {
         CheckExternalEvents(cs1, 0x0017);
         VerifySpeculativeEntryOrFail(cs1, 0x0017, Signature_0017_callback);
@@ -462,7 +462,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_005D_D005D() {
         CheckExternalEvents(cs1, 0x005D);
         VerifySpeculativeEntryOrFail(cs1, 0x005D, Signature_005D_callback);
@@ -484,7 +484,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_006D_D006D() {
         CheckExternalEvents(cs1, 0x006D);
         VerifySpeculativeEntryOrFail(cs1, 0x006D, Signature_006D_callback);
@@ -494,7 +494,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0072_D0072() {
         CheckExternalEvents(cs1, 0x0072);
         VerifySpeculativeEntryOrFail(cs1, 0x0072, Signature_0072_callback);
@@ -504,7 +504,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0077_D0077() {
         CheckExternalEvents(cs1, 0x0077);
         VerifySpeculativeEntryOrFail(cs1, 0x0077, Signature_0077_callback);
@@ -514,7 +514,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_007C_D007C() {
         CheckExternalEvents(cs1, 0x007C);
         VerifySpeculativeEntryOrFail(cs1, 0x007C, Signature_007C_callback);
@@ -524,7 +524,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0081_D0081() {
         CheckExternalEvents(cs1, 0x0081);
         VerifySpeculativeEntryOrFail(cs1, 0x0081, Signature_0081_callback);
@@ -534,7 +534,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_D000_0086_D0086() {
         CheckExternalEvents(cs1, 0x0086);
         VerifySpeculativeEntryOrFail(cs1, 0x0086, Signature_0086_callback);

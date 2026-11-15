@@ -6,7 +6,7 @@
       "name": "unknown",
       "blocks": [
         16,
-        41
+        77
       ],
       "entries": [
         {
@@ -22,7 +22,7 @@
       "name": "unknown",
       "blocks": [
         18,
-        38
+        72
       ],
       "entries": [
         {
@@ -37,11 +37,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        35
+        70
       ],
       "entries": [
         {
-          "block": 35,
+          "block": 70,
           "address": "F000:0041",
           "kind": "functionEntry"
         }
@@ -53,7 +53,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        47,
+        84,
         2
       ],
       "entries": [
@@ -74,15 +74,15 @@
       "toBlock": 18,
       "from": "F000:0036",
       "target": "F000:003E",
-      "callContinuationBlock": 41,
+      "callContinuationBlock": 77,
       "callContinuationAddress": "F000:0039"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 4,
-      "fromBlock": 41,
-      "toBlock": 47,
+      "fromBlock": 77,
+      "toBlock": 84,
       "from": "F000:003D",
       "target": "F000:0024"
     },
@@ -90,8 +90,8 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 38,
-      "toBlock": 41,
+      "fromBlock": 72,
+      "toBlock": 77,
       "from": "F000:0040",
       "target": "F000:0039"
     },
@@ -100,18 +100,18 @@
       "fromPartition": 2,
       "toPartition": 3,
       "fromBlock": 18,
-      "toBlock": 35,
+      "toBlock": 70,
       "from": "F000:003E",
       "target": "F000:0041",
-      "callContinuationBlock": 38,
+      "callContinuationBlock": 72,
       "callContinuationAddress": "F000:0040"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 3,
       "toPartition": 2,
-      "fromBlock": 35,
-      "toBlock": 38,
+      "fromBlock": 70,
+      "toBlock": 72,
       "from": "F000:0043",
       "target": "F000:0040"
     },
@@ -123,7 +123,7 @@
       "toBlock": 16,
       "from": "F000:0021",
       "target": "F000:0036",
-      "callContinuationBlock": 47,
+      "callContinuationBlock": 84,
       "callContinuationAddress": "F000:0024"
     }
   ]

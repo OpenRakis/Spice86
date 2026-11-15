@@ -183,12 +183,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        72,
-        73
+        75,
+        76
       ],
       "entries": [
         {
-          "block": 72,
+          "block": 75,
           "address": "F000:0090",
           "kind": "functionEntry"
         }
@@ -234,7 +234,7 @@
       "fromPartition": 1,
       "toPartition": 12,
       "fromBlock": 64,
-      "toBlock": 72,
+      "toBlock": 75,
       "from": "016E:0106",
       "target": "F000:0090"
     },

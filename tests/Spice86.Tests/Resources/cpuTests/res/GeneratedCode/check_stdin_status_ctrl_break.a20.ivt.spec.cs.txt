@@ -17,11 +17,10 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016E_0100_017E0() {
         ushort count = 0;
         CheckExternalEvents(cs1, 0x0100);
-        AX = 0x3301;
+        AH = 0x33;
         DL = 1;
         (AL, DX, BX) = ServiceCall(Dos, () => Dos.GetSetControlBreak(1, 1, DH, BX));
         AL = 0;
-        DX = 0x0999;
         Out8(0x0999, 0);
         count = 0x03E8;
         do {
@@ -30,7 +29,10 @@ public partial class CfgGeneratedOverrides {
         } while (count != 0);
         AH = 0x0B;
         InterruptCall(cs1, 0x0117, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0115");
+        VerifySpeculativeRunOrFail(cs1, 0x0117, SpeculativeRun_0117);
+        Out8(0x0999, 0xFF);
+        VerifySpeculativeEntryOrFail(cs1, 0x011D, Signature_011D_hlt);
+        return Hlt();
     }
 
 }
@@ -153,6 +155,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0117_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_0119_mov = [0xBA, 0x99, 0x09];
+    private static readonly byte?[] Signature_011C_out = [0xEE];
+    private static readonly byte?[] Signature_011D_hlt = [0xF4];
     private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
     private static readonly byte?[] Signature_0061_iret = [0xCF];
     private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xF0];
@@ -175,6 +181,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -183,6 +190,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
+    private static readonly byte?[][] SpeculativeRun_0117 = [Signature_0117_mov, Signature_0119_mov, Signature_011C_out];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
@@ -331,6 +339,7 @@ public partial class CfgGeneratedOverrides {
                 }
             }
         }
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);

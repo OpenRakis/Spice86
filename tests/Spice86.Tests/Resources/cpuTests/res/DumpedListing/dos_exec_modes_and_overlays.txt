@@ -15,6 +15,7 @@
 016F:011F jmp short 0x0127
 016F:0121 mov AL,0x73
 016F:0123 call near 0x02E0
+016F:0126 hlt
 016F:0127 mov BX,word ptr DS:[0x002C]
 016F:012B cmp BX,0
 016F:012E je short 0x0157
@@ -75,6 +76,7 @@
 016F:01A2 jmp short 0x01AB
 016F:01A4 mov AL,0x63
 016F:01A6 call near 0x02E0
+016F:01A9 jmp short 0x01AB
 016F:01AB call near 0x029F
 016F:01AE lea DX,0x0397
 016F:01B2 mov AX,0x4B00
@@ -91,6 +93,7 @@
 016F:01C9 jmp short 0x01D2
 016F:01CB mov AL,0x74
 016F:01CD call near 0x02E0
+016F:01D0 jmp short 0x01D2
 016F:01D2 call near 0x029F
 016F:01D5 lea DX,0x02F1
 016F:01D9 mov AX,0x4B01
@@ -107,6 +110,7 @@
 016F:01F2 jmp short 0x01FB
 016F:01F4 mov AL,0x6C
 016F:01F6 call near 0x02E0
+016F:01F9 jmp short 0x01FB
 016F:01FB mov AH,0x48
 016F:01FD mov BX,0x0040
 016F:0200 int 0x21
@@ -264,6 +268,7 @@ F000:00AB callback 0x010A
 F000:00AF cmp byte ptr CS:[0x0095],0
 F000:00B5 jne short 0x00BB
 F000:00B7 int 0x28
+F000:00B9 jmp short 0x00AA
 F000:00BB callback 0x010B
 F000:00BF iret
 F000:00E8 ret far

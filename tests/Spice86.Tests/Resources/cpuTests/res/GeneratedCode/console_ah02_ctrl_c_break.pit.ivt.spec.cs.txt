@@ -19,7 +19,17 @@ public partial class CfgGeneratedOverrides {
         DL = 0x51;
         AH = 2;
         InterruptCall(cs1, 0x0106, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0104");
+        VerifySpeculativeRunOrFail(cs1, 0x0106, SpeculativeRun_0106);
+        AL = 0x58;
+        AH = 7;
+        BX = 0xB800;
+        ES = 0xB800;
+        DI = 0;
+        SegmentB800Globals.Word0000 = 0x0758;
+        DI = (ushort)(DirectionFlag ? -2 : 2);
+        VerifySpeculativeRunOrFail(cs1, 0x0113, SpeculativeRun_0113);
+        AX = 0x4C00;
+        throw FailAsUntested("Untested interrupt at 016E:0116");
     }
 
 }
@@ -44,6 +54,25 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
 
     /// CS:0x0095, whatever CS holds at the access.
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
+}
+
+// ==== file: SegmentB800Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentB800Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentB800Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xB8000) {
+        _memory = memory;
+        Segment = 0xB800;
+    }
+
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -79,11 +108,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly CsGlobals CsGlobals;
+    protected readonly SegmentB800Globals SegmentB800Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
+        SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
 
         unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
@@ -132,6 +163,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0106_mov = [0xB0, 0x58];
+    private static readonly byte?[] Signature_0108_mov = [0xB4, 0x07];
+    private static readonly byte?[] Signature_010A_mov = [0xBB, 0x00, 0xB8];
+    private static readonly byte?[] Signature_010D_mov = [0x8E, 0xC3];
+    private static readonly byte?[] Signature_010F_mov = [0xBF, 0x00, 0x00];
+    private static readonly byte?[] Signature_0112_stos = [0xAB];
+    private static readonly byte?[] Signature_0113_mov = [0xB8, 0x00, 0x4C];
+    private static readonly byte?[] Signature_0116_int = [0xCD, 0x21];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -167,6 +206,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -175,6 +215,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
+    private static readonly byte?[][] SpeculativeRun_0106 = [Signature_0106_mov, Signature_0108_mov, Signature_010A_mov, Signature_010D_mov, Signature_010F_mov, Signature_0112_stos];
+    private static readonly byte?[][] SpeculativeRun_0113 = [Signature_0113_mov, Signature_0116_int];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
@@ -319,6 +361,7 @@ public partial class CfgGeneratedOverrides {
                 }
             }
         }
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);

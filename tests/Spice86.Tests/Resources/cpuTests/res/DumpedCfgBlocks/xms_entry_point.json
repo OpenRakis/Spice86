@@ -16,7 +16,7 @@
     "016F:0100"
   ],
   "lastExecutedAddress": "016F:0115",
-  "lastExecutedBlockId": 83,
+  "lastExecutedBlockId": 77,
   "blocks": [
     {
       "id": 64,
@@ -24,8 +24,8 @@
       "term": "016F:0103",
       "pred": [],
       "succ": [
-        68,
-        73
+        66,
+        82
       ],
       "asm": [
         "B81043|mov AX,0x4310",
@@ -33,12 +33,12 @@
       ]
     },
     {
-      "id": 83,
+      "id": 77,
       "entry": "016F:0111",
       "term": "016F:0115",
       "pred": [
-        76,
-        78
+        70,
+        72
       ],
       "succ": [],
       "asm": [
@@ -179,30 +179,16 @@
       ]
     },
     {
-      "id": 68,
-      "entry": "F000:00CA",
-      "term": "F000:00CA",
-      "pred": [
-        64
-      ],
-      "succ": [
-        69
-      ],
-      "asm": [
-        "FE382F00|callback 0x002F"
-      ]
-    },
-    {
-      "id": 73,
+      "id": 66,
       "entry": "016F:0105",
       "term": "016F:0109",
       "pred": [
         64,
-        69
+        83
       ],
       "succ": [
-        76,
-        78
+        70,
+        72
       ],
       "asm": [
         "8CC0|mov AX,ES",
@@ -211,29 +197,43 @@
       ]
     },
     {
-      "id": 76,
+      "id": 82,
+      "entry": "F000:00CA",
+      "term": "F000:00CA",
+      "pred": [
+        64
+      ],
+      "succ": [
+        83
+      ],
+      "asm": [
+        "FE382F00|callback 0x002F"
+      ]
+    },
+    {
+      "id": 70,
       "entry": "016F:010F",
       "dead": true,
       "term": "016F:010F",
       "pred": [
-        73
+        66
       ],
       "succ": [
-        83
+        77
       ],
       "asm": [
         "B0FF|mov AL,0xFF"
       ]
     },
     {
-      "id": 78,
+      "id": 72,
       "entry": "016F:010B",
       "term": "016F:010D",
       "pred": [
-        73
+        66
       ],
       "succ": [
-        83
+        77
       ],
       "asm": [
         "B000|mov AL,0",
@@ -393,14 +393,14 @@
       ]
     },
     {
-      "id": 69,
+      "id": 83,
       "entry": "F000:00CE",
       "term": "F000:00CE",
       "pred": [
-        68
+        82
       ],
       "succ": [
-        73
+        66
       ],
       "asm": [
         "CF|iret"

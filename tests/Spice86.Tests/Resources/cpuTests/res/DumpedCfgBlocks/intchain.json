@@ -16,7 +16,7 @@
     "016E:0100"
   ],
   "lastExecutedAddress": "016E:0102",
-  "lastExecutedBlockId": 77,
+  "lastExecutedBlockId": 65,
   "blocks": [
     {
       "id": 64,
@@ -25,14 +25,14 @@
       "pred": [],
       "succ": [
         2,
-        77
+        65
       ],
       "asm": [
         "CD08|int 8"
       ]
     },
     {
-      "id": 77,
+      "id": 65,
       "entry": "016E:0102",
       "term": "016E:0102",
       "pred": [
@@ -184,7 +184,7 @@
         8
       ],
       "succ": [
-        77
+        65
       ],
       "asm": [
         "5A|pop DX",
@@ -202,7 +202,7 @@
       ],
       "succ": [
         8,
-        70
+        79
       ],
       "asm": [
         "1E|push DS",
@@ -351,7 +351,7 @@
       "term": "F000:000F",
       "pred": [
         3,
-        70
+        79
       ],
       "succ": [
         10
@@ -361,7 +361,7 @@
       ]
     },
     {
-      "id": 70,
+      "id": 79,
       "entry": "F000:0005",
       "term": "F000:0005",
       "pred": [

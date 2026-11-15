@@ -6,7 +6,7 @@
       "name": "unknown",
       "blocks": [
         64,
-        98
+        66
       ],
       "entries": [
         {
@@ -55,20 +55,20 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        68,
-        72,
+        77,
+        81,
+        88,
+        94,
         79,
         85,
-        70,
-        76,
-        83,
-        89,
-        81,
-        87
+        92,
+        98,
+        90,
+        96
       ],
       "entries": [
         {
-          "block": 68,
+          "block": 77,
           "address": "F000:0035",
           "kind": "functionEntry"
         }
@@ -208,21 +208,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        114,
-        118,
-        126,
-        135,
-        139,
-        116,
-        120,
-        123,
-        132,
-        130,
-        137
+        143,
+        147,
+        155,
+        164,
+        170,
+        145,
+        149,
+        152,
+        161,
+        168,
+        159,
+        166
       ],
       "entries": [
         {
-          "block": 114,
+          "block": 143,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -268,18 +269,18 @@
       "fromPartition": 1,
       "toPartition": 4,
       "fromBlock": 64,
-      "toBlock": 68,
+      "toBlock": 77,
       "from": "016E:0102",
       "target": "F000:0035",
-      "callContinuationBlock": 98,
+      "callContinuationBlock": 66,
       "callContinuationAddress": "016E:0104"
     },
     {
       "kind": "callOut",
       "fromPartition": 1,
       "toPartition": 13,
-      "fromBlock": 98,
-      "toBlock": 114,
+      "fromBlock": 66,
+      "toBlock": 143,
       "from": "016E:0114",
       "target": "F000:0096"
     },
@@ -287,8 +288,8 @@
       "kind": "alignedReturn",
       "fromPartition": 4,
       "toPartition": 1,
-      "fromBlock": 85,
-      "toBlock": 98,
+      "fromBlock": 94,
+      "toBlock": 66,
       "from": "F000:0043",
       "target": "016E:0104"
     },

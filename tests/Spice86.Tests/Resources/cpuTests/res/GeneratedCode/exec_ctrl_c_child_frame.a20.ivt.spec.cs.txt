@@ -108,10 +108,13 @@ public partial class CfgGeneratedOverrides {
                 AH = 9;
                 DX = 0x0128;
                 InterruptCall(cs2, 0x0123, 0x21);
-                throw FailAsUntested("Untested return from call at 117D:0121");
+                VerifySpeculativeRunOrFail(cs2, 0x0123, SpeculativeRun_0123);
+                AX = 0x4C02;
+                throw FailAsUntested("Untested interrupt at 117D:0126");
             }
         }
     L_00AA:
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
@@ -330,6 +333,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_015C_mov = [0xB0, 0xFF];
+    private static readonly byte?[] Signature_0123_mov = [0xB8, 0x02, 0x4C];
+    private static readonly byte?[] Signature_0126_int = [0xCD, 0x21];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -364,6 +369,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -372,6 +378,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
+    private static readonly byte?[][] SpeculativeRun_0123 = [Signature_0123_mov, Signature_0126_int];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }

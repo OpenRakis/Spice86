@@ -6,12 +6,12 @@
       "name": "unknown",
       "blocks": [
         64,
-        73,
-        91,
-        95,
-        101,
-        93,
-        105
+        66,
+        102,
+        106,
+        112,
+        104,
+        116
       ],
       "entries": [
         {
@@ -26,13 +26,13 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        83,
-        84,
-        86
+        93,
+        94,
+        96
       ],
       "entries": [
         {
-          "block": 83,
+          "block": 93,
           "address": "C8AB:0010",
           "kind": "functionEntry"
         }
@@ -206,12 +206,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        68,
-        69
+        74,
+        75
       ],
       "entries": [
         {
-          "block": 68,
+          "block": 74,
           "address": "F000:00CA",
           "kind": "functionEntry"
         }
@@ -256,11 +256,11 @@
       "kind": "callOut",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 73,
-      "toBlock": 83,
+      "fromBlock": 66,
+      "toBlock": 93,
       "from": "016F:0112",
       "target": "C8AB:0010",
-      "callContinuationBlock": 91,
+      "callContinuationBlock": 102,
       "callContinuationAddress": "016F:0116"
     },
     {
@@ -268,18 +268,18 @@
       "fromPartition": 1,
       "toPartition": 13,
       "fromBlock": 64,
-      "toBlock": 68,
+      "toBlock": 74,
       "from": "016F:0103",
       "target": "F000:00CA",
-      "callContinuationBlock": 73,
+      "callContinuationBlock": 66,
       "callContinuationAddress": "016F:0105"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 86,
-      "toBlock": 91,
+      "fromBlock": 96,
+      "toBlock": 102,
       "from": "C8AB:001A",
       "target": "016F:0116"
     },
@@ -298,8 +298,8 @@
       "kind": "alignedReturn",
       "fromPartition": 13,
       "toPartition": 1,
-      "fromBlock": 69,
-      "toBlock": 73,
+      "fromBlock": 75,
+      "toBlock": 66,
       "from": "F000:00CE",
       "target": "016F:0105"
     },

@@ -1,6 +1,14 @@
 016E:0100 mov DL,0x51
 016E:0102 mov AH,2
 016E:0104 int 0x21
+016E:0106 mov AL,0x58
+016E:0108 mov AH,7
+016E:010A mov BX,0xB800
+016E:010D mov ES,BX
+016E:010F mov DI,0
+016E:0112 stos word ptr ES:[DI],AX
+016E:0113 mov AX,0x4C00
+016E:0116 int 0x21
 F000:0006 callback 8
 F000:000A push DS
 F000:000B push AX
@@ -43,6 +51,7 @@ F000:00AB callback 0x010A
 F000:00AF cmp byte ptr CS:[0x0095],0
 F000:00B5 jne short 0x00BB
 F000:00B7 int 0x28
+F000:00B9 jmp short 0x00AA
 F000:00BB callback 0x010B
 F000:00BF iret
 F000:00E8 ret far
