@@ -219,6 +219,114 @@ public sealed class SpeculativeExplorerCandidateTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void SweptAnchorSiteStopsProposingTargets() {
+        // Arrange: NOP anchor at 0x200:0x10 falls through to a speculative `jmp bx` at 0x11.
+        // The anchor does not write BX, so the site registers a dependent on it.
+        SegmentedAddress anchorAddress = new(0x200, 0x10);
+        SegmentedAddress siteAddress = new(0x200, 0x11);
+        SegmentedAddress firstTarget = new(0x200, 0x50);
+        SegmentedAddress secondTarget = new(0x200, 0x60);
+        WriteNop(anchorAddress);
+        uint sitePhys = MemoryUtils.ToPhysicalAddress(siteAddress.Segment, siteAddress.Offset);
+        Memory.UInt8[sitePhys] = 0xFF;
+        Memory.UInt8[sitePhys + 1] = 0xE3;
+        WriteNop(firstTarget);
+        WriteRet(new SegmentedAddress(0x200, 0x51));
+        WriteNop(secondTarget);
+        WriteRet(new SegmentedAddress(0x200, 0x61));
+        RegisterImage();
+        CfgInstruction anchor = Parser.ParseInstructionAt(anchorAddress);
+        NodeIndex.Insert(anchor);
+        SetAllGeneralRegisters(0x50);
+        _explorer.ExploreFrom(anchor);
+        _explorer.EvaluateAnchorDependents(anchor);
+        NodeIndex.HasAddress(firstTarget).Should().BeTrue("the dependent proposed BX as its target");
+
+        // Act: the sweep discards the site; the anchor fires again with a new register value.
+        CfgInstruction site = NodeIndex.GetAtAddress(siteAddress).First();
+        new SpeculativeReachabilityPruner(ReplacerRegistry).Sweep(site);
+        SetAllGeneralRegisters(0x60);
+        _explorer.EvaluateAnchorDependents(anchor);
+
+        // Assert
+        NodeIndex.HasAddress(secondTarget).Should().BeFalse(
+            "a dependent whose site a sweep removed must be dropped, so the anchor submits nothing");
+    }
+
+    [Fact]
+    public void SweptPendingPredecessorIsNotRetried() {
+        // Arrange: trusted bytes inside the image at 0x200:0x50, then the first byte is
+        // overwritten so the data-sourced candidate stays pending on its trigger.
+        SegmentedAddress target = new(0x200, 0x50);
+        uint phys = MemoryUtils.ToPhysicalAddress(target.Segment, target.Offset);
+        Memory.UInt8[phys] = 0x90;
+        Memory.UInt8[phys + 1] = 0xC3;
+        RegisterImage();
+        Memory.UInt8[phys] = 0x40;
+        CfgInstruction trigger = CreateTrigger();
+        // The predecessor stays IsLive after removal: only the index forgets it, so the
+        // dead-predecessor guard of RetryPending does not cover a swept observed node.
+        CfgInstruction predecessor = CreateObservedNode(new SegmentedAddress(0x200, 0x20));
+        _explorer.ExploreCandidates(trigger, [
+            new DiscoveryCandidate(target, predecessor, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
+        ]);
+
+        // Act: the sweep removes the predecessor, then the bytes hold their loaded value again.
+        new SpeculativeReachabilityPruner(ReplacerRegistry).Sweep(predecessor);
+        Memory.UInt8[phys] = 0x90;
+        _explorer.RetryPending(trigger);
+
+        // Assert
+        NodeIndex.HasAddress(target).Should().BeFalse(
+            "a candidate whose predecessor a sweep removed must be dropped, so retrying submits nothing");
+    }
+
+    [Fact]
+    public void SweptCalleeEntryDropsItsReturnProof() {
+        // Arrange: call at 0x200:0x10 calls a callee at 0x80 that is a lone RET; the explorer
+        // proves the callee returns and wires the continuation at 0x13.
+        WriteCallNear(new SegmentedAddress(0x200, 0x10), new SegmentedAddress(0x200, 0x80));
+        WriteNop(new SegmentedAddress(0x200, 0x13));
+        WriteRet(new SegmentedAddress(0x200, 0x14));
+        WriteRet(new SegmentedAddress(0x200, 0x80));
+        WriteCallNear(new SegmentedAddress(0x200, 0x30), new SegmentedAddress(0x200, 0x80));
+        WriteNop(new SegmentedAddress(0x200, 0x33));
+        WriteRet(new SegmentedAddress(0x200, 0x34));
+        RegisterImage();
+        CfgInstruction firstCall = Parser.ParseInstructionAt(new SegmentedAddress(0x200, 0x10));
+        NodeIndex.Insert(firstCall);
+        _explorer.ExploreFrom(firstCall);
+        SegmentedAddress firstContinuation = new(0x200, 0x13);
+        NodeIndex.HasAddress(firstContinuation).Should().BeTrue(
+            "the callee's speculative subgraph proved it returns");
+
+        // Act: the sweep discards the callee entry; a second call site asks for the same callee.
+        CfgInstruction calleeEntry = NodeIndex.GetAtAddress(new SegmentedAddress(0x200, 0x80)).First();
+        new SpeculativeReachabilityPruner(ReplacerRegistry).Sweep(calleeEntry);
+        CfgInstruction secondCall = Parser.ParseInstructionAt(new SegmentedAddress(0x200, 0x30));
+        NodeIndex.Insert(secondCall);
+        _explorer.ExploreCallContinuationForCallee(secondCall, new SegmentedAddress(0x200, 0x80));
+
+        // Assert
+        NodeIndex.HasAddress(new SegmentedAddress(0x200, 0x33)).Should().BeFalse(
+            "a proof whose callee entry a sweep removed must not drain new call sites");
+    }
+
+    private void SetAllGeneralRegisters(ushort value) {
+        for (int i = 0; i < 8; i++) {
+            State.GeneralRegisters.UInt16[(uint)i] = value;
+        }
+    }
+
+    private void WriteCallNear(SegmentedAddress address, SegmentedAddress target) {
+        uint phys = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
+        short relative = (short)(target.Offset - (address.Offset + 3));
+        Memory.UInt8[phys] = 0xE8;
+        Memory.UInt8[phys + 1] = (byte)relative;
+        Memory.UInt8[phys + 2] = (byte)(relative >> 8);
+    }
+
+    [Fact]
     public void SiteAcceptsAtMost32DistinctNonStaticTargets() {
         // Arrange: 33 distinct trusted targets reached from the same site, each a RET.
         CfgInstruction site = CreateObservedNode(new SegmentedAddress(0x200, 0x20));

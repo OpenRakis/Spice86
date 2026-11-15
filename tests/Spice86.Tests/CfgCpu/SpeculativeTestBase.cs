@@ -65,7 +65,7 @@ public abstract class SpeculativeTestBase : IDisposable {
     }
 
     protected SpeculativeExplorer CreateExplorer() =>
-        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue,
+        new(ReplacerRegistry, Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue,
             new WatchedPointerCells(Memory, MemoryBreakpoints), State, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {

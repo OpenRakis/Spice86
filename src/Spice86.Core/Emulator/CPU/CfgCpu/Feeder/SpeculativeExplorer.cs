@@ -55,7 +55,7 @@ using System.Linq;
 /// and also crosses into callees, so nested calls reached from a known-safe entry point have their
 /// own continuations explored as well.</para>
 /// </summary>
-public class SpeculativeExplorer {
+public class SpeculativeExplorer : InstructionReplacer {
     /// <summary>
     /// Per-worklist-item data carrying the target address, predecessor, edge type, trust flag and
     /// discovery source. Trust (<see cref="FollowContinuations"/>) propagates along intra-routine
@@ -128,10 +128,10 @@ public class SpeculativeExplorer {
     private int _drainNesting;
     private bool _drainInserted;
 
-    public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
+    public SpeculativeExplorer(InstructionReplacerRegistry replacerRegistry, IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
         ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
         InterruptVectorTable interruptVectorTable, FunctionCatalogue functionCatalogue,
-        WatchedPointerCells watchedCells, State state, ILogger loggerService) {
+        WatchedPointerCells watchedCells, State state, ILogger loggerService) : base(replacerRegistry) {
         _memory = memory;
         _state = state;
         _instructionParser = instructionParser;
@@ -149,6 +149,47 @@ public class SpeculativeExplorer {
         // submitted after the image capture ran. ImageCaptured fires at the end of that capture,
         // which makes the ordering explicit instead of relying on event subscription order.
         _changedMemoryMap.ImageCaptured += OnImageCaptured;
+    }
+
+    /// <inheritdoc />
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        // Explorer state is keyed on the replaced node; nothing migrates to the new node today.
+    }
+
+    /// <inheritdoc />
+    public override void RemoveInstruction(CfgInstruction instruction) {
+        _anchorDependents.Remove(instruction);
+        foreach ((CfgInstruction anchor, List<AnchorDependent> dependents) in _anchorDependents.ToList()) {
+            dependents.RemoveAll(dependent => ReferenceEquals(dependent.Site, instruction));
+            if (dependents.Count == 0) {
+                _anchorDependents.Remove(anchor);
+            }
+        }
+        _anchorSitePairs.RemoveWhere(pair => ReferenceEquals(pair.Site, instruction) || ReferenceEquals(pair.Anchor, instruction));
+        _anchorKnownUnion.Remove(instruction);
+        _siteTargets.Remove(instruction);
+        _cappedSites.Remove(instruction);
+        _watchedSiteCells.RemoveWhere(cell => ReferenceEquals(cell.Site, instruction));
+        _pending.Remove(instruction);
+        foreach ((CfgInstruction trigger, List<DiscoveryCandidate> pending) in _pending.ToList()) {
+            pending.RemoveAll(candidate => ReferenceEquals(candidate.Predecessor, instruction));
+            if (pending.Count == 0) {
+                _pending.Remove(trigger);
+            }
+        }
+        foreach ((SegmentedAddress callee, List<CfgInstruction> sites) in _pendingCallSites.ToList()) {
+            sites.RemoveAll(site => ReferenceEquals(site, instruction));
+            if (sites.Count == 0) {
+                _pendingCallSites.Remove(callee);
+            }
+        }
+        // The registry calls the index before the explorer, so the address test runs after the
+        // node's own removal: an address with no node left loses its callee proof state.
+        if (!_nodeIndex.HasAddress(instruction.Address)) {
+            _provedReturnKind.Remove(instruction.Address);
+            _refusedCalleeProof.Remove(instruction.Address);
+            _incompleteCalleeProof.Remove(instruction.Address);
+        }
     }
 
     /// <summary>Raised once a predecessorless seed node has been decoded and given a block.
@@ -807,6 +848,10 @@ public class SpeculativeExplorer {
     }
 
     private void OnSiteCellValue(AnchorDependent dependent, uint value, CfgInstruction? trigger) {
+        // Watched cells cannot be unwatched, so a dependent whose site left the index is ignored.
+        if (!_nodeIndex.Contains(dependent.Site)) {
+            return;
+        }
         ExploreCandidates(trigger,
             [new DiscoveryCandidate(CellTarget(dependent, value), dependent.Site,
                 InstructionSuccessorType.Normal, ExploreSource.PointerValue)]);
