@@ -42,6 +42,11 @@ public sealed class ChangedMemoryMap {
         registry.ImageLoaded += OnImageLoaded;
     }
 
+    /// <summary>Raised after an image's bytes have been captured by <see cref="OnImageLoaded"/>,
+    /// never for <see cref="LoadedImageKind.EmulatorRoutines"/>. Subscribing here instead of to
+    /// <see cref="LoadedImageRegistry.ImageLoaded"/> guarantees the capture already happened.</summary>
+    internal event EventHandler<LoadedImage>? ImageCaptured;
+
     /// <summary>An immutable view of the map for the generator; empty when nothing was
     /// watched.</summary>
     internal ChangedMemorySnapshot Snapshot() {
@@ -88,6 +93,7 @@ public sealed class ChangedMemoryMap {
             _captured.Set((int)address, true);
         }
         Watch(image.StartAddress, image.SizeInBytes);
+        ImageCaptured?.Invoke(this, image);
     }
 
     private void Watch(uint start, uint size) {

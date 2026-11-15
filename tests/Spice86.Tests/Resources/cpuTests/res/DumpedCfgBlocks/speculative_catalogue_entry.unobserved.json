@@ -1,0 +1,122 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 2,
+  "entryPointAddresses": [
+    "F000:0100",
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0048",
+  "lastExecutedBlockId": 40,
+  "blocks": [
+    {
+      "id": 40,
+      "entry": "F000:0048",
+      "term": "F000:0048",
+      "pred": [
+        34,
+        36
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 1,
+      "entry": "F000:0100",
+      "dead": true,
+      "term": "F000:0103",
+      "pred": [],
+      "succ": [],
+      "asm": [
+        "B83412|mov AX,0x1234",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 6,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        7
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 36,
+      "entry": "F000:0043",
+      "dead": true,
+      "term": "F000:0043",
+      "pred": [
+        31
+      ],
+      "succ": [
+        40
+      ],
+      "asm": [
+        "C606010442|mov byte ptr DS:[0x0401],0x42"
+      ]
+    },
+    {
+      "id": 34,
+      "entry": "F000:0120",
+      "term": "F000:0125",
+      "pred": [
+        31
+      ],
+      "succ": [
+        40
+      ],
+      "asm": [
+        "C606020477|mov byte ptr DS:[0x0402],0x77",
+        "E920FF|jmp near 0x0048"
+      ]
+    },
+    {
+      "id": 7,
+      "entry": "F000:0000",
+      "term": "F000:0038",
+      "pred": [
+        6
+      ],
+      "succ": [
+        31
+      ],
+      "asm": [
+        "C606000401|mov byte ptr DS:[0x0400],1",
+        "C606010400|mov byte ptr DS:[0x0401],0",
+        "C606020400|mov byte ptr DS:[0x0402],0",
+        "2EC6062001C6|mov byte ptr CS:[0x0120],0xC6",
+        "2EC606210106|mov byte ptr CS:[0x0121],6",
+        "2EC70622010204|mov word ptr CS:[0x0122],0x0402",
+        "2EC606240177|mov byte ptr CS:[0x0124],0x77",
+        "2EC6062501E9|mov byte ptr CS:[0x0125],0xE9",
+        "2EC706260120FF|mov word ptr CS:[0x0126],0xFF20",
+        "BB3A00|mov BX,0x003A",
+        "FFE3|jmp near BX"
+      ]
+    },
+    {
+      "id": 31,
+      "entry": "F000:003A",
+      "term": "F000:003F",
+      "pred": [
+        7
+      ],
+      "succ": [
+        34,
+        36
+      ],
+      "asm": [
+        "A00005|mov AL,byte ptr DS:[0x0500]",
+        "84C0|test AL,AL",
+        "0F85DD00|jne near 0x0120"
+      ]
+    }
+  ],
+  "truncated": false
+}

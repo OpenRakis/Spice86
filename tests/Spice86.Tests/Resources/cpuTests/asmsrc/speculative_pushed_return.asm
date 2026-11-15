@@ -1,5 +1,5 @@
 ; compile it with fasm
-; Speculative pushed-return fixture (D4): the program builds a call by hand -
+; Speculative pushed-return fixture: the program builds a call by hand -
 ; it pushes a return address, then jumps indirectly. The callee's ret lands on
 ; the pushed address, which the explorer discovers as a PushedReturn candidate.
 ;

@@ -56,7 +56,7 @@ public class CfgNodeFeederTest : IDisposable {
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
             _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false, new ChangedMemoryMap(_memory, memoryBreakpoints, new LoadedImageRegistry()),
-            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), loggerService);
+            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), new FunctionCatalogue(), loggerService);
         ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, loggerState, null);
         ExecutionContext executionContext = executionContextManager.CurrentExecutionContext;
         return (cfgNodeFeeder, executionContext);

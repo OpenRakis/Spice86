@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        2
+        3
       ],
       "entries": [
         {
-          "block": 2,
+          "block": 3,
           "address": "F000:0006",
           "kind": "executionContextEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        25
+        26
       ],
       "entries": [
         {
-          "block": 25,
+          "block": 26,
           "address": "F000:0017",
           "kind": "executionContextEntry"
         }
@@ -35,12 +35,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        40,
-        39
+        41,
+        40
       ],
       "entries": [
         {
-          "block": 39,
+          "block": 40,
           "address": "F000:FFF0",
           "kind": "executionContextEntry"
         }
@@ -51,20 +51,20 @@
       "kind": "synthetic",
       "name": "unknown",
       "blocks": [
-        45,
-        27,
-        10,
-        17,
-        19
+        46,
+        28,
+        11,
+        18,
+        20
       ],
       "entries": [
         {
-          "block": 27,
+          "block": 28,
           "address": "F000:001A",
           "kind": "sharedEntry"
         },
         {
-          "block": 45,
+          "block": 46,
           "address": "F000:000A",
           "kind": "sharedEntry"
         }
@@ -76,8 +76,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 4,
-      "fromBlock": 2,
-      "toBlock": 45,
+      "fromBlock": 3,
+      "toBlock": 46,
       "from": "F000:0006",
       "target": "F000:000A"
     },
@@ -85,8 +85,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 4,
-      "fromBlock": 25,
-      "toBlock": 27,
+      "fromBlock": 26,
+      "toBlock": 28,
       "from": "F000:0018",
       "target": "F000:001A"
     },
@@ -94,8 +94,8 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 3,
       "toPartition": 4,
-      "fromBlock": 40,
-      "toBlock": 45,
+      "fromBlock": 41,
+      "toBlock": 46,
       "from": "F000:0007",
       "target": "F000:000A"
     }

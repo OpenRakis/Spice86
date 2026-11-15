@@ -1,0 +1,21 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov byte ptr DS:[0x0401],0
+F000:000A mov byte ptr DS:[0x0402],0
+F000:000F mov byte ptr CS:[0x0120],0xC6
+F000:0015 mov byte ptr CS:[0x0121],6
+F000:001B mov word ptr CS:[0x0122],0x0402
+F000:0022 mov byte ptr CS:[0x0124],0x77
+F000:0028 mov byte ptr CS:[0x0125],0xE9
+F000:002E mov word ptr CS:[0x0126],0xFF20
+F000:0035 mov BX,0x003A
+F000:0038 jmp near BX
+F000:003A mov AL,byte ptr DS:[0x0500]
+F000:003D test AL,AL
+F000:003F jne near 0x0120
+F000:0043 mov byte ptr DS:[0x0401],0x42
+F000:0048 hlt
+F000:0100 mov AX,0x1234
+F000:0103 ret near
+F000:0120 mov byte ptr DS:[0x0402],0x77
+F000:0125 jmp near 0x0048
+F000:FFF0 jmp short 0

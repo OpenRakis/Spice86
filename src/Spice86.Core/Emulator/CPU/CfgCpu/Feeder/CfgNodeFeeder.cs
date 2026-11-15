@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
@@ -32,12 +33,12 @@ public class CfgNodeFeeder {
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
         bool enableSpeculativeExploration, ChangedMemoryMap changedMemoryMap,
         InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable,
-        ILogger loggerService) {
+        FunctionCatalogue functionCatalogue, ILogger loggerService) {
         _state = state;
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
             enableSpeculativeExploration ? _nodeLinker : null, changedMemoryMap,
-            installedInterruptHandlers, interruptVectorTable, loggerService);
+            installedInterruptHandlers, interruptVectorTable, functionCatalogue, loggerService);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
@@ -51,6 +52,12 @@ public class CfgNodeFeeder {
     /// </summary>
     public void SeedKnownSafeHandlers(IReadOnlyList<SegmentedAddress> handlerAddresses) =>
         InstructionsFeeder.SeedKnownSafeHandlers(handlerAddresses);
+
+    /// <summary>Forwards the feeder's <see cref="InstructionsFeeder.SpeculativeSeedCreated"/>.</summary>
+    internal event Action<CfgInstruction>? SpeculativeSeedCreated {
+        add => InstructionsFeeder.SpeculativeSeedCreated += value;
+        remove => InstructionsFeeder.SpeculativeSeedCreated -= value;
+    }
 
     /// <summary>
     /// Parses or retrieves from cache the instruction at the current IP from memory.

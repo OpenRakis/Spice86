@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
@@ -83,6 +84,7 @@ public class SpeculativeExplorer {
     private readonly ILogger _loggerService;
     private readonly InstalledInterruptHandlers _installedInterruptHandlers;
     private readonly InterruptVectorTable _interruptVectorTable;
+    private readonly FunctionCatalogue _functionCatalogue;
     private readonly CalleeReturnEvidence _calleeReturnEvidence = new();
     private readonly Dictionary<CfgInstruction, List<DiscoveryCandidate>> _pending = new();
     private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
@@ -91,7 +93,8 @@ public class SpeculativeExplorer {
 
     public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker,
         ChangedMemoryMap changedMemoryMap, InstalledInterruptHandlers installedInterruptHandlers,
-        InterruptVectorTable interruptVectorTable, State state, ILogger loggerService) {
+        InterruptVectorTable interruptVectorTable, FunctionCatalogue functionCatalogue,
+        State state, ILogger loggerService) {
         _memory = memory;
         _state = state;
         _instructionParser = instructionParser;
@@ -100,8 +103,49 @@ public class SpeculativeExplorer {
         _changedMemoryMap = changedMemoryMap;
         _installedInterruptHandlers = installedInterruptHandlers;
         _interruptVectorTable = interruptVectorTable;
+        _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
+        // Catalogue entries are trust-checked against the loaded bytes, so they can only be
+        // submitted after the image capture ran. ImageCaptured fires at the end of that capture,
+        // which makes the ordering explicit instead of relying on event subscription order.
+        _changedMemoryMap.ImageCaptured += OnImageCaptured;
+    }
+
+    /// <summary>Raised once a predecessorless seed node has been decoded and given a block.
+    /// The execution context registers such nodes as generation entry points; a seed no observed
+    /// edge ever reaches would otherwise stay invisible to the exported block graph.</summary>
+    internal event Action<CfgInstruction>? SpeculativeSeedCreated;
+
+    /// <summary>
+    /// Seeds one predecessorless candidate per catalogue entry that lands in the loaded image and
+    /// is not yet in the graph, in a single batch. The physical address is computed like a code
+    /// fetch (MMU translation then A20 gate) so an entry matches only when the CPU could execute
+    /// it inside the image.
+    /// </summary>
+    private void OnImageCaptured(object? sender, LoadedImage image) {
+        uint imageEnd = image.StartAddress + image.SizeInBytes;
+        List<DiscoveryCandidate> candidates = [];
+        foreach (FunctionInformation information in _functionCatalogue.FunctionInformations.Values) {
+            uint physical = _memory.A20Gate.TransformAddress(
+                _memory.Mmu.TranslateAddress(information.Address.Segment, information.Address.Offset));
+            if (physical < image.StartAddress || physical >= imageEnd) {
+                continue;
+            }
+            if (_nodeIndex.HasAddress(information.Address)) {
+                continue;
+            }
+            if (_installedInterruptHandlers.IsInstalledHandler(information.Address)) {
+                // Emulator-installed handlers are seeded and entry-registered through their own
+                // channel; seeding them here would bypass that policy.
+                continue;
+            }
+            candidates.Add(new DiscoveryCandidate(information.Address, null,
+                InstructionSuccessorType.Normal, ExploreSource.CatalogueEntry));
+        }
+        if (candidates.Count > 0) {
+            ExploreCandidates(null, candidates);
+        }
     }
 
     /// <summary>
@@ -163,8 +207,8 @@ public class SpeculativeExplorer {
     /// target edge never seen before, resolves the switch/call table the transfer may read: reads
     /// the N+1 entries at the pointer's segment and displacement, refuses the table when an entry
     /// is a refused value or an observed target is missing from it, else submits every entry as a
-    /// <see cref="ExploreSource.TableEntry"/> candidate. For an indirect call the D2 rule is then
-    /// applied with each entry as an explicit callee.
+    /// <see cref="ExploreSource.TableEntry"/> candidate. For an indirect call the
+    /// call-continuation rule is then applied with each entry as an explicit callee.
     /// </summary>
     public void ExploreIndirectTransfer(CfgInstruction transfer, bool newTargetEdge) {
         RetryPending(transfer);
@@ -228,7 +272,7 @@ public class SpeculativeExplorer {
     }
 
     /// <summary>
-    /// The D2 call-continuation rule with an explicitly given callee entry, for callers that know
+    /// The call-continuation rule with an explicitly given callee entry, for callers that know
     /// the callee without a static successor on the call node (table entries now, other sources
     /// later). Enqueues the continuation when the callee is known to return, else records the call
     /// site pending on it.
@@ -390,6 +434,13 @@ public class SpeculativeExplorer {
                 _nodeLinker.Link(item.EdgeType, item.Predecessor, candidate);
             }
             EnqueueSuccessorsForNode(candidate, worklist, item.FollowContinuations);
+            if (item.Predecessor is null && item.Source is ExploreSource.CatalogueEntry) {
+                // A seed with no successors (a lone ret, for instance) never goes through Link,
+                // so nothing opens its block. The partition collector needs one; known-safe
+                // handler seeds deliberately stay blockless until something links them.
+                _nodeLinker.EnsureBlock(candidate);
+                SpeculativeSeedCreated?.Invoke(candidate);
+            }
         }
     }
 
@@ -452,7 +503,7 @@ public class SpeculativeExplorer {
     }
 
     /// <summary>
-    /// The D4 manufactured-return rule: when an indirect near jump's block touches the stack
+    /// When an indirect near jump's block touches the stack
     /// exactly once between its leader and the jump, and that instruction is <c>push imm16</c> or
     /// <c>push r16</c> last set by <c>mov r16, imm16</c>, the pushed address is the return address
     /// a hand-built call's callee lands on. Enqueue it as a <see cref="ExploreSource.PushedReturn"/>
@@ -461,7 +512,7 @@ public class SpeculativeExplorer {
     /// </summary>
     private void TryExplorePushedReturn(CfgInstruction node, Queue<ExploreItem> worklist) {
         if (!PushedAddressMatcher.IsIndirectNearJump(node)
-            || node is not { IsLive: true } and not { IsSpeculative: true }
+            || !node.IsLive
             || node.ContainingBlock is null) {
             return;
         }

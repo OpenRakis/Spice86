@@ -324,6 +324,16 @@ public class NodeLinker : InstructionReplacer {
     }
 
     /// <summary>
+    /// Gives <paramref name="entry"/> a block when it has none. Entry nodes discovered without a
+    /// predecessor (seeded roots) get their block here the way a linked edge would have opened it.
+    /// </summary>
+    internal void EnsureBlock(ICfgNode entry) {
+        if (entry.ContainingBlock is null) {
+            OpenBlock(entry);
+        }
+    }
+
+    /// <summary>
     /// Opens a fresh <see cref="CfgBlock"/> seeded with <paramref name="entry"/> and
     /// auto-marks discovery-complete when the entry is itself a block terminator.
     /// </summary>

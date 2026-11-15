@@ -533,7 +533,7 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture SpeculativeCallContinuation(SpeculativeArm arm) {
         AsmRunSettings settings = new() {
             BinName = "speculative_call_continuation", MaxCycles = 200000,
-            InstallInterruptVectors = true, AsmHandlersSegment = 0xD000
+            InstallInterruptVectors = true
         };
         if (arm == SpeculativeArm.Unobserved) {
             settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
@@ -590,6 +590,32 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x408] = 0xDD;
         expectedMemory[0x409] = 0x66;
         return SpeculativeFixture("speculative_pushed_return", expectedMemory, arm);
+    }
+
+    /// <summary>Runs speculative_catalogue_entry: the symbols file names cat_pos at F000:0100
+    /// (valid leaf the run never calls, emitted as a speculative method) and cat_neg at F000:0120
+    /// (invalid bytes at image load, patched at startup and reached only on the unobserved arm
+    /// through a conditional jump).</summary>
+    public static AsmFixture SpeculativeCatalogueEntry(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x403];
+        expectedMemory[0x400] = 0x01;
+        if (arm == SpeculativeArm.Observed) {
+            expectedMemory[0x401] = 0x42;
+        } else {
+            expectedMemory[0x402] = 0x77;
+        }
+        AsmRunSettings settings = new() {
+            BinName = "speculative_catalogue_entry",
+            MaxCycles = 1000,
+            GhidraSymbols =
+                "catpos_F000_0100_000F0100 0x000F0100 f\n" +
+                "catneg_F000_0120_000F0120 0x000F0120 f\n"
+        };
+        if (arm == SpeculativeArm.Observed) {
+            return MemoryFixture(settings, expectedMemory);
+        }
+        settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        return MemoryFixture(settings, expectedMemory);
     }
 
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>

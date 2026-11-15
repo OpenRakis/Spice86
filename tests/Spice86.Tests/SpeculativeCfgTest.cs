@@ -73,7 +73,7 @@ public sealed class SpeculativeCfgTest {
 
     /// <summary>
     /// Call tables: same as the switch fixture but for an indirect near call: the index-2 callee is
-    /// discovered from the table and the D2 continuation rule explores the code after the call.
+    /// discovered from the table and the call-continuation rule explores the code after the call.
     /// </summary>
     [Fact]
     public void SpeculativeCallTableExecutesCorrectlyOnBothPaths() {
@@ -93,6 +93,19 @@ public sealed class SpeculativeCfgTest {
             AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Observed),
             [AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Observed),
              AsmFixtureCatalog.SpeculativePushedReturn(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
+    /// Catalogue seeding: the symbols file names a function the run never calls (emitted as a
+    /// speculative method) and an entry whose bytes are invalid at load - dropped without
+    /// poisoning so the unobserved arm can still reach it after the program patches real code.
+    /// </summary>
+    [Fact]
+    public void SpeculativeCatalogueEntryExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeCatalogueEntry(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeCatalogueEntry(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeCatalogueEntry(SpeculativeArm.Unobserved)]);
     }
 
     /// <summary>

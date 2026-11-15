@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
@@ -36,7 +37,7 @@ public class InstructionsFeeder : IClearable {
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
         NodeLinker? nodeLinker, ChangedMemoryMap changedMemoryMap,
         InstalledInterruptHandlers installedInterruptHandlers, InterruptVectorTable interruptVectorTable,
-        ILogger loggerService) {
+        FunctionCatalogue functionCatalogue, ILogger loggerService) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
@@ -46,7 +47,7 @@ public class InstructionsFeeder : IClearable {
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
             _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker, changedMemoryMap,
-                installedInterruptHandlers, interruptVectorTable, cpuState, loggerService);
+                installedInterruptHandlers, interruptVectorTable, functionCatalogue, cpuState, loggerService);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);
@@ -70,6 +71,21 @@ public class InstructionsFeeder : IClearable {
         }
         foreach (SegmentedAddress entry in handlerAddresses) {
             _speculativeExplorer.SeedKnownSafe(entry);
+        }
+    }
+
+    /// <summary>Forwards <see cref="SpeculativeExplorer.SpeculativeSeedCreated"/>: a speculative
+    /// seed node just got a block, so subscribers can register it as a generation entry point.</summary>
+    internal event Action<CfgInstruction>? SpeculativeSeedCreated {
+        add {
+            if (_speculativeExplorer is not null) {
+                _speculativeExplorer.SpeculativeSeedCreated += value;
+            }
+        }
+        remove {
+            if (_speculativeExplorer is not null) {
+                _speculativeExplorer.SpeculativeSeedCreated -= value;
+            }
         }
     }
 

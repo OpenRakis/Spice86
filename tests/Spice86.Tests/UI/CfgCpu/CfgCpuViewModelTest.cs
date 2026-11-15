@@ -10,6 +10,7 @@ using Spice86.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Shared.Utils;
@@ -90,7 +91,7 @@ public class CfgCpuViewModelTest : IDisposable {
             _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false, false);
             SequentialIdAllocator sharedIdAllocator = new();
             CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false, new ChangedMemoryMap(Memory, memoryBreakpoints, new LoadedImageRegistry()),
-                new InstalledInterruptHandlers([]), new InterruptVectorTable(Memory), _loggerService);
+                new InstalledInterruptHandlers([]), new InterruptVectorTable(Memory), new FunctionCatalogue(), _loggerService);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,

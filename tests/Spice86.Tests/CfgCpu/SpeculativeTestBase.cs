@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
@@ -44,6 +45,7 @@ public abstract class SpeculativeTestBase : IDisposable {
     protected readonly ChangedMemoryMap ChangedMemoryMap;
     protected readonly InstalledInterruptHandlers InstalledInterrupts;
     protected readonly InterruptVectorTable InterruptVectors;
+    protected readonly FunctionCatalogue Catalogue = new();
 
     protected SpeculativeTestBase() {
         IdAllocator = new SequentialIdAllocator();
@@ -63,7 +65,7 @@ public abstract class SpeculativeTestBase : IDisposable {
     }
 
     protected SpeculativeExplorer CreateExplorer() =>
-        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, State, LoggerService);
+        new(Memory, Parser, NodeIndex, NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue, State, LoggerService);
 
     protected CfgInstruction CreateSpeculativeNode(SegmentedAddress address) {
         uint physAddr = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
@@ -131,7 +133,7 @@ public abstract class SpeculativeTestBase : IDisposable {
         EmulatorBreakpointsManager breakpointsManager =
             new(new PauseHandler(LoggerService), State, Memory, MemoryBreakpoints, ioBreakpoints);
         InstructionsFeeder feeder = new(breakpointsManager, Memory, State, ReplacerRegistry,
-            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, LoggerService);
+            Compiler, IdAllocator, nodeLinker: NodeLinker, ChangedMemoryMap, InstalledInterrupts, InterruptVectors, Catalogue, LoggerService);
         return feeder;
     }
 

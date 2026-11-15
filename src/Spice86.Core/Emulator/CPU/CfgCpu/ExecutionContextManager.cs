@@ -46,6 +46,9 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _cpuHeavyLogger = cpuHeavyLogger;
         // Initial fake but non-null context at init
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
+        // Predecessorless speculative seeds (catalogue entries, handler seeds) only become visible
+        // to the block-graph export through the entry-point set.
+        _cfgNodeFeeder.SpeculativeSeedCreated += OnSpeculativeSeedCreated;
     }
 
     private int CurrentDepth {
@@ -162,6 +165,12 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
                 .FirstOrDefault(node => node.ContainingBlock is not null))
             .OfType<CfgInstruction>()) {
             RegisterEntryPoint(entryNode);
+        }
+    }
+
+    private void OnSpeculativeSeedCreated(CfgInstruction node) {
+        if (node.DiscoverySource == ExploreSource.CatalogueEntry) {
+            RegisterEntryPoint(node);
         }
     }
 

@@ -1,0 +1,40 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        1
+      ],
+      "entries": [
+        {
+          "block": 1,
+          "address": "F000:0100",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        7,
+        31,
+        36,
+        40,
+        34,
+        6
+      ],
+      "entries": [
+        {
+          "block": 6,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": []
+}

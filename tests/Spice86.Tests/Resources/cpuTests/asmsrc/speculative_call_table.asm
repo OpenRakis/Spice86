@@ -2,7 +2,7 @@
 ; Speculative call-table fixture: an observed near indirect call through a word
 ; memory operand preceded by the canonical bounds-check sequence must have its
 ; table callees explored speculatively, so the unobserved call runs in generated
-; code instead of failing "Untested near call target". For each entry the D2
+; code instead of failing "Untested near call target". For each entry the
 ; call-continuation rule applies once the callee is known to return.
 ;
 ; The discovery run executes the SAME indirect call twice with two different
@@ -58,8 +58,8 @@ do_call:
     mov bx, ax
     shl bx, 1
     call word [cs:bx+call_table]
-    ; continuation after the indirect call: the D2 rule explores it once a table
-    ; callee is known to return; on both runs it is executed.
+    ; continuation after the indirect call: the continuation rule explores it once a
+    ; table callee is known to return; on both runs it is executed.
     inc byte [0x0402]
     ret
 call_default:

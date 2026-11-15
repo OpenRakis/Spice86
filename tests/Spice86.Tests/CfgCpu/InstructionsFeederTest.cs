@@ -3,6 +3,7 @@ namespace Spice86.Tests.CfgCpu;
 using NSubstitute;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
@@ -55,7 +56,7 @@ public class InstructionsFeederTest : IDisposable {
 
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
             _compiler, new SequentialIdAllocator(), nodeLinker: null, new ChangedMemoryMap(_memory, memoryBreakpoints, new LoadedImageRegistry()),
-            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), loggerService);
+            new InstalledInterruptHandlers([]), new InterruptVectorTable(_memory), new FunctionCatalogue(), loggerService);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

@@ -119,6 +119,10 @@ internal sealed record AsmRunSettings {
     /// MMU, so only a non-8086 model raises real-mode segment faults.</summary>
     public CpuModel? CpuModel { get; init; }
 
+    /// <summary>Content of a spice86dumpGhidraSymbols.txt to seed the recorded-data directory with,
+    /// or null for none. Lets a fixture name catalogue functions without a real Ghidra export.</summary>
+    public string? GhidraSymbols { get; init; }
+
     /// <summary>Runs on the fresh machine before the program runs. Never null.</summary>
     public Action<Machine> ConfigureMachine { get; init; } = NoMachineConfiguration;
 

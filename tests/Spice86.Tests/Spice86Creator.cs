@@ -1,6 +1,9 @@
 namespace Spice86.Tests;
 
+using System.Security.Cryptography;
+
 using Spice86.Core.CLI;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -52,7 +55,7 @@ public sealed class Spice86Creator : IDisposable {
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, TestClockStartTime) {
+            settings.EnableSpeculativeCfgExploration, TestClockStartTime, settings.GhidraSymbols) {
         EnableUmb = settings.EnableUmb;
     }
 
@@ -67,7 +70,8 @@ public sealed class Spice86Creator : IDisposable {
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
-        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
+        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime,
+        string? ghidraSymbols = null) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -85,6 +89,15 @@ public sealed class Spice86Creator : IDisposable {
             Guid.NewGuid().ToString()
         );
         _exportFolder = exportFolder;
+        if (ghidraSymbols is not null) {
+            // The recorded-data root is per-program: EmulatorStateSerializationFolderFactory appends
+            // the exe's SHA-256 as a subdirectory before the symbols file is read.
+            string programHash = ConvertUtils.ByteArrayToHexString(
+                SHA256.HashData(File.ReadAllBytes(executablePath)));
+            string dataDirectory = Path.Join(exportFolder, programHash);
+            Directory.CreateDirectory(dataDirectory);
+            File.WriteAllText(Path.Join(dataDirectory, "spice86dumpGhidraSymbols.txt"), ghidraSymbols);
+        }
         _configuration = new Configuration {
             Exe = executablePath,
             CpuModel = cpuModel ?? CpuModel.ZET_86,
