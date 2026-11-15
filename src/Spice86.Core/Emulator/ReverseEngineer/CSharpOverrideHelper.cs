@@ -1155,7 +1155,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="callbackNumber">The callback identifier.</param>
     public void Callback(ushort callbackNumber) {
-        _callbackHandler.RunFromOverriden(callbackNumber);
+        _callbackHandler.Run(callbackNumber);
     }
 
     /// <summary>
@@ -1173,7 +1173,7 @@ public class CSharpOverrideHelper {
     public bool CallbackMovedCsIp(ushort cs, ushort ip, ushort callbackNumber) {
         State.CS = cs;
         State.IP = ip;
-        _callbackHandler.RunFromOverriden(callbackNumber);
+        _callbackHandler.Run(callbackNumber);
         if (!State.IsRunning) {
             Exit();
         }
@@ -1882,7 +1882,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="vectorNumber">The vector number to call</param>
     public void Interrupt(byte vectorNumber) {
-        _callbackHandler.RunFromOverriden(vectorNumber);
+        _callbackHandler.Run(vectorNumber);
     }
 
     /// <summary>
@@ -1898,7 +1898,7 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                _callbackHandler.RunFromOverriden(callback);
+                _callbackHandler.Run(callback);
 
                 return InterruptRet();
             }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");

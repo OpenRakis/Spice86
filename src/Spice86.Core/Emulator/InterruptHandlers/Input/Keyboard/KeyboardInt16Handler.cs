@@ -213,7 +213,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     // Callbacks used by the in-memory INT 16h stub
     private void CallbackHasKey() {
         // ZF = 1 when empty, 0 when a key is available
-        SetZeroFlag(_biosKeyboardBuffer.IsEmpty, false);
+        State.ZeroFlag = _biosKeyboardBuffer.IsEmpty;
     }
 
     private void CallbackDequeueAndSetAx() {
@@ -277,9 +277,9 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </summary>
     [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Cx, Writes = CpuValues.Al | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite,
         Implementation = nameof(StoreKeystroke), Inputs = [CpuValues.Cx])]
-    public void StoreKeystroke(bool calledFromVm) {
+    public void StoreKeystroke() {
         (State.AL, bool carryFlag) = StoreKeystroke(State.CX);
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>
@@ -327,12 +327,11 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <summary>
     /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
     /// </summary>
-    /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
     [InterruptService(0x01, Name = "GetKeystrokeStatus", Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read,
         Implementation = nameof(ReadKeystrokeStatus), Inputs = [CpuValues.Ax, CpuValues.Zero])]
-    public void WriteKeystrokeStatus(bool calledFromVm) {
-        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag(calledFromVm));
-        SetZeroFlag(zeroFlag, calledFromVm);
+    public void WriteKeystrokeStatus() {
+        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag());
+        SetZeroFlag(zeroFlag);
     }
 
     /// <summary>
@@ -348,12 +347,11 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// INT 16h, AH=11h - Check Enhanced Keystroke Status (enhanced keyboards).
     /// Returns key in AX without dequeuing and updates ZF like AH=01h.
     /// </summary>
-    /// <param name="calledFromVm"><c>True</c> if the method was called by internal emulator code, <c>False</c> otherwise.</param>
     [InterruptService(0x11, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read,
         Implementation = nameof(ReadKeystrokeStatus), Inputs = [CpuValues.Ax, CpuValues.Zero])]
-    public void GetEnhancedKeystrokeStatus(bool calledFromVm) {
-        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag(calledFromVm));
-        SetZeroFlag(zeroFlag, calledFromVm);
+    public void GetEnhancedKeystrokeStatus() {
+        (State.AX, bool zeroFlag) = ReadKeystrokeStatus(State.AX, ReadZeroFlag());
+        SetZeroFlag(zeroFlag);
     }
 
     /// <summary>

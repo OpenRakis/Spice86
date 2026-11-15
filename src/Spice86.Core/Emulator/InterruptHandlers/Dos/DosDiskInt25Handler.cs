@@ -67,18 +67,17 @@ public class DosDiskInt25Handler : InterruptHandler {
     /// <inheritdoc />
     [InterruptService(Unknown = true)]
     public override void Run() {
-        AbsoluteDiskRead(true);
+        AbsoluteDiskRead();
     }
 
     /// <summary>
     /// Reads one or more sectors from a floppy or hard disk drive into memory.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
-    public void AbsoluteDiskRead(bool calledFromVm) {
+    public void AbsoluteDiskRead() {
         byte driveIndex = State.AL;
         if (driveIndex >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(driveIndex)) {
             State.AX = ErrorInvalidDrive;
-            SetCarryFlag(true, calledFromVm);
+            SetCarryFlag(true);
             return;
         }
 
@@ -108,12 +107,12 @@ public class DosDiskInt25Handler : InterruptHandler {
                 } else if (LoggerService.IsEnabled(LogLevel.Warning)) {
                     LoggerService.LogWarning("Interrupt 25 called but not as disk detection, {DriveIndex}", driveIndex);
                 }
-                SetCarryFlag(false, calledFromVm);
+                SetCarryFlag(false);
                 State.AX = 0;
                 return;
             }
             State.AX = ErrorInvalidDrive;
-            SetCarryFlag(true, calledFromVm);
+            SetCarryFlag(true);
             return;
         }
         int bytesPerSector = geometryResult.Geometry.BytesPerSector;
@@ -127,12 +126,12 @@ public class DosDiskInt25Handler : InterruptHandler {
         FloppyTransferResult readResult = _dosDriveManager.ReadFromImage(driveIndex, byteOffset, buffer, 0, byteCount);
         if (readResult.Status != FloppyAccessStatus.Success) {
             State.AX = 0x0408;
-            SetCarryFlag(true, calledFromVm);
+            SetCarryFlag(true);
             return;
         }
 
         Memory.LoadData(bufferAddress, buffer);
-        SetCarryFlag(false, calledFromVm);
+        SetCarryFlag(false);
         State.AX = 0;
     }
 }

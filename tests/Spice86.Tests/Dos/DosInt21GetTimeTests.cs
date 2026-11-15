@@ -28,7 +28,7 @@ public sealed class DosInt21GetTimeTests : IDisposable {
         _fixture.State.AH = 0x2C;
 
         // Act
-        _fixture.DosInt21Handler.RunFromOverriden();
+        _fixture.DosInt21Handler.Run();
 
         // Assert
         DateTimeOffset expected = _fixture.EmulatedClock.CurrentDateTime;
@@ -50,7 +50,7 @@ public sealed class DosInt21GetTimeTests : IDisposable {
         _fixture.State.AH = 0x2C;
 
         // Act
-        _fixture.DosInt21Handler.RunFromOverriden();
+        _fixture.DosInt21Handler.Run();
 
         // Assert
         DateTimeOffset expected = _fixture.EmulatedClock.CurrentDateTime;

@@ -58,7 +58,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// INT 15h, AH=50h - DOS/V Font Subsystem Access.
     /// Retrieves the address of a font read or write function for Japanese DOS/V systems.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was called by the CPU or not.</param>
     /// <remarks>
     /// <b>Inputs:</b><br/>
     /// AH = 50h<br/>
@@ -82,10 +81,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
         return (0x80, true); //Unsupported function (PC AT)
     }
 
-    [InterruptService(0x50, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void DosVFontSubsystemAccess(bool calledFromVm) {
+    [InterruptService(0x50, Name = "DosVFontSubsystemAccess", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    public void AccessDosVFontSubsystem() {
         (State.AH, bool carryFlag) = DosVFontSubsystemAccess();
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <inheritdoc />
@@ -144,10 +143,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     [InterruptService(0x83, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Write, Io = true,
         Implementation = nameof(WaitFunction), Inputs = [CpuValues.Al, CpuValues.Cx, CpuValues.Dx, CpuValues.Es, CpuValues.Bx, CpuValues.Ah])]
-    public void WaitFunction(bool calledFromVm) {
+    public void WaitFunction() {
         (State.AH, bool carryFlag) = WaitFunction(State.AL, State.CX, State.DX,
             State.ES, State.BX, State.AH);
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Toggles or queries the A20 gate per the AL sub-function; null outputs
@@ -186,7 +185,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </ul>
     /// </summary>
     [InterruptService(0x24, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Ah | CpuValues.Bx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void ToggleA20GateOrGetStatus(bool calledFromVm) {
+    public void ToggleA20GateOrGetStatus() {
         (byte? al, byte? ah, ushort? bx, bool? carryFlag) =
             ToggleA20GateOrGetStatus(State.AL);
         if (al is { } alValue) {
@@ -199,7 +198,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
             State.BX = bxValue;
         }
         if (carryFlag is { } flag) {
-            SetCarryFlag(flag, calledFromVm);
+            SetCarryFlag(flag);
         }
     }
 
@@ -223,10 +222,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// They are then free to use the memory between the new and old sizes at will. <br/><br/>
     /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
     /// </remarks>
-    [InterruptService(0x88, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void GetExtendedMemorySize(bool calledFromVm) {
+    [InterruptService(0x88, Name = "GetExtendedMemorySize", Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    public void ReportExtendedMemorySize() {
         (State.AX, bool carryFlag) = GetExtendedMemorySize();
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Copies <paramref name="wordCount"/> words in extended memory using the GDT
@@ -313,9 +312,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// AH = status (see RBIL #00498)<br/>
     /// </summary>
     [InterruptService(0x87, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Es | CpuValues.Si, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
-    public void CopyExtendedMemory(bool calledFromVm) {
+    public void CopyExtendedMemory() {
         (State.AH, bool carryFlag) = CopyExtendedMemory(State.ES, State.SI, State.CX);
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Reports the function as unsupported (AH=86h, CF set).</summary>
@@ -334,7 +333,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     [InterruptService(0x84, Name = "Unsupported84", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     public void WriteUnsupported() {
         (State.AH, bool carryFlag) = Unsupported();
-        SetCarryFlag(carryFlag, true);
+        SetCarryFlag(carryFlag);
     }
 
     private void ModifyCmosRegister(byte register, Func<byte, byte> modifier) {
@@ -368,12 +367,12 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Waits for CX:DX microseconds. Returns CF=1 + AH=83h if timer already in use.
     /// </summary>
     [InterruptService(0x86, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
-    public void BiosWait(bool calledFromVm) {
+    public void BiosWait() {
         (byte? ah, bool carryFlag) = BiosWait(((uint)State.CX << 16) | State.DX);
         if (ah is { } status) {
             State.AH = status;
         }
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     private void OnWaitComplete(uint value) {
@@ -398,9 +397,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Allows translation or filtering of keyboard scan codes. Returns CF=1 to process, CF=0 to ignore.
     /// </summary>
     [InterruptService(0x4F, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void KeyboardIntercept(bool calledFromVm) {
+    public void KeyboardIntercept() {
         bool carryFlag = KeyboardIntercept(State.AL);
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Device busy notification; reports no error.</summary>
@@ -411,10 +410,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// INT 15h, AH=90h - Device Busy.
     /// </summary>
-    [InterruptService(0x90, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void DeviceBusy(bool calledFromVm) {
+    [InterruptService(0x90, Name = "DeviceBusy", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    public void NotifyDeviceBusy() {
         (State.AH, bool carryFlag) = DeviceBusy();
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Device post-complete notification; reports no error.</summary>
@@ -425,9 +424,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// INT 15h, AH=91h - Device Post.
     /// </summary>
-    [InterruptService(0x91, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void DevicePost(bool calledFromVm) {
+    [InterruptService(0x91, Name = "DevicePost", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
+    public void NotifyDevicePost() {
         (State.AH, bool carryFlag) = DevicePost();
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 }

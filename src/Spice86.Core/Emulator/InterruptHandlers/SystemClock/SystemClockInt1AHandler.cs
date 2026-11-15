@@ -102,13 +102,13 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=02h - Read Time from RTC.
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
-    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+    [InterruptService(0x02, Name = "ReadTimeFromRTC", Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(ReadTimeFromRTC), Inputs = [])]
-    public void ReadTimeFromRTC(bool calledFromVm) {
+    public void GetRTCTime() {
         (ushort cx, ushort dx, bool carryFlag) = ReadTimeFromRTC();
         State.CX = cx;
         State.DX = dx;
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Returns whether setting the RTC time failed: it always does, because
@@ -125,10 +125,10 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system time is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
-    [InterruptService(0x03, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+    [InterruptService(0x03, Name = "SetRTCTime", Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(SetRTCTime), Inputs = [])]
-    public void SetRTCTime(bool calledFromVm) {
-        SetCarryFlag(SetRTCTime(), calledFromVm);
+    public void WriteRTCTime() {
+        SetCarryFlag(SetRTCTime());
     }
 
     /// <summary>Returns the real-time clock date in CH, CL, DH and DL (BCD); CF is clear.</summary>
@@ -149,13 +149,13 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=04h - Read Date from RTC.
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
-    [InterruptService(0x04, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+    [InterruptService(0x04, Name = "ReadDateFromRTC", Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(ReadDateFromRTC), Inputs = [])]
-    public void ReadDateFromRTC(bool calledFromVm) {
+    public void GetRTCDate() {
         (ushort cx, ushort dx, bool carryFlag) = ReadDateFromRTC();
         State.CX = cx;
         State.DX = dx;
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Returns whether setting the RTC date failed: it always does, because
@@ -172,9 +172,9 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
-    [InterruptService(0x05, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
+    [InterruptService(0x05, Name = "SetRTCDate", Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(SetRTCDate), Inputs = [])]
-    public void SetRTCDate(bool calledFromVm) {
-        SetCarryFlag(SetRTCDate(), calledFromVm);
+    public void WriteRTCDate() {
+        SetCarryFlag(SetRTCDate());
     }
 }

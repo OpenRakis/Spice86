@@ -26,7 +26,7 @@ public static class InterruptServiceAttributes {
     /// <exception cref="InvalidOperationException">
     /// The type mixes the two attribute forms, declares two single contracts, uses the
     /// same selector value twice, combines <c>Unknown</c> with other properties,
-    /// annotates a method that is not <c>void M()</c> or <c>void M(bool)</c>, or names an
+    /// annotates a method that is not <c>void M()</c>, or names an
     /// implementation no unique public instance method matches in parameter or return
     /// shape.
     /// </exception>
@@ -186,13 +186,10 @@ public static class InterruptServiceAttributes {
 
     private static void CheckShape(MethodInfo method, string typeName) {
         ParameterInfo[] parameters = method.GetParameters();
-        bool valid = method.ReturnType == typeof(void) &&
-            (parameters.Length == 0 ||
-             (parameters.Length == 1 && parameters[0].ParameterType == typeof(bool)));
+        bool valid = method.ReturnType == typeof(void) && parameters.Length == 0;
         if (!valid) {
             throw new InvalidOperationException(
-                $"{typeName}.{method.Name}: an interrupt service method must be " +
-                "void M() or void M(bool calledFromVm)");
+                $"{typeName}.{method.Name}: an interrupt service method must be void M()");
         }
     }
 }

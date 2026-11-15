@@ -34,10 +34,6 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     protected Stack Stack;
 
-    /// <summary>
-    /// Indicates whether the interrupt stack is present.
-    /// </summary>
-    private bool _interruptStackPresent = true;
     private IEmulatorLoggerState _loggerState = new Spice86LoggerState();
     private readonly InterruptServiceDeclarations _declarations;
     private HandlerServices? _services;
@@ -76,11 +72,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     private Action ServiceActionOf(MethodInfo method) {
-        if (method.GetParameters().Length == 0) {
-            return (Action)method.CreateDelegate(typeof(Action), this);
-        }
-        Action<bool> action = (Action<bool>)method.CreateDelegate(typeof(Action<bool>), this);
-        return () => action(true);
+        return (Action)method.CreateDelegate(typeof(Action), this);
     }
 
     public void SetLoggerState(IEmulatorLoggerState loggerState) {
@@ -171,55 +163,30 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     /// <summary>
-    /// Sets the Carry Flag in the CPU state and optionally on the interrupt stack.
+    /// Sets the Carry Flag in the CPU state and on the interrupt stack.
     /// </summary>
     /// <param name="value">The value to set for the Carry Flag.</param>
-    /// <param name="setOnStack">If set to true, the Carry Flag will also be set on the interrupt stack.</param>
-    protected void SetCarryFlag(bool value, bool setOnStack) {
+    protected void SetCarryFlag(bool value) {
         State.CarryFlag = value;
-        if (_interruptStackPresent && setOnStack) {
-            Stack.SetFlagOnInterruptStack(Flags.Carry, value);
-        }
+        Stack.SetFlagOnInterruptStack(Flags.Carry, value);
     }
 
     /// <summary>
-    /// Sets the Zero Flag in the CPU state and optionally on the interrupt stack.
+    /// Sets the Zero Flag in the CPU state and on the interrupt stack.
     /// </summary>
     /// <param name="value">The value to set for the Zero Flag.</param>
-    /// <param name="setOnStack">If set to true, the Zero Flag will also be set on the interrupt stack.</param>
-    protected void SetZeroFlag(bool value, bool setOnStack) {
+    protected void SetZeroFlag(bool value) {
         State.ZeroFlag = value;
-        if (_interruptStackPresent && setOnStack) {
-            Stack.SetFlagOnInterruptStack(Flags.Zero, value);
-        }
+        Stack.SetFlagOnInterruptStack(Flags.Zero, value);
     }
 
-    /// <summary>Reads the caller's Carry Flag: the stacked flag word of the interrupt frame when
-    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
-    protected bool ReadCarryFlag(bool calledFromVm) {
-        if (_interruptStackPresent && calledFromVm) {
-            return (Stack.Peek16(4) & Flags.Carry) != 0;
-        }
-        return State.CarryFlag;
+    /// <summary>Reads the caller's Carry Flag from the stacked flag word of the interrupt frame.</summary>
+    protected bool ReadCarryFlag() {
+        return (Stack.Peek16(4) & Flags.Carry) != 0;
     }
 
-    /// <summary>Reads the caller's Zero Flag: the stacked flag word of the interrupt frame when
-    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
-    protected bool ReadZeroFlag(bool calledFromVm) {
-        if (_interruptStackPresent && calledFromVm) {
-            return (Stack.Peek16(4) & Flags.Zero) != 0;
-        }
-        return State.ZeroFlag;
-    }
-
-    /// <summary>
-    /// Runs the C# code that replaces the machine code. <br/>
-    /// While the C# code is run, the interrupt stack is disabled.
-    /// </summary>
-    public void RunFromOverriden() {
-        // When running from overriden code, this is a direct C# code so there is no stack to edit.
-        _interruptStackPresent = false;
-        Run();
-        _interruptStackPresent = true;
+    /// <summary>Reads the caller's Zero Flag from the stacked flag word of the interrupt frame.</summary>
+    protected bool ReadZeroFlag() {
+        return (Stack.Peek16(4) & Flags.Zero) != 0;
     }
 }

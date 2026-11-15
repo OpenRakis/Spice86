@@ -671,7 +671,7 @@ public class DosInt21ServiceContractTest {
         ax.Should().Be((ushort)DosErrorCode.FunctionNumberInvalid);
         cx.Should().Be(0);
         before.AssertUnchanged(state);
-        Action interrupt = () => handler.GetSetFileAttributes(false);
+        Action interrupt = () => handler.GetSetFileAttributes();
         interrupt.Should().Throw<UnhandledOperationException>();
         state.CarryFlag.Should().BeFalse();
         state.AX.Should().Be(0x4302);
