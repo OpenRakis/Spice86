@@ -101,18 +101,24 @@ public class SpeculativeExplorer {
     private int _refusedAnchorSiteForms;
 
     /// <summary>One evaluation a site registered on its anchor asks to run at each anchor
-    /// execution: either "read register <see cref="IndexRegister"/> and propose CS:that", or
-    /// "read the <see cref="CellSize"/>-byte pointer cell the operand formula resolves to and
-    /// propose what it holds".</summary>
-    private sealed record AnchorDependent(
-        CfgInstruction Site,
-        bool IsCall,
-        int CellSize,
-        int SegmentRegisterIndex,
-        int IndexRegister,
-        ushort Displacement,
-        int Step = 0,
-        int Bound = 0);
+    /// execution.</summary>
+    private abstract record AnchorDependent(CfgInstruction Site, bool IsCall);
+
+    /// <summary>Near <c>jmp/call reg</c>: reads <see cref="Register"/> and proposes CS:that.</summary>
+    private sealed record RegisterDependent(CfgInstruction Site, bool IsCall, int Register)
+        : AnchorDependent(Site, IsCall);
+
+    /// <summary>Reads the <see cref="CellSize"/>-byte pointer cell the operand formula resolves to
+    /// (<see cref="IndexRegister"/> null for a plain <c>[seg:const]</c>) and proposes what it
+    /// holds.</summary>
+    private sealed record CellDependent(CfgInstruction Site, bool IsCall, int CellSize,
+        int SegmentRegisterIndex, int? IndexRegister, ushort Displacement) : AnchorDependent(Site, IsCall);
+
+    /// <summary>Reads every word entry of a bounded table under the anchor's current segment
+    /// value and proposes each.</summary>
+    private sealed record TableDependent(CfgInstruction Site, bool IsCall,
+        int SegmentRegisterIndex, ushort BaseOffset, ushort Step, ushort Bound)
+        : AnchorDependent(Site, IsCall);
     private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
     private readonly CalleeReturnScanner _calleeReturnScanner;
@@ -670,7 +676,7 @@ public class SpeculativeExplorer {
                 _refusedAnchorSiteForms++;
                 return;
             }
-            AddDependent(item.Anchor, new AnchorDependent(site, isCall, 0, -1, register.RegisterIndex, 0));
+            AddDependent(item.Anchor, new RegisterDependent(site, isCall, register.RegisterIndex));
             return;
         }
         if (parameter is not SegmentedPointerNode pointer
@@ -690,7 +696,7 @@ public class SpeculativeExplorer {
                 _refusedAnchorSiteForms++;
                 return;
             }
-            AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, -1, (ushort)constOffset));
+            AddDependent(item.Anchor, new CellDependent(site, isCall, expectedSize, segmentRegisterIndex, null, (ushort)constOffset));
             return;
         }
         if (!SwitchTableRecognizer.TryGetIndexExpression(pointer.Offset, out int indexRegister, out ushort displacement)) {
@@ -705,11 +711,11 @@ public class SpeculativeExplorer {
                 _refusedAnchorSiteForms++;
                 return;
             }
-            AddDependent(item.Anchor, new AnchorDependent(site, isCall, 2, segmentRegisterIndex, -1,
+            AddDependent(item.Anchor, new TableDependent(site, isCall, segmentRegisterIndex,
                 table.BaseOffset, table.Step, table.Bound));
             return;
         }
-        AddDependent(item.Anchor, new AnchorDependent(site, isCall, expectedSize, segmentRegisterIndex, indexRegister, displacement));
+        AddDependent(item.Anchor, new CellDependent(site, isCall, expectedSize, segmentRegisterIndex, indexRegister, displacement));
     }
 
     private void AddDependent(CfgInstruction anchor, AnchorDependent dependent) {
@@ -741,27 +747,31 @@ public class SpeculativeExplorer {
     }
 
     private void EvaluateDependent(CfgInstruction anchor, AnchorDependent dependent) {
-        if (dependent.Step != 0) {
-            EvaluateTableDependent(anchor, dependent);
-            return;
+        switch (dependent) {
+            case TableDependent table:
+                EvaluateTableDependent(anchor, table);
+                return;
+            case RegisterDependent register: {
+                ushort offset = _state.GeneralRegisters.UInt16[(uint)register.Register];
+                SubmitAnchorCandidate(anchor, register,
+                    new SegmentedAddress(register.Site.Address.Segment, offset), ExploreSource.RegisterValue);
+                return;
+            }
+            case CellDependent cell: {
+                ushort segment = _state.SegmentRegisters.UInt16[(uint)cell.SegmentRegisterIndex];
+                uint cellOffset = cell.IndexRegister is int indexRegister
+                    ? (uint)(_state.GeneralRegisters.UInt16[(uint)indexRegister] + cell.Displacement)
+                    : cell.Displacement;
+                uint physical = _memory.A20Gate.TransformAddress(_memory.Mmu.TranslateAddress(segment, cellOffset));
+                uint value = 0;
+                for (int i = 0; i < cell.CellSize; i++) {
+                    value |= (uint)_memory.SneakilyRead(physical + (uint)i) << (8 * i);
+                }
+                WatchSiteCell(dependent, cell.CellSize, physical);
+                SubmitAnchorCandidate(anchor, cell, CellTarget(cell, value), ExploreSource.PointerValue);
+                return;
+            }
         }
-        if (dependent.CellSize == 0) {
-            ushort offset = _state.GeneralRegisters.UInt16[(uint)dependent.IndexRegister];
-            SubmitAnchorCandidate(anchor, dependent,
-                new SegmentedAddress(dependent.Site.Address.Segment, offset), ExploreSource.RegisterValue);
-            return;
-        }
-        ushort segment = _state.SegmentRegisters.UInt16[(uint)dependent.SegmentRegisterIndex];
-        uint cellOffset = dependent.IndexRegister >= 0
-            ? (uint)(_state.GeneralRegisters.UInt16[(uint)dependent.IndexRegister] + dependent.Displacement)
-            : dependent.Displacement;
-        uint physical = _memory.A20Gate.TransformAddress(_memory.Mmu.TranslateAddress(segment, cellOffset));
-        uint value = 0;
-        for (int i = 0; i < dependent.CellSize; i++) {
-            value |= (uint)_memory.SneakilyRead(physical + (uint)i) << (8 * i);
-        }
-        WatchSiteCell(dependent, physical);
-        SubmitAnchorCandidate(anchor, dependent, CellTarget(dependent, value), ExploreSource.PointerValue);
     }
 
     /// <summary>
@@ -769,13 +779,13 @@ public class SpeculativeExplorer {
     /// proposes each as a candidate for the site. The walk's bound and step give the offsets, so
     /// the index register itself is never consulted.
     /// </summary>
-    private void EvaluateTableDependent(CfgInstruction anchor, AnchorDependent dependent) {
+    private void EvaluateTableDependent(CfgInstruction anchor, TableDependent dependent) {
         ushort segment = _state.SegmentRegisters.UInt16[(uint)dependent.SegmentRegisterIndex];
         HashSet<ushort> entries = new();
         for (int i = 0; i <= dependent.Bound; i++) {
-            uint offset = (uint)(dependent.Displacement + dependent.Step * i);
+            uint offset = (uint)(dependent.BaseOffset + dependent.Step * i);
             uint physical = _memory.A20Gate.TransformAddress(_memory.Mmu.TranslateAddress(segment, offset));
-            WatchSiteCell(dependent, physical);
+            WatchSiteCell(dependent, 2, physical);
             ushort entry = (ushort)(_memory.SneakilyRead(physical) | _memory.SneakilyRead(physical + 1) << 8);
             if (entry is 0x0000 or 0xFFFF) {
                 return;
@@ -788,11 +798,11 @@ public class SpeculativeExplorer {
         }
     }
 
-    private void WatchSiteCell(AnchorDependent dependent, uint physical) {
-        if (!_watchedSiteCells.Add((physical, dependent.CellSize, dependent.Site))) {
+    private void WatchSiteCell(AnchorDependent dependent, int cellSize, uint physical) {
+        if (!_watchedSiteCells.Add((physical, cellSize, dependent.Site))) {
             return;
         }
-        _watchedCells.Watch(physical, dependent.CellSize, new WatchedPointerCells.WatchedCellDependent(
+        _watchedCells.Watch(physical, cellSize, new WatchedPointerCells.WatchedCellDependent(
             (value, trigger) => OnSiteCellValue(dependent, value, trigger)));
     }
 
@@ -808,7 +818,7 @@ public class SpeculativeExplorer {
     }
 
     private static SegmentedAddress CellTarget(AnchorDependent dependent, uint cellValue) =>
-        new(dependent.CellSize == 4 ? (ushort)(cellValue >> 16) : dependent.Site.Address.Segment,
+        new(dependent is CellDependent { CellSize: 4 } ? (ushort)(cellValue >> 16) : dependent.Site.Address.Segment,
             (ushort)cellValue);
 
     private void SubmitAnchorCandidate(CfgInstruction anchor, AnchorDependent dependent,
@@ -829,7 +839,7 @@ public class SpeculativeExplorer {
     /// </summary>
     internal void RecordCallReturnEvidence(SegmentedAddress calleeEntry, bool aligned) {
         if (_calleeReturnEvidence.Record(calleeEntry, aligned)) {
-            DrainPendingCallSites(calleeEntry);
+            DrainPendingCallSites(calleeEntry, null);
         }
     }
 
@@ -1088,7 +1098,11 @@ public class SpeculativeExplorer {
     /// The callee just became known to return: wire the continuation of every pending call site
     /// still in the index. Sites pruned or already holding a CallToReturn successor are skipped.
     /// </summary>
-    private void DrainPendingCallSites(SegmentedAddress callee, CallDistance? provenDistance = null) {
+    /// <param name="callee">The callee entry the pending sites call.</param>
+    /// <param name="provenDistance">The proven return distance, or null when the evidence is an
+    /// observed return that applies to every distance: a proof is uniform per distance, so sites
+    /// of another distance stay pending.</param>
+    private void DrainPendingCallSites(SegmentedAddress callee, CallDistance? provenDistance) {
         if (!_pendingCallSites.TryGetValue(callee, out List<CfgInstruction>? sites)) {
             return;
         }
