@@ -233,8 +233,8 @@ public sealed class SpeculativeCfgTest {
         // Discovery path (selector=0): no SMC on this path, runs to completion.
         AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
 
-        // Speculative path (selector=1): the store at 016E:011D loads DS with the load segment and
-        // rewrites the ModRM byte of the instruction at 016E:0122. The write is proven conventional
+        // Speculative path (selector=1): the store at 016F:011D loads DS with the load segment and
+        // rewrites the ModRM byte of the instruction at 016F:0122. The write is proven conventional
         // RAM overlapping the guarded bytes, so the disjointness check is what keeps the second
         // guard in place; it fires and the run fails as untested.
         AsmRunSettings unobservedSettings = fixture.Settings with { ConfigureMachine = AsmFixtureCatalog.SelectUnobservedArm };
@@ -244,7 +244,7 @@ public sealed class SpeculativeCfgTest {
 
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
-            .WithMessage("*Speculative code at 016E:0122 no longer matches memory*");
+            .WithMessage("*Speculative code at 016F:0122 no longer matches memory*");
 
         runner.CompareGeneratedSourceWithExpected(
             GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);

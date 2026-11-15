@@ -1,6 +1,6 @@
 ; Speculative guard merge fixture: the same mid-run self-modification shape as
 ; speculative_smc_guard, but inside a .com program so the guarded code lives in
-; low RAM (DOS loads the program at segment 016Dh in this environment).
+; low RAM (DOS loads the program at segment 016Fh in this environment).
 ;
 ; The store loads DS with the literal load segment before writing: the alias
 ; analysis then proves the write's segment (a known-RAM range below 0A0000h)
@@ -33,7 +33,7 @@ start:
     jmp done
 
 smc_path:
-    mov ax, 016Eh
+    mov ax, 016Fh
     mov ds, ax
     mov byte [smc_target + 1], 0EEh
 smc_target:
