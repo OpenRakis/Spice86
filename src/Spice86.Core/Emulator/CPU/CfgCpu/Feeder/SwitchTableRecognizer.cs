@@ -25,7 +25,9 @@ using System;
 /// combine into an inclusive <c>[low, high]</c> range - or <c>and v,2^n-1</c>. Any other
 /// write to the tracked register refuses; a table is never accepted without a found bound. When
 /// the compared value is already scaled (<c>shl si,1; cmp si,6</c>) the walk keeps going so the
-/// scale lands in <see cref="TableShape.Step"/> and only reachable indices are read.
+/// scale lands in <see cref="TableShape.Step"/> and only reachable indices are read. When no
+/// scaling step is found at all the index is a byte offset into a word table and only the
+/// offsets that start a whole entry are read.
 /// Recognition results, including negative ones, are cached per transfer node.
 /// </summary>
 internal class SwitchTableRecognizer {
@@ -170,6 +172,19 @@ internal class SwitchTableRecognizer {
         }
         if (low > high) {
             return null;
+        }
+        if (scale == 1) {
+            // No scaling step was found, so the index value is a byte offset into a table of
+            // word entries: only offsets where bias + v is even can be whole entries.
+            if (((bias + low) & 1) != 0) {
+                low++;
+            }
+            if (low > high) {
+                return null;
+            }
+            return new TableShape((ushort)((high - low) / 2), segmentRegisterIndex,
+                (ushort)(displacement + bias + low), 2,
+                display.Operation == InstructionOperation.CALL_NEAR);
         }
         // The first entry read is the one at index low: fold it into the base offset so the
         // shape keeps enumerating Bound+1 words from BaseOffset by Step.

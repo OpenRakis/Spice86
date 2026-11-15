@@ -24,6 +24,12 @@
 ;       there, and an observed branch has it as its unexecuted arm, taken by the
 ;       unobserved run only. If TableEntry items poisoned, that arm would never
 ;       be explored and the unobserved run would fail as untested.
+;   U : unscaled mask index (and bx,1Fh; jmp [cs:bx+T], the Dune A337 shape):
+;       the index is a byte offset into a word table of consecutive 3-byte
+;       near-jump stubs, so only even offsets are whole entries. With the
+;       byte-offset rule the jump reads the 16 real entries; without it half
+;       the targets are words straddling two stubs (junk addresses inside the
+;       stub block).
 ;   S : speculative bounded [es:si+T] on an arm the discovery run never takes:
 ;       si is reloaded on the arm so its value is unknown at the branch anchor;
 ;       the backward walk bounds it through an and-mask and supplies the entry
@@ -53,6 +59,7 @@
 ;   [0x040A] = 0xDD or 0x77 (P7: add R,imm bias)
 ;   [0x040B] = 0xDD or 0x88 (P8: and-mask bound)
 ;   [0x040C] = 0x99 (S: speculative anchor table - only on the unobserved run)
+;   [0x040D] = 0xDD or 0xBB (U: unscaled mask index, entry = selector*2)
 ;   [0x0407] = 0xAA (done)
 
 use16
@@ -304,6 +311,54 @@ retry_entry:
     mov byte [0x0406], 0x77
     ; falls through to after_retry
 after_retry:
+    ; U: unscaled mask index. bx = selector*2 (0 on the discovery run, 2 on the
+    ; unobserved run), bounded by and bx,1Fh; the scale step sits outside the
+    ; recognizer's back-walk window, so the index looks like a bare byte offset
+    ; into u_table's word entries and only the 16 even offsets are whole
+    ; entries. Entry N jumps to stub u_sN, which jumps to the matching case.
+u_switch:
+    mov al, byte [0x0500]
+    mov ah, 0
+    shl ax, 1
+    times 17 nop
+    mov bx, ax
+    and bx, 1Fh
+    jmp word [cs:bx+u_table]
+u_case0:
+    mov byte [0x040D], 0xDD
+    jmp poison_section
+u_case1:
+    mov byte [0x040D], 0xBB
+    jmp poison_section
+u_case2:
+    hlt
+u_case3:
+    hlt
+u_case4:
+    hlt
+u_case5:
+    hlt
+u_case6:
+    hlt
+u_case7:
+    hlt
+u_case8:
+    hlt
+u_case9:
+    hlt
+u_case10:
+    hlt
+u_case11:
+    hlt
+u_case12:
+    hlt
+u_case13:
+    hlt
+u_case14:
+    hlt
+u_case15:
+    hlt
+poison_section:
     ; X: poison section. Forced index 0 keeps both runs on p6_case0; the second
     ; entry names poison_target, which still holds FF bytes at resolution time
     ; (trusted, decodes invalid, dropped without poisoning).
@@ -442,6 +497,33 @@ n6_table:      dw n6_cont, done, done
 n7_table:      dw n7_cont, done, done
 retry_table:   dw retry_case0, retry_entry
 p6_table:      dw p6_case0, poison_target
+; 16 word entries pointing at consecutive 3-byte near-jump stubs: a word read
+; at an odd table offset lands inside the stub block (junk target).
+u_table:       dw u_s0, u_s1, u_s2, u_s3, u_s4, u_s5, u_s6, u_s7
+               dw u_s8, u_s9, u_s10, u_s11, u_s12, u_s13, u_s14, u_s15
+u_s0:          jmp near u_case0
+u_s1:          jmp near u_case1
+u_s2:          jmp near u_case2
+u_s3:          jmp near u_case3
+u_s4:          jmp near u_case4
+u_s5:          jmp near u_case5
+u_s6:          jmp near u_case6
+u_s7:          jmp near u_case7
+u_s8:          jmp near u_case8
+u_s9:          jmp near u_case9
+u_s10:         jmp near u_case10
+u_s11:         jmp near u_case11
+u_s12:         jmp near u_case12
+u_s13:         jmp near u_case13
+u_s14:         jmp near u_case14
+u_s15:         jmp near u_case15
+
+; Half-entry reads of u_table land in this span (entry N's high byte 0x07 plus
+; entry N+1's low byte, e.g. 0x3707): a reader that treats every byte offset as
+; an entry finds hlt decoys here, so the junk targets survive in the dump.
+rb 0x3707-$
+u_junk:
+    times 0xB201 db 0xF4
 
 rb 65520-$
 jmp start

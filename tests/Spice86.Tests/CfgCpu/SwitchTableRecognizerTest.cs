@@ -282,6 +282,36 @@ public class SwitchTableRecognizerTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void UnscaledMaskIndexReadsWholeWordEntries() {
+        // and bx,0x1F ; jmp [cs:bx+T]
+        // The index value is a byte offset into a word table, so only the even offsets
+        // 0,2,...,30 are entries: bound 15, step 2, base offset T.
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xE3, 0x1F,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(15, shape.Bound);
+        Assert.Equal(2, shape.Step);
+        Assert.Equal(Table, shape.BaseOffset);
+    }
+
+    [Fact]
+    public void ScaledMaskIndexKeepsEveryEntry() {
+        // and bx,0x1F ; add bx,bx ; jmp [cs:bx+T]
+        // The index is scaled by the add, so all 32 entries stay reachable.
+        CfgInstruction transfer = Chain(0x100,
+            0x83, 0xE3, 0x1F,
+            0x01, 0xDB,
+            0x2E, 0xFF, 0xA7, 0x24, 0x0E);
+        SwitchTableRecognizer.TableShape? shape = new SwitchTableRecognizer().Recognize(transfer);
+        Assert.NotNull(shape);
+        Assert.Equal(31, shape.Bound);
+        Assert.Equal(2, shape.Step);
+        Assert.Equal(Table, shape.BaseOffset);
+    }
+
+    [Fact]
     public void RefusesGuardWithBothEdgesReachingTransfer() {
         // cmp si,4 ; jbe +0 ; jmp [es:si+T]
         // jbe jumps to its own fallthrough: both edges reach the transfer, so the compare
