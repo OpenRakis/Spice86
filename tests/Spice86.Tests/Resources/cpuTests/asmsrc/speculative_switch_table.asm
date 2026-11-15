@@ -36,6 +36,13 @@
 ;       offsets the anchor evaluation reads at runtime.
 ;   N1..N7: negative twins on never-taken jnz targets - explored or refused but
 ;       never executed, so generated code must keep them untested:
+;   G : a never-executed table entry points at junk J: two valid instructions,
+;       then a conditional branch to invalid bytes (as assembled), while J's
+;       fall-through runs into real region g_r - also the unexecuted arm of
+;       g_branch's observed jnz, taken by the unobserved run only. The guess is
+;       condemned and swept; g_r survives because the observed branch reaches it.
+;   T : twin of G: the invalid bytes were overwritten at init, so they never
+;       hold their loaded value and nothing condemns the guess.
 ;   N1: shl before the compare (compare on the pre-transform register) -
 ;       RESOLVES on purpose since the backward walk carries the bound on AX
 ;       through the mov; the golden records it
@@ -61,6 +68,8 @@
 ;   [0x040C] = 0x99 (S: speculative anchor table - only on the unobserved run)
 ;   [0x040D] = 0xDD or 0xBB (U: unscaled mask index, entry = selector*2)
 ;   [0x040E] = 0xDD or 0xCC (W: self-patched code at a guess's fall-through - unobserved only)
+;   [0x040F] = 0xDD or 0xEE (G: region the swept junk's fall-through reaches - unobserved only)
+;   [0x0410] = 0xDD or 0xF0 (T: same for the twin whose guess survives - unobserved only)
 ;   [0x0407] = 0xAA (done)
 
 use16
@@ -70,6 +79,8 @@ start:
     mov byte [0x0408], 0x01 ; poison marker initial value (low RAM may be nonzero)
     mov byte [0x040C], 0x00 ; S marker initial value (low RAM may be nonzero)
     mov byte [0x040E], 0xDD ; W marker initial value (low RAM may be nonzero)
+    mov byte [0x040F], 0xDD ; G marker initial value
+    mov byte [0x0410], 0xDD ; T marker initial value
     mov ax, cs
     mov es, ax              ; es = cs for the self-patch; ds stays 0 for markers
 
@@ -78,6 +89,10 @@ start:
     mov byte [es:retry_entry], 0x90
     mov byte [es:retry_entry+1], 0x90
     mov byte [es:retry_entry+2], 0x90
+
+    ; T setup: t_invalid's first byte differs from the loaded image before any
+    ; table resolves, so t_junk's invalid successor is never trusted evidence.
+    mov byte [es:t_invalid], 0x0F
 
     ; S setup: the arm's index source lives at [0x0502] (1 -> s_case1)
     mov word [0x0502], 1
@@ -328,10 +343,10 @@ u_switch:
     jmp word [cs:bx+u_table]
 u_case0:
     mov byte [0x040D], 0xDD
-    jmp w_switch
+    jmp g_branch
 u_case1:
     mov byte [0x040D], 0xBB
-    jmp w_switch
+    jmp g_branch
 u_case2:
     hlt
 u_case3:
@@ -360,6 +375,67 @@ u_case14:
     hlt
 u_case15:
     hlt
+    ; G: g_table's middle entry is never executed and points at junk J inside
+    ; the image. J decodes two valid instructions; its conditional branch goes
+    ; to bytes that decode invalid as assembled, and its fall-through runs into
+    ; the real region g_r. g_r is also the unexecuted arm of g_branch's observed
+    ; jnz, taken by the unobserved run only. The guess that owns J is condemned
+    ; and swept; g_r survives because the observed branch reaches it too.
+g_branch:
+    cmp byte [0x0500], 0
+    jnz g_r
+g_switch:
+    mov al, byte [0x0500]
+    mov ah, 0
+    shl ax, 1
+    cmp ax, 4
+    ja g_default
+    mov bx, ax
+    jmp word [cs:bx+g_table]
+g_default:
+    hlt
+g_case0:
+    jmp t_branch
+g_case2:
+    jmp t_branch
+g_junk:
+    nop
+    jnz g_invalid
+g_r:
+    mov byte [0x040F], 0xEE
+    jmp g_switch
+g_invalid:
+    times 8 db 0xFF
+
+    ; T: twin of G where the invalid bytes no longer hold their loaded values
+    ; when the table resolves (init overwrote one), so nothing is evidence
+    ; and the guess stays.
+t_branch:
+    cmp byte [0x0500], 0
+    jnz t_r
+t_switch:
+    mov al, byte [0x0500]
+    mov ah, 0
+    shl ax, 1
+    cmp ax, 4
+    ja t_default
+    mov bx, ax
+    jmp word [cs:bx+t_table]
+t_default:
+    hlt
+t_case0:
+    jmp w_switch
+t_case2:
+    jmp w_switch
+t_junk:
+    nop
+    jnz t_invalid
+t_r:
+    mov byte [0x0410], 0xF0
+    jmp t_switch
+t_invalid:
+    times 8 db 0xFF
+
     ; W: w_table's third entry is never executed: it lands on a lone nop whose
     ; fall-through f holds 0xFF bytes while the table resolves, so a guess's
     ; fall-through must not poison f. The program then writes real code at f
@@ -509,8 +585,6 @@ n6_cont:
 n7_default:
     hlt
 n7_cont:
-    jmp done
-
 done:
     hlt
 
@@ -540,6 +614,8 @@ p6_table:      dw p6_case0, poison_target
 u_table:       dw u_s0, u_s1, u_s2, u_s3, u_s4, u_s5, u_s6, u_s7
                dw u_s8, u_s9, u_s10, u_s11, u_s12, u_s13, u_s14, u_s15
 w_table:       dw w_case0, w_case1, w_case2
+g_table:       dw g_case0, g_case2, g_junk
+t_table:       dw t_case0, t_case2, t_junk
 u_s0:          jmp near u_case0
 u_s1:          jmp near u_case1
 u_s2:          jmp near u_case2

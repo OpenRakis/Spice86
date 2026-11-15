@@ -92,9 +92,10 @@ public sealed class SpeculativeExplorerCandidateTest : SpeculativeTestBase {
             new DiscoveryCandidate(entry, null, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
         ]);
 
-        // Assert: the item decoded from the guess enqueues its successors, but nothing it
-        // descends into poisons - the fall-through stays discoverable.
-        NodeIndex.HasAddress(entry).Should().BeTrue();
+        // Assert: the item decoded from the guess enqueues its successors; the invalid
+        // fall-through condemns the guess, so the root is swept - and never poisoned.
+        NodeIndex.HasAddress(entry).Should().BeFalse(
+            "a guess whose own code reaches trusted invalid bytes is swept");
         NodeIndex.PoisonSet.Should().NotContain(fallThrough,
             "an invalid decode descended from a guessed root is dropped, never poisoned");
     }
@@ -310,6 +311,114 @@ public sealed class SpeculativeExplorerCandidateTest : SpeculativeTestBase {
         // Assert
         NodeIndex.HasAddress(new SegmentedAddress(0x200, 0x33)).Should().BeFalse(
             "a proof whose callee entry a sweep removed must not drain new call sites");
+    }
+
+    [Fact]
+    public void GuessWhoseOwnCodeReachesTrustedInvalidBytesIsSwept() {
+        // Arrange: a guess root at 0x50: nop then jnz to bytes that decode invalid and
+        // still hold their loaded values.
+        SegmentedAddress root = new(0x200, 0x50);
+        WriteNop(root);
+        WriteInvalidBytes(new SegmentedAddress(0x200, 0x51 + 2 + 8));
+        uint sitePhys = MemoryUtils.ToPhysicalAddress(0x200, 0x51);
+        Memory.UInt8[sitePhys] = 0x75;
+        Memory.Int8[sitePhys + 1] = 8;
+        WriteRet(new SegmentedAddress(0x200, 0x53));
+        RegisterImage();
+        CfgInstruction trigger = CreateTrigger();
+
+        // Act
+        _explorer.ExploreCandidates(trigger, [
+            new DiscoveryCandidate(root, null, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
+        ]);
+
+        // Assert
+        NodeIndex.HasAddress(root).Should().BeFalse(
+            "a guess whose own code reaches trusted invalid bytes is condemned and swept");
+    }
+
+    [Fact]
+    public void InvalidCallTargetBelowAGuessDoesNotCondemnIt() {
+        // Arrange: a guess root at 0x50 is a call whose callee holds invalid bytes: a
+        // call target crosses into code the guess does not own, so it is not evidence.
+        SegmentedAddress root = new(0x200, 0x50);
+        WriteCallNear(root, new SegmentedAddress(0x200, 0x70));
+        WriteInvalidBytes(new SegmentedAddress(0x200, 0x70));
+        WriteRet(new SegmentedAddress(0x200, 0x53));
+        RegisterImage();
+        CfgInstruction trigger = CreateTrigger();
+
+        // Act
+        _explorer.ExploreCandidates(trigger, [
+            new DiscoveryCandidate(root, null, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
+        ]);
+
+        // Assert
+        NodeIndex.HasAddress(root).Should().BeTrue(
+            "an invalid call target below a guess condemns nothing");
+    }
+
+    [Fact]
+    public void InvalidCallContinuationBelowAGuessDoesNotCondemnIt() {
+        // Arrange: a guess root at 0x50 is a call to a callee that returns; the
+        // continuation after the call holds invalid bytes. Call continuations are not
+        // evidence either.
+        SegmentedAddress root = new(0x200, 0x50);
+        WriteCallNear(root, new SegmentedAddress(0x200, 0x70));
+        WriteInvalidBytes(new SegmentedAddress(0x200, 0x53));
+        WriteRet(new SegmentedAddress(0x200, 0x70));
+        RegisterImage();
+        CfgInstruction trigger = CreateTrigger();
+
+        // Act
+        _explorer.ExploreCandidates(trigger, [
+            new DiscoveryCandidate(root, null, InstructionSuccessorType.Normal, ExploreSource.TableEntry)
+        ]);
+
+        // Assert
+        NodeIndex.HasAddress(root).Should().BeTrue(
+            "an invalid call continuation below a guess condemns nothing");
+    }
+
+    [Fact]
+    public void RejectedGuessIsNotDecodedAgainUntilItsBytesChange() {
+        // Arrange: the same invalid-reaching guess, submitted through PushedReturn so
+        // changed bytes are not gated on their loaded values.
+        SegmentedAddress root = new(0x200, 0x50);
+        SegmentedAddress invalid = new(0x200, 0x60);
+        WriteNop(root);
+        WriteInvalidBytes(invalid);
+        uint sitePhys = MemoryUtils.ToPhysicalAddress(0x200, 0x51);
+        Memory.UInt8[sitePhys] = 0x75;
+        Memory.Int8[sitePhys + 1] = 0x0D;
+        WriteRet(new SegmentedAddress(0x200, 0x53));
+        RegisterImage();
+        CfgInstruction trigger = CreateTrigger();
+        DiscoveryCandidate candidate = new(root, null, InstructionSuccessorType.Normal, ExploreSource.PushedReturn);
+        _explorer.ExploreCandidates(trigger, [candidate]);
+        NodeIndex.HasAddress(root).Should().BeFalse("the first submission was condemned and swept");
+
+        // Act: the same bytes are submitted again while the junk path already decodes validly.
+        Memory.UInt8[MemoryUtils.ToPhysicalAddress(invalid.Segment, invalid.Offset)] = 0xC3;
+        _explorer.ExploreCandidates(trigger, [candidate]);
+
+        // Assert: a re-submitted guess with unchanged root bytes is skipped entirely.
+        NodeIndex.HasAddress(root).Should().BeFalse(
+            "a rejected guess is not decoded again while its bytes are unchanged");
+
+        // Act: the root's bytes changed, so its signature differs and it decodes again.
+        WriteRet(root);
+        _explorer.ExploreCandidates(trigger, [candidate]);
+
+        // Assert
+        NodeIndex.HasAddress(root).Should().BeTrue(
+            "changed bytes give another signature and decode normally");
+    }
+
+    private void WriteInvalidBytes(SegmentedAddress address) {
+        uint phys = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
+        Memory.UInt8[phys] = 0x0F;
+        Memory.UInt8[phys + 1] = 0xFF;
     }
 
     private void SetAllGeneralRegisters(ushort value) {
