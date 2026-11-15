@@ -101,7 +101,7 @@ public partial class CfgGeneratedOverrides {
                 DI = (ushort)(DirectionFlag ? -2 : 2);
                 AX = 0x4C00;
                 InterruptCall(cs2, 0x0112, 0x21);
-                throw FailAsUntested("Untested return from call at 016D:0110");
+                throw FailAsUntested("Untested return from call at 016E:0110");
             }
         }
     L_00AA:
@@ -201,7 +201,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = (ushort)(programStartSegment - 0x0010);
-        cs2 = (ushort)(programStartSegment - 0x0003);
+        cs2 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
         SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);

@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrides.016E.cs ====
+// ==== file: CfgGeneratedOverrides.016F.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
-    public virtual Action unknown_016E_0100_017E0() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual Action unknown_016F_0100_017F0() {
         byte byte1;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0;
@@ -23,10 +23,10 @@ public partial class CfgGeneratedOverrides {
         byte1 = Segment0000Globals.Byte0500;
         if (byte1 != 0) {
             VerifySpeculativeRunOrFail(cs1, 0x0118, SpeculativeRun_0118);
-            DS = 0x016E;
-            Segment016EGlobals.Byte0123 = 0xEE;
+            DS = 0x016F;
+            Segment016FGlobals.Byte0123 = 0xEE;
             VerifySpeculativeRunOrFail(cs1, 0x0122, SpeculativeRun_0122);
-            Segment016EGlobals.Byte0401 = 0;
+            Segment016FGlobals.Byte0401 = 0;
         }
         else {
             Segment0000Globals.Byte0401 = 0xDD;
@@ -63,20 +63,20 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
     public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
 }
 
-// ==== file: Segment016EGlobals.cs ====
+// ==== file: Segment016FGlobals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class Segment016EGlobals : MemoryBasedDataStructure {
+public sealed class Segment016FGlobals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public Segment016EGlobals(IMemory memory, ushort programStartSegment) : base(memory, 0x16E0) {
+    public Segment016FGlobals(IMemory memory, ushort programStartSegment) : base(memory, 0x16F0) {
         _memory = memory;
-        Segment = 0x016E;
+        Segment = 0x016F;
     }
 
     public byte Byte0123 { get => _memory.UInt8[Segment, 0x0123]; set => _memory.UInt8[Segment, 0x0123] = value; }
@@ -100,18 +100,18 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
-    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016F_0100_017F0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
-    protected readonly Segment016EGlobals Segment016EGlobals;
+    protected readonly Segment016FGlobals Segment016FGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0002);
+        cs1 = (ushort)(programStartSegment - 0x0001);
         Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
-        Segment016EGlobals = new Segment016EGlobals(Memory, programStartSegment);
+        Segment016FGlobals = new Segment016FGlobals(Memory, programStartSegment);
 
-        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        unknown_016F_0100_017F0Entry = _ => unknown_016F_0100_017F0();
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016F_0100_017F0Entry, "unknown");
     }
 
     protected override bool ObservedTransfersOnly => true;
@@ -131,7 +131,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_0118_mov = [0xB8, 0x6E, 0x01];
+    private static readonly byte?[] Signature_0118_mov = [0xB8, 0x6F, 0x01];
     private static readonly byte?[] Signature_011B_mov = [0x8E, 0xD8];
     private static readonly byte?[] Signature_011D_mov = [0xC6, 0x06, 0x23, 0x01, 0xEE];
     private static readonly byte?[] Signature_0122_mov = [0xC6, 0x06, 0x01, 0x04, 0x00];

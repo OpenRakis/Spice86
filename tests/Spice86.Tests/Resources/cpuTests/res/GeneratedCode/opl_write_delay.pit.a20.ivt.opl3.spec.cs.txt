@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016F.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -13,13 +13,13 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual Action unknown_016F_0100_017F0() {
         byte byte1 = 0;
         byte byte2;
         CheckExternalEvents(cs1, 0x0100);
-        CX = NearCall(cs1, 0x0103, () => unknown_016D_01A4_01874(CX));
-        (AL, CX, DX) = NearCall(cs1, 0x0106, () => unknown_016D_01B7_01887(CX));
+        CX = NearCall(cs1, 0x0103, () => unknown_016F_01A4_01894(CX));
+        (AL, CX, DX) = NearCall(cs1, 0x0106, () => unknown_016F_01B7_018A7(CX));
         DX = 0x0388;
         byte1 = Opl3Ports.ReadAdlibAddress0();
         Alu8.And(byte1, 0xE0);
@@ -27,19 +27,19 @@ public partial class CfgGeneratedOverrides {
             DX = 0x0388;
             AL = 2;
             Opl3Ports.WriteAdlibAddress0(2);
-            CX = NearCall(cs1, 0x012C, () => unknown_016D_01CA_0189A());
+            CX = NearCall(cs1, 0x012C, () => unknown_016F_01CA_018BA());
             DX = 0x0389;
             AL = 0xFF;
             Opl3Ports.WriteAdlibData0(0xFF);
-            (AL, CX, DX) = NearCall(cs1, 0x0135, () => unknown_016D_01D8_018A8());
+            (AL, CX, DX) = NearCall(cs1, 0x0135, () => unknown_016F_01D8_018C8());
             DX = 0x0388;
             AL = 4;
             Opl3Ports.WriteAdlibAddress0(4);
-            CX = NearCall(cs1, 0x013E, () => unknown_016D_01CA_0189A());
+            CX = NearCall(cs1, 0x013E, () => unknown_016F_01CA_018BA());
             DX = 0x0389;
             AL = 0x21;
             Opl3Ports.WriteAdlibData0(0x21);
-            (AL, CX, DX) = NearCall(cs1, 0x0147, () => unknown_016D_01D8_018A8());
+            (AL, CX, DX) = NearCall(cs1, 0x0147, () => unknown_016F_01D8_018C8());
             CX = 0;
             DX = 0x0388;
             while (true) {
@@ -65,15 +65,15 @@ public partial class CfgGeneratedOverrides {
             AL = 0;
             Out8(0x0999, 0);
             SI = 0x0217;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0191, () => unknown_016D_01E6_018B6(BX, 0x0217, DS, DirectionFlag));
+            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0191, () => unknown_016F_01E6_018D6(BX, 0x0217, DS, DirectionFlag));
             AX = CX;
-            NearCall(cs1, 0x0196, unknown_016D_01F5_018C5Entry);
+            NearCall(cs1, 0x0196, unknown_016F_01F5_018E5Entry);
             SI = 0x0233;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x019C, () => unknown_016D_01E6_018B6(BX, 0x0233, DS, DirectionFlag));
-            CX = NearCall(cs1, 0x019F, () => unknown_016D_01A4_01874(CX));
-            (AL, CX, DX) = NearCall(cs1, 0x01A2, () => unknown_016D_01B7_01887(CX));
+            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x019C, () => unknown_016F_01E6_018D6(BX, 0x0233, DS, DirectionFlag));
+            CX = NearCall(cs1, 0x019F, () => unknown_016F_01A4_01894(CX));
+            (AL, CX, DX) = NearCall(cs1, 0x01A2, () => unknown_016F_01B7_018A7(CX));
             InterruptCall(cs1, 0x01A4, 0x20);
-            throw FailAsUntested("Untested return from call at 016D:01A2");
+            throw FailAsUntested("Untested return from call at 016F:01A2");
         L_015A:
             VerifySpeculativeRunOrFail(cs1, 0x015A, SpeculativeRun_015A);
             DX = 0x0998;
@@ -88,8 +88,8 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0999, 2);
             VerifySpeculativeRunOrFail(cs1, 0x0169, SpeculativeRun_0169);
             SI = 0x0241;
-            NearCall(cs1, 0x016F, unknown_016D_01E6_018B6_AsmEntry);
-            throw FailAsUntested("Untested return from call at 016D:016C");
+            NearCall(cs1, 0x016F, unknown_016F_01E6_018D6_AsmEntry);
+            throw FailAsUntested("Untested return from call at 016F:016C");
         }
         VerifySpeculativeRunOrFail(cs1, 0x010E, SpeculativeRun_010E);
         DX = 0x0998;
@@ -103,57 +103,57 @@ public partial class CfgGeneratedOverrides {
         Out8(0x0999, 1);
         VerifySpeculativeRunOrFail(cs1, 0x011B, SpeculativeRun_011B);
         SI = 0x0256;
-        NearCall(cs1, 0x0121, unknown_016D_01E6_018B6_AsmEntry);
-        throw FailAsUntested("Untested return from call at 016D:011E");
+        NearCall(cs1, 0x0121, unknown_016F_01E6_018D6_AsmEntry);
+        throw FailAsUntested("Untested return from call at 016F:011E");
     }
 
     /// <summary>Inputs: CX. Outputs: CX. Changes: AL, CX, DX.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual ushort unknown_016D_01A4_01874(ushort word1) {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual ushort unknown_016F_01A4_01894(ushort word1) {
         CX = word1;
         CheckExternalEvents(cs1, 0x01A4);
         DX = 0x0388;
         AL = 4;
         Opl3Ports.WriteAdlibAddress0(4);
-        CX = NearCall(cs1, 0x01AD, () => unknown_016D_01CA_0189A());
+        CX = NearCall(cs1, 0x01AD, () => unknown_016F_01CA_018BA());
         DX = 0x0389;
         AL = 0x60;
         Opl3Ports.WriteAdlibData0(0x60);
-        (AL, CX, DX) = NearCall(cs1, 0x01B6, () => unknown_016D_01D8_018A8());
+        (AL, CX, DX) = NearCall(cs1, 0x01B6, () => unknown_016F_01D8_018C8());
         NearReturn();
         return CX;
     }
 
-    public virtual Action unknown_016D_01A4_01874_Asm() {
-        CX = unknown_016D_01A4_01874(CX);
+    public virtual Action unknown_016F_01A4_01894_Asm() {
+        CX = unknown_016F_01A4_01894(CX);
         return Returned;
     }
 
     /// <summary>Inputs: CX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (byte result, ushort result2, ushort result3) unknown_016D_01B7_01887(ushort word1) {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual (byte result, ushort result2, ushort result3) unknown_016F_01B7_018A7(ushort word1) {
         CX = word1;
         CheckExternalEvents(cs1, 0x01B7);
         DX = 0x0388;
         AL = 4;
         Opl3Ports.WriteAdlibAddress0(4);
-        CX = NearCall(cs1, 0x01C0, () => unknown_016D_01CA_0189A());
+        CX = NearCall(cs1, 0x01C0, () => unknown_016F_01CA_018BA());
         DX = 0x0389;
         AL = 0x80;
         Opl3Ports.WriteAdlibData0(0x80);
-        (AL, CX, DX) = NearCall(cs1, 0x01C9, () => unknown_016D_01D8_018A8());
+        (AL, CX, DX) = NearCall(cs1, 0x01C9, () => unknown_016F_01D8_018C8());
         NearReturn();
         return (AL, CX, DX);
     }
 
-    public virtual Action unknown_016D_01B7_01887_Asm() {
-        (AL, CX, DX) = unknown_016D_01B7_01887(CX);
+    public virtual Action unknown_016F_01B7_018A7_Asm() {
+        (AL, CX, DX) = unknown_016F_01B7_018A7(CX);
         return Returned;
     }
 
     /// <summary>Inputs: CX, DX. Outputs: CX. Changes: AL, CX, DX.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual ushort unknown_016D_01CA_0189A() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual ushort unknown_016F_01CA_018BA() {
         CheckExternalEvents(cs1, 0x01CA);
         Stack.Save(CX, DX);
         CX = 6;
@@ -167,14 +167,14 @@ public partial class CfgGeneratedOverrides {
         return CX;
     }
 
-    public virtual Action unknown_016D_01CA_0189A_Asm() {
-        CX = unknown_016D_01CA_0189A();
+    public virtual Action unknown_016F_01CA_018BA_Asm() {
+        CX = unknown_016F_01CA_018BA();
         return Returned;
     }
 
     /// <summary>Inputs: CX, DX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (byte result, ushort result2, ushort result3) unknown_016D_01D8_018A8() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual (byte result, ushort result2, ushort result3) unknown_016F_01D8_018C8() {
         CheckExternalEvents(cs1, 0x01D8);
         Stack.Save(CX, DX);
         CX = 0x0023;
@@ -188,14 +188,14 @@ public partial class CfgGeneratedOverrides {
         return (AL, CX, DX);
     }
 
-    public virtual Action unknown_016D_01D8_018A8_Asm() {
-        (AL, CX, DX) = unknown_016D_01D8_018A8();
+    public virtual Action unknown_016F_01D8_018C8_Asm() {
+        (AL, CX, DX) = unknown_016F_01D8_018C8();
         return Returned;
     }
 
     /// <summary>Inputs: BX, SI, DS, DF. Outputs: AH, BX, SI, flags. Changes: AX, BX, SI, flags.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016D_01E6_018B6(ushort word1, ushort index, ushort word2, bool flag1) {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016F_01E6_018D6(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
         SI = index;
         DS = word2;
@@ -216,14 +216,14 @@ public partial class CfgGeneratedOverrides {
         return (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
 
-    public virtual Action unknown_016D_01E6_018B6_Asm() {
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016D_01E6_018B6(BX, SI, DS, DirectionFlag);
+    public virtual Action unknown_016F_01E6_018D6_Asm() {
+        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016F_01E6_018D6(BX, SI, DS, DirectionFlag);
         return Returned;
     }
 
     /// <summary>Inputs: AX, CX, DX, BX. Outputs: CX, BX. Changes: AX, CX, DX, BX, flags.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_01F5_018C5() {
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
+    public virtual Action unknown_016F_01F5_018E5() {
         CheckExternalEvents(cs1, 0x01F5);
         Stack.Save(BX, CX, DX);
         CX = 0;
@@ -266,13 +266,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_01A4_01874_AsmEntry;
-    private readonly Func<int, Action> unknown_016D_01B7_01887_AsmEntry;
-    private readonly Func<int, Action> unknown_016D_01CA_0189A_AsmEntry;
-    private readonly Func<int, Action> unknown_016D_01D8_018A8_AsmEntry;
-    private readonly Func<int, Action> unknown_016D_01E6_018B6_AsmEntry;
-    private readonly Func<int, Action> unknown_016D_01F5_018C5Entry;
+    private readonly Func<int, Action> unknown_016F_0100_017F0Entry;
+    private readonly Func<int, Action> unknown_016F_01A4_01894_AsmEntry;
+    private readonly Func<int, Action> unknown_016F_01B7_018A7_AsmEntry;
+    private readonly Func<int, Action> unknown_016F_01CA_018BA_AsmEntry;
+    private readonly Func<int, Action> unknown_016F_01D8_018C8_AsmEntry;
+    private readonly Func<int, Action> unknown_016F_01E6_018D6_AsmEntry;
+    private readonly Func<int, Action> unknown_016F_01F5_018E5Entry;
     private readonly Func<int, Action> unknown_F000_0000_F0000Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
@@ -289,16 +289,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0001);
         biosSegment = 0xF000;
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_01A4_01874_AsmEntry = _ => unknown_016D_01A4_01874_Asm();
-        unknown_016D_01B7_01887_AsmEntry = _ => unknown_016D_01B7_01887_Asm();
-        unknown_016D_01CA_0189A_AsmEntry = _ => unknown_016D_01CA_0189A_Asm();
-        unknown_016D_01D8_018A8_AsmEntry = _ => unknown_016D_01D8_018A8_Asm();
-        unknown_016D_01E6_018B6_AsmEntry = _ => unknown_016D_01E6_018B6_Asm();
-        unknown_016D_01F5_018C5Entry = _ => unknown_016D_01F5_018C5();
+        unknown_016F_0100_017F0Entry = _ => unknown_016F_0100_017F0();
+        unknown_016F_01A4_01894_AsmEntry = _ => unknown_016F_01A4_01894_Asm();
+        unknown_016F_01B7_018A7_AsmEntry = _ => unknown_016F_01B7_018A7_Asm();
+        unknown_016F_01CA_018BA_AsmEntry = _ => unknown_016F_01CA_018BA_Asm();
+        unknown_016F_01D8_018C8_AsmEntry = _ => unknown_016F_01D8_018C8_Asm();
+        unknown_016F_01E6_018D6_AsmEntry = _ => unknown_016F_01E6_018D6_Asm();
+        unknown_016F_01F5_018E5Entry = _ => unknown_016F_01F5_018E5();
         unknown_F000_0000_F0000Entry = _ => unknown_F000_0000_F0000();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
@@ -313,13 +313,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0090_F0090Entry = _ => unknown_F000_0090_F0090();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01A4, unknown_016D_01A4_01874_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01B7, unknown_016D_01B7_01887_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01CA, unknown_016D_01CA_0189A_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01D8, unknown_016D_01D8_018A8_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01E6, unknown_016D_01E6_018B6_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01F5, unknown_016D_01F5_018C5Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016F_0100_017F0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01A4, unknown_016F_01A4_01894_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01B7, unknown_016F_01B7_018A7_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01CA, unknown_016F_01CA_018BA_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01D8, unknown_016F_01D8_018C8_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01E6, unknown_016F_01E6_018D6_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01F5, unknown_016F_01F5_018E5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0000, unknown_F000_0000_F0000Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
@@ -434,7 +434,7 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         // INT 10h: Video services selected by AH
@@ -551,7 +551,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_F000_0090_F0090() {
         CheckExternalEvents(biosSegment, 0x0090);
         // INT 20h: DosInt20Handler

@@ -1,17 +1,17 @@
 {
   "currentContextDepth": 1,
-  "currentContextEntryPoint": "016E:0100",
+  "currentContextEntryPoint": "016F:0100",
   "totalEntryPoints": 1,
   "entryPointAddresses": [
-    "016E:0100"
+    "016F:0100"
   ],
-  "lastExecutedAddress": "016E:0133",
+  "lastExecutedAddress": "016F:0133",
   "lastExecutedBlockId": 15,
   "blocks": [
     {
       "id": 2,
-      "entry": "016E:0100",
-      "term": "016E:010F",
+      "entry": "016F:0100",
+      "term": "016F:010F",
       "pred": [],
       "succ": [
         8,
@@ -28,8 +28,8 @@
     },
     {
       "id": 15,
-      "entry": "016E:0129",
-      "term": "016E:0133",
+      "entry": "016F:0129",
+      "term": "016F:0133",
       "pred": [
         8,
         10
@@ -44,9 +44,9 @@
     },
     {
       "id": 8,
-      "entry": "016E:0118",
+      "entry": "016F:0118",
       "dead": true,
-      "term": "016E:0127",
+      "term": "016F:0127",
       "pred": [
         2
       ],
@@ -54,7 +54,7 @@
         15
       ],
       "asm": [
-        "B86E01|mov AX,0x016E",
+        "B86F01|mov AX,0x016F",
         "8ED8|mov DS,AX",
         "C6062301EE|mov byte ptr DS:[0x0123],0xEE",
         "C606010400|mov byte ptr DS:[0x0401],0",
@@ -63,8 +63,8 @@
     },
     {
       "id": 10,
-      "entry": "016E:0111",
-      "term": "016E:0116",
+      "entry": "016F:0111",
+      "term": "016F:0116",
       "pred": [
         2
       ],

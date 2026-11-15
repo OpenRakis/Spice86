@@ -52,6 +52,6 @@ public class SupportStubClassificationTest {
         GeneratedCSharpProgram program = Generate("child_exec_terminate_releases_handles.a20.ivt.spec");
 
         FileNameHolding(program, "unknown_F000_0096_").Should().Be("CfgGeneratedOverrides.F000.cs");
-        FileNameHolding(program, "unknown_016D_0100_").Should().Be("CfgGeneratedOverrides.016D.cs");
+        FileNameHolding(program, "unknown_016E_0100_").Should().Be("CfgGeneratedOverrides.016E.cs");
     }
 }

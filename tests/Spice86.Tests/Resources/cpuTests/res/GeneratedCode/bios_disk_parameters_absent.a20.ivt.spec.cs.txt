@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP, DI, ES, DS, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
         byte byte1 = 0;
         ushort word2;
@@ -41,7 +41,7 @@ public partial class CfgGeneratedOverrides {
             }
             SI++;
         }
-        ImageMinus0003Globals.Byte02FB = AL;
+        ImageMinus0002Globals.Byte02FB = AL;
         DL = 0x80;
         if (AL != 0x68) {
             DL = 0;
@@ -65,38 +65,38 @@ public partial class CfgGeneratedOverrides {
             AL = 2;
             if (ZeroFlag) {
                 DL = 0x80;
-                flagOperand_013C = ImageMinus0003Globals.Byte02FB;
+                flagOperand_013C = ImageMinus0002Globals.Byte02FB;
                 Alu8.Sub(flagOperand_013C, 0x68);
                 if (flagOperand_013C != 0x68) {
                     DL = 0;
                 }
                 AL = 0x5A;
                 DH = 0x56;
-                ImageMinus0003Globals.Word0304 = SP;
-                ImageMinus0003Globals.Word0306 = DS;
-                ImageMinus0003Globals.Word0308 = ES;
-                ImageMinus0003Globals.Word030A = SI;
-                ImageMinus0003Globals.Word030C = DI;
-                ImageMinus0003Globals.Word030E = BP;
+                ImageMinus0002Globals.Word0304 = SP;
+                ImageMinus0002Globals.Word0306 = DS;
+                ImageMinus0002Globals.Word0308 = ES;
+                ImageMinus0002Globals.Word030A = SI;
+                ImageMinus0002Globals.Word030C = DI;
+                ImageMinus0002Globals.Word030E = BP;
                 (AX, CX, DX, BX, CarryFlag) = ServiceCall(Disk, () => Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3));
                 Stack.Push16(FlagRegister16);
                 ushort popStackCheck_0173 = Stack.Peek16(0);
-                ushort popDestinationCheck_0173 = ImageMinus0003Globals.Word0310;
+                ushort popDestinationCheck_0173 = ImageMinus0002Globals.Word0310;
                 ushort poppedValue_0173 = Stack.Pop16();
-                ImageMinus0003Globals.Word0310 = poppedValue_0173;
-                ImageMinus0003Globals.Word0312 = AX;
-                ImageMinus0003Globals.Word0314 = BX;
-                ImageMinus0003Globals.Word0316 = CX;
-                ImageMinus0003Globals.Word0318 = DX;
+                ImageMinus0002Globals.Word0310 = poppedValue_0173;
+                ImageMinus0002Globals.Word0312 = AX;
+                ImageMinus0002Globals.Word0314 = BX;
+                ImageMinus0002Globals.Word0316 = CX;
+                ImageMinus0002Globals.Word0318 = DX;
                 AL = 3;
-                if (SP == ImageMinus0003Globals.Word0304) {
+                if (SP == ImageMinus0002Globals.Word0304) {
                     AX = DS;
-                    if (AX == ImageMinus0003Globals.Word0306) {
+                    if (AX == ImageMinus0002Globals.Word0306) {
                         AX = ES;
-                        if (AX != ImageMinus0003Globals.Word0308 || SI != ImageMinus0003Globals.Word030A || DI != ImageMinus0003Globals.Word030C || BP != ImageMinus0003Globals.Word030E) {
+                        if (AX != ImageMinus0002Globals.Word0308 || SI != ImageMinus0002Globals.Word030A || DI != ImageMinus0002Globals.Word030C || BP != ImageMinus0002Globals.Word030E) {
                             goto L_02F0;
                         }
-                        byte1 = ImageMinus0003Globals.Byte02FB;
+                        byte1 = ImageMinus0002Globals.Byte02FB;
                         if (byte1 == 0x68) {
                             goto L_0218;
                         }
@@ -104,54 +104,54 @@ public partial class CfgGeneratedOverrides {
                             goto L_025A;
                         }
                         AL = 4;
-                        if ((ImageMinus0003Globals.Word0310 & 1) == 0) {
+                        if ((ImageMinus0002Globals.Word0310 & 1) == 0) {
                             goto L_02F0;
                         }
                         AL = 5;
-                        if (ImageMinus0003Globals.Word0312 != 0x805A) {
+                        if (ImageMinus0002Globals.Word0312 != 0x805A) {
                             goto L_02F0;
                         }
                         AL = 6;
-                        if (ImageMinus0003Globals.Word0314 != 0xA5C3) {
+                        if (ImageMinus0002Globals.Word0314 != 0xA5C3) {
                             goto L_02F0;
                         }
                         AL = 7;
-                        if (ImageMinus0003Globals.Word0316 != 0x1234) {
+                        if (ImageMinus0002Globals.Word0316 != 0x1234) {
                             goto L_02F0;
                         }
                         AL = 8;
-                        if (ImageMinus0003Globals.Word0318 != 0x5600) {
+                        if (ImageMinus0002Globals.Word0318 != 0x5600) {
                             goto L_02F0;
                         }
                         goto L_0292;
                     L_025A:
                         VerifySpeculativeRunOrFail(cs1, 0x025A, SpeculativeRun_025A);
                         AL = 0x0E;
-                        flagOperand_025C = ImageMinus0003Globals.Word0310;
+                        flagOperand_025C = ImageMinus0002Globals.Word0310;
                         if ((flagOperand_025C & 1) != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0267, SpeculativeRun_0267);
                         AL = 0x0F;
-                        flagOperand_0269 = ImageMinus0003Globals.Word0312;
+                        flagOperand_0269 = ImageMinus0002Globals.Word0312;
                         if (flagOperand_0269 != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0271, SpeculativeRun_0271);
                         AL = 0x10;
-                        flagOperand_0273 = ImageMinus0003Globals.Word0314;
+                        flagOperand_0273 = ImageMinus0002Globals.Word0314;
                         if (flagOperand_0273 != 0xA504) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x027C, SpeculativeRun_027C);
                         AL = 0x11;
-                        flagOperand_027E = ImageMinus0003Globals.Word0316;
+                        flagOperand_027E = ImageMinus0002Globals.Word0316;
                         if (flagOperand_027E != 0x4F12) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0287, SpeculativeRun_0287);
                         AL = 0x12;
-                        flagOperand_0289 = ImageMinus0003Globals.Word0318;
+                        flagOperand_0289 = ImageMinus0002Globals.Word0318;
                         if (flagOperand_0289 != 0x0101) {
                             goto L_02F0;
                         }
@@ -161,39 +161,39 @@ public partial class CfgGeneratedOverrides {
                     L_0218:
                         VerifySpeculativeRunOrFail(cs1, 0x0218, SpeculativeRun_0218);
                         AL = 9;
-                        flagOperand_021A = ImageMinus0003Globals.Word0310;
+                        flagOperand_021A = ImageMinus0002Globals.Word0310;
                         if ((flagOperand_021A & 1) != 0) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0225, SpeculativeRun_0225);
                         AL = 0x0A;
-                        flagOperand_0227 = ImageMinus0003Globals.Word0312;
+                        flagOperand_0227 = ImageMinus0002Globals.Word0312;
                         if (flagOperand_0227 != 0x005A) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x0231, SpeculativeRun_0231);
                         AL = 0x0B;
-                        flagOperand_0233 = ImageMinus0003Globals.Word0314;
+                        flagOperand_0233 = ImageMinus0002Globals.Word0314;
                         if (flagOperand_0233 != 0xA5C3) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x023E, SpeculativeRun_023E);
                         AL = 0x0C;
-                        flagOperand_0240 = ImageMinus0003Globals.Word0316;
+                        flagOperand_0240 = ImageMinus0002Globals.Word0316;
                         if (flagOperand_0240 != 0xFE3F) {
                             goto L_02F0;
                         }
                         VerifySpeculativeRunOrFail(cs1, 0x024B, SpeculativeRun_024B);
                         AL = 0x0D;
-                        flagOperand_024D = ImageMinus0003Globals.Word0318;
+                        flagOperand_024D = ImageMinus0002Globals.Word0318;
                         if (flagOperand_024D != 0xFF01) {
                             goto L_02F0;
                         }
                         VerifySpeculativeEntryOrFail(cs1, 0x0258, Signature_0258_jmp);
                     L_0292:
                         word2 = (ushort)(SP - 6);
-                        ImageMinus0003Globals.Word02FC = word2;
-                        ImageMinus0003Globals.Word02FE = SS;
+                        ImageMinus0002Globals.Word02FC = word2;
+                        ImageMinus0002Globals.Word02FE = SS;
                         (word3, CX, BX) = ServiceCall(Dos, () => Dos.ReadDosVersion());
                         ECX = (uint)(int)(short)word3;
                         EDX = (uint)(int)(short)word3;
@@ -206,16 +206,16 @@ public partial class CfgGeneratedOverrides {
                         if (EDX != 5) {
                             goto L_02F0;
                         }
-                        word2 = ImageMinus0003Globals.Word002E;
-                        ImageMinus0003Globals.Word0300 = word2;
-                        AX = ImageMinus0003Globals.Word0030;
-                        ImageMinus0003Globals.Word0302 = AX;
-                        AX = ImageMinus0003Globals.Word02FC;
-                        if (ImageMinus0003Globals.Word0300 != AX) {
+                        word2 = ImageMinus0002Globals.Word002E;
+                        ImageMinus0002Globals.Word0300 = word2;
+                        AX = ImageMinus0002Globals.Word0030;
+                        ImageMinus0002Globals.Word0302 = AX;
+                        AX = ImageMinus0002Globals.Word02FC;
+                        if (ImageMinus0002Globals.Word0300 != AX) {
                             goto L_02F0;
                         }
-                        AX = ImageMinus0003Globals.Word02FE;
-                        if (ImageMinus0003Globals.Word0302 != AX) {
+                        AX = ImageMinus0002Globals.Word02FE;
+                        if (ImageMinus0002Globals.Word0302 != AX) {
                             goto L_02F0;
                         }
                         byte2 = 0;
@@ -258,20 +258,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0002Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0002);
     }
 
     public ushort Word002E { get => _memory.UInt16[Segment, 0x002E]; set => _memory.UInt16[Segment, 0x002E] = value; }
@@ -328,7 +328,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_001C_F001CEntry;
@@ -347,15 +347,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_001C_F001CEntry = _ => unknown_F000_001C_F001C();
@@ -372,7 +372,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001C, unknown_F000_001C_F001CEntry, "unknown");
@@ -543,7 +543,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: AX, flags, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_001C_F001C() {
         CheckExternalEvents(biosSegment, 0x001C);
         // INT 11h: Equipment.GetEquipmentList
@@ -552,7 +552,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: AX, flags, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0021_F0021() {
         CheckExternalEvents(biosSegment, 0x0021);
         // INT 12h: MemorySize.GetConventionalMemorySize
@@ -561,7 +561,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0058_F0058() {
         CheckExternalEvents(biosSegment, 0x0058);
         // INT 13h: Disk services selected by AH
@@ -652,7 +652,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

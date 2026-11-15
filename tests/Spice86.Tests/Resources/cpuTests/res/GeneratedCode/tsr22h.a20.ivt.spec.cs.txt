@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -13,8 +13,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: flags, DF. Outputs: none. Changes: AX, CX, DX, BX, SI, DI, ES, DS, CF, DF.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
+    /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
+    public virtual Action unknown_016E_0100_017E0() {
         ushort word1;
         ushort blockSegment;
         ushort word2 = 0;
@@ -34,15 +34,15 @@ public partial class CfgGeneratedOverrides {
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x019D, SpeculativeRun_019D);
             AX = 0x4C01;
-            throw FailAsUntested("Untested interrupt at 016D:01A0");
+            throw FailAsUntested("Untested interrupt at 016E:01A0");
         }
         (word2, BX, CarryFlag) = ServiceCall(cs1, 0x011D, Dos, () => Dos.AllocateMemory(0x0013), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A2, SpeculativeRun_01A2);
             AX = 0x4C02;
-            throw FailAsUntested("Untested interrupt at 016D:01A5");
+            throw FailAsUntested("Untested interrupt at 016E:01A5");
         }
-        ImageMinus0003Globals.Word03D4 = word2;
+        ImageMinus0002Globals.Word03D4 = word2;
         DX = word2;
         AX = word2;
         AH = 0x26;
@@ -50,10 +50,10 @@ public partial class CfgGeneratedOverrides {
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x01A7, SpeculativeRun_01A7);
             AX = 0x4C03;
-            throw FailAsUntested("Untested interrupt at 016D:01AA");
+            throw FailAsUntested("Untested interrupt at 016E:01AA");
         }
         Stack.Push16(DS);
-        word3 = ImageMinus0003Globals.Word03D4;
+        word3 = ImageMinus0002Globals.Word03D4;
         ES = word3;
         DS = Stack.Pop16();
         DirectionFlag = false;
@@ -86,7 +86,7 @@ public partial class CfgGeneratedOverrides {
     }
 
     /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, flags, DF. Does not return.</summary>
-    public virtual Action unknown_016D_016A_0183A() {
+    public virtual Action unknown_016E_016A_0184A() {
         ushort word1;
         CheckExternalEvents(cs1, 0x016A);
         Stack.Push16(CS);
@@ -102,7 +102,7 @@ public partial class CfgGeneratedOverrides {
         if (AL != 0xAA) {
             VerifySpeculativeRunOrFail(cs1, 0x0193, SpeculativeRun_0193);
             AX = 0x4C06;
-            throw FailAsUntested("Untested interrupt at 016D:0196");
+            throw FailAsUntested("Untested interrupt at 016E:0196");
         }
         BX = CS;
         AH = 0x50;
@@ -114,16 +114,16 @@ public partial class CfgGeneratedOverrides {
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0198, SpeculativeRun_0198);
             AX = 0x4C05;
-            throw FailAsUntested("Untested interrupt at 016D:019B");
+            throw FailAsUntested("Untested interrupt at 016E:019B");
         }
         AX = 0x4C00;
         InterruptCall(cs1, 0x0193, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:0191");
+        throw FailAsUntested("Untested return from call at 016E:0191");
     }
 
 }
 
-// ==== file: CfgGeneratedOverrides.01AC.cs ====
+// ==== file: CfgGeneratedOverrides.01AD.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -138,12 +138,12 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
-    public virtual Action unknown_01AC_0100_01BC0() {
+    public virtual Action unknown_01AD_0100_01BD0() {
         CheckExternalEvents(cs2, 0x0100);
         DX = 0x0013;
         AX = 0x31AA;
         InterruptCall(cs2, 0x0108, 0x21);
-        throw FailAsUntested("Untested return from call at 01AC:0106");
+        throw FailAsUntested("Untested return from call at 01AD:0106");
     }
 
 }
@@ -217,20 +217,20 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: ImageMinus0003Globals.cs ====
+// ==== file: ImageMinus0002Globals.cs ====
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
+public sealed class ImageMinus0002Globals : MemoryBasedDataStructure {
     private readonly IMemory _memory;
     private readonly ushort Segment;
 
-    public ImageMinus0003Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0003) * 16)) {
+    public ImageMinus0002Globals(IMemory memory, ushort programStartSegment) : base(memory, (uint)((programStartSegment - 0x0002) * 16)) {
         _memory = memory;
-        Segment = (ushort)(programStartSegment - 0x0003);
+        Segment = (ushort)(programStartSegment - 0x0002);
     }
 
     public ushort Word03D4 { get => _memory.UInt16[Segment, 0x03D4]; set => _memory.UInt16[Segment, 0x03D4] = value; }
@@ -254,9 +254,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs2;
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_016A_0183AEntry;
-    private readonly Func<int, Action> unknown_01AC_0100_01BC0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_016A_0184AEntry;
+    private readonly Func<int, Action> unknown_01AD_0100_01BD0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -274,20 +274,20 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly DsGlobals DsGlobals;
     protected readonly EsGlobals EsGlobals;
     protected readonly CsGlobals CsGlobals;
-    protected readonly ImageMinus0003Globals ImageMinus0003Globals;
+    protected readonly ImageMinus0002Globals ImageMinus0002Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0003);
-        cs2 = 0x01AC;
+        cs1 = (ushort)(programStartSegment - 0x0002);
+        cs2 = 0x01AD;
         biosSegment = 0xF000;
         DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
         EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        ImageMinus0003Globals = new ImageMinus0003Globals(Memory, programStartSegment);
+        ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_016A_0183AEntry = _ => unknown_016D_016A_0183A();
-        unknown_01AC_0100_01BC0Entry = _ => unknown_01AC_0100_01BC0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_016A_0184AEntry = _ => unknown_016E_016A_0184A();
+        unknown_01AD_0100_01BD0Entry = _ => unknown_01AD_0100_01BD0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -301,9 +301,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x016A, unknown_016D_016A_0183AEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0100, unknown_01AC_0100_01BC0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x016A, unknown_016E_016A_0184AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0100, unknown_01AD_0100_01BD0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -317,15 +317,15 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
-        DefineCallLandings(new(cs1, 0x0112), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x011D), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x012A), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x0159), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x0179), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x0183), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x018C), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs1, 0x0193), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
-        DefineCallLandings(new(cs2, 0x0108), new CallLanding(new(cs1, 0x016A), unknown_016D_016A_0183AEntry));
+        DefineCallLandings(new(cs1, 0x0112), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x011D), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x012A), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x0159), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x0179), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x0183), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x018C), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs1, 0x0193), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
+        DefineCallLandings(new(cs2, 0x0108), new CallLanding(new(cs1, 0x016A), unknown_016E_016A_0184AEntry));
     }
 
     protected override bool ObservedTransfersOnly => true;

@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrides.016D.cs ====
+// ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -13,83 +13,48 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
-    /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
-    public virtual Action unknown_016D_0100_017D0() {
-        CheckExternalEvents(cs2, 0x0100);
-        AX = 0x4C0A;
-        InterruptCall(cs2, 0x0105, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:0103");
+    public virtual Action unknown_016E_0100_017E0() {
+        CheckExternalEvents(cs1, 0x0100);
+        AX = UInt16[0x000017E1];
+        if (SelectorSignatureMatches(cs1, 0x0103, Signature_0103_mov)) {
+            ES = AX;
+            DI = 0;
+            AX = 0x0758;
+            EsGlobals.Word0000 = 0x0758;
+            DI = (ushort)(DirectionFlag ? -2 : 2);
+            AX = 0x4C00;
+            InterruptCall(cs1, 0x0112, 0x21);
+            throw FailAsUntested("Untested return from call at 016E:0110");
+        }
+        if (!SelectorSignatureMatches(cs1, 0x0103, Signature_0103_int)) {
+            throw FailAsUntested("Untested code variant at 016E:0103");
+        }
+        InterruptCall(cs1, 0x0105, 0x21);
+        throw FailAsUntested("Untested return from call at 016E:0103");
     }
 
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
+// ==== file: EsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 namespace Spice86.Generated;
 
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
-    public virtual Action unknown_F000_0096_F0096() {
-        byte flagOperand_00AF = 0;
-        CheckExternalEvents(biosSegment, 0x0096);
-        Alu8.Sub(AH, 7);
-        if (AH != 7) {
-            Alu8.Sub(AH, 8);
-            if (AH != 8) {
-                Alu8.Sub(AH, 0x0A);
-                if (AH == 0x0A) {
-                    goto L_00AA;
-                }
-                // INT 21h: Dos services selected by AH
-                if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
-                    VerifySpeculativeEntryOrFail(biosSegment, 0x00A9, Signature_00A9_iret);
-                    return InterruptRet();
-                }
-                if (CS != cs1 || IP != 0x0100) {
-                    throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
-                }
-                CS = cs1;
-                AX = 0xB800;
-                ES = 0xB800;
-                DI = 0;
-                AX = 0x0758;
-                SegmentB800Globals.Word0000 = 0x0758;
-                DI = (ushort)(DirectionFlag ? -2 : 2);
-                AX = 0x4C00;
-                InterruptCall(cs1, 0x0112, 0x21);
-                throw FailAsUntested("Untested return from call at 016C:0110");
-            }
-        }
-    L_00AA:
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
-        InterruptFlag = true;
-        CheckExternalEvents(biosSegment, 0x00AB);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_callback);
-        // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
-        Callback(biosSegment, 0x00AB, 0x010A);
-        VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
-        flagOperand_00AF = CsGlobals.Byte0095;
-        Alu8.Sub(flagOperand_00AF, 0);
-        if (flagOperand_00AF != 0) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
-            // Spice86 callback: DosInt21Handler.DispatchStdinInput
-            Callback(biosSegment, 0x00BB, 0x010B);
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
-            return InterruptRet();
-        }
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
-        throw FailAsUntested("Untested interrupt at F000:00B7");
+public sealed class EsGlobals : MemoryBasedDataStructureWithEsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex];
+
+    public EsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
     }
 
+    /// ES:0x0000, whatever ES holds at the access.
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 }
 
 // ==== file: CsGlobals.cs ====
@@ -114,25 +79,6 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 }
 
-// ==== file: SegmentB800Globals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
-
-namespace Spice86.Generated;
-
-public sealed class SegmentB800Globals : MemoryBasedDataStructure {
-    private readonly IMemory _memory;
-    private readonly ushort Segment;
-
-    public SegmentB800Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xB8000) {
-        _memory = memory;
-        Segment = 0xB800;
-    }
-
-    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
-}
-
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -148,10 +94,9 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
-    protected readonly ushort cs2;
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -166,17 +111,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
+    protected readonly EsGlobals EsGlobals;
     protected readonly CsGlobals CsGlobals;
-    protected readonly SegmentB800Globals SegmentB800Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0004);
-        cs2 = (ushort)(programStartSegment - 0x0003);
+        cs1 = (ushort)(programStartSegment - 0x0002);
         biosSegment = 0xF000;
+        EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
 
-        unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -190,7 +134,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -204,6 +148,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
+        DefineCallLandings(new(cs1, 0x0105), new CallLanding(new(cs1, 0x0100), unknown_016E_0100_017E0Entry));
+        DefineCallLandings(new(cs1, 0x0112), new CallLanding(new(cs1, 0x0100), unknown_016E_0100_017E0Entry));
     }
 
     protected override bool ObservedTransfersOnly => true;
@@ -223,6 +169,8 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0103_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_0103_mov = [0x8E, 0xC0];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -390,6 +338,56 @@ public partial class CfgGeneratedOverrides {
         Callback(biosSegment, 0x0086, 0x0109);
         VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_iret);
         return InterruptRet();
+    }
+
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
+    public virtual Action unknown_F000_0096_F0096() {
+        byte flagOperand_00AF = 0;
+    entrydispatcher:
+        CheckExternalEvents(biosSegment, 0x0096);
+        Alu8.Sub(AH, 7);
+        if (AH != 7) {
+            Alu8.Sub(AH, 8);
+            if (AH != 8) {
+                Alu8.Sub(AH, 0x0A);
+                if (AH == 0x0A) {
+                    goto L_00AA;
+                }
+                // INT 21h: Dos services selected by AH
+                if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x00A9, Signature_00A9_iret);
+                    return InterruptRet();
+                }
+                if (CS == cs1 && IP == 0x0100) {
+                    if (JumpDispatcher.Jump(unknown_016E_0100_017E0Entry, 0x0000)) {
+                        goto entrydispatcher;
+                    }
+                    return JumpDispatcher.RequiredJumpAsmReturn;
+                }
+                else {
+                    throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
+                }
+            }
+        }
+    L_00AA:
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
+        InterruptFlag = true;
+        CheckExternalEvents(biosSegment, 0x00AB);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_callback);
+        // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
+        Callback(biosSegment, 0x00AB, 0x010A);
+        VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
+        flagOperand_00AF = CsGlobals.Byte0095;
+        Alu8.Sub(flagOperand_00AF, 0);
+        if (flagOperand_00AF != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
+            Callback(biosSegment, 0x00BB, 0x010B);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
+            return InterruptRet();
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
+        throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
     /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
