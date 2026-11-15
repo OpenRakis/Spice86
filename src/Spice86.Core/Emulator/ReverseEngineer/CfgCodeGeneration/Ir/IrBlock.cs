@@ -54,7 +54,7 @@ internal sealed class IrBlock : IGotoTarget {
             ICfgNode origin = _statements[startIndex].Origin;
             for (int index = 0; index < startIndex; index++) {
                 IrStatement statement = _statements[index];
-                if (statement.Node is not CheckExternalEventsNode and not SpeculativeGuardNode
+                if (statement.Node is not CheckExternalEventsNode and not SpeculativeGuardNode and not PatchedCallGuardNode
                     || !ReferenceEquals(statement.Origin, origin)) {
                     return false;
                 }

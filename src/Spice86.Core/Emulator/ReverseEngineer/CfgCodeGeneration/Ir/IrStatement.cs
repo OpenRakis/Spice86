@@ -47,6 +47,7 @@ internal sealed class IrStatement {
         CpuFaultSuccessors.HasCpuFaultSuccessor(origin)
         && node is not CheckExternalEventsNode
         && node is not SpeculativeGuardNode
+        && node is not PatchedCallGuardNode
         && node is not InstructionStartNode
         && node is not CommentNode;
 }

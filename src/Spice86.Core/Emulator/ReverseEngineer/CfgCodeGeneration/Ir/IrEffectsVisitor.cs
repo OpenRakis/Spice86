@@ -207,6 +207,8 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
 
     public IrEffects VisitSpeculativeGuardNode(SpeculativeGuardNode node) => ReadMemory;
 
+    public IrEffects VisitPatchedCallGuardNode(PatchedCallGuardNode node) => ReadMemory;
+
     /// <summary>A hardware interrupt handler can run at the check: it reads the effect's
     /// <see cref="CallEffect.Reads"/> and may write its
     /// <see cref="CallEffect.Writes"/>, and no status flag or DF (the iret restores

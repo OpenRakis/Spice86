@@ -96,10 +96,12 @@ internal sealed class GeneratorAnalysis {
     /// </exception>
     private static List<SignatureFieldPlan> BuildSignatureFields(CfgPartitionedProgram program, InstructionMnemonic mnemonic) {
         Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction = [];
+        IReadOnlySet<SegmentedAddress> switcherPatchedCalls =
+            program.Inputs.HardwareInterrupts.SwitcherPatchedCalls;
         foreach (CfgCodePartition partition in program.Partitions) {
             foreach (CfgBlock block in partition.Blocks) {
                 foreach (ICfgNode node in block.Instructions) {
-                    CollectSignatureBytes(node, bytesByInstruction);
+                    CollectSignatureBytes(node, bytesByInstruction, switcherPatchedCalls);
                 }
             }
         }
@@ -116,10 +118,18 @@ internal sealed class GeneratorAnalysis {
             .ToList();
     }
 
-    private static void CollectSignatureBytes(ICfgNode node, Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction) {
+    private static void CollectSignatureBytes(ICfgNode node,
+        Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction,
+        IReadOnlySet<SegmentedAddress> switcherPatchedCalls) {
         switch (node) {
             case CfgInstruction { IsSpeculative: true } speculative when speculative.Signature.SignatureValue.Count > 0:
                 AddSignatureBytes(bytesByInstruction, speculative, speculative.Signature.SignatureValue);
+                break;
+            // A call a runtime switcher can patch gets its observed bytes verified before it
+            // runs, unless it was only discovered speculatively (its own guard covers it).
+            case CfgInstruction patched
+                when switcherPatchedCalls.Contains(patched.Address):
+                AddSignatureBytes(bytesByInstruction, patched, patched.Signature.SignatureValue);
                 break;
             case CfgSelectorNode selector:
                 foreach (KeyValuePair<Signature, CfgInstruction> entry in selector.SuccessorsPerSignature) {

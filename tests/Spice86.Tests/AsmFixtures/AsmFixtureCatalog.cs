@@ -14,6 +14,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
 using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.ViewModels.Services;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
@@ -378,6 +380,54 @@ internal static class AsmFixtureCatalog {
             EnablePit = true
         };
         return ResultFixture(settings, AssertInterruptHandlerChangesRegisterCompleted);
+    }
+
+    /// <summary>Unmasks IRQ 12 and posts a mouse move so the machine raises IRQ 12 while the
+    /// program waits; the delivery runs the int 74h stub and its user-routine callbacks.</summary>
+    private static void RaiseMouseIrq12(Machine machine) {
+        machine.DualPic.SetIrqMask(12, false);
+        machine.InputEventHub.PostMouseMoveEvent(new MouseMoveEventArgs(1, 1));
+        machine.InputEventHub.ProcessAllPendingInputEvents();
+    }
+
+    /// <summary>Runs mouse_irq12 with no user routine registered: IRQ 12 is delivered during the
+    /// wait loop, the driver's before/after callbacks take their no-routine path, and the word the
+    /// registered routine would have written stays 0.</summary>
+    public static AsmFixture MouseIrq12NoRoutine() {
+        AsmRunSettings settings = new() {
+            BinName = "mouse_irq12",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            // The program is a BIOS image at F000: the BIOS handlers go to D000 so the
+            // installed stubs do not overwrite it.
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = RaiseMouseIrq12
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20080].Should().Be(0,
+                "no user routine is registered, so nothing writes the result word");
+        });
+    }
+
+    /// <summary>Runs mouse_irq12 with the routine registered through INT 33h AX=000Ch before the
+    /// wait loop: the IRQ 12 delivery calls it through the stub's patched far call and it stores
+    /// 0xCAFE. The registration makes the callback contracts stay Unknown.</summary>
+    public static AsmFixture MouseIrq12RegisteredRoutine() {
+        AsmRunSettings settings = new() {
+            BinName = "mouse_irq12",
+            ScenarioName = "mouse_irq12.registered",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = 0x01;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20080].Should().Be(0xCAFE,
+                "the registered routine ran when IRQ 12 was delivered and stored its marker");
+        });
     }
 
     /// <summary>Runs divfaultloop: the fault handler retried once and the division produced 2.</summary>

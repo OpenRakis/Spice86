@@ -536,6 +536,7 @@ internal sealed class StackArguments {
         }
         if (IrAstChildren.Descendants(statement.Node).Any(node =>
                 node is StackCallNode or CheckExternalEventsNode or SpeculativeGuardNode
+                    or PatchedCallGuardNode
                     or CpuFaultTryCatchNode
                     or MethodCallNode {
                         PropertyPath: not ("Alu8" or "Alu16" or "Alu32") })) {

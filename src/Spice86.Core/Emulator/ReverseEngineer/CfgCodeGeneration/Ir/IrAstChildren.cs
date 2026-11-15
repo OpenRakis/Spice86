@@ -186,7 +186,7 @@ internal static class IrAstChildren {
             case ConstantNode or CpuFlagNode or FlagRegisterNode or RegisterNode or VariableReferenceNode
                 or InstructionPointerNode or LoadOffsetParameterNode or SegmentVariableNode
                 or OffsetLiteralNode or SignatureFieldNode or CommentNode or InstructionStartNode
-                or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode or ContinueNode
+                or CheckExternalEventsNode or SpeculativeGuardNode or PatchedCallGuardNode or BreakNode or ContinueNode
                 or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
                 or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
                 or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
@@ -296,7 +296,7 @@ internal static class IrAstChildren {
         InstructionFieldNode or ConstantNode or CpuFlagNode or FlagRegisterNode or RegisterNode
             or VariableReferenceNode or InstructionPointerNode or LoadOffsetParameterNode
             or SegmentVariableNode or OffsetLiteralNode or SignatureFieldNode or CommentNode
-            or InstructionStartNode or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode
+            or InstructionStartNode or CheckExternalEventsNode or SpeculativeGuardNode or PatchedCallGuardNode or BreakNode
             or ContinueNode or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
             or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
             or SetInterruptShadowNode or ThrowNode or CfgInstructionNode

@@ -160,6 +160,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case SpeculativeGuardNode speculativeGuard:
                 PrintSpeculativeGuard(speculativeGuard);
                 return;
+            case PatchedCallGuardNode patchedCallGuard:
+                PrintPatchedCallGuard(patchedCallGuard);
+                return;
             case TupleSwapNode swap:
                 writer.Line($"({expressions.Print(swap.First).Text}, {expressions.Print(swap.Second).Text}) = ({expressions.Print(swap.Second).Text}, {expressions.Print(swap.First).Text});");
                 return;
@@ -821,6 +824,15 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             return;
         }
         writer.Line($"VerifySpeculativeRunOrFail({segment}, 0x{node.Address.Offset:X4}, {node.RunFieldName});");
+    }
+
+    private void PrintPatchedCallGuard(PatchedCallGuardNode node) {
+        string segment = expressions.SegmentVariable(node.Address.Segment);
+        writer.Line($"if (!SelectorSignatureMatches({segment}, 0x{node.Address.Offset:X4}, {node.SignatureField})) {{");
+        writer.Indent();
+        writer.Line($"throw FailAsUntested(\"Untested code variant at {node.Address}\");");
+        writer.Dedent();
+        writer.Line("}");
     }
 
     /// <summary>The <c>X op= y;</c> form of <paramref name="assignment"/> when it is <c>X = X op y</c> in the

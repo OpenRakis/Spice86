@@ -72,4 +72,17 @@ public class MiscVectorsServiceContractTest {
         ServiceContractHarness.AssertContractThroughStub(
             new ServiceContractCase { Vector = 0x0B, SelectorValue = 0 });
     }
+
+    /// <summary>The mouse-driver user-routine callbacks' declared contracts hold on the
+    /// no-routine path: <c>BeforeUserHandlerExecution</c> (0x10C) only writes the far
+    /// call's target in memory and <c>AfterUserHandlerExecution</c> (0x10D) does
+    /// nothing. A registered routine keeps them <c>Unknown</c> (IS-16).</summary>
+    [Theory]
+    [InlineData(0x10C)]
+    [InlineData(0x10D)]
+    public void MouseUserRoutineCallbacksHonourDeclaredContracts(ushort callbackNumber) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertContract(
+            new ServiceContractCase { Vector = 0, SelectorValue = 0, CallbackNumber = callbackNumber });
+    }
 }

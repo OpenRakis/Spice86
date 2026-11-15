@@ -28,6 +28,7 @@ internal sealed record GeneratorInputs(
             ServiceVectors = new Dictionary<byte, InterruptServiceVector>(),
             CallbackDescriptions = new Dictionary<ushort, string>(),
             CallbackContracts = new Dictionary<ushort, ServiceContract>(),
+            SwitcherPatchedCalls = new HashSet<SegmentedAddress>(),
             MouseUserSubroutineRegistered = false,
             ProgramSetCurrentPsp = false
         },

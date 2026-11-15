@@ -245,7 +245,7 @@ internal static class IrDoublePrecision {
         int skip = 0;
         while (skip < run.BodyIndices.Count
             && block.Statements[run.BodyIndices[skip]].Node
-                is CheckExternalEventsNode or SpeculativeGuardNode or CommentNode) {
+                is CheckExternalEventsNode or SpeculativeGuardNode or PatchedCallGuardNode or CommentNode) {
             skip++;
         }
         return skip == 0 ? run : new Run(run.Origin, [.. run.BodyIndices.Skip(skip)]);

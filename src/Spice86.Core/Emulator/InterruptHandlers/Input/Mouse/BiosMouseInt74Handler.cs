@@ -11,7 +11,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Handler for interrupt 0x74, which is used by the BIOS to update the mouse position.
 /// Currently also installs the mouse driver ASM code when installing its own code in memory.
 /// </summary>
-public class BiosMouseInt74Handler : IInterruptHandler {
+public class BiosMouseInt74Handler : IInterruptHandler, IPatchedCallSite {
     private readonly DualPic _hardwareInterruptHandler;
     private readonly InMemoryAddressSwitcher _driverAddressSwitcher;
 
@@ -66,4 +66,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// is the stub's own instruction, not an effect of this callback.</remarks>
     [InterruptService(Io = true)]
     public void AfterMouseDriverExecution() => _hardwareInterruptHandler.AcknowledgeInterrupt(12);
+
+    /// <inheritdoc />
+    public SegmentedAddress? PatchedCallAddress => _driverAddressSwitcher.PatchedCallAddress;
 }

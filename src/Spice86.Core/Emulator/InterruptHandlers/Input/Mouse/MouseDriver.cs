@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -17,7 +18,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Driver for the mouse.
 /// </summary>
-public class MouseDriver : IMouseDriver {
+public class MouseDriver : IMouseDriver, IPatchedCallSite {
     private class MouseButtonPressCount {
         public int PressCount { get; set; }
         public double LastPressedX { get; set; }
@@ -121,6 +122,7 @@ public class MouseDriver : IMouseDriver {
     public int CurrentMinY { get => _sharedMouseData.CurrentMinY; set => _sharedMouseData.CurrentMinY = value; }
 
     /// <inheritdoc />
+    [InterruptService(Memory = ServiceMemoryEffect.Write)]
     public void BeforeUserHandlerExecution() {
         bool callUserRoutine = CanCallUserRoutine();
         _passCalledUserRoutine.Push(callUserRoutine);
@@ -169,6 +171,9 @@ public class MouseDriver : IMouseDriver {
         // User routine needs to be disabled because it is called unconditionally in interrupt handler ASM. Disabling means calling an empty function.
         _userHandlerAddressSwitcher.SetAddressToDefault();
     }
+
+    /// <inheritdoc />
+    public SegmentedAddress? PatchedCallAddress => _userHandlerAddressSwitcher.PatchedCallAddress;
 
     /// <inheritdoc />
     public MouseUserCallback GetRegisteredCallback() {
@@ -312,6 +317,7 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
+    [InterruptService]
     public void AfterUserHandlerExecution() {
         // A pass that did not call the user routine saved nothing. When it is nested inside the pass that
         // did, the saved registers and the in-progress flag belong to that outer pass and must stay intact.

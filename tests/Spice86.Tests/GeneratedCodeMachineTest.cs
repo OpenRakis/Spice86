@@ -6,9 +6,11 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -18,6 +20,7 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Microsoft.Extensions.Logging;
@@ -244,6 +247,40 @@ public sealed class GeneratedCodeMachineTest {
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Hardware interrupt 0x08 targets F000:003C*");
+    }
+
+    /// <summary>E4: mouse_irq12 runs discovery with no user routine registered, so the generated
+    /// int 74h stub signature-checks the far call's default target. Registering a routine after
+    /// discovery makes the driver patch that call to F000:0033, which the run must reject as
+    /// untested.</summary>
+    [Fact]
+    public void RuntimeRegisteredMouseRoutineFailsAsUntested() {
+        AsmFixture fixture = AsmFixtureCatalog.MouseIrq12NoRoutine();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // The observed run delivers IRQ 12 with no routine registered and passes.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // A routine registered only at run time lets BeforeUserHandlerExecution patch the far
+        // call's target to the user routine, which the generated signature check rejects.
+        AsmRunSettings registeredSettings = fixture.Settings with {
+            ConfigureMachine = machine => {
+                machine.MouseDriver.RegisterCallback(
+                    new MouseUserCallback(MouseEventMask.Movement, 0xF000, 0x002D));
+                machine.DualPic.SetIrqMask(12, false);
+                machine.InputEventHub.PostMouseMoveEvent(new MouseMoveEventArgs(1, 1));
+                machine.InputEventHub.ProcessAllPendingInputEvents();
+            }
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(registeredSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Untested code variant at D000:00ED*");
     }
 
     /// <summary>

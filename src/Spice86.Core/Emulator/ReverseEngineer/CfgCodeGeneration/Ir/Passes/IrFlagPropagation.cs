@@ -310,7 +310,7 @@ internal static class IrFlagPropagation {
                 if (between.Node is InstructionStartNode or CommentNode) {
                     continue;
                 }
-                if (between.Node is SpeculativeGuardNode || between.Effects.TouchesMemory
+                if (between.Node is SpeculativeGuardNode or PatchedCallGuardNode || between.Effects.TouchesMemory
                     || _alias.IsFullMemoryBoundary(site.Block, index)) {
                     return false;
                 }

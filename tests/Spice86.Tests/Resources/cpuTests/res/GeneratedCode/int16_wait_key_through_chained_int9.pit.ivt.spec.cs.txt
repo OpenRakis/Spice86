@@ -530,7 +530,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     public virtual Action unknown_F000_00E9_F00E9() {
         CheckExternalEvents(biosSegment, 0x00E9);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);

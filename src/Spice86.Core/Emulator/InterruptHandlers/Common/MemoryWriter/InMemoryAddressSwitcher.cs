@@ -24,6 +24,12 @@ public class InMemoryAddressSwitcher {
     public uint? PhysicalLocation { private get; set; }
 
     /// <summary>
+    /// Segmented address of the call instruction this switcher can rewrite at run time, set by
+    /// <see cref="MemoryAsmWriter.WriteFarCallToSwitcherDefaultAddress"/> when it emits the call.
+    /// </summary>
+    public SegmentedAddress? PatchedCallAddress { get; internal set; }
+
+    /// <summary>
     /// Value of the Default Address to use.
     /// </summary>
     public SegmentedAddress? DefaultAddress { get; set; }

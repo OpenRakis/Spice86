@@ -128,7 +128,7 @@ internal static class IrExpressionPropagation {
         for (int k = i; k <= j; k++) {
             IrStatement between = block.Statements[k];
             if (between.Effects.MayFault
-                || between.Node is SpeculativeGuardNode) {
+                || between.Node is SpeculativeGuardNode or PatchedCallGuardNode) {
                 return null;
             }
         }

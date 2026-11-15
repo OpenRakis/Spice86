@@ -141,7 +141,7 @@ internal static class IrDeadRegisterWrites {
         IrStatement candidate) =>
         statements.All(located => ReferenceEquals(located.Statement, candidate)
             || located.Statement.Node is InstructionStartNode or CommentNode
-                or CheckExternalEventsNode or SpeculativeGuardNode);
+                or CheckExternalEventsNode or SpeculativeGuardNode or PatchedCallGuardNode);
 
     private static bool Drops(IrStatement statement, HashSet<ICfgNode> entryNodes, IrSsa ssa) {
         if (entryNodes.Contains(statement.Origin)

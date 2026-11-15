@@ -25,6 +25,7 @@ using Spice86.Tests.Utility;
 internal static class AsmScenarioCatalog {
     private const string LargestFreeBlockObservation = "largestFreeBlock";
     private const string TestPortResultsObservation = "testPortResults";
+    private const string MouseIrq12DeliveriesObservation = "mouseIrq12Deliveries";
     private const byte TestPortSuccess = 0x00;
     private const byte TestPortFailure = 0xFF;
     private const ushort MinFreeParagraphsAfterTsr = 0x8000;
@@ -498,6 +499,29 @@ internal static class AsmScenarioCatalog {
                 .WithoutGeneratedExecution("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
             AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister)
                 .WithoutGeneratedExecution("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
+            // mouse_irq12 posts a move before the run so IRQ 12 is delivered while the program
+            // waits; with no user routine registered the driver's before/after callbacks take their
+            // no-routine contracts, and the delivery reaches vector 0x74.
+            new AsmScenario("mouse_irq12", scope => {
+                scope.AddObservationProvider(MouseIrq12DeliveriesObservation,
+                    machine => machine.CfgCpu.ExecutionContextManager.HardwareInterruptDeliveries
+                        .Any(delivery => delivery.Vector == 0x74));
+                AsmFixture fixture = AsmFixtureCatalog.MouseIrq12NoRoutine();
+                return new AsmFixture(fixture.Settings, fixture.ExpectedMemory, result => {
+                    fixture.AssertResult(result);
+                    result.Observations.Get<bool>(MouseIrq12DeliveriesObservation).Should().BeTrue(
+                        "the posted mouse move must deliver IRQ 12 to vector 0x74");
+                });
+            }, []).WithoutGeneratedExecution(
+                "the IRQ 12 delivery leaves its landing stack frame on the program stack, " +
+                "and generated delivery pushes a different frame than interpreted delivery"),
+            // The registered variant registers the routine through INT 33h AX=000Ch before the wait
+            // loop; the discovery snapshot keeps both callback contracts Unknown then, and the
+            // routine's 0xCAFE store is the oracle.
+            AsmScenario.FromFixture("mouse_irq12.registered", AsmFixtureCatalog.MouseIrq12RegisteredRoutine)
+                .WithoutGeneratedExecution(
+                    "the IRQ 12 delivery leaves its landing stack frame on the program stack, " +
+                    "and generated delivery pushes a different frame than interpreted delivery"),
             AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
                 .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
             AsmScenario.FromFixture("flagconditions", AsmFixtureCatalog.FlagConditions),

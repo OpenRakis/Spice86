@@ -129,6 +129,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitSpeculativeGuardNode(SpeculativeGuardNode node) => true;
 
+    public bool VisitPatchedCallGuardNode(PatchedCallGuardNode node) => true;
+
     public bool VisitDivisionNode(DivisionNode node) => true;
 
     public bool VisitMultiplicationNode(MultiplicationNode node) => true;

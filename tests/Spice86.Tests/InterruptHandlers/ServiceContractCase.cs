@@ -24,6 +24,10 @@ public sealed record ServiceContractCase {
     /// </summary>
     public int Al { get; init; } = InterruptServiceAttribute.NoAl;
 
+    /// <summary>The registered callback number the case invokes instead of a vector
+    /// service, or <see langword="null"/> for a vector case.</summary>
+    public ushort? CallbackNumber { get; init; }
+
     /// <summary>Whether the machine is built with XMS enabled.</summary>
     public bool NeedsXms { get; init; }
 

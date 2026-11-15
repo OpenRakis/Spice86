@@ -216,7 +216,7 @@ internal sealed class IrFrames {
     private int? PartialCopyDelta(IrSsaValue value, int version, IrSsaVersionInfo info) {
         IrStatement? statement = _ssa.DefiningStatement(version);
         if (statement is null || info.Previous < 0
-            || statement.Node is CheckExternalEventsNode or SpeculativeGuardNode
+            || statement.Node is CheckExternalEventsNode or SpeculativeGuardNode or PatchedCallGuardNode
             || statement.Origin is not CfgInstruction instruction
             || (!instruction.IsCall && !IsInterruptCall(instruction))) {
             return null;

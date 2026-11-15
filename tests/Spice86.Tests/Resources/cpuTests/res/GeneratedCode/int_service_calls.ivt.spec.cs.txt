@@ -900,7 +900,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0063_F0063() {
         CheckExternalEvents(biosSegment, 0x0063);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
@@ -1015,7 +1015,7 @@ public partial class CfgGeneratedOverrides {
         return FarRet();
     }
 
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
     public virtual Action unknown_F000_00E9_F00E9() {
         CheckExternalEvents(biosSegment, 0x00E9);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);

@@ -158,9 +158,26 @@ internal sealed class IrLifter(
         if (!IsEmpty(guard)) {
             flattener.Add(guard, node, string.Empty);
         }
+        if (PatchedCallGuard(context, node) is { } patchedGuard) {
+            flattener.Add(patchedGuard, node, string.Empty);
+        }
         string comment = InstructionBoundary.AsmCommentText(assemblyRenderer, node)
             ?? throw new NotSupportedException($"IR lifting does not support node {node.GetType().FullName} at {node.Address}.");
         flattener.Add(new InstructionStartNode(comment) { Address = node.Address }, node, string.Empty);
+    }
+
+    /// <summary>The <c>SelectorSignatureMatches</c> byte check of a call whose target bytes a
+    /// runtime address switcher can rewrite (the mouse int 74h driver call and the mouse driver's
+    /// user-routine call), or <see langword="null"/> for any other node. A speculatively
+    /// discovered call already carries its <see cref="SpeculativeGuardNode"/> instead.</summary>
+    private static IVisitableAstNode? PatchedCallGuard(CfgGeneratorContext context, ICfgNode node) {
+        if (node is not CfgInstruction { IsSpeculative: false } instruction
+            || !context.Program.Inputs.HardwareInterrupts.SwitcherPatchedCalls
+                .Contains(instruction.Address)) {
+            return null;
+        }
+        return new PatchedCallGuardNode(instruction.Address,
+            context.GetSignatureField(instruction));
     }
 
     private IVisitableAstNode BodyOf(NodeEmissionPlan plan) => plan.Node switch {

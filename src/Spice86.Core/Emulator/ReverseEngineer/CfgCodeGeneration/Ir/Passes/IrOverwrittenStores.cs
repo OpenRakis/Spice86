@@ -68,7 +68,7 @@ internal static class IrOverwrittenStores {
             IrStatement between = block.Statements[k];
             if (between.Effects.MayFault
                 || between.Effects.DeliversInterrupts
-                || between.Node is SpeculativeGuardNode
+                || between.Node is SpeculativeGuardNode or PatchedCallGuardNode
                 || alias.IsFullMemoryBoundary(block, k)
                 || alias.Reads(block, k).Any(read
                     => alias.Relation(read, storeAccess) != IrAliasRelation.Disjoint)

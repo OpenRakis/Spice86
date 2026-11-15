@@ -4,9 +4,11 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
@@ -233,25 +235,42 @@ internal static class ServiceContractHarness {
         using ServiceContractMachine machine = new(testCase.NeedsEms, testCase.NeedsXms);
         Spice86DependencyInjection spice86 = machine.Spice86;
 
-        if (!spice86.Machine.InstalledInterruptHandlers.Handlers.TryGetValue(testCase.Vector,
-                out IInterruptHandler? handler)) {
-            throw new InvalidOperationException($"No handler installed on vector 0x{testCase.Vector:X2}");
+        Action? callback = null;
+        IInterruptHandler? handler;
+        InterruptServiceEntry? entry;
+        if (testCase.CallbackNumber is { } callbackNumber) {
+            Callback? registered = spice86.Machine.CallbackHandler.AllRunnables
+                .OfType<Callback>().FirstOrDefault(runnable => runnable.Index == callbackNumber);
+            if (registered is null) {
+                throw new InvalidOperationException(
+                    $"No callback registered for number 0x{callbackNumber:X3}");
+            }
+            entry = HardwareInterruptSetup.ServiceEntryOf(registered.Runnable)
+                ?? throw new InvalidOperationException(
+                    $"No service entry declared for callback 0x{callbackNumber:X3}");
+            callback = registered.Runnable;
+            handler = null;
+        } else {
+            if (!spice86.Machine.InstalledInterruptHandlers.Handlers.TryGetValue(testCase.Vector,
+                    out handler)) {
+                throw new InvalidOperationException($"No handler installed on vector 0x{testCase.Vector:X2}");
+            }
+            entry = EntryOf(handler, testCase.SelectorValue);
+            if (entry is null) {
+                throw new InvalidOperationException(
+                    $"No service entry declared for {testCase} (handler selector is {SelectorOf(handler)})");
+            }
         }
-        ServiceSelector? selector = SelectorOf(handler);
-        InterruptServiceEntry? entry = EntryOf(handler, testCase.SelectorValue);
-        if (entry is null) {
-            throw new InvalidOperationException(
-                $"No service entry declared for {testCase} (handler selector is {selector})");
-        }
+        ServiceSelector? selector = handler is null ? null : SelectorOf(handler);
         if (testCase.Al != InterruptServiceAttribute.NoAl) {
             entry = entry.Variants.FirstOrDefault(variant => variant.Al == testCase.Al)
                 ?? throw new InvalidOperationException(
                     $"No AL=0x{testCase.Al:X2} variant declared for {testCase}");
         }
 
-        if (mode != ServiceRunMode.Stub && handler is not InterruptHandler) {
+        if (callback is null && mode != ServiceRunMode.Stub && handler is not InterruptHandler) {
             throw new InvalidOperationException(
-                $"Handler on vector 0x{testCase.Vector:X2} ({handler.GetType().Name}) does not derive " +
+                $"Handler on vector 0x{testCase.Vector:X2} ({handler?.GetType().Name}) does not derive " +
                 "from InterruptHandler and cannot be run by the harness");
         }
 
@@ -344,8 +363,10 @@ internal static class ServiceContractHarness {
         try {
             if (mode == ServiceRunMode.Stub) {
                 RunThroughStub(spice86, state, testCase, entry);
+            } else if (callback is not null) {
+                callback();
             } else {
-                ((InterruptHandler)handler).Run();
+                ((InterruptHandler)handler!).Run();
             }
         } finally {
             breakpoints.ToggleBreakPoint(ioBreakpoint, false);
