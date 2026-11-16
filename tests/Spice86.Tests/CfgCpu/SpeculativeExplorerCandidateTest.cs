@@ -436,6 +436,44 @@ public sealed class SpeculativeExplorerCandidateTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void ContinuationAfterUnknownCalleeKeepsCs() {
+        // Arrange: nop anchor at 0x10, a call near at 0x11 to a callee the return evidence says
+        // comes back but whose write scan is unknown (`jmp ax` at 0x80), and a continuation at
+        // 0x14 that jumps through a CS-relative cell holding 0x90. Only CS survives the call, so
+        // the site registers a cell dependent and the anchor proposes the cell's target.
+        SegmentedAddress anchorAddress = new(0x200, 0x10);
+        SegmentedAddress callee = new(0x200, 0x80);
+        SegmentedAddress siteAddress = new(0x200, 0x14);
+        SegmentedAddress target = new(0x200, 0x90);
+        WriteNop(anchorAddress);
+        WriteCallNear(new SegmentedAddress(0x200, 0x11), callee);
+        uint sitePhys = MemoryUtils.ToPhysicalAddress(siteAddress.Segment, siteAddress.Offset);
+        Memory.UInt8[sitePhys] = 0x2E;
+        Memory.UInt8[sitePhys + 1] = 0xFF;
+        Memory.UInt8[sitePhys + 2] = 0x26;
+        Memory.UInt16[sitePhys + 3] = 0x40;
+        Memory.UInt16[MemoryUtils.ToPhysicalAddress(0x200, 0x40)] = 0x90;
+        uint calleePhys = MemoryUtils.ToPhysicalAddress(callee.Segment, callee.Offset);
+        Memory.UInt8[calleePhys] = 0xFF;
+        Memory.UInt8[calleePhys + 1] = 0xE0;
+        WriteNop(target);
+        WriteRet(new SegmentedAddress(0x200, 0x91));
+        RegisterImage();
+        CfgInstruction anchor = Parser.ParseInstructionAt(anchorAddress);
+        NodeIndex.Insert(anchor);
+        State.CS = 0x200;
+        _explorer.RecordCallReturnEvidence(callee, true);
+
+        // Act
+        _explorer.ExploreFrom(anchor);
+        _explorer.EvaluateAnchorDependents(anchor);
+
+        // Assert
+        NodeIndex.HasAddress(target).Should().BeTrue(
+            "CS is never cleared by a call: a ret/retf/iret always lands in a known CS");
+    }
+
+    [Fact]
     public void SiteAcceptsAtMost32DistinctNonStaticTargets() {
         // Arrange: 33 distinct trusted targets reached from the same site, each a RET.
         CfgInstruction site = CreateObservedNode(new SegmentedAddress(0x200, 0x20));

@@ -41,6 +41,11 @@
 ;   N6 (negative): same shape as S7 but the observed driver target writes DI,
 ;       so the register crosses the indirect call clobbered and the site is
 ;       refused (golden-only).
+;   S8: `call word [cs:s8_ptr]` sits past `call s8_leaf`. The leaf's write
+;       scan is unknown, so everything but CS is cleared; a CS cell site only
+;       needs CS, which every return keeps, and the site registers too.
+;   N7 (negative): `jmp word [ds:n7_ptr]` past a leaf that writes DS, so the
+;       site's segment is unknown and the site is refused (golden-only).
 ;
 ; Selector byte at DS:0500h: 0 = discovery run (call arms never taken),
 ; 1 = unobserved run (every arm taken). DS = CS (flat bin).
@@ -56,6 +61,7 @@
 ;   [0407] = cb_s5 invocations (warmup + S5 arm calls)
 ;   [0408] = cb_s6 invocations (warmup + S6 arm calls)
 ;   [0409] = cb_s7 invocations (warmup + S7 arm calls)
+;   [040A] = cb_s8 invocations (warmup + S8 arm calls)
 
 use16
 
@@ -70,6 +76,7 @@ start:
     mov byte [0x0407], 0x00
     mov byte [0x0408], 0x00
     mov byte [0x0409], 0x00
+    mov byte [0x040A], 0x00
 
     ; Warmup: one observed call per callback builds the return evidence the
     ; speculative call sites need for their continuations.
@@ -89,6 +96,9 @@ start:
     call n4_leaf
     call n5_leaf
     call n6_leaf
+    call cb_s8
+    call s8_leaf
+    call n7_leaf
 ; --- S1: callback in DI, `call di` on the unexecuted arm ---
     mov di, cb_a
     call s1_dispatch
@@ -156,6 +166,14 @@ s3_done:
     mov di, cb_s5
     call n6_dispatch
     call n6_dispatch
+
+; --- S8: CS cell site past a leaf whose write scan is unknown ---
+    call s8_dispatch                  ; registers the site past the leaf call
+    call s8_dispatch                  ; evaluation proposes cb_s8
+
+; --- N7: leaf writes DS -> the DS cell site is refused ---
+    call n7_dispatch
+    call n7_dispatch
 
     mov byte [0x0400], 0x02
     hlt
@@ -350,6 +368,45 @@ n6_driver:
 
 cb_s7:
     inc byte [0x0409]
+    ret
+
+s8_dispatch:
+    cmp byte [0x0500], 0
+    jne s8_call
+    ret
+s8_call:
+    call s8_leaf
+    call word [cs:s8_ptr]
+    ret
+s8_ptr:
+    dw cb_s8
+s8_leaf:
+    cmp byte [0x0500], 0xFF
+    je s8_indirect
+    ret
+s8_indirect:
+    call si
+    ret
+
+n7_dispatch:
+    cmp byte [0x0500], 0xFF
+    je n7_dead
+    ret
+n7_dead:
+    call n7_leaf
+    jmp word [ds:n7_ptr]
+n7_ptr:
+    dw cb_n7
+n7_leaf:
+    mov ax, ds
+    mov ds, ax
+    ret
+
+cb_s8:
+    inc byte [0x040A]
+    ret
+cb_n7:
+    inc byte [0x040B]
     ret
 
 rb 65520-$

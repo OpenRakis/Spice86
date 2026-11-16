@@ -1216,17 +1216,16 @@ public class SpeculativeExplorer : InstructionReplacer {
     }
 
     /// <summary>The registers of <paramref name="knownBeforeCall"/> that still hold after
-    /// <paramref name="callNode"/> returns: the ones the callee write scan does not name. An
-    /// unknown callee clears everything, exactly like before the scan existed.</summary>
+    /// <paramref name="callNode"/> returns: the ones the callee write scan does not name, plus
+    /// CS - every return lands in a known CS (a near ret in the caller's CS, a retf in the CS
+    /// the call pushed, an iret in the CS the int pushed), so an unknown callee keeps only CS.
+    /// </summary>
     private ushort ContinuationKnown(CfgInstruction callNode, ushort knownBeforeCall) {
         if (knownBeforeCall == 0) {
             return 0;
         }
         ushort mask = _calleeWriteScanner.MayWriteAcross(callNode);
-        if (mask == (ushort)RegisterBits.AllExceptCs) {
-            return 0;
-        }
-        return (ushort)(knownBeforeCall & ~mask);
+        return (ushort)(knownBeforeCall & ~(mask & ~(ushort)RegisterBits.Cs));
     }
 
     private bool IsCalleeKnownToReturn(CfgInstruction callNode, out SegmentedAddress? callee) {

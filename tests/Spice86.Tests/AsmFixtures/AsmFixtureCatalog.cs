@@ -699,11 +699,14 @@ internal static class AsmFixtureCatalog {
     /// restoring it before its return: the callee write scan sees the restore and the site
     /// resolves the same way. The S7 leaf crosses an indirect call whose observed driver
     /// target writes only AX: the write scan unions the observed targets and the site
-    /// resolves the same way. The dead arms (a path write to DI, a zero cell, a leaf
-    /// writing DI, a leaf whose scan is unknown, a leaf whose pops read the wrong slots,
-    /// a leaf whose observed driver writes DI) stay undiscovered.</summary>
+    /// resolves the same way. The S8 cell site sits past a leaf whose write scan is unknown:
+    /// the continuation keeps CS, which is all a CS cell needs, and the site resolves the
+    /// same way. The dead arms (a path write to DI, a zero cell, a leaf
+    /// writing DI, a leaf whose scan is unknown followed by a register site, a leaf whose pops
+    /// read the wrong slots, a leaf whose observed driver writes DI, a leaf writing DS before
+    /// a DS cell site) stay undiscovered.</summary>
     public static AsmFixture SpeculativeAnchorValues(SpeculativeArm arm) {
-        byte[] expectedMemory = new byte[0x40A];
+        byte[] expectedMemory = new byte[0x40B];
         expectedMemory[0x400] = 0x02;
         if (arm == SpeculativeArm.Unobserved) {
             expectedMemory[0x401] = 0x03;
@@ -715,8 +718,9 @@ internal static class AsmFixtureCatalog {
             expectedMemory[0x407] = 0x03;
             expectedMemory[0x408] = 0x03;
             expectedMemory[0x409] = 0x03;
+            expectedMemory[0x40A] = 0x03;
         } else {
-            for (int i = 0x401; i <= 0x409; i++) {
+            for (int i = 0x401; i <= 0x40A; i++) {
                 expectedMemory[i] = 0x01;
             }
         }
