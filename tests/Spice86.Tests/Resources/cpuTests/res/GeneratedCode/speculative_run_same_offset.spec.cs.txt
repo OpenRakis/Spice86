@@ -20,12 +20,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeRunOrFail(biosSegment, 0x010D, SpeculativeRun_010D_Signature_010D_mov_9_Signature_010F_mov_13_Signature_0111_add_15_Signature_0113_mov_16);
             BL = 0x0E;
             AL = 0xEE;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = false;
-            SignFlag = true;
-            OverflowFlag = false;
+            SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: false, sign: true, overflow: false);
             DsGlobals.Byte0401 = 0xEE;
             VerifySpeculativeEntryOrFail(biosSegment, 0x0116, Signature_0116_ret_17);
             FarReturn();
@@ -75,12 +70,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeRunOrFail(cs1, 0x010D, SpeculativeRun_010D_Signature_010D_mov_30_Signature_010F_mov_34_Signature_0111_add_36_Signature_0113_mov_37);
             BL = 0x0C;
             AL = 0xCC;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = false;
-            SignFlag = true;
-            OverflowFlag = false;
+            SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: false, sign: true, overflow: false);
             DsGlobals.Byte0402 = 0xCC;
             VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_ret_38);
             FarReturn();

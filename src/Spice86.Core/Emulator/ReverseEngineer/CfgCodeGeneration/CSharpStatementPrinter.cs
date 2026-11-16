@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -66,6 +67,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                     break;
                 case BoundaryPrint boundaryPrint:
                     PushBoundaryPrint(pending, boundaryPrint);
+                    break;
+                case StatusFlagRun statusFlagRun:
+                    writer.Line(statusFlagRun.Text);
                     break;
             }
         }
@@ -354,6 +358,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// suffix like <see cref="PushInstructionBoundary"/>.</summary>
     private sealed record BoundaryPrint(InstructionBoundaryNode Boundary, IReadOnlyList<object> Items);
 
+    /// <summary>A whole six-flag run merged into one <c>SetStatusFlags(...)</c> line.</summary>
+    private sealed record StatusFlagRun(string Text);
+
     /// <summary>The condition, step and rewritten body of a <see cref="PreTestLoopNode"/> eligible for the
     /// <c>for</c> form, before its init statement is located.</summary>
     private sealed record CountedLoopShape(string Counter, IVisitableAstNode Step, BlockNode Body);
@@ -370,41 +377,86 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>while</c>.</summary>
     private void PushBlockStatements(Stack<object> pending, BlockNode block) {
         IReadOnlyList<IVisitableAstNode> statements = block.Statements;
-        if (expressions.LocalReads is null) {
-            for (int index = statements.Count - 1; index >= 0; index--) {
-                pending.Push(statements[index]);
-            }
-            return;
-        }
         object?[] slots = new object?[statements.Count];
         for (int index = 0; index < statements.Count; index++) {
             slots[index] = statements[index];
         }
-        for (int index = 0; index < statements.Count; index++) {
-            switch (statements[index]) {
-                case PreTestLoopNode loop:
-                    if (CountedLoopShapeOf(block, MethodGotoTargets, loop.Condition, loop.Body, loop.HeaderTarget) is { } shape
-                        && InitBefore(slots, statements, index, shape.Counter) is { } init) {
-                        slots[index] = new CountedLoop(loop.Condition, init, shape.Step, shape.Body);
-                    }
-                    break;
-                case WhileNode whileNode:
-                    if (CountedLoopShapeOf(block, MethodGotoTargets, whileNode.Condition, whileNode.Body, null) is { } whileShape
-                        && InitBefore(slots, statements, index, whileShape.Counter) is { } whileInit) {
-                        slots[index] = new CountedLoop(whileNode.Condition, whileInit, whileShape.Step, whileShape.Body);
-                    }
-                    break;
-                case InstructionBoundaryNode boundary:
-                    BoundaryCountedLoops(block, MethodGotoTargets, slots, index, boundary);
-                    break;
+        if (expressions.LocalReads is not null) {
+            for (int index = 0; index < statements.Count; index++) {
+                switch (statements[index]) {
+                    case PreTestLoopNode loop:
+                        if (CountedLoopShapeOf(block, MethodGotoTargets, loop.Condition, loop.Body, loop.HeaderTarget) is { } shape
+                            && InitBefore(slots, statements, index, shape.Counter) is { } init) {
+                            slots[index] = new CountedLoop(loop.Condition, init, shape.Step, shape.Body);
+                        }
+                        break;
+                    case WhileNode whileNode:
+                        if (CountedLoopShapeOf(block, MethodGotoTargets, whileNode.Condition, whileNode.Body, null) is { } whileShape
+                            && InitBefore(slots, statements, index, whileShape.Counter) is { } whileInit) {
+                            slots[index] = new CountedLoop(whileNode.Condition, whileInit, whileShape.Step, whileShape.Body);
+                        }
+                        break;
+                    case InstructionBoundaryNode boundary:
+                        BoundaryCountedLoops(block, MethodGotoTargets, slots, index, boundary);
+                        break;
+                }
             }
         }
+        MergeStatusFlagRuns(slots);
         for (int index = statements.Count - 1; index >= 0; index--) {
             if (slots[index] is { } item) {
                 pending.Push(item);
             }
         }
     }
+
+    private static readonly ushort[] StatusFlagMasks = [
+        Flags.Carry, Flags.Parity, Flags.Auxiliary, Flags.Zero, Flags.Sign, Flags.Overflow];
+    private static readonly string[] StatusFlagArgumentNames = [
+        "carry", "parity", "auxiliary", "zero", "sign", "overflow"];
+
+    /// <summary>Replaces every run of six consecutive statements assigning each of the six status flags
+    /// once - the flag result of one operation, kept for an observer - with a single
+    /// <see cref="StatusFlagRun"/>. Any other statement between them, a repeated or non-status flag, or a
+    /// value that reads a status flag, or a flag target printed as a local keeps the run unmerged.</summary>
+    private void MergeStatusFlagRuns(object?[] slots) {
+        for (int index = 0; index + StatusFlagMasks.Length <= slots.Length; index++) {
+            if (StatusFlagRunOf(slots, index) is not { } run) {
+                continue;
+            }
+            slots[index] = run;
+            for (int skip = 1; skip < StatusFlagMasks.Length; skip++) {
+                slots[index + skip] = null;
+            }
+            index += StatusFlagMasks.Length - 1;
+        }
+    }
+
+    private StatusFlagRun? StatusFlagRunOf(object?[] slots, int index) {
+        string?[] values = new string?[StatusFlagMasks.Length];
+        for (int offset = 0; offset < StatusFlagMasks.Length; offset++) {
+            if (slots[index + offset] is not BinaryOperationNode {
+                    BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: CpuFlagNode flag, Right: ValueNode value }) {
+                return null;
+            }
+            int position = Array.IndexOf(StatusFlagMasks, flag.FlagMask);
+            if (position < 0 || values[position] is not null || ReadsStatusFlag(value)
+                || expressions.LocalReads?.ContainsKey(flag) == true) {
+                return null;
+            }
+            values[position] = expressions.Print(value).Text;
+        }
+        string arguments = string.Join(", ", StatusFlagArgumentNames
+            .Select((name, position) => $"{name}: {values[position]}"));
+        return new StatusFlagRun($"SetStatusFlags({arguments});");
+    }
+
+    /// <summary>Whether <paramref name="value"/> reads a status flag, directly or through a local that
+    /// stands for one (a promoted flag's read node stays a <see cref="CpuFlagNode"/>).</summary>
+    private static bool ReadsStatusFlag(ValueNode value) =>
+        IrAstChildren.Descendants(value).OfType<CpuFlagNode>()
+            .Any(flag => StatusFlagMasks.Contains(flag.FlagMask));
 
     /// <summary>Queues a boundary body's statements in which every counted loop whose init is the last
     /// statement of the previous sibling boundary became a <see cref="CountedLoop"/> marker.</summary>

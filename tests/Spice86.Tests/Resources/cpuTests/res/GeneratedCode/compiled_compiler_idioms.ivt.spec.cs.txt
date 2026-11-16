@@ -671,12 +671,7 @@ public partial class CfgGeneratedOverrides {
         }
         if (ZeroFlag) {
             AX = 0;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = true;
-            SignFlag = false;
-            OverflowFlag = false;
+            SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: true, sign: false, overflow: false);
             DX = 0x000F;
             DI = index7;
             CX = count2;
@@ -4761,12 +4756,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeRunOrFail(cs1, 0x2161, SpeculativeRun_2161);
             BL = AL;
             BH = 0;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = true;
-            SignFlag = false;
-            OverflowFlag = false;
+            SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: true, sign: false, overflow: false);
             byte1 = UInt8[word2, BX + 0x030C];
             AX = (ushort)(short)(sbyte)byte1;
             DX = AX;

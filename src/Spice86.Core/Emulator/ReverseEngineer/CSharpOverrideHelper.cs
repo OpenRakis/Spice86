@@ -392,6 +392,18 @@ public class CSharpOverrideHelper {
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
 
     /// <summary>
+    /// Sets the six status flags at once, the flag result of one operation.
+    /// </summary>
+    public void SetStatusFlags(bool carry, bool parity, bool auxiliary, bool zero, bool sign, bool overflow) {
+        CarryFlag = carry;
+        ParityFlag = parity;
+        AuxiliaryFlag = auxiliary;
+        ZeroFlag = zero;
+        SignFlag = sign;
+        OverflowFlag = overflow;
+    }
+
+    /// <summary>
     /// Gets or sets the value of the flags register (32 bit value).
     /// </summary>
     public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }

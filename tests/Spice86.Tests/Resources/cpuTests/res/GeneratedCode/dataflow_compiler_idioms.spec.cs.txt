@@ -76,12 +76,7 @@ public partial class CfgGeneratedOverrides {
             AX = word2;
             AX ^= word3;
             UInt16[DS, index + 0x1A] = AX;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = true;
-            SignFlag = false;
-            OverflowFlag = false;
+            SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: true, sign: false, overflow: false);
             DX = 0xABCD;
             AX = UInt16[CS, index2];
             DL = AL;

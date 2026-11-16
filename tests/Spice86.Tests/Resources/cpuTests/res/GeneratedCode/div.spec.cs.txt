@@ -398,12 +398,7 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[0x00D0] = 2;
         (word1, word2) = Div16(divisor: 5, dividend: 0x00000014);
         BP = 0x00D2;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
+        SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: false, sign: false, overflow: false);
         DsGlobals.Word0080 = word1;
         DsGlobals.Word0082 = 5;
         DsGlobals.Word0004 = word2;
@@ -412,12 +407,7 @@ public partial class CfgGeneratedOverrides {
         SsUInt16[0x00D2] = 4;
         (AX, DX) = Div16(divisor: DsGlobals.Word0006, dividend: 0xA320C3DAu);
         BP = 0x00D4;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
+        SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: false, sign: false, overflow: false);
         DsGlobals.Word0008 = AX;
         DsGlobals.Word000A = DX;
         Stack.Push16(FlagRegister16);

@@ -160,12 +160,7 @@ public partial class CfgGeneratedOverrides {
         EsGlobals.Word0078 = AX;
         EsGlobals.Word007A = BX;
         SI = 0x1234;
-        CarryFlag = false;
-        ParityFlag = false;
-        AuxiliaryFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
+        SetStatusFlags(carry: false, parity: false, auxiliary: false, zero: false, sign: false, overflow: false);
         EsGlobals.Word0096 = 0x1234;
         CsGlobals.Word0429 = SP;
         AX = 0x30A5;

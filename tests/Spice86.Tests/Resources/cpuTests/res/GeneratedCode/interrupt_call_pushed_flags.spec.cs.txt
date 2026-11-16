@@ -20,12 +20,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x004D);
         CX = 0x7FFF;
         CX = 0x8000;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = true;
-        ZeroFlag = false;
-        SignFlag = true;
-        OverflowFlag = true;
+        SetStatusFlags(carry: false, parity: true, auxiliary: true, zero: false, sign: true, overflow: true);
         InterruptCall(biosSegment, 0x0055, 0x60, biosSegment, 0x0059, unknown_F000_0059_F0059Entry);
         return NearRet();
     }
@@ -82,21 +77,11 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = true;
         InterruptCall(biosSegment, 0x002B, 0x60, biosSegment, 0x0059, unknown_F000_0059_F0059Entry);
         DirectionFlag = false;
-        CarryFlag = true;
-        ParityFlag = false;
-        AuxiliaryFlag = true;
-        ZeroFlag = false;
-        SignFlag = true;
-        OverflowFlag = false;
+        SetStatusFlags(carry: true, parity: false, auxiliary: true, zero: false, sign: true, overflow: false);
         InterruptCall(biosSegment, 0x0034, 0x60, biosSegment, 0x0059, unknown_F000_0059_F0059Entry);
         NearCall(biosSegment, 0x0037, unknown_F000_004D_F004DEntry);
         DX = 0xFFFF;
-        CarryFlag = true;
-        ParityFlag = true;
-        AuxiliaryFlag = true;
-        ZeroFlag = false;
-        SignFlag = true;
-        OverflowFlag = false;
+        SetStatusFlags(carry: true, parity: true, auxiliary: true, zero: false, sign: true, overflow: false);
         DirectionFlag = true;
         NearCall(biosSegment, 0x0041, unknown_F000_0056_F0056Entry);
         DirectionFlag = false;

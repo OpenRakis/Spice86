@@ -577,6 +577,11 @@ the two apart. A post-test loop (`do { ... } while`, which is what the `loop` in
 a `jcxz` guard lowers to - its first iteration never tests) and a step that is not the body's last
 statement stay `while`.
 
+Six consecutive statements assigning each status flag once (CF, PF, AF, ZF, SF, OF), with values
+that read no status flag, print as one `SetStatusFlags(carry: ..., parity: ..., auxiliary: ...,
+zero: ..., sign: ..., overflow: ...);` call - the flag result of one operation - while a shorter
+run or a flag-reading value keeps the separate lines.
+
 ### Save / restore pairs
 
 A `push X` ... `pop Y` pair prints without the stack - the pushed value is any expression and the

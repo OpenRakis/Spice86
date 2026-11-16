@@ -113,12 +113,7 @@ public partial class CfgGeneratedOverrides {
         BX = 0x005C;
         InterruptCall(biosSegment, 0x00AF, 0x62, biosSegment, 0x0104, unknown_F000_0104_F0104Entry);
         Segment2000Globals.Word0056 = AX;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
+        SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: false, sign: false, overflow: false);
         InterruptCall(biosSegment, 0x00BA, 0x63, biosSegment, 0x0107, unknown_F000_0107_F0107Entry);
         if (CarryFlag) {
             Segment2000Globals.Byte0058 = 1;

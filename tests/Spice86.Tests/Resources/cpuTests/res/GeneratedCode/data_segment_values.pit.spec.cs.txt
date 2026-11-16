@@ -430,12 +430,7 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0083 = AL;
         InterruptFlag = false;
         AX = 0;
-        CarryFlag = false;
-        ParityFlag = true;
-        AuxiliaryFlag = false;
-        ZeroFlag = true;
-        SignFlag = false;
-        OverflowFlag = false;
+        SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: true, sign: false, overflow: false);
         ES = 0;
         Segment0000Globals.Dword0030 = 0x000002D3 | (uint)CS << 16;
         Segment0000Globals.Dword0034 = 0x000002DF | (uint)CS << 16;
