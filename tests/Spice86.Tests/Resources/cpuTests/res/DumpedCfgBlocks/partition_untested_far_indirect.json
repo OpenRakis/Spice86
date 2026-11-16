@@ -63,7 +63,7 @@
       ],
       "succ": [
         16,
-        78
+        24
       ],
       "asm": [
         "2EFF1F|call far dword ptr CS:[BX]"
@@ -91,7 +91,7 @@
       ]
     },
     {
-      "id": 78,
+      "id": 24,
       "entry": "F000:0031",
       "dead": true,
       "term": "F000:0034",
@@ -114,7 +114,7 @@
         3
       ],
       "succ": [
-        78
+        24
       ],
       "asm": [
         "2EFF2F|jmp far dword ptr CS:[BX]"

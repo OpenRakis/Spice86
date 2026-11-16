@@ -1,0 +1,1953 @@
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Outputs: AL. Changes: AL, BX.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual byte unknown_F000_01DA_F01DA(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x01DA);
+        BL = DsGlobals.Byte0500;
+        BH = 0;
+        AL = UInt8[CS, BX + 0x01E6];
+        NearReturn();
+        return AL;
+    }
+
+    public virtual Action unknown_F000_01DA_F01DA_Asm() {
+        AL = unknown_F000_01DA_F01DA(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: AX. Changes: AX, BX.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_01E8_F01E8(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x01E8);
+        BL = DsGlobals.Byte0500;
+        BH = 0;
+        AX = (ushort)UInt8[CS, BX + 0x01F5];
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_01E8_F01E8_Asm() {
+        AX = unknown_F000_01E8_F01E8(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_01F7_F01F7(byte byte1) {
+        AL = byte1;
+        byte flagOperand_01FD = 0;
+        CheckExternalEvents(biosSegment, 0x01F7);
+        DI = 0x03A1;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x01FD);
+            flagOperand_01FD = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_01FD, byte1);
+            if (flagOperand_01FD == byte1) {
+                goto L_0209;
+            }
+            DI = Alu16.Add(DI, 0x000E);
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_0209:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_01F7_F01F7_Asm() {
+        (DI, CarryFlag) = unknown_F000_01F7_F01F7(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_020B_F020B(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x020B);
+        DI = 0x03CB;
+        CX = SegmentF000Globals.Word03CB;
+        DI = 0x03CD;
+        if (DsGlobals.Byte0500 == 0xFF) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x021B, Signature_021B_sub);
+            CX--;
+        }
+        do {
+            CheckExternalEvents(biosSegment, 0x021E);
+            if (UInt8[CS, DI] == byte1) {
+                goto L_022A;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_022A:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_020B_F020B_Asm() {
+        (DI, CarryFlag) = unknown_F000_020B_F020B(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_022C_F022C(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x022C);
+        if (DsGlobals.Byte0500 != 0) {
+            VerifySpeculativeRunOrFail(biosSegment, 0x023E, SpeculativeRun_023E);
+            DI = 0x0415;
+            CX = 2;
+        }
+        else {
+            CX = SegmentF000Globals.Word03F7;
+            DI = 0x03F9;
+        }
+        do {
+            CheckExternalEvents(biosSegment, 0x0244);
+            if (UInt8[CS, DI] == byte1) {
+                goto L_0250;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_0250:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_022C_F022C_Asm() {
+        (DI, CarryFlag) = unknown_F000_022C_F022C(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: CF. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual bool unknown_F000_0252_F0252(byte byte1) {
+        AL = byte1;
+        byte flagOperand_0258 = 0;
+        CheckExternalEvents(biosSegment, 0x0252);
+        DI = 0x043F;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x0258);
+            flagOperand_0258 = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_0258, byte1);
+            if (flagOperand_0258 == byte1) {
+                goto L_0264;
+            }
+            DI = Alu16.Add(DI, 0x000E);
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return CarryFlag;
+    L_0264:
+        VerifySpeculativeRunOrFail(biosSegment, 0x0264, SpeculativeRun_0264);
+        CarryFlag = true;
+        NearReturn();
+        return CarryFlag;
+    }
+
+    public virtual Action unknown_F000_0252_F0252_Asm() {
+        CarryFlag = unknown_F000_0252_F0252(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_0266_F0266(byte byte1) {
+        AL = byte1;
+        CheckExternalEvents(biosSegment, 0x0266);
+        DI = 0x0493;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x026C);
+            if (UInt8[CS, DI] == byte1) {
+                goto L_0278;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_0278:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_0266_F0266_Asm() {
+        (DI, CarryFlag) = unknown_F000_0266_F0266(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX. Outputs: DI, CF. Changes: DI, CF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_027A_F027A(ushort word1) {
+        AX = word1;
+        CheckExternalEvents(biosSegment, 0x027A);
+        DI = 0x04BF;
+        if (word1 != 0x0011) {
+            DI = 0x04CD;
+            if (word1 != 0x0022) {
+                DI = 0x04DB;
+            }
+        }
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_027A_F027A_Asm() {
+        (DI, CarryFlag) = unknown_F000_027A_F027A(AX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Outputs: AL, DI, CF. Changes: AX, CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (byte result, ushort result2, bool result3) unknown_F000_028F_F028F() {
+        byte flagOperand_0298 = 0;
+        CheckExternalEvents(biosSegment, 0x028F);
+        DI = 0x04E9;
+        CX = 3;
+        AX = 0x000E;
+        do {
+            CheckExternalEvents(biosSegment, 0x0298);
+            flagOperand_0298 = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_0298, 0x0E);
+            if (flagOperand_0298 == 0x0E) {
+                goto L_02A3;
+            }
+            DI = Alu16.Add(DI, 0x000E);
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (AL, DI, CarryFlag);
+    L_02A3:
+        VerifySpeculativeRunOrFail(biosSegment, 0x02A3, SpeculativeRun_02A3);
+        CarryFlag = true;
+        NearReturn();
+        return (AL, DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_028F_F028F_Asm() {
+        (AL, DI, CarryFlag) = unknown_F000_028F_F028F();
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Outputs: AX, DI, CF. Changes: AX, CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, ushort result2, bool result3) unknown_F000_02A5_F02A5() {
+        byte flagOperand_02AD = 0;
+        CheckExternalEvents(biosSegment, 0x02A5);
+        DI = 0x0513;
+        AX = 3;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x02AD);
+            flagOperand_02AD = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_02AD, 3);
+            if (flagOperand_02AD == 3) {
+                goto L_02B9;
+            }
+            DI = Alu16.Add(DI, 0x000E);
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (AX, DI, CarryFlag);
+    L_02B9:
+        VerifySpeculativeRunOrFail(biosSegment, 0x02B9, SpeculativeRun_02B9);
+        CarryFlag = true;
+        NearReturn();
+        return (AX, DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_02A5_F02A5_Asm() {
+        (AX, DI, CarryFlag) = unknown_F000_02A5_F02A5();
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_02BB_F02BB(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x02BB);
+        DI = 0;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x02C1);
+            if (UInt8[word1, DI] == byte1) {
+                goto L_02CC;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_02CC:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_02BB_F02BB_Asm() {
+        (DI, CarryFlag) = unknown_F000_02BB_F02BB(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_02CE_F02CE(byte byte1) {
+        AL = byte1;
+        CheckExternalEvents(biosSegment, 0x02CE);
+        DI = 0x055B;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x02D4);
+            if (UInt8[CS, DI] == byte1) {
+                goto L_02E0;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_02E0:
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_02CE_F02CE_Asm() {
+        (DI, CarryFlag) = unknown_F000_02CE_F02CE(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: CF. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual bool unknown_F000_02E2_F02E2(byte byte1) {
+        AL = byte1;
+        byte flagOperand_02EC = 0;
+        CheckExternalEvents(biosSegment, 0x02E2);
+        DI = 0x0585;
+        CX = 3;
+        CX = NearCall(biosSegment, 0x02EB, () => unknown_F000_02FA_F02FA());
+        do {
+            CheckExternalEvents(biosSegment, 0x02EC);
+            flagOperand_02EC = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_02EC, byte1);
+            if (flagOperand_02EC == byte1) {
+                goto L_02F8;
+            }
+            DI = Alu16.Add(DI, 0x000E);
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return CarryFlag;
+    L_02F8:
+        VerifySpeculativeRunOrFail(biosSegment, 0x02F8, SpeculativeRun_02F8);
+        CarryFlag = true;
+        NearReturn();
+        return CarryFlag;
+    }
+
+    public virtual Action unknown_F000_02E2_F02E2_Asm() {
+        CarryFlag = unknown_F000_02E2_F02E2(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Outputs: CX. Changes: CX.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_02FA_F02FA() {
+        CheckExternalEvents(biosSegment, 0x02FA);
+        CX = 9;
+        NearReturn();
+        return CX;
+    }
+
+    public virtual Action unknown_F000_02FA_F02FA_Asm() {
+        CX = unknown_F000_02FA_F02FA();
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, bool result2) unknown_F000_02FE_F02FE(byte byte1) {
+        AL = byte1;
+        byte flagOperand_0304 = 0;
+        CheckExternalEvents(biosSegment, 0x02FE);
+        DI = 0x053D;
+        CX = 1;
+        do {
+            CheckExternalEvents(biosSegment, 0x0304);
+            flagOperand_0304 = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_0304, byte1);
+            if (flagOperand_0304 == byte1) {
+                goto L_0310;
+            }
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        CarryFlag = false;
+        NearReturn();
+        return (DI, CarryFlag);
+    L_0310:
+        VerifySpeculativeRunOrFail(biosSegment, 0x0310, SpeculativeRun_0310);
+        CarryFlag = true;
+        NearReturn();
+        return (DI, CarryFlag);
+    }
+
+    public virtual Action unknown_F000_02FE_F02FE_Asm() {
+        (DI, CarryFlag) = unknown_F000_02FE_F02FE(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX. Outputs: none. Changes: DI.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_0312_F0312(ushort word1) {
+        AX = word1;
+        CheckExternalEvents(biosSegment, 0x0312);
+        DI = word1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_0312_F0312_Asm() {
+        unknown_F000_0312_F0312(AX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: AL, CX, BX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_0315_F0315() {
+        byte flagOperand_0315 = 0;
+        CheckExternalEvents(biosSegment, 0x0315);
+        flagOperand_0315 = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_0315, 0);
+        if (flagOperand_0315 == 0) {
+            return NearRet();
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x031D, Signature_031D_call);
+        AL = NearCall(biosSegment, 0x0320, () => unknown_F000_01DA_F01DA(DS));
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0320, Signature_0320_call);
+        CarryFlag = NearCall(biosSegment, 0x0323, () => unknown_F000_0252_F0252(AL));
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0323, Signature_0323_jae);
+        if (CarryFlag) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0325, Signature_0325_call);
+            ushort targetSegment_0325 = UInt16[CS, DI + 0x000C];
+            ushort targetOffset_0325 = UInt16[CS, DI + 0x0A];
+            switch ((uint)(targetSegment_0325 << 16 | targetOffset_0325)) {
+                case 0xF000_8061:
+                    FarCall(biosSegment, 0x0329, biosSegment, unknown_F000_8061_F8061_AsmEntry);
+                    break;
+                case 0xF000_8066:
+                    FarCall(biosSegment, 0x0329, biosSegment, unknown_F000_8066_F8066_AsmEntry);
+                    break;
+                case 0xF000_806B:
+                    FarCall(biosSegment, 0x0329, biosSegment, unknown_F000_806B_F806B_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested far call target {targetSegment_0325:X4}:{targetOffset_0325:X4} at F000:0325");
+            }
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0329, Signature_0329_ret);
+        return NearRet();
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: none. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_032A_F032A() {
+        byte flagOperand_0330 = 0;
+        CheckExternalEvents(biosSegment, 0x032A);
+        DI = 0x0469;
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x0330);
+            flagOperand_0330 = UInt8[CS, DI];
+            Alu8.Sub(flagOperand_0330, AL);
+            if (flagOperand_0330 == AL) {
+                goto L_033C;
+            }
+            VerifySpeculativeRunOrFail(biosSegment, 0x0335, SpeculativeRun_0335);
+            DI += 0x000E;
+            CX--;
+        } while (CX != 0);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x033A, Signature_033A_jmp);
+        return NearRet();
+    L_033C:
+        switch (UInt16[CS, DI + 0x0C]) {
+            case 0x8070:
+                NearCall(biosSegment, 0x0340, unknown_F000_8070_F8070_AsmEntry);
+                break;
+            case 0x8075:
+                NearCall(biosSegment, 0x0340, unknown_F000_8075_F8075_AsmEntry);
+                break;
+            case 0x807A:
+                NearCall(biosSegment, 0x0340, unknown_F000_807A_F807A_AsmEntry);
+                break;
+            default:
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:033C");
+        }
+        return NearRet();
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: none. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_0341_F0341(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        byte flagOperand_0341 = 0;
+        CheckExternalEvents(biosSegment, 0x0341);
+        flagOperand_0341 = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_0341, 0xFF);
+        if (flagOperand_0341 == 0xFF) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0349, Signature_0349_call);
+            (DI, CarryFlag) = NearCall(biosSegment, 0x034C, () => unknown_F000_01F7_F01F7(byte1));
+            VerifySpeculativeEntryOrFail(biosSegment, 0x034C, Signature_034C_jae);
+            if (!CarryFlag) {
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0355, Signature_0355_ret);
+                NearReturn();
+                return;
+            }
+            VerifySpeculativeRunOrFail(biosSegment, 0x034E, SpeculativeRun_034E);
+            DI += 4;
+            throw FailAsUntested("Untested indirect call at F000:0351");
+        }
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_0341_F0341_Asm() {
+        unknown_F000_0341_F0341(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: none. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_0356_F0356(ushort word1, ushort word2) {
+        AX = word1;
+        DS = word2;
+        byte flagOperand_0356 = 0;
+        CheckExternalEvents(biosSegment, 0x0356);
+        flagOperand_0356 = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_0356, 0xFF);
+        if (flagOperand_0356 == 0xFF) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x035E, Signature_035E_call);
+            (DI, CarryFlag) = NearCall(biosSegment, 0x0361, () => unknown_F000_01F7_F01F7((byte)word1));
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0361, Signature_0361_jae);
+            if (!CarryFlag) {
+                VerifySpeculativeEntryOrFail(biosSegment, 0x036A, Signature_036A_ret);
+                NearReturn();
+                return;
+            }
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0363, Signature_0363_call);
+            NearCall(biosSegment, 0x0366, () => unknown_F000_0312_F0312(word1));
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0366, Signature_0366_call);
+            throw FailAsUntested("Untested indirect call at F000:0366");
+        }
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_0356_F0356_Asm() {
+        unknown_F000_0356_F0356(AX, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: AL. Changes: AX, CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual byte unknown_F000_036B_F036B(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        byte flagOperand_036B = 0;
+        CheckExternalEvents(biosSegment, 0x036B);
+        flagOperand_036B = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_036B, 0xFF);
+        if (flagOperand_036B != 0xFF) {
+            NearReturn();
+            return AL;
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0373, Signature_0373_call);
+        (AL, DI, CarryFlag) = NearCall(biosSegment, 0x0376, () => unknown_F000_028F_F028F());
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0376, Signature_0376_jae);
+        if (CarryFlag) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0378, Signature_0378_call);
+            if (UInt16[CS, DI + 0x0C] != 0x802A) {
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:0378");
+            }
+            NearCall(biosSegment, 0x037C, unknown_F000_802A_F802A_AsmEntry);
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x037C, Signature_037C_ret);
+        NearReturn();
+        return AL;
+    }
+
+    public virtual Action unknown_F000_036B_F036B_Asm() {
+        AL = unknown_F000_036B_F036B(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: AL. Changes: AX, CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual byte unknown_F000_037D_F037D(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        byte flagOperand_037D = 0;
+        CheckExternalEvents(biosSegment, 0x037D);
+        flagOperand_037D = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_037D, 0xFF);
+        if (flagOperand_037D != 0xFF) {
+            NearReturn();
+            return AL;
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0385, Signature_0385_call);
+        (AX, DI, CarryFlag) = NearCall(biosSegment, 0x0388, () => unknown_F000_02A5_F02A5());
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0388, Signature_0388_jae);
+        if (CarryFlag) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x038A, Signature_038A_call);
+            if (UInt16[CS, DI + 0x0C] != 0x802A) {
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:038A");
+            }
+            NearCall(biosSegment, 0x038E, unknown_F000_802A_F802A_AsmEntry);
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x038E, Signature_038E_ret);
+        NearReturn();
+        return AL;
+    }
+
+    public virtual Action unknown_F000_037D_F037D_Asm() {
+        AL = unknown_F000_037D_F037D(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AL, DS. Outputs: none. Changes: CX, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_038F_F038F(byte byte1, ushort word1) {
+        AL = byte1;
+        DS = word1;
+        byte flagOperand_038F = 0;
+        CheckExternalEvents(biosSegment, 0x038F);
+        flagOperand_038F = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_038F, 0xFF);
+        if (flagOperand_038F == 0xFF) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0397, Signature_0397_call);
+            CarryFlag = NearCall(biosSegment, 0x039A, () => unknown_F000_02E2_F02E2(byte1));
+            VerifySpeculativeEntryOrFail(biosSegment, 0x039A, Signature_039A_jae);
+            if (!CarryFlag) {
+                VerifySpeculativeEntryOrFail(biosSegment, 0x03A0, Signature_03A0_ret);
+                NearReturn();
+                return;
+            }
+            VerifySpeculativeEntryOrFail(biosSegment, 0x039C, Signature_039C_call);
+            throw FailAsUntested("Untested indirect call at F000:039C");
+        }
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_038F_F038F_Asm() {
+        unknown_F000_038F_F038F(AL, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_802A_F802A(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x802A);
+        DsGlobals.Byte0401 = Alu8.Inc(DsGlobals.Byte0401);
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_802A_F802A_Asm() {
+        unknown_F000_802A_F802A(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_802F_F802F(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x802F);
+        DsGlobals.Byte0402 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_802F_F802F_Asm() {
+        unknown_F000_802F_F802F(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8034_F8034(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8034);
+        DsGlobals.Byte0403 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8034_F8034_Asm() {
+        unknown_F000_8034_F8034(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8039_F8039(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8039);
+        DsGlobals.Byte0404 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8039_F8039_Asm() {
+        unknown_F000_8039_F8039(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_803E_F803E(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x803E);
+        DsGlobals.Byte0405 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_803E_F803E_Asm() {
+        unknown_F000_803E_F803E(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8043_F8043(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8043);
+        DsGlobals.Byte0406 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8043_F8043_Asm() {
+        unknown_F000_8043_F8043(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8048_F8048(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8048);
+        DsGlobals.Byte0407 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8048_F8048_Asm() {
+        unknown_F000_8048_F8048(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_804D_F804D(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x804D);
+        DsGlobals.Byte0408 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_804D_F804D_Asm() {
+        unknown_F000_804D_F804D(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8052_F8052(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8052);
+        DsGlobals.Byte0409 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8052_F8052_Asm() {
+        unknown_F000_8052_F8052(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8057_F8057(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8057);
+        DsGlobals.Byte040A += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8057_F8057_Asm() {
+        unknown_F000_8057_F8057(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_805C_F805C(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x805C);
+        DsGlobals.Byte040B += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_805C_F805C_Asm() {
+        unknown_F000_805C_F805C(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8061_F8061(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8061);
+        DsGlobals.Byte040C = Alu8.Inc(DsGlobals.Byte040C);
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8061_F8061_Asm() {
+        unknown_F000_8061_F8061(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8066_F8066(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8066);
+        DsGlobals.Byte040D = Alu8.Inc(DsGlobals.Byte040D);
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8066_F8066_Asm() {
+        unknown_F000_8066_F8066(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_806B_F806B(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x806B);
+        DsGlobals.Byte040E = Alu8.Inc(DsGlobals.Byte040E);
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_806B_F806B_Asm() {
+        unknown_F000_806B_F806B(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8070_F8070(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8070);
+        DsGlobals.Byte040F += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8070_F8070_Asm() {
+        unknown_F000_8070_F8070(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8075_F8075(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8075);
+        DsGlobals.Byte0410 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8075_F8075_Asm() {
+        unknown_F000_8075_F8075(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_807A_F807A(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x807A);
+        DsGlobals.Byte0411 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_807A_F807A_Asm() {
+        unknown_F000_807A_F807A(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_807F_F807F(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x807F);
+        DsGlobals.Byte0412 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_807F_F807F_Asm() {
+        unknown_F000_807F_F807F(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8084_F8084(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8084);
+        DsGlobals.Byte0413 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8084_F8084_Asm() {
+        unknown_F000_8084_F8084(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8089_F8089(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8089);
+        DsGlobals.Byte0414 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8089_F8089_Asm() {
+        unknown_F000_8089_F8089(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_808E_F808E(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x808E);
+        DsGlobals.Byte0415 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_808E_F808E_Asm() {
+        unknown_F000_808E_F808E(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8093_F8093(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8093);
+        DsGlobals.Byte0416 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8093_F8093_Asm() {
+        unknown_F000_8093_F8093(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_8098_F8098(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x8098);
+        DsGlobals.Byte0417 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_8098_F8098_Asm() {
+        unknown_F000_8098_F8098(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_809D_F809D(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x809D);
+        DsGlobals.Byte0418 += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_809D_F809D_Asm() {
+        unknown_F000_809D_F809D(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: AX, DS. Changes: AX, DS.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, ushort result2) unknown_F000_80A2_F80A2() {
+        CheckExternalEvents(biosSegment, 0x80A2);
+        Stack.Push16(DS);
+        Stack.Push16(AX);
+        DS = 0;
+        Segment0000Globals.Byte0419 += 1;
+        AX = Stack.Pop16();
+        DS = Stack.Pop16();
+        NearReturn();
+        return (AX, DS);
+    }
+
+    public virtual Action unknown_F000_80A2_F80A2_Asm() {
+        (AX, DS) = unknown_F000_80A2_F80A2();
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: AX, DS. Changes: AX, DS.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort result, ushort result2) unknown_F000_80AF_F80AF() {
+        CheckExternalEvents(biosSegment, 0x80AF);
+        Stack.Push16(DS);
+        Stack.Push16(AX);
+        DS = 0;
+        Segment0000Globals.Byte041A += 1;
+        AX = Stack.Pop16();
+        DS = Stack.Pop16();
+        NearReturn();
+        return (AX, DS);
+    }
+
+    public virtual Action unknown_F000_80AF_F80AF_Asm() {
+        (AX, DS) = unknown_F000_80AF_F80AF();
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: AH, DS. Changes: AX, DS.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (byte result, ushort result2) unknown_F000_80BC_F80BC() {
+        CheckExternalEvents(biosSegment, 0x80BC);
+        Stack.Push16(DS);
+        Stack.Push16(AX);
+        DS = 0;
+        Segment0000Globals.Byte041B += 1;
+        AX = Stack.Pop16();
+        DS = Stack.Pop16();
+        NearReturn();
+        return (AH, DS);
+    }
+
+    public virtual Action unknown_F000_80BC_F80BC_Asm() {
+        (AH, DS) = unknown_F000_80BC_F80BC();
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_80C9_F80C9(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x80C9);
+        DsGlobals.Byte041C += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_80C9_F80C9_Asm() {
+        unknown_F000_80C9_F80C9(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_80CE_F80CE(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x80CE);
+        DsGlobals.Byte041D += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_80CE_F80CE_Asm() {
+        unknown_F000_80CE_F80CE(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_80D3_F80D3(ushort word1) {
+        DS = word1;
+        CheckExternalEvents(biosSegment, 0x80D3);
+        DsGlobals.Byte041E += 1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_80D3_F80D3_Asm() {
+        unknown_F000_80D3_F80D3(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index = 0;
+        ushort count = 0;
+        ushort word1 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        Stack.Push16(DS);
+        ES = Stack.Pop16();
+        index = 0x0400;
+        count = 0x0020;
+        AX = Alu16.Xor(AX, AX);
+        DirectionFlag = false;
+        while (count != 0) {
+            UInt8[ES, index] = AL;
+            index++;
+            count--;
+        }
+        DI = index;
+        CX = count;
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0010, () => unknown_F000_01F7_F01F7(0));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0013, () => unknown_F000_020B_F020B(0, DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0016, () => unknown_F000_022C_F022C(0, DS));
+        CarryFlag = NearCall(biosSegment, 0x0019, () => unknown_F000_0252_F0252(0));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x001C, () => unknown_F000_0266_F0266(0));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x001F, () => unknown_F000_027A_F027A(0));
+        (AL, DI, CarryFlag) = NearCall(biosSegment, 0x0022, () => unknown_F000_028F_F028F());
+        (AX, DI, CarryFlag) = NearCall(biosSegment, 0x0025, () => unknown_F000_02A5_F02A5());
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0028, () => unknown_F000_02BB_F02BB(AL, DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x002B, () => unknown_F000_02CE_F02CE(AL));
+        CarryFlag = NearCall(biosSegment, 0x002E, () => unknown_F000_02E2_F02E2(AL));
+        CX = NearCall(biosSegment, 0x0031, () => unknown_F000_02FA_F02FA());
+        NearCall(biosSegment, 0x0034, () => unknown_F000_0312_F0312(AX));
+        NearCall(biosSegment, 0x0037, () => unknown_F000_802A_F802A(DS));
+        NearCall(biosSegment, 0x003A, () => unknown_F000_802F_F802F(DS));
+        NearCall(biosSegment, 0x003D, () => unknown_F000_8034_F8034(DS));
+        NearCall(biosSegment, 0x0040, () => unknown_F000_8039_F8039(DS));
+        NearCall(biosSegment, 0x0043, () => unknown_F000_803E_F803E(DS));
+        NearCall(biosSegment, 0x0046, () => unknown_F000_8043_F8043(DS));
+        NearCall(biosSegment, 0x0049, () => unknown_F000_8048_F8048(DS));
+        NearCall(biosSegment, 0x004C, () => unknown_F000_804D_F804D(DS));
+        NearCall(biosSegment, 0x004F, () => unknown_F000_8052_F8052(DS));
+        NearCall(biosSegment, 0x0052, () => unknown_F000_8057_F8057(DS));
+        NearCall(biosSegment, 0x0055, () => unknown_F000_805C_F805C(DS));
+        FarCall(biosSegment, 0x005A, biosSegment, () => unknown_F000_8061_F8061(DS));
+        FarCall(biosSegment, 0x005F, biosSegment, () => unknown_F000_8066_F8066(DS));
+        FarCall(biosSegment, 0x0064, biosSegment, () => unknown_F000_806B_F806B(DS));
+        NearCall(biosSegment, 0x0067, () => unknown_F000_8070_F8070(DS));
+        NearCall(biosSegment, 0x006A, () => unknown_F000_8075_F8075(DS));
+        NearCall(biosSegment, 0x006D, () => unknown_F000_807A_F807A(DS));
+        NearCall(biosSegment, 0x0070, () => unknown_F000_807F_F807F(DS));
+        NearCall(biosSegment, 0x0073, () => unknown_F000_8084_F8084(DS));
+        NearCall(biosSegment, 0x0076, () => unknown_F000_8089_F8089(DS));
+        NearCall(biosSegment, 0x0079, () => unknown_F000_808E_F808E(DS));
+        NearCall(biosSegment, 0x007C, () => unknown_F000_8093_F8093(DS));
+        NearCall(biosSegment, 0x007F, () => unknown_F000_8098_F8098(DS));
+        NearCall(biosSegment, 0x0082, () => unknown_F000_809D_F809D(DS));
+        (AX, DS) = NearCall(biosSegment, 0x0085, () => unknown_F000_80A2_F80A2());
+        (AX, DS) = NearCall(biosSegment, 0x0088, () => unknown_F000_80AF_F80AF());
+        (AH, DS) = NearCall(biosSegment, 0x008B, () => unknown_F000_80BC_F80BC());
+        NearCall(biosSegment, 0x008E, () => unknown_F000_80C9_F80C9(DS));
+        NearCall(biosSegment, 0x0091, () => unknown_F000_80CE_F80CE(DS));
+        NearCall(biosSegment, 0x0094, () => unknown_F000_80D3_F80D3(DS));
+        AL = NearCall(biosSegment, 0x0097, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x009A, () => unknown_F000_01F7_F01F7(AL));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x802A:
+                    NearCall(biosSegment, 0x00A0, unknown_F000_802A_F802A_AsmEntry);
+                    break;
+                case 0x802F:
+                    NearCall(biosSegment, 0x00A0, unknown_F000_802F_F802F_AsmEntry);
+                    break;
+                case 0x8034:
+                    NearCall(biosSegment, 0x00A0, unknown_F000_8034_F8034_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:009C");
+            }
+        }
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00A3, () => unknown_F000_01F7_F01F7(AL));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x802A:
+                    NearCall(biosSegment, 0x00A9, unknown_F000_802A_F802A_AsmEntry);
+                    break;
+                case 0x802F:
+                    NearCall(biosSegment, 0x00A9, unknown_F000_802F_F802F_AsmEntry);
+                    break;
+                case 0x8034:
+                    NearCall(biosSegment, 0x00A9, unknown_F000_8034_F8034_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00A5");
+            }
+        }
+        AL = NearCall(biosSegment, 0x00AC, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00AF, () => unknown_F000_020B_F020B(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x8039:
+                    NearCall(biosSegment, 0x00B5, unknown_F000_8039_F8039_AsmEntry);
+                    break;
+                case 0x803E:
+                    NearCall(biosSegment, 0x00B5, unknown_F000_803E_F803E_AsmEntry);
+                    break;
+                case 0x8043:
+                    NearCall(biosSegment, 0x00B5, unknown_F000_8043_F8043_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00B1");
+            }
+        }
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00B8, () => unknown_F000_020B_F020B(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x8039:
+                    NearCall(biosSegment, 0x00BE, unknown_F000_8039_F8039_AsmEntry);
+                    break;
+                case 0x803E:
+                    NearCall(biosSegment, 0x00BE, unknown_F000_803E_F803E_AsmEntry);
+                    break;
+                case 0x8043:
+                    NearCall(biosSegment, 0x00BE, unknown_F000_8043_F8043_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00BA");
+            }
+        }
+        AL = NearCall(biosSegment, 0x00C1, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00C4, () => unknown_F000_022C_F022C(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x8048:
+                    NearCall(biosSegment, 0x00CA, unknown_F000_8048_F8048_AsmEntry);
+                    break;
+                case 0x804D:
+                    NearCall(biosSegment, 0x00CA, unknown_F000_804D_F804D_AsmEntry);
+                    break;
+                case 0x8052:
+                    NearCall(biosSegment, 0x00CA, unknown_F000_8052_F8052_AsmEntry);
+                    break;
+                case 0x8057:
+                    NearCall(biosSegment, 0x00CA, unknown_F000_8057_F8057_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00C6");
+            }
+        }
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00CD, () => unknown_F000_022C_F022C(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x8048:
+                    NearCall(biosSegment, 0x00D3, unknown_F000_8048_F8048_AsmEntry);
+                    break;
+                case 0x804D:
+                    NearCall(biosSegment, 0x00D3, unknown_F000_804D_F804D_AsmEntry);
+                    break;
+                case 0x8052:
+                    NearCall(biosSegment, 0x00D3, unknown_F000_8052_F8052_AsmEntry);
+                    break;
+                case 0x8057:
+                    NearCall(biosSegment, 0x00D3, unknown_F000_8057_F8057_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00CF");
+            }
+        }
+        NearCall(biosSegment, 0x00D6, unknown_F000_0315_F0315Entry);
+        NearCall(biosSegment, 0x00D9, unknown_F000_0315_F0315Entry);
+        AL = NearCall(biosSegment, 0x00DC, () => unknown_F000_01DA_F01DA(DS));
+        NearCall(biosSegment, 0x00DF, unknown_F000_032A_F032AEntry);
+        NearCall(biosSegment, 0x00E2, unknown_F000_032A_F032AEntry);
+        AL = NearCall(biosSegment, 0x00E5, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00E8, () => unknown_F000_0266_F0266(AL));
+        if (!CarryFlag) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00EA, Signature_00EA_mov);
+            DI = CsGlobals.Word04BD;
+        }
+        switch (UInt16[CS, DI + 0x0C]) {
+            case 0x807F:
+                NearCall(biosSegment, 0x00F3, unknown_F000_807F_F807F_AsmEntry);
+                break;
+            case 0x8084:
+                NearCall(biosSegment, 0x00F3, unknown_F000_8084_F8084_AsmEntry);
+                break;
+            case 0x8089:
+                NearCall(biosSegment, 0x00F3, unknown_F000_8089_F8089_AsmEntry);
+                break;
+            default:
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00EF");
+        }
+        (DI, CarryFlag) = NearCall(biosSegment, 0x00F6, () => unknown_F000_0266_F0266(AL));
+        if (!CarryFlag) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00F8, Signature_00F8_mov);
+            DI = CsGlobals.Word04BD;
+        }
+        switch (UInt16[CS, DI + 0x0C]) {
+            case 0x807F:
+                NearCall(biosSegment, 0x0101, unknown_F000_807F_F807F_AsmEntry);
+                break;
+            case 0x8084:
+                NearCall(biosSegment, 0x0101, unknown_F000_8084_F8084_AsmEntry);
+                break;
+            case 0x8089:
+                NearCall(biosSegment, 0x0101, unknown_F000_8089_F8089_AsmEntry);
+                break;
+            default:
+                throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:00FD");
+        }
+        AX = NearCall(biosSegment, 0x0104, () => unknown_F000_01E8_F01E8(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0107, () => unknown_F000_027A_F027A(AX));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x808E:
+                    NearCall(biosSegment, 0x010D, unknown_F000_808E_F808E_AsmEntry);
+                    break;
+                case 0x8093:
+                    NearCall(biosSegment, 0x010D, unknown_F000_8093_F8093_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:0109");
+            }
+        }
+        AX = NearCall(biosSegment, 0x0110, () => unknown_F000_01E8_F01E8(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0113, () => unknown_F000_027A_F027A(AX));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x808E:
+                    NearCall(biosSegment, 0x0119, unknown_F000_808E_F808E_AsmEntry);
+                    break;
+                case 0x8093:
+                    NearCall(biosSegment, 0x0119, unknown_F000_8093_F8093_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:0115");
+            }
+        }
+        AL = NearCall(biosSegment, 0x011C, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x011F, () => unknown_F000_02FE_F02FE(AL));
+        if (!CarryFlag) {
+            DI = CsGlobals.Word0559;
+        }
+        if (UInt16[CS, DI + 0x0C] != 0x809D) {
+            throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:0126");
+        }
+        NearCall(biosSegment, 0x012A, unknown_F000_809D_F809D_AsmEntry);
+        AL = NearCall(biosSegment, 0x012D, () => unknown_F000_01DA_F01DA(DS));
+        Stack.Push16(DS);
+        BX = 0xF800;
+        DS = 0xF800;
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0136, () => unknown_F000_02BB_F02BB(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[DS, DI + 0x0C]) {
+                case 0x80A2:
+                    NearCall(biosSegment, 0x013B, unknown_F000_80A2_F80A2_AsmEntry);
+                    break;
+                case 0x80AF:
+                    NearCall(biosSegment, 0x013B, unknown_F000_80AF_F80AF_AsmEntry);
+                    break;
+                case 0x80BC:
+                    NearCall(biosSegment, 0x013B, unknown_F000_80BC_F80BC_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[DS, DI + 0x0C]:X4} at F000:0138");
+            }
+        }
+        word1 = Stack.Pop16();
+        AL = NearCall(biosSegment, 0x013F, () => unknown_F000_01DA_F01DA(word1));
+        Stack.Push16(word1);
+        BX = 0xF800;
+        DS = 0xF800;
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0148, () => unknown_F000_02BB_F02BB(AL, DS));
+        if (CarryFlag) {
+            switch (UInt16[DS, DI + 0x0C]) {
+                case 0x80A2:
+                    NearCall(biosSegment, 0x014D, unknown_F000_80A2_F80A2_AsmEntry);
+                    break;
+                case 0x80AF:
+                    NearCall(biosSegment, 0x014D, unknown_F000_80AF_F80AF_AsmEntry);
+                    break;
+                case 0x80BC:
+                    NearCall(biosSegment, 0x014D, unknown_F000_80BC_F80BC_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[DS, DI + 0x0C]:X4} at F000:014A");
+            }
+        }
+        DS = Stack.Pop16();
+        AL = NearCall(biosSegment, 0x0151, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0154, () => unknown_F000_02CE_F02CE(AL));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x80C9:
+                    NearCall(biosSegment, 0x0182, unknown_F000_80C9_F80C9_AsmEntry);
+                    break;
+                case 0x80CE:
+                    NearCall(biosSegment, 0x0182, unknown_F000_80CE_F80CE_AsmEntry);
+                    break;
+                case 0x80D3:
+                    NearCall(biosSegment, 0x0182, unknown_F000_80D3_F80D3_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:017E");
+            }
+        }
+        AL = NearCall(biosSegment, 0x0185, () => unknown_F000_01DA_F01DA(DS));
+        (DI, CarryFlag) = NearCall(biosSegment, 0x0188, () => unknown_F000_02CE_F02CE(AL));
+        if (CarryFlag) {
+            switch (UInt16[CS, DI + 0x0C]) {
+                case 0x80C9:
+                    NearCall(biosSegment, 0x01B6, unknown_F000_80C9_F80C9_AsmEntry);
+                    break;
+                case 0x80CE:
+                    NearCall(biosSegment, 0x01B6, unknown_F000_80CE_F80CE_AsmEntry);
+                    break;
+                case 0x80D3:
+                    NearCall(biosSegment, 0x01B6, unknown_F000_80D3_F80D3_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near call target 0x{UInt16[CS, DI + 0x0C]:X4} at F000:01B2");
+            }
+        }
+        NearCall(biosSegment, 0x01B9, () => unknown_F000_0341_F0341(AL, DS));
+        NearCall(biosSegment, 0x01BC, () => unknown_F000_0341_F0341(AL, DS));
+        NearCall(biosSegment, 0x01BF, () => unknown_F000_0356_F0356(AX, DS));
+        NearCall(biosSegment, 0x01C2, () => unknown_F000_0356_F0356(AX, DS));
+        AL = NearCall(biosSegment, 0x01C5, () => unknown_F000_036B_F036B(AL, DS));
+        AL = NearCall(biosSegment, 0x01C8, () => unknown_F000_036B_F036B(AL, DS));
+        AL = NearCall(biosSegment, 0x01CB, () => unknown_F000_037D_F037D(AL, DS));
+        AL = NearCall(biosSegment, 0x01CE, () => unknown_F000_037D_F037D(AL, DS));
+        NearCall(biosSegment, 0x01D1, () => unknown_F000_038F_F038F(AL, DS));
+        NearCall(biosSegment, 0x01D4, () => unknown_F000_038F_F038F(AL, DS));
+        DsGlobals.Byte0400 = 2;
+        return Hlt();
+    }
+
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0400, whatever DS holds at the access.
+    public byte Byte0400 { get => _memory.UInt8[Segment, 0x0400]; set => _memory.UInt8[Segment, 0x0400] = value; }
+
+    /// DS:0x0401, whatever DS holds at the access.
+    public byte Byte0401 { get => _memory.UInt8[Segment, 0x0401]; set => _memory.UInt8[Segment, 0x0401] = value; }
+
+    /// DS:0x0402, whatever DS holds at the access.
+    public byte Byte0402 { get => _memory.UInt8[Segment, 0x0402]; set => _memory.UInt8[Segment, 0x0402] = value; }
+
+    /// DS:0x0403, whatever DS holds at the access.
+    public byte Byte0403 { get => _memory.UInt8[Segment, 0x0403]; set => _memory.UInt8[Segment, 0x0403] = value; }
+
+    /// DS:0x0404, whatever DS holds at the access.
+    public byte Byte0404 { get => _memory.UInt8[Segment, 0x0404]; set => _memory.UInt8[Segment, 0x0404] = value; }
+
+    /// DS:0x0405, whatever DS holds at the access.
+    public byte Byte0405 { get => _memory.UInt8[Segment, 0x0405]; set => _memory.UInt8[Segment, 0x0405] = value; }
+
+    /// DS:0x0406, whatever DS holds at the access.
+    public byte Byte0406 { get => _memory.UInt8[Segment, 0x0406]; set => _memory.UInt8[Segment, 0x0406] = value; }
+
+    /// DS:0x0407, whatever DS holds at the access.
+    public byte Byte0407 { get => _memory.UInt8[Segment, 0x0407]; set => _memory.UInt8[Segment, 0x0407] = value; }
+
+    /// DS:0x0408, whatever DS holds at the access.
+    public byte Byte0408 { get => _memory.UInt8[Segment, 0x0408]; set => _memory.UInt8[Segment, 0x0408] = value; }
+
+    /// DS:0x0409, whatever DS holds at the access.
+    public byte Byte0409 { get => _memory.UInt8[Segment, 0x0409]; set => _memory.UInt8[Segment, 0x0409] = value; }
+
+    /// DS:0x040A, whatever DS holds at the access.
+    public byte Byte040A { get => _memory.UInt8[Segment, 0x040A]; set => _memory.UInt8[Segment, 0x040A] = value; }
+
+    /// DS:0x040B, whatever DS holds at the access.
+    public byte Byte040B { get => _memory.UInt8[Segment, 0x040B]; set => _memory.UInt8[Segment, 0x040B] = value; }
+
+    /// DS:0x040C, whatever DS holds at the access.
+    public byte Byte040C { get => _memory.UInt8[Segment, 0x040C]; set => _memory.UInt8[Segment, 0x040C] = value; }
+
+    /// DS:0x040D, whatever DS holds at the access.
+    public byte Byte040D { get => _memory.UInt8[Segment, 0x040D]; set => _memory.UInt8[Segment, 0x040D] = value; }
+
+    /// DS:0x040E, whatever DS holds at the access.
+    public byte Byte040E { get => _memory.UInt8[Segment, 0x040E]; set => _memory.UInt8[Segment, 0x040E] = value; }
+
+    /// DS:0x040F, whatever DS holds at the access.
+    public byte Byte040F { get => _memory.UInt8[Segment, 0x040F]; set => _memory.UInt8[Segment, 0x040F] = value; }
+
+    /// DS:0x0410, whatever DS holds at the access.
+    public byte Byte0410 { get => _memory.UInt8[Segment, 0x0410]; set => _memory.UInt8[Segment, 0x0410] = value; }
+
+    /// DS:0x0411, whatever DS holds at the access.
+    public byte Byte0411 { get => _memory.UInt8[Segment, 0x0411]; set => _memory.UInt8[Segment, 0x0411] = value; }
+
+    /// DS:0x0412, whatever DS holds at the access.
+    public byte Byte0412 { get => _memory.UInt8[Segment, 0x0412]; set => _memory.UInt8[Segment, 0x0412] = value; }
+
+    /// DS:0x0413, whatever DS holds at the access.
+    public byte Byte0413 { get => _memory.UInt8[Segment, 0x0413]; set => _memory.UInt8[Segment, 0x0413] = value; }
+
+    /// DS:0x0414, whatever DS holds at the access.
+    public byte Byte0414 { get => _memory.UInt8[Segment, 0x0414]; set => _memory.UInt8[Segment, 0x0414] = value; }
+
+    /// DS:0x0415, whatever DS holds at the access.
+    public byte Byte0415 { get => _memory.UInt8[Segment, 0x0415]; set => _memory.UInt8[Segment, 0x0415] = value; }
+
+    /// DS:0x0416, whatever DS holds at the access.
+    public byte Byte0416 { get => _memory.UInt8[Segment, 0x0416]; set => _memory.UInt8[Segment, 0x0416] = value; }
+
+    /// DS:0x0417, whatever DS holds at the access.
+    public byte Byte0417 { get => _memory.UInt8[Segment, 0x0417]; set => _memory.UInt8[Segment, 0x0417] = value; }
+
+    /// DS:0x0418, whatever DS holds at the access.
+    public byte Byte0418 { get => _memory.UInt8[Segment, 0x0418]; set => _memory.UInt8[Segment, 0x0418] = value; }
+
+    /// DS:0x041C, whatever DS holds at the access.
+    public byte Byte041C { get => _memory.UInt8[Segment, 0x041C]; set => _memory.UInt8[Segment, 0x041C] = value; }
+
+    /// DS:0x041D, whatever DS holds at the access.
+    public byte Byte041D { get => _memory.UInt8[Segment, 0x041D]; set => _memory.UInt8[Segment, 0x041D] = value; }
+
+    /// DS:0x041E, whatever DS holds at the access.
+    public byte Byte041E { get => _memory.UInt8[Segment, 0x041E]; set => _memory.UInt8[Segment, 0x041E] = value; }
+
+    /// DS:0x0500, whatever DS holds at the access.
+    public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
+}
+
+// ==== file: CsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex];
+
+    public CsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// CS:0x04BD, whatever CS holds at the access.
+    public ushort Word04BD { get => _memory.UInt16[Segment, 0x04BD]; set => _memory.UInt16[Segment, 0x04BD] = value; }
+
+    /// CS:0x0559, whatever CS holds at the access.
+    public ushort Word0559 { get => _memory.UInt16[Segment, 0x0559]; set => _memory.UInt16[Segment, 0x0559] = value; }
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public byte Byte0419 { get => _memory.UInt8[Segment, 0x0419]; set => _memory.UInt8[Segment, 0x0419] = value; }
+
+    public byte Byte041A { get => _memory.UInt8[Segment, 0x041A]; set => _memory.UInt8[Segment, 0x041A] = value; }
+
+    public byte Byte041B { get => _memory.UInt8[Segment, 0x041B]; set => _memory.UInt8[Segment, 0x041B] = value; }
+}
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public ushort Word03CB { get => _memory.UInt16[Segment, 0x03CB]; set => _memory.UInt16[Segment, 0x03CB] = value; }
+
+    public ushort Word03F7 { get => _memory.UInt16[Segment, 0x03F7]; set => _memory.UInt16[Segment, 0x03F7] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_01DA_F01DA_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01E8_F01E8_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01F7_F01F7_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_020B_F020B_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_022C_F022C_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0252_F0252_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0266_F0266_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_027A_F027A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_028F_F028F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02A5_F02A5_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02BB_F02BB_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02CE_F02CE_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02E2_F02E2_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02FA_F02FA_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02FE_F02FE_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0312_F0312_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0315_F0315Entry;
+    private readonly Func<int, Action> unknown_F000_032A_F032AEntry;
+    private readonly Func<int, Action> unknown_F000_0341_F0341_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0356_F0356_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_036B_F036B_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_037D_F037D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_038F_F038F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_802A_F802A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_802F_F802F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8034_F8034_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8039_F8039_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_803E_F803E_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8043_F8043_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8048_F8048_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_804D_F804D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8052_F8052_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8057_F8057_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_805C_F805C_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8061_F8061_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8066_F8066_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_806B_F806B_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8070_F8070_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8075_F8075_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_807A_F807A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_807F_F807F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8084_F8084_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8089_F8089_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_808E_F808E_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8093_F8093_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_8098_F8098_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_809D_F809D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80A2_F80A2_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80AF_F80AF_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80BC_F80BC_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80C9_F80C9_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80CE_F80CE_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_80D3_F80D3_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly CsGlobals CsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_F000_01DA_F01DA_AsmEntry = _ => unknown_F000_01DA_F01DA_Asm();
+        unknown_F000_01E8_F01E8_AsmEntry = _ => unknown_F000_01E8_F01E8_Asm();
+        unknown_F000_01F7_F01F7_AsmEntry = _ => unknown_F000_01F7_F01F7_Asm();
+        unknown_F000_020B_F020B_AsmEntry = _ => unknown_F000_020B_F020B_Asm();
+        unknown_F000_022C_F022C_AsmEntry = _ => unknown_F000_022C_F022C_Asm();
+        unknown_F000_0252_F0252_AsmEntry = _ => unknown_F000_0252_F0252_Asm();
+        unknown_F000_0266_F0266_AsmEntry = _ => unknown_F000_0266_F0266_Asm();
+        unknown_F000_027A_F027A_AsmEntry = _ => unknown_F000_027A_F027A_Asm();
+        unknown_F000_028F_F028F_AsmEntry = _ => unknown_F000_028F_F028F_Asm();
+        unknown_F000_02A5_F02A5_AsmEntry = _ => unknown_F000_02A5_F02A5_Asm();
+        unknown_F000_02BB_F02BB_AsmEntry = _ => unknown_F000_02BB_F02BB_Asm();
+        unknown_F000_02CE_F02CE_AsmEntry = _ => unknown_F000_02CE_F02CE_Asm();
+        unknown_F000_02E2_F02E2_AsmEntry = _ => unknown_F000_02E2_F02E2_Asm();
+        unknown_F000_02FA_F02FA_AsmEntry = _ => unknown_F000_02FA_F02FA_Asm();
+        unknown_F000_02FE_F02FE_AsmEntry = _ => unknown_F000_02FE_F02FE_Asm();
+        unknown_F000_0312_F0312_AsmEntry = _ => unknown_F000_0312_F0312_Asm();
+        unknown_F000_0315_F0315Entry = _ => unknown_F000_0315_F0315();
+        unknown_F000_032A_F032AEntry = _ => unknown_F000_032A_F032A();
+        unknown_F000_0341_F0341_AsmEntry = _ => unknown_F000_0341_F0341_Asm();
+        unknown_F000_0356_F0356_AsmEntry = _ => unknown_F000_0356_F0356_Asm();
+        unknown_F000_036B_F036B_AsmEntry = _ => unknown_F000_036B_F036B_Asm();
+        unknown_F000_037D_F037D_AsmEntry = _ => unknown_F000_037D_F037D_Asm();
+        unknown_F000_038F_F038F_AsmEntry = _ => unknown_F000_038F_F038F_Asm();
+        unknown_F000_802A_F802A_AsmEntry = _ => unknown_F000_802A_F802A_Asm();
+        unknown_F000_802F_F802F_AsmEntry = _ => unknown_F000_802F_F802F_Asm();
+        unknown_F000_8034_F8034_AsmEntry = _ => unknown_F000_8034_F8034_Asm();
+        unknown_F000_8039_F8039_AsmEntry = _ => unknown_F000_8039_F8039_Asm();
+        unknown_F000_803E_F803E_AsmEntry = _ => unknown_F000_803E_F803E_Asm();
+        unknown_F000_8043_F8043_AsmEntry = _ => unknown_F000_8043_F8043_Asm();
+        unknown_F000_8048_F8048_AsmEntry = _ => unknown_F000_8048_F8048_Asm();
+        unknown_F000_804D_F804D_AsmEntry = _ => unknown_F000_804D_F804D_Asm();
+        unknown_F000_8052_F8052_AsmEntry = _ => unknown_F000_8052_F8052_Asm();
+        unknown_F000_8057_F8057_AsmEntry = _ => unknown_F000_8057_F8057_Asm();
+        unknown_F000_805C_F805C_AsmEntry = _ => unknown_F000_805C_F805C_Asm();
+        unknown_F000_8061_F8061_AsmEntry = _ => unknown_F000_8061_F8061_Asm();
+        unknown_F000_8066_F8066_AsmEntry = _ => unknown_F000_8066_F8066_Asm();
+        unknown_F000_806B_F806B_AsmEntry = _ => unknown_F000_806B_F806B_Asm();
+        unknown_F000_8070_F8070_AsmEntry = _ => unknown_F000_8070_F8070_Asm();
+        unknown_F000_8075_F8075_AsmEntry = _ => unknown_F000_8075_F8075_Asm();
+        unknown_F000_807A_F807A_AsmEntry = _ => unknown_F000_807A_F807A_Asm();
+        unknown_F000_807F_F807F_AsmEntry = _ => unknown_F000_807F_F807F_Asm();
+        unknown_F000_8084_F8084_AsmEntry = _ => unknown_F000_8084_F8084_Asm();
+        unknown_F000_8089_F8089_AsmEntry = _ => unknown_F000_8089_F8089_Asm();
+        unknown_F000_808E_F808E_AsmEntry = _ => unknown_F000_808E_F808E_Asm();
+        unknown_F000_8093_F8093_AsmEntry = _ => unknown_F000_8093_F8093_Asm();
+        unknown_F000_8098_F8098_AsmEntry = _ => unknown_F000_8098_F8098_Asm();
+        unknown_F000_809D_F809D_AsmEntry = _ => unknown_F000_809D_F809D_Asm();
+        unknown_F000_80A2_F80A2_AsmEntry = _ => unknown_F000_80A2_F80A2_Asm();
+        unknown_F000_80AF_F80AF_AsmEntry = _ => unknown_F000_80AF_F80AF_Asm();
+        unknown_F000_80BC_F80BC_AsmEntry = _ => unknown_F000_80BC_F80BC_Asm();
+        unknown_F000_80C9_F80C9_AsmEntry = _ => unknown_F000_80C9_F80C9_Asm();
+        unknown_F000_80CE_F80CE_AsmEntry = _ => unknown_F000_80CE_F80CE_Asm();
+        unknown_F000_80D3_F80D3_AsmEntry = _ => unknown_F000_80D3_F80D3_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DA, unknown_F000_01DA_F01DA_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01E8, unknown_F000_01E8_F01E8_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F7, unknown_F000_01F7_F01F7_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x020B, unknown_F000_020B_F020B_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x022C, unknown_F000_022C_F022C_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0252, unknown_F000_0252_F0252_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0266, unknown_F000_0266_F0266_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x027A, unknown_F000_027A_F027A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x028F, unknown_F000_028F_F028F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02A5, unknown_F000_02A5_F02A5_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02BB, unknown_F000_02BB_F02BB_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02CE, unknown_F000_02CE_F02CE_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02E2, unknown_F000_02E2_F02E2_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02FA, unknown_F000_02FA_F02FA_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02FE, unknown_F000_02FE_F02FE_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0312, unknown_F000_0312_F0312_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0315, unknown_F000_0315_F0315Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x032A, unknown_F000_032A_F032AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0341, unknown_F000_0341_F0341_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0356, unknown_F000_0356_F0356_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x036B, unknown_F000_036B_F036B_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x037D, unknown_F000_037D_F037D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x038F, unknown_F000_038F_F038F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x802A, unknown_F000_802A_F802A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x802F, unknown_F000_802F_F802F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8034, unknown_F000_8034_F8034_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8039, unknown_F000_8039_F8039_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x803E, unknown_F000_803E_F803E_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8043, unknown_F000_8043_F8043_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8048, unknown_F000_8048_F8048_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x804D, unknown_F000_804D_F804D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8052, unknown_F000_8052_F8052_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8057, unknown_F000_8057_F8057_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x805C, unknown_F000_805C_F805C_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8061, unknown_F000_8061_F8061_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8066, unknown_F000_8066_F8066_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x806B, unknown_F000_806B_F806B_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8070, unknown_F000_8070_F8070_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8075, unknown_F000_8075_F8075_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x807A, unknown_F000_807A_F807A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x807F, unknown_F000_807F_F807F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8084, unknown_F000_8084_F8084_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8089, unknown_F000_8089_F8089_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x808E, unknown_F000_808E_F808E_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8093, unknown_F000_8093_F8093_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x8098, unknown_F000_8098_F8098_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x809D, unknown_F000_809D_F809D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80A2, unknown_F000_80A2_F80A2_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80AF, unknown_F000_80AF_F80AF_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80BC, unknown_F000_80BC_F80BC_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80C9, unknown_F000_80C9_F80C9_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80CE, unknown_F000_80CE_F80CE_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x80D3, unknown_F000_80D3_F80D3_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_00EA_mov = [0x2E, 0x8B, 0x3E, 0xBD, 0x04];
+    private static readonly byte?[] Signature_00F8_mov = [0x2E, 0x8B, 0x3E, 0xBD, 0x04];
+    private static readonly byte?[] Signature_021B_sub = [0x83, 0xE9, 0x01];
+    private static readonly byte?[] Signature_023E_mov = [0xBF, 0x15, 0x04];
+    private static readonly byte?[] Signature_0241_mov = [0xB9, 0x02, 0x00];
+    private static readonly byte?[] Signature_0264_stc = [0xF9];
+    private static readonly byte?[] Signature_0265_ret = [0xC3];
+    private static readonly byte?[] Signature_02A3_stc = [0xF9];
+    private static readonly byte?[] Signature_02A4_ret = [0xC3];
+    private static readonly byte?[] Signature_02B9_stc = [0xF9];
+    private static readonly byte?[] Signature_02BA_ret = [0xC3];
+    private static readonly byte?[] Signature_02F8_stc = [0xF9];
+    private static readonly byte?[] Signature_02F9_ret = [0xC3];
+    private static readonly byte?[] Signature_0310_stc = [0xF9];
+    private static readonly byte?[] Signature_0311_ret = [0xC3];
+    private static readonly byte?[] Signature_031D_call = [0xE8, 0xBA, 0xFE];
+    private static readonly byte?[] Signature_0320_call = [0xE8, 0x2F, 0xFF];
+    private static readonly byte?[] Signature_0323_jae = [0x73, 0x04];
+    private static readonly byte?[] Signature_0325_call = [0x2E, 0xFF, 0x5D, 0x0A];
+    private static readonly byte?[] Signature_0329_ret = [0xC3];
+    private static readonly byte?[] Signature_0335_add = [0x83, 0xC7, 0x0E];
+    private static readonly byte?[] Signature_0338_loop = [0xE2, 0xF6];
+    private static readonly byte?[] Signature_033A_jmp = [0xEB, 0x04];
+    private static readonly byte?[] Signature_0349_call = [0xE8, 0xAB, 0xFE];
+    private static readonly byte?[] Signature_034C_jae = [0x73, 0x07];
+    private static readonly byte?[] Signature_034E_add = [0x83, 0xC7, 0x04];
+    private static readonly byte?[] Signature_0351_call = [0x2E, 0xFF, 0x55, 0x0C];
+    private static readonly byte?[] Signature_0355_ret = [0xC3];
+    private static readonly byte?[] Signature_035E_call = [0xE8, 0x96, 0xFE];
+    private static readonly byte?[] Signature_0361_jae = [0x73, 0x07];
+    private static readonly byte?[] Signature_0363_call = [0xE8, 0xAC, 0xFF];
+    private static readonly byte?[] Signature_0366_call = [0x2E, 0xFF, 0x55, 0x0C];
+    private static readonly byte?[] Signature_036A_ret = [0xC3];
+    private static readonly byte?[] Signature_0373_call = [0xE8, 0x19, 0xFF];
+    private static readonly byte?[] Signature_0376_jae = [0x73, 0x04];
+    private static readonly byte?[] Signature_0378_call = [0x2E, 0xFF, 0x55, 0x0C];
+    private static readonly byte?[] Signature_037C_ret = [0xC3];
+    private static readonly byte?[] Signature_0385_call = [0xE8, 0x1D, 0xFF];
+    private static readonly byte?[] Signature_0388_jae = [0x73, 0x04];
+    private static readonly byte?[] Signature_038A_call = [0x2E, 0xFF, 0x55, 0x0C];
+    private static readonly byte?[] Signature_038E_ret = [0xC3];
+    private static readonly byte?[] Signature_0397_call = [0xE8, 0x48, 0xFF];
+    private static readonly byte?[] Signature_039A_jae = [0x73, 0x04];
+    private static readonly byte?[] Signature_039C_call = [0x2E, 0xFF, 0x55, 0x0C];
+    private static readonly byte?[] Signature_03A0_ret = [0xC3];
+
+    private static readonly byte?[][] SpeculativeRun_023E = [Signature_023E_mov, Signature_0241_mov];
+    private static readonly byte?[][] SpeculativeRun_0264 = [Signature_0264_stc, Signature_0265_ret];
+    private static readonly byte?[][] SpeculativeRun_02A3 = [Signature_02A3_stc, Signature_02A4_ret];
+    private static readonly byte?[][] SpeculativeRun_02B9 = [Signature_02B9_stc, Signature_02BA_ret];
+    private static readonly byte?[][] SpeculativeRun_02F8 = [Signature_02F8_stc, Signature_02F9_ret];
+    private static readonly byte?[][] SpeculativeRun_0310 = [Signature_0310_stc, Signature_0311_ret];
+    private static readonly byte?[][] SpeculativeRun_0335 = [Signature_0335_add, Signature_0338_loop];
+    private static readonly byte?[][] SpeculativeRun_034E = [Signature_034E_add, Signature_0351_call];
+
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
