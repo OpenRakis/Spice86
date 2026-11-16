@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0021",
-  "lastExecutedBlockId": 90,
+  "lastExecutedBlockId": 94,
   "blocks": [
     {
-      "id": 90,
+      "id": 94,
       "entry": "F000:0020",
       "term": "F000:0021",
       "pred": [
-        89
+        93
       ],
       "succ": [],
       "asm": [
@@ -34,14 +34,14 @@
       ]
     },
     {
-      "id": 89,
+      "id": 93,
       "entry": "F000:0019",
       "term": "F000:0019",
       "pred": [
         61
       ],
       "succ": [
-        90
+        94
       ],
       "asm": [
         "EB05|jmp short 0x0020"
@@ -75,8 +75,8 @@
         64
       ],
       "succ": [
-        89,
-        93
+        93,
+        97
       ],
       "asm": [
         "B84200|mov AX,0x0042",
@@ -90,7 +90,7 @@
       "term": "F000:0011",
       "pred": [
         3,
-        93
+        97
       ],
       "succ": [
         11,
@@ -102,7 +102,7 @@
       ]
     },
     {
-      "id": 93,
+      "id": 97,
       "entry": "F000:0019",
       "dead": true,
       "term": "F000:0019",
@@ -172,7 +172,7 @@
       "dead": true,
       "term": "F000:001F",
       "pred": [
-        93
+        97
       ],
       "succ": [],
       "asm": [

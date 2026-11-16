@@ -6,7 +6,7 @@
       "name": "unknown",
       "blocks": [
         9,
-        83
+        84
       ],
       "entries": [
         {
@@ -70,7 +70,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        87,
+        90,
         2
       ],
       "entries": [
@@ -91,15 +91,15 @@
       "toBlock": 11,
       "from": "F000:0100",
       "target": "F000:0200",
-      "callContinuationBlock": 83,
+      "callContinuationBlock": 84,
       "callContinuationAddress": "F000:0103"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 5,
-      "fromBlock": 83,
-      "toBlock": 87,
+      "fromBlock": 84,
+      "toBlock": 90,
       "from": "F000:0108",
       "target": "F000:000D"
     },
@@ -117,7 +117,7 @@
       "fromPartition": 3,
       "toPartition": 1,
       "fromBlock": 80,
-      "toBlock": 83,
+      "toBlock": 84,
       "from": "F000:0303",
       "target": "F000:0103"
     },
@@ -149,7 +149,7 @@
       "toBlock": 9,
       "from": "F000:000A",
       "target": "F000:0100",
-      "callContinuationBlock": 87,
+      "callContinuationBlock": 90,
       "callContinuationAddress": "F000:000D"
     }
   ]

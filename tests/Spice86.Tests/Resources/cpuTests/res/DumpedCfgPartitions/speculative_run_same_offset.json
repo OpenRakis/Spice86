@@ -41,7 +41,7 @@
       "blocks": [
         3,
         41,
-        69,
+        71,
         2
       ],
       "entries": [
@@ -68,7 +68,7 @@
       "fromPartition": 2,
       "toPartition": 3,
       "fromBlock": 47,
-      "toBlock": 69,
+      "toBlock": 71,
       "from": "F010:010C",
       "target": "F000:0012"
     },
@@ -91,7 +91,7 @@
       "toBlock": 42,
       "from": "F000:000D",
       "target": "F010:0100",
-      "callContinuationBlock": 69,
+      "callContinuationBlock": 71,
       "callContinuationAddress": "F000:0012"
     }
   ]

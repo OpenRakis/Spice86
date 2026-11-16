@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0022",
-  "lastExecutedBlockId": 70,
+  "lastExecutedBlockId": 77,
   "blocks": [
     {
-      "id": 70,
+      "id": 77,
       "entry": "F000:0011",
       "term": "F000:0022",
       "pred": [
@@ -46,7 +46,7 @@
         14
       ],
       "succ": [
-        70
+        77
       ],
       "asm": [
         "89E3|mov BX,SP",
@@ -63,7 +63,7 @@
       ],
       "succ": [
         11,
-        70
+        77
       ],
       "asm": [
         "B80020|mov AX,0x2000",

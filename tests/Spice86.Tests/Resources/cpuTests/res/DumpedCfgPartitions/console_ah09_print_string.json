@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        120
+        122
       ],
       "entries": [
         {
-          "block": 120,
+          "block": 122,
           "address": "016E:0000",
           "kind": "returnTargetEntry"
         }
@@ -199,12 +199,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        123,
-        124
+        125,
+        126
       ],
       "entries": [
         {
-          "block": 123,
+          "block": 125,
           "address": "F000:0090",
           "kind": "functionEntry"
         }
@@ -215,22 +215,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        73,
-        77,
-        85,
-        94,
-        100,
         75,
         79,
-        82,
+        87,
+        96,
+        102,
+        77,
+        81,
+        84,
+        93,
+        100,
         91,
-        98,
-        89,
-        96
+        98
       ],
       "entries": [
         {
-          "block": 73,
+          "block": 75,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -275,8 +275,8 @@
       "kind": "callOut",
       "fromPartition": 1,
       "toPartition": 13,
-      "fromBlock": 120,
-      "toBlock": 123,
+      "fromBlock": 122,
+      "toBlock": 125,
       "from": "016E:0000",
       "target": "F000:0090"
     },
@@ -285,7 +285,7 @@
       "fromPartition": 2,
       "toPartition": 1,
       "fromBlock": 67,
-      "toBlock": 120,
+      "toBlock": 122,
       "from": "016E:0107",
       "target": "016E:0000"
     },
@@ -294,7 +294,7 @@
       "fromPartition": 2,
       "toPartition": 14,
       "fromBlock": 64,
-      "toBlock": 73,
+      "toBlock": 75,
       "from": "016E:0105",
       "target": "F000:0096",
       "callContinuationBlock": 67,
@@ -315,7 +315,7 @@
       "kind": "alignedReturn",
       "fromPartition": 14,
       "toPartition": 2,
-      "fromBlock": 100,
+      "fromBlock": 102,
       "toBlock": 67,
       "from": "F000:00A9",
       "target": "016E:0107"

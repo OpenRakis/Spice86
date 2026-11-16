@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:00D0",
-  "lastExecutedBlockId": 265,
+  "lastExecutedBlockId": 342,
   "blocks": [
     {
-      "id": 265,
+      "id": 342,
       "entry": "F000:0091",
       "term": "F000:00D0",
       "pred": [
         37,
-        258
+        335
       ],
       "succ": [],
       "asm": [
@@ -57,8 +57,8 @@
         33
       ],
       "succ": [
-        258,
-        265
+        335,
+        342
       ],
       "asm": [
         "C70628002222|mov word ptr DS:[0x0028],0x2222",
@@ -71,14 +71,14 @@
       ]
     },
     {
-      "id": 258,
+      "id": 335,
       "entry": "F000:00D8",
       "term": "F000:00EE",
       "pred": [
         37
       ],
       "succ": [
-        265
+        342
       ],
       "asm": [
         "55|push BP",

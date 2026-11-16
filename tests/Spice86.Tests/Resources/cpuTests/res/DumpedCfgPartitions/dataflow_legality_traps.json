@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        1328
+        1641
       ],
       "entries": [
         {
-          "block": 1328,
+          "block": 1641,
           "address": "F000:0383",
           "kind": "functionEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        411
+        723
       ],
       "entries": [
         {
-          "block": 411,
+          "block": 723,
           "address": "F000:0387",
           "kind": "executionContextEntry"
         }
@@ -50,11 +50,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        1840
+        2153
       ],
       "entries": [
         {
-          "block": 1840,
+          "block": 2153,
           "address": "F000:0394",
           "kind": "executionContextEntry"
         }
@@ -66,7 +66,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        1501,
+        1814,
         50,
         48,
         55,
@@ -74,38 +74,38 @@
         62,
         69,
         77,
-        81,
-        79,
-        86,
-        102,
-        100,
-        108,
-        106,
-        115,
-        120,
-        118,
-        125,
-        136,
-        134,
-        148,
+        82,
+        80,
+        91,
+        121,
+        119,
+        131,
+        129,
+        144,
+        152,
         150,
-        158,
-        156,
-        166,
-        164,
-        162,
-        171,
-        1330,
-        1344,
-        1348,
-        1373,
-        1377,
-        1379,
-        1399,
-        1397,
-        1406,
-        1408,
-        1503,
+        161,
+        181,
+        179,
+        205,
+        208,
+        221,
+        219,
+        233,
+        231,
+        229,
+        243,
+        1643,
+        1657,
+        1661,
+        1686,
+        1690,
+        1692,
+        1712,
+        1710,
+        1719,
+        1721,
+        1816,
         2
       ],
       "entries": [
@@ -131,8 +131,8 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 5,
-      "fromBlock": 1328,
-      "toBlock": 1330,
+      "fromBlock": 1641,
+      "toBlock": 1643,
       "from": "F000:0386",
       "target": "F000:01AF"
     },
@@ -151,11 +151,11 @@
       "kind": "callOut",
       "fromPartition": 5,
       "toPartition": 2,
-      "fromBlock": 171,
-      "toBlock": 1328,
+      "fromBlock": 243,
+      "toBlock": 1641,
       "from": "F000:01AD",
       "target": "F000:0383",
-      "callContinuationBlock": 1330,
+      "callContinuationBlock": 1643,
       "callContinuationAddress": "F000:01AF"
     }
   ]

@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0095",
-  "lastExecutedBlockId": 47,
+  "lastExecutedBlockId": 53,
   "blocks": [
     {
-      "id": 47,
+      "id": 53,
       "entry": "F000:0075",
       "term": "F000:0095",
       "pred": [
         39,
-        41
+        42
       ],
       "succ": [],
       "asm": [
@@ -51,22 +51,22 @@
         36
       ],
       "succ": [
-        41,
-        47
+        42,
+        53
       ],
       "asm": [
         "E82800|call near 0x009D"
       ]
     },
     {
-      "id": 41,
+      "id": 42,
       "entry": "F000:009D",
       "term": "F000:00A9",
       "pred": [
         39
       ],
       "succ": [
-        47
+        53
       ],
       "asm": [
         "A13200|mov AX,word ptr DS:[0x0032]",

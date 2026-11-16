@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0012",
-  "lastExecutedBlockId": 87,
+  "lastExecutedBlockId": 89,
   "blocks": [
     {
-      "id": 87,
+      "id": 89,
       "entry": "F000:000D",
       "term": "F000:0012",
       "pred": [
@@ -43,7 +43,7 @@
         52
       ],
       "succ": [
-        87
+        89
       ],
       "asm": [
         "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
@@ -59,7 +59,7 @@
       ],
       "succ": [
         9,
-        87
+        89
       ],
       "asm": [
         "B80000|mov AX,0",

@@ -37,7 +37,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        36,
+        39,
         2
       ],
       "entries": [
@@ -66,7 +66,7 @@
       "fromPartition": 1,
       "toPartition": 3,
       "fromBlock": 32,
-      "toBlock": 36,
+      "toBlock": 39,
       "from": "F100:0007",
       "target": "F000:000D"
     },
@@ -87,7 +87,7 @@
       "toBlock": 8,
       "from": "F000:0008",
       "target": "F100:0000",
-      "callContinuationBlock": 36,
+      "callContinuationBlock": 39,
       "callContinuationAddress": "F000:000D"
     }
   ]

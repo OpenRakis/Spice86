@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0027",
-  "lastExecutedBlockId": 28,
+  "lastExecutedBlockId": 31,
   "blocks": [
     {
-      "id": 28,
+      "id": 31,
       "entry": "F000:0014",
       "term": "F000:0027",
       "pred": [
@@ -47,7 +47,7 @@
       ],
       "succ": [
         16,
-        28
+        31
       ],
       "asm": [
         "B90200|mov CX,2",
@@ -62,7 +62,7 @@
         9
       ],
       "succ": [
-        28
+        31
       ],
       "asm": [
         "C3|ret near"

@@ -25,8 +25,8 @@
         3,
         59,
         56,
-        86,
-        88,
+        90,
+        92,
         2
       ],
       "entries": [
@@ -44,7 +44,7 @@
       "fromPartition": 1,
       "toPartition": 2,
       "fromBlock": 12,
-      "toBlock": 88,
+      "toBlock": 92,
       "from": "F000:0044",
       "target": "F000:0010"
     },
@@ -53,7 +53,7 @@
       "fromPartition": 1,
       "toPartition": 2,
       "fromBlock": 14,
-      "toBlock": 88,
+      "toBlock": 92,
       "from": "F000:0043",
       "target": "F000:0010"
     },
@@ -65,7 +65,7 @@
       "toBlock": 9,
       "from": "F000:000D",
       "target": "F000:0017",
-      "callContinuationBlock": 88,
+      "callContinuationBlock": 92,
       "callContinuationAddress": "F000:0010"
     }
   ]

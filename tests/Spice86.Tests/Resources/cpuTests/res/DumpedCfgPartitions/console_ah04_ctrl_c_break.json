@@ -184,22 +184,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        77,
-        81,
-        89,
-        98,
-        104,
         79,
         83,
-        86,
+        91,
+        100,
+        106,
+        81,
+        85,
+        88,
+        97,
+        104,
         95,
-        102,
-        93,
-        100
+        102
       ],
       "entries": [
         {
-          "block": 77,
+          "block": 79,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -245,7 +245,7 @@
       "fromPartition": 1,
       "toPartition": 12,
       "fromBlock": 64,
-      "toBlock": 77,
+      "toBlock": 79,
       "from": "016E:0102",
       "target": "F000:0096",
       "callContinuationBlock": 66,
