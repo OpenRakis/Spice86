@@ -123,7 +123,13 @@ public class SpeculativeExplorer : InstructionReplacer {
     private sealed record TableDependent(CfgInstruction Site, bool IsCall,
         int SegmentRegisterIndex, ushort BaseOffset, ushort Step, ushort Bound)
         : AnchorDependent(Site, IsCall);
-    private readonly Dictionary<SegmentedAddress, List<CfgInstruction>> _pendingCallSites = new();
+    /// <summary>One call site pending on its callee's return proof, with the (known-registers,
+    /// anchor) pairs that reached it: when the callee proves, each pair resumes its walk past the
+    /// call with the registers the callee does not write.</summary>
+    private sealed record PendingCallSite(CfgInstruction Call,
+        List<(ushort KnownBeforeCall, CfgInstruction Anchor)> Anchors);
+
+    private readonly Dictionary<SegmentedAddress, List<PendingCallSite>> _pendingCallSites = new();
     private readonly HashSet<CfgInstruction> _cappedSites = [];
     private readonly CalleeReturnScanner _calleeReturnScanner;
     private readonly Dictionary<SegmentedAddress, CallDistance> _provedReturnKind = new();
@@ -190,8 +196,11 @@ public class SpeculativeExplorer : InstructionReplacer {
                 _pending.Remove(trigger);
             }
         }
-        foreach ((SegmentedAddress callee, List<CfgInstruction> sites) in _pendingCallSites.ToList()) {
-            sites.RemoveAll(site => ReferenceEquals(site, instruction));
+        foreach ((SegmentedAddress callee, List<PendingCallSite> sites) in _pendingCallSites.ToList()) {
+            sites.RemoveAll(site => {
+                site.Anchors.RemoveAll(pair => ReferenceEquals(pair.Anchor, instruction));
+                return ReferenceEquals(site.Call, instruction);
+            });
             if (sites.Count == 0) {
                 _pendingCallSites.Remove(callee);
             }
@@ -262,7 +271,9 @@ public class SpeculativeExplorer : InstructionReplacer {
         ushort known = (ushort)((ushort)RegisterBits.All & ~RegisterWriteSet.MayWrite(observed));
         EnqueueStaticSuccessors(observed, worklist, followContinuations: false, known, known == 0 ? null : observed, guessRoot: null);
         if (observed.IsCall) {
-            TryExploreCallContinuation(observed, worklist, null);
+            // The walk starts from the CPU state right before the observed call runs, so the
+            // continuation keeps every register the callee does not write.
+            TryExploreCallContinuation(observed, worklist, (ushort)RegisterBits.All, observed, null);
         }
         TryExplorePushedReturn(observed, worklist);
         Drain(worklist);
@@ -390,9 +401,9 @@ public class SpeculativeExplorer : InstructionReplacer {
             return;
         }
         if (_calleeReturnEvidence.IsKnownToReturn(calleeEntry) || IsProvenFor(calleeEntry, callNode)) {
-            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, null);
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, 0, null, null);
         } else {
-            AddPendingCallSite(calleeEntry, callNode);
+            AddPendingCallSite(calleeEntry, callNode, 0, null);
         }
     }
 
@@ -693,9 +704,11 @@ public class SpeculativeExplorer : InstructionReplacer {
                 worklist.Enqueue(new ExploreItem(successor, node, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, null, nextKnown, nextAnchor, guessRoot));
             }
             if (followContinuations) {
-                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static, guessRoot);
+                EnqueueContinuation(node, worklist, InstructionSuccessorType.CallToReturn, followContinuations, ExploreSource.Static, 0, null, guessRoot);
             } else {
-                TryExploreCallContinuation(node, worklist, guessRoot);
+                // The registers known right before the call, and the anchor they come from:
+                // the continuation keeps whichever of them the callee does not write.
+                TryExploreCallContinuation(node, worklist, item.KnownRegisters, item.Anchor, guessRoot);
             }
             return;
         }
@@ -708,7 +721,7 @@ public class SpeculativeExplorer : InstructionReplacer {
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.
         // Only callback instructions have a meaningful memory continuation; follow it under trust.
         if (followContinuations && node.MaxSuccessorsCount is null && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
-            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, guessRoot);
+            EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations, ExploreSource.Static, 0, null, guessRoot);
         }
         TryExplorePushedReturn(node, worklist);
     }
@@ -996,7 +1009,7 @@ public class SpeculativeExplorer : InstructionReplacer {
         }
         Queue<ExploreItem> worklist = new();
         foreach (CfgInstruction callNode in callNodes) {
-            TryExploreCallContinuation(callNode, worklist, null);
+            TryExploreCallContinuation(callNode, worklist, 0, null, null);
         }
         Drain(worklist);
         // Restored observed nodes were never parsed in this run, so no anchor walk registered
@@ -1049,18 +1062,44 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// <summary>
     /// Enqueues the call/int continuation when the callee is known to return, or records the call
     /// node pending on its callee entry so it is retried when aligned return evidence appears.
-    /// Nodes that already carry a CallToReturn successor or left the index are skipped.
+    /// Nodes that left the index are skipped. When the item reaching the call carries an anchor,
+    /// the continuation keeps the registers the callee write scan does not name, and keeps
+    /// walking under that anchor even when the CallToReturn edge already exists.
     /// </summary>
-    private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, CfgInstruction? guessRoot) {
-        if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode) || HasCallToReturnSuccessor(callNode)) {
+    private void TryExploreCallContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist,
+        ushort knownBeforeCall, CfgInstruction? anchor, CfgInstruction? guessRoot) {
+        if (!_nodeIndex.Contains(callNode) || !IsUsable(callNode)) {
             return;
         }
-
-        if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
-            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, guessRoot);
-        } else if (callee is not null) {
-            AddPendingCallSite(callee.Value, callNode);
+        ushort continuationKnown = anchor is null ? (ushort)0 : ContinuationKnown(callNode, knownBeforeCall);
+        CfgInstruction? continuationAnchor = continuationKnown == 0 ? null : anchor;
+        if (HasCallToReturnSuccessor(callNode)) {
+            if (continuationAnchor is not null) {
+                EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false,
+                    ExploreSource.CallContinuation, continuationKnown, continuationAnchor, guessRoot);
+            }
+            return;
         }
+        if (IsCalleeKnownToReturn(callNode, out SegmentedAddress? callee)) {
+            EnqueueContinuation(callNode, worklist, InstructionSuccessorType.CallToReturn, false,
+                ExploreSource.CallContinuation, continuationKnown, continuationAnchor, guessRoot);
+        } else if (callee is not null) {
+            AddPendingCallSite(callee.Value, callNode, knownBeforeCall, anchor);
+        }
+    }
+
+    /// <summary>The registers of <paramref name="knownBeforeCall"/> that still hold after
+    /// <paramref name="callNode"/> returns: the ones the callee write scan does not name. An
+    /// unknown callee clears everything, exactly like before the scan existed.</summary>
+    private ushort ContinuationKnown(CfgInstruction callNode, ushort knownBeforeCall) {
+        if (knownBeforeCall == 0) {
+            return 0;
+        }
+        ushort mask = _calleeWriteScanner.MayWriteAcross(callNode);
+        if (mask == (ushort)RegisterBits.AllExceptCs) {
+            return 0;
+        }
+        return (ushort)(knownBeforeCall & ~mask);
     }
 
     private bool IsCalleeKnownToReturn(CfgInstruction callNode, out SegmentedAddress? callee) {
@@ -1169,42 +1208,59 @@ public class SpeculativeExplorer : InstructionReplacer {
         callNode.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CallToReturn, out ISet<ICfgNode>? targets)
             && targets.Count > 0;
 
-    private void AddPendingCallSite(SegmentedAddress callee, CfgInstruction callNode) {
-        if (!_pendingCallSites.TryGetValue(callee, out List<CfgInstruction>? sites)) {
+    private void AddPendingCallSite(SegmentedAddress callee, CfgInstruction callNode,
+        ushort knownBeforeCall, CfgInstruction? anchor) {
+        if (!_pendingCallSites.TryGetValue(callee, out List<PendingCallSite>? sites)) {
             sites = _pendingCallSites[callee] = [];
         }
-        if (!sites.Contains(callNode)) {
-            sites.Add(callNode);
-
+        PendingCallSite? record = sites.Find(site => ReferenceEquals(site.Call, callNode));
+        if (record is null) {
+            record = new PendingCallSite(callNode, []);
+            sites.Add(record);
+        }
+        if (anchor is not null && !record.Anchors.Contains((knownBeforeCall, anchor))) {
+            record.Anchors.Add((knownBeforeCall, anchor));
         }
     }
 
     /// <summary>
     /// The callee just became known to return: wire the continuation of every pending call site
-    /// still in the index. Sites pruned or already holding a CallToReturn successor are skipped.
+    /// still in the index. Sites pruned from the index are skipped; a site with no CallToReturn
+    /// successor gets the plain continuation, and each anchor pair that reached it resumes its
+    /// walk with the registers the callee does not write (computable now that the proof decoded
+    /// the callee's subgraph).
     /// </summary>
     /// <param name="callee">The callee entry the pending sites call.</param>
     /// <param name="provenDistance">The proven return distance, or null when the evidence is an
     /// observed return that applies to every distance: a proof is uniform per distance, so sites
     /// of another distance stay pending.</param>
     private void DrainPendingCallSites(SegmentedAddress callee, CallDistance? provenDistance) {
-        if (!_pendingCallSites.TryGetValue(callee, out List<CfgInstruction>? sites)) {
+        if (!_pendingCallSites.TryGetValue(callee, out List<PendingCallSite>? sites)) {
             return;
         }
         // A proof is uniform per distance: sites of another distance stay pending.
-        List<CfgInstruction> matching = sites
-            .Where(site => provenDistance is null || SiteDistance(site) == provenDistance.Value)
+        List<PendingCallSite> matching = sites
+            .Where(site => provenDistance is null || SiteDistance(site.Call) == provenDistance.Value)
             .ToList();
         sites.RemoveAll(matching.Contains);
         if (sites.Count == 0) {
             _pendingCallSites.Remove(callee);
         }
         Queue<ExploreItem> worklist = new();
-        foreach (CfgInstruction site in matching) {
-            if (!_nodeIndex.Contains(site) || !IsUsable(site) || HasCallToReturnSuccessor(site)) {
+        foreach (PendingCallSite site in matching) {
+            CfgInstruction call = site.Call;
+            if (!_nodeIndex.Contains(call) || !IsUsable(call)) {
                 continue;
             }
-            EnqueueContinuation(site, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, null);
+            if (!HasCallToReturnSuccessor(call)) {
+                EnqueueContinuation(call, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, 0, null, null);
+            }
+            foreach ((ushort knownBeforeCall, CfgInstruction anchor) in site.Anchors) {
+                ushort known = ContinuationKnown(call, knownBeforeCall);
+                if (known != 0) {
+                    EnqueueContinuation(call, worklist, InstructionSuccessorType.CallToReturn, false, ExploreSource.CallContinuation, known, anchor, null);
+                }
+            }
         }
         Drain(worklist);
     }
@@ -1214,12 +1270,12 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// edge type and source. The continuation address is computed from instruction length, never
     /// by decoding the operand.
     /// </summary>
-    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations, ExploreSource source, CfgInstruction? guessRoot) {
+    private void EnqueueContinuation(CfgInstruction callNode, Queue<ExploreItem> worklist, InstructionSuccessorType edgeType, bool followContinuations, ExploreSource source, ushort knownRegisters, CfgInstruction? anchor, CfgInstruction? guessRoot) {
         SegmentedAddress continuation = callNode.NextInMemoryAddress32.ToSegmentedAddress();
         if (_nodeIndex.PoisonSet.Contains(continuation)) {
             return;
         }
-        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null, 0, null, guessRoot));
+        worklist.Enqueue(new ExploreItem(continuation, callNode, edgeType, followContinuations, source, null, knownRegisters, anchor, guessRoot));
     }
 
     private void EnqueueStaticSuccessors(CfgInstruction instruction, Queue<ExploreItem> worklist, bool followContinuations, ushort knownRegisters, CfgInstruction? anchor, CfgInstruction? guessRoot) {

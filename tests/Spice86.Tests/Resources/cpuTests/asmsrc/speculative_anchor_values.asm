@@ -17,15 +17,23 @@
 ;       enters the call arm directly, past the anchor.
 ;   S4: `call word [cs:bx]`, BX set on the shared path; the evaluation reads the
 ;       cell at DS:BX.
+;   S5: `call di` sits past `call s5_leaf` on the call arm. The leaf writes AX
+;       only, so the register knowledge the anchor carried survives the
+;       continuation and the site registers like S1.
 ;   N1 (negative): `mov di, ax` on the speculative path before `call di` kills
 ;       the known register, so the site is refused (golden-only).
 ;   N2 (negative): a pointer cell holding 0x0000 is evaluated and refused
 ;       (golden-only).
+;   N3 (negative): same shape as S5 but n3_leaf writes DI, so the continuation
+;       knowledge loses it and the site is refused (golden-only).
+;   N4 (negative): same shape but n4_leaf holds an indirect call on its own
+;       dead arm, so the callee write scan is unknown and everything is
+;       cleared (golden-only).
 ;
 ; Selector byte at DS:0500h: 0 = discovery run (call arms never taken),
 ; 1 = unobserved run (every arm taken). DS = CS (flat bin).
 ;
-; Result bytes at DS:0400h..0406h:
+; Result bytes at DS:0400h..0407h:
 ;   [0400] = 02 when the program completed
 ;   [0401] = cb_a  invocations (warmup + S1 arm calls)
 ;   [0402] = cb_b  invocations (warmup + S1 arm calls)
@@ -33,6 +41,7 @@
 ;   [0404] = cb3a  invocations (warmup + S3 arm calls before the rewrite)
 ;   [0405] = cb3b  invocations (warmup + the post-rewrite arm entry)
 ;   [0406] = cb_s4 invocations
+;   [0407] = cb_s5 invocations (warmup + S5 arm calls)
 
 use16
 
@@ -44,6 +53,7 @@ start:
     mov byte [0x0404], 0x00
     mov byte [0x0405], 0x00
     mov byte [0x0406], 0x00
+    mov byte [0x0407], 0x00
 
     ; Warmup: one observed call per callback builds the return evidence the
     ; speculative call sites need for their continuations.
@@ -53,6 +63,10 @@ start:
     call cb3a
     call cb3b
     call cb_s4
+    call cb_s5
+    call s5_leaf
+    call n3_leaf
+    call n4_leaf
 ; --- S1: callback in DI, `call di` on the unexecuted arm ---
     mov di, cb_a
     call s1_dispatch
@@ -85,6 +99,21 @@ s3_done:
 ; --- N2: cell holding 0 -> candidate refused ---
     call s2n_dispatch
     call s2n_dispatch
+
+; --- S5: `call di` past `call s5_leaf` (writes AX only) ---
+    mov di, cb_s5
+    call s5_dispatch                  ; registers the site past the leaf call
+    call s5_dispatch                  ; evaluation proposes cb_s5
+
+; --- N3: leaf writes DI -> continuation knowledge loses it, site refused ---
+    mov di, cb_s5
+    call n3_dispatch
+    call n3_dispatch
+
+; --- N4: leaf scan unknown -> everything cleared, site refused ---
+    mov di, cb_s5
+    call n4_dispatch
+    call n4_dispatch
 
     mov byte [0x0400], 0x02
     hlt
@@ -146,6 +175,46 @@ s2n_dead:
 zero_ptr:
     dw 0
 
+s5_dispatch:
+    cmp byte [0x0500], 0
+    jne s5_call
+    ret
+s5_call:
+    call s5_leaf
+    call di
+    ret
+s5_leaf:
+    mov ax, 0x1234
+    ret
+
+n3_dispatch:
+    cmp byte [0x0500], 0xFF
+    je n3_dead
+    ret
+n3_dead:
+    call n3_leaf
+    call di
+    ret
+n3_leaf:
+    mov di, 0x1234
+    ret
+
+n4_dispatch:
+    cmp byte [0x0500], 0xFF
+    je n4_dead
+    ret
+n4_dead:
+    call n4_leaf
+    call di
+    ret
+n4_leaf:
+    cmp byte [0x0500], 0xFF
+    je n4_indirect
+    ret
+n4_indirect:
+    call si
+    ret
+
 cb_a:
     inc byte [0x0401]
     ret
@@ -163,6 +232,9 @@ cb3b:
     ret
 cb_s4:
     inc byte [0x0406]
+    ret
+cb_s5:
+    inc byte [0x0407]
     ret
 
 rb 65520-$

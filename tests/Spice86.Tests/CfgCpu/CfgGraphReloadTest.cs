@@ -327,11 +327,11 @@ public class CfgGraphReloadTest {
             di.ProgramExecutor.Run();
         }
 
-        // S = F000:0084 `call near DI`, the s1_dispatch call arm: speculative on the observed arm.
-        // T = F000:00D2 cb_a, proposed for S only by the anchor's register dependent (DI = cb_a
+        // S = F000:00B0 `call near DI`, the s1_dispatch call arm: speculative on the observed arm.
+        // T = F000:013B cb_a, proposed for S only by the anchor's register dependent (DI = cb_a
         // when the second s1_dispatch call executes). Remove only that Normal edge, keep the nodes.
-        const string siteAddress = "F000:0084";
-        const string targetAddress = "F000:00D2";
+        const string siteAddress = "F000:00B0";
+        const string targetAddress = "F000:013B";
         // The recorded-data root is per-program: the dump lands in a subdirectory of it.
         string dumpPath = Directory.GetFiles(recordedDataDirectory.Path,
             "spice86dumpCfgReload.json", SearchOption.AllDirectories).Single();
