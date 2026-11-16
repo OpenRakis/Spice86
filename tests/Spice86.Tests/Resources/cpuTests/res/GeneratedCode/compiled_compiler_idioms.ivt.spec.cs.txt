@@ -3742,20 +3742,20 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_1BB5_03395(ushort word1, ushort word2, ushort word3, ushort previousSi, ushort word4, ushort word5, bool count) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_1BB5_03395(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5, ushort word6, bool count) {
         CX = word1;
         BX = word2;
         BP = word3;
-        SI = previousSi;
-        DI = word4;
-        DS = word5;
+        SI = word4;
+        DI = word5;
+        DS = word6;
         DirectionFlag = count;
         CheckExternalEvents(cs1, 0x1BB5);
         AX = 0;
         Stack.Push16(word2);
         Stack.Push16(DX);
         DX = 0;
-        (CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017E_2084_03864(word1, word4, word5, count));
+        (CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017E_2084_03864(word1, word5, word6, count));
         if (DX != 0xFFFF && DX != 0xFFFE) {
             if (DX == 0xFFFD) {
                 goto L_2136;
@@ -3778,7 +3778,7 @@ public partial class CfgGeneratedOverrides {
                 return (AX, CX, BP, SI, DI);
             }
         }
-        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017E_2257_03A37(previousSi));
+        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017E_2257_03A37());
         Alu16.And(DX, DX);
         if (DX == 0) {
             VerifySpeculativeRunOrFail(cs1, 0x2129, SpeculativeRun_2129);
@@ -4906,41 +4906,37 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: CX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, ushort result8) unknown_017E_2257_03A37(ushort previousSi) {
-        bool previousCarry;
-        ushort previousDs;
-        ushort previousDs2 = 0;
-        bool previousCarry2 = false;
-        byte byte1 = 0;
-        ushort previousSi2 = 0;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, ushort result8) unknown_017E_2257_03A37() {
         ushort word1 = 0;
+        bool flag1 = false;
+        byte byte1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
         CheckExternalEvents(cs1, 0x2257);
-        Stack.Save(BX, CX, previousSi, DI, BP);
+        Stack.Save(BX, CX, SI, DI, BP);
         Stack.Push16(DS);
-        previousCarry = false;
         AX = 0;
-        previousDs = 0;
         AH = 0x63;
-        (byte1, previousSi2, previousDs2, previousCarry2) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, previousSi, previousDs, previousCarry));
-        word1 = previousDs2;
-        if (!previousCarry2 && (byte1 == 0 && word1 != 0)) {
+        (byte1, word2, word1, flag1) = ServiceCall(Dos, () => Dos.ReadLeadByteTablePointer());
+        word3 = word1;
+        if (!flag1 && (byte1 == 0 && word3 != 0)) {
             goto L_2275;
         }
         VerifySpeculativeRunOrFail(cs1, 0x2271, SpeculativeRun_2271);
-        word1 = 0;
-        previousSi2 = 0;
+        word3 = 0;
+        word2 = 0;
     L_2275:
         DS = Stack.Pop16();
         BP = Stack.Pop16();
-        AX = previousSi2;
-        DX = word1;
+        AX = word2;
+        DX = word3;
         (DI, SI, CX, BX) = Stack.Restore4();
         NearReturn();
         return (AX, CX, DX, BX, BP, SI, DI, DS);
     }
 
     public virtual Action unknown_017E_2257_03A37_Asm() {
-        (AX, CX, DX, BX, BP, SI, DI, DS) = unknown_017E_2257_03A37(SI);
+        (AX, CX, DX, BX, BP, SI, DI, DS) = unknown_017E_2257_03A37();
         return Returned;
     }
 

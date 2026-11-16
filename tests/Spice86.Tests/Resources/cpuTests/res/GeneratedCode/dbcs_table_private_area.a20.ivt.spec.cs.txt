@@ -12,17 +12,17 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: SI, DS, CF. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
-        ushort previousDs = 0;
-        ushort word1;
+        ushort word1 = 0;
+        ushort word2;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x6300;
-        (AL, SI, previousDs, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag));
-        word1 = previousDs;
-        if (word1 is < 0xC800 or >= 0xD000) {
+        (AL, SI, word1, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTablePointer());
+        word2 = word1;
+        if (word2 is < 0xC800 or >= 0xD000) {
             VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_mov);
             byte1 = 0xFF;
         }

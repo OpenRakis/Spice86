@@ -34,6 +34,10 @@ public class DosInt21ServiceContractTest {
             foreach (int selector in selectors) {
                 yield return new ServiceContractCase { Vector = 0x21, SelectorValue = selector };
             }
+            // Get DBCS lead-byte table pointer (AL=00h): the only 63h sub-service.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x63, Al = 0x00
+            };
             // Commit an open file without closing it, or reject an invalid DOS handle.
             yield return new ServiceContractCase {
                 Vector = 0x21, SelectorValue = 0x68,

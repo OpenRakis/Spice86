@@ -12,19 +12,19 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: SI, DS, CF. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         byte byte1 = 0;
-        ushort previousSi = 0;
+        ushort index = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x6300;
-        (byte1, previousSi, DS, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, SI, DS, CarryFlag));
+        (byte1, index, DS, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTablePointer());
         if (byte1 == 0 && byte1 >= 0) {
             DX = DS;
             if (DX != 0) {
-                if (UInt16[DS, previousSi] != 0) {
+                if (UInt16[DS, index] != 0) {
                     goto L_011B;
                 }
                 byte2 = 0;

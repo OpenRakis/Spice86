@@ -397,6 +397,11 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     [InterruptService(0x63, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al | CpuValues.Ds | CpuValues.Si | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite,
         Implementation = nameof(ReadLeadByteTable), Inputs = [CpuValues.Al, CpuValues.Si, CpuValues.Ds, CpuValues.Carry])]
+    [InterruptService(0x63, Al = 0x00, Name = "GetLeadByteTablePointer",
+        Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp,
+        Writes = CpuValues.Al | CpuValues.Ds | CpuValues.Si | CpuValues.Carry,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(ReadLeadByteTablePointer), Inputs = [])]
     private void GetLeadByteTable() {
         (byte al, ushort si, ushort ds, bool carryFlag) = ReadLeadByteTable(
             State.AL, State.SI, State.DS, ReadCarryFlag());
@@ -418,7 +423,12 @@ public class DosInt21Handler : InterruptHandler {
             // Returns error without modifying carry flag for invalid subfunction
             return (0xFF, previousSi, previousDs, previousCarry);
         }
+        return ReadLeadByteTablePointer();
+    }
 
+    /// <summary>Returns the DBCS lead-byte table pointer: the result of
+    /// <see cref="ReadLeadByteTable"/> for operation 0.</summary>
+    public (byte al, ushort si, ushort ds, bool carryFlag) ReadLeadByteTablePointer() {
         uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
         ushort segment = MemoryUtils.ToSegment(dbcsAddress);
         ushort offset = (ushort)(dbcsAddress & OffsetMask);
