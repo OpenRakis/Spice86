@@ -81,9 +81,67 @@ internal sealed class TypedSignatures {
                 pair => pair.Signature ?? throw new InvalidOperationException("SignatureOf gave no signature."));
         TypedSignatures signatures = new(byName);
         signatures.RefineSignatures(methods, conventions);
+        if (signatures.ResolveTailCalls()) {
+            signatures.RefineSignatures(methods, conventions);
+        }
         signatures.AssignNames(methods);
         return signatures;
     }
+
+    /// <summary>Confirms or drops every provisional signature <see cref="ExitsAreTyped"/> admitted
+    /// with a tail-call exit: a target must itself be typed with the same outputs in the same order
+    /// (no projection) and the same distance and popped bytes, so <c>return f(args);</c> hands the
+    /// caller's callers exactly the tuple the signature promises; any other target makes the method
+    /// stay untyped. Iterates so confirmed targets can admit their own callers in turn; a signature
+    /// whose targets never resolve (a cycle or a dropped target) is dropped. Returns whether any
+    /// signature was dropped - callers then re-run <see cref="RefineSignatures"/> because a dropped
+    /// target turns calls back to untyped.</summary>
+    private bool ResolveTailCalls() {
+        bool dropped = false;
+        while (true) {
+            bool progress = false;
+            foreach ((string name, TypedSignature signature) in _byMethodName.ToList()) {
+                if (signature.TailCallTargets is not { } targets) {
+                    continue;
+                }
+                bool allConfirmed = true;
+                bool failed = false;
+                foreach (string target in targets) {
+                    if (!_byMethodName.TryGetValue(target, out TypedSignature? targetSignature)
+                            || !SameOutputsAndReturn(signature, targetSignature)) {
+                        failed = true;
+                        break;
+                    }
+                    if (targetSignature.TailCallTargets is not null) {
+                        allConfirmed = false;
+                    }
+                }
+                if (failed) {
+                    _byMethodName.Remove(name);
+                    dropped = progress = true;
+                } else if (allConfirmed) {
+                    signature.TailCallTargets = null;
+                    progress = true;
+                }
+            }
+            if (!progress) {
+                break;
+            }
+        }
+        foreach ((string name, TypedSignature signature) in _byMethodName.ToList()) {
+            if (signature.TailCallTargets is not null) {
+                _byMethodName.Remove(name);
+                dropped = true;
+            }
+        }
+        return dropped;
+    }
+
+    private static bool SameOutputsAndReturn(TypedSignature caller, TypedSignature callee) =>
+        caller.Outputs.Count == callee.Outputs.Count
+            && caller.Outputs.Zip(callee.Outputs).All(pair => pair.First.Mask == pair.Second.Mask)
+            && caller.Distance == callee.Distance
+            && caller.PoppedBytes == callee.PoppedBytes;
 
     /// <summary>Second pass over the typed methods, with the pass-1 set known: an input the body
     /// only feeds to an untyped call, and an output only an untyped call writes, stay machine
@@ -111,7 +169,8 @@ internal sealed class TypedSignatures {
                     nameCounters),
                 Distance = signature.Distance,
                 PoppedBytes = signature.PoppedBytes,
-                EntryBlock = signature.EntryBlock
+                EntryBlock = signature.EntryBlock,
+                TailCallTargets = signature.TailCallTargets
             };
         }
     }
@@ -239,6 +298,11 @@ internal sealed class TypedSignatures {
                         continue;
                     }
                     if (use.Statement is not { } statement) {
+                        if (use.Terminator is IrExit exit
+                                && IrAstChildren.Descendants(exit.Transfer)
+                                    .Any(node => node.GetType() == typeof(MethodCallNode))) {
+                            continue;
+                        }
                         realRead = true;
                         break;
                     }
@@ -325,7 +389,8 @@ internal sealed class TypedSignatures {
             return null;
         }
         IrMethod method = source.IrMethod;
-        if (!ExitsAreTyped(method, out CallDistance distance, out int poppedBytes)) {
+        if (!ExitsAreTyped(method, out CallDistance distance, out int poppedBytes,
+                out bool hasReturns, out List<string>? tailTargets)) {
             return null;
         }
         if (HasInterruptOrCallback(method)) {
@@ -340,6 +405,18 @@ internal sealed class TypedSignatures {
             .Single(methodEntry => methodEntry.Node.Equals(entry.Node));
         IrCallingConventions.CalleeReturnEffect? proved =
             conventions.ReturnsToCallerOf(plan.MethodName);
+        if (proved is null && tailTargets is { Count: > 0 }) {
+            proved = BorrowedTailEffect(conventions, tailTargets);
+            if (proved is not null) {
+                if (hasReturns && (proved.Distance != distance
+                        || proved.PoppedBytes != poppedBytes)) {
+                    proved = null;
+                } else {
+                    distance = proved.Distance;
+                    poppedBytes = proved.PoppedBytes;
+                }
+            }
+        }
         if (proved is null || proved.Distance != distance || proved.PoppedBytes != poppedBytes) {
             return null;
         }
@@ -352,7 +429,8 @@ internal sealed class TypedSignatures {
             Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
             Distance = distance,
             PoppedBytes = poppedBytes,
-            EntryBlock = irEntry.Block
+            EntryBlock = irEntry.Block,
+            TailCallTargets = tailTargets
         };
     }
 
@@ -371,11 +449,32 @@ internal sealed class TypedSignatures {
     }
 
     /// <summary>Every exit of <paramref name="method"/> is a 16-bit <c>ret</c> / <c>retf</c> of the
-    /// same distance popping the same byte count, or an abort (<c>FailAsUntested</c>, throw); at
-    /// least one is a return.</summary>
-    private static bool ExitsAreTyped(IrMethod method, out CallDistance distance, out int poppedBytes) {
+    /// same distance popping the same byte count, an abort (<c>FailAsUntested</c>, throw) or a tail
+    /// call (a bare <see cref="MethodCallNode"/>, recorded in <paramref name="tailTargets"/> for the
+    /// provisional signature <see cref="ResolveTailCalls"/> later confirms); at least one is a
+    /// return or a tail call.</summary>
+    private static IrCallingConventions.CalleeReturnEffect? BorrowedTailEffect(
+        IrCallingConventions conventions, List<string> tailTargets) {
+        IrCallingConventions.CalleeReturnEffect? effect = null;
+        foreach (string target in tailTargets) {
+            IrCallingConventions.CalleeReturnEffect? targetEffect =
+                conventions.ReturnsToCallerOf(target);
+            if (targetEffect is null
+                || (effect is not null && (targetEffect.Distance != effect.Distance
+                    || targetEffect.PoppedBytes != effect.PoppedBytes))) {
+                return null;
+            }
+            effect = targetEffect;
+        }
+        return effect;
+    }
+
+    private static bool ExitsAreTyped(IrMethod method, out CallDistance distance, out int poppedBytes,
+        out bool hasReturns, out List<string>? tailTargets) {
         distance = CallDistance.Near;
         poppedBytes = 0;
+        hasReturns = false;
+        tailTargets = null;
         int returns = 0;
         foreach (IrBlock block in method.Blocks) {
             if (block.Terminator is not IrExit exit) {
@@ -386,8 +485,11 @@ internal sealed class TypedSignatures {
                     or HltHelperNode)) {
                 return false;
             }
-            if (nodes.Any(node => node.GetType() == typeof(MethodCallNode))) {
-                return false;
+            List<MethodCallNode> tailCalls = [.. nodes
+                .Where(node => node.GetType() == typeof(MethodCallNode)).Cast<MethodCallNode>()];
+            if (tailCalls.Count > 0) {
+                (tailTargets ??= []).AddRange(tailCalls.Select(call => call.MethodName));
+                continue;
             }
             List<ProcedureReturnHelperNode> returnHelpers = nodes.OfType<ProcedureReturnHelperNode>().ToList();
             if (returnHelpers.Count > 0) {
@@ -401,13 +503,14 @@ internal sealed class TypedSignatures {
                     poppedBytes = popCount;
                     returns++;
                 }
+                hasReturns = true;
                 continue;
             }
             if (!nodes.Any(node => node is FailAsUntestedNode or ThrowNode or ReturnNode)) {
                 return false;
             }
         }
-        return returns > 0;
+        return returns > 0 || tailTargets is { Count: > 0 };
     }
 
     private static int PopCount(ProcedureReturnHelperNode helper) => helper.Arguments switch {

@@ -24,6 +24,11 @@ internal sealed class TypedSignature {
     /// <summary>The IR block the method's single entry maps to.</summary>
     public required IrBlock EntryBlock { get; init; }
 
+    /// <summary>The method names every bare-<see cref="MethodCallNode"/> exit targets, while the
+    /// signature is provisional: <see cref="TypedSignatures.Compute"/> clears it once every target
+    /// is confirmed typed with the same outputs and return shape, or drops the signature.</summary>
+    public List<string>? TailCallTargets { get; set; }
+
     /// <summary>The C# return type: <c>void</c>, the single output's type, or a named tuple.</summary>
     public string ReturnType => Outputs.Count switch {
         0 => "void",

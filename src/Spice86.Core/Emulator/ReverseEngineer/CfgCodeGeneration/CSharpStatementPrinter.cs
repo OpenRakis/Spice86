@@ -129,6 +129,16 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                     expressions.TypedSignature is { } typed:
                 PrintTypedReturn(helper, typed);
                 return;
+            case ReturnNode { Value: MethodCallNode tailCall }
+                    when expressions.TypedSignature is not null
+                    && expressions.TypedSignatures?.Of(tailCall.MethodName) is { } tailSignature:
+                string tailInvocation = $"{tailCall.MethodName}({tailSignature.ArgumentList})";
+                writer.Line(tailSignature.Outputs.Count == 0
+                    ? $"{tailInvocation};" : $"return {tailInvocation};");
+                if (tailSignature.Outputs.Count == 0) {
+                    writer.Line("return;");
+                }
+                return;
             case ReturnNode returnNode:
                 writer.Line($"return {expressions.Print(returnNode.Value)};");
                 return;
