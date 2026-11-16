@@ -174,7 +174,7 @@ Ownerless blocks are rejected before assembly. The assembler still guards agains
 
 ### Stage 5: Normalization
 
-`CfgPartitionNormalizer` refines only synthetic partitions with multiple entry blocks. If the entries do not directly transfer to each other, it builds a dominator tree inside the synthetic partition and splits dominated regions into smaller single-entry synthetic partitions.
+`CfgPartitionNormalizer` refines only synthetic partitions with multiple entry blocks. When no entry reaches another, it builds a dominator tree inside the synthetic partition and splits dominated regions into smaller single-entry synthetic partitions. When an entry does reach another, the internal graph is first cut at the edges into a different entry block (self-loops on an entry stay), so each entry dominates its own region; the cut edges become ordinary cross-partition flows and the split is then kept only when the graph of the replacement partitions is acyclic - a cycle between split methods could only run through the cyclic-jump dispatcher or C# recursion, so a cyclic multi-entry partition keeps its `switch` as before.
 
 For a multi-entry shared component such as this:
 

@@ -281,15 +281,24 @@
       "kind": "synthetic",
       "name": "unknown",
       "blocks": [
-        117,
-        175
+        117
       ],
       "entries": [
         {
           "block": 117,
           "address": "016E:011B",
           "kind": "sharedEntry"
-        },
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "synthetic",
+      "name": "unknown",
+      "blocks": [
+        175
+      ],
+      "entries": [
         {
           "block": 175,
           "address": "016E:011D",
@@ -333,7 +342,7 @@
     {
       "kind": "crossPartitionFlow",
       "fromPartition": 1,
-      "toPartition": 17,
+      "toPartition": 18,
       "fromBlock": 173,
       "toBlock": 175,
       "from": "016E:0119",
@@ -427,6 +436,15 @@
       "target": "F000:00E8",
       "callContinuationBlock": 35,
       "callContinuationAddress": "F000:00F2"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 17,
+      "toPartition": 18,
+      "fromBlock": 117,
+      "toBlock": 175,
+      "from": "016E:011B",
+      "target": "016E:011D"
     }
   ]
 }

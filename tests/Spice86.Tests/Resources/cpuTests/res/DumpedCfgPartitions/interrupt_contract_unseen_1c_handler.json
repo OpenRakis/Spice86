@@ -51,7 +51,21 @@
       "kind": "synthetic",
       "name": "unknown",
       "blocks": [
-        45,
+        45
+      ],
+      "entries": [
+        {
+          "block": 45,
+          "address": "F000:000A",
+          "kind": "sharedEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "synthetic",
+      "name": "unknown",
+      "blocks": [
         27,
         10,
         17,
@@ -61,11 +75,6 @@
         {
           "block": 27,
           "address": "F000:001A",
-          "kind": "sharedEntry"
-        },
-        {
-          "block": 45,
-          "address": "F000:000A",
           "kind": "sharedEntry"
         }
       ]
@@ -84,7 +93,7 @@
     {
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
-      "toPartition": 4,
+      "toPartition": 5,
       "fromBlock": 25,
       "toBlock": 27,
       "from": "F000:0018",
@@ -98,6 +107,15 @@
       "toBlock": 45,
       "from": "F000:0007",
       "target": "F000:000A"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 4,
+      "toPartition": 5,
+      "fromBlock": 45,
+      "toBlock": 27,
+      "from": "F000:0015",
+      "target": "F000:001A"
     }
   ]
 }

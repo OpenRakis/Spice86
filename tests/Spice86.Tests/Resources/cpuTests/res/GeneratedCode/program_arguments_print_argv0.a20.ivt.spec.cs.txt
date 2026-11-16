@@ -20,7 +20,7 @@ public partial class CfgGeneratedOverrides {
         DS = Stack.Pop16();
         DI = NearCall(cs1, 0x0105, () => unknown_016E_0133_01813());
         if (UInt16[ES, DI] != 1) {
-            return unknown_016E_011B_017FB(0x0000);
+            return unknown_016E_011B_017FB();
         }
         DI = Alu16.Add(DI, 2);
         DL = UInt8[ES, DI];
@@ -29,7 +29,7 @@ public partial class CfgGeneratedOverrides {
         AH = 2;
         InterruptCall(cs1, 0x0117, 0x21);
         AL = 0;
-        return unknown_016E_011B_017FB(0x011D);
+        return unknown_016E_011D_017FD();
     }
 
     /// <summary>Inputs: none. Outputs: ES. Changes: AX, BX, ES.</summary>
@@ -43,7 +43,7 @@ public partial class CfgGeneratedOverrides {
         ES = word1;
         word2 = EsGlobals.Word002C;
         if (word2 == 0) {
-            return unknown_016E_011B_017FB(0x0000);
+            return unknown_016E_011B_017FB();
         }
         ES = word2;
         return NearRet();
@@ -74,25 +74,16 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>
-    /// Entry 016E:011B: inputs none; does not return.
-    /// Entry 016E:011D: inputs AL; does not return.
-    /// </summary>
-    public virtual Action unknown_016E_011B_017FB(int loadOffset) {
-        switch (loadOffset) {
-            case 0x0000:
-                goto L_011B;
-            case 0x011D:
-                goto L_011D;
-            default:
-                throw FailAsUntested($"Untested entry offset 0x{loadOffset:X4}");
-        }
-
-    L_011B:
+    /// <summary>Inputs: none. Outputs: AL. Changes: AL.</summary>
+    public virtual Action unknown_016E_011B_017FB() {
         CheckExternalEvents(cs1, 0x011B);
         VerifySpeculativeEntryOrFail(cs1, 0x011B, Signature_011B_mov);
         AL = 0xFF;
-    L_011D:
+        return unknown_016E_011D_017FD();
+    }
+
+    /// <summary>Inputs: AL. Does not return.</summary>
+    public virtual Action unknown_016E_011D_017FD() {
         CheckExternalEvents(cs1, 0x011D);
         DX = 0x0999;
         Out8(0x0999, AL);
@@ -178,6 +169,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_0096_F0096Entry;
     private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
+    private readonly Func<int, Action> unknown_016E_011B_017FBEntry;
+    private readonly Func<int, Action> unknown_016E_011D_017FDEntry;
 
     protected readonly EsGlobals EsGlobals;
     protected readonly CsGlobals CsGlobals;
@@ -204,6 +197,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
+        unknown_016E_011B_017FBEntry = _ => unknown_016E_011B_017FB();
+        unknown_016E_011D_017FDEntry = _ => unknown_016E_011D_017FD();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0122, unknown_016E_0122_01802Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0133, unknown_016E_0133_01813_AsmEntry, "unknown");
@@ -220,9 +215,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x011B, unknown_016E_011B_017FB, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x011D, _ => unknown_016E_011B_017FB(0x011D), "unknown_entry");
-        DefineCallLandings(new(cs1, 0x0136), new CallLanding(new(cs1, 0x011B), unknown_016E_011B_017FB));
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x011B, unknown_016E_011B_017FBEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x011D, unknown_016E_011D_017FDEntry, "unknown");
+        DefineCallLandings(new(cs1, 0x0136), new CallLanding(new(cs1, 0x011B), unknown_016E_011B_017FBEntry), new CallLanding(new(cs1, 0x011D), unknown_016E_011D_017FDEntry));
     }
 
     protected override bool ObservedTransfersOnly => true;

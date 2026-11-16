@@ -49,8 +49,11 @@ internal sealed class IrSegmentValues {
         _callDefinedVersions = callDefinedVersions;
         _codeSegment = UniformEntrySegment(method);
         _entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
+        // Two blocks can hold distinct IrExit instances with equal content (e.g. a branch whose arms
+        // tail-call the same method): key by reference so each terminator finds its own block.
         _blockByTerminator = method.Blocks.Where(block => block.HasTerminator)
-            .ToDictionary(block => block.Terminator);
+            .ToDictionary(block => block.Terminator,
+                (IEqualityComparer<IrTerminator>)ReferenceEqualityComparer.Instance);
     }
 
     /// <summary>Replaces the cross-method facts and drops only the resolutions that could have read
