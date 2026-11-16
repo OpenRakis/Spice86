@@ -1249,7 +1249,7 @@ public partial class CfgGeneratedOverrides {
             AX = SsUInt16[BP - 0x0E];
             BX = index2;
             BX += 2;
-            (AX, DX, BP, SI, DI) = NearCall(cs1, 0x07F3, () => unknown_017E_069B_01E7B(AX, CX, DX, BX, DS));
+            (AX, _, BP, SI, DI) = NearCall(cs1, 0x07F3, () => unknown_017E_069B_01E7B(AX, CX, DX, BX, DS));
             AX++;
             BX = (ushort)((AX << 1) + SsUInt16[BP - 6]);
             UInt16[DS, BX] = 0;
@@ -3283,7 +3283,7 @@ public partial class CfgGeneratedOverrides {
             if ((UInt8[DS, SI + 6] & 8) != 0) {
                 BX = UInt16[DS, SI + 4];
                 AX = UInt16[DS, BX + 4];
-                (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x1874, () => unknown_017E_175A_02F3A(AX, CX, BP, 0, DS));
+                (AX, CX, _, BX, BP, SI, DI, DS) = NearCall(cs1, 0x1874, () => unknown_017E_175A_02F3A(AX, CX, BP, 0, DS));
                 BX = UInt16[DS, SI + 4];
                 UInt16[DS, BX + 4] = 0;
             }
@@ -4570,7 +4570,7 @@ public partial class CfgGeneratedOverrides {
                         UInt16[DS, BX + 0x0A] = 0xFFFF;
                         AX = (ushort)(DI + 2);
                         UInt16[DS, BX + 0x0C] += 1;
-                        (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2001, () => unknown_017E_175A_02F3A(AX, CX, BP, DI, DS));
+                        (AX, CX, DX, _, BP, _, _, DS) = NearCall(cs1, 0x2001, () => unknown_017E_175A_02F3A(AX, CX, BP, DI, DS));
                         AX = 1;
                         goto L_1F79;
                     }

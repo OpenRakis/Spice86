@@ -217,7 +217,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
                 ? stackList : $"{argumentList}, {stackList}";
         }
         string invocation = $"{call.MethodName}({prefix}, () => {methodName}({argumentList}))";
-        return CallResult(signature, invocation);
+        return CallResult(call, signature, invocation);
     }
 
     /// <summary>How many of <paramref name="call"/>'s arguments just before the
@@ -257,15 +257,34 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             arguments.Add(stackList);
         }
         string invocation = $"CallWithStackArguments({string.Join(", ", arguments)})";
-        return CallResult(signature, invocation);
+        return CallResult(node.Call, signature, invocation);
     }
 
-    private static CSharpFragment CallResult(Ir.TypedSignature signature, string invocation) =>
-        signature.Outputs.Count switch {
-            0 => invocation,
-            1 => $"{signature.Outputs[0].Register} = {invocation}",
-            _ => $"({string.Join(", ", signature.Outputs.Select(output => output.Register))}) = {invocation}"
-        };
+    /// <summary>The call with its outputs assigned: the register names of
+    /// <paramref name="signature"/>, unless the register-local plan prints an element as
+    /// <c>_</c> for an output nobody reads. A call whose outputs all print <c>_</c> keeps the
+    /// invocation alone.</summary>
+    private CSharpFragment CallResult(ProcedureCallHelperNode call,
+        Ir.TypedSignature signature, string invocation) {
+        if (signature.Outputs.Count == 0) {
+            return invocation;
+        }
+        List<string> elements = [.. signature.Outputs.Select(output => output.Register)];
+        if (_method?.RegisterLocals?.CallOutputs.TryGetValue(call,
+                out IReadOnlyList<string?>? outputs) == true) {
+            for (int index = 0; index < elements.Count && index < outputs.Count; index++) {
+                if (outputs[index] is { } name) {
+                    elements[index] = name;
+                }
+            }
+        }
+        if (elements.All(element => element == "_")) {
+            return invocation;
+        }
+        return elements.Count == 1
+            ? $"{elements[0]} = {invocation}"
+            : $"({string.Join(", ", elements)}) = {invocation}";
+    }
 
     private static readonly
         Dictionary<(Type Type, string Name, int ArgumentCount), ParameterInfo[]?> ParametersByCall = [];

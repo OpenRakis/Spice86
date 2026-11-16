@@ -314,7 +314,7 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte004C = AL;
         AX = 0x2001;
         DS = 0x2001;
-        (AL, BP, DS) = NearCall(biosSegment, 0x014E, () => unknown_F000_02F1_F02F1());
+        (AL, BP, _) = NearCall(biosSegment, 0x014E, () => unknown_F000_02F1_F02F1());
         BX = 0x2000;
         DS = 0x2000;
         Segment2000Globals.Byte004D = AL;

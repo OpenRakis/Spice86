@@ -59,6 +59,7 @@ internal static partial class RegisterLocalPromotion {
 
     public static RegisterLocalPlan Plan(IrMethod method, IrSsa ssa, IReadOnlySet<string> reservedNames,
         IReadOnlySet<IVisitableAstNode> unprinted, TypedSignature? signature,
+        TypedSignatures? typedSignatures,
         Func<IrStatement, CpuValues, bool> callPreserves, RoleNames.RoleNameContext roles) {
         Dictionary<IVisitableAstNode, SubstitutedRead> reads = new(ReferenceEqualityComparer.Instance);
         List<LocalDeclarationNode> declarations = [];
@@ -209,7 +210,53 @@ internal static partial class RegisterLocalPromotion {
             reservedNames, declared, reads, declarations, writeBacks,
             dropped, replacements);
         return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
-            accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet());
+            accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet(),
+            PlanCallOutputs(method, ssa, typedSignatures));
+    }
+
+    /// <summary>The printed left side of each typed call site in <paramref name="method"/>: an
+    /// output version with no live use prints <c>_</c> and any other output keeps its register
+    /// name. Calls whose outputs all keep the register take no entry.</summary>
+    private static Dictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> PlanCallOutputs(
+        IrMethod method, IrSsa ssa, TypedSignatures? typedSignatures) {
+        Dictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> callOutputs =
+            new(ReferenceEqualityComparer.Instance);
+        if (typedSignatures is null) {
+            return callOutputs;
+        }
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                ProcedureCallHelperNode? call = statement.Node switch {
+                    ProcedureCallHelperNode helper => helper,
+                    StackArgumentCallNode stackCall => stackCall.Call,
+                    _ => null
+                };
+                if (call is null || typedSignatures.TypedCallOf(call) is not { } callSignature
+                    || callSignature.Outputs.Count == 0) {
+                    continue;
+                }
+                string?[] names = new string?[callSignature.Outputs.Count];
+                for (int element = 0; element < callSignature.Outputs.Count; element++) {
+                    IrSsaValue? value = TypedSignatures.ValueOf(callSignature.Outputs[element].Mask);
+                    if (value is null || !Promotable.Contains(value.Value)) {
+                        continue;
+                    }
+                    int version = ssa.Definitions(statement)
+                        .Where(definition => definition.Value == value)
+                        .Select(definition => definition.Version).FirstOrDefault(-1);
+                    if (version < 0) {
+                        continue;
+                    }
+                    if (!ssa.IsLive(version)) {
+                        names[element] = "_";
+                    }
+                }
+                if (names.Any(name => name is not null)) {
+                    callOutputs[call] = names;
+                }
+            }
+        }
+        return callOutputs;
     }
 
     /// <summary>The next number for <paramref name="baseName"/>'s numbered names (<c>ax1</c>,

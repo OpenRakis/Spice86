@@ -40,13 +40,13 @@ public partial class CfgGeneratedOverrides {
         (AX, DL) = NearCall(biosSegment, 0x0010, () => unknown_F000_0039_F0039(0x2000, 0, CarryFlag));
         Segment2000Globals.Byte0200 = DL;
         CarryFlag = false;
-        (AX, DL) = NearCall(biosSegment, 0x001A, () => unknown_F000_0039_F0039(AX, 0, CarryFlag));
+        (_, DL) = NearCall(biosSegment, 0x001A, () => unknown_F000_0039_F0039(AX, 0, CarryFlag));
         Segment2000Globals.Byte0201 = DL;
         CarryFlag = false;
-        (AX, DL) = NearCall(biosSegment, 0x0027, () => unknown_F000_0039_F0039(0x8000, 1, CarryFlag));
+        (_, DL) = NearCall(biosSegment, 0x0027, () => unknown_F000_0039_F0039(0x8000, 1, CarryFlag));
         Segment2000Globals.Byte0202 = DL;
         CarryFlag = false;
-        (AX, DL) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(1, 1, CarryFlag));
+        (_, DL) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(1, 1, CarryFlag));
         Segment2000Globals.Byte0203 = DL;
         return Hlt();
     }

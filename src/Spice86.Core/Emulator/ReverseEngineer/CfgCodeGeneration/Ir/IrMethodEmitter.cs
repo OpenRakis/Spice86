@@ -168,7 +168,7 @@ internal sealed class IrMethodEmitter(
             TypedSignature? signature = analysis.TypedSignatures.Of(method.MethodName);
             RegisterLocalPlan? registerLocals = RegisterLocalPromotion.Plan(prepared.IrMethod, prepared.Ssa,
                 ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan),
-                UnprintedNodes(prepared.FramePlan), signature,
+                UnprintedNodes(prepared.FramePlan), signature, analysis.TypedSignatures,
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask),
                 new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan));

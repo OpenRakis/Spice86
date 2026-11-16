@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides {
         CX = NearCall(cs1, 0x01AF, () => unknown_016F_01CC_018BC());
         DX = 0x0389;
         Opl3Ports.WriteAdlibData0(0x60);
-        (AL, CX, DX) = NearCall(cs1, 0x01B8, () => unknown_016F_01DA_018CA());
+        (_, CX, _) = NearCall(cs1, 0x01B8, () => unknown_016F_01DA_018CA());
         NearReturn();
         return CX;
     }

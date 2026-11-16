@@ -15,10 +15,14 @@ using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 /// (by reference): a promoted pair's initial definitions.</param>
 /// <param name="EntryParameters">The typed parameters whose entry-version web promoted: the
 /// parameter already initializes the local, so the method emits no copy-in for it.</param>
+/// <param name="CallOutputs">The printed left side of each typed call site (by
+/// <see cref="ProcedureCallHelperNode"/> reference): one text per output element - <c>_</c>
+/// for an output nobody reads live, or <c>null</c> to keep the register name.</param>
 internal sealed record RegisterLocalPlan(
     IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead> Reads,
     IReadOnlyList<LocalDeclarationNode> Declarations,
     IReadOnlyList<RegisterLocalWriteBack> WriteBacks,
     IReadOnlySet<IVisitableAstNode> Dropped,
     IReadOnlyDictionary<IVisitableAstNode, IVisitableAstNode> Replacements,
-    IReadOnlySet<TypedParameter> EntryParameters);
+    IReadOnlySet<TypedParameter> EntryParameters,
+    IReadOnlyDictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> CallOutputs);
