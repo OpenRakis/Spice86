@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Shared.Emulator.Memory;
 
@@ -57,7 +58,7 @@ internal static partial class RegisterLocalPromotion {
     /// </summary>
 
     public static RegisterLocalPlan Plan(IrMethod method, IrSsa ssa, IReadOnlySet<string> reservedNames,
-        IReadOnlySet<IVisitableAstNode> unprinted,
+        IReadOnlySet<IVisitableAstNode> unprinted, TypedSignature? signature,
         Func<IrStatement, CpuValues, bool> callPreserves, RoleNames.RoleNameContext roles) {
         Dictionary<IVisitableAstNode, SubstitutedRead> reads = new(ReferenceEqualityComparer.Instance);
         List<LocalDeclarationNode> declarations = [];
@@ -107,7 +108,7 @@ internal static partial class RegisterLocalPromotion {
         HashSet<IVisitableAstNode> dropped = new(ReferenceEqualityComparer.Instance);
         List<Candidate> candidates = [.. WebsOf(ssa, Find).Values
             .Select(members => CandidateOf(method, graph, ssa, members, preservedByCall,
-                nonSubstitutable, occurrences, unprinted, dropped))
+                nonSubstitutable, occurrences, unprinted, dropped, signature))
             .OfType<Candidate>()];
         Dictionary<string, int> counters = new(StringComparer.Ordinal);
         List<(Candidate Candidate, string LegacyName)> promotable = [];
@@ -140,7 +141,8 @@ internal static partial class RegisterLocalPromotion {
                 continue;
             }
             string? hint = CandidateHint(candidate, occurrences, roles);
-            string name = hint is null || !RoleNames.IsIdentifier(hint)
+            string name = candidate.Parameter is { } parameter ? parameter.Name
+                : hint is null || !RoleNames.IsIdentifier(hint)
                 ? GenericValueNames.Next(
                     GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken)
                 : RoleNames.Next(hint, taken);
@@ -172,9 +174,10 @@ internal static partial class RegisterLocalPromotion {
         }
         foreach ((Candidate candidate, string name) in accepted) {
             DataType signedType = DataType.SignedFromBitWidth(candidate.Register.DataType.BitWidth);
-            bool signed = !unsignedNames.Contains(name) && votes[name].Unsigned < votes[name].Signed;
+            bool signed = candidate.Parameter is null && !unsignedNames.Contains(name)
+                && votes[name].Unsigned < votes[name].Signed;
             DataType localType = signed ? signedType : candidate.Register.DataType;
-            if (declared.Add(name)) {
+            if (candidate.Parameter is null && declared.Add(name)) {
                 declarations.Add(new LocalDeclarationNode(localType, name,
                     candidate.SingleBlock ? null : new ConstantNode(localType, 0)));
             }
@@ -202,9 +205,11 @@ internal static partial class RegisterLocalPromotion {
         }
         Dictionary<IVisitableAstNode, IVisitableAstNode> replacements =
             new(ReferenceEqualityComparer.Instance);
-        PlanPairs(method, accepted, reservedNames, declared, reads, declarations, writeBacks,
+        PlanPairs(method, [.. accepted.Where(item => item.Candidate.Parameter is null)],
+            reservedNames, declared, reads, declarations, writeBacks,
             dropped, replacements);
-        return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements);
+        return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
+            accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet());
     }
 
     /// <summary>The next number for <paramref name="baseName"/>'s numbered names (<c>ax1</c>,
@@ -402,17 +407,30 @@ internal static partial class RegisterLocalPromotion {
         Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
         HashSet<IVisitableAstNode> nonSubstitutable,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
-        IReadOnlySet<IVisitableAstNode> unprinted, HashSet<IVisitableAstNode> dropped) {
+        IReadOnlySet<IVisitableAstNode> unprinted, HashSet<IVisitableAstNode> dropped,
+        TypedSignature? signature) {
         IrSsaValue value = ssa.Info(members[0]).Value;
         HashSet<int> memberVersions = [.. members];
         WebDefinitions? collected = CollectWebDefinitions(method, ssa, members, memberVersions,
-            value, preservedByCall, occurrences);
+            value, preservedByCall, occurrences, signature);
         if (collected is null || collected.DefTargets.Count == 0
             || collected.DefTargets.Any(target => !target.Equals(collected.DefTargets[0]))) {
             return null;
         }
         RegisterNode webRegister = collected.DefTargets[0];
         CpuValues registerBytes = IrValueSets.Of(webRegister);
+        // A method-entry member promotes only as a typed parameter: the signature must reach it
+        // from its own entry block and a parameter must cover the register's exact bytes. The
+        // parameter name is the local's, so nothing declares or copies it in.
+        TypedParameter? entryParameter = null;
+        if (collected.EntryBlock is { } entryBlock) {
+            if (signature is null || entryBlock != signature.EntryBlock
+                || signature.Parameters.FirstOrDefault(parameter => parameter.Mask == registerBytes)
+                    is not { } match) {
+                return null;
+            }
+            entryParameter = match;
+        }
         string baseName = LocalName(webRegister);
         List<Use>? uses = CollectWebUses(ssa, members);
         if (uses is null) {
@@ -433,6 +451,7 @@ internal static partial class RegisterLocalPromotion {
                 writeBackUses)) {
             return null;
         }
+
         if (DroppableWeb(collected, classification, unprinted, writeBackUses)) {
             foreach (IVisitableAstNode node in collected.Sites
                     .Select(definition => definition.Statement?.Node).OfType<IVisitableAstNode>()) {
@@ -452,7 +471,7 @@ internal static partial class RegisterLocalPromotion {
             return null;
         }
         if (!PrintsFewerRegisterAccesses(collected, classification, uses, preservedByCall, value,
-                writeBackUses)) {
+                writeBackUses, entryParameter)) {
             return null;
         }
         (int signedVotes, int unsignedVotes) = CountSignedVotes(webRegister, classification.WebReads,
@@ -481,7 +500,7 @@ internal static partial class RegisterLocalPromotion {
         return new Candidate(touched.First(), singleBlock, firstBlockOrder, firstIndex, defIndex,
             end, webRegister, baseName, collected.DefTargets, collected.Sites,
             classification.WebReads, writeBackUses, signedVotes, unsignedVotes, firstAddress,
-            classification);
+            classification, entryParameter);
     }
 
     /// <summary>The definition sites of the web's versions, or <c>null</c> when one disqualifies
@@ -492,14 +511,23 @@ internal static partial class RegisterLocalPromotion {
     private static WebDefinitions? CollectWebDefinitions(IrMethod method, IrSsa ssa,
         List<int> members, HashSet<int> memberVersions,
         IrSsaValue value, Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
-        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences) {
+        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
+        TypedSignature? signature) {
         List<RegisterNode> defTargets = [];
         List<Definition> definitions = [];
         bool hasCall = false;
+        IrBlock? entryBlock = null;
         foreach (int version in members) {
             IrSsaVersionInfo info = ssa.Info(version);
             if (info.Kind is IrSsaDefinitionKind.MethodEntry) {
-                return null;
+                if (signature is null) {
+                    return null;
+                }
+                // The entry version acts like a definition the machine register does not mirror:
+                // implicit uses reached from it without another definition take a write-back.
+                entryBlock = info.Block;
+                definitions.Add(new Definition(info.Block, -1, null));
+                continue;
             }
             if (info.Kind is IrSsaDefinitionKind.Phi) {
                 definitions.Add(new Definition(info.Block, -1, null));
@@ -537,7 +565,7 @@ internal static partial class RegisterLocalPromotion {
             defTargets.Add(targets[0]);
             definitions.Add(new Definition(info.Block, definitionIndex, definition));
         }
-        return new WebDefinitions(defTargets, definitions, hasCall);
+        return new WebDefinitions(defTargets, definitions, hasCall, entryBlock);
     }
 
     /// <summary>The use sites of the web's versions, resolved in each block's current statement
@@ -623,8 +651,11 @@ internal static partial class RegisterLocalPromotion {
     private static bool PrintsFewerRegisterAccesses(WebDefinitions definitions,
         WebUses classification, List<Use> uses,
         Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall, IrSsaValue value,
-        List<Use> writeBackUses) {
-        int saved = classification.WebReads.Count + definitions.DefTargets.Count;
+        List<Use> writeBackUses, TypedParameter? entryParameter) {
+        // A parameter web also removes its copy-in line, so it may break even where a plain web
+        // would not.
+        int saved = classification.WebReads.Count + definitions.DefTargets.Count
+            + (entryParameter is null ? 0 : 1);
         int cost = writeBackUses.Count + 1;
         if (definitions.DefTargets[0] is SegmentRegisterNode segment) {
             cost += uses
@@ -1279,7 +1310,7 @@ internal static partial class RegisterLocalPromotion {
     /// targets of the web's plain definitions, every definition site (a phi counts with index -1)
     /// and whether a call's preserved value counts as a definition.</summary>
     private sealed record WebDefinitions(List<RegisterNode> DefTargets, List<Definition> Sites,
-        bool HasCall);
+        bool HasCall, IrBlock? EntryBlock);
 
     /// <summary>The uses <see cref="ClassifyWebUses"/> split: the explicit reads and their roots,
     /// the implicit uses that take a write-back and the killing uses that end the live range.</summary>
@@ -1299,5 +1330,5 @@ internal static partial class RegisterLocalPromotion {
         IReadOnlyList<RegisterNode> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
         IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes,
-        SegmentedAddress FirstAddress, WebUses Uses);
+        SegmentedAddress FirstAddress, WebUses Uses, TypedParameter? Parameter);
 }

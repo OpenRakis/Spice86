@@ -202,11 +202,10 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016F_01E8_018D8(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
-        SI = index;
         while (true) {
             CheckExternalEvents(cs1, 0x01E8);
-            AL = UInt8[word2, SI];
-            SI += (ushort)(flag1 ? -1 : 1);
+            AL = UInt8[word2, index];
+            index += (ushort)(flag1 ? -1 : 1);
             AL = Alu8.Or(AL, AL);
             if (ZeroFlag) {
                 break;
@@ -215,6 +214,7 @@ public partial class CfgGeneratedOverrides {
             BX = 7;
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         }
+        SI = index;
         NearReturn();
         return (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }

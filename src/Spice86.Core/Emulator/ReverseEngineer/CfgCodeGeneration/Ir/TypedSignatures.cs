@@ -653,7 +653,8 @@ internal sealed class TypedSignatures {
     /// keeps an SS parameter: the frame reads <c>State.SegmentRegisters</c>.</summary>
     internal static IReadOnlyList<TypedParameter> CopyInParameters(IrMethod method, IrSsa ssa,
         TypedSignature signature, IReadOnlySet<IVisitableAstNode> printedParameterReads,
-        IReadOnlySet<IVisitableAstNode> printedMachineRegisters, bool hasFrame) {
+        IReadOnlySet<IVisitableAstNode> printedMachineRegisters, bool hasFrame,
+        IReadOnlySet<TypedParameter> promotedEntryParameters) {
         HashSet<IVisitableAstNode> irSiteNodes = new(ReferenceEqualityComparer.Instance);
         foreach (IrBlock block in method.Blocks) {
             foreach (IrStatement statement in block.Statements) {
@@ -666,7 +667,8 @@ internal sealed class TypedSignatures {
         List<TypedParameter> copyIns = [];
         foreach (TypedParameter parameter in signature.Parameters) {
             if (NeedsCopyIn(ssa, signature, parameter, outputMask, printedParameterReads,
-                    printedMachineRegisters, irSiteNodes, hasFrame)) {
+                    printedMachineRegisters, irSiteNodes, hasFrame,
+                    promotedEntryParameters.Contains(parameter))) {
                 copyIns.Add(parameter);
             }
         }
@@ -676,7 +678,7 @@ internal sealed class TypedSignatures {
     private static bool NeedsCopyIn(IrSsa ssa, TypedSignature signature, TypedParameter parameter,
         CpuValues outputMask, IReadOnlySet<IVisitableAstNode> printedParameterReads,
         IReadOnlySet<IVisitableAstNode> printedMachineRegisters,
-        HashSet<IVisitableAstNode> irSiteNodes, bool hasFrame) {
+        HashSet<IVisitableAstNode> irSiteNodes, bool hasFrame, bool promotedEntryParameter) {
         if (ValueOf(parameter.Mask) is not { } value) {
             return true;
         }
@@ -685,6 +687,13 @@ internal sealed class TypedSignatures {
             return true;
         }
         int entryVersion = ssa.MethodEntryVersion(signature.EntryBlock, value);
+        if (promotedEntryParameter) {
+            // The entry version promotes to the parameter's own local: no IR site still reads the
+            // register's entry value. Only a machine-register print the plans created outside
+            // every IR site (a saved-pair initializer) can still need the copy-in.
+            return printedMachineRegisters.Any(node => !irSiteNodes.Contains(node)
+                && (MachineMaskOf(node) & parameterBytes) != CpuValues.None);
+        }
         HashSet<(int Version, CpuValues Bytes)> visited = [];
         Queue<(int Version, CpuValues Bytes)> worklist = new();
         worklist.Enqueue((entryVersion, parameterBytes));

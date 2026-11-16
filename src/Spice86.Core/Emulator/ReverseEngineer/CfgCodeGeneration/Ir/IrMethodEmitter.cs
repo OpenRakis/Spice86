@@ -168,7 +168,7 @@ internal sealed class IrMethodEmitter(
             TypedSignature? signature = analysis.TypedSignatures.Of(method.MethodName);
             RegisterLocalPlan? registerLocals = RegisterLocalPromotion.Plan(prepared.IrMethod, prepared.Ssa,
                 ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan),
-                UnprintedNodes(prepared.FramePlan),
+                UnprintedNodes(prepared.FramePlan), signature,
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask),
                 new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan));
@@ -310,7 +310,9 @@ internal sealed class IrMethodEmitter(
             PrintAfterCopyIns(scratch, dryPrinter);
             foreach (TypedParameter parameter in TypedSignatures.CopyInParameters(irMethod,
                     prepared.Ssa, signature, dryExpressions.PrintedParameterReads,
-                    dryExpressions.PrintedMachineRegisters, prepared.FramePlan is not null)) {
+                    dryExpressions.PrintedMachineRegisters, prepared.FramePlan is not null,
+                    analyzed.RegisterLocals?.EntryParameters
+                        ?? (IReadOnlySet<TypedParameter>)new HashSet<TypedParameter>())) {
                 writer.Line($"{parameter.Register} = {parameter.Name};");
             }
         }
