@@ -154,6 +154,68 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void IndirectCallInsideCalleeUnionsObservedTargets() {
+        // entry: call word [cs:0x0500]; ret - the observed targets write AX and BX
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x2E, 0xFF, 0x16, 0x00, 0x05, 0xC3);
+        List<CfgInstruction> targetAx = DecodeRoutine(0x200, 0xB8, 0x01, 0x00, 0xC3);
+        List<CfgInstruction> targetBx = DecodeRoutine(0x300, 0xBB, 0x01, 0x00, 0xC3);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], targetAx[0]);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], targetBx[0]);
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Bx),
+            CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IndirectCallWithUnknownTargetIsUnknown() {
+        // entry: call word [cs:0x0500]; ret - the observed target (jmp ax) cannot be scanned
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x2E, 0xFF, 0x16, 0x00, 0x05, 0xC3);
+        List<CfgInstruction> target = DecodeRoutine(0x200, 0xFF, 0xE0);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], target[0]);
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IndirectCallWithoutObservedTargetIsUnknown() {
+        // entry: call word [cs:0x0500]; ret - the site was never observed
+        DecodeRoutine(0x100, 0x2E, 0xFF, 0x16, 0x00, 0x05, 0xC3);
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IndirectCallWithOnlySpeculativeTargetIsUnknown() {
+        // entry: call word [cs:0x0500]; ret - the only linked target is speculative
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x2E, 0xFF, 0x00, 0x05, 0xC3);
+        List<CfgInstruction> target = DecodeRoutine(0x200, 0xB8, 0x01, 0x00, 0xC3);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], target[0]);
+        routine[0].SpeculativelyWiredSuccessors.Add(target[0]);
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IndirectJumpInsideCalleeCrossesObservedTarget() {
+        // entry: jmp word [cs:0x0500] - the observed target's return is the callee's return
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x2E, 0xFF, 0x26, 0x00, 0x05);
+        List<CfgInstruction> target = DecodeRoutine(0x200, 0xB9, 0x01, 0x00, 0xC3);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], target[0]);
+        Assert.Equal(Regs(RegisterBits.Cx),
+            CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void LinkedObservedTargetInvalidatesCachedScan() {
+        // entry: call word [cs:0x0500]; ret - a second observed target linked later adds DI
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x2E, 0xFF, 0x16, 0x00, 0x05, 0xC3);
+        List<CfgInstruction> targetAx = DecodeRoutine(0x200, 0xB8, 0x01, 0x00, 0xC3);
+        List<CfgInstruction> targetDi = DecodeRoutine(0x300, 0xBF, 0x01, 0x00, 0xC3);
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], targetAx[0]);
+        CalleeWriteScanner scanner = CreateScanner(returnsBalanced: true);
+        Assert.Equal(Regs(RegisterBits.Ax), scanner.MayWrite(At(0x100)));
+        NodeLinker.Link(InstructionSuccessorType.Normal, routine[0], targetDi[0]);
+        scanner.ForgetScansThrough(routine[0].Address);
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Di), scanner.MayWrite(At(0x100)));
+    }
+
+    [Fact]
     public void UndecodedSuccessorIsUnknown() {
         // jz +10 (into an undecoded gap); mov ax,1; ret - the taken arm is nowhere in the index
         DecodeRoutine(0x100, 0x74, 0x0A, 0xB8, 0x01, 0x00, 0xC3);

@@ -23,6 +23,9 @@
 ;   S6: same shape but s6_leaf writes DI after saving it (`push di` /
 ;       `pop di`): the restored register keeps the continuation knowledge and
 ;       the site registers too.
+;   S7: same shape but s7_leaf crosses an indirect call (`call word
+;       [cs:s7_drv]`) whose observed target writes AX only: the write scan
+;       resolves it through the observed edge and the site registers too.
 ;   N1 (negative): `mov di, ax` on the speculative path before `call di` kills
 ;       the known register, so the site is refused (golden-only).
 ;   N2 (negative): a pointer cell holding 0x0000 is evaluated and refused
@@ -35,6 +38,9 @@
 ;   N5 (negative): same shape as S6 but n5_leaf pops DI from a different stack
 ;       slot (`push di` / `push ax` / `pop di` / `pop ax`), so the registers
 ;       cross the call clobbered and the site is refused (golden-only).
+;   N6 (negative): same shape as S7 but the observed driver target writes DI,
+;       so the register crosses the indirect call clobbered and the site is
+;       refused (golden-only).
 ;
 ; Selector byte at DS:0500h: 0 = discovery run (call arms never taken),
 ; 1 = unobserved run (every arm taken). DS = CS (flat bin).
@@ -49,6 +55,7 @@
 ;   [0406] = cb_s4 invocations
 ;   [0407] = cb_s5 invocations (warmup + S5 arm calls)
 ;   [0408] = cb_s6 invocations (warmup + S6 arm calls)
+;   [0409] = cb_s7 invocations (warmup + S7 arm calls)
 
 use16
 
@@ -62,6 +69,7 @@ start:
     mov byte [0x0406], 0x00
     mov byte [0x0407], 0x00
     mov byte [0x0408], 0x00
+    mov byte [0x0409], 0x00
 
     ; Warmup: one observed call per callback builds the return evidence the
     ; speculative call sites need for their continuations.
@@ -73,11 +81,14 @@ start:
     call cb_s4
     call cb_s5
     call cb_s6
+    call cb_s7
     call s5_leaf
     call s6_leaf
+    call s7_leaf
     call n3_leaf
     call n4_leaf
     call n5_leaf
+    call n6_leaf
 ; --- S1: callback in DI, `call di` on the unexecuted arm ---
     mov di, cb_a
     call s1_dispatch
@@ -135,6 +146,16 @@ s3_done:
     mov di, cb_s5
     call n5_dispatch
     call n5_dispatch
+
+; --- S7: leaf crosses an indirect call through an observed target ---
+    mov di, cb_s7
+    call s7_dispatch                  ; registers the site past the leaf call
+    call s7_dispatch                  ; evaluation proposes cb_s7
+
+; --- N6: observed driver target writes DI -> site refused ---
+    mov di, cb_s5
+    call n6_dispatch
+    call n6_dispatch
 
     mov byte [0x0400], 0x02
     hlt
@@ -291,6 +312,44 @@ n5_leaf:
 
 cb_s6:
     inc byte [0x0408]
+    ret
+
+s7_dispatch:
+    cmp byte [0x0500], 0
+    jne s7_call
+    ret
+s7_call:
+    call s7_leaf
+    call di
+    ret
+s7_leaf:
+    call word [cs:s7_drv]
+    ret
+s7_drv:
+    dw s7_driver
+s7_driver:
+    mov ax, 0x1234
+    ret
+
+n6_dispatch:
+    cmp byte [0x0500], 0xFF
+    je n6_dead
+    ret
+n6_dead:
+    call n6_leaf
+    call di
+    ret
+n6_leaf:
+    call word [cs:n6_drv]
+    ret
+n6_drv:
+    dw n6_driver
+n6_driver:
+    mov di, 0x1234
+    ret
+
+cb_s7:
+    inc byte [0x0409]
     ret
 
 rb 65520-$

@@ -34,9 +34,9 @@ internal static class CalleeSavedRegisters {
     private readonly record struct PopBinding(int SlotIndex, bool IsLeave, ushort Grant);
 
     /// <summary>One pop found in a return run: the register bit it restores (<c>pop R</c>, BP
-    /// for <c>leave</c>), whether it is a <c>popa</c>, and whether it is a stack pop of a shape
-    /// that restores nothing (<c>pop r/m</c>, ...).</summary>
-    private sealed record Pop(CfgInstruction Node, ushort Bit, bool IsPopAll, bool IsLeave, bool IsOther);
+    /// for <c>leave</c>, 0 for a shape that restores nothing) and whether it is a
+    /// <c>popa</c>.</summary>
+    private sealed record Pop(CfgInstruction Node, ushort Bit, bool IsPopAll, bool IsLeave);
 
     /// <summary>
     /// The <see cref="RegisterBits"/> mask of registers <paramref name="entry"/> saves and
@@ -142,14 +142,18 @@ internal static class CalleeSavedRegisters {
 
     private static bool IsTransfer(CfgInstruction node) => node.IsCall || node.IsJump || node.IsReturn;
 
-    /// <summary>The scan's edges out of one node: static successors, plus the call
-    /// continuation for call/int nodes.</summary>
+    /// <summary>The scan's edges out of one node: static successors, the call continuation
+    /// for call/int nodes, and the observed targets of an indirect jump.</summary>
     private static IEnumerable<SegmentedAddress> ScanSuccessors(CfgInstruction node) {
         foreach (SegmentedAddress successor in node.StaticSuccessorAddresses) {
             yield return successor;
         }
         if (node.IsCall) {
             yield return node.NextInMemoryAddress32.ToSegmentedAddress();
+        } else if (node.IsJump && node.StaticSuccessorAddresses.Count == 0) {
+            foreach (SegmentedAddress target in CalleeWriteScanner.ObservedTargets(node)) {
+                yield return target;
+            }
         }
     }
 
@@ -284,9 +288,9 @@ internal static class CalleeSavedRegisters {
     private static Pop? PoppedRegister(CfgInstruction node, IVisitableAstNode statement) {
         switch (statement) {
             case StackCallNode { Operation: StackOperation.PopAll, Width: BitWidth.WORD_16 }:
-                return new Pop(node, 0, true, false, false);
+                return new Pop(node, 0, true, false);
             case StackCallNode { Operation: StackOperation.Leave }:
-                return new Pop(node, Bp, false, true, false);
+                return new Pop(node, Bp, false, true);
             case BinaryOperationNode {
                     BinaryOperation: BinaryOperation.ASSIGN,
                     Left: SegmentRegisterNode segment,
@@ -295,15 +299,15 @@ internal static class CalleeSavedRegisters {
                         Offset: RegisterNode { RegisterIndex: (int)RegisterIndex.SpIndex }
                     }
                 }:
-                return new Pop(node, (ushort)(1 << (8 + segment.RegisterIndex)), false, false, false);
+                return new Pop(node, (ushort)(1 << (8 + segment.RegisterIndex)), false, false);
             case BinaryOperationNode {
                     BinaryOperation: BinaryOperation.ASSIGN,
                     Left: RegisterNode register,
                     Right: var value
                 } when ContainsPop(value):
-                return new Pop(node, (ushort)(1 << register.RegisterIndex), false, false, false);
+                return new Pop(node, (ushort)(1 << register.RegisterIndex), false, false);
             case VariableDeclarationNode { Initializer: var initializer } when ContainsPop(initializer):
-                return new Pop(node, 0, false, false, true);
+                return new Pop(node, 0, false, false);
             default:
                 return null;
         }
@@ -373,7 +377,7 @@ internal static class CalleeSavedRegisters {
             if ((writes & Bp) != 0 && !IsFrameStatement(node)) {
                 frame = null;
             }
-            foreach (SegmentedAddress successor in node.StaticSuccessorAddresses) {
+            foreach (SegmentedAddress successor in ScanSuccessors(node)) {
                 PushTargets(work, nodeIndex.GetAtAddress(successor), pushed, frame);
             }
         }

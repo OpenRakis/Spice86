@@ -138,6 +138,12 @@ public class InstructionsFeeder : IClearable {
     internal void ExploreIndirectTransfer(CfgInstruction transfer, bool newTargetEdge) =>
         _speculativeExplorer?.ExploreIndirectTransfer(transfer, newTargetEdge);
 
+    /// <summary>Drops every cached callee write scan that visited the site address: a newly
+    /// observed target of an indirect call or jump may have changed the masks of the scans
+    /// that crossed it. No-op when speculative exploration is off.</summary>
+    internal void ForgetScansThrough(SegmentedAddress site) =>
+        _speculativeExplorer?.ForgetScansThrough(site);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
         // Try to get instruction from cache that represents current memory state.

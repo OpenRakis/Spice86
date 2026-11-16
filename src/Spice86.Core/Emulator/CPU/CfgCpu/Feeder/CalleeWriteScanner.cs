@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
@@ -17,8 +18,11 @@ using Spice86.Shared.Emulator.Memory;
 /// <see cref="RegisterWriteSet"/> of every instruction on every path. Nested calls contribute the
 /// callee's own mask when it resolves; an <c>int</c> contributes the writes of the installed
 /// emulator handler's service contract when the vector still belongs to the emulator and AH
-/// selects a known service. Anything the scan cannot account for - an undecoded address, an
-/// invalid node, a far or indirect jump, a leaf with no static successor, an instruction whose
+/// selects a known service. An indirect call inside the callee unions the scans of its observed
+/// (non-speculative) targets; an indirect jump is followed into its observed targets, whose
+/// returns count as the callee's own. Anything the scan cannot account for - an undecoded
+/// address, an invalid node, a far jump, an indirect site with no observed or unscannable
+/// target, a leaf with no static successor, an instruction whose
 /// write set is not understood, a nested call to a callee still being scanned, or a subgraph over
 /// <see cref="CalleeReturnScanner.MaxNodes"/> nodes - makes the whole result unknown
 /// (<see cref="RegisterBits.AllExceptCs"/>).
@@ -66,7 +70,7 @@ internal sealed class CalleeWriteScanner {
         _installedHandlers = installedHandlers;
         _interruptVectorTable = interruptVectorTable;
         _returnsBalanced = returnsBalanced;
-        _nodeIndex.AddressChanged += OnAddressChanged;
+        _nodeIndex.AddressChanged += ForgetScansThrough;
     }
 
     /// <summary>The <see cref="RegisterBits"/> mask of registers the callee at
@@ -165,7 +169,7 @@ internal sealed class CalleeWriteScanner {
                 continue;
             }
             if (node.IsCall) {
-                NestedResult across = MayWriteAcross(node, context);
+                NestedResult across = AcrossInScan(node, context);
                 if (across.Mask == Unknown) {
                     return ScanOutcome.Unknown;
                 }
@@ -181,8 +185,16 @@ internal sealed class CalleeWriteScanner {
                 continue;
             }
             if (node.IsJump) {
-                if (last is JumpFarNode || node.StaticSuccessorAddresses.Count == 0) {
+                if (last is JumpFarNode) {
                     return ScanOutcome.Unknown;
+                }
+                if (node.StaticSuccessorAddresses.Count == 0) {
+                    // An indirect jump stays inside the callee: the observed targets' own
+                    // returns count as this callee's returns.
+                    if (!EnqueueObservedTargets(work, node)) {
+                        return ScanOutcome.Unknown;
+                    }
+                    continue;
                 }
                 if (!EnqueueSuccessors(work, node)) {
                     return ScanOutcome.Unknown;
@@ -203,6 +215,66 @@ internal sealed class CalleeWriteScanner {
         }
         ushort saved = CalleeSavedRegisters.Compute(calleeEntry, _nodeIndex, visited, acrossMasks);
         return new ScanOutcome(true, cacheable, mask, saved, popsImmediate, addresses);
+    }
+
+    /// <summary>The distinct observed targets of an indirect site: its Normal-type successors
+    /// that are neither speculative nodes nor speculatively wired edges. Speculative targets
+    /// are never used.</summary>
+    internal static HashSet<SegmentedAddress> ObservedTargets(CfgInstruction site) {
+        HashSet<SegmentedAddress> targets = [];
+        if (!site.SuccessorsPerType.TryGetValue(InstructionSuccessorType.Normal, out ISet<ICfgNode>? successors)) {
+            return targets;
+        }
+        foreach (ICfgNode successor in successors) {
+            if (!successor.IsSpeculative && !site.SpeculativelyWiredSuccessors.Contains(successor)) {
+                targets.Add(successor.Address);
+            }
+        }
+        return targets;
+    }
+
+    /// <summary>The across-mask of a call inside a scan: the public rule for a static site or
+    /// an <c>int</c>, the union of the observed targets' masks for an indirect site (none,
+    /// more than the per-site cap, or an unscannable target make it unknown).</summary>
+    private NestedResult AcrossInScan(CfgInstruction callNode, ScanContext context) {
+        if (callNode.StaticSuccessorAddresses.Count == 0
+            && !InterruptCallFacts.TryGetInterruptVector(callNode, out _)) {
+            return IndirectAcross(callNode, context);
+        }
+        return MayWriteAcross(callNode, context);
+    }
+
+    private NestedResult IndirectAcross(CfgInstruction callNode, ScanContext context) {
+        HashSet<SegmentedAddress> targets = ObservedTargets(callNode);
+        if (targets.Count == 0 || targets.Count > SpeculativeExplorer.MaxCandidatesPerSite) {
+            return NestedResult.UnknownResult;
+        }
+        ushort mask = 0;
+        bool cacheable = true;
+        HashSet<SegmentedAddress> addresses = [];
+        foreach (SegmentedAddress target in targets) {
+            NestedResult result = MayWrite(target, context);
+            if (result.Mask == Unknown) {
+                return NestedResult.UnknownResult;
+            }
+            mask |= result.Mask;
+            cacheable &= result.Cacheable;
+            addresses.UnionWith(result.Addresses);
+        }
+        return new NestedResult(mask, cacheable, addresses);
+    }
+
+    private bool EnqueueObservedTargets(Queue<CfgInstruction> work, CfgInstruction node) {
+        HashSet<SegmentedAddress> targets = ObservedTargets(node);
+        if (targets.Count == 0 || targets.Count > SpeculativeExplorer.MaxCandidatesPerSite) {
+            return false;
+        }
+        foreach (SegmentedAddress target in targets) {
+            if (!EnqueueAll(work, target)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private bool EnqueueSuccessors(Queue<CfgInstruction> work, CfgInstruction node) {
@@ -295,8 +367,9 @@ internal sealed class CalleeWriteScanner {
     }
 
     /// <summary>Drops every cached scan that visited <paramref name="address"/>: a node added,
-    /// removed or replaced there may have changed the mask.</summary>
-    private void OnAddressChanged(SegmentedAddress address) {
+    /// removed or replaced there may have changed the mask, and a newly observed target of an
+    /// indirect site there may have changed the masks of the scans that crossed it.</summary>
+    internal void ForgetScansThrough(SegmentedAddress address) {
         if (!_cachedEntriesByAddress.Remove(address, out List<SegmentedAddress>? affected)) {
             return;
         }

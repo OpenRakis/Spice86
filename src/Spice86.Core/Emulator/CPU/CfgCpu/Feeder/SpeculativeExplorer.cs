@@ -79,7 +79,7 @@ public class SpeculativeExplorer : InstructionReplacer {
         CfgInstruction? Anchor,
         CfgInstruction? GuessRoot);
 
-    private const int MaxCandidatesPerSite = 32;
+    internal const int MaxCandidatesPerSite = 32;
     private const int MaxTableEntries = 1024;
 
     private readonly IMemory _memory;
@@ -321,6 +321,11 @@ public class SpeculativeExplorer : InstructionReplacer {
         }
         Drain(worklist);
     }
+
+    /// <summary>Drops every cached callee write scan that visited <paramref name="site"/>: a
+    /// newly observed target of an indirect site may have changed the masks of the scans that
+    /// crossed it.</summary>
+    internal void ForgetScansThrough(SegmentedAddress site) => _calleeWriteScanner.ForgetScansThrough(site);
 
     /// <summary>
     /// Called on every execution of an observed near indirect jmp/call through a word memory

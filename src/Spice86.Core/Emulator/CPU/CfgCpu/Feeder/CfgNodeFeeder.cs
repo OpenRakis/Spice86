@@ -95,19 +95,40 @@ public class CfgNodeFeeder {
         // Reset it
         executionContext.CpuFault = false;
 
-        if (lastExecuted is CfgInstruction transfer && SwitchTableRecognizer.IsIndirectTransfer(transfer)) {
-            // Observed near indirect jmp/call through a word memory operand: retry its pending
-            // table-entry candidates on every execution, and resolve the table it may read when
-            // this execution links a target never seen before.
-            bool newTargetEdge = type == InstructionSuccessorType.Normal
-                && !transfer.SuccessorsPerAddress.ContainsKey(toExecute.Address);
-            ICfgNode linked = _nodeLinker.Link(type, lastExecuted, toExecute);
-            InstructionsFeeder.ExploreIndirectTransfer(transfer, newTargetEdge);
-            return linked;
+        if (lastExecuted is CfgInstruction transfer) {
+            bool isTableTransfer = SwitchTableRecognizer.IsIndirectTransfer(transfer);
+            bool isIndirectCallOrJump = IsIndirectCallOrJump(transfer);
+            if (isTableTransfer || isIndirectCallOrJump) {
+                // An observed indirect jmp/call through a word memory operand retries its
+                // pending table-entry candidates and resolves the table it may read when this
+                // execution links a target never seen before; an observed indirect call or
+                // jump linking a new observed target drops the callee write scans that crossed it.
+                bool newTargetEdge = type == InstructionSuccessorType.Normal
+                    && !transfer.SuccessorsPerAddress.ContainsKey(toExecute.Address);
+                bool newObservedTarget = isIndirectCallOrJump
+                    && type == InstructionSuccessorType.Normal
+                    && (!transfer.SuccessorsPerAddress.TryGetValue(toExecute.Address, out ICfgNode? existing)
+                        || transfer.SpeculativelyWiredSuccessors.Contains(existing));
+                ICfgNode linked = _nodeLinker.Link(type, lastExecuted, toExecute);
+                if (isTableTransfer) {
+                    InstructionsFeeder.ExploreIndirectTransfer(transfer, newTargetEdge);
+                }
+                if (newObservedTarget) {
+                    InstructionsFeeder.ForgetScansThrough(transfer.Address);
+                }
+                return linked;
+            }
         }
 
         return _nodeLinker.Link(type, lastExecuted, toExecute);
     }
+
+    /// <summary>True when <paramref name="node"/> is an indirect call or jump: a call or jump
+    /// with no static successor that is not an <c>int</c>.</summary>
+    private static bool IsIndirectCallOrJump(CfgInstruction node) =>
+        (node.IsCall || node.IsJump)
+            && node.StaticSuccessorAddresses.Count == 0
+            && !InterruptCallFacts.TryGetInterruptVector(node, out _);
 
     private ICfgNode DetermineToExecute(ExecutionContext executionContext) {
         ICfgNode? currentFromGraph = executionContext.NodeToExecuteNextAccordingToGraph;
