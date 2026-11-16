@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        803,
-        801
+        955,
+        953
       ],
       "entries": [
         {
-          "block": 803,
+          "block": 955,
           "address": "F000:0137",
           "kind": "returnTargetEntry"
         }
@@ -36,11 +36,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        770
+        888
       ],
       "entries": [
         {
-          "block": 770,
+          "block": 888,
           "address": "F000:018E",
           "kind": "executionContextEntry"
         }
@@ -81,8 +81,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 803,
-      "toBlock": 770,
+      "fromBlock": 955,
+      "toBlock": 888,
       "from": "F000:0137",
       "target": "F000:018E"
     },
@@ -99,8 +99,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 770,
-      "toBlock": 803,
+      "fromBlock": 888,
+      "toBlock": 955,
       "from": "F000:0191",
       "target": "F000:0137"
     },
@@ -109,7 +109,7 @@
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 107,
-      "toBlock": 803,
+      "toBlock": 955,
       "from": "F000:0134",
       "target": "F000:0137"
     },

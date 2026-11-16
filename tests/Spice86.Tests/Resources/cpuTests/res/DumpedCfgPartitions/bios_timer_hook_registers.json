@@ -31,11 +31,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        237
+        225
       ],
       "entries": [
         {
-          "block": 237,
+          "block": 225,
           "address": "016F:0180",
           "kind": "functionEntry"
         }
@@ -259,7 +259,7 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 3,
-      "fromBlock": 237,
+      "fromBlock": 225,
       "toBlock": 8,
       "from": "016F:018D",
       "target": "F000:000F"
@@ -278,7 +278,7 @@
       "fromPartition": 3,
       "toPartition": 2,
       "fromBlock": 3,
-      "toBlock": 237,
+      "toBlock": 225,
       "from": "F000:000D",
       "target": "016F:0180",
       "callContinuationBlock": 8,

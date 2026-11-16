@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0012",
-  "lastExecutedBlockId": 83,
+  "lastExecutedBlockId": 87,
   "blocks": [
     {
-      "id": 83,
+      "id": 87,
       "entry": "F000:000D",
       "term": "F000:0012",
       "pred": [
         3,
-        79
+        83
       ],
       "succ": [],
       "asm": [
@@ -35,15 +35,15 @@
       ]
     },
     {
-      "id": 79,
+      "id": 83,
       "entry": "F000:0103",
       "term": "F000:0108",
       "pred": [
         9,
-        76
+        80
       ],
       "succ": [
-        83
+        87
       ],
       "asm": [
         "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
@@ -59,7 +59,7 @@
       ],
       "succ": [
         9,
-        83
+        87
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -70,15 +70,15 @@
       ]
     },
     {
-      "id": 76,
+      "id": 80,
       "entry": "F000:0303",
       "term": "F000:0303",
       "pred": [
-        43,
-        50
+        47,
+        54
       ],
       "succ": [
-        79
+        83
       ],
       "asm": [
         "C3|ret near"
@@ -93,21 +93,21 @@
       ],
       "succ": [
         11,
-        79
+        83
       ],
       "asm": [
         "E8FD00|call near 0x0200"
       ]
     },
     {
-      "id": 50,
+      "id": 54,
       "entry": "F000:0407",
       "term": "F000:040C",
       "pred": [
-        44
+        48
       ],
       "succ": [
-        76
+        80
       ],
       "asm": [
         "C6061200DD|mov byte ptr DS:[0x0012],0xDD",
@@ -115,15 +115,15 @@
       ]
     },
     {
-      "id": 43,
+      "id": 47,
       "entry": "F000:0300",
       "term": "F000:0300",
       "pred": [
         11
       ],
       "succ": [
-        44,
-        76
+        48,
+        80
       ],
       "asm": [
         "E8FD00|call near 0x0400"
@@ -137,7 +137,7 @@
         9
       ],
       "succ": [
-        43
+        47
       ],
       "asm": [
         "5B|pop BX",
@@ -148,15 +148,15 @@
       ]
     },
     {
-      "id": 44,
+      "id": 48,
       "entry": "F000:0400",
       "term": "F000:0405",
       "pred": [
-        43
+        47
       ],
       "succ": [
-        48,
-        50
+        52,
+        54
       ],
       "asm": [
         "A00005|mov AL,byte ptr DS:[0x0500]",
@@ -165,12 +165,12 @@
       ]
     },
     {
-      "id": 48,
+      "id": 52,
       "entry": "F000:040D",
       "dead": true,
       "term": "F000:0413",
       "pred": [
-        44
+        48
       ],
       "succ": [],
       "asm": [

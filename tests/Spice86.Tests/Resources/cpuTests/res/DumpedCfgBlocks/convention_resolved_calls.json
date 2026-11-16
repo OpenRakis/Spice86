@@ -7,10 +7,10 @@
     "F000:016A"
   ],
   "lastExecutedAddress": "F000:00CF",
-  "lastExecutedBlockId": 618,
+  "lastExecutedBlockId": 612,
   "blocks": [
     {
-      "id": 618,
+      "id": 612,
       "entry": "F000:00CB",
       "term": "F000:00CF",
       "pred": [
@@ -60,7 +60,7 @@
         546
       ],
       "succ": [
-        618
+        612
       ],
       "asm": [
         "C3|ret near"
@@ -76,7 +76,7 @@
       ],
       "succ": [
         530,
-        618
+        612
       ],
       "asm": [
         "A31603|mov word ptr DS:[0x0316],AX",

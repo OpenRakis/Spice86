@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        128,
+        131,
         112
       ],
       "entries": [
         {
-          "block": 128,
+          "block": 131,
           "address": "F000:001A",
           "kind": "returnTargetEntry"
         }
@@ -36,11 +36,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        131
+        134
       ],
       "entries": [
         {
-          "block": 131,
+          "block": 134,
           "address": "F000:004D",
           "kind": "executionContextEntry"
         }
@@ -68,7 +68,7 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 128,
+      "fromBlock": 131,
       "toBlock": 106,
       "from": "F000:001F",
       "target": "F000:003A"
@@ -77,8 +77,8 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 128,
-      "toBlock": 131,
+      "fromBlock": 131,
+      "toBlock": 134,
       "from": "F000:001F",
       "target": "F000:004D"
     },
@@ -87,7 +87,7 @@
       "fromPartition": 2,
       "toPartition": 1,
       "fromBlock": 106,
-      "toBlock": 128,
+      "toBlock": 131,
       "from": "F000:004C",
       "target": "F000:001A"
     },
@@ -95,8 +95,8 @@
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 131,
-      "toBlock": 128,
+      "fromBlock": 134,
+      "toBlock": 131,
       "from": "F000:005C",
       "target": "F000:001A"
     },
@@ -105,7 +105,7 @@
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 3,
-      "toBlock": 128,
+      "toBlock": 131,
       "from": "F000:0018",
       "target": "F000:001A"
     }

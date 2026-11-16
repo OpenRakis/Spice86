@@ -321,7 +321,7 @@
         457,
         463,
         521,
-        618,
+        612,
         2
       ],
       "entries": [
@@ -504,7 +504,7 @@
       "fromPartition": 9,
       "toPartition": 20,
       "fromBlock": 544,
-      "toBlock": 618,
+      "toBlock": 612,
       "from": "F000:013C",
       "target": "F000:00CB"
     },
@@ -703,7 +703,7 @@
       "toBlock": 530,
       "from": "F000:00C8",
       "target": "F000:0128",
-      "callContinuationBlock": 618,
+      "callContinuationBlock": 612,
       "callContinuationAddress": "F000:00CB"
     },
     {

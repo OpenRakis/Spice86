@@ -34,11 +34,11 @@ public partial class CfgGeneratedOverrides {
             if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_69)) {
                 goto L_1400_69;
             }
-            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_103)) {
+            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_107)) {
                 break;
             }
-            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_85)) {
-                goto L_1400_85;
+            if (SelectorSignatureMatches(biosSegment, 0x1400, Signature_1400_mov_87)) {
+                goto L_1400_87;
             }
             else {
                 throw FailAsUntested("Untested code variant at F000:1400");
@@ -47,7 +47,7 @@ public partial class CfgGeneratedOverrides {
             Stack.Push16(1);
             index = 0x0C00;
             continue;
-        L_1400_85:
+        L_1400_87:
             Stack.Push16(2);
             index = 0x1000;
         }
@@ -100,8 +100,8 @@ namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_1400_mov_69 = [0xB8, 0x01, 0x00];
-    private static readonly byte?[] Signature_1400_mov_85 = [0xBB, 0x01, 0x00];
-    private static readonly byte?[] Signature_1400_mov_103 = [0xB9, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_87 = [0xBB, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_107 = [0xB9, 0x01, 0x00];
 
 }
 

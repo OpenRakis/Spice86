@@ -16,7 +16,7 @@
     "016E:0100"
   ],
   "lastExecutedAddress": "016E:0212",
-  "lastExecutedBlockId": 524,
+  "lastExecutedBlockId": 519,
   "blocks": [
     {
       "id": 64,
@@ -33,11 +33,11 @@
       ]
     },
     {
-      "id": 524,
+      "id": 519,
       "entry": "016E:020E",
       "term": "016E:0212",
       "pred": [
-        510
+        505
       ],
       "succ": [],
       "asm": [
@@ -226,14 +226,14 @@
       ]
     },
     {
-      "id": 510,
+      "id": 505,
       "entry": "016E:01E2",
       "term": "016E:020A",
       "pred": [
         130
       ],
       "succ": [
-        524
+        519
       ],
       "asm": [
         "9C|pushf",
@@ -445,7 +445,7 @@
         268,
         280,
         300,
-        510
+        505
       ],
       "asm": [
         "CF|iret"

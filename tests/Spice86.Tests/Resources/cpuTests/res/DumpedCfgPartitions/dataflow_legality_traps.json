@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        1064
+        1328
       ],
       "entries": [
         {
-          "block": 1064,
+          "block": 1328,
           "address": "F000:0383",
           "kind": "functionEntry"
         }
@@ -35,11 +35,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        300
+        411
       ],
       "entries": [
         {
-          "block": 300,
+          "block": 411,
           "address": "F000:0387",
           "kind": "executionContextEntry"
         }
@@ -50,11 +50,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        1568
+        1840
       ],
       "entries": [
         {
-          "block": 1568,
+          "block": 1840,
           "address": "F000:0394",
           "kind": "executionContextEntry"
         }
@@ -66,7 +66,7 @@
       "name": "unknown",
       "blocks": [
         3,
-        1237,
+        1501,
         50,
         48,
         55,
@@ -95,17 +95,17 @@
         164,
         162,
         171,
-        1066,
-        1080,
-        1084,
-        1109,
-        1113,
-        1115,
-        1135,
-        1133,
-        1142,
-        1144,
-        1239,
+        1330,
+        1344,
+        1348,
+        1373,
+        1377,
+        1379,
+        1399,
+        1397,
+        1406,
+        1408,
+        1503,
         2
       ],
       "entries": [
@@ -131,8 +131,8 @@
       "kind": "alignedReturn",
       "fromPartition": 2,
       "toPartition": 5,
-      "fromBlock": 1064,
-      "toBlock": 1066,
+      "fromBlock": 1328,
+      "toBlock": 1330,
       "from": "F000:0386",
       "target": "F000:01AF"
     },
@@ -152,10 +152,10 @@
       "fromPartition": 5,
       "toPartition": 2,
       "fromBlock": 171,
-      "toBlock": 1064,
+      "toBlock": 1328,
       "from": "F000:01AD",
       "target": "F000:0383",
-      "callContinuationBlock": 1066,
+      "callContinuationBlock": 1330,
       "callContinuationAddress": "F000:01AF"
     }
   ]
