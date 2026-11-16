@@ -836,6 +836,7 @@ internal sealed class IrCallingConventions {
                         resolved = false;
                     }
                 }
+                targets = SectionCallTargets(IrAstChildren.Descendants(statement.Node), targets);
                 resolved &= targets.Count > 0;
                 int[] defined = new int[ValueCount];
                 Array.Fill(defined, -1);
@@ -884,6 +885,7 @@ internal sealed class IrCallingConventions {
                             resolved = false;
                         }
                     }
+                    targets = SectionCallTargets(IrAstChildren.TerminatorNodes(block.Terminator), targets);
                     resolved &= targets.Count > 0;
                     int[] defined = new int[ValueCount];
                     Array.Fill(defined, -1);
@@ -921,6 +923,30 @@ internal sealed class IrCallingConventions {
                 }
             }
         }
+    }
+
+    /// <summary>The call targets a dispatch section's site really has: when <paramref name="nodes"/>
+    /// holds one <see cref="ProcedureCallHelperNode"/> ending in a <see cref="MethodGroupNode"/>, the
+    /// section runs only after its runtime target check singled that entry out, so the call is
+    /// charged by that entry alone instead of every target the instruction observed. The group maps
+    /// to an entry exactly the way <see cref="TransferEmitter.FunctionReference"/> builds it:
+    /// method name plus load offset. Any other shape - or a group naming none of the resolved
+    /// targets - keeps <paramref name="targets"/>.</summary>
+    private List<CfgCodePartitionEntry> SectionCallTargets(IEnumerable<IVisitableAstNode> nodes,
+        List<CfgCodePartitionEntry> targets) {
+        if (targets.Count <= 1) {
+            return targets;
+        }
+        if (nodes.OfType<ProcedureCallHelperNode>().ToList() is not [ProcedureCallHelperNode call]
+            || call.Arguments is not [.., MethodGroupNode group]) {
+            return targets;
+        }
+        CfgCodePartitionEntry? own = targets.FirstOrDefault(target => {
+            CfgCodePartition partition = _context.GetPartition(target.Node);
+            return _context.GetMethodName(partition) == group.MethodName
+                && _context.GetEntryLoadOffset(partition, target.Node) == group.LoadOffset;
+        });
+        return own is null ? targets : [own];
     }
 
     /// <summary>The version of every value right after a call at

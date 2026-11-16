@@ -664,7 +664,12 @@ internal sealed class CfgCSharpGenerator {
                 (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
                     conventions.CallSummaryOf(methodName, statement, contract);
                 if (effect is { } summary) {
-                    effects[statement.Origin] = summary;
+                    // Several statements can share one call instruction's origin (the sections of a
+                    // target dispatch): the map is keyed by origin, so they carry the union - each
+                    // section's real target is covered.
+                    effects[statement.Origin] = effects.TryGetValue(statement.Origin, out IrEffects was)
+                        ? IrEffects.Either(was, summary)
+                        : summary;
                 } else {
                     skips[skip] = skips.GetValueOrDefault(skip) + 1;
                 }
@@ -674,7 +679,10 @@ internal sealed class CfgCSharpGenerator {
                 (IrEffects? effect, IrCallingConventions.CallSummarySkip skip) =
                     conventions.CallSummaryOf(methodName, block.Terminator, contract);
                 if (effect is { } summary) {
-                    effects[block.Terminator.Origin] = summary;
+                    effects[block.Terminator.Origin] =
+                        effects.TryGetValue(block.Terminator.Origin, out IrEffects was)
+                            ? IrEffects.Either(was, summary)
+                            : summary;
                 } else {
                     skips[skip] = skips.GetValueOrDefault(skip) + 1;
                 }
