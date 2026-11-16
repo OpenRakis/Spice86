@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
@@ -125,6 +126,32 @@ internal sealed class IrConstantFacts {
         return true;
     }
 
+    /// <summary>The known value of a status flag before position <paramref name="position"/> of
+    /// <paramref name="block"/>: the flag's SSA version is exact, so a version defined by a constant
+    /// assignment (<c>CarryFlag = true</c>) is known wherever the version holds; a phi, an entry or
+    /// a non-constant definition is not.</summary>
+    private bool TryGetStatusFlag(CpuFlagNode flag, IrBlock block, int position, out bool set) {
+        set = false;
+        foreach ((IrSsaValue ssaValue, _, StatusFlags statusFlag) in IrValueSets.StatusFlagRows) {
+            if ((ushort)statusFlag != flag.FlagMask) {
+                continue;
+            }
+            int version = _ssa.VersionBefore(block, position, ssaValue);
+            if (_ssa.Info(version).Kind != IrSsaDefinitionKind.Definition
+                || _ssa.DefinitionSite(version) is not IrStatement {
+                    Node: BinaryOperationNode {
+                        BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: CpuFlagNode target, Right: { } right } }
+                || target.FlagMask != flag.FlagMask
+                || ConstantEvaluation.Resolved(right) is not { } constant) {
+                return false;
+            }
+            set = constant.Value != 0;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Evaluates <paramref name="node"/> the way <see cref="ConstantEvaluation"/> does,
     /// with the known register bytes and direction flag before position <paramref name="position"/>
     /// of <paramref name="block"/> as leaves.</summary>
@@ -148,6 +175,8 @@ internal sealed class IrConstantFacts {
             when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,
         CpuFlagNode { FlagMask: Flags.Direction }
             when TryGetDirection(block, position, out bool direction) => direction ? 1UL : 0UL,
+        CpuFlagNode flag
+            when TryGetStatusFlag(flag, block, position, out bool set) => set ? 1UL : 0UL,
         VariableReferenceNode variable
             when Locals.TryGetValue(variable.VariableName, out ConstantNode? local)
             => ConstantEvaluation.SemanticValue(variable.DataType, local.Value),

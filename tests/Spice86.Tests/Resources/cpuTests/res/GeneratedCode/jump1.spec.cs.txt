@@ -18,45 +18,24 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         SS = SP;
         Stack.Push16(0x0040);
-        CarryFlag = true;
-        if (!CarryFlag && !ZeroFlag) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x000E, Signature_000E_jmp);
-        }
-        else {
-            CarryFlag = false;
-            if (!CarryFlag && !ZeroFlag) {
-                CarryFlag = true;
-                if (!CarryFlag) {
-                    goto L_0016;
-                }
-                CarryFlag = false;
-                if (!CarryFlag) {
-                    if (CarryFlag) {
-                        goto L_001E;
+        if (!ZeroFlag) {
+            if (ZeroFlag) {
+                VerifySpeculativeEntryOrFail(biosSegment, 0x0025, Signature_0025_jmp);
+            }
+            else {
+                FlagRegister16 = Stack.Pop16();
+                CheckExternalEvents(biosSegment, 0x002B);
+                if (CarryFlag || ZeroFlag) {
+                    Stack.Push16(0);
+                    FlagRegister16 = Stack.Pop16();
+                    CheckExternalEvents(biosSegment, 0x0031);
+                    if (ZeroFlag) {
+                        goto L_002D;
                     }
-                    CarryFlag = true;
-                    if (CarryFlag) {
-                        CarryFlag = false;
-                        if (CarryFlag || ZeroFlag) {
-                            goto L_0025;
-                        }
-                        FlagRegister16 = Stack.Pop16();
-                        CheckExternalEvents(biosSegment, 0x002B);
-                        if (!CarryFlag && !ZeroFlag) {
-                            goto L_002D;
-                        }
-                        Stack.Push16(0);
-                        FlagRegister16 = Stack.Pop16();
-                        CheckExternalEvents(biosSegment, 0x0031);
-                        if (ZeroFlag) {
-                            goto L_002D;
-                        }
-                        Stack.Push16(0x0040);
-                        FlagRegister16 = Stack.Pop16();
-                        CheckExternalEvents(biosSegment, 0x0035);
-                        if (!ZeroFlag) {
-                            goto L_0037;
-                        }
+                    Stack.Push16(0x0040);
+                    FlagRegister16 = Stack.Pop16();
+                    CheckExternalEvents(biosSegment, 0x0035);
+                    if (ZeroFlag) {
                         Stack.Push16(0x08C0);
                         FlagRegister16 = Stack.Pop16();
                         CheckExternalEvents(biosSegment, 0x003E);
@@ -203,26 +182,17 @@ public partial class CfgGeneratedOverrides {
                         VerifySpeculativeEntryOrFail(biosSegment, 0x0047, Signature_0047_jmp);
                         VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
                         return Hlt();
-                    L_0037:
-                        VerifySpeculativeEntryOrFail(biosSegment, 0x0037, Signature_0037_jmp);
-                        VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
-                        return Hlt();
-                    L_002D:
-                        VerifySpeculativeEntryOrFail(biosSegment, 0x002D, Signature_002D_jmp);
-                        VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
-                        return Hlt();
                     }
-                L_0025:
-                    VerifySpeculativeEntryOrFail(biosSegment, 0x0025, Signature_0025_jmp);
+                L_0037:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x0037, Signature_0037_jmp);
                     VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
                     return Hlt();
                 }
-            L_001E:
-                VerifySpeculativeEntryOrFail(biosSegment, 0x001E, Signature_001E_jmp);
-                VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
-                return Hlt();
+            L_002D:
+                VerifySpeculativeEntryOrFail(biosSegment, 0x002D, Signature_002D_jmp);
             }
-        L_0016:
+        }
+        else {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0016, Signature_0016_jmp);
         }
         VerifySpeculativeEntryOrFail(biosSegment, 0xFFF2, Signature_FFF2_hlt);
