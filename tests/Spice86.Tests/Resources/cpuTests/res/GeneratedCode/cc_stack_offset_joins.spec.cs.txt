@@ -36,7 +36,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX, CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0062_F0062(ushort word1) {
-        AX = word1;
         CheckExternalEvents(biosSegment, 0x0062);
         CX = word1;
         AX = 0;
@@ -180,7 +179,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX. Outputs: AX. Changes: AX, BX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_00C4_F00C4(ushort word1) {
-        AX = word1;
         ushort word2;
         CheckExternalEvents(biosSegment, 0x00C4);
         Stack.Push16(BX);

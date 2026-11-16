@@ -96,8 +96,6 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_01F6_F01F6(ushort word1, ushort index, ushort word2) {
-        BX = word1;
-        DI = index;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x01F6);
         UInt16[word2, index + 8] = word1;
@@ -114,8 +112,6 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_01FA_F01FA(ushort word1, ushort index, ushort word2) {
-        BX = word1;
-        DI = index;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x01FA);
         UInt16[word2, index + 0x50] = word1;

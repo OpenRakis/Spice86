@@ -35,7 +35,6 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_F000_00DA_F00DA(ushort word1, ushort word2, ushort word3) {
         AX = word1;
-        CX = word2;
         BX = word3;
         CheckExternalEvents(biosSegment, 0x00DA);
         if (word2 == 0) {

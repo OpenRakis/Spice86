@@ -144,6 +144,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// <summary>Whether the current method dispatches between multiple entry points.</summary>
     internal bool NeedsEntryDispatch => _method?.Prepared.Method.NeedsEntryDispatch ?? false;
 
+    /// <summary>The nodes this printer has printed with their <see cref="ParameterReads"/> text.
+    /// <see cref="LocalReads"/> substitutions do not count.</summary>
+    internal HashSet<IVisitableAstNode> PrintedParameterReads { get; } = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The register, segment and flag nodes this printer has printed as the machine
+    /// name: neither a parameter nor a register local.</summary>
+    internal HashSet<IVisitableAstNode> PrintedMachineRegisters { get; } = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>Prints <paramref name="node"/>, which must be an expression.</summary>
     public CSharpFragment Print(IVisitableAstNode node) => node.Accept(this);
 
@@ -463,8 +471,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return Atomic(read.Text, read.Type ?? node.DataType);
         }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, node.DataType);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(_registerRenderer.ToStringRegister(node.DataType.BitWidth, node.RegisterIndex), node.DataType);
     }
 
@@ -473,8 +483,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return Atomic(read.Text, read.Type ?? node.DataType);
         }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, node.DataType);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(_registerRenderer.ToStringSegmentRegister(node.RegisterIndex), DataType.UINT16);
     }
 
@@ -879,8 +891,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     public CSharpFragment VisitCpuFlagNode(CpuFlagNode node) {
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, DataType.BOOL);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(FlagName(node), DataType.BOOL);
     }
 
@@ -1279,9 +1293,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
     public CSharpFragment VisitRegisterLocalNode(RegisterLocalNode node) =>
         Atomic(node.VariableName, node.DataType);
-    public CSharpFragment VisitRegisterWriteBackNode(RegisterWriteBackNode node) =>
-        new CSharpFragment($"{Expr(node.Register)} = {Cast(node.Register.DataType, Expr(node.Local))}",
+    public CSharpFragment VisitRegisterWriteBackNode(RegisterWriteBackNode node) {
+        CSharpFragment register = Expr(node.Register);
+        // The write-back target is a write of the register, not a read of it.
+        PrintedMachineRegisters.Remove(node.Register);
+        PrintedParameterReads.Remove(node.Register);
+        return new CSharpFragment($"{register.Text} = {Cast(node.Register.DataType, Expr(node.Local))}",
             node.Register.DataType, AssignmentPrecedence);
+    }
 
     private readonly record struct ClrTypeInfo(string Name, DataType? DataType);
 }

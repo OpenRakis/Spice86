@@ -73,7 +73,6 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3) unknown_F000_0099_F0099(ushort word1, ushort word2) {
         AX = word1;
-        CX = word2;
         CheckExternalEvents(biosSegment, 0x0099);
         Stack.Save(SI, DI);
         NearCall(biosSegment, 0x009E, unknown_F000_00B1_F00B1Entry);

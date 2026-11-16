@@ -18,8 +18,6 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_01B1_F01B1(ushort index, ushort word1, ushort arg0) {
-        DI = index;
-        DS = word1;
         unknown_F000_01B1_F01B1Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01B1);
         CX = arg0;

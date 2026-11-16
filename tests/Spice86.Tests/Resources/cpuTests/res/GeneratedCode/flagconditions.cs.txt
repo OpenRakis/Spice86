@@ -29,7 +29,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS, CF. Outputs: AX, CX, BX, BP, SI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_F000_02F8_F02F8(bool flag1) {
-        CarryFlag = flag1;
         CheckExternalEvents(biosSegment, 0x02F8);
         if (!flag1) {
             UInt8[DS, BX + 0x27] = 2;

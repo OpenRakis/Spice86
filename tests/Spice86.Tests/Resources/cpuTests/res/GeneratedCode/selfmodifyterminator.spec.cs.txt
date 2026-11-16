@@ -14,7 +14,6 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: AX, ES.</summary>
     public virtual void unknown_F000_0022_F0022(ushort word1, ushort word2) {
-        AX = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x0022);
         if (DsGlobals.Byte0040 == 0) {

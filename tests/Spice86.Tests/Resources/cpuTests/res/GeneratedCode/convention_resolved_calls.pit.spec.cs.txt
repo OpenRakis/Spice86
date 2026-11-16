@@ -155,7 +155,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, DS. Outputs: none. Changes: AL, CX.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000, DS = 0x2000.
     public virtual void unknown_F000_0142_F0142(ushort word1, ushort word2) {
-        BX = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x0142);
         Segment2000Globals.Word0300 = word1;
@@ -334,7 +333,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS, CF. Outputs: AL. Changes: AL, CX.</summary>
     public virtual byte unknown_F000_00D6_F00D6(ushort word1, bool flag1) {
         DS = word1;
-        CarryFlag = flag1;
         CheckExternalEvents(biosSegment, 0x00D6);
         if (flag1) {
             DsGlobals.Byte030C = 1;
@@ -368,7 +366,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DX, DS. Outputs: none. Changes: AL, CX.</summary>
     public virtual void unknown_F000_0118_F0118(ushort word1, ushort word2) {
-        DX = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x0118);
         DsGlobals.Word0314 = word1;

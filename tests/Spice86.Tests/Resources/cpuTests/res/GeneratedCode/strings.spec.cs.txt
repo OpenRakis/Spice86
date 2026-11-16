@@ -193,7 +193,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AL, SI, DI, ES, DS, DF. Outputs: AL, DI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
     public virtual (byte result, ushort result2, ushort result3, ushort result4) unknown_F000_E102_FE102(bool flag1) {
-        DirectionFlag = flag1;
         CheckExternalEvents(biosSegment, 0xE102);
         UInt16[ES, DI] = UInt16[DS, SI];
         SI += (ushort)(flag1 ? -2 : 2);

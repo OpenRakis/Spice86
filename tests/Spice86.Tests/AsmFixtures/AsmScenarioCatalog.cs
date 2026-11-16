@@ -608,6 +608,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_back_edge_fallthrough"),
             PartitionScenario("partition_jump_to_next"),
             PartitionScenario("partition_two_fault_handlers"),
+            PartitionScenario("cc_copy_in_observers"),
             PartitionScenario("cc_register_leaf"),
             PartitionScenario("cc_stack_frames"),
             PartitionScenario("cc_saved_registers"),

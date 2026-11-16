@@ -746,6 +746,10 @@ internal static class AsmFixtureCatalog {
                     result.Memory.UInt16[0x1000, 0x604].Should().Be(0x0002, $"{binName}: the third division succeeds");
                     result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
                 });
+            case "cc_copy_in_observers":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x82,
+                    (0x40, 2, 0x000E), (0x42, 2, 0x000B), (0x44, 2, 0x000B), (0x48, 2, 0x3000),
+                    (0x50, 2, 0x0003), (0x70, 2, 0xAB00), (0x74, 2, 0xAB05), (0x80, 2, 0x7777)));
             case "cc_register_leaf":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x56,
                     (0x40, 2, 0x0007), (0x42, 2, 0x0030), (0x44, 1, 0x11), (0x45, 1, 0x22),

@@ -196,8 +196,6 @@ public partial class CfgGeneratedOverrides {
     public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016F_01E6_018D6(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
         SI = index;
-        DS = word2;
-        DirectionFlag = flag1;
         while (true) {
             CheckExternalEvents(cs1, 0x01E6);
             AL = UInt8[word2, SI];

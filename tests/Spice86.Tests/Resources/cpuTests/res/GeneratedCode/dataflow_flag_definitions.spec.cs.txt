@@ -16,8 +16,6 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_00C7_F00C7(ushort word1, ushort word2) {
-        AX = word1;
-        CX = word2;
         CheckExternalEvents(biosSegment, 0x00C7);
         if (word1 < word2) {
             CarryFlag = true;

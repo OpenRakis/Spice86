@@ -73,8 +73,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BX, DS. Outputs: none. Changes: AX.</summary>
     /// Segment values at entry, from every call site: ES = 0xF100, DS = 0x2000.
     public virtual void unknown_F100_004F_F104F(ushort index, ushort word1) {
-        BX = index;
-        DS = word1;
         ushort word2;
         CheckExternalEvents(cs1, 0x004F);
         Stack.Push16(CS);

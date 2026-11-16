@@ -266,42 +266,56 @@ internal sealed class IrMethodEmitter(
             throw new InvalidOperationException(
                 $"Method {method.MethodName}: goto target {target} is not an IR block.");
         }
-        CSharpExpressionPrinter expressions = new(context.SegmentVariables,
-            context.Program.Inputs.IoPorts, analyzed, analysis);
-        CSharpStatementPrinter printer = new(writer, expressions, LabelOf, _printAsmComments);
-        // Every read the body makes of a register the signature declares must see the argument:
-        // the assignment sits before the entrydispatcher label so a cyclic jump to an entry
-        // does not reassign stale arguments.
+        (CSharpStatementPrinter Printer, CSharpExpressionPrinter Expressions) Printers(
+            CSharpSourceWriter target) {
+            CSharpExpressionPrinter expressions = new(context.SegmentVariables,
+                context.Program.Inputs.IoPorts, analyzed, analysis);
+            return (new CSharpStatementPrinter(target, expressions, LabelOf, _printAsmComments),
+                expressions);
+        }
+        void PrintAfterCopyIns(CSharpSourceWriter target, CSharpStatementPrinter printer) {
+            if (analyzed.RegisterLocals is { } promoted) {
+                foreach (LocalDeclarationNode declaration in promoted.Declarations) {
+                    printer.Print(declaration);
+                }
+            }
+            foreach (LocalDeclarationNode declaration in SaveRestorePairs.Declarations(prepared.SavedPairs)) {
+                printer.Print(declaration);
+            }
+            foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
+                printer.Print(variable);
+            }
+            if (prepared.Targets.EntryDispatcher) {
+                printer.Print(new EntryDispatcherLabelNode());
+            }
+            if (prepared.FramePlan is { } framePlan) {
+                // The frame is declared after the entry dispatcher label, so a cyclic jump to an
+                // entry re-creates it with that entry's SP.
+                target.Line($"{framePlan.ClassName} {framePlan.VariableName} = new(Memory, "
+                    + "State.SegmentRegisters, SP);");
+            }
+            printer.Print(prepared.EntryDispatch);
+            if (!IsEmpty(prepared.EntryDispatch)) {
+                target.Line();
+            }
+            printer.Print(analyzed.Body);
+        }
         if (analyzed.Signature is { } signature) {
-            foreach (TypedParameter parameter in signature.Parameters) {
+            // A copy-in line is needed only while something can still read the register's entry
+            // value: a dry print on a scratch writer finds which reads the method makes. The
+            // assignment sits before the entrydispatcher label so a cyclic jump to an entry does
+            // not reassign stale arguments.
+            CSharpSourceWriter scratch = new();
+            (CSharpStatementPrinter dryPrinter, CSharpExpressionPrinter dryExpressions) = Printers(scratch);
+            PrintAfterCopyIns(scratch, dryPrinter);
+            foreach (TypedParameter parameter in TypedSignatures.CopyInParameters(irMethod,
+                    prepared.Ssa, signature, dryExpressions.PrintedParameterReads,
+                    dryExpressions.PrintedMachineRegisters, prepared.FramePlan is not null)) {
                 writer.Line($"{parameter.Register} = {parameter.Name};");
             }
         }
-        if (analyzed.RegisterLocals is { } promoted) {
-            foreach (LocalDeclarationNode declaration in promoted.Declarations) {
-                printer.Print(declaration);
-            }
-        }
-        foreach (LocalDeclarationNode declaration in SaveRestorePairs.Declarations(prepared.SavedPairs)) {
-            printer.Print(declaration);
-        }
-        foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
-            printer.Print(variable);
-        }
-        if (prepared.Targets.EntryDispatcher) {
-            printer.Print(new EntryDispatcherLabelNode());
-        }
-        if (prepared.FramePlan is { } framePlan) {
-            // The frame is declared after the entry dispatcher label, so a cyclic jump to an
-            // entry re-creates it with that entry's SP.
-            writer.Line($"{framePlan.ClassName} {framePlan.VariableName} = new(Memory, "
-                + "State.SegmentRegisters, SP);");
-        }
-        printer.Print(prepared.EntryDispatch);
-        if (!IsEmpty(prepared.EntryDispatch)) {
-            writer.Line();
-        }
-        printer.Print(analyzed.Body);
+        (CSharpStatementPrinter printer, _) = Printers(writer);
+        PrintAfterCopyIns(writer, printer);
         printer.FinishInstructions();
         writer.CloseBlock();
         return printer.InstructionLines;

@@ -214,9 +214,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, SI, DS. Outputs: AX, SI. Changes: AX, CL, DX, BX, SI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_017E_0117_018F7(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        CX = word2;
-        DS = word3;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0117);
         Stack.Save(BX, word2, DX, SI);
@@ -1002,11 +999,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, DX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_069B_01E7B(ushort word1, ushort word2, ushort word3, ushort word4, ushort word5) {
-        AX = word1;
-        CX = word2;
-        DX = word3;
-        BX = word4;
-        DS = word5;
         ushort index = 0;
         ushort word6 = 0;
         ushort flagOperand_06CF = 0;
@@ -1614,9 +1606,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, SI, DS. Outputs: AX, BX. Changes: AX, BX, SI.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_017E_0A50_02230(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        DX = word2;
-        DS = word3;
         ushort index = 0;
         byte flagOperand_0A84 = 0;
         CheckExternalEvents(cs1, 0x0A50);
@@ -1686,9 +1675,7 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_0A9E_0227E(ushort word1, ushort word2, ushort index, ushort word3) {
         AX = word1;
-        DX = word2;
         BX = index;
-        DS = word3;
         ushort word4 = 0;
         ushort index2 = 0;
         byte byte1;
@@ -1938,8 +1925,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, SI, DI. Outputs: AX, BX, SI, ES. Changes: AX, DX, BX, SI, DI, ES.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_0BE9_023C9(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        DX = word2;
         BX = word3;
         ushort word4;
         ushort word5 = 0;
@@ -1975,8 +1960,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, DS. Outputs: BX. Changes: AX, BX.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_017E_0DA4_02584(ushort word1, ushort word2) {
-        AX = word1;
-        DS = word2;
         ushort index = 0;
         CheckExternalEvents(cs1, 0x0DA4);
         Stack.Push16(BX);
@@ -3051,10 +3034,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, SI, DI, ES. Changes: CX, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_173D_02F1D(ushort word1, ushort word2, ushort word3, ushort count, bool count2) {
-        AX = word1;
-        DX = word2;
-        BX = word3;
-        DS = count;
         DirectionFlag = count2;
         ushort index = 0;
         ushort index2 = 0;
@@ -3330,7 +3309,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, SI, DS. Outputs: SI. Changes: AX, BX, SI.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_017E_18DE_030BE(ushort word1, ushort word2) {
-        AX = word1;
         DS = word2;
         ushort index = 0;
         CheckExternalEvents(cs1, 0x18DE);
@@ -3367,10 +3345,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, DS. Outputs: DX, BX. Changes: AX, DX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_017E_191D_030FD(ushort word1, ushort word2, ushort word3, ushort word4) {
-        AX = word1;
-        CX = word2;
         DX = word3;
-        DS = word4;
         byte flagOperand_1920 = 0;
         byte flagOperand_1936 = 0;
         CheckExternalEvents(cs1, 0x191D);
@@ -3408,9 +3383,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: none. Changes: AX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_017E_1942_03122(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        DX = word2;
-        DS = word3;
         ushort index = 0;
         CheckExternalEvents(cs1, 0x1942);
         VerifySpeculativeEntryOrFail(cs1, 0x1942, Signature_1942_push);
@@ -3453,7 +3425,6 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         CX = word2;
         DX = word3;
-        DS = word4;
         ushort index = 0;
         ushort arg0;
         ushort local10 = 0;
@@ -3645,8 +3616,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: none. Changes: AX, DX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_017E_1B12_032F2(ushort word1, ushort word2) {
-        AX = word1;
-        DS = word2;
         ushort word3 = 0;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x1B12);
@@ -3694,8 +3663,6 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6) unknown_017E_1B32_03312(ushort word1, ushort word2, ushort word3, ushort word4) {
         AX = word1;
         DX = word2;
-        BX = word3;
-        DS = word4;
         ushort index = 0;
         ushort index2 = 0;
         unknown_017E_1B32_03312Frame frame = new(Memory, State.SegmentRegisters, SP);
@@ -3854,7 +3821,6 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_1BF2_033D2(ushort word1, ushort word2, ushort word3, ushort word4) {
         AX = word1;
-        DX = word2;
         BX = word3;
         DS = word4;
         ushort index = 0;
@@ -3955,8 +3921,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_017E_1C50_03430(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        DX = word2;
         BX = word3;
         ushort index = 0;
         ushort index2 = 0;
@@ -4084,8 +4048,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, flags.</summary>
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6) unknown_017E_1D18_034F8(ushort word1, ushort word2, ushort word3) {
         AX = word1;
-        DX = word2;
-        BX = word3;
         ushort index = 0;
         ushort word4 = 0;
         ushort index2 = 0;
@@ -4427,7 +4389,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: AX, DX. Changes: AX, DX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2) unknown_017E_1F1D_036FD(ushort word1, ushort word2) {
-        AX = word1;
         DS = word2;
         ushort word3 = 0;
         CheckExternalEvents(cs1, 0x1F1D);
@@ -4628,10 +4589,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, DS. Outputs: AX, DX, BX. Changes: AX, DX, BX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3) unknown_017E_205E_0383E(ushort word1, ushort word2, ushort word3, ushort word4) {
-        AX = word1;
-        CX = word2;
-        DX = word3;
-        DS = word4;
         ushort word5 = 0;
         ushort word6 = 0;
         CheckExternalEvents(cs1, 0x205E);
@@ -4670,7 +4627,6 @@ public partial class CfgGeneratedOverrides {
         CX = word1;
         DI = word2;
         DS = word3;
-        DirectionFlag = count;
         CheckExternalEvents(cs1, 0x2084);
         Stack.Save(BX, DX);
         DsGlobals.Word0350 = 0;
@@ -4690,8 +4646,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, BX, SI, ES, flags. Changes: AX, CX, BX, SI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, bool result5, bool result6, bool result7, bool result8, bool result9, bool result10) unknown_017E_209C_0387C(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
-        DX = word2;
         DS = word3;
         ushort index = 0;
         ushort flagOperand_20A5 = 0;
@@ -4849,7 +4803,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, ES, DS. Outputs: AX, CX, DX, BX, ES. Changes: AX, CX, DX, BX, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_21E5_039C5(ushort word1, ushort word2, ushort word3) {
-        AX = word1;
         ES = word2;
         DS = word3;
         ushort word4 = 0;
@@ -4902,9 +4855,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DL, BX, DI, DS, DF. Outputs: CX, DI, ES. Changes: AX, CX, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3) unknown_017E_223C_03A1C(ushort word1, byte byte1, ushort word2, bool count) {
-        AX = word1;
-        DL = byte1;
-        BX = word2;
         DirectionFlag = count;
         ushort index = 0;
         ushort word3;
@@ -4945,7 +4895,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: CX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, ushort result8) unknown_017E_2257_03A37(ushort previousSi) {
-        SI = previousSi;
         ushort previousDs;
         ushort previousDs2 = 0;
         byte byte1 = 0;

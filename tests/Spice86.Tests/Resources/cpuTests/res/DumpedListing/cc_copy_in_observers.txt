@@ -1,0 +1,56 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A cld
+F000:000B mov word ptr DS:[0x0210],3
+F000:0011 mov word ptr DS:[0x0200],1
+F000:0017 mov word ptr DS:[0x0202],2
+F000:001D mov word ptr DS:[0x0204],4
+F000:0023 mov AX,7
+F000:0026 mov SI,0x0200
+F000:0029 call near 0x0066
+F000:002C mov word ptr DS:[0x0040],AX
+F000:002F mov AX,3
+F000:0032 mov BX,0x0078
+F000:0035 call near 0x0072
+F000:0038 mov word ptr DS:[0x0042],AX
+F000:003B call near 0x007C
+F000:003E mov word ptr DS:[0x0044],AX
+F000:0041 call near 0x0086
+F000:0044 mov AX,0x3000
+F000:0047 mov DS,AX
+F000:0049 mov AX,0x2000
+F000:004C mov ES,AX
+F000:004E mov word ptr ES:[0x0048],DS
+F000:0053 mov DS,AX
+F000:0055 mov AX,0x7777
+F000:0058 call near 0x0096
+F000:005B mov word ptr SS:[0x0600],SP
+F000:0060 mov word ptr SS:[0x0602],SS
+F000:0065 hlt
+F000:0066 add AX,word ptr DS:[SI]
+F000:0068 add SI,2
+F000:006B dec word ptr DS:[0x0210]
+F000:006F jne short 0x0066
+F000:0071 ret near
+F000:0072 call near BX
+F000:0074 add AX,8
+F000:0077 ret near
+F000:0078 mov word ptr DS:[0x0050],AX
+F000:007B ret near
+F000:007C cmp AX,7
+F000:007F ja short 0x0085
+F000:0081 mov AX,9
+F000:0084 ret near
+F000:0085 ret near
+F000:0086 mov AX,0xAB00
+F000:0089 call near 0x008D
+F000:008C ret near
+F000:008D mov word ptr DS:[0x0070],AX
+F000:0090 mov AL,5
+F000:0092 mov word ptr DS:[0x0074],AX
+F000:0095 ret near
+F000:0096 mov word ptr DS:[0x0080],AX
+F000:0099 ret near
+F000:FFF0 jmp short 0

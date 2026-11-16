@@ -71,7 +71,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F000_0044_F0044(ushort index, ushort word1) {
         DI = index;
-        DS = word1;
         ushort word2;
         CheckExternalEvents(biosSegment, 0x0044);
         Stack.Push16(CS);
@@ -91,7 +90,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F000_0151_F0151(ushort index, ushort word1) {
         DI = index;
-        DS = word1;
         ushort word2;
         CheckExternalEvents(biosSegment, 0x0151);
         Stack.Push16(CS);
@@ -181,7 +179,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F001_0141_F0151(ushort index, ushort word1) {
         DI = index;
-        DS = word1;
         ushort word2;
         CheckExternalEvents(cs1, 0x0141);
         Stack.Push16(CS);
@@ -217,7 +214,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, DI.</summary>
     public virtual void unknown_F010_0044_F0144(ushort index, ushort word1) {
         DI = index;
-        DS = word1;
         ushort word2;
         CheckExternalEvents(cs2, 0x0044);
         Stack.Push16(CS);

@@ -642,6 +642,141 @@ internal sealed class TypedSignatures {
         return (IrSsaValue)((int)IrSsaValue.Carry + trailing - 38);
     }
 
+    /// <summary>The parameters of <paramref name="signature"/> that keep their copy-in line: a
+    /// parameter is copied into its register only while something the printed method runs can
+    /// still read the register's entry value. The worklist follows the parameter's bytes from the
+    /// entry version through phis and the carried bytes of partial definitions, and a copy-in
+    /// stays when it meets a use site whose read the printed parameter text does not cover, a
+    /// site that may fault, an exit that is not a <see cref="FailAsUntestedNode"/> (a typed return
+    /// only when the bytes meet an output mask), or a machine-register print outside every IR
+    /// site - a node the plans created, such as a saved-pair initializer. <paramref name="hasFrame"/>
+    /// keeps an SS parameter: the frame reads <c>State.SegmentRegisters</c>.</summary>
+    internal static IReadOnlyList<TypedParameter> CopyInParameters(IrMethod method, IrSsa ssa,
+        TypedSignature signature, IReadOnlySet<IVisitableAstNode> printedParameterReads,
+        IReadOnlySet<IVisitableAstNode> printedMachineRegisters, bool hasFrame) {
+        HashSet<IVisitableAstNode> irSiteNodes = new(ReferenceEqualityComparer.Instance);
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                irSiteNodes.UnionWith(IrAstChildren.Descendants(statement.Node));
+            }
+            irSiteNodes.UnionWith(IrAstChildren.TerminatorNodes(block.Terminator));
+        }
+        CpuValues outputMask = signature.Outputs.Aggregate(CpuValues.None,
+            (mask, output) => mask | output.Mask);
+        List<TypedParameter> copyIns = [];
+        foreach (TypedParameter parameter in signature.Parameters) {
+            if (NeedsCopyIn(ssa, signature, parameter, outputMask, printedParameterReads,
+                    printedMachineRegisters, irSiteNodes, hasFrame)) {
+                copyIns.Add(parameter);
+            }
+        }
+        return copyIns;
+    }
+
+    private static bool NeedsCopyIn(IrSsa ssa, TypedSignature signature, TypedParameter parameter,
+        CpuValues outputMask, IReadOnlySet<IVisitableAstNode> printedParameterReads,
+        IReadOnlySet<IVisitableAstNode> printedMachineRegisters,
+        HashSet<IVisitableAstNode> irSiteNodes, bool hasFrame) {
+        if (ValueOf(parameter.Mask) is not { } value) {
+            return true;
+        }
+        CpuValues parameterBytes = parameter.Mask;
+        if (hasFrame && (parameterBytes & CpuValues.Ss) != CpuValues.None) {
+            return true;
+        }
+        int entryVersion = ssa.MethodEntryVersion(signature.EntryBlock, value);
+        HashSet<(int Version, CpuValues Bytes)> visited = [];
+        Queue<(int Version, CpuValues Bytes)> worklist = new();
+        worklist.Enqueue((entryVersion, parameterBytes));
+        while (worklist.Count > 0) {
+            (int version, CpuValues bytes) = worklist.Dequeue();
+            if (!visited.Add((version, bytes))) {
+                continue;
+            }
+            foreach (IrSsaUse use in ssa.Uses(version)) {
+                if (use.Phi is { } phi) {
+                    worklist.Enqueue((phi.Result, bytes));
+                    continue;
+                }
+                if (use.Terminator is IrExit exit) {
+                    if (NeedsCopyInAtExit(exit, bytes, outputMask)) {
+                        return true;
+                    }
+                    continue;
+                }
+                object? site = use.Statement ?? (object?)use.Terminator;
+                if (site is not (IrStatement or IrTerminator)) {
+                    return true;
+                }
+                IrEffects effects = site is IrStatement statement
+                    ? statement.Effects : ((IrTerminator)site).Effects;
+                if (effects.MayFault) {
+                    return true;
+                }
+                CpuValues read = effects.Reads & bytes;
+                if (version == entryVersion) {
+                    read &= ~CoveredReads(site, value, printedParameterReads);
+                }
+                if (read != CpuValues.None) {
+                    return true;
+                }
+                IReadOnlyList<(IrSsaValue Value, int Version)> definitions = site is IrStatement siteStatement
+                    ? ssa.Definitions(siteStatement) : ssa.Definitions((IrTerminator)site);
+                foreach ((IrSsaValue defined, int newVersion) in definitions) {
+                    if (defined != value) {
+                        continue;
+                    }
+                    CpuValues carried = bytes & ~effects.MustWrite;
+                    if (carried != CpuValues.None) {
+                        worklist.Enqueue((newVersion, carried));
+                    }
+                }
+            }
+        }
+        foreach (IVisitableAstNode node in printedMachineRegisters) {
+            if (!irSiteNodes.Contains(node) && (MachineMaskOf(node) & parameterBytes) != CpuValues.None) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether the exit use of the followed bytes needs the machine register to hold the
+    /// entry value: a <see cref="FailAsUntestedNode"/> aborts the program so nothing observes it,
+    /// a typed return needs the bytes an output covers, and every other exit uses it.</summary>
+    private static bool NeedsCopyInAtExit(IrExit exit, CpuValues bytes, CpuValues outputMask) =>
+        exit.Transfer switch {
+            FailAsUntestedNode => false,
+            ReturnNode { Value: ProcedureReturnHelperNode } => (bytes & outputMask) != CpuValues.None,
+            _ => true
+        };
+
+    /// <summary>The read bytes of <paramref name="site"/> the printed body covers by printing a
+    /// parameter instead of the register: the union of the masks of the site's descendant nodes
+    /// that printed with <paramref name="printedParameterReads"/> text and read
+    /// <paramref name="value"/>.</summary>
+    private static CpuValues CoveredReads(object site, IrSsaValue value,
+        IReadOnlySet<IVisitableAstNode> printedParameterReads) {
+        IEnumerable<IVisitableAstNode> descendants = site is IrStatement statement
+            ? IrAstChildren.Descendants(statement.Node)
+            : IrAstChildren.TerminatorNodes((IrTerminator)site);
+        CpuValues covered = CpuValues.None;
+        foreach (IVisitableAstNode node in descendants) {
+            if (printedParameterReads.Contains(node) && ValueOf(node) == value) {
+                covered |= MachineMaskOf(node);
+            }
+        }
+        return covered;
+    }
+
+    /// <summary>The <see cref="CpuValues"/> a read of <paramref name="node"/> covers.</summary>
+    private static CpuValues MachineMaskOf(IVisitableAstNode node) {
+        if (node is RegisterNode register) {
+            return IrValueSets.Of(register);
+        }
+        return ValueOf(node) is { } value ? IrSsaValues.MaskOf(value) : CpuValues.None;
+    }
+
     private static IrSsaValue? ValueOfFlag(ushort flagMask) => flagMask switch {
         Spice86.Core.Emulator.CPU.Flags.Carry => IrSsaValue.Carry,
         Spice86.Core.Emulator.CPU.Flags.Parity => IrSsaValue.Parity,

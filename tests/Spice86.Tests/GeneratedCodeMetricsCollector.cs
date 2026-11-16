@@ -369,10 +369,11 @@ internal static class GeneratedCodeMetricsCollector {
             };
         }
 
-        /// <summary>The generic <c>flagN</c> names the current method binds to a status flag in
-        /// an entry copy (<c>CarryFlag = flag1</c>): only those parameters stand for a census flag.
-        /// A parameter bound to <c>DirectionFlag</c> or a promoted flag local of the same shape is
-        /// not a flag read.</summary>
+        /// <summary>The generic <c>flagN</c> names the current method binds to a status flag: an
+        /// entry copy (<c>CarryFlag = flag1</c>) or the flag argument its <c>_Asm</c> wrapper passes
+        /// at the parameter's position. Only those parameters stand for a census flag. A parameter
+        /// bound to <c>DirectionFlag</c> or a promoted flag local of the same shape is not a flag
+        /// read.</summary>
         private HashSet<string> _statusFlagParameterNames = new(StringComparer.Ordinal);
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
@@ -392,14 +393,33 @@ internal static class GeneratedCodeMetricsCollector {
 
         private HashSet<string> StatusFlagBoundParameters(SyntaxNode node) {
             HashSet<string> names = new(StringComparer.Ordinal);
+            SemanticModel model = _models[node.SyntaxTree];
             foreach (AssignmentExpressionSyntax assignment in node.DescendantNodes()
                     .OfType<AssignmentExpressionSyntax>()) {
                 if (assignment.Left is IdentifierNameSyntax flag
                     && StatusFlagNames.Contains(flag.Identifier.ValueText)
                     && assignment.Right is IdentifierNameSyntax parameter
                     && TypedFlagParameterName.IsMatch(parameter.Identifier.ValueText)
-                    && _models[node.SyntaxTree].GetSymbolInfo(parameter).Symbol is IParameterSymbol) {
+                    && model.GetSymbolInfo(parameter).Symbol is IParameterSymbol) {
                     names.Add(parameter.Identifier.ValueText);
+                }
+            }
+            if (model.GetDeclaredSymbol(node) is not IMethodSymbol method) {
+                return names;
+            }
+            foreach (InvocationExpressionSyntax invocation in node.SyntaxTree.GetRoot()
+                    .DescendantNodes().OfType<InvocationExpressionSyntax>()) {
+                if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol invoked
+                    || !SymbolEqualityComparer.Default.Equals(invoked, method)) {
+                    continue;
+                }
+                SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
+                for (int index = 0; index < arguments.Count && index < method.Parameters.Length;
+                        index++) {
+                    if (arguments[index].Expression is IdentifierNameSyntax flag
+                        && StatusFlagNames.Contains(flag.Identifier.ValueText)) {
+                        names.Add(method.Parameters[index].Name);
+                    }
                 }
             }
             return names;
