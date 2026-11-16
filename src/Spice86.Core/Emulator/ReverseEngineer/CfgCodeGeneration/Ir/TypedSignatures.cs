@@ -51,15 +51,15 @@ internal sealed class TypedSignatures {
     public string DelegateNameOf(string methodName) =>
         _byMethodName.ContainsKey(methodName) ? methodName + "_Asm" : methodName;
 
-    /// <summary>The signature a call statement may use: <paramref name="node"/> is a 16-bit call
-    /// whose only observed target is a typed method's entry, with no redirected return, no observed
-    /// mid-call landings and an observed continuation; <c>null</c> for any other call site (it keeps
-    /// the untyped helper).</summary>
+    /// <summary>The signature a call statement may use: <paramref name="node"/> is a call whose
+    /// only observed target is a typed method's entry of the same operand width, with no
+    /// redirected return, no observed mid-call landings and an observed continuation;
+    /// <c>null</c> for any other call site (it keeps the untyped helper).</summary>
     public TypedSignature? TypedCallOf(ProcedureCallHelperNode node) {
         if (node.SingleObservedTarget && node.ObservedContinuation && !node.ObservedLandings
-            && node.Width == BitWidth.WORD_16
             && node.Arguments[^1] is MethodGroupNode { SingleEntry: true, LoadOffset: 0 } group
-            && _byMethodName.TryGetValue(group.MethodName, out TypedSignature? signature)) {
+            && _byMethodName.TryGetValue(group.MethodName, out TypedSignature? signature)
+            && signature.Width == node.Width) {
             return signature;
         }
         return null;
@@ -141,6 +141,7 @@ internal sealed class TypedSignatures {
         caller.Outputs.Count == callee.Outputs.Count
             && caller.Outputs.Zip(callee.Outputs).All(pair => pair.First.Mask == pair.Second.Mask)
             && caller.Distance == callee.Distance
+            && caller.Width == callee.Width
             && caller.PoppedBytes == callee.PoppedBytes;
 
     /// <summary>Second pass over the typed methods, with the pass-1 set known: an input the body
@@ -168,6 +169,7 @@ internal sealed class TypedSignatures {
                     outputs & ~MachineOutputs(source, outputs)),
                     nameCounters),
                 Distance = signature.Distance,
+                Width = signature.Width,
                 PoppedBytes = signature.PoppedBytes,
                 EntryBlock = signature.EntryBlock,
                 TailCallTargets = signature.TailCallTargets
@@ -397,7 +399,7 @@ internal sealed class TypedSignatures {
             return null;
         }
         IrMethod method = source.IrMethod;
-        if (!ExitsAreTyped(method, out CallDistance distance, out int poppedBytes,
+        if (!ExitsAreTyped(method, out CallDistance distance, out BitWidth width, out int poppedBytes,
                 out bool hasReturns, out List<string>? tailTargets)) {
             return null;
         }
@@ -416,16 +418,18 @@ internal sealed class TypedSignatures {
         if (proved is null && tailTargets is { Count: > 0 }) {
             proved = BorrowedTailEffect(conventions, tailTargets);
             if (proved is not null) {
-                if (hasReturns && (proved.Distance != distance
+                if (hasReturns && (proved.Distance != distance || proved.Width != width
                         || proved.PoppedBytes != poppedBytes)) {
                     proved = null;
                 } else {
                     distance = proved.Distance;
+                    width = proved.Width;
                     poppedBytes = proved.PoppedBytes;
                 }
             }
         }
-        if (proved is null || proved.Distance != distance || proved.PoppedBytes != poppedBytes) {
+        if (proved is null || proved.Distance != distance || proved.Width != width
+                || proved.PoppedBytes != poppedBytes) {
             return null;
         }
         Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
@@ -436,6 +440,7 @@ internal sealed class TypedSignatures {
                 nameCounters),
             Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
             Distance = distance,
+            Width = width,
             PoppedBytes = poppedBytes,
             EntryBlock = irEntry.Block,
             TailCallTargets = tailTargets
@@ -456,11 +461,11 @@ internal sealed class TypedSignatures {
         return named;
     }
 
-    /// <summary>Every exit of <paramref name="method"/> is a 16-bit <c>ret</c> / <c>retf</c> of the
-    /// same distance popping the same byte count, an abort (<c>FailAsUntested</c>, throw) or a tail
-    /// call (a bare <see cref="MethodCallNode"/>, recorded in <paramref name="tailTargets"/> for the
-    /// provisional signature <see cref="ResolveTailCalls"/> later confirms); at least one is a
-    /// return or a tail call.</summary>
+    /// <summary>Every exit of <paramref name="method"/> is a <c>ret</c> / <c>retf</c> of the
+    /// same distance, operand width and popped byte count, an abort (<c>FailAsUntested</c>, throw)
+    /// or a tail call (a bare <see cref="MethodCallNode"/>, recorded in <paramref name="tailTargets"/>
+    /// for the provisional signature <see cref="ResolveTailCalls"/> later confirms); at least one is
+    /// a return or a tail call.</summary>
     private static IrCallingConventions.CalleeReturnEffect? BorrowedTailEffect(
         IrCallingConventions conventions, List<string> tailTargets) {
         IrCallingConventions.CalleeReturnEffect? effect = null;
@@ -469,6 +474,7 @@ internal sealed class TypedSignatures {
                 conventions.ReturnsToCallerOf(target);
             if (targetEffect is null
                 || (effect is not null && (targetEffect.Distance != effect.Distance
+                    || targetEffect.Width != effect.Width
                     || targetEffect.PoppedBytes != effect.PoppedBytes))) {
                 return null;
             }
@@ -477,9 +483,10 @@ internal sealed class TypedSignatures {
         return effect;
     }
 
-    private static bool ExitsAreTyped(IrMethod method, out CallDistance distance, out int poppedBytes,
-        out bool hasReturns, out List<string>? tailTargets) {
+    private static bool ExitsAreTyped(IrMethod method, out CallDistance distance, out BitWidth width,
+        out int poppedBytes, out bool hasReturns, out List<string>? tailTargets) {
         distance = CallDistance.Near;
+        width = BitWidth.WORD_16;
         poppedBytes = 0;
         hasReturns = false;
         tailTargets = null;
@@ -503,11 +510,13 @@ internal sealed class TypedSignatures {
             if (returnHelpers.Count > 0) {
                 foreach (ProcedureReturnHelperNode helper in returnHelpers) {
                     int popCount = PopCount(helper);
-                    if (helper.Width != BitWidth.WORD_16 || popCount < 0
-                        || (returns > 0 && (helper.Distance != distance || popCount != poppedBytes))) {
+                    if (helper.Width is not (BitWidth.WORD_16 or BitWidth.DWORD_32) || popCount < 0
+                        || (returns > 0 && (helper.Distance != distance || helper.Width != width
+                            || popCount != poppedBytes))) {
                         return false;
                     }
                     distance = helper.Distance;
+                    width = helper.Width;
                     poppedBytes = popCount;
                     returns++;
                 }

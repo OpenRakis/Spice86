@@ -1,0 +1,169 @@
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: ECX, EDX. Outputs: EAX. Changes: EAX.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual uint unknown_F000_0044_F0044(uint dword1, uint dword2) {
+        CheckExternalEvents(biosSegment, 0x0044);
+        EAX = dword1;
+        EAX += dword2;
+        NearReturn32();
+        return EAX;
+    }
+
+    public virtual Action unknown_F000_0044_F0044_Asm() {
+        EAX = unknown_F000_0044_F0044(ECX, EDX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: ECX. Outputs: EAX. Changes: EAX, BP.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual uint unknown_F000_004C_F004C(uint dword1) {
+        unknown_F000_004C_F004CFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x004C);
+        EAX = (uint)(frame.Arg4Dword + dword1);
+        FarReturn32(4);
+        return EAX;
+    }
+
+    public virtual Action unknown_F000_004C_F004C_Asm() {
+        EAX = unknown_F000_004C_F004C(ECX);
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_004C_F004CFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Double word at SS:[entry SP + 0x0008].</summary>
+        public uint Arg4Dword { get => _slots.GetDword(0x0008); set => _slots.SetDword(0x0008, value); }
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        AX = 0x2000;
+        DS = 0x2000;
+        SS = 0x2000;
+        SP = 0x1000;
+        DirectionFlag = false;
+        EAX = NearCall32(biosSegment, 0x001D, () => unknown_F000_0044_F0044(0x11112222, 0x00003333));
+        Segment2000Globals.Dword0040 = EAX;
+        Stack.Push32(0xABCD1234u);
+        EAX = FarCall32(biosSegment, 0x0035, biosSegment, () => unknown_F000_004C_F004C(7));
+        Segment2000Globals.Dword0044 = EAX;
+        SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public uint Dword0040 { get => _memory.UInt32[Segment, 0x0040]; set => _memory.UInt32[Segment, 0x0040] = value; }
+
+    public uint Dword0044 { get => _memory.UInt32[Segment, 0x0044]; set => _memory.UInt32[Segment, 0x0044] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0044_F0044_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_004C_F004C_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_0044_F0044_AsmEntry = _ => unknown_F000_0044_F0044_Asm();
+        unknown_F000_004C_F004C_AsmEntry = _ => unknown_F000_004C_F004C_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0044, unknown_F000_0044_F0044_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x004C, unknown_F000_004C_F004C_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

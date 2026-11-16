@@ -685,7 +685,12 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>FarReturn(n)</c> statement, then <c>return</c> of the signature's outputs. A count of
     /// <c>0</c> prints the parameterless overload.</summary>
     private void PrintTypedReturn(ProcedureReturnHelperNode helper, TypedSignature typed) {
-        string helperName = helper.Distance == CallDistance.Near ? "NearReturn" : "FarReturn";
+        string helperName = (helper.Distance, helper.Width) switch {
+            (CallDistance.Near, BitWidth.DWORD_32) => "NearReturn32",
+            (CallDistance.Far, BitWidth.DWORD_32) => "FarReturn32",
+            (CallDistance.Near, _) => "NearReturn",
+            _ => "FarReturn"
+        };
         string arguments = TypedReturnArguments(helper);
         writer.Line(arguments == "0" ? $"{helperName}();" : $"{helperName}({arguments});");
         writer.Line(ReturnText(helper, typed));

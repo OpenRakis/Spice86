@@ -957,7 +957,8 @@ public class CSharpOverrideHelper {
     /// </remarks>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public T NearCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, Func<T> typedCall) {
-        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -969,7 +970,8 @@ public class CSharpOverrideHelper {
     /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Action typedCall) {
-        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -987,7 +989,8 @@ public class CSharpOverrideHelper {
     /// <returns>The value the typed callee returned.</returns>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public T FarCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<T> typedCall) {
-        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -1000,7 +1003,73 @@ public class CSharpOverrideHelper {
     /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Action typedCall) {
-        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true,
+            BitWidth.WORD_16, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed near call with a 32-bit operand size: pushes a 32-bit return EIP exactly like
+    /// <see cref="NearCall32(ushort, ushort, Func{int, Action})"/>, runs the typed callee and then
+    /// requires CS:IP to be the expected return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T NearCall32<T>(ushort expectedReturnCs, ushort expectedReturnIp, Func<T> typedCall) {
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed near call of a callee that returns no value: same stack contract as
+    /// <see cref="NearCall32{T}(ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void NearCall32(ushort expectedReturnCs, ushort expectedReturnIp, Action typedCall) {
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call with a 32-bit operand size: pushes the return address as a 32-bit
+    /// far pointer exactly like <see cref="FarCall32(ushort, ushort, ushort, Func{int, Action})"/>,
+    /// sets CS to <paramref name="targetCs"/>, runs the typed callee and then requires CS:IP to be
+    /// the expected return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T FarCall32<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<T> typedCall) {
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call of a callee that returns no value: same stack contract as
+    /// <see cref="FarCall32{T}(ushort, ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Action typedCall) {
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true,
+            BitWidth.DWORD_32, typedCall);
     }
 
     /// <summary>
@@ -1028,6 +1097,32 @@ public class CSharpOverrideHelper {
     /// that pops no parameter bytes.
     /// </summary>
     public void FarReturn() => FarReturn(0);
+
+    /// <summary>
+    /// Pops the stacked near return address (EIP) immediately, with the same operand bytes as an
+    /// <c>o32 ret n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>o32 ret</c>).</param>
+    public void NearReturn32(ushort numberOfBytesToPop) => ReturnOperationsHelper.NearRet32(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked near return address (EIP) immediately, the plain <c>o32 ret</c> of a typed
+    /// callee that pops no parameter bytes.
+    /// </summary>
+    public void NearReturn32() => NearReturn32(0);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:EIP) immediately, with the same operand bytes as an
+    /// <c>o32 retf n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>o32 retf</c>).</param>
+    public void FarReturn32(ushort numberOfBytesToPop) => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:EIP) immediately, the plain <c>o32 retf</c> of a
+    /// typed callee that pops no parameter bytes.
+    /// </summary>
+    public void FarReturn32() => FarReturn32(0);
 
     /// <summary>
     /// Performs a typed near call with the argument pushes folded into the call, without a caller
@@ -1070,7 +1165,8 @@ public class CSharpOverrideHelper {
         for (int index = arguments.Length - 1; index >= 0; index--) {
             Stack.Push16(arguments[index]);
         }
-        T result = ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        T result = ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.WORD_16, typedCall);
         State.SP = (ushort)(State.SP + cleanupBytes);
         return result;
     }
@@ -1106,7 +1202,8 @@ public class CSharpOverrideHelper {
         for (int index = arguments.Length - 1; index >= 0; index--) {
             Stack.Push16(arguments[index]);
         }
-        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
+            BitWidth.WORD_16, typedCall);
         State.SP = (ushort)(State.SP + cleanupBytes);
     }
 
@@ -1123,26 +1220,37 @@ public class CSharpOverrideHelper {
     /// before the pushes.
     /// </summary>
     private T ExecuteTypedCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
-        bool isFar, Func<T> typedCall) {
-        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
+        bool isFar, BitWidth returnWidth, Func<T> typedCall) {
+        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar,
+            returnWidth);
         T result = typedCall.Invoke();
         CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
         return result;
     }
 
     private void ExecuteTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
-        bool isFar, Action typedCall) {
-        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
+        bool isFar, BitWidth returnWidth, Action typedCall) {
+        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar,
+            returnWidth);
         typedCall.Invoke();
         CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
     }
 
-    private uint PrepareTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, bool isFar) {
+    private uint PrepareTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
+        bool isFar, BitWidth returnWidth) {
         uint expectedStackAddress = State.StackPhysicalAddress;
-        if (isFar) {
-            Stack.Push16(expectedReturnCs);
+        if (isFar && returnWidth == BitWidth.DWORD_32) {
+            Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
+        } else {
+            if (isFar) {
+                Stack.Push16(expectedReturnCs);
+            }
+            if (returnWidth == BitWidth.DWORD_32) {
+                Stack.Push32(expectedReturnIp);
+            } else {
+                Stack.Push16(expectedReturnIp);
+            }
         }
-        Stack.Push16(expectedReturnIp);
         State.CS = targetCs;
         State.IP = expectedReturnIp;
         return expectedStackAddress;

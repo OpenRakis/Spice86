@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 
@@ -17,6 +18,10 @@ internal sealed class TypedSignature {
 
     /// <summary>Whether every return of the method is near or far.</summary>
     public required CallDistance Distance { get; init; }
+
+    /// <summary>The operand width of every return and of every typed call site
+    /// (<c>ret</c>/<c>retf</c> or their <c>o32</c> forms).</summary>
+    public required BitWidth Width { get; init; }
 
     /// <summary>The bytes every return pops after the return address (<c>ret n</c> / <c>retf n</c>).</summary>
     public required int PoppedBytes { get; init; }

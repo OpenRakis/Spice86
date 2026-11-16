@@ -433,7 +433,7 @@ internal sealed class IrCallingConventions {
     /// <summary>The fact a resolved call consumes: <paramref name="methodName"/> returns to its
     /// caller at <paramref name="distance"/> popping <paramref name="poppedBytes"/> bytes beyond
     /// the return address.</summary>
-    internal sealed record CalleeReturnEffect(CallDistance Distance, int PoppedBytes);
+    internal sealed record CalleeReturnEffect(CallDistance Distance, BitWidth Width, int PoppedBytes);
 
     /// <summary>The least fixed point of decision 3: start with no callee proved, prove every
     /// method that structurally returns to its caller under the current slot map, recompute the
@@ -492,17 +492,17 @@ internal sealed class IrCallingConventions {
             || !ReferenceEquals(callee.Source.Method.Entries[0], target)
             || !_provedReturns.TryGetValue(callee.Source.Method.MethodName,
                 out CalleeReturnEffect? effect)
-            || CallDistanceOf(statement) != effect.Distance) {
+            || CallHelperOf(statement)?.Distance != effect.Distance
+            || CallHelperOf(statement)?.Width != effect.Width) {
             return null;
         }
         return effect.PoppedBytes;
     }
 
-    /// <summary>The near/far distance of a call statement's call helper, or <c>null</c> when the
-    /// statement is no call.</summary>
-    private static CallDistance? CallDistanceOf(IrStatement statement) =>
+    /// <summary>The call helper of a statement, or <c>null</c> when the statement is no call.</summary>
+    private static ProcedureCallHelperNode? CallHelperOf(IrStatement statement) =>
         IrAstChildren.Descendants(statement.Node).OfType<ProcedureCallHelperNode>()
-            .FirstOrDefault()?.Distance;
+            .FirstOrDefault();
 
     /// <summary>Whether <paramref name="data"/>'s method structurally returns to its caller: the
     /// <see cref="TypedSignatures"/> return rule, moved here. Holds when every return exit reads
@@ -517,6 +517,7 @@ internal sealed class IrCallingConventions {
         }
         IrMethod method = data.Source.IrMethod;
         CallDistance distance = CallDistance.Near;
+        BitWidth width = BitWidth.WORD_16;
         int poppedBytes = 0;
         int returns = 0;
         foreach (IrBlock block in method.Blocks) {
@@ -526,11 +527,13 @@ internal sealed class IrCallingConventions {
             foreach (ProcedureReturnHelperNode helper in IrAstChildren
                     .Descendants(exit.Transfer).OfType<ProcedureReturnHelperNode>()) {
                 int popCount = PopCount(helper);
-                if (helper.Width != BitWidth.WORD_16 || popCount < 0
-                    || (returns > 0 && (helper.Distance != distance || popCount != poppedBytes))) {
+                if (helper.Width is not (BitWidth.WORD_16 or BitWidth.DWORD_32) || popCount < 0
+                    || (returns > 0 && (helper.Distance != distance || helper.Width != width
+                        || popCount != poppedBytes))) {
                     return null;
                 }
                 distance = helper.Distance;
+                width = helper.Width;
                 poppedBytes = popCount;
                 returns++;
             }
@@ -550,7 +553,9 @@ internal sealed class IrCallingConventions {
             statement => statement.Origin is CfgInstruction instruction
                 ? _effectBuilder.CallTargetWrites(instruction)
                 : CpuValues.Registers);
-        int returnBytes = distance == CallDistance.Near ? 2 : 4;
+        int returnBytes = (distance, width) == (CallDistance.Near, BitWidth.WORD_16) ? 2
+            : distance == CallDistance.Near ? 4
+            : width == BitWidth.WORD_16 ? 4 : 8;
         if (frames.Accesses.Any(access =>
                 access.IsWrite && access.EntryOffset >= 0 && access.EntryOffset < returnBytes)) {
             return null;
@@ -572,7 +577,7 @@ internal sealed class IrCallingConventions {
             }
             return null;
         }
-        return new CalleeReturnEffect(distance, poppedBytes);
+        return new CalleeReturnEffect(distance, width, poppedBytes);
     }
 
     private static bool IsReturnHelperExit(IrExit exit) =>
