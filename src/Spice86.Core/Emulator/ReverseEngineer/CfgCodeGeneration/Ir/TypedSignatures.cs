@@ -199,7 +199,7 @@ internal sealed class TypedSignatures {
 
     private bool AssignNames(PreparedMethod prepared, TypedSignature signature) {
         HashSet<string> taken = IrMethodEmitter.ReservedLocalNames(prepared.IrMethod, null,
-            prepared.FramePlan);
+            prepared.FramePlan, null);
         bool changed = false;
         List<TypedParameter> parameters = (List<TypedParameter>)signature.Parameters;
         for (int index = 0; index < parameters.Count; index++) {

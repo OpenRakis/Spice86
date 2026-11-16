@@ -168,7 +168,8 @@ internal sealed class IrMethodEmitter(
         return timer.Measure("register locals", () => {
             TypedSignature? signature = analysis.TypedSignatures.Of(method.MethodName);
             RegisterLocalPlan? registerLocals = RegisterLocalPromotion.Plan(prepared.IrMethod, prepared.Ssa,
-                ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan),
+                ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan,
+                    analysis.StackArguments.PlanOf(method.MethodName)),
                 UnprintedNodes(prepared.FramePlan), signature, analysis.TypedSignatures,
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask),
@@ -352,10 +353,10 @@ internal sealed class IrMethodEmitter(
     }
 
     /// <summary>Every local name a register local may not take in <paramref name="irMethod"/>: the
-    /// typed signature's parameters, the frame variable, the method variables and every temporary or
-    /// declared name appearing in the method.</summary>
+    /// typed signature's parameters, the stack-argument plan's parameters, the frame variable, the
+    /// method variables and every temporary or declared name appearing in the method.</summary>
     internal static HashSet<string> ReservedLocalNames(IrMethod irMethod, TypedSignature? signature,
-        FrameSlotPlan? framePlan) {
+        FrameSlotPlan? framePlan, StackArguments.StackArgumentPlan? stackPlan) {
         HashSet<string> names = new(StringComparer.Ordinal);
         foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
             names.Add(variable.VariableName);
@@ -381,6 +382,11 @@ internal sealed class IrMethodEmitter(
             foreach (TypedParameter parameter in signature.Parameters) {
                 names.Add(parameter.Name);
                 names.Add(parameter.Register.ToLowerInvariant());
+            }
+        }
+        if (stackPlan is not null) {
+            foreach (StackArguments.StackParameter parameter in stackPlan.Parameters) {
+                names.Add(parameter.Name);
             }
         }
         if (framePlan is not null) {

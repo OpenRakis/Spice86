@@ -136,6 +136,12 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     internal IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? LocalReads =>
         _method?.RegisterLocals is { Reads.Count: > 0 } locals ? locals.Reads : null;
 
+    /// <summary>The printed elements of each typed <c>return</c> of the method being printed,
+    /// keyed by <see cref="ProcedureReturnHelperNode"/> reference; <see langword="null"/> when the
+    /// method promotes no web or no exit serves an output from a local.</summary>
+    internal IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<string?>>? ReturnOutputs =>
+        _method?.RegisterLocals?.ReturnOutputs;
+
     /// <summary>The goto targets of the whole method being printed. A <c>for</c> rewrite refuses
     /// a loop when any statement of the method - not only of the block being dispatched - jumps to
     /// its header or its step.</summary>

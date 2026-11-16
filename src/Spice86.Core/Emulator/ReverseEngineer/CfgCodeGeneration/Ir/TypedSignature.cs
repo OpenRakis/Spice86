@@ -46,9 +46,15 @@ internal sealed class TypedSignature {
 
     /// <summary>The text a typed <c>ret</c> prints after its <c>NearReturn</c> / <c>FarReturn</c>:
     /// <c>return;</c>, <c>return AX;</c> or <c>return (AX, DX);</c>.</summary>
-    public string ReturnStatement => Outputs.Count switch {
-        0 => "return;",
-        1 => $"return {Outputs[0].Register};",
-        _ => $"return ({string.Join(", ", Outputs.Select(output => output.Register))});"
-    };
+    public string ReturnStatement => ReturnStatementText(
+        [.. Outputs.Select(output => output.Register)]);
+
+    /// <summary>The <c>return</c> text of one ordered element list: <c>return;</c>,
+    /// <c>return x;</c> or <c>return (a, b);</c>.</summary>
+    internal static string ReturnStatementText(IReadOnlyList<string> elements) =>
+        elements.Count switch {
+            0 => "return;",
+            1 => $"return {elements[0]};",
+            _ => $"return ({string.Join(", ", elements)});"
+        };
 }

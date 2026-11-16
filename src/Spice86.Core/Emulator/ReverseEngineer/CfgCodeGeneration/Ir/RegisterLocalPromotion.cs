@@ -73,6 +73,10 @@ internal static partial class RegisterLocalPromotion {
         List<LocalDeclarationNode> declarations = [];
         HashSet<string> declared = new(StringComparer.Ordinal);
         List<RegisterLocalWriteBack> writeBacks = [];
+        Dictionary<ProcedureReturnHelperNode, string?[]> returnOutputs =
+            new(ReferenceEqualityComparer.Instance);
+        List<(Candidate Candidate, string Name, bool Signed,
+            ProcedureReturnHelperNode Helper, int Element)> returnServed = [];
         List<(IrBlock Block, string Name, int Start, int End)> ranges = [];
         Dictionary<IrBlock, int> blockOrder = [];
         for (int i = 0; i < method.Blocks.Count; i++) {
@@ -159,8 +163,12 @@ internal static partial class RegisterLocalPromotion {
             taken.Add(name);
             names[legacyName] = name;
         }
+        // A shared legacy name that resolved to a parameter or another reserved local cannot back
+        // a second, non-parameter web: its declaration would collide with the existing one.
         List<(Candidate Candidate, string Name)> accepted = [.. promotable
-            .Select(item => (item.Candidate, names[item.LegacyName]))];
+            .Select(item => (item.Candidate, Name: names[item.LegacyName]))
+            .Where(item => item.Candidate.Parameter is not null
+                || !reservedNames.Contains(item.Name))];
         // The tuple helpers and the service calls hand back unsigned storage halves even for a
         // signed operation, so a local defined by one of their targets stays unsigned whatever the
         // web's signed reads vote.
@@ -214,6 +222,10 @@ internal static partial class RegisterLocalPromotion {
                 writeBacks.Add(new RegisterLocalWriteBack(use.Origin, AnchorOf(use),
                     new RegisterWriteBackNode(fresh, new RegisterLocalNode(fresh, name, localType))));
             }
+            foreach ((ProcedureReturnHelperNode helper, int element)
+                    in candidate.Uses.ReturnUses) {
+                returnServed.Add((candidate, name, signed, helper, element));
+            }
         }
         Dictionary<IVisitableAstNode, IVisitableAstNode> replacements =
             new(ReferenceEqualityComparer.Instance);
@@ -221,9 +233,38 @@ internal static partial class RegisterLocalPromotion {
             && item.Candidate.Register is RegisterNode)],
             reservedNames, declared, reads, declarations, writeBacks,
             dropped, replacements);
+        if (signature is { } returnSignature) {
+            foreach ((Candidate candidate, string name, bool signed,
+                    ProcedureReturnHelperNode helper, int element) in returnServed) {
+                if (!returnOutputs.TryGetValue(helper, out string?[]? texts)) {
+                    texts = new string?[returnSignature.Outputs.Count];
+                    returnOutputs[helper] = texts;
+                }
+                texts[element] = ReturnText(candidate, name, signed, reads);
+            }
+        }
         return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
             accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet(),
-            PlanCallOutputs(method, ssa, typedSignatures));
+            PlanCallOutputs(method, ssa, typedSignatures),
+            returnOutputs.ToDictionary<KeyValuePair<ProcedureReturnHelperNode, string?[]>,
+                ProcedureReturnHelperNode, IReadOnlyList<string?>>(
+                pair => pair.Key, pair => pair.Value, ReferenceEqualityComparer.Instance));
+    }
+
+    /// <summary>The unsigned text <paramref name="candidate"/>'s promoted web prints as a read:
+    /// the pair's slice (<c>(ushort)dwordN</c>) when pairing rewrote the reads after
+    /// <paramref name="name"/> was chosen, else the bare name or the signed local's cast. Reads
+    /// are consulted after <see cref="PlanPairs"/> so a paired web serves its return element with
+    /// the same text its other reads print.</summary>
+    private static string ReturnText(Candidate candidate, string name, bool signed,
+        Dictionary<IVisitableAstNode, SubstitutedRead> reads) {
+        foreach ((IVisitableAstNode node, IVisitableAstNode? _) in candidate.Reads) {
+            if (reads.TryGetValue(node, out SubstitutedRead? read) && read.Type is null) {
+                return read.Text;
+            }
+        }
+        return signed
+            ? $"({CSharpExpressionPrinter.ToCSharpType(candidate.Register.DataType)}){name}" : name;
     }
 
     /// <summary>The printed left side of each typed call site in <paramref name="method"/>: an
@@ -499,7 +540,7 @@ internal static partial class RegisterLocalPromotion {
             return null;
         }
         WebUses? classification = ClassifyWebUses(webRegister, baseName, value, uses,
-            nonSubstitutable, collected.DefTargets);
+            nonSubstitutable, collected.DefTargets, signature);
         if (classification is null) {
             return null;
         }
@@ -660,11 +701,12 @@ internal static partial class RegisterLocalPromotion {
     /// the local cannot serve or the web has no explicit read at all.</summary>
     private static WebUses? ClassifyWebUses(ValueNode webRegister, string baseName,
         IrSsaValue value, List<Use> uses, HashSet<IVisitableAstNode> nonSubstitutable,
-        IReadOnlyList<ValueNode> defTargets) {
+        IReadOnlyList<ValueNode> defTargets, TypedSignature? signature) {
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> webReads = [];
         HashSet<IVisitableAstNode> explicitRoots = new(ReferenceEqualityComparer.Instance);
         List<Use> implicitUses = [];
         List<Use> killingUses = [];
+        List<(ProcedureReturnHelperNode Helper, int Element)> returnUses = [];
         foreach (Use use in uses) {
             if (IsKillingUse(webRegister, use)) {
                 killingUses.Add(use);
@@ -683,12 +725,38 @@ internal static partial class RegisterLocalPromotion {
             if (use.Site.Terminator is not null and not IrExit) {
                 return null;
             }
+            if (ServedReturn(signature, MaskOf(webRegister), use) is { } served) {
+                returnUses.Add(served);
+                continue;
+            }
             implicitUses.Add(use);
         }
         if (explicitRoots.Count == 0) {
             return null;
         }
-        return new WebUses(webReads, explicitRoots, implicitUses, killingUses);
+        return new WebUses(webReads, explicitRoots, implicitUses, killingUses, returnUses);
+    }
+
+    /// <summary>The <c>return</c> element a typed return exit serves from the local, or
+    /// <c>null</c> when the exit keeps a write-back: in a typed method, the C# return hands the
+    /// outputs to the caller, which writes each register itself, so the exit's read of an output
+    /// the web covers exactly (the register mask equals the output's) is an explicit read the
+    /// local serves. Only a <see cref="ProcedureReturnHelperNode"/> transfer that cannot fault
+    /// (a fault would observe the register) qualifies; any other exit use - a value
+    /// outside <c>signature.Outputs</c>, or a partial-width web - stays an implicit use.</summary>
+    private static (ProcedureReturnHelperNode Helper, int Element)? ServedReturn(
+        TypedSignature? signature, CpuValues registerBytes, Use use) {
+        if (signature is null || use.Site.Terminator is not IrExit {
+                Transfer: ReturnNode { Value: ProcedureReturnHelperNode helper } } exit) {
+            return null;
+        }
+        int element = -1;
+        for (int index = 0; index < signature.Outputs.Count; index++) {
+            if (signature.Outputs[index].Mask == registerBytes) {
+                element = index;
+            }
+        }
+        return element < 0 || exit.Effects.MayFault ? null : (helper, element);
     }
 
     /// <summary>Whether the web vanishes from the printed method entirely: every read is a node
@@ -1399,10 +1467,12 @@ internal static partial class RegisterLocalPromotion {
         bool HasCall, IrBlock? EntryBlock);
 
     /// <summary>The uses <see cref="ClassifyWebUses"/> split: the explicit reads and their roots,
-    /// the implicit uses that take a write-back and the killing uses that end the live range.</summary>
+    /// the implicit uses that take a write-back, the killing uses that end the live range, and the
+    /// typed-return exit uses the local serves through the <c>return</c> elements.</summary>
     private sealed record WebUses(
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> WebReads,
-        HashSet<IVisitableAstNode> ExplicitRoots, List<Use> ImplicitUses, List<Use> KillingUses);
+        HashSet<IVisitableAstNode> ExplicitRoots, List<Use> ImplicitUses, List<Use> KillingUses,
+        List<(ProcedureReturnHelperNode Helper, int Element)> ReturnUses);
 
     /// <summary>A web that may promote: a block of it, whether it lives in one block, the ordering
     /// keys of its first definition, the start and end of its live range for the single-block

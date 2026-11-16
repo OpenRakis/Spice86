@@ -225,10 +225,8 @@ public partial class CfgGeneratedOverrides {
             CheckExternalEvents(cs1, 0x0251);
             Alu16.Sub(word4, 0);
             if (word4 == 0) {
-                SI = word1;
-                CX = word4;
                 NearReturn();
-                return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+                return (word4, word1, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
             }
             word4--;
             AL = UInt8[ES, DI];
@@ -272,10 +270,8 @@ public partial class CfgGeneratedOverrides {
         UInt8[word2, DI + 2] = 0x30;
         UInt8[word2, DI + 3] = 0x30;
         UInt8[word2, DI + 4] = 0;
-        SI = word1;
-        CX = word4;
         NearReturn();
-        return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return (word4, word1, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
 
     public virtual Action unknown_016F_0246_01936_Asm() {

@@ -18,6 +18,10 @@ using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 /// <param name="CallOutputs">The printed left side of each typed call site (by
 /// <see cref="ProcedureCallHelperNode"/> reference): one text per output element - <c>_</c>
 /// for an output nobody reads live, or <c>null</c> to keep the register name.</param>
+/// <param name="ReturnOutputs">The printed elements of each typed <c>return</c> (by
+/// <see cref="ProcedureReturnHelperNode"/> reference): one text per output element in
+/// signature order - the local that serves the exit's read of the output, or <c>null</c>
+/// to keep the register name.</param>
 internal sealed record RegisterLocalPlan(
     IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead> Reads,
     IReadOnlyList<LocalDeclarationNode> Declarations,
@@ -25,4 +29,5 @@ internal sealed record RegisterLocalPlan(
     IReadOnlySet<IVisitableAstNode> Dropped,
     IReadOnlyDictionary<IVisitableAstNode, IVisitableAstNode> Replacements,
     IReadOnlySet<TypedParameter> EntryParameters,
-    IReadOnlyDictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> CallOutputs);
+    IReadOnlyDictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> CallOutputs,
+    IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<string?>> ReturnOutputs);

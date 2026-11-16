@@ -16,17 +16,16 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_0066_F0066(ushort word1, ushort index, ushort word2) {
-        AX = word1;
         SI = index;
         DS = word2;
         do {
             CheckExternalEvents(biosSegment, 0x0066);
-            AX += UInt16[word2, SI];
+            word1 += UInt16[word2, SI];
             SI += 2;
             Segment2000Globals.Word0210 = Alu16.Dec(Segment2000Globals.Word0210);
         } while (!ZeroFlag);
         NearReturn();
-        return AX;
+        return word1;
     }
 
     public virtual Action unknown_F000_0066_F0066_Asm() {

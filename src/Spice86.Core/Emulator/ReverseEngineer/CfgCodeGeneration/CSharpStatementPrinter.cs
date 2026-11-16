@@ -688,7 +688,22 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         string helperName = helper.Distance == CallDistance.Near ? "NearReturn" : "FarReturn";
         string arguments = TypedReturnArguments(helper);
         writer.Line(arguments == "0" ? $"{helperName}();" : $"{helperName}({arguments});");
-        writer.Line(typed.ReturnStatement);
+        writer.Line(ReturnText(helper, typed));
+    }
+
+    /// <summary>The <c>return</c> text of a typed <c>ret</c>: the outputs' register names, or the
+    /// local the register-local plan serves an output's exit read from.</summary>
+    private string ReturnText(ProcedureReturnHelperNode helper, TypedSignature typed) {
+        if (expressions.ReturnOutputs is not { } returnOutputs
+            || !returnOutputs.TryGetValue(helper, out IReadOnlyList<string?>? outputs)) {
+            return typed.ReturnStatement;
+        }
+        string[] elements = new string[typed.Outputs.Count];
+        for (int index = 0; index < elements.Length; index++) {
+            elements[index] = index < outputs.Count && outputs[index] is { } text
+                ? text : typed.Outputs[index].Register;
+        }
+        return TypedSignature.ReturnStatementText(elements);
     }
 
     private string TypedReturnArguments(ProcedureReturnHelperNode helper) {

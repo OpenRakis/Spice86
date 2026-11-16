@@ -54,15 +54,9 @@ public partial class CfgGeneratedOverrides {
             word6++;
         }
         SP = index;
-        BP = Stack.Pop16();
-        Stack.Release(1);
-        Stack.Release(1);
-        CX = Stack.Pop16();
-        BX = Stack.Pop16();
-        AX = (ushort)dword1;
-        DX = (ushort)(dword1 >> 16);
+        (BP, _, _, CX, BX) = Stack.Restore5();
         NearReturn();
-        return (AX, CX, DX, BX, BP);
+        return ((ushort)dword1, CX, (ushort)(dword1 >> 16), BX, BP);
     }
 
     public virtual Action unknown_017E_0010_017F0_Asm() {
@@ -414,9 +408,8 @@ public partial class CfgGeneratedOverrides {
             word3 = CX;
             CX = 0;
         }
-        DX = word3;
         NearReturn();
-        return (AX, CX, DX, BX, BP, SI);
+        return (AX, CX, word3, BX, BP, SI);
     }
 
     public virtual Action unknown_017E_01B1_01991_Asm() {
@@ -1170,9 +1163,8 @@ public partial class CfgGeneratedOverrides {
         UInt16[word5, BX] = index2;
         SP = index;
         (BP, DI, SI) = Stack.Restore3();
-        DX = word6;
         NearReturn();
-        return (AX, DX, BP, SI, DI);
+        return (AX, word6, BP, SI, DI);
     }
 
     public virtual Action unknown_017E_069B_01E7B_Asm() {
@@ -1923,9 +1915,8 @@ public partial class CfgGeneratedOverrides {
     L_0B8F:
         AX = index3;
         (DI, SI, CX) = Stack.Restore3();
-        DX = word5;
         NearReturn();
-        return (AX, CX, DX, SI, DI);
+        return (AX, CX, word5, SI, DI);
     }
 
     public virtual Action unknown_017E_0A9E_0227E_Asm() {
@@ -1960,10 +1951,8 @@ public partial class CfgGeneratedOverrides {
             word7++;
         }
         (_, SI) = Stack.Restore2();
-        BX = word3;
-        AX = word7;
         NearReturn();
-        return (AX, BX, SI);
+        return (word7, word3, SI);
     }
 
     public virtual Action unknown_017E_0BE9_023C9_Asm() {
@@ -3726,9 +3715,8 @@ public partial class CfgGeneratedOverrides {
         AX = frame.Local44;
         SP = index;
         (BP, DI, SI) = Stack.Restore3();
-        DX = word2;
         NearReturn();
-        return (CX, DX, BX, BP, SI, DI);
+        return (CX, word2, BX, BP, SI, DI);
     }
 
     public virtual Action unknown_017E_1B32_03312_Asm() {
@@ -4049,10 +4037,9 @@ public partial class CfgGeneratedOverrides {
         BP = Stack.Pop16();
         DS = Stack.Pop16();
         (DI, SI, CX) = Stack.Restore3();
-        BX = word3;
         DX = local12;
         NearReturn();
-        return (AX, CX, BX, BP, SI, DS);
+        return (AX, CX, word3, BP, SI, DS);
     }
 
     public virtual Action unknown_017E_1C50_03430_Asm() {
@@ -4264,10 +4251,9 @@ public partial class CfgGeneratedOverrides {
                 BP = Stack.Pop16();
                 DS = Stack.Pop16();
                 (DI, SI, CX) = Stack.Restore3();
-                AX = word1;
                 BX = word3;
                 NearReturn();
-                return (AX, CX, BP, SI, DI, DS);
+                return (word1, CX, BP, SI, DI, DS);
             }
             goto L_1DB2;
         }
@@ -4278,9 +4264,8 @@ public partial class CfgGeneratedOverrides {
         BP = Stack.Pop16();
         DS = Stack.Pop16();
         (DI, SI, CX) = Stack.Restore3();
-        AX = word1;
         NearReturn();
-        return (AX, CX, BP, SI, DI, DS);
+        return (word1, CX, BP, SI, DI, DS);
     }
 
     public virtual Action unknown_017E_1D18_034F8_Asm() {
@@ -4400,9 +4385,8 @@ public partial class CfgGeneratedOverrides {
             word2 = UInt16[word1, BX];
         }
         BX = Stack.Pop16();
-        AX = word2;
         NearReturn();
-        return AX;
+        return word2;
     }
 
     public virtual Action unknown_017E_1EFB_036DB_Asm() {
