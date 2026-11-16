@@ -88,7 +88,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: BX, DS. Outputs: none. Changes: flags.</summary>
     public virtual void unknown_F000_00D3_F00D3(ushort word1, ushort word2) {
-        BX = word1;
         DS = word2;
         byte flagOperand_00D3 = 0;
         CheckExternalEvents(biosSegment, 0x00D3);
@@ -115,7 +114,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: none.</summary>
     public virtual void unknown_F000_00E1_F00E1(ushort word1, ushort word2) {
-        AX = word1;
         DS = word2;
         CheckExternalEvents(biosSegment, 0x00E1);
         if (DsGlobals.Byte0500 == 0xFF) {
@@ -151,7 +149,6 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DI, DS. Outputs: none. Changes: AX, flags.</summary>
     public virtual void unknown_F000_00FE_F00FE(ushort word1, ushort word2) {
-        DI = word1;
         DS = word2;
         byte flagOperand_00FE = 0;
         CheckExternalEvents(biosSegment, 0x00FE);

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Does not return.</summary>
+    /// <summary>Inputs: DS, flags, DF. Outputs: none. Changes: AX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         CheckExternalEvents(cs1, 0x0100);
@@ -21,7 +21,15 @@ public partial class CfgGeneratedOverrides {
         ServiceCall(Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
         AX = 0x3100;
         DX = 0x0020;
-        return TerminateCall(cs1, 0x0111, () => Dos.TerminateAndStayResident(AL, DX));
+        InterruptCall(cs1, 0x0111, 0x21);
+        return unknown_016F_0111_01801();
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_016F_0111_01801() {
+        CheckExternalEvents(cs1, 0x0111);
+        VerifySpeculativeEntryOrFail(cs1, 0x0111, Signature_0111_hlt);
+        return Hlt();
     }
 
 }
@@ -66,6 +74,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_016F_0100_017F0Entry;
+    private readonly Func<int, Action> unknown_016F_0111_01801Entry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -88,6 +97,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
         unknown_016F_0100_017F0Entry = _ => unknown_016F_0100_017F0();
+        unknown_016F_0111_01801Entry = _ => unknown_016F_0111_01801();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -102,6 +112,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016F_0100_017F0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0111, unknown_016F_0111_01801Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -134,6 +145,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0111_hlt = [0xF4];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -168,6 +180,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -319,6 +332,7 @@ public partial class CfgGeneratedOverrides {
                 }
             }
         }
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);

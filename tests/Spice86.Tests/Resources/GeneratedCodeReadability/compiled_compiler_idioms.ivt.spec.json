@@ -31,19 +31,19 @@
     },
     "maximum": {
       "BookkeepingCalls": 0,
-      "Casts": 228,
+      "Casts": 246,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 8,
-      "LocalReads": 753,
-      "LocalVariables": 237,
-      "LocalWrites": 533,
+      "LocalReads": 879,
+      "LocalVariables": 269,
+      "LocalWrites": 604,
       "PlainRegisterAssignments": 1018,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
       "RegisterReads": 2387,
       "RegisterWrites": 1485,
-      "Statements": 3877,
-      "WriteBacks": 110
+      "Statements": 4244,
+      "WriteBacks": 128
     }
   },
   "support": {
@@ -88,7 +88,7 @@
       "RawIoCalls": 0,
       "RegisterReads": 9,
       "RegisterWrites": 3,
-      "Statements": 291,
+      "Statements": 302,
       "WriteBacks": 0
     }
   }

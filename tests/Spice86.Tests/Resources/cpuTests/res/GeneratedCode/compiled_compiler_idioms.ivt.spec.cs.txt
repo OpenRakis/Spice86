@@ -90,7 +90,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_005E_0183E() {
         ushort word1 = 0;
@@ -424,7 +424,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS. Outputs: BP, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS. Outputs: BP, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0235_01A15() {
         ushort index;
@@ -726,7 +726,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, DS. Outputs: BX, BP, SI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS. Outputs: CX, DX, BX, BP, SI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_04FC_01CDC() {
         CheckExternalEvents(cs1, 0x04FC);
@@ -741,7 +741,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_050D_01CED() {
         ushort word1 = 0;
@@ -797,10 +797,9 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, SI + 7] &= 0xFA;
             VerifySpeculativeRunOrFail(cs1, 0x057F, SpeculativeRun_057F);
             AX = SI;
-            UInt8[DS, SI + 7] = Alu8.Or(UInt8[DS, SI + 7], 4);
+            UInt8[DS, SI + 7] |= 4;
             VerifySpeculativeEntryOrFail(cs1, 0x0585, Signature_0585_call);
             NearCall(cs1, 0x0588, unknown_017E_156F_02D4FEntry);
-            throw FailAsUntested("Untested return from call at 017E:0585");
         }
         if ((UInt8[DS, SI + 6] & 0x20) != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x058E, Signature_058E_mov);
@@ -822,7 +821,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_05B2_01D92() {
         ushort flagOperand_05B9 = 0;
@@ -891,7 +890,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested indirect far call at 017E:05DF");
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x03A9, DS = 0x03A9.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_05E4_01DC4() {
@@ -949,7 +948,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, DS, DF. Outputs: BX, BP, SI, DS, ZF. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS, DF. Outputs: BX, BP, SI, DS, ZF. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_063B_01E1B() {
         byte flagOperand_0681 = 0;
@@ -1193,7 +1192,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: AX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0776_01F56() {
         ushort index;
@@ -1266,7 +1265,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0801_01FE1() {
         ushort word1;
@@ -1332,11 +1331,12 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0859_02039() {
         ushort word1 = 0;
-        ushort index;
+        ushort index = 0;
+        ushort index2;
         CheckExternalEvents(cs1, 0x0859);
         Stack.Save(BX, DX, SI, DI);
         DsGlobals.Byte0203 &= 0xF8;
@@ -1350,19 +1350,27 @@ public partial class CfgGeneratedOverrides {
             }
             AX = 0x000C;
             NearCall(cs1, 0x087F, unknown_017E_1684_02E64Entry);
-            Alu16.And(AX, AX);
             if (AX == 0) {
-                goto L_08AD;
+                VerifySpeculativeRunOrFail(cs1, 0x08AD, SpeculativeRun_08AD);
+                AX = 0x000C;
+                NearCall(cs1, 0x08B3, unknown_017E_1684_02E64Entry);
+                VerifySpeculativeRunOrFail(cs1, 0x08B3, SpeculativeRun_08B3);
+                index = AX;
+                if (AX == 0) {
+                    goto L_08B9;
+                }
             }
-            index = AX;
+            else {
+                index = AX;
+            }
             AX = DsGlobals.Word037E;
             UInt16[DS, index + 2] = SI;
             UInt16[DS, index] = AX;
             UInt16[DS, SI + 4] = index;
             UInt16[DS, index + 4] = 0;
             DsGlobals.Word037E = index;
-            DI = UInt16[DS, SI + 4];
-            UInt8[DS, DI + 0x0A] = 0;
+            index2 = UInt16[DS, SI + 4];
+            UInt8[DS, index2 + 0x0A] = 0;
             DI = UInt16[DS, SI + 4];
             SI += 0x000E;
             UInt16[DS, DI + 6] = 0;
@@ -1371,11 +1379,11 @@ public partial class CfgGeneratedOverrides {
         (DI, SI, _, _) = Stack.Restore4();
         AX = word1;
         return NearRet();
-    L_08AD:
-        VerifySpeculativeRunOrFail(cs1, 0x08AD, SpeculativeRun_08AD);
-        AX = 0x000C;
-        NearCall(cs1, 0x08B3, unknown_017E_1684_02E64Entry);
-        throw FailAsUntested("Untested return from call at 017E:08B0");
+    L_08B9:
+        VerifySpeculativeRunOrFail(cs1, 0x08B9, SpeculativeRun_08B9);
+        AX = 0x0034;
+        DX = DS;
+        return unknown_017E_04E5_01CC5();
     }
 
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, flags.</summary>
@@ -1466,11 +1474,9 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_093E_0211E() {
-        ushort flagOperand_0969 = 0;
-        ushort flagOperand_0996 = 0;
         CheckExternalEvents(cs1, 0x093E);
         Stack.Save(BX, CX, SI, DI);
         CX = AX;
@@ -1490,13 +1496,10 @@ public partial class CfgGeneratedOverrides {
         }
         if ((UInt8[DS, BX + 6] & 2) != 0) {
             SI = UInt16[DS, BX + 4];
-            flagOperand_0969 = UInt16[DS, SI + 4];
-            Alu16.Sub(flagOperand_0969, 0);
-            if (flagOperand_0969 == 0) {
+            if (UInt16[DS, SI + 4] == 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x096F, SpeculativeRun_096F);
                 AX = BX;
                 NearCall(cs1, 0x0974, unknown_017E_09E4_021C4Entry);
-                throw FailAsUntested("Untested return from call at 017E:0971");
             }
             SI = 0x0400;
             if (CX == 0x000A) {
@@ -1508,13 +1511,14 @@ public partial class CfgGeneratedOverrides {
                     UInt16[DS, BX] += 1;
                     UInt16[DS, BX + 2] += 1;
                     AX = UInt16[DS, BX + 2];
-                    flagOperand_0996 = UInt16[DS, BX + 0x0A];
-                    Alu16.Sub(AX, flagOperand_0996);
-                    if (AX == flagOperand_0996) {
+                    if (AX == UInt16[DS, BX + 0x0A]) {
                         VerifySpeculativeRunOrFail(cs1, 0x099B, SpeculativeRun_099B);
                         AX = BX;
                         NearCall(cs1, 0x09A0, unknown_017E_156F_02D4FEntry);
-                        throw FailAsUntested("Untested return from call at 017E:099D");
+                        VerifySpeculativeRunOrFail(cs1, 0x09A0, SpeculativeRun_09A0);
+                        if (AX != 0) {
+                            goto L_09C7;
+                        }
                     }
                 }
             }
@@ -1555,7 +1559,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_09E4_021C4() {
         ushort index;
@@ -1608,7 +1612,7 @@ public partial class CfgGeneratedOverrides {
         word1 = UInt16[DS, index + 4];
         UInt16[DS, BX + 2] = 0;
         UInt16[DS, BX] = word1;
-        (SI, _) = Stack.Restore2();
+        (SI, BX) = Stack.Restore2();
         return NearRet();
     }
 
@@ -1681,87 +1685,86 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS. Outputs: AX, CX, DX, SI, DI. Changes: AX, CX, DX, BX, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, SI, DI. Changes: AX, CX, DX, BX, SI, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_0A9E_0227E(ushort word1, ushort word2, ushort index, ushort word3) {
-        AX = word1;
-        BX = index;
-        ushort word4 = 0;
+    public virtual Action unknown_017E_0A9E_0227E() {
+        ushort word1 = 0;
+        ushort index = 0;
         ushort index2 = 0;
-        ushort index3 = 0;
+        ushort word2;
         byte byte1;
-        ushort index4;
+        ushort index3;
         byte byte2 = 0;
-        ushort word5 = 0;
+        ushort word3 = 0;
         byte flagOperand_0B00 = 0;
         byte flagOperand_0B53 = 0;
         byte flagOperand_0B59 = 0;
         byte flagOperand_0B6E = 0;
         CheckExternalEvents(cs1, 0x0A9E);
         Stack.Save(CX, SI, DI);
-        SI = word1;
-        word4 = word2;
-        DX = index;
-        UInt8[word3, index + 0x19] = 0x20;
-        (AX, BX) = NearCall(cs1, 0x0AAE, () => unknown_017E_0A50_02230(word1, DX, word3));
+        SI = AX;
+        word1 = DX;
+        DX = BX;
+        UInt8[DS, BX + 0x19] = 0x20;
+        (AX, BX) = NearCall(cs1, 0x0AAE, () => unknown_017E_0A50_02230(AX, DX, DS));
+        index = AX;
+        UInt16[DS, BX + 6] = 0;
         index2 = AX;
-        UInt16[word3, BX + 6] = 0;
-        index3 = AX;
-        if (UInt8[word3, index2] == 0x2A) {
+        if (UInt8[DS, index] == 0x2A) {
             goto L_0ADE;
         }
         while (true) {
             CheckExternalEvents(cs1, 0x0ABC);
-            AL = UInt8[word3, index3];
+            AL = UInt8[DS, index2];
             if ((sbyte)AL is < 0x30 or > 0x39) {
                 goto L_0AF0;
             }
             VerifySpeculativeRunOrFail(cs1, 0x0AC6, SpeculativeRun_0AC6);
-            AX = UInt16[word3, BX + 6];
-            (AX, DX) = IMul16((short)AX, (short)0x000A);
+            word2 = UInt16[DS, BX + 6];
+            (AX, DX) = IMul16((short)word2, (short)0x000A);
             DX = AX;
-            byte1 = UInt8[word3, index3];
+            byte1 = UInt8[DS, index2];
             AX = (ushort)(short)(sbyte)byte1;
             AX -= 0x0030;
             DX += AX;
-            index3++;
-            UInt16[word3, BX + 6] = DX;
+            index2++;
+            UInt16[DS, BX + 6] = DX;
             VerifySpeculativeEntryOrFail(cs1, 0x0ADC, Signature_0ADC_jmp);
         }
     L_0ADE:
         VerifySpeculativeRunOrFail(cs1, 0x0ADE, SpeculativeRun_0ADE);
-        index4 = word4;
-        UInt16[word3, index4] += 2;
+        index3 = word1;
+        UInt16[DS, index3] += 2;
         VerifySpeculativeRunOrFail(cs1, 0x0AE3, SpeculativeRun_0AE3);
-        index2 = UInt16[word3, index4];
-        AX = UInt16[word3, index2 - 2];
-        UInt16[word3, BX + 6] = AX;
+        index = UInt16[DS, index3];
+        AX = UInt16[DS, index - 2];
+        UInt16[DS, BX + 6] = AX;
         VerifySpeculativeRunOrFail(cs1, 0x0AEB, SpeculativeRun_0AEB);
         if ((short)AX < 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x0B27, Signature_0B27_neg);
-            UInt16[word3, BX + 6] = (ushort)-UInt16[word3, BX + 6];
-            CarryFlag = UInt16[word3, BX + 6] != 0;
+            UInt16[DS, BX + 6] = (ushort)-UInt16[DS, BX + 6];
+            CarryFlag = UInt16[DS, BX + 6] != 0;
             VerifySpeculativeEntryOrFail(cs1, 0x0B2A, Signature_0B2A_or);
-            UInt8[word3, BX + 2] |= 8;
+            UInt8[DS, BX + 2] |= 8;
             VerifySpeculativeEntryOrFail(cs1, 0x0B2E, Signature_0B2E_jmp);
         }
         VerifySpeculativeEntryOrFail(cs1, 0x0AEF, Signature_0AEF_inc);
-        index3++;
+        index2++;
     L_0AF0:
-        UInt16[word3, BX + 8] = 0xFFFF;
-        if (UInt8[word3, index3] == 0x2E) {
+        UInt16[DS, BX + 8] = 0xFFFF;
+        if (UInt8[DS, index2] == 0x2E) {
             VerifySpeculativeRunOrFail(cs1, 0x0AFA, SpeculativeRun_0AFA);
-            index3++;
-            UInt16[word3, BX + 8] = 0;
+            index2++;
+            UInt16[DS, BX + 8] = 0;
             VerifySpeculativeRunOrFail(cs1, 0x0B00, SpeculativeRun_0B00);
-            flagOperand_0B00 = UInt8[word3, index3];
+            flagOperand_0B00 = UInt8[DS, index2];
             if (flagOperand_0B00 == 0x2A) {
                 goto L_0B30;
             }
             while (true) {
                 CheckExternalEvents(cs1, 0x0B05);
                 VerifySpeculativeRunOrFail(cs1, 0x0B05, SpeculativeRun_0B05);
-                AL = UInt8[word3, index3];
+                AL = UInt8[DS, index2];
                 if ((sbyte)AL < 0x30) {
                     goto L_0B42;
                 }
@@ -1770,37 +1773,37 @@ public partial class CfgGeneratedOverrides {
                     goto L_0B42;
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x0B0F, SpeculativeRun_0B0F);
-                AX = UInt16[word3, BX + 8];
-                (AX, DX) = IMul16((short)AX, (short)0x000A);
+                word2 = UInt16[DS, BX + 8];
+                (AX, DX) = IMul16((short)word2, (short)0x000A);
                 DX = AX;
-                byte1 = UInt8[word3, index3];
+                byte1 = UInt8[DS, index2];
                 AX = (ushort)(short)(sbyte)byte1;
                 AX -= 0x0030;
                 DX += AX;
-                index3++;
-                UInt16[word3, BX + 8] = DX;
+                index2++;
+                UInt16[DS, BX + 8] = DX;
                 VerifySpeculativeEntryOrFail(cs1, 0x0B25, Signature_0B25_jmp);
             }
         L_0B30:
             VerifySpeculativeRunOrFail(cs1, 0x0B30, SpeculativeRun_0B30);
-            index4 = word4;
-            UInt16[word3, index4] += 2;
+            index3 = word1;
+            UInt16[DS, index3] += 2;
             VerifySpeculativeRunOrFail(cs1, 0x0B35, SpeculativeRun_0B35);
-            index2 = UInt16[word3, index4];
-            AX = UInt16[word3, index2 - 2];
-            UInt16[word3, BX + 8] = AX;
+            index = UInt16[DS, index3];
+            AX = UInt16[DS, index - 2];
+            UInt16[DS, BX + 8] = AX;
             VerifySpeculativeRunOrFail(cs1, 0x0B3D, SpeculativeRun_0B3D);
             if ((short)AX < 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0B62, Signature_0B62_mov);
-                UInt16[word3, BX + 8] = 0xFFFF;
+                UInt16[DS, BX + 8] = 0xFFFF;
                 VerifySpeculativeEntryOrFail(cs1, 0x0B67, Signature_0B67_jmp);
             }
             VerifySpeculativeEntryOrFail(cs1, 0x0B41, Signature_0B41_inc);
-            index3++;
+            index2++;
         }
     L_0B42:
-        byte2 = UInt8[word3, index3];
-        word5 = (ushort)(index3 + 1);
+        byte2 = UInt8[DS, index2];
+        word3 = (ushort)(index2 + 1);
         if (byte2 >= 0x68) {
             goto L_0B69;
         }
@@ -1817,25 +1820,29 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             VerifySpeculativeRunOrFail(cs1, 0x0B53, SpeculativeRun_0B53);
-            flagOperand_0B53 = UInt8[word3, index3 + 1];
+            flagOperand_0B53 = UInt8[DS, index2 + 1];
             if (flagOperand_0B53 == 0x36) {
                 VerifySpeculativeRunOrFail(cs1, 0x0B59, SpeculativeRun_0B59);
-                flagOperand_0B59 = UInt8[word3, index3 + 2];
+                flagOperand_0B59 = UInt8[DS, index2 + 2];
                 if (flagOperand_0B59 != 0x34) {
-                    goto L_0B8F;
+                    DX = word3;
+                    AX = index2;
+                    return unknown_017E_0B91_02371();
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x0B5F, Signature_0B5F_jmp);
                 VerifySpeculativeRunOrFail(cs1, 0x0BD9, SpeculativeRun_0BD9);
-                index3 += 3;
+                index2 += 3;
                 goto L_0B8B;
             }
         }
-        goto L_0B8F;
+        DX = word3;
+        AX = index2;
+        return unknown_017E_0B91_02371();
     L_0BA6:
         if (byte2 <= 0x4C) {
             VerifySpeculativeRunOrFail(cs1, 0x0BDE, SpeculativeRun_0BDE);
-            index3 = word5;
-            UInt8[word3, BX + 3] |= 1;
+            index2 = word3;
+            UInt8[DS, BX + 3] |= 1;
             VerifySpeculativeEntryOrFail(cs1, 0x0BE4, Signature_0BE4_jmp);
         }
         else {
@@ -1844,20 +1851,24 @@ public partial class CfgGeneratedOverrides {
             }
             if (byte2 == 0x4E) {
                 VerifySpeculativeRunOrFail(cs1, 0x0BBC, SpeculativeRun_0BBC);
-                index3 = word5;
-                UInt8[word3, BX + 3] |= 2;
+                index2 = word3;
+                UInt8[DS, BX + 3] |= 2;
                 VerifySpeculativeEntryOrFail(cs1, 0x0BC2, Signature_0BC2_jmp);
             }
         }
-        goto L_0B8F;
+        DX = word3;
+        AX = index2;
+        return unknown_017E_0B91_02371();
     L_0BCA:
         VerifySpeculativeRunOrFail(cs1, 0x0BCA, SpeculativeRun_0BCA);
-        index3++;
-        UInt8[word3, BX + 3] |= 4;
+        index2++;
+        UInt8[DS, BX + 3] |= 4;
         VerifySpeculativeEntryOrFail(cs1, 0x0BCF, Signature_0BCF_jmp);
-        goto L_0B8F;
+        DX = word3;
+        AX = index2;
+        return unknown_017E_0B91_02371();
     L_0B69:
-        index2 = (ushort)(index3 + 2);
+        index = (ushort)(index2 + 2);
         if (byte2 > 0x68) {
             if (byte2 >= 0x74) {
                 goto L_0B95;
@@ -1865,17 +1876,19 @@ public partial class CfgGeneratedOverrides {
             if (byte2 != 0x6C) {
                 VerifySpeculativeRunOrFail(cs1, 0x0BAA, SpeculativeRun_0BAA);
                 if (byte2 != 0x6A) {
-                    goto L_0B8F;
+                    DX = word3;
+                    AX = index2;
+                    return unknown_017E_0B91_02371();
                 }
                 VerifySpeculativeRunOrFail(cs1, 0x0BAE, SpeculativeRun_0BAE);
-                index3 = word5;
+                index2 = word3;
             }
             else {
-                if (byte2 != UInt8[word3, index3 + 1]) {
+                if (byte2 != UInt8[DS, index2 + 1]) {
                     goto L_0B9F;
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x0B89, Signature_0B89_mov);
-                index3 = index2;
+                index2 = index;
             }
             goto L_0B8B;
         L_0B95:
@@ -1884,7 +1897,9 @@ public partial class CfgGeneratedOverrides {
                     goto L_0BE6;
                 }
                 if (byte2 != 0x77) {
-                    goto L_0B8F;
+                    DX = word3;
+                    AX = index2;
+                    return unknown_017E_0B91_02371();
                 }
                 else {
                     goto L_0B9F;
@@ -1892,45 +1907,41 @@ public partial class CfgGeneratedOverrides {
             }
             goto L_0BE6;
         L_0B9F:
-            index3++;
-            UInt8[word3, BX + 2] |= 0x40;
-            goto L_0B8F;
+            index2++;
+            UInt8[DS, BX + 2] |= 0x40;
+            DX = word3;
+            AX = index2;
+            return unknown_017E_0B91_02371();
         L_0BE6:
             VerifySpeculativeRunOrFail(cs1, 0x0BE6, SpeculativeRun_0BE6);
-            index3++;
+            index2++;
         }
         else {
             VerifySpeculativeRunOrFail(cs1, 0x0B6E, SpeculativeRun_0B6E);
-            flagOperand_0B6E = UInt8[word3, index3 + 1];
+            flagOperand_0B6E = UInt8[DS, index2 + 1];
             if (flagOperand_0B6E != 0x68) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0BC4, Signature_0BC4_jmp);
                 VerifySpeculativeRunOrFail(cs1, 0x0BD1, SpeculativeRun_0BD1);
-                index3 = word5;
-                UInt8[word3, BX + 2] |= 0x20;
+                index2 = word3;
+                UInt8[DS, BX + 2] |= 0x20;
                 VerifySpeculativeEntryOrFail(cs1, 0x0BD7, Signature_0BD7_jmp);
             }
             else {
                 VerifySpeculativeRunOrFail(cs1, 0x0B74, SpeculativeRun_0B74);
-                index3 = index2;
-                UInt8[word3, BX + 2] |= 0x10;
+                index2 = index;
+                UInt8[DS, BX + 2] |= 0x10;
                 VerifySpeculativeEntryOrFail(cs1, 0x0B7A, Signature_0B7A_jmp);
             }
         }
-        goto L_0B8F;
+        DX = word3;
+        AX = index2;
+        return unknown_017E_0B91_02371();
     L_0B8B:
         VerifySpeculativeEntryOrFail(cs1, 0x0B8B, Signature_0B8B_or);
-        UInt8[word3, BX + 2] |= 0x80;
-    L_0B8F:
-        AX = index3;
-        (DI, SI, CX) = Stack.Restore3();
-        DX = word5;
-        NearReturn();
-        return (AX, CX, DX, SI, DI);
-    }
-
-    public virtual Action unknown_017E_0A9E_0227E_Asm() {
-        (AX, CX, DX, SI, DI) = unknown_017E_0A9E_0227E(AX, DX, BX, DS);
-        return Returned;
+        UInt8[DS, BX + 2] |= 0x80;
+        DX = word3;
+        AX = index2;
+        return unknown_017E_0B91_02371();
     }
 
     /// <summary>Inputs: AX, DX, BX, SI, DI. Outputs: AX, BX, SI. Changes: AX, DX, BX, SI, DI, ES.</summary>
@@ -1969,6 +1980,170 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017E_0BE9_023C9_Asm() {
         (AX, BX, SI) = unknown_017E_0BE9_023C9(AX, DX, BX);
         return Returned;
+    }
+
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: AX, CX, BX, SI, DI, ES, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_017E_0C08_023E8() {
+        ushort word1 = 0;
+        ushort word2 = 0;
+        ushort word3 = 0;
+        CheckExternalEvents(cs1, 0x0C08);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C08, Signature_0C08_push);
+        Stack.Push16(CX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C09, Signature_0C09_push);
+        Stack.Push16(SI);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C0A, Signature_0C0A_push);
+        Stack.Push16(DI);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C0B, Signature_0C0B_push);
+        Stack.Push16(BP);
+        VerifySpeculativeRunOrFail(cs1, 0x0C0C, SpeculativeRun_0C0C);
+        word1 = SP;
+        SP -= 2;
+        word2 = BX;
+        BX = AX;
+        DI = DX;
+        CX = 0;
+        if (word2 != 0xFFFF) {
+            VerifySpeculativeRunOrFail(cs1, 0x0C43, SpeculativeRun_0C43);
+            ES = DI;
+            word3 = UInt16[ES, BX];
+            if (word3 != 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x0C4C, SpeculativeRun_0C4C);
+                if (0 <= (short)word2) {
+                    VerifySpeculativeRunOrFail(cs1, 0x0C50, SpeculativeRun_0C50);
+                    DX = word3;
+                    AX = (ushort)(word1 - 2);
+                    BX = Alu16.Add(BX, 2);
+                    BP = word1;
+                    SI = word2;
+                    NearCall(cs1, 0x0C5B, unknown_017E_1942_03122_AsmEntry);
+                    throw FailAsUntested("Untested return from call at 017E:0C58");
+                }
+            }
+            VerifySpeculativeRunOrFail(cs1, 0x0C64, SpeculativeRun_0C64);
+            if (0 <= (short)word2) {
+                goto L_0C3B;
+            }
+            VerifySpeculativeRunOrFail(cs1, 0x0C68, SpeculativeRun_0C68);
+            AX = word2;
+            goto L_0C3D;
+        }
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x0C1E, SpeculativeRun_0C1E);
+            ES = DI;
+            word3 = UInt16[ES, BX];
+            if (word3 != 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x0C27, SpeculativeRun_0C27);
+                DX = word3;
+                AX = (ushort)(word1 - 2);
+                BX = Alu16.Add(BX, 2);
+                BP = word1;
+                SI = word2;
+                NearCall(cs1, 0x0C32, unknown_017E_1942_03122_AsmEntry);
+                throw FailAsUntested("Untested return from call at 017E:0C2F");
+            }
+        }
+    L_0C3B:
+        VerifySpeculativeEntryOrFail(cs1, 0x0C3B, Signature_0C3B_mov);
+        AX = 0;
+    L_0C3D:
+        VerifySpeculativeRunOrFail(cs1, 0x0C3D, SpeculativeRun_0C3D);
+        SP = word1;
+        BP = Stack.Pop16();
+        return unknown_017E_0B91_02371();
+    }
+
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Does not return.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_017E_0C6C_0244C() {
+        CheckExternalEvents(cs1, 0x0C6C);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C6C, Signature_0C6C_push);
+        Stack.Push16(CX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C6D, Signature_0C6D_push);
+        Stack.Push16(SI);
+        VerifySpeculativeEntryOrFail(cs1, 0x0C6E, Signature_0C6E_push);
+        Stack.Push16(BP);
+        VerifySpeculativeRunOrFail(cs1, 0x0C6F, SpeculativeRun_0C6F);
+        BP = SP;
+        SP = Alu16.Sub(SP, 0x000A);
+        Stack.Push16(DX);
+        VerifySpeculativeRunOrFail(cs1, 0x0C75, SpeculativeRun_0C75);
+        CX = BX;
+        BX = 0x0010;
+        DX = (ushort)(BP - 0x0A);
+        NearCall(cs1, 0x0C80, unknown_017E_19A4_03184Entry);
+        throw FailAsUntested("Untested return from call at 017E:0C7D");
+    }
+
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Does not return.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_017E_0CC5_024A5() {
+        ushort index = 0;
+        ushort index2 = 0;
+        ushort local10 = 0;
+        ushort flagOperand_0CDF = 0;
+        unknown_017E_0CC5_024A5Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(cs1, 0x0CC5);
+        VerifySpeculativeEntryOrFail(cs1, 0x0CC5, Signature_0CC5_push);
+        Stack.Push16(SI);
+        VerifySpeculativeEntryOrFail(cs1, 0x0CC6, Signature_0CC6_push);
+        Stack.Push16(DI);
+        VerifySpeculativeEntryOrFail(cs1, 0x0CC7, Signature_0CC7_push);
+        Stack.Push16(BP);
+        VerifySpeculativeRunOrFail(cs1, 0x0CC8, SpeculativeRun_0CC8);
+        index = SP;
+        SP -= 8;
+        index2 = AX;
+        frame.Local10 = DX;
+        VerifySpeculativeEntryOrFail(cs1, 0x0CD2, Signature_0CD2_mov);
+        frame.Local12 = BX;
+        VerifySpeculativeEntryOrFail(cs1, 0x0CD5, Signature_0CD5_mov);
+        frame.Local8 = CX;
+        VerifySpeculativeRunOrFail(cs1, 0x0CD8, SpeculativeRun_0CD8);
+        if ((short)CX < 0) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0D04, Signature_0D04_neg);
+            frame.Local8 = (ushort)-frame.Local8;
+            CarryFlag = frame.Local8 != 0;
+            VerifySpeculativeEntryOrFail(cs1, 0x0D07, Signature_0D07_mov);
+            UInt8[DS, index2] = 0x2D;
+            VerifySpeculativeEntryOrFail(cs1, 0x0D0A, Signature_0D0A_neg);
+            frame.Local12 = (ushort)-frame.Local12;
+            CarryFlag = frame.Local12 != 0;
+            VerifySpeculativeEntryOrFail(cs1, 0x0D0D, Signature_0D0D_sbb);
+            frame.Local8 = (ushort)(frame.Local8 - (CarryFlag ? 1 : 0));
+            VerifySpeculativeRunOrFail(cs1, 0x0D11, SpeculativeRun_0D11);
+            index2++;
+        }
+        VerifySpeculativeRunOrFail(cs1, 0x0CDC, SpeculativeRun_0CDC);
+        local10 = frame.Local10;
+        flagOperand_0CDF = UInt16[DS, local10 + 8];
+        Alu16.Sub(flagOperand_0CDF, 0xFFFF);
+        if (flagOperand_0CDF == 0xFFFF) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0CE5, Signature_0CE5_mov);
+            UInt16[DS, local10 + 8] = 4;
+        }
+        VerifySpeculativeRunOrFail(cs1, 0x0CEA, SpeculativeRun_0CEA);
+        BX = 0x000A;
+        AX = frame.Local8;
+        DX = index2;
+        BP = index;
+        SI = index2;
+        NearCall(cs1, 0x0CF5, unknown_017E_19A4_03184Entry);
+        throw FailAsUntested("Untested return from call at 017E:0CF2");
+    }
+
+    public readonly struct unknown_017E_0CC5_024A5Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP - 0x000C].</summary>
+        public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
+
+        /// <summary>Word at SS:[entry SP - 0x000A].</summary>
+        public ushort Local10 { get => _slots.GetWord(-0x000A); set => _slots.SetWord(-0x000A, value); }
+
+        /// <summary>Word at SS:[entry SP - 0x0008].</summary>
+        public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
     /// <summary>Inputs: AX, BX, DS. Outputs: BX. Changes: AX, BX.</summary>
@@ -2048,14 +2223,25 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BP, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0E94_02674() {
         ushort word1;
         byte byte2 = 0;
         byte byte1 = 0;
         byte local10Byte;
+        ushort index;
+        ushort local26 = 0;
+        ushort index2 = 0;
         ushort flagOperand_0FE0 = 0;
+        byte flagOperand_107E = 0;
+        byte flagOperand_10E2 = 0;
+        byte flagOperand_10E8 = 0;
+        byte flagOperand_1136 = 0;
+        ushort flagOperand_10FD = 0;
+        ushort flagOperand_1103 = 0;
+        ushort flagOperand_1150 = 0;
+        ushort flagOperand_1156 = 0;
         ushort flagOperand_11A7 = 0;
         ushort flagOperand_11B1 = 0;
         ushort flagOperand_11B7 = 0;
@@ -2063,6 +2249,10 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_11FE = 0;
         ushort flagOperand_1229 = 0;
         byte flagOperand_1236 = 0;
+        ushort flagOperand_1275 = 0;
+        byte flagOperand_127B = 0;
+        byte flagOperand_1292 = 0;
+        byte flagOperand_12EF = 0;
         unknown_017E_0E94_02674Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x0E94);
         Stack.Save(SI, DI, BP);
@@ -2319,22 +2509,273 @@ public partial class CfgGeneratedOverrides {
         frame.Local22 = 0x000A;
         if (AL > 0x37) {
             VerifySpeculativeEntryOrFail(cs1, 0x0FAF, Signature_0FAF_jmp);
-            VerifySpeculativeEntryOrFail(cs1, 0x1356, Signature_1356_mov);
-            UInt16[DS, SI + 6] = 0;
-            VerifySpeculativeRunOrFail(cs1, 0x135B, SpeculativeRun_135B);
-            BX = frame.Local26;
-            AL = UInt8[DS, SI + 0x18];
-            UInt8[DS, BX] = AL;
-            VerifySpeculativeEntryOrFail(cs1, 0x1363, Signature_1363_mov);
-            UInt16[DS, SI + 0x0C] = 1;
-            VerifySpeculativeEntryOrFail(cs1, 0x1368, Signature_1368_jmp);
         }
         else {
             AH = 0;
             BX = (ushort)(AX << 1);
-            if (UInt16[CS, BX + 0x0E24] != 0x118B) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0E24]:X4} at 017E:0F64");
+            switch (UInt16[CS, BX + 0x0E24]) {
+                case 0x0EED:
+                    goto L_0EED;
+                case 0x107E:
+                    break;
+                case 0x10C1:
+                    goto L_10C1;
+                case 0x113E:
+                    goto L_113E;
+                case 0x118B:
+                    goto L_118B;
+                case 0x11D6:
+                    goto L_11D6;
+                case 0x11DD:
+                    goto L_11DD;
+                case 0x1275:
+                    VerifySpeculativeRunOrFail(cs1, 0x1275, SpeculativeRun_1275);
+                    flagOperand_1275 = UInt16[DS, SI + 6];
+                    if (flagOperand_1275 == 0) {
+                        VerifySpeculativeRunOrFail(cs1, 0x127B, SpeculativeRun_127B);
+                        flagOperand_127B = UInt8[DS, SI + 3];
+                        if ((flagOperand_127B & 4) == 0) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x12D9, Signature_12D9_mov);
+                            UInt16[DS, SI + 6] = 4;
+                            VerifySpeculativeEntryOrFail(cs1, 0x12DE, Signature_12DE_jmp);
+                        }
+                        else {
+                            VerifySpeculativeEntryOrFail(cs1, 0x1281, Signature_1281_mov);
+                            UInt16[DS, SI + 6] = 9;
+                        }
+                    }
+                    VerifySpeculativeEntryOrFail(cs1, 0x1286, Signature_1286_and);
+                    UInt8[DS, SI + 2] &= 0xF9;
+                    VerifySpeculativeEntryOrFail(cs1, 0x128A, Signature_128A_add);
+                    UInt16[DS, DI] += 2;
+                    VerifySpeculativeRunOrFail(cs1, 0x128D, SpeculativeRun_128D);
+                    BX = UInt16[DS, DI];
+                    CX = UInt16[DS, BX - 2];
+                    flagOperand_1292 = UInt8[DS, SI + 3];
+                    Alu8.And(flagOperand_1292, 4);
+                    if ((flagOperand_1292 & 4) == 0) {
+                        VerifySpeculativeRunOrFail(cs1, 0x12E0, SpeculativeRun_12E0);
+                        BX = 4;
+                        DX = frame.Local26;
+                        AX = CX;
+                        VerifySpeculativeEntryOrFail(cs1, 0x12B8, Signature_12B8_call);
+                        NearCall(cs1, 0x12BB, unknown_017E_0C6C_0244CEntry);
+                        throw FailAsUntested("Untested return from call at 017E:12B8");
+                    }
+                    VerifySpeculativeRunOrFail(cs1, 0x1298, SpeculativeRun_1298);
+                    BX = Alu16.Add(BX, 2);
+                    UInt16[DS, DI] = BX;
+                    VerifySpeculativeRunOrFail(cs1, 0x129D, SpeculativeRun_129D);
+                    DX = frame.Local26;
+                    AX = UInt16[DS, BX - 2];
+                    BX = 4;
+                    NearCall(cs1, 0x12A9, unknown_017E_0C6C_0244CEntry);
+                    throw FailAsUntested("Untested return from call at 017E:12A6");
+                case 0x12EA:
+                    goto L_12EA;
+                case 0x1338:
+                    VerifySpeculativeEntryOrFail(cs1, 0x1338, Signature_1338_add);
+                    UInt16[DS, DI] = Alu16.Add(UInt16[DS, DI], 2);
+                    VerifySpeculativeRunOrFail(cs1, 0x133B, SpeculativeRun_133B);
+                    BX = UInt16[DS, DI];
+                    AX = frame.Local26;
+                    DX = UInt16[DS, BX - 2];
+                    NearCall(cs1, 0x1346, unknown_017E_1942_03122_AsmEntry);
+                    throw FailAsUntested("Untested return from call at 017E:1343");
+                case 0x1356:
+                    goto L_1356;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x0E24]:X4} at 017E:0F64");
             }
+            VerifySpeculativeRunOrFail(cs1, 0x107E, SpeculativeRun_107E);
+            flagOperand_107E = UInt8[DS, SI + 2];
+            if ((flagOperand_107E & 0x20) != 0) {
+                VerifySpeculativeEntryOrFail(cs1, 0x1087, Signature_1087_add);
+                UInt16[DS, DI] = Alu16.Add(UInt16[DS, DI], 4);
+                VerifySpeculativeRunOrFail(cs1, 0x108A, SpeculativeRun_108A);
+                index = UInt16[DS, DI];
+                word1 = UInt16[DS, index - 4];
+                DX = SI;
+                frame.Local10 = word1;
+                VerifySpeculativeRunOrFail(cs1, 0x1094, SpeculativeRun_1094);
+                AX = UInt16[DS, index - 2];
+                BX = frame.Local10;
+                frame.Local8 = AX;
+                VerifySpeculativeRunOrFail(cs1, 0x109D, SpeculativeRun_109D);
+                CX = AX;
+                AX = frame.Local26;
+                NearCall(cs1, 0x10A5, unknown_017E_0CC5_024A5Entry);
+                throw FailAsUntested("Untested return from call at 017E:10A2");
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x1084, Signature_1084_jmp);
+        L_0EED:
+            VerifySpeculativeRunOrFail(cs1, 0x0EED, SpeculativeRun_0EED);
+            AX = frame.Local26;
+            BX = SI;
+            DX = DI;
+            frame.Local14 += 1;
+            VerifySpeculativeEntryOrFail(cs1, 0x0EF7, Signature_0EF7_call);
+            throw FailAsUntested("Untested indirect call at 017E:0EF7");
+        L_10C1:
+            VerifySpeculativeRunOrFail(cs1, 0x10C1, SpeculativeRun_10C1);
+            local26 = frame.Local26;
+            UInt8[DS, local26] = 0;
+            VerifySpeculativeRunOrFail(cs1, 0x10C7, SpeculativeRun_10C7);
+            AL = UInt8[DS, SI + 3];
+            if ((AL & 4) != 0) {
+                VerifySpeculativeEntryOrFail(cs1, 0x110D, Signature_110D_add);
+                UInt16[DS, DI] += 4;
+                VerifySpeculativeRunOrFail(cs1, 0x1110, SpeculativeRun_1110);
+                index2 = UInt16[DS, DI];
+                AX = UInt16[DS, index2 - 2];
+                DI = UInt16[DS, index2 - 4];
+                if (AX == 0) {
+                    VerifySpeculativeRunOrFail(cs1, 0x111C, SpeculativeRun_111C);
+                    if (DI == 0) {
+                        goto L_10E2;
+                    }
+                }
+                VerifySpeculativeEntryOrFail(cs1, 0x1120, Signature_1120_mov);
+                frame.Local14 = DI;
+                VerifySpeculativeEntryOrFail(cs1, 0x1123, Signature_1123_mov);
+                frame.Local12 = AX;
+                VerifySpeculativeEntryOrFail(cs1, 0x1126, Signature_1126_jmp);
+            }
+            else {
+                VerifySpeculativeRunOrFail(cs1, 0x10CE, SpeculativeRun_10CE);
+                UInt16[DS, DI] += 2;
+                VerifySpeculativeRunOrFail(cs1, 0x10D3, SpeculativeRun_10D3);
+                index = UInt16[DS, DI];
+                index2 = UInt16[DS, index - 2];
+                if (index2 != 0) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x10DC, Signature_10DC_mov);
+                    frame.Local12 = DS;
+                    VerifySpeculativeEntryOrFail(cs1, 0x10DF, Signature_10DF_mov);
+                    frame.Local14 = index2;
+                }
+            }
+        L_10E2:
+            VerifySpeculativeRunOrFail(cs1, 0x10E2, SpeculativeRun_10E2);
+            flagOperand_10E2 = UInt8[DS, SI + 0x18];
+            if (flagOperand_10E2 != 0x53) {
+                goto L_1136;
+            }
+            VerifySpeculativeRunOrFail(cs1, 0x10E8, SpeculativeRun_10E8);
+            flagOperand_10E8 = UInt8[DS, SI + 2];
+            Alu8.And(flagOperand_10E8, 0x20);
+            if ((flagOperand_10E8 & 0x20) == 0) {
+                goto L_1128;
+            }
+            else {
+                goto L_10EE;
+            }
+        L_1136:
+            VerifySpeculativeRunOrFail(cs1, 0x1136, SpeculativeRun_1136);
+            flagOperand_1136 = UInt8[DS, SI + 2];
+            Alu8.And(flagOperand_1136, 0x40);
+            if ((flagOperand_1136 & 0x40) != 0) {
+                goto L_1128;
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x113C, Signature_113C_jmp);
+        L_10EE:
+            VerifySpeculativeRunOrFail(cs1, 0x10EE, SpeculativeRun_10EE);
+            AX = frame.Local14;
+            DX = frame.Local12;
+            BX = UInt16[DS, SI + 8];
+            (AX, BX, SI) = NearCall(cs1, 0x10FA, () => unknown_017E_0BE9_023C9(AX, DX, BX));
+            VerifySpeculativeEntryOrFail(cs1, 0x10FA, Signature_10FA_mov);
+            UInt16[DS, SI + 0x10] = AX;
+            VerifySpeculativeRunOrFail(cs1, 0x10FD, SpeculativeRun_10FD);
+            flagOperand_10FD = UInt16[DS, SI + 8];
+            if ((short)flagOperand_10FD >= 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x1103, SpeculativeRun_1103);
+                flagOperand_1103 = UInt16[DS, SI + 8];
+                if ((short)AX > (short)flagOperand_1103) {
+                    VerifySpeculativeRunOrFail(cs1, 0x1108, SpeculativeRun_1108);
+                    AX = UInt16[DS, SI + 8];
+                    VerifySpeculativeEntryOrFail(cs1, 0x10B0, Signature_10B0_mov);
+                    UInt16[DS, SI + 0x10] = AX;
+                }
+            }
+            goto L_10B3;
+        L_1128:
+            VerifySpeculativeRunOrFail(cs1, 0x1128, SpeculativeRun_1128);
+            AX = frame.Local14;
+            DX = frame.Local12;
+            BX = UInt16[DS, SI + 8];
+            NearCall(cs1, 0x1134, unknown_017E_0C08_023E8Entry);
+            throw FailAsUntested("Untested return from call at 017E:1131");
+        L_113E:
+            VerifySpeculativeRunOrFail(cs1, 0x113E, SpeculativeRun_113E);
+            AL = UInt8[DS, SI + 2];
+            if ((AL & 1) != 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x1145, SpeculativeRun_1145);
+                if ((AL & 0x80) != 0) {
+                    VerifySpeculativeRunOrFail(cs1, 0x114C, SpeculativeRun_114C);
+                    if (CX == 0) {
+                        VerifySpeculativeRunOrFail(cs1, 0x1150, SpeculativeRun_1150);
+                        flagOperand_1150 = frame.Local16;
+                        if (flagOperand_1150 != 0) {
+                            goto L_1162;
+                        }
+                        VerifySpeculativeRunOrFail(cs1, 0x1156, SpeculativeRun_1156);
+                        flagOperand_1156 = frame.Local18;
+                        if (flagOperand_1156 != 0) {
+                            goto L_1162;
+                        }
+                        VerifySpeculativeEntryOrFail(cs1, 0x115C, Signature_115C_cmp);
+                        Alu16.Sub(frame.Local20, 0);
+                        goto L_1160;
+                    }
+                    goto L_1162;
+                }
+                else {
+                    VerifySpeculativeEntryOrFail(cs1, 0x1149, Signature_1149_jmp);
+                    VerifySpeculativeRunOrFail(cs1, 0x11CE, SpeculativeRun_11CE);
+                    AX = frame.Local8;
+                    AX |= frame.Local10;
+                    ZeroFlag = AX == 0;
+                }
+            L_1160:
+                VerifySpeculativeEntryOrFail(cs1, 0x1160, Signature_1160_je);
+                if (ZeroFlag) {
+                    goto L_1186;
+                }
+            L_1162:
+                VerifySpeculativeRunOrFail(cs1, 0x1162, SpeculativeRun_1162);
+                word1 = UInt16[DS, SI + 0x0C];
+                DX = word1;
+                BX = frame.Local26;
+                DX++;
+                BX += word1;
+                UInt16[DS, SI + 0x0C] = DX;
+                VerifySpeculativeEntryOrFail(cs1, 0x1170, Signature_1170_mov);
+                UInt8[DS, BX] = 0x30;
+                VerifySpeculativeRunOrFail(cs1, 0x1173, SpeculativeRun_1173);
+                AX = UInt16[DS, SI + 0x0C];
+                BX = frame.Local26;
+                DX = AX;
+                BX += AX;
+                DX++;
+                AL = UInt8[DS, SI + 0x18];
+                UInt16[DS, SI + 0x0C] = DX;
+                VerifySpeculativeEntryOrFail(cs1, 0x1184, Signature_1184_mov);
+                UInt8[DS, BX] = AL;
+            }
+        L_1186:
+            VerifySpeculativeEntryOrFail(cs1, 0x1186, Signature_1186_mov);
+            frame.Local22 = 0x0010;
+            goto L_118B;
+        L_11D6:
+            VerifySpeculativeEntryOrFail(cs1, 0x11D6, Signature_11D6_mov);
+            frame.Local22 = 2;
+            VerifySpeculativeEntryOrFail(cs1, 0x11DB, Signature_11DB_jmp);
+            goto L_118B;
+        L_11DD:
+            VerifySpeculativeEntryOrFail(cs1, 0x11DD, Signature_11DD_mov);
+            frame.Local22 = 8;
+            VerifySpeculativeEntryOrFail(cs1, 0x11E2, Signature_11E2_jmp);
+        L_118B:
             if (UInt16[DS, SI + 8] != 0xFFFF) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1191, Signature_1191_mov);
                 UInt8[DS, SI + 0x19] = 0x20;
@@ -2457,7 +2898,42 @@ public partial class CfgGeneratedOverrides {
             L_1226:
                 ;
             }
+            goto L_10B3;
+        L_12EA:
+            VerifySpeculativeEntryOrFail(cs1, 0x12EA, Signature_12EA_mov);
+            UInt16[DS, SI + 0x10] = 1;
+            VerifySpeculativeRunOrFail(cs1, 0x12EF, SpeculativeRun_12EF);
+            flagOperand_12EF = UInt8[DS, SI + 2];
+            if ((flagOperand_12EF & 0x40) != 0) {
+                VerifySpeculativeEntryOrFail(cs1, 0x1305, Signature_1305_add);
+                UInt16[DS, DI] = Alu16.Add(UInt16[DS, DI], 2);
+                VerifySpeculativeRunOrFail(cs1, 0x1308, SpeculativeRun_1308);
+                BX = UInt16[DS, DI];
+                AX = (ushort)(BP - 0x12);
+                DX = UInt16[DS, BX - 2];
+                NearCall(cs1, 0x1313, unknown_017E_1942_03122_AsmEntry);
+                throw FailAsUntested("Untested return from call at 017E:1310");
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x12F5, Signature_12F5_add);
+            UInt16[DS, DI] += 2;
+            VerifySpeculativeRunOrFail(cs1, 0x12F8, SpeculativeRun_12F8);
+            index = UInt16[DS, DI];
+            AL = UInt8[DS, index - 2];
+            BX = frame.Local26;
+            UInt8[DS, BX] = AL;
+            VerifySpeculativeEntryOrFail(cs1, 0x1302, Signature_1302_jmp);
+            goto L_10B3;
         }
+    L_1356:
+        VerifySpeculativeEntryOrFail(cs1, 0x1356, Signature_1356_mov);
+        UInt16[DS, SI + 6] = 0;
+        VerifySpeculativeRunOrFail(cs1, 0x135B, SpeculativeRun_135B);
+        BX = frame.Local26;
+        AL = UInt8[DS, SI + 0x18];
+        UInt8[DS, BX] = AL;
+        VerifySpeculativeEntryOrFail(cs1, 0x1363, Signature_1363_mov);
+        UInt16[DS, SI + 0x0C] = 1;
+        VerifySpeculativeEntryOrFail(cs1, 0x1368, Signature_1368_jmp);
     L_10B3:
         AX = SI;
         DX = SsUInt16[BP - 6];
@@ -2500,7 +2976,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_136B_02B4B() {
         byte byte1 = 0;
@@ -2508,8 +2984,13 @@ public partial class CfgGeneratedOverrides {
         ushort index;
         byte byte2 = 0;
         byte byte3;
+        ushort flagOperand_1495 = 0;
+        ushort flagOperand_14A8 = 0;
         byte flagOperand_14C2 = 0;
         ushort flagOperand_14C8 = 0;
+        ushort flagOperand_14EF = 0;
+        ushort flagOperand_1520 = 0;
+        ushort flagOperand_153A = 0;
         ushort flagOperand_1556 = 0;
         unknown_017E_136B_02B4BFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x136B);
@@ -2548,7 +3029,7 @@ public partial class CfgGeneratedOverrides {
             BX = (ushort)(BP - 0x22);
             DX = (ushort)(BP - 0x6C);
             AX = CX;
-            (AX, CX, DX, SI, DI) = NearCall(cs1, 0x13B7, () => unknown_017E_0A9E_0227E(AX, DX, BX, DS));
+            NearCall(cs1, 0x13B7, unknown_017E_0A9E_0227EEntry);
             BX = AX;
             byte1 = UInt8[DS, BX];
             BX++;
@@ -2645,8 +3126,12 @@ public partial class CfgGeneratedOverrides {
             AX = (ushort)(AX + SsUInt16[BP - 0x0E] + SsUInt16[BP - 0x0C]);
             SsUInt16[BP - 6] = DX;
             SsUInt16[BP - 0x1C] -= AX;
-            if ((SsUInt8[BP - 0x20] & 8) == 0 && (SsUInt8[BP - 9] == 0x20 && (short)SsUInt16[BP - 0x1C] > 0)) {
-                goto L_149B;
+            if ((SsUInt8[BP - 0x20] & 8) == 0 && SsUInt8[BP - 9] == 0x20) {
+                flagOperand_1495 = SsUInt16[BP - 0x1C];
+                Alu16.Sub(flagOperand_1495, 0);
+                if ((short)flagOperand_1495 > 0) {
+                    goto L_149B;
+                }
             }
             BX = (ushort)(BP - 0x6A);
             while (true) {
@@ -2664,7 +3149,9 @@ public partial class CfgGeneratedOverrides {
                 NearCall(cs1, 0x148A, unknown_017E_04FC_01CDCEntry);
                 SsUInt16[BP - 0x16] -= 1;
             }
-            if ((short)SsUInt16[BP - 0x14] > 0) {
+            flagOperand_14A8 = SsUInt16[BP - 0x14];
+            Alu16.Sub(flagOperand_14A8, 0);
+            if ((short)flagOperand_14A8 > 0) {
                 goto L_14AE;
             }
             AL = SsUInt8[BP - 0x0A];
@@ -2679,6 +3166,7 @@ public partial class CfgGeneratedOverrides {
             }
             VerifySpeculativeRunOrFail(cs1, 0x14C8, SpeculativeRun_14C8);
             flagOperand_14C8 = SsUInt16[BP - 0x12];
+            Alu16.Sub(flagOperand_14C8, 0);
             if ((short)flagOperand_14C8 <= 0) {
                 goto L_14EF;
             }
@@ -2707,18 +3195,25 @@ public partial class CfgGeneratedOverrides {
                 SsUInt16[BP - 0x12] -= 1;
             }
         L_14EF:
-            if ((short)SsUInt16[BP - 0x10] > 0) {
+            flagOperand_14EF = SsUInt16[BP - 0x10];
+            Alu16.Sub(flagOperand_14EF, 0);
+            if ((short)flagOperand_14EF > 0) {
                 goto L_14F5;
             }
-            if ((short)SsUInt16[BP - 0x0E] > 0) {
+            flagOperand_1520 = SsUInt16[BP - 0x0E];
+            Alu16.Sub(flagOperand_1520, 0);
+            if ((short)flagOperand_1520 > 0) {
                 goto L_1526;
             }
-            if ((short)SsUInt16[BP - 0x0C] > 0) {
+            flagOperand_153A = SsUInt16[BP - 0x0C];
+            Alu16.Sub(flagOperand_153A, 0);
+            if ((short)flagOperand_153A > 0) {
                 goto L_1540;
             }
             if ((SsUInt8[BP - 0x20] & 8) != 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x1556, SpeculativeRun_1556);
                 flagOperand_1556 = SsUInt16[BP - 0x1C];
+                Alu16.Sub(flagOperand_1556, 0);
                 if ((short)flagOperand_1556 > 0) {
                     goto L_155C;
                 }
@@ -2735,12 +3230,20 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeRunOrFail(cs1, 0x149B, SpeculativeRun_149B);
         DX = 0x0020;
         AX = (ushort)(BP - 0x22);
-        throw FailAsUntested("Untested indirect call at 017E:14A1");
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:14A1");
+        }
+        NearCall(cs1, 0x14A3, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:14A1");
     L_14AE:
         VerifySpeculativeRunOrFail(cs1, 0x14AE, SpeculativeRun_14AE);
         DX = 0x0030;
         AX = (ushort)(BP - 0x22);
-        throw FailAsUntested("Untested indirect call at 017E:14B4");
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:14B4");
+        }
+        NearCall(cs1, 0x14B6, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:14B4");
     L_14CE:
         VerifySpeculativeRunOrFail(cs1, 0x14CE, SpeculativeRun_14CE);
         ES = SsUInt16[BP - 6];
@@ -2748,13 +3251,21 @@ public partial class CfgGeneratedOverrides {
         word1 = (ushort)(short)(sbyte)byte3;
         DX = word1;
         AX = (ushort)(BP - 0x22);
-        SI++;
-        throw FailAsUntested("Untested indirect call at 017E:14DB");
+        SI = Alu16.Inc(SI);
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:14DB");
+        }
+        NearCall(cs1, 0x14DD, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:14DB");
     L_14F5:
         VerifySpeculativeRunOrFail(cs1, 0x14F5, SpeculativeRun_14F5);
         DX = 0x0030;
         AX = (ushort)(BP - 0x22);
-        throw FailAsUntested("Untested indirect call at 017E:14FB");
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:14FB");
+        }
+        NearCall(cs1, 0x14FD, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:14FB");
     L_1526:
         VerifySpeculativeRunOrFail(cs1, 0x1526, SpeculativeRun_1526);
         ES = SsUInt16[BP - 6];
@@ -2762,18 +3273,30 @@ public partial class CfgGeneratedOverrides {
         word1 = (ushort)(short)(sbyte)byte3;
         DX = word1;
         AX = (ushort)(BP - 0x22);
-        SI++;
-        throw FailAsUntested("Untested indirect call at 017E:1533");
+        SI = Alu16.Inc(SI);
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:1533");
+        }
+        NearCall(cs1, 0x1535, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:1533");
     L_1540:
         VerifySpeculativeRunOrFail(cs1, 0x1540, SpeculativeRun_1540);
         DX = 0x0030;
         AX = (ushort)(BP - 0x22);
-        throw FailAsUntested("Untested indirect call at 017E:1546");
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:1546");
+        }
+        NearCall(cs1, 0x1548, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:1546");
     L_155C:
         VerifySpeculativeRunOrFail(cs1, 0x155C, SpeculativeRun_155C);
         DX = 0x0020;
         AX = (ushort)(BP - 0x22);
-        throw FailAsUntested("Untested indirect call at 017E:1562");
+        if (DI != 0x04FC) {
+            throw FailAsUntested($"Untested near call target 0x{DI:X4} at 017E:1562");
+        }
+        NearCall(cs1, 0x1564, unknown_017E_04FC_01CDCEntry);
+        throw FailAsUntested("Untested return from call at 017E:1562");
     L_13F0:
         AX = SsUInt16[BP - 0x18];
         return unknown_017E_0D9A_0257A();
@@ -2801,7 +3324,7 @@ public partial class CfgGeneratedOverrides {
         public byte Local8Byte { get => _slots.GetByte(-0x0008); set => _slots.SetByte(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CL, DX, BP. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_156F_02D4F() {
         ushort index = 0;
@@ -2918,7 +3441,7 @@ public partial class CfgGeneratedOverrides {
         }
         AX = SsUInt16[BP - 2];
         SP = BP;
-        (BP, _, _, DX, CX, _) = Stack.Restore6();
+        (BP, DI, SI, DX, CX, BX) = Stack.Restore6();
         return NearRet();
     }
 
@@ -2936,11 +3459,10 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_1684_02E64() {
         ushort flagOperand_16DC = 0;
-        byte flagOperand_1714 = 0;
         unknown_017E_1684_02E64Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x1684);
         Stack.Save(BX, CX, DX, SI, DI, BP);
@@ -3005,23 +3527,28 @@ public partial class CfgGeneratedOverrides {
                     VerifySpeculativeRunOrFail(cs1, 0x16E2, SpeculativeRun_16E2);
                     SI = UInt16[DS, SI + 4];
                 }
-                flagOperand_1714 = SsUInt8[BP - 2];
-                Alu8.Sub(flagOperand_1714, 0);
-                if (flagOperand_1714 != 0) {
-                    break;
+                if (SsUInt8[BP - 2] != 0) {
+                    goto L_171A;
                 }
                 AX = DI;
                 NearCall(cs1, 0x172E, unknown_017E_1F62_03742Entry);
-                Alu16.And(AX, AX);
+                if (AX == 0) {
+                    goto L_171A;
+                }
+                SsUInt8[BP - 2] = 1;
+                continue;
+            L_171A:
+                VerifySpeculativeRunOrFail(cs1, 0x171A, SpeculativeRun_171A);
+                AX = DI;
+                AX = NearCall(cs1, 0x171F, () => unknown_017E_1E92_03672(AX));
+                VerifySpeculativeRunOrFail(cs1, 0x171F, SpeculativeRun_171F);
                 if (AX == 0) {
                     break;
                 }
-                SsUInt8[BP - 2] = 1;
+                VerifySpeculativeEntryOrFail(cs1, 0x1723, Signature_1723_mov);
+                SsUInt8[BP - 2] = 0;
+                VerifySpeculativeEntryOrFail(cs1, 0x1727, Signature_1727_jmp);
             }
-            VerifySpeculativeRunOrFail(cs1, 0x171A, SpeculativeRun_171A);
-            AX = DI;
-            NearCall(cs1, 0x171F, unknown_017E_1E92_03672_AsmEntry);
-            throw FailAsUntested("Untested return from call at 017E:171C");
         L_1739:
             AX = DX;
             goto L_16E9;
@@ -3229,7 +3756,6 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017E_181D_02FFD() {
         ushort word1;
         ushort word2;
-        byte flagOperand_1834 = 0;
         ushort flagOperand_1857 = 0;
         unknown_017E_181D_02FFDFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x181D);
@@ -3244,12 +3770,14 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             DI = 0;
-            flagOperand_1834 = UInt8[DS, SI + 7];
-            Alu8.And(flagOperand_1834, 0x10);
-            if ((flagOperand_1834 & 0x10) != 0) {
+            if ((UInt8[DS, SI + 7] & 0x10) != 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x189F, Signature_189F_call);
                 NearCall(cs1, 0x18A2, unknown_017E_156F_02D4FEntry);
-                throw FailAsUntested("Untested return from call at 017E:189F");
+                VerifySpeculativeRunOrFail(cs1, 0x18A2, SpeculativeRun_18A2);
+                if (AX != 0) {
+                    VerifySpeculativeRunOrFail(cs1, 0x18A6, SpeculativeRun_18A6);
+                    DI = 0xFFFF;
+                }
             }
             AX = UInt16[DS, SI + 2];
             if (AX != 0) {
@@ -3258,16 +3786,16 @@ public partial class CfgGeneratedOverrides {
                 CarryFlag = AX != 0;
                 word1 = UInt16[DS, SI + 8];
                 word2 = (ushort)((short)AX >> 15);
-                frame.Local14 = word1;
+                SsUInt16[BP - 4] = word1;
                 VerifySpeculativeRunOrFail(cs1, 0x184A, SpeculativeRun_184A);
                 CX = word2;
                 BX = AX;
                 DX = 1;
-                AX = frame.Local14;
+                AX = SsUInt16[BP - 4];
                 NearCall(cs1, 0x1857, unknown_017E_1BBA_0339AEntry);
                 throw FailAsUntested("Untested return from call at 017E:1854");
             }
-            flagOperand_1857 = frame.Local12;
+            flagOperand_1857 = SsUInt16[BP - 2];
             Alu16.Sub(flagOperand_1857, 0);
             if (flagOperand_1857 != 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x185D, SpeculativeRun_185D);
@@ -3278,7 +3806,7 @@ public partial class CfgGeneratedOverrides {
             if ((UInt8[DS, SI + 6] & 8) != 0) {
                 BX = UInt16[DS, SI + 4];
                 AX = UInt16[DS, BX + 4];
-                (AX, CX, _, BX, BP, SI, DI, DS) = NearCall(cs1, 0x1874, () => unknown_017E_175A_02F3A(AX, CX, BP, 0, DS));
+                (AX, CX, _, BX, BP, SI, DI, DS) = NearCall(cs1, 0x1874, () => unknown_017E_175A_02F3A(AX, CX, BP, DI, DS));
                 BX = UInt16[DS, SI + 4];
                 UInt16[DS, BX + 4] = 0;
             }
@@ -3298,9 +3826,6 @@ public partial class CfgGeneratedOverrides {
 
     public readonly struct unknown_017E_181D_02FFDFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
         private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
-
-        /// <summary>Word at SS:[entry SP - 0x000E].</summary>
-        public ushort Local14 { get => _slots.GetWord(-0x000E); set => _slots.SetWord(-0x000E, value); }
 
         /// <summary>Word at SS:[entry SP - 0x000C].</summary>
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
@@ -3433,6 +3958,133 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_017E_1942_03122_Asm() {
         unknown_017E_1942_03122(AX, DX, DS);
         return Returned;
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.017E.2.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_017E_195F_0313F(ushort word1, ushort word2, ushort word3, ushort word4) {
+        AX = word1;
+        ushort index = 0;
+        ushort word5 = 0;
+        ushort index2 = 0;
+        ushort index3 = 0;
+        byte byte1;
+        unknown_017E_195F_0313FFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(cs1, 0x195F);
+        VerifySpeculativeEntryOrFail(cs1, 0x195F, Signature_195F_push);
+        Stack.Push16(CX);
+        VerifySpeculativeEntryOrFail(cs1, 0x1960, Signature_1960_push);
+        Stack.Push16(SI);
+        VerifySpeculativeEntryOrFail(cs1, 0x1961, Signature_1961_push);
+        Stack.Push16(DI);
+        VerifySpeculativeEntryOrFail(cs1, 0x1962, Signature_1962_push);
+        Stack.Push16(BP);
+        VerifySpeculativeRunOrFail(cs1, 0x1963, SpeculativeRun_1963);
+        index = SP;
+        SP -= 0x0024;
+        Stack.Push16(word2);
+        VerifySpeculativeRunOrFail(cs1, 0x1969, SpeculativeRun_1969);
+        word5 = word3;
+        frame.Local44Byte = 0;
+        VerifySpeculativeRunOrFail(cs1, 0x196F, SpeculativeRun_196F);
+        index2 = (ushort)(index - 0x23);
+        index3 = word2;
+        do {
+            CheckExternalEvents(cs1, 0x1974);
+            VerifySpeculativeRunOrFail(cs1, 0x1974, SpeculativeRun_1974);
+            BX = (ushort)(index - 2);
+            frame.Local10 = word5;
+            VerifySpeculativeRunOrFail(cs1, 0x197A, SpeculativeRun_197A);
+            (AX, word2) = Div16(divisor: UInt16[word4, BX], dividend: (uint)AX);
+            UInt16[word4, BX] = AX;
+            VerifySpeculativeRunOrFail(cs1, 0x1980, SpeculativeRun_1980);
+            word3 = word2;
+            byte1 = UInt8[word4, word3 + 0x018E];
+            UInt8[word4, index2] = byte1;
+            VerifySpeculativeRunOrFail(cs1, 0x1988, SpeculativeRun_1988);
+            AX = frame.Local10;
+            index2++;
+        } while (AX != 0);
+        do {
+            CheckExternalEvents(cs1, 0x1990);
+            VerifySpeculativeRunOrFail(cs1, 0x1990, SpeculativeRun_1990);
+            index2--;
+            AL = UInt8[word4, index2];
+            UInt8[word4, index3] = AL;
+            VerifySpeculativeRunOrFail(cs1, 0x1995, SpeculativeRun_1995);
+            index3++;
+            Alu8.And(AL, AL);
+        } while (AL != 0);
+        VerifySpeculativeRunOrFail(cs1, 0x199A, SpeculativeRun_199A);
+        AX = frame.Local46;
+        SP = index;
+        (BP, DI, SI, CX) = Stack.Restore4();
+        DX = word2;
+        BX = word3;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_017E_195F_0313F_Asm() {
+        unknown_017E_195F_0313F(AX, DX, BX, DS);
+        return Returned;
+    }
+
+    public readonly struct unknown_017E_195F_0313FFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP - 0x002E].</summary>
+        public ushort Local46 { get => _slots.GetWord(-0x002E); set => _slots.SetWord(-0x002E, value); }
+
+        /// <summary>Byte at SS:[entry SP - 0x002C].</summary>
+        public byte Local44Byte { get => _slots.GetByte(-0x002C); set => _slots.SetByte(-0x002C, value); }
+
+        /// <summary>Word at SS:[entry SP - 0x000A].</summary>
+        public ushort Local10 { get => _slots.GetWord(-0x000A); set => _slots.SetWord(-0x000A, value); }
+    }
+
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Does not return.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_017E_19A4_03184() {
+        CheckExternalEvents(cs1, 0x19A4);
+        VerifySpeculativeEntryOrFail(cs1, 0x19A4, Signature_19A4_push);
+        Stack.Push16(SI);
+        VerifySpeculativeRunOrFail(cs1, 0x19A5, SpeculativeRun_19A5);
+        SI = DX;
+        Alu16.Sub(BX, 0x000A);
+        if (BX == 0x000A) {
+            VerifySpeculativeRunOrFail(cs1, 0x19AC, SpeculativeRun_19AC);
+            Alu16.And(AX, AX);
+            if ((short)AX < 0) {
+                VerifySpeculativeRunOrFail(cs1, 0x19B7, SpeculativeRun_19B7);
+                AX = (ushort)-AX;
+                CarryFlag = AX != 0;
+                DX = Alu16.Inc(DX);
+                UInt8[DS, SI] = 0x2D;
+                VerifySpeculativeEntryOrFail(cs1, 0x19BD, Signature_19BD_jmp);
+            }
+        }
+        VerifySpeculativeEntryOrFail(cs1, 0x19B0, Signature_19B0_call);
+        NearCall(cs1, 0x19B3, unknown_017E_195F_0313F_AsmEntry);
+        throw FailAsUntested("Untested return from call at 017E:19B0");
     }
 
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: none. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
@@ -3769,27 +4421,36 @@ public partial class CfgGeneratedOverrides {
         DX = 0;
         (CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017E_2084_03864(word1, word4, word5, count));
         if (DX != 0xFFFF && DX != 0xFFFE) {
-            if (DX == 0xFFFD) {
-                goto L_2136;
-            }
-            Alu16.Sub(DX, 0xFFFC);
-            if (DX == 0xFFFC) {
+            if (DX != 0xFFFD) {
+                if (DX != 0xFFFC) {
+                    goto L_2118;
+                }
                 VerifySpeculativeRunOrFail(cs1, 0x20F2, SpeculativeRun_20F2);
-                BX = 0x001F;
-                DX = 1;
                 AX = 0x0412;
-                NearCall(cs1, 0x20FE, unknown_017E_223C_03A1C_AsmEntry);
-                throw FailAsUntested("Untested return from call at 017E:20FB");
+                (CX, DI) = NearCall(cs1, 0x20FE, () => unknown_017E_223C_03A1C(0x0412, 1, 0x001F, count));
+                VerifySpeculativeRunOrFail(cs1, 0x20FE, SpeculativeRun_20FE);
+                AX = 0x0471;
+                (CX, DI) = NearCall(cs1, 0x210A, () => unknown_017E_223C_03A1C(0x0471, 1, 0x001D, count));
+                VerifySpeculativeEntryOrFail(cs1, 0x210A, Signature_210A_mov);
+                DsGlobals.Word0350 = 1;
+                VerifySpeculativeEntryOrFail(cs1, 0x2110, Signature_2110_mov);
+                DsGlobals.Word030A = 0x03A4;
+                VerifySpeculativeEntryOrFail(cs1, 0x2116, Signature_2116_jmp);
+                goto L_2136;
+            L_2118:
+                Alu16.And(DX, DX);
+                if (DX != 0) {
+                    VerifySpeculativeRunOrFail(cs1, 0x211C, SpeculativeRun_211C);
+                    AX = 1;
+                    (DX, BX) = Stack.Restore2();
+                    NearReturn();
+                    return (AX, CX, BP, SI, DI);
+                }
+                goto L_2122;
             }
-            Alu16.And(DX, DX);
-            if (DX != 0) {
-                VerifySpeculativeRunOrFail(cs1, 0x211C, SpeculativeRun_211C);
-                AX = 1;
-                (DX, BX) = Stack.Restore2();
-                NearReturn();
-                return (AX, CX, BP, SI, DI);
-            }
+            goto L_2136;
         }
+    L_2122:
         (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017E_2257_03A37(previousSi));
         Alu16.And(DX, DX);
         if (DX == 0) {
@@ -3799,7 +4460,7 @@ public partial class CfgGeneratedOverrides {
                 goto L_2136;
             }
         }
-        (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017E_209C_0387C(AX, DX, DS));
+        (CX, DX, BX, SI, DI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017E_209C_0387C(AX, DX, DI, DS, count));
         NearCall(cs1, 0x2133, unknown_017E_2280_03A60Entry);
         DsGlobals.Word030A = AX;
     L_2136:
@@ -3922,24 +4583,6 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at 017E:21D2");
     }
 
-}
-
-// ==== file: CfgGeneratedOverrides.017E.2.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6) unknown_017E_1C50_03430(ushort word1, ushort word2, ushort word3) {
@@ -4301,19 +4944,19 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: AX. Outputs: none. Changes: AX, flags.</summary>
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_017E_1E92_03672(ushort word1) {
+    public virtual ushort unknown_017E_1E92_03672(ushort word1) {
         AX = word1;
         CheckExternalEvents(cs1, 0x1E92);
         VerifySpeculativeRunOrFail(cs1, 0x1E92, SpeculativeRun_1E92);
         AX = Alu16.Xor(AX, AX);
         NearReturn();
-        return;
+        return AX;
     }
 
     public virtual Action unknown_017E_1E92_03672_Asm() {
-        unknown_017E_1E92_03672(AX);
+        AX = unknown_017E_1E92_03672(AX);
         return Returned;
     }
 
@@ -4461,7 +5104,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, BP, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, DX, BP, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_1F62_03742() {
         ushort local10 = 0;
@@ -4669,57 +5312,60 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, BX, SI, flags. Changes: AX, CX, BX, SI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, DX, BX, SI, DI, flags. Changes: AX, CX, DX, BX, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_017E_209C_0387C(ushort word1, ushort word2, ushort word3) {
-        DS = word3;
-        ushort index = 0;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, bool result6, bool result7, bool result8, bool result9, bool result10, bool result11) unknown_017E_209C_0387C(ushort word1, ushort word2, ushort word3, ushort word4, bool count) {
+        DI = word3;
+        DS = word4;
         ushort flagOperand_20A5 = 0;
         CheckExternalEvents(cs1, 0x209C);
         Stack.Save(BX, CX, SI);
-        index = word1;
+        SI = word1;
         CX = word2;
         ES = word2;
-        flagOperand_20A5 = UInt16[ES, index];
+        flagOperand_20A5 = UInt16[ES, SI];
         Alu16.Sub(flagOperand_20A5, 0);
         if (flagOperand_20A5 != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x20AB, Signature_20AB_mov);
             DsGlobals.Word0350 = 1;
-            VerifySpeculativeRunOrFail(cs1, 0x20B1, SpeculativeRun_20B1);
-            ES = CX;
-            word1 = UInt16[ES, index];
-            Alu16.And(word1, word1);
-            if (word1 != 0) {
+            while (true) {
+                CheckExternalEvents(cs1, 0x20B1);
+                VerifySpeculativeRunOrFail(cs1, 0x20B1, SpeculativeRun_20B1);
+                ES = CX;
+                AX = UInt16[ES, SI];
+                Alu16.And(AX, AX);
+                if (AX == 0) {
+                    break;
+                }
                 VerifySpeculativeRunOrFail(cs1, 0x20BA, SpeculativeRun_20BA);
-                AX = word1;
+                DX = word2;
                 DL = AH;
                 DH = 0;
                 AH = 0;
                 BX = DX;
-                DX = 1;
+                word2 = 1;
                 BX -= AX;
-                AX = Alu16.Add(AX, 0x0390);
+                AX += 0x0390;
                 BX++;
                 AX++;
-                SI = index;
                 SI++;
-                SI = Alu16.Inc(SI);
-                NearCall(cs1, 0x20D1, unknown_017E_223C_03A1C_AsmEntry);
-                throw FailAsUntested("Untested return from call at 017E:20CE");
+                SI++;
+                (CX, DI) = NearCall(cs1, 0x20D1, () => unknown_017E_223C_03A1C(AX, 1, BX, count));
+                VerifySpeculativeEntryOrFail(cs1, 0x20D1, Signature_20D1_jmp);
             }
         }
         (SI, CX, BX) = Stack.Restore3();
+        DX = word2;
         NearReturn();
-        return (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return (CX, DX, BX, SI, DI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
 
     public virtual Action unknown_017E_209C_0387C_Asm() {
-        (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017E_209C_0387C(AX, DX, DS);
+        (CX, DX, BX, SI, DI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017E_209C_0387C(AX, DX, DI, DS, DirectionFlag);
         return Returned;
     }
 
     /// <summary>Inputs: AX, DX, BX, DS. Outputs: none. Changes: AX, DX, BX, flags.</summary>
-    /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_017E_213B_0391B(ushort word1, ushort word2) {
         AX = word1;
         DS = word2;
@@ -4824,6 +5470,39 @@ public partial class CfgGeneratedOverrides {
 
     public virtual Action unknown_017E_2194_03974_Asm() {
         AL = unknown_017E_2194_03974(AX, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DX, BX, DS. Outputs: none. Changes: AX, BX, flags.</summary>
+    public virtual void unknown_017E_21AB_0398B(ushort word1, ushort word2, ushort word3) {
+        AX = word1;
+        DS = word3;
+        ushort flagOperand_21AC = 0;
+        CheckExternalEvents(cs1, 0x21AB);
+        VerifySpeculativeEntryOrFail(cs1, 0x21AB, Signature_21AB_push);
+        Stack.Push16(BX);
+        VerifySpeculativeRunOrFail(cs1, 0x21AC, SpeculativeRun_21AC);
+        flagOperand_21AC = DsGlobals.Word0320;
+        Alu16.Sub(word1, flagOperand_21AC);
+        if (word1 < flagOperand_21AC) {
+            VerifySpeculativeRunOrFail(cs1, 0x21B4, SpeculativeRun_21B4);
+            BX = DsGlobals.Word034A;
+            AX <<= 1;
+            BX = Alu16.Add(BX, AX);
+            UInt16[word3, BX] = word2;
+            VerifySpeculativeRunOrFail(cs1, 0x21BE, SpeculativeRun_21BE);
+            BX = Stack.Pop16();
+            NearReturn();
+            return;
+        }
+        VerifySpeculativeRunOrFail(cs1, 0x21B2, SpeculativeRun_21B2);
+        BX = Stack.Pop16();
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_017E_21AB_0398B_Asm() {
+        unknown_017E_21AB_0398B(AX, DX, DS);
         return Returned;
     }
 
@@ -4976,6 +5655,30 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
+    /// <summary>Inputs: AX, DX, BX, DS, CF. Outputs: none. Changes: AX, flags.</summary>
+    public virtual void unknown_017E_2294_03A74(ushort word1, bool flag1) {
+        AX = word1;
+        CarryFlag = flag1;
+        CheckExternalEvents(cs1, 0x2294);
+        VerifySpeculativeEntryOrFail(cs1, 0x2294, Signature_2294_jae);
+        if (!flag1) {
+            VerifySpeculativeRunOrFail(cs1, 0x229D, SpeculativeRun_229D);
+            AX = Alu16.Sub(AX, AX);
+            NearReturn();
+            return;
+        }
+        VerifySpeculativeEntryOrFail(cs1, 0x2296, Signature_2296_push);
+        Stack.Push16(word1);
+        VerifySpeculativeEntryOrFail(cs1, 0x2297, Signature_2297_call);
+        NearCall(cs1, 0x229A, unknown_017E_213B_0391B_AsmEntry);
+        throw FailAsUntested("Untested return from call at 017E:2297");
+    }
+
+    public virtual Action unknown_017E_2294_03A74_Asm() {
+        unknown_017E_2294_03A74(AX, CarryFlag);
+        return Returned;
+    }
+
     /// <summary>Inputs: AX, DX, DS. Does not return.</summary>
     public virtual Action unknown_017E_04E5_01CC5() {
         CheckExternalEvents(cs1, 0x04E5);
@@ -4991,6 +5694,13 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x05BE);
         SP = BP;
         (BP, DX, BX) = Stack.Restore3();
+        return NearRet();
+    }
+
+    /// <summary>Inputs: none. Outputs: CX, SI, DI. Changes: CX, SI, DI.</summary>
+    public virtual Action unknown_017E_0B91_02371() {
+        CheckExternalEvents(cs1, 0x0B91);
+        (DI, SI, CX) = Stack.Restore3();
         return NearRet();
     }
 
@@ -5273,8 +5983,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_017E_093E_0211EEntry;
     private readonly Func<int, Action> unknown_017E_09E4_021C4Entry;
     private readonly Func<int, Action> unknown_017E_0A50_02230_AsmEntry;
-    private readonly Func<int, Action> unknown_017E_0A9E_0227E_AsmEntry;
+    private readonly Func<int, Action> unknown_017E_0A9E_0227EEntry;
     private readonly Func<int, Action> unknown_017E_0BE9_023C9_AsmEntry;
+    private readonly Func<int, Action> unknown_017E_0C08_023E8Entry;
+    private readonly Func<int, Action> unknown_017E_0C6C_0244CEntry;
+    private readonly Func<int, Action> unknown_017E_0CC5_024A5Entry;
     private readonly Func<int, Action> unknown_017E_0DA4_02584_AsmEntry;
     private readonly Func<int, Action> unknown_017E_0DD1_025B1Entry;
     private readonly Func<int, Action> unknown_017E_0E94_02674Entry;
@@ -5289,6 +6002,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_017E_18DE_030BE_AsmEntry;
     private readonly Func<int, Action> unknown_017E_191D_030FD_AsmEntry;
     private readonly Func<int, Action> unknown_017E_1942_03122_AsmEntry;
+    private readonly Func<int, Action> unknown_017E_195F_0313F_AsmEntry;
+    private readonly Func<int, Action> unknown_017E_19A4_03184Entry;
     private readonly Func<int, Action> unknown_017E_19FB_031DB_AsmEntry;
     private readonly Func<int, Action> unknown_017E_1B12_032F2_AsmEntry;
     private readonly Func<int, Action> unknown_017E_1B32_03312_AsmEntry;
@@ -5309,10 +6024,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_017E_209C_0387C_AsmEntry;
     private readonly Func<int, Action> unknown_017E_213B_0391B_AsmEntry;
     private readonly Func<int, Action> unknown_017E_2194_03974_AsmEntry;
+    private readonly Func<int, Action> unknown_017E_21AB_0398B_AsmEntry;
     private readonly Func<int, Action> unknown_017E_21E5_039C5_AsmEntry;
     private readonly Func<int, Action> unknown_017E_223C_03A1C_AsmEntry;
     private readonly Func<int, Action> unknown_017E_2257_03A37_AsmEntry;
     private readonly Func<int, Action> unknown_017E_2280_03A60Entry;
+    private readonly Func<int, Action> unknown_017E_2294_03A74_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -5328,6 +6045,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
     private readonly Func<int, Action> unknown_017E_04E5_01CC5Entry;
     private readonly Func<int, Action> unknown_017E_05BE_01D9EEntry;
+    private readonly Func<int, Action> unknown_017E_0B91_02371Entry;
     private readonly Func<int, Action> unknown_017E_0D9A_0257AEntry;
     private readonly Func<int, Action> unknown_017E_1EF1_036D1Entry;
 
@@ -5371,8 +6089,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_017E_093E_0211EEntry = _ => unknown_017E_093E_0211E();
         unknown_017E_09E4_021C4Entry = _ => unknown_017E_09E4_021C4();
         unknown_017E_0A50_02230_AsmEntry = _ => unknown_017E_0A50_02230_Asm();
-        unknown_017E_0A9E_0227E_AsmEntry = _ => unknown_017E_0A9E_0227E_Asm();
+        unknown_017E_0A9E_0227EEntry = _ => unknown_017E_0A9E_0227E();
         unknown_017E_0BE9_023C9_AsmEntry = _ => unknown_017E_0BE9_023C9_Asm();
+        unknown_017E_0C08_023E8Entry = _ => unknown_017E_0C08_023E8();
+        unknown_017E_0C6C_0244CEntry = _ => unknown_017E_0C6C_0244C();
+        unknown_017E_0CC5_024A5Entry = _ => unknown_017E_0CC5_024A5();
         unknown_017E_0DA4_02584_AsmEntry = _ => unknown_017E_0DA4_02584_Asm();
         unknown_017E_0DD1_025B1Entry = _ => unknown_017E_0DD1_025B1();
         unknown_017E_0E94_02674Entry = _ => unknown_017E_0E94_02674();
@@ -5387,6 +6108,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_017E_18DE_030BE_AsmEntry = _ => unknown_017E_18DE_030BE_Asm();
         unknown_017E_191D_030FD_AsmEntry = _ => unknown_017E_191D_030FD_Asm();
         unknown_017E_1942_03122_AsmEntry = _ => unknown_017E_1942_03122_Asm();
+        unknown_017E_195F_0313F_AsmEntry = _ => unknown_017E_195F_0313F_Asm();
+        unknown_017E_19A4_03184Entry = _ => unknown_017E_19A4_03184();
         unknown_017E_19FB_031DB_AsmEntry = _ => unknown_017E_19FB_031DB_Asm();
         unknown_017E_1B12_032F2_AsmEntry = _ => unknown_017E_1B12_032F2_Asm();
         unknown_017E_1B32_03312_AsmEntry = _ => unknown_017E_1B32_03312_Asm();
@@ -5407,10 +6130,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_017E_209C_0387C_AsmEntry = _ => unknown_017E_209C_0387C_Asm();
         unknown_017E_213B_0391B_AsmEntry = _ => unknown_017E_213B_0391B_Asm();
         unknown_017E_2194_03974_AsmEntry = _ => unknown_017E_2194_03974_Asm();
+        unknown_017E_21AB_0398B_AsmEntry = _ => unknown_017E_21AB_0398B_Asm();
         unknown_017E_21E5_039C5_AsmEntry = _ => unknown_017E_21E5_039C5_Asm();
         unknown_017E_223C_03A1C_AsmEntry = _ => unknown_017E_223C_03A1C_Asm();
         unknown_017E_2257_03A37_AsmEntry = _ => unknown_017E_2257_03A37_Asm();
         unknown_017E_2280_03A60Entry = _ => unknown_017E_2280_03A60();
+        unknown_017E_2294_03A74_AsmEntry = _ => unknown_017E_2294_03A74_Asm();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -5426,6 +6151,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         unknown_017E_04E5_01CC5Entry = _ => unknown_017E_04E5_01CC5();
         unknown_017E_05BE_01D9EEntry = _ => unknown_017E_05BE_01D9E();
+        unknown_017E_0B91_02371Entry = _ => unknown_017E_0B91_02371();
         unknown_017E_0D9A_0257AEntry = _ => unknown_017E_0D9A_0257A();
         unknown_017E_1EF1_036D1Entry = _ => unknown_017E_1EF1_036D1();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0010, unknown_017E_0010_017F0_AsmEntry, "unknown");
@@ -5455,8 +6181,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x093E, unknown_017E_093E_0211EEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x09E4, unknown_017E_09E4_021C4Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0A50, unknown_017E_0A50_02230_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0A9E, unknown_017E_0A9E_0227E_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0A9E, unknown_017E_0A9E_0227EEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0BE9, unknown_017E_0BE9_023C9_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0C08, unknown_017E_0C08_023E8Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0C6C, unknown_017E_0C6C_0244CEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0CC5, unknown_017E_0CC5_024A5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0DA4, unknown_017E_0DA4_02584_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0DD1, unknown_017E_0DD1_025B1Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0E94, unknown_017E_0E94_02674Entry, "unknown");
@@ -5471,6 +6200,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x18DE, unknown_017E_18DE_030BE_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x191D, unknown_017E_191D_030FD_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1942, unknown_017E_1942_03122_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x195F, unknown_017E_195F_0313F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x19A4, unknown_017E_19A4_03184Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x19FB, unknown_017E_19FB_031DB_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1B12, unknown_017E_1B12_032F2_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1B32, unknown_017E_1B32_03312_AsmEntry, "unknown");
@@ -5491,10 +6222,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs1, 0x209C, unknown_017E_209C_0387C_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x213B, unknown_017E_213B_0391B_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2194, unknown_017E_2194_03974_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x21AB, unknown_017E_21AB_0398B_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x21E5, unknown_017E_21E5_039C5_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x223C, unknown_017E_223C_03A1C_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2257, unknown_017E_2257_03A37_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x2280, unknown_017E_2280_03A60Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x2294, unknown_017E_2294_03A74_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -5510,17 +6243,20 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x04E5, unknown_017E_04E5_01CC5Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x05BE, unknown_017E_05BE_01D9EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0B91, unknown_017E_0B91_02371Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0D9A, unknown_017E_0D9A_0257AEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x1EF1, unknown_017E_1EF1_036D1Entry, "unknown");
         DefineCallLandings(new(cs1, 0x0017), new CallLanding(new(cs1, 0x04E5), unknown_017E_04E5_01CC5Entry));
         DefineCallLandings(new(cs1, 0x0055), new CallLanding(new(cs1, 0x04E5), unknown_017E_04E5_01CC5Entry));
         DefineCallLandings(new(cs1, 0x0065), new CallLanding(new(cs1, 0x04E5), unknown_017E_04E5_01CC5Entry));
         DefineCallLandings(new(cs1, 0x0573), new CallLanding(new(cs1, 0x0D9A), unknown_017E_0D9A_0257AEntry));
-        DefineCallLandings(new(cs1, 0x05C7), new CallLanding(new(cs1, 0x175A), unknown_017E_175A_02F3A_AsmEntry));
+        DefineCallLandings(new(cs1, 0x05C7), new CallLanding(new(cs1, 0x04E5), unknown_017E_04E5_01CC5Entry), new CallLanding(new(cs1, 0x175A), unknown_017E_175A_02F3A_AsmEntry));
         DefineCallLandings(new(cs1, 0x0627), new CallLanding(new(cs1, 0x05BE), unknown_017E_05BE_01D9EEntry));
         DefineCallLandings(new(cs1, 0x062F), new CallLanding(new(cs1, 0x05BE), unknown_017E_05BE_01D9EEntry));
         DefineCallLandings(new(cs1, 0x0689), new CallLanding(new(cs1, 0x05BE), unknown_017E_05BE_01D9EEntry));
         DefineCallLandings(new(cs1, 0x068E), new CallLanding(new(cs1, 0x05BE), unknown_017E_05BE_01D9EEntry));
+        DefineCallLandings(new(cs1, 0x1134), new CallLanding(new(cs1, 0x0B91), unknown_017E_0B91_02371Entry));
+        DefineCallLandings(new(cs1, 0x13B7), new CallLanding(new(cs1, 0x0B91), unknown_017E_0B91_02371Entry));
         DefineCallLandings(new(cs1, 0x1456), new CallLanding(new(cs1, 0x0D9A), unknown_017E_0D9A_0257AEntry));
         DefineCallLandings(new(cs1, 0x14EF), new CallLanding(new(cs1, 0x0D9A), unknown_017E_0D9A_0257AEntry));
         DefineCallLandings(new(cs1, 0x172E), new CallLanding(new(cs1, 0x1EF1), unknown_017E_1EF1_036D1Entry));
@@ -5662,6 +6398,24 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_041B_mov = [0xBA, 0x7D, 0x02];
     private static readonly byte?[] Signature_041E_mov = [0xB8, 0x01, 0x3D];
     private static readonly byte?[] Signature_0421_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_0423_mov = [0x8B, 0xD8];
+    private static readonly byte?[] Signature_0425_pop = [0x1F];
+    private static readonly byte?[] Signature_0426_pop = [0x5A];
+    private static readonly byte?[] Signature_0427_mov = [0x8B, 0xF2];
+    private static readonly byte?[] Signature_0429_cld = [0xFC];
+    private static readonly byte?[] Signature_042A_lods = [0xAC];
+    private static readonly byte?[] Signature_042B_test = [0x84, 0xC0];
+    private static readonly byte?[] Signature_042D_jne = [0x75, 0xFB];
+    private static readonly byte?[] Signature_042F_mov = [0x8B, 0xCE];
+    private static readonly byte?[] Signature_0431_sub = [0x2B, 0xCA];
+    private static readonly byte?[] Signature_0433_dec = [0x49];
+    private static readonly byte?[] Signature_0434_mov = [0xB4, 0x40];
+    private static readonly byte?[] Signature_0436_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_0438_mov = [0x8E, 0xDF];
+    private static readonly byte?[] Signature_043A_mov = [0xBA, 0x81, 0x02];
+    private static readonly byte?[] Signature_043D_mov = [0xB9, 0x02, 0x00];
+    private static readonly byte?[] Signature_0440_mov = [0xB4, 0x40];
+    private static readonly byte?[] Signature_0442_int = [0xCD, 0x21];
     private static readonly byte?[] Signature_04E5_mov = [0x89, 0xC1];
     private static readonly byte?[] Signature_04E7_mov = [0x89, 0xD6];
     private static readonly byte?[] Signature_04E9_call = [0xE8, 0x51, 0x03];
@@ -5740,6 +6494,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0849_int = [0xCC];
     private static readonly byte?[] Signature_08AD_mov = [0xB8, 0x0C, 0x00];
     private static readonly byte?[] Signature_08B0_call = [0xE8, 0xD1, 0x0D];
+    private static readonly byte?[] Signature_08B3_mov = [0x89, 0xC7];
+    private static readonly byte?[] Signature_08B5_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_08B7_jne = [0x75, 0xCC];
+    private static readonly byte?[] Signature_08B9_mov = [0xBB, 0x01, 0x00];
+    private static readonly byte?[] Signature_08BC_mov = [0xB8, 0x34, 0x00];
+    private static readonly byte?[] Signature_08BF_mov = [0x8C, 0xDA];
+    private static readonly byte?[] Signature_08C1_jmp = [0xE9, 0x21, 0xFC];
     private static readonly byte?[] Signature_091F_mov = [0xBB, 0xFF, 0xFF];
     private static readonly byte?[] Signature_0951_test = [0x85, 0xC0];
     private static readonly byte?[] Signature_0953_je = [0x74, 0x03];
@@ -5750,6 +6511,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0971_call = [0xE8, 0x70, 0x00];
     private static readonly byte?[] Signature_099B_mov = [0x89, 0xD8];
     private static readonly byte?[] Signature_099D_call = [0xE8, 0xCF, 0x0B];
+    private static readonly byte?[] Signature_09A0_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_09A2_jne = [0x75, 0x23];
     private static readonly byte?[] Signature_09C7_mov = [0xB8, 0xFF, 0xFF];
     private static readonly byte?[] Signature_09CF_mov = [0xC7, 0x06, 0x8E, 0x03, 0x04, 0x00];
     private static readonly byte?[] Signature_09D5_mov = [0xB8, 0xFF, 0xFF];
@@ -5871,6 +6634,79 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0BE4_jmp = [0xEB, 0xA9];
     private static readonly byte?[] Signature_0BE6_inc = [0x46];
     private static readonly byte?[] Signature_0BE7_jmp = [0xEB, 0xA6];
+    private static readonly byte?[] Signature_0C08_push = [0x51];
+    private static readonly byte?[] Signature_0C09_push = [0x56];
+    private static readonly byte?[] Signature_0C0A_push = [0x57];
+    private static readonly byte?[] Signature_0C0B_push = [0x55];
+    private static readonly byte?[] Signature_0C0C_mov = [0x89, 0xE5];
+    private static readonly byte?[] Signature_0C0E_sub = [0x83, 0xEC, 0x02];
+    private static readonly byte?[] Signature_0C11_mov = [0x89, 0xDE];
+    private static readonly byte?[] Signature_0C13_mov = [0x89, 0xC3];
+    private static readonly byte?[] Signature_0C15_mov = [0x89, 0xD7];
+    private static readonly byte?[] Signature_0C17_xor = [0x31, 0xC9];
+    private static readonly byte?[] Signature_0C19_cmp = [0x83, 0xFE, 0xFF];
+    private static readonly byte?[] Signature_0C1C_jne = [0x75, 0x25];
+    private static readonly byte?[] Signature_0C1E_mov = [0x8E, 0xC7];
+    private static readonly byte?[] Signature_0C20_mov = [0x26, 0x8B, 0x07];
+    private static readonly byte?[] Signature_0C23_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_0C25_je = [0x74, 0x14];
+    private static readonly byte?[] Signature_0C27_mov = [0x89, 0xC2];
+    private static readonly byte?[] Signature_0C29_lea = [0x8D, 0x46, 0xFE];
+    private static readonly byte?[] Signature_0C2C_add = [0x83, 0xC3, 0x02];
+    private static readonly byte?[] Signature_0C2F_call = [0xE8, 0x10, 0x0D];
+    private static readonly byte?[] Signature_0C3B_mov = [0x89, 0xC8];
+    private static readonly byte?[] Signature_0C3D_mov = [0x89, 0xEC];
+    private static readonly byte?[] Signature_0C3F_pop = [0x5D];
+    private static readonly byte?[] Signature_0C40_jmp = [0xE9, 0x4E, 0xFF];
+    private static readonly byte?[] Signature_0C43_mov = [0x8E, 0xC7];
+    private static readonly byte?[] Signature_0C45_mov = [0x26, 0x8B, 0x07];
+    private static readonly byte?[] Signature_0C48_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_0C4A_je = [0x74, 0x18];
+    private static readonly byte?[] Signature_0C4C_cmp = [0x39, 0xF1];
+    private static readonly byte?[] Signature_0C4E_jg = [0x7F, 0x14];
+    private static readonly byte?[] Signature_0C50_mov = [0x89, 0xC2];
+    private static readonly byte?[] Signature_0C52_lea = [0x8D, 0x46, 0xFE];
+    private static readonly byte?[] Signature_0C55_add = [0x83, 0xC3, 0x02];
+    private static readonly byte?[] Signature_0C58_call = [0xE8, 0xE7, 0x0C];
+    private static readonly byte?[] Signature_0C64_cmp = [0x39, 0xF1];
+    private static readonly byte?[] Signature_0C66_jle = [0x7E, 0xD3];
+    private static readonly byte?[] Signature_0C68_mov = [0x89, 0xF0];
+    private static readonly byte?[] Signature_0C6A_jmp = [0xEB, 0xD1];
+    private static readonly byte?[] Signature_0C6C_push = [0x51];
+    private static readonly byte?[] Signature_0C6D_push = [0x56];
+    private static readonly byte?[] Signature_0C6E_push = [0x55];
+    private static readonly byte?[] Signature_0C6F_mov = [0x89, 0xE5];
+    private static readonly byte?[] Signature_0C71_sub = [0x83, 0xEC, 0x0A];
+    private static readonly byte?[] Signature_0C74_push = [0x52];
+    private static readonly byte?[] Signature_0C75_mov = [0x89, 0xD9];
+    private static readonly byte?[] Signature_0C77_mov = [0xBB, 0x10, 0x00];
+    private static readonly byte?[] Signature_0C7A_lea = [0x8D, 0x56, 0xF6];
+    private static readonly byte?[] Signature_0C7D_call = [0xE8, 0x24, 0x0D];
+    private static readonly byte?[] Signature_0CC5_push = [0x56];
+    private static readonly byte?[] Signature_0CC6_push = [0x57];
+    private static readonly byte?[] Signature_0CC7_push = [0x55];
+    private static readonly byte?[] Signature_0CC8_mov = [0x89, 0xE5];
+    private static readonly byte?[] Signature_0CCA_sub = [0x83, 0xEC, 0x08];
+    private static readonly byte?[] Signature_0CCD_mov = [0x89, 0xC6];
+    private static readonly byte?[] Signature_0CCF_mov = [0x89, 0x56, 0xFC];
+    private static readonly byte?[] Signature_0CD2_mov = [0x89, 0x5E, 0xFA];
+    private static readonly byte?[] Signature_0CD5_mov = [0x89, 0x4E, 0xFE];
+    private static readonly byte?[] Signature_0CD8_test = [0x85, 0xC9];
+    private static readonly byte?[] Signature_0CDA_jl = [0x7C, 0x28];
+    private static readonly byte?[] Signature_0CDC_mov = [0x8B, 0x5E, 0xFC];
+    private static readonly byte?[] Signature_0CDF_cmp = [0x83, 0x7F, 0x08, 0xFF];
+    private static readonly byte?[] Signature_0CE3_jne = [0x75, 0x05];
+    private static readonly byte?[] Signature_0CE5_mov = [0xC7, 0x47, 0x08, 0x04, 0x00];
+    private static readonly byte?[] Signature_0CEA_mov = [0xBB, 0x0A, 0x00];
+    private static readonly byte?[] Signature_0CED_mov = [0x8B, 0x46, 0xFE];
+    private static readonly byte?[] Signature_0CF0_mov = [0x89, 0xF2];
+    private static readonly byte?[] Signature_0CF2_call = [0xE8, 0xAF, 0x0C];
+    private static readonly byte?[] Signature_0D04_neg = [0xF7, 0x5E, 0xFE];
+    private static readonly byte?[] Signature_0D07_mov = [0xC6, 0x04, 0x2D];
+    private static readonly byte?[] Signature_0D0A_neg = [0xF7, 0x5E, 0xFA];
+    private static readonly byte?[] Signature_0D0D_sbb = [0x83, 0x5E, 0xFE, 0x00];
+    private static readonly byte?[] Signature_0D11_inc = [0x46];
+    private static readonly byte?[] Signature_0D12_jmp = [0xEB, 0xC8];
     private static readonly byte?[] Signature_0DB3_mov = [0x8B, 0x47, 0x06];
     private static readonly byte?[] Signature_0DB6_sub = [0x2B, 0x47, 0x0C];
     private static readonly byte?[] Signature_0DB9_sub = [0x2B, 0x47, 0x0E];
@@ -5905,6 +6741,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0EE4_mov = [0x8B, 0x4F, 0xFE];
     private static readonly byte?[] Signature_0EE7_mov = [0x89, 0x46, 0xF2];
     private static readonly byte?[] Signature_0EEA_jmp = [0xE9, 0xE5, 0x00];
+    private static readonly byte?[] Signature_0EED_mov = [0x8B, 0x46, 0xEC];
+    private static readonly byte?[] Signature_0EF0_mov = [0x89, 0xF3];
+    private static readonly byte?[] Signature_0EF2_mov = [0x89, 0xFA];
+    private static readonly byte?[] Signature_0EF4_inc = [0xFF, 0x46, 0xF8];
+    private static readonly byte?[] Signature_0EF7_call = [0xFF, 0x16, 0x06, 0x03];
     private static readonly byte?[] Signature_0F0B_add = [0x83, 0x05, 0x08];
     private static readonly byte?[] Signature_0F0E_mov = [0x8B, 0x1D];
     private static readonly byte?[] Signature_0F10_mov = [0x8B, 0x47, 0xFC];
@@ -5988,6 +6829,97 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_1075_mov = [0x89, 0x54, 0x0C];
     private static readonly byte?[] Signature_1078_mov = [0xC6, 0x07, 0x20];
     private static readonly byte?[] Signature_107B_jmp = [0xE9, 0xD2, 0xFE];
+    private static readonly byte?[] Signature_107E_test = [0xF6, 0x44, 0x02, 0x20];
+    private static readonly byte?[] Signature_1082_jne = [0x75, 0x03];
+    private static readonly byte?[] Signature_1084_jmp = [0xE9, 0x66, 0xFE];
+    private static readonly byte?[] Signature_1087_add = [0x83, 0x05, 0x04];
+    private static readonly byte?[] Signature_108A_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_108C_mov = [0x8B, 0x47, 0xFC];
+    private static readonly byte?[] Signature_108F_mov = [0x89, 0xF2];
+    private static readonly byte?[] Signature_1091_mov = [0x89, 0x46, 0xFC];
+    private static readonly byte?[] Signature_1094_mov = [0x8B, 0x47, 0xFE];
+    private static readonly byte?[] Signature_1097_mov = [0x8B, 0x5E, 0xFC];
+    private static readonly byte?[] Signature_109A_mov = [0x89, 0x46, 0xFE];
+    private static readonly byte?[] Signature_109D_mov = [0x89, 0xC1];
+    private static readonly byte?[] Signature_109F_mov = [0x8B, 0x46, 0xEC];
+    private static readonly byte?[] Signature_10A2_call = [0xE8, 0x20, 0xFC];
+    private static readonly byte?[] Signature_10B0_mov = [0x89, 0x44, 0x10];
+    private static readonly byte?[] Signature_10C1_mov = [0x8B, 0x5E, 0xEC];
+    private static readonly byte?[] Signature_10C4_mov = [0xC6, 0x07, 0x00];
+    private static readonly byte?[] Signature_10C7_mov = [0x8A, 0x44, 0x03];
+    private static readonly byte?[] Signature_10CA_test = [0xA8, 0x04];
+    private static readonly byte?[] Signature_10CC_jne = [0x75, 0x3F];
+    private static readonly byte?[] Signature_10CE_test = [0xA8, 0x02];
+    private static readonly byte?[] Signature_10D0_add = [0x83, 0x05, 0x02];
+    private static readonly byte?[] Signature_10D3_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_10D5_mov = [0x8B, 0x5F, 0xFE];
+    private static readonly byte?[] Signature_10D8_test = [0x85, 0xDB];
+    private static readonly byte?[] Signature_10DA_je = [0x74, 0x06];
+    private static readonly byte?[] Signature_10DC_mov = [0x8C, 0x5E, 0xFA];
+    private static readonly byte?[] Signature_10DF_mov = [0x89, 0x5E, 0xF8];
+    private static readonly byte?[] Signature_10E2_cmp = [0x80, 0x7C, 0x18, 0x53];
+    private static readonly byte?[] Signature_10E6_jne = [0x75, 0x4E];
+    private static readonly byte?[] Signature_10E8_test = [0xF6, 0x44, 0x02, 0x20];
+    private static readonly byte?[] Signature_10EC_je = [0x74, 0x3A];
+    private static readonly byte?[] Signature_10EE_mov = [0x8B, 0x46, 0xF8];
+    private static readonly byte?[] Signature_10F1_mov = [0x8B, 0x56, 0xFA];
+    private static readonly byte?[] Signature_10F4_mov = [0x8B, 0x5C, 0x08];
+    private static readonly byte?[] Signature_10F7_call = [0xE8, 0xEF, 0xFA];
+    private static readonly byte?[] Signature_10FA_mov = [0x89, 0x44, 0x10];
+    private static readonly byte?[] Signature_10FD_cmp = [0x83, 0x7C, 0x08, 0x00];
+    private static readonly byte?[] Signature_1101_jl = [0x7C, 0xB0];
+    private static readonly byte?[] Signature_1103_cmp = [0x3B, 0x44, 0x08];
+    private static readonly byte?[] Signature_1106_jle = [0x7E, 0xAB];
+    private static readonly byte?[] Signature_1108_mov = [0x8B, 0x44, 0x08];
+    private static readonly byte?[] Signature_110B_jmp = [0xEB, 0xA3];
+    private static readonly byte?[] Signature_110D_add = [0x83, 0x05, 0x04];
+    private static readonly byte?[] Signature_1110_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_1112_mov = [0x8B, 0x47, 0xFE];
+    private static readonly byte?[] Signature_1115_mov = [0x8B, 0x7F, 0xFC];
+    private static readonly byte?[] Signature_1118_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_111A_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_111C_test = [0x85, 0xFF];
+    private static readonly byte?[] Signature_111E_je = [0x74, 0xC2];
+    private static readonly byte?[] Signature_1120_mov = [0x89, 0x7E, 0xF8];
+    private static readonly byte?[] Signature_1123_mov = [0x89, 0x46, 0xFA];
+    private static readonly byte?[] Signature_1126_jmp = [0xEB, 0xBA];
+    private static readonly byte?[] Signature_1128_mov = [0x8B, 0x46, 0xF8];
+    private static readonly byte?[] Signature_112B_mov = [0x8B, 0x56, 0xFA];
+    private static readonly byte?[] Signature_112E_mov = [0x8B, 0x5C, 0x08];
+    private static readonly byte?[] Signature_1131_call = [0xE8, 0xD4, 0xFA];
+    private static readonly byte?[] Signature_1136_test = [0xF6, 0x44, 0x02, 0x40];
+    private static readonly byte?[] Signature_113A_jne = [0x75, 0xEC];
+    private static readonly byte?[] Signature_113C_jmp = [0xEB, 0xB0];
+    private static readonly byte?[] Signature_113E_mov = [0x8A, 0x44, 0x02];
+    private static readonly byte?[] Signature_1141_test = [0xA8, 0x01];
+    private static readonly byte?[] Signature_1143_je = [0x74, 0x41];
+    private static readonly byte?[] Signature_1145_test = [0xA8, 0x80];
+    private static readonly byte?[] Signature_1147_jne = [0x75, 0x03];
+    private static readonly byte?[] Signature_1149_jmp = [0xE9, 0x82, 0x00];
+    private static readonly byte?[] Signature_114C_test = [0x85, 0xC9];
+    private static readonly byte?[] Signature_114E_jne = [0x75, 0x12];
+    private static readonly byte?[] Signature_1150_cmp = [0x83, 0x7E, 0xF6, 0x00];
+    private static readonly byte?[] Signature_1154_jne = [0x75, 0x0C];
+    private static readonly byte?[] Signature_1156_cmp = [0x83, 0x7E, 0xF4, 0x00];
+    private static readonly byte?[] Signature_115A_jne = [0x75, 0x06];
+    private static readonly byte?[] Signature_115C_cmp = [0x83, 0x7E, 0xF2, 0x00];
+    private static readonly byte?[] Signature_1160_je = [0x74, 0x24];
+    private static readonly byte?[] Signature_1162_mov = [0x8B, 0x44, 0x0C];
+    private static readonly byte?[] Signature_1165_mov = [0x89, 0xC2];
+    private static readonly byte?[] Signature_1167_mov = [0x8B, 0x5E, 0xEC];
+    private static readonly byte?[] Signature_116A_inc = [0x42];
+    private static readonly byte?[] Signature_116B_add = [0x01, 0xC3];
+    private static readonly byte?[] Signature_116D_mov = [0x89, 0x54, 0x0C];
+    private static readonly byte?[] Signature_1170_mov = [0xC6, 0x07, 0x30];
+    private static readonly byte?[] Signature_1173_mov = [0x8B, 0x44, 0x0C];
+    private static readonly byte?[] Signature_1176_mov = [0x8B, 0x5E, 0xEC];
+    private static readonly byte?[] Signature_1179_mov = [0x89, 0xC2];
+    private static readonly byte?[] Signature_117B_add = [0x01, 0xC3];
+    private static readonly byte?[] Signature_117D_inc = [0x42];
+    private static readonly byte?[] Signature_117E_mov = [0x8A, 0x44, 0x18];
+    private static readonly byte?[] Signature_1181_mov = [0x89, 0x54, 0x0C];
+    private static readonly byte?[] Signature_1184_mov = [0x88, 0x07];
+    private static readonly byte?[] Signature_1186_mov = [0xC7, 0x46, 0xF0, 0x10, 0x00];
     private static readonly byte?[] Signature_1191_mov = [0xC6, 0x44, 0x19, 0x20];
     private static readonly byte?[] Signature_11A7_cmp = [0x83, 0x7C, 0x08, 0x00];
     private static readonly byte?[] Signature_11AB_jne = [0x75, 0x39];
@@ -6003,6 +6935,13 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_11C6_xor = [0x31, 0xC0];
     private static readonly byte?[] Signature_11C8_mov = [0x26, 0xC6, 0x07, 0x00];
     private static readonly byte?[] Signature_11CC_jmp = [0xEB, 0x48];
+    private static readonly byte?[] Signature_11CE_mov = [0x8B, 0x46, 0xFE];
+    private static readonly byte?[] Signature_11D1_or = [0x0B, 0x46, 0xFC];
+    private static readonly byte?[] Signature_11D4_jmp = [0xEB, 0x8A];
+    private static readonly byte?[] Signature_11D6_mov = [0xC7, 0x46, 0xF0, 0x02, 0x00];
+    private static readonly byte?[] Signature_11DB_jmp = [0xEB, 0xAE];
+    private static readonly byte?[] Signature_11DD_mov = [0xC7, 0x46, 0xF0, 0x08, 0x00];
+    private static readonly byte?[] Signature_11E2_jmp = [0xEB, 0xA7];
     private static readonly byte?[] Signature_11E6_push = [0xFF, 0x76, 0xF0];
     private static readonly byte?[] Signature_11E9_mov = [0x8B, 0x46, 0xEC];
     private static readonly byte?[] Signature_11EC_mov = [0x8B, 0x5E, 0xF6];
@@ -6032,6 +6971,49 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_126D_sub = [0x29, 0xD0];
     private static readonly byte?[] Signature_126F_mov = [0x89, 0x44, 0x0E];
     private static readonly byte?[] Signature_1272_jmp = [0xE9, 0x3E, 0xFE];
+    private static readonly byte?[] Signature_1275_cmp = [0x83, 0x7C, 0x06, 0x00];
+    private static readonly byte?[] Signature_1279_jne = [0x75, 0x0B];
+    private static readonly byte?[] Signature_127B_test = [0xF6, 0x44, 0x03, 0x04];
+    private static readonly byte?[] Signature_127F_je = [0x74, 0x58];
+    private static readonly byte?[] Signature_1281_mov = [0xC7, 0x44, 0x06, 0x09, 0x00];
+    private static readonly byte?[] Signature_1286_and = [0x80, 0x64, 0x02, 0xF9];
+    private static readonly byte?[] Signature_128A_add = [0x83, 0x05, 0x02];
+    private static readonly byte?[] Signature_128D_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_128F_mov = [0x8B, 0x4F, 0xFE];
+    private static readonly byte?[] Signature_1292_test = [0xF6, 0x44, 0x03, 0x04];
+    private static readonly byte?[] Signature_1296_je = [0x74, 0x48];
+    private static readonly byte?[] Signature_1298_add = [0x83, 0xC3, 0x02];
+    private static readonly byte?[] Signature_129B_mov = [0x89, 0x1D];
+    private static readonly byte?[] Signature_129D_mov = [0x8B, 0x56, 0xEC];
+    private static readonly byte?[] Signature_12A0_mov = [0x8B, 0x47, 0xFE];
+    private static readonly byte?[] Signature_12A3_mov = [0xBB, 0x04, 0x00];
+    private static readonly byte?[] Signature_12A6_call = [0xE8, 0xC3, 0xF9];
+    private static readonly byte?[] Signature_12B8_call = [0xE8, 0xB1, 0xF9];
+    private static readonly byte?[] Signature_12D9_mov = [0xC7, 0x44, 0x06, 0x04, 0x00];
+    private static readonly byte?[] Signature_12DE_jmp = [0xEB, 0xA6];
+    private static readonly byte?[] Signature_12E0_mov = [0xBB, 0x04, 0x00];
+    private static readonly byte?[] Signature_12E3_mov = [0x8B, 0x56, 0xEC];
+    private static readonly byte?[] Signature_12E6_mov = [0x89, 0xC8];
+    private static readonly byte?[] Signature_12E8_jmp = [0xEB, 0xCE];
+    private static readonly byte?[] Signature_12EA_mov = [0xC7, 0x44, 0x10, 0x01, 0x00];
+    private static readonly byte?[] Signature_12EF_test = [0xF6, 0x44, 0x02, 0x40];
+    private static readonly byte?[] Signature_12F3_jne = [0x75, 0x10];
+    private static readonly byte?[] Signature_12F5_add = [0x83, 0x05, 0x02];
+    private static readonly byte?[] Signature_12F8_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_12FA_mov = [0x8A, 0x47, 0xFE];
+    private static readonly byte?[] Signature_12FD_mov = [0x8B, 0x5E, 0xEC];
+    private static readonly byte?[] Signature_1300_mov = [0x88, 0x07];
+    private static readonly byte?[] Signature_1302_jmp = [0xE9, 0xAE, 0xFD];
+    private static readonly byte?[] Signature_1305_add = [0x83, 0x05, 0x02];
+    private static readonly byte?[] Signature_1308_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_130A_lea = [0x8D, 0x46, 0xEE];
+    private static readonly byte?[] Signature_130D_mov = [0x8B, 0x57, 0xFE];
+    private static readonly byte?[] Signature_1310_call = [0xE8, 0x2F, 0x06];
+    private static readonly byte?[] Signature_1338_add = [0x83, 0x05, 0x02];
+    private static readonly byte?[] Signature_133B_mov = [0x8B, 0x1D];
+    private static readonly byte?[] Signature_133D_mov = [0x8B, 0x46, 0xEC];
+    private static readonly byte?[] Signature_1340_mov = [0x8B, 0x57, 0xFE];
+    private static readonly byte?[] Signature_1343_call = [0xE8, 0xFC, 0x05];
     private static readonly byte?[] Signature_1356_mov = [0xC7, 0x44, 0x06, 0x00, 0x00];
     private static readonly byte?[] Signature_135B_mov = [0x8B, 0x5E, 0xEC];
     private static readonly byte?[] Signature_135E_mov = [0x8A, 0x44, 0x18];
@@ -6170,6 +7152,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_1712_jmp = [0xEB, 0xCE];
     private static readonly byte?[] Signature_171A_mov = [0x89, 0xF8];
     private static readonly byte?[] Signature_171C_call = [0xE8, 0x73, 0x07];
+    private static readonly byte?[] Signature_171F_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_1721_je = [0x74, 0x16];
+    private static readonly byte?[] Signature_1723_mov = [0xC6, 0x46, 0xFE, 0x00];
+    private static readonly byte?[] Signature_1727_jmp = [0xEB, 0x84];
     private static readonly byte?[] Signature_1775_mov = [0x89, 0xF3];
     private static readonly byte?[] Signature_1777_mov = [0x8B, 0x74, 0x02];
     private static readonly byte?[] Signature_177A_test = [0x85, 0xF6];
@@ -6240,6 +7226,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_189A_mov = [0xBF, 0xFF, 0xFF];
     private static readonly byte?[] Signature_189D_jmp = [0xEB, 0xF1];
     private static readonly byte?[] Signature_189F_call = [0xE8, 0xCD, 0xFC];
+    private static readonly byte?[] Signature_18A2_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_18A4_je = [0x74, 0x94];
+    private static readonly byte?[] Signature_18A6_mov = [0xBF, 0xFF, 0xFF];
+    private static readonly byte?[] Signature_18A9_jmp = [0xEB, 0x8F];
     private static readonly byte?[] Signature_18EE_mov = [0x89, 0xDE];
     private static readonly byte?[] Signature_18F0_jmp = [0xEB, 0xF1];
     private static readonly byte?[] Signature_1926_pop = [0x5B];
@@ -6259,6 +7249,53 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_195B_mov = [0x88, 0x17];
     private static readonly byte?[] Signature_195D_pop = [0x5B];
     private static readonly byte?[] Signature_195E_ret = [0xC3];
+    private static readonly byte?[] Signature_195F_push = [0x51];
+    private static readonly byte?[] Signature_1960_push = [0x56];
+    private static readonly byte?[] Signature_1961_push = [0x57];
+    private static readonly byte?[] Signature_1962_push = [0x55];
+    private static readonly byte?[] Signature_1963_mov = [0x89, 0xE5];
+    private static readonly byte?[] Signature_1965_sub = [0x83, 0xEC, 0x24];
+    private static readonly byte?[] Signature_1968_push = [0x52];
+    private static readonly byte?[] Signature_1969_mov = [0x89, 0xD9];
+    private static readonly byte?[] Signature_196B_mov = [0xC6, 0x46, 0xDC, 0x00];
+    private static readonly byte?[] Signature_196F_lea = [0x8D, 0x76, 0xDD];
+    private static readonly byte?[] Signature_1972_mov = [0x89, 0xD7];
+    private static readonly byte?[] Signature_1974_lea = [0x8D, 0x5E, 0xFE];
+    private static readonly byte?[] Signature_1977_mov = [0x89, 0x4E, 0xFE];
+    private static readonly byte?[] Signature_197A_xor = [0x33, 0xD2];
+    private static readonly byte?[] Signature_197C_div = [0xF7, 0x37];
+    private static readonly byte?[] Signature_197E_mov = [0x89, 0x07];
+    private static readonly byte?[] Signature_1980_mov = [0x89, 0xD3];
+    private static readonly byte?[] Signature_1982_mov = [0x8A, 0x87, 0x8E, 0x01];
+    private static readonly byte?[] Signature_1986_mov = [0x88, 0x04];
+    private static readonly byte?[] Signature_1988_mov = [0x8B, 0x46, 0xFE];
+    private static readonly byte?[] Signature_198B_inc = [0x46];
+    private static readonly byte?[] Signature_198C_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_198E_jne = [0x75, 0xE4];
+    private static readonly byte?[] Signature_1990_dec = [0x4E];
+    private static readonly byte?[] Signature_1991_mov = [0x8A, 0x04];
+    private static readonly byte?[] Signature_1993_mov = [0x88, 0x05];
+    private static readonly byte?[] Signature_1995_inc = [0x47];
+    private static readonly byte?[] Signature_1996_test = [0x84, 0xC0];
+    private static readonly byte?[] Signature_1998_jne = [0x75, 0xF6];
+    private static readonly byte?[] Signature_199A_mov = [0x8B, 0x46, 0xDA];
+    private static readonly byte?[] Signature_199D_mov = [0x89, 0xEC];
+    private static readonly byte?[] Signature_199F_pop = [0x5D];
+    private static readonly byte?[] Signature_19A0_pop = [0x5F];
+    private static readonly byte?[] Signature_19A1_pop = [0x5E];
+    private static readonly byte?[] Signature_19A2_pop = [0x59];
+    private static readonly byte?[] Signature_19A3_ret = [0xC3];
+    private static readonly byte?[] Signature_19A4_push = [0x56];
+    private static readonly byte?[] Signature_19A5_mov = [0x89, 0xD6];
+    private static readonly byte?[] Signature_19A7_cmp = [0x83, 0xFB, 0x0A];
+    private static readonly byte?[] Signature_19AA_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_19AC_test = [0x85, 0xC0];
+    private static readonly byte?[] Signature_19AE_jl = [0x7C, 0x07];
+    private static readonly byte?[] Signature_19B0_call = [0xE8, 0xAC, 0xFF];
+    private static readonly byte?[] Signature_19B7_neg = [0xF7, 0xD8];
+    private static readonly byte?[] Signature_19B9_inc = [0x42];
+    private static readonly byte?[] Signature_19BA_mov = [0xC6, 0x04, 0x2D];
+    private static readonly byte?[] Signature_19BD_jmp = [0xEB, 0xF1];
     private static readonly byte?[] Signature_19FB_push = [0x56];
     private static readonly byte?[] Signature_19FC_push = [0x57];
     private static readonly byte?[] Signature_19FD_push = [0x55];
@@ -6385,12 +7422,30 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_1BCB_mov = [0x89, 0xF3];
     private static readonly byte?[] Signature_1BCD_mov = [0xB4, 0x42];
     private static readonly byte?[] Signature_1BCF_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_1BD1_sbb = [0x19, 0xC9];
+    private static readonly byte?[] Signature_1BD3_jne = [0x75, 0x07];
+    private static readonly byte?[] Signature_1BD5_mov = [0x36, 0x89, 0x05];
+    private static readonly byte?[] Signature_1BD8_mov = [0x36, 0x89, 0x55, 0x02];
+    private static readonly byte?[] Signature_1BDC_test = [0x85, 0xC9];
+    private static readonly byte?[] Signature_1BDE_jl = [0x7C, 0x0C];
+    private static readonly byte?[] Signature_1BE0_mov = [0x8B, 0x46, 0xFC];
+    private static readonly byte?[] Signature_1BE3_mov = [0x8B, 0x56, 0xFE];
+    private static readonly byte?[] Signature_1BE6_mov = [0x89, 0xEC];
+    private static readonly byte?[] Signature_1BE8_pop = [0x5D];
+    private static readonly byte?[] Signature_1BE9_pop = [0x5F];
+    private static readonly byte?[] Signature_1BEA_pop = [0x5E];
+    private static readonly byte?[] Signature_1BEB_ret = [0xC3];
+    private static readonly byte?[] Signature_1BEC_call = [0xE8, 0x4C, 0x05];
     private static readonly byte?[] Signature_1C09_mov = [0xB0, 0x02];
     private static readonly byte?[] Signature_1C0B_mov = [0x89, 0xF3];
     private static readonly byte?[] Signature_1C0D_xor = [0x31, 0xD2];
     private static readonly byte?[] Signature_1C0F_xor = [0x31, 0xC9];
     private static readonly byte?[] Signature_1C11_mov = [0xB4, 0x42];
     private static readonly byte?[] Signature_1C13_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_1C15_rcl = [0xD1, 0xD2];
+    private static readonly byte?[] Signature_1C17_ror = [0xD1, 0xCA];
+    private static readonly byte?[] Signature_1C19_test = [0x85, 0xD2];
+    private static readonly byte?[] Signature_1C1B_jl = [0x7C, 0x26];
     private static readonly byte?[] Signature_1C34_mov = [0xC7, 0x06, 0x8E, 0x03, 0x0C, 0x00];
     private static readonly byte?[] Signature_1C43_call = [0xE8, 0xF5, 0x04];
     private static readonly byte?[] Signature_1C48_jmp = [0xE9, 0x81, 0x05];
@@ -6537,6 +7592,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_203B_mov = [0x89, 0xC3];
     private static readonly byte?[] Signature_203D_mov = [0xB4, 0x3E];
     private static readonly byte?[] Signature_203F_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_2041_sbb = [0x19, 0xD2];
+    private static readonly byte?[] Signature_2043_xor = [0x31, 0xF6];
+    private static readonly byte?[] Signature_2045_test = [0x85, 0xD2];
+    private static readonly byte?[] Signature_2047_jl = [0x7C, 0x0E];
+    private static readonly byte?[] Signature_2049_mov = [0x89, 0xC8];
+    private static readonly byte?[] Signature_204B_xor = [0x31, 0xD2];
+    private static readonly byte?[] Signature_204D_call = [0xE8, 0x5B, 0x01];
+    private static readonly byte?[] Signature_2057_call = [0xE8, 0xE1, 0x00];
     private static readonly byte?[] Signature_207F_xor = [0x31, 0xC0];
     private static readonly byte?[] Signature_2081_pop = [0x5A];
     private static readonly byte?[] Signature_2082_pop = [0x5B];
@@ -6558,10 +7621,18 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_20CC_inc = [0x46];
     private static readonly byte?[] Signature_20CD_inc = [0x46];
     private static readonly byte?[] Signature_20CE_call = [0xE8, 0x6B, 0x01];
+    private static readonly byte?[] Signature_20D1_jmp = [0xEB, 0xDE];
     private static readonly byte?[] Signature_20F2_mov = [0xBB, 0x1F, 0x00];
     private static readonly byte?[] Signature_20F5_mov = [0xBA, 0x01, 0x00];
     private static readonly byte?[] Signature_20F8_mov = [0xB8, 0x12, 0x04];
     private static readonly byte?[] Signature_20FB_call = [0xE8, 0x3E, 0x01];
+    private static readonly byte?[] Signature_20FE_mov = [0xBB, 0x1D, 0x00];
+    private static readonly byte?[] Signature_2101_mov = [0xBA, 0x01, 0x00];
+    private static readonly byte?[] Signature_2104_mov = [0xB8, 0x71, 0x04];
+    private static readonly byte?[] Signature_2107_call = [0xE8, 0x32, 0x01];
+    private static readonly byte?[] Signature_210A_mov = [0xC7, 0x06, 0x50, 0x03, 0x01, 0x00];
+    private static readonly byte?[] Signature_2110_mov = [0xC7, 0x06, 0x0A, 0x03, 0xA4, 0x03];
+    private static readonly byte?[] Signature_2116_jmp = [0xEB, 0x1E];
     private static readonly byte?[] Signature_211C_mov = [0xB8, 0x01, 0x00];
     private static readonly byte?[] Signature_211F_pop = [0x5A];
     private static readonly byte?[] Signature_2120_pop = [0x5B];
@@ -6608,11 +7679,23 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_21A7_xor = [0x31, 0xC0];
     private static readonly byte?[] Signature_21A9_pop = [0x5B];
     private static readonly byte?[] Signature_21AA_ret = [0xC3];
+    private static readonly byte?[] Signature_21AB_push = [0x53];
+    private static readonly byte?[] Signature_21AC_cmp = [0x3B, 0x06, 0x20, 0x03];
+    private static readonly byte?[] Signature_21B0_jb = [0x72, 0x02];
+    private static readonly byte?[] Signature_21B2_pop = [0x5B];
+    private static readonly byte?[] Signature_21B3_ret = [0xC3];
+    private static readonly byte?[] Signature_21B4_mov = [0x8B, 0x1E, 0x4A, 0x03];
+    private static readonly byte?[] Signature_21B8_shl = [0xD1, 0xE0];
+    private static readonly byte?[] Signature_21BA_add = [0x01, 0xC3];
+    private static readonly byte?[] Signature_21BC_mov = [0x89, 0x17];
+    private static readonly byte?[] Signature_21BE_pop = [0x5B];
+    private static readonly byte?[] Signature_21BF_ret = [0xC3];
     private static readonly byte?[] Signature_21CC_push = [0x53];
     private static readonly byte?[] Signature_21CD_mov = [0x89, 0xC3];
     private static readonly byte?[] Signature_21CF_mov = [0xB4, 0x68];
     private static readonly byte?[] Signature_21D1_clc = [0xF8];
     private static readonly byte?[] Signature_21D2_int = [0xCD, 0x21];
+    private static readonly byte?[] Signature_21D4_call = [0xE8, 0xBD, 0x00];
     private static readonly byte?[] Signature_21FF_mov = [0xBB, 0x00, 0x10];
     private static readonly byte?[] Signature_222B_mov = [0xC7, 0x06, 0x8E, 0x03, 0x05, 0x00];
     private static readonly byte?[] Signature_2231_mov = [0xB8, 0xFF, 0xFF];
@@ -6620,6 +7703,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_2271_xor = [0x33, 0xFF];
     private static readonly byte?[] Signature_2273_xor = [0x33, 0xF6];
     private static readonly byte?[] Signature_2289_xor = [0x33, 0xDB];
+    private static readonly byte?[] Signature_2294_jae = [0x73, 0x07];
+    private static readonly byte?[] Signature_2296_push = [0x50];
+    private static readonly byte?[] Signature_2297_call = [0xE8, 0xA1, 0xFE];
+    private static readonly byte?[] Signature_229D_sub = [0x2B, 0xC0];
+    private static readonly byte?[] Signature_229F_ret = [0xC3];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -6654,6 +7742,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -6715,9 +7804,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_083D = [Signature_083D_cmp, Signature_0842_jne];
     private static readonly byte?[][] SpeculativeRun_0844 = [Signature_0844_xor, Signature_0846_ret];
     private static readonly byte?[][] SpeculativeRun_08AD = [Signature_08AD_mov, Signature_08B0_call];
+    private static readonly byte?[][] SpeculativeRun_08B3 = [Signature_08B3_mov, Signature_08B5_test, Signature_08B7_jne];
+    private static readonly byte?[][] SpeculativeRun_08B9 = [Signature_08B9_mov, Signature_08BC_mov, Signature_08BF_mov, Signature_08C1_jmp];
     private static readonly byte?[][] SpeculativeRun_0951 = [Signature_0951_test, Signature_0953_je];
     private static readonly byte?[][] SpeculativeRun_096F = [Signature_096F_mov, Signature_0971_call];
     private static readonly byte?[][] SpeculativeRun_099B = [Signature_099B_mov, Signature_099D_call];
+    private static readonly byte?[][] SpeculativeRun_09A0 = [Signature_09A0_test, Signature_09A2_jne];
     private static readonly byte?[][] SpeculativeRun_09D5 = [Signature_09D5_mov, Signature_09D8_or];
     private static readonly byte?[][] SpeculativeRun_0A16 = [Signature_0A16_lea, Signature_0A19_mov, Signature_0A1C_or];
     private static readonly byte?[][] SpeculativeRun_0A38 = [Signature_0A38_test, Signature_0A3A_je];
@@ -6749,6 +7841,22 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0BD9 = [Signature_0BD9_add, Signature_0BDC_jmp];
     private static readonly byte?[][] SpeculativeRun_0BDE = [Signature_0BDE_mov, Signature_0BE0_or];
     private static readonly byte?[][] SpeculativeRun_0BE6 = [Signature_0BE6_inc, Signature_0BE7_jmp];
+    private static readonly byte?[][] SpeculativeRun_0C0C = [Signature_0C0C_mov, Signature_0C0E_sub, Signature_0C11_mov, Signature_0C13_mov, Signature_0C15_mov, Signature_0C17_xor, Signature_0C19_cmp, Signature_0C1C_jne];
+    private static readonly byte?[][] SpeculativeRun_0C1E = [Signature_0C1E_mov, Signature_0C20_mov, Signature_0C23_test, Signature_0C25_je];
+    private static readonly byte?[][] SpeculativeRun_0C27 = [Signature_0C27_mov, Signature_0C29_lea, Signature_0C2C_add, Signature_0C2F_call];
+    private static readonly byte?[][] SpeculativeRun_0C3D = [Signature_0C3D_mov, Signature_0C3F_pop, Signature_0C40_jmp];
+    private static readonly byte?[][] SpeculativeRun_0C43 = [Signature_0C43_mov, Signature_0C45_mov, Signature_0C48_test, Signature_0C4A_je];
+    private static readonly byte?[][] SpeculativeRun_0C4C = [Signature_0C4C_cmp, Signature_0C4E_jg];
+    private static readonly byte?[][] SpeculativeRun_0C50 = [Signature_0C50_mov, Signature_0C52_lea, Signature_0C55_add, Signature_0C58_call];
+    private static readonly byte?[][] SpeculativeRun_0C64 = [Signature_0C64_cmp, Signature_0C66_jle];
+    private static readonly byte?[][] SpeculativeRun_0C68 = [Signature_0C68_mov, Signature_0C6A_jmp];
+    private static readonly byte?[][] SpeculativeRun_0C6F = [Signature_0C6F_mov, Signature_0C71_sub, Signature_0C74_push];
+    private static readonly byte?[][] SpeculativeRun_0C75 = [Signature_0C75_mov, Signature_0C77_mov, Signature_0C7A_lea, Signature_0C7D_call];
+    private static readonly byte?[][] SpeculativeRun_0CC8 = [Signature_0CC8_mov, Signature_0CCA_sub, Signature_0CCD_mov, Signature_0CCF_mov];
+    private static readonly byte?[][] SpeculativeRun_0CD8 = [Signature_0CD8_test, Signature_0CDA_jl];
+    private static readonly byte?[][] SpeculativeRun_0CDC = [Signature_0CDC_mov, Signature_0CDF_cmp, Signature_0CE3_jne];
+    private static readonly byte?[][] SpeculativeRun_0CEA = [Signature_0CEA_mov, Signature_0CED_mov, Signature_0CF0_mov, Signature_0CF2_call];
+    private static readonly byte?[][] SpeculativeRun_0D11 = [Signature_0D11_inc, Signature_0D12_jmp];
     private static readonly byte?[][] SpeculativeRun_0DB3 = [Signature_0DB3_mov, Signature_0DB6_sub, Signature_0DB9_sub, Signature_0DBC_sub, Signature_0DBF_sub, Signature_0DC2_sub, Signature_0DC5_sub, Signature_0DC8_test, Signature_0DCA_jle];
     private static readonly byte?[][] SpeculativeRun_0DD4 = [Signature_0DD4_mov, Signature_0DD6_sub, Signature_0DD9_mov, Signature_0DDB_mov];
     private static readonly byte?[][] SpeculativeRun_0DE1 = [Signature_0DE1_cmp, Signature_0DE5_jle];
@@ -6756,6 +7864,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0ED3 = [Signature_0ED3_mov, Signature_0ED5_mov, Signature_0ED8_mov];
     private static readonly byte?[][] SpeculativeRun_0EDB = [Signature_0EDB_mov, Signature_0EDE_mov];
     private static readonly byte?[][] SpeculativeRun_0EE1 = [Signature_0EE1_mov, Signature_0EE4_mov, Signature_0EE7_mov];
+    private static readonly byte?[][] SpeculativeRun_0EED = [Signature_0EED_mov, Signature_0EF0_mov, Signature_0EF2_mov, Signature_0EF4_inc];
     private static readonly byte?[][] SpeculativeRun_0F0E = [Signature_0F0E_mov, Signature_0F10_mov, Signature_0F13_mov];
     private static readonly byte?[][] SpeculativeRun_0F16 = [Signature_0F16_mov, Signature_0F19_mov];
     private static readonly byte?[][] SpeculativeRun_0F1C = [Signature_0F1C_mov, Signature_0F1F_mov, Signature_0F22_mov];
@@ -6778,12 +7887,38 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_104F = [Signature_104F_mov, Signature_1052_mov, Signature_1054_mov, Signature_1057_inc, Signature_1058_add, Signature_105A_mov];
     private static readonly byte?[][] SpeculativeRun_1063 = [Signature_1063_test, Signature_1065_jne];
     private static readonly byte?[][] SpeculativeRun_106A = [Signature_106A_mov, Signature_106D_mov, Signature_106F_mov, Signature_1072_inc, Signature_1073_add, Signature_1075_mov];
+    private static readonly byte?[][] SpeculativeRun_107E = [Signature_107E_test, Signature_1082_jne];
+    private static readonly byte?[][] SpeculativeRun_108A = [Signature_108A_mov, Signature_108C_mov, Signature_108F_mov, Signature_1091_mov];
+    private static readonly byte?[][] SpeculativeRun_1094 = [Signature_1094_mov, Signature_1097_mov, Signature_109A_mov];
+    private static readonly byte?[][] SpeculativeRun_109D = [Signature_109D_mov, Signature_109F_mov, Signature_10A2_call];
+    private static readonly byte?[][] SpeculativeRun_10C1 = [Signature_10C1_mov, Signature_10C4_mov];
+    private static readonly byte?[][] SpeculativeRun_10C7 = [Signature_10C7_mov, Signature_10CA_test, Signature_10CC_jne];
+    private static readonly byte?[][] SpeculativeRun_10CE = [Signature_10CE_test, Signature_10D0_add];
+    private static readonly byte?[][] SpeculativeRun_10D3 = [Signature_10D3_mov, Signature_10D5_mov, Signature_10D8_test, Signature_10DA_je];
+    private static readonly byte?[][] SpeculativeRun_10E2 = [Signature_10E2_cmp, Signature_10E6_jne];
+    private static readonly byte?[][] SpeculativeRun_10E8 = [Signature_10E8_test, Signature_10EC_je];
+    private static readonly byte?[][] SpeculativeRun_10EE = [Signature_10EE_mov, Signature_10F1_mov, Signature_10F4_mov, Signature_10F7_call];
+    private static readonly byte?[][] SpeculativeRun_10FD = [Signature_10FD_cmp, Signature_1101_jl];
+    private static readonly byte?[][] SpeculativeRun_1103 = [Signature_1103_cmp, Signature_1106_jle];
+    private static readonly byte?[][] SpeculativeRun_1108 = [Signature_1108_mov, Signature_110B_jmp];
+    private static readonly byte?[][] SpeculativeRun_1110 = [Signature_1110_mov, Signature_1112_mov, Signature_1115_mov, Signature_1118_test, Signature_111A_jne];
+    private static readonly byte?[][] SpeculativeRun_111C = [Signature_111C_test, Signature_111E_je];
+    private static readonly byte?[][] SpeculativeRun_1128 = [Signature_1128_mov, Signature_112B_mov, Signature_112E_mov, Signature_1131_call];
+    private static readonly byte?[][] SpeculativeRun_1136 = [Signature_1136_test, Signature_113A_jne];
+    private static readonly byte?[][] SpeculativeRun_113E = [Signature_113E_mov, Signature_1141_test, Signature_1143_je];
+    private static readonly byte?[][] SpeculativeRun_1145 = [Signature_1145_test, Signature_1147_jne];
+    private static readonly byte?[][] SpeculativeRun_114C = [Signature_114C_test, Signature_114E_jne];
+    private static readonly byte?[][] SpeculativeRun_1150 = [Signature_1150_cmp, Signature_1154_jne];
+    private static readonly byte?[][] SpeculativeRun_1156 = [Signature_1156_cmp, Signature_115A_jne];
+    private static readonly byte?[][] SpeculativeRun_1162 = [Signature_1162_mov, Signature_1165_mov, Signature_1167_mov, Signature_116A_inc, Signature_116B_add, Signature_116D_mov];
+    private static readonly byte?[][] SpeculativeRun_1173 = [Signature_1173_mov, Signature_1176_mov, Signature_1179_mov, Signature_117B_add, Signature_117D_inc, Signature_117E_mov, Signature_1181_mov];
     private static readonly byte?[][] SpeculativeRun_11A7 = [Signature_11A7_cmp, Signature_11AB_jne];
     private static readonly byte?[][] SpeculativeRun_11AD = [Signature_11AD_test, Signature_11AF_jne];
     private static readonly byte?[][] SpeculativeRun_11B1 = [Signature_11B1_cmp, Signature_11B5_jne];
     private static readonly byte?[][] SpeculativeRun_11B7 = [Signature_11B7_cmp, Signature_11BB_jne];
     private static readonly byte?[][] SpeculativeRun_11BD = [Signature_11BD_cmp, Signature_11C1_jne];
     private static readonly byte?[][] SpeculativeRun_11C3 = [Signature_11C3_mov, Signature_11C6_xor];
+    private static readonly byte?[][] SpeculativeRun_11CE = [Signature_11CE_mov, Signature_11D1_or, Signature_11D4_jmp];
     private static readonly byte?[][] SpeculativeRun_11E9 = [Signature_11E9_mov, Signature_11EC_mov, Signature_11EF_add, Signature_11F2_mov, Signature_11F5_push];
     private static readonly byte?[][] SpeculativeRun_11F6 = [Signature_11F6_mov, Signature_11F8_mov, Signature_11FB_call];
     private static readonly byte?[][] SpeculativeRun_1204 = [Signature_1204_mov, Signature_1207_call];
@@ -6793,6 +7928,16 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_1248 = [Signature_1248_mov, Signature_124B_or, Signature_124E_jne];
     private static readonly byte?[][] SpeculativeRun_1250 = [Signature_1250_mov, Signature_1253_jmp];
     private static readonly byte?[][] SpeculativeRun_126A = [Signature_126A_mov, Signature_126D_sub, Signature_126F_mov];
+    private static readonly byte?[][] SpeculativeRun_1275 = [Signature_1275_cmp, Signature_1279_jne];
+    private static readonly byte?[][] SpeculativeRun_127B = [Signature_127B_test, Signature_127F_je];
+    private static readonly byte?[][] SpeculativeRun_128D = [Signature_128D_mov, Signature_128F_mov, Signature_1292_test, Signature_1296_je];
+    private static readonly byte?[][] SpeculativeRun_1298 = [Signature_1298_add, Signature_129B_mov];
+    private static readonly byte?[][] SpeculativeRun_129D = [Signature_129D_mov, Signature_12A0_mov, Signature_12A3_mov, Signature_12A6_call];
+    private static readonly byte?[][] SpeculativeRun_12E0 = [Signature_12E0_mov, Signature_12E3_mov, Signature_12E6_mov, Signature_12E8_jmp];
+    private static readonly byte?[][] SpeculativeRun_12EF = [Signature_12EF_test, Signature_12F3_jne];
+    private static readonly byte?[][] SpeculativeRun_12F8 = [Signature_12F8_mov, Signature_12FA_mov, Signature_12FD_mov, Signature_1300_mov];
+    private static readonly byte?[][] SpeculativeRun_1308 = [Signature_1308_mov, Signature_130A_lea, Signature_130D_mov, Signature_1310_call];
+    private static readonly byte?[][] SpeculativeRun_133B = [Signature_133B_mov, Signature_133D_mov, Signature_1340_mov, Signature_1343_call];
     private static readonly byte?[][] SpeculativeRun_135B = [Signature_135B_mov, Signature_135E_mov, Signature_1361_mov];
     private static readonly byte?[][] SpeculativeRun_13CA = [Signature_13CA_mov, Signature_13CD_test, Signature_13CF_je];
     private static readonly byte?[][] SpeculativeRun_13D5 = [Signature_13D5_mov, Signature_13D8_mov, Signature_13DB_mov, Signature_13DE_mov];
@@ -6830,6 +7975,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_16E2 = [Signature_16E2_mov, Signature_16E5_jmp];
     private static readonly byte?[][] SpeculativeRun_1703 = [Signature_1703_xor, Signature_1705_mov, Signature_1709_mov];
     private static readonly byte?[][] SpeculativeRun_171A = [Signature_171A_mov, Signature_171C_call];
+    private static readonly byte?[][] SpeculativeRun_171F = [Signature_171F_test, Signature_1721_je];
     private static readonly byte?[][] SpeculativeRun_1775 = [Signature_1775_mov, Signature_1777_mov, Signature_177A_test, Signature_177C_je];
     private static readonly byte?[][] SpeculativeRun_177E = [Signature_177E_cmp, Signature_1780_ja];
     private static readonly byte?[][] SpeculativeRun_1782 = [Signature_1782_mov, Signature_1784_add, Signature_1786_cmp, Signature_1788_jb];
@@ -6852,6 +7998,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_185D = [Signature_185D_mov, Signature_1860_call];
     private static readonly byte?[][] SpeculativeRun_1882 = [Signature_1882_mov, Signature_1884_call];
     private static readonly byte?[][] SpeculativeRun_189A = [Signature_189A_mov, Signature_189D_jmp];
+    private static readonly byte?[][] SpeculativeRun_18A2 = [Signature_18A2_test, Signature_18A4_je];
+    private static readonly byte?[][] SpeculativeRun_18A6 = [Signature_18A6_mov, Signature_18A9_jmp];
     private static readonly byte?[][] SpeculativeRun_18EE = [Signature_18EE_mov, Signature_18F0_jmp];
     private static readonly byte?[][] SpeculativeRun_1926 = [Signature_1926_pop, Signature_1927_ret];
     private static readonly byte?[][] SpeculativeRun_1943 = [Signature_1943_mov, Signature_1945_test, Signature_1947_je];
@@ -6860,6 +8008,19 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_1956 = [Signature_1956_pop, Signature_1957_ret];
     private static readonly byte?[][] SpeculativeRun_1958 = [Signature_1958_mov, Signature_195B_mov];
     private static readonly byte?[][] SpeculativeRun_195D = [Signature_195D_pop, Signature_195E_ret];
+    private static readonly byte?[][] SpeculativeRun_1963 = [Signature_1963_mov, Signature_1965_sub, Signature_1968_push];
+    private static readonly byte?[][] SpeculativeRun_1969 = [Signature_1969_mov, Signature_196B_mov];
+    private static readonly byte?[][] SpeculativeRun_196F = [Signature_196F_lea, Signature_1972_mov];
+    private static readonly byte?[][] SpeculativeRun_1974 = [Signature_1974_lea, Signature_1977_mov];
+    private static readonly byte?[][] SpeculativeRun_197A = [Signature_197A_xor, Signature_197C_div, Signature_197E_mov];
+    private static readonly byte?[][] SpeculativeRun_1980 = [Signature_1980_mov, Signature_1982_mov, Signature_1986_mov];
+    private static readonly byte?[][] SpeculativeRun_1988 = [Signature_1988_mov, Signature_198B_inc, Signature_198C_test, Signature_198E_jne];
+    private static readonly byte?[][] SpeculativeRun_1990 = [Signature_1990_dec, Signature_1991_mov, Signature_1993_mov];
+    private static readonly byte?[][] SpeculativeRun_1995 = [Signature_1995_inc, Signature_1996_test, Signature_1998_jne];
+    private static readonly byte?[][] SpeculativeRun_199A = [Signature_199A_mov, Signature_199D_mov, Signature_199F_pop, Signature_19A0_pop, Signature_19A1_pop, Signature_19A2_pop, Signature_19A3_ret];
+    private static readonly byte?[][] SpeculativeRun_19A5 = [Signature_19A5_mov, Signature_19A7_cmp, Signature_19AA_jne];
+    private static readonly byte?[][] SpeculativeRun_19AC = [Signature_19AC_test, Signature_19AE_jl];
+    private static readonly byte?[][] SpeculativeRun_19B7 = [Signature_19B7_neg, Signature_19B9_inc, Signature_19BA_mov];
     private static readonly byte?[][] SpeculativeRun_19FE = [Signature_19FE_mov, Signature_1A00_sub, Signature_1A03_push];
     private static readonly byte?[][] SpeculativeRun_1A04 = [Signature_1A04_mov, Signature_1A07_mov];
     private static readonly byte?[][] SpeculativeRun_1A0A = [Signature_1A0A_lea, Signature_1A0D_mov];
@@ -6932,6 +8093,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_20B1 = [Signature_20B1_mov, Signature_20B3_mov, Signature_20B6_test, Signature_20B8_je];
     private static readonly byte?[][] SpeculativeRun_20BA = [Signature_20BA_mov, Signature_20BC_xor, Signature_20BE_xor, Signature_20C0_mov, Signature_20C2_mov, Signature_20C5_sub, Signature_20C7_add, Signature_20CA_inc, Signature_20CB_inc, Signature_20CC_inc, Signature_20CD_inc, Signature_20CE_call];
     private static readonly byte?[][] SpeculativeRun_20F2 = [Signature_20F2_mov, Signature_20F5_mov, Signature_20F8_mov, Signature_20FB_call];
+    private static readonly byte?[][] SpeculativeRun_20FE = [Signature_20FE_mov, Signature_2101_mov, Signature_2104_mov, Signature_2107_call];
     private static readonly byte?[][] SpeculativeRun_211C = [Signature_211C_mov, Signature_211F_pop, Signature_2120_pop, Signature_2121_ret];
     private static readonly byte?[][] SpeculativeRun_2129 = [Signature_2129_test, Signature_212B_je];
     private static readonly byte?[][] SpeculativeRun_213D = [Signature_213D_mov, Signature_213F_mov, Signature_2141_xor, Signature_2143_mov];
@@ -6948,9 +8110,14 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_217E = [Signature_217E_cmp, Signature_2180_jbe];
     private static readonly byte?[][] SpeculativeRun_2184 = [Signature_2184_mov, Signature_2186_xor, Signature_2188_jmp];
     private static readonly byte?[][] SpeculativeRun_21A7 = [Signature_21A7_xor, Signature_21A9_pop, Signature_21AA_ret];
+    private static readonly byte?[][] SpeculativeRun_21AC = [Signature_21AC_cmp, Signature_21B0_jb];
+    private static readonly byte?[][] SpeculativeRun_21B2 = [Signature_21B2_pop, Signature_21B3_ret];
+    private static readonly byte?[][] SpeculativeRun_21B4 = [Signature_21B4_mov, Signature_21B8_shl, Signature_21BA_add, Signature_21BC_mov];
+    private static readonly byte?[][] SpeculativeRun_21BE = [Signature_21BE_pop, Signature_21BF_ret];
     private static readonly byte?[][] SpeculativeRun_21CD = [Signature_21CD_mov, Signature_21CF_mov, Signature_21D1_clc, Signature_21D2_int];
     private static readonly byte?[][] SpeculativeRun_2231 = [Signature_2231_mov, Signature_2234_jmp];
     private static readonly byte?[][] SpeculativeRun_2271 = [Signature_2271_xor, Signature_2273_xor];
+    private static readonly byte?[][] SpeculativeRun_229D = [Signature_229D_sub, Signature_229F_ret];
     private static readonly byte?[][] SpeculativeRun_00AF_Signature_00AF_cmp_Signature_00B5_jne = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
@@ -7093,6 +8260,7 @@ public partial class CfgGeneratedOverrides {
                 }
             }
         }
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);

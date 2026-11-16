@@ -54,71 +54,162 @@ public partial class CfgGeneratedOverrides {
         SP = 0x1000;
         DirectionFlag = false;
         Segment2000Globals.Word0080 = 0;
+        BX = 0;
         ES = 0xF000;
         SI = 0;
-        if (SI <= 6) {
-            if (SegmentF000Globals.Word02FC != 0x022B) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0023");
-            }
-            Segment2000Globals.Word0056 += 1;
+        if (SI > 6) {
+            goto L_0028;
         }
+        switch (SegmentF000Globals.Word02FC) {
+            case 0x022B:
+                goto L_022B;
+            case 0x022D:
+                goto L_022D;
+            case 0x022F:
+                goto L_022F;
+            case 0x0231:
+                goto L_0231;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0023");
+        }
+    L_0028:
+        CheckExternalEvents(biosSegment, 0x0028);
         Segment2000Globals.Word0080 = 1;
+        BX = 1;
         ES = 0xF000;
         SI = 2;
-        if (SI <= 6) {
-            if (SegmentF000Globals.Word02FE != 0x022D) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0040");
-            }
-            Segment2000Globals.Word0058 += 1;
+        if (SI > 6) {
+            goto L_0045;
         }
+        switch (SegmentF000Globals.Word02FE) {
+            case 0x022B:
+                goto L_022B;
+            case 0x022D:
+                goto L_022D;
+            case 0x022F:
+                goto L_022F;
+            case 0x0231:
+                goto L_0231;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:0040");
+        }
+    L_0045:
+        CheckExternalEvents(biosSegment, 0x0045);
         Segment2000Globals.Word0080 = 2;
+        BX = 2;
         ES = 0xF000;
         SI = 4;
-        if (SI <= 6) {
-            if (SegmentF000Globals.Word0300 != 0x022F) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:005D");
-            }
-            Segment2000Globals.Word005A += 1;
+        if (SI > 6) {
+            goto L_0062;
         }
+        switch (SegmentF000Globals.Word0300) {
+            case 0x022B:
+                goto L_022B;
+            case 0x022D:
+                goto L_022D;
+            case 0x022F:
+                goto L_022F;
+            case 0x0231:
+                goto L_0231;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:005D");
+        }
+    L_0062:
+        CheckExternalEvents(biosSegment, 0x0062);
         Segment2000Globals.Word0080 = 3;
+        BX = 3;
         ES = 0xF000;
         SI = 6;
-        if (SI <= 6) {
-            if (SegmentF000Globals.Word0302 != 0x0231) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:007A");
-            }
-            Segment2000Globals.Word005C += 1;
+        if (SI > 6) {
+            goto L_007F;
         }
+        switch (SegmentF000Globals.Word0302) {
+            case 0x022B:
+                break;
+            case 0x022D:
+                goto L_022D;
+            case 0x022F:
+                goto L_022F;
+            case 0x0231:
+                goto L_0231;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x02FC]:X4} at F000:007A");
+        }
+    L_022B:
+        Segment2000Globals.Word0056 += 1;
+        goto L_0028;
+    L_022D:
+        Segment2000Globals.Word0058 += 1;
+        goto L_0045;
+    L_022F:
+        Segment2000Globals.Word005A += 1;
+        goto L_0062;
+    L_0231:
+        Segment2000Globals.Word005C += 1;
+    L_007F:
         Segment2000Globals.Word0080 = 2;
         BX = 2;
         ES = 0xF000;
         SI = 4;
         if (SI is >= 4 and <= 8) {
-            if (SegmentF000Globals.Word0308 != 0x024F) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:009C");
+            switch (SegmentF000Globals.Word0308) {
+                case 0x024F:
+                    goto L_024F;
+                case 0x0251:
+                    break;
+                case 0x0253:
+                    goto L_0253;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:009C");
             }
-            Segment2000Globals.Word0064 = 1;
-            Segment2000Globals.Word0080 = 3;
-            BX = 3;
-            ES = 0xF000;
-            SI = 6;
-            if (SI is >= 4 and <= 8) {
-                if (SegmentF000Globals.Word030A != 0x0251) {
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:00BE");
-                }
+        L_0251:
+            while (true) {
+                CheckExternalEvents(biosSegment, 0x0251);
                 Segment2000Globals.Word0066 = 1;
                 Segment2000Globals.Word0080 = 4;
                 BX = 4;
                 ES = 0xF000;
                 SI = 8;
-                if (SI is >= 4 and <= 8) {
-                    if (SegmentF000Globals.Word030C != 0x0253) {
+                if (SI is < 4 or > 8) {
+                    goto L_00E5;
+                }
+                switch (SegmentF000Globals.Word030C) {
+                    case 0x024F:
+                        goto L_024F;
+                    case 0x0251:
+                        break;
+                    case 0x0253:
+                        goto L_0253;
+                    default:
                         throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:00E0");
-                    }
-                    Segment2000Globals.Word0078 = 1;
                 }
             }
+        L_024F:
+            while (true) {
+                CheckExternalEvents(biosSegment, 0x024F);
+                Segment2000Globals.Word0064 = 1;
+                Segment2000Globals.Word0080 = 3;
+                BX = 3;
+                ES = 0xF000;
+                SI = 6;
+                if (SI is < 4 or > 8) {
+                    goto L_00E5;
+                }
+                switch (SegmentF000Globals.Word030A) {
+                    case 0x024F:
+                        break;
+                    case 0x0251:
+                        goto L_0251;
+                    case 0x0253:
+                        goto L_0253;
+                    default:
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0304]:X4} at F000:00BE");
+                }
+            }
+        L_0253:
+            Segment2000Globals.Word0078 = 1;
         }
+    L_00E5:
         word1 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x00E8);
@@ -150,19 +241,45 @@ public partial class CfgGeneratedOverrides {
         ES = 0xF000;
         SI = 2;
         if (SI <= 4) {
-            if (SegmentF000Globals.Word0358 != 0x029B) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0125");
+            switch (SegmentF000Globals.Word0358) {
+                case 0x0299:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x0299, Signature_0299_jmp);
+                    VerifySpeculativeRunOrFail(biosSegment, 0x02A7, SpeculativeRun_02A7);
+                    Segment2000Globals.Word0068 = 0x1100;
+                    break;
+                case 0x029B:
+                    Segment2000Globals.Word006A = 0x1111;
+                    break;
+                case 0x029D:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x029D, Signature_029D_jmp);
+                    VerifySpeculativeRunOrFail(biosSegment, 0x02B9, SpeculativeRun_02B9);
+                    Segment2000Globals.Word006C = 0x1122;
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0125");
             }
-            Segment2000Globals.Word006A = 0x1111;
         }
         Segment2000Globals.Word0080 = 5;
         ES = 0xF000;
         SI = 0x000A;
         if (SI is >= 8 and <= 0x000C) {
-            if (SegmentF000Globals.Word0360 != 0x02A3) {
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0147");
+            switch (SegmentF000Globals.Word0360) {
+                case 0x02A1:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x02A1, Signature_02A1_jmp);
+                    VerifySpeculativeRunOrFail(biosSegment, 0x02CB, SpeculativeRun_02CB);
+                    Segment2000Globals.Word0072 = 0x1144;
+                    break;
+                case 0x02A3:
+                    Segment2000Globals.Word0074 = 0x1155;
+                    break;
+                case 0x02A5:
+                    VerifySpeculativeEntryOrFail(biosSegment, 0x02A5, Signature_02A5_jmp);
+                    VerifySpeculativeRunOrFail(biosSegment, 0x02DD, SpeculativeRun_02DD);
+                    Segment2000Globals.Word0076 = 0x1166;
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, SI + 0x0356]:X4} at F000:0147");
             }
-            Segment2000Globals.Word0074 = 0x1155;
         }
         word2 = 0;
         CX = 5;
@@ -326,9 +443,17 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public ushort Word0066 { get => _memory.UInt16[Segment, 0x0066]; set => _memory.UInt16[Segment, 0x0066] = value; }
 
+    public ushort Word0068 { get => _memory.UInt16[Segment, 0x0068]; set => _memory.UInt16[Segment, 0x0068] = value; }
+
     public ushort Word006A { get => _memory.UInt16[Segment, 0x006A]; set => _memory.UInt16[Segment, 0x006A] = value; }
 
+    public ushort Word006C { get => _memory.UInt16[Segment, 0x006C]; set => _memory.UInt16[Segment, 0x006C] = value; }
+
+    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
+
     public ushort Word0074 { get => _memory.UInt16[Segment, 0x0074]; set => _memory.UInt16[Segment, 0x0074] = value; }
+
+    public ushort Word0076 { get => _memory.UInt16[Segment, 0x0076]; set => _memory.UInt16[Segment, 0x0076] = value; }
 
     public ushort Word0078 { get => _memory.UInt16[Segment, 0x0078]; set => _memory.UInt16[Segment, 0x0078] = value; }
 
@@ -437,6 +562,24 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0299_jmp = [0xEB, 0x0C];
+    private static readonly byte?[] Signature_029D_jmp = [0xEB, 0x1A];
+    private static readonly byte?[] Signature_02A1_jmp = [0xEB, 0x28];
+    private static readonly byte?[] Signature_02A5_jmp = [0xEB, 0x36];
+    private static readonly byte?[] Signature_02A7_mov = [0xC7, 0x06, 0x68, 0x00, 0x00, 0x11];
+    private static readonly byte?[] Signature_02AD_jmp = [0xE9, 0x7A, 0xFE];
+    private static readonly byte?[] Signature_02B9_mov = [0xC7, 0x06, 0x6C, 0x00, 0x22, 0x11];
+    private static readonly byte?[] Signature_02BF_jmp = [0xE9, 0x68, 0xFE];
+    private static readonly byte?[] Signature_02CB_mov = [0xC7, 0x06, 0x72, 0x00, 0x44, 0x11];
+    private static readonly byte?[] Signature_02D1_jmp = [0xE9, 0x78, 0xFE];
+    private static readonly byte?[] Signature_02DD_mov = [0xC7, 0x06, 0x76, 0x00, 0x66, 0x11];
+    private static readonly byte?[] Signature_02E3_jmp = [0xE9, 0x66, 0xFE];
+
+    private static readonly byte?[][] SpeculativeRun_02A7 = [Signature_02A7_mov, Signature_02AD_jmp];
+    private static readonly byte?[][] SpeculativeRun_02B9 = [Signature_02B9_mov, Signature_02BF_jmp];
+    private static readonly byte?[][] SpeculativeRun_02CB = [Signature_02CB_mov, Signature_02D1_jmp];
+    private static readonly byte?[][] SpeculativeRun_02DD = [Signature_02DD_mov, Signature_02E3_jmp];
+
 }
 
 // ==== file: CfgGeneratedOverrideSupplier.cs ====

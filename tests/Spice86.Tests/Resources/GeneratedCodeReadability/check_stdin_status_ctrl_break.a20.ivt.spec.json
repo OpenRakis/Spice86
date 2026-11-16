@@ -39,10 +39,10 @@
       "LocalWrites": 3,
       "PlainRegisterAssignments": 6,
       "PortWrapperCalls": 0,
-      "RawIoCalls": 1,
+      "RawIoCalls": 2,
       "RegisterReads": 4,
       "RegisterWrites": 10,
-      "Statements": 17,
+      "Statements": 19,
       "WriteBacks": 0
     }
   },

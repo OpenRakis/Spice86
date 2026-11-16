@@ -34,7 +34,7 @@
       "Casts": 3,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 1,
-      "LocalReads": 19,
+      "LocalReads": 20,
       "LocalVariables": 7,
       "LocalWrites": 20,
       "PlainRegisterAssignments": 64,
@@ -43,7 +43,7 @@
       "RegisterReads": 58,
       "RegisterWrites": 109,
       "Statements": 178,
-      "WriteBacks": 3
+      "WriteBacks": 4
     }
   },
   "support": {

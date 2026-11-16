@@ -63,17 +63,14 @@ public partial class CfgGeneratedOverrides {
             AL = 0;
             Out8(0x0999, 0);
             SI = 0x0219;
-            BX = NearCall(cs1, 0x0193, () => unknown_016F_01E8_018D8(BX, 0x0219, DS, DirectionFlag));
+            (AL, BX) = NearCall(cs1, 0x0193, () => unknown_016F_01E8_018D8(BX, 0x0219, DS, DirectionFlag));
             AX = word1;
             NearCall(cs1, 0x0198, unknown_016F_01F7_018E7Entry);
             SI = 0x0235;
-            BX = NearCall(cs1, 0x019E, () => unknown_016F_01E8_018D8(BX, 0x0235, DS, DirectionFlag));
-            CX = NearCall(cs1, 0x01A1, () => unknown_016F_01A6_01896(CX));
-            (AL, CX) = NearCall(cs1, 0x01A4, () => unknown_016F_01B9_018A9(CX));
-            return TerminateCall(cs1, 0x01A6, () => DosInt20.Terminate(AL));
+            (AL, BX) = NearCall(cs1, 0x019E, () => unknown_016F_01E8_018D8(BX, 0x0235, DS, DirectionFlag));
+            goto L_019E;
         L_015C:
             VerifySpeculativeRunOrFail(cs1, 0x015C, SpeculativeRun_015C);
-            DX = 0x0998;
             CX = word1;
             byte3 = CL;
             Out8(0x0998, byte3);
@@ -86,23 +83,33 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0999, 2);
             VerifySpeculativeRunOrFail(cs1, 0x016B, SpeculativeRun_016B);
             SI = 0x023E;
-            NearCall(cs1, 0x0171, unknown_016F_01E8_018D8_AsmEntry);
-            throw FailAsUntested("Untested return from call at 016F:016E");
+            (AL, BX) = NearCall(cs1, 0x0171, () => unknown_016F_01E8_018D8(BX, 0x023E, DS, DirectionFlag));
+            VerifySpeculativeRunOrFail(cs1, 0x0171, SpeculativeRun_0171);
+            AX = word1;
+            NearCall(cs1, 0x0176, unknown_016F_01F7_018E7Entry);
+            VerifySpeculativeRunOrFail(cs1, 0x0176, SpeculativeRun_0176);
+            SI = 0x0235;
+            (AL, BX) = NearCall(cs1, 0x017C, () => unknown_016F_01E8_018D8(BX, 0x0235, DS, DirectionFlag));
+            VerifySpeculativeEntryOrFail(cs1, 0x017C, Signature_017C_jmp);
+        L_019E:
+            CX = NearCall(cs1, 0x01A1, () => unknown_016F_01A6_01896(CX));
+            (AL, CX) = NearCall(cs1, 0x01A4, () => unknown_016F_01B9_018A9(CX));
         }
-        VerifySpeculativeRunOrFail(cs1, 0x010E, SpeculativeRun_010E);
-        DX = 0x0998;
-        AL = 0;
-        Out8(0x0998, 0);
-        VerifySpeculativeEntryOrFail(cs1, 0x0114, Signature_0114_out);
-        Out8(0x0998, 0);
-        VerifySpeculativeRunOrFail(cs1, 0x0115, SpeculativeRun_0115);
-        DX = 0x0999;
-        AL = 1;
-        Out8(0x0999, 1);
-        VerifySpeculativeRunOrFail(cs1, 0x011B, SpeculativeRun_011B);
-        SI = 0x0253;
-        NearCall(cs1, 0x0121, unknown_016F_01E8_018D8_AsmEntry);
-        throw FailAsUntested("Untested return from call at 016F:011E");
+        else {
+            VerifySpeculativeRunOrFail(cs1, 0x010E, SpeculativeRun_010E);
+            Out8(0x0998, 0);
+            VerifySpeculativeEntryOrFail(cs1, 0x0114, Signature_0114_out);
+            Out8(0x0998, 0);
+            VerifySpeculativeRunOrFail(cs1, 0x0115, SpeculativeRun_0115);
+            DX = 0x0999;
+            AL = 1;
+            Out8(0x0999, 1);
+            VerifySpeculativeRunOrFail(cs1, 0x011B, SpeculativeRun_011B);
+            SI = 0x0253;
+            (AL, BX) = NearCall(cs1, 0x0121, () => unknown_016F_01E8_018D8(BX, 0x0253, DS, DirectionFlag));
+            VerifySpeculativeEntryOrFail(cs1, 0x0121, Signature_0121_jmp);
+        }
+        return TerminateCall(cs1, 0x01A6, () => DosInt20.Terminate(AL));
     }
 
     /// <summary>Inputs: CX. Outputs: CX. Changes: AL, CX, DX.</summary>
@@ -191,9 +198,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: BX, SI, DS, DF. Outputs: BX. Changes: AX, BX, SI, ZF.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: AL, BX. Changes: AX, BX, SI, ZF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
-    public virtual ushort unknown_016F_01E8_018D8(ushort word1, ushort index, ushort word2, bool flag1) {
+    public virtual (byte result, ushort result2) unknown_016F_01E8_018D8(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
         SI = index;
         while (true) {
@@ -209,11 +216,11 @@ public partial class CfgGeneratedOverrides {
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         }
         NearReturn();
-        return BX;
+        return (AL, BX);
     }
 
     public virtual Action unknown_016F_01E8_018D8_Asm() {
-        BX = unknown_016F_01E8_018D8(BX, SI, DS, DirectionFlag);
+        (AL, BX) = unknown_016F_01E8_018D8(BX, SI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -359,6 +366,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_011A_out = [0xEE];
     private static readonly byte?[] Signature_011B_mov = [0xBE, 0x53, 0x02];
     private static readonly byte?[] Signature_011E_call = [0xE8, 0xC7, 0x00];
+    private static readonly byte?[] Signature_0121_jmp = [0xE9, 0x80, 0x00];
     private static readonly byte?[] Signature_015A_jmp = [0xEB, 0xF2];
     private static readonly byte?[] Signature_015C_mov = [0xBA, 0x98, 0x09];
     private static readonly byte?[] Signature_015F_mov = [0x88, 0xC8];
@@ -370,6 +378,11 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_016A_out = [0xEE];
     private static readonly byte?[] Signature_016B_mov = [0xBE, 0x3E, 0x02];
     private static readonly byte?[] Signature_016E_call = [0xE8, 0x77, 0x00];
+    private static readonly byte?[] Signature_0171_mov = [0x89, 0xC8];
+    private static readonly byte?[] Signature_0173_call = [0xE8, 0x81, 0x00];
+    private static readonly byte?[] Signature_0176_mov = [0xBE, 0x35, 0x02];
+    private static readonly byte?[] Signature_0179_call = [0xE8, 0x6C, 0x00];
+    private static readonly byte?[] Signature_017C_jmp = [0xEB, 0x20];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -413,6 +426,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_0162 = [Signature_0162_mov, Signature_0164_out];
     private static readonly byte?[][] SpeculativeRun_0165 = [Signature_0165_mov, Signature_0168_mov, Signature_016A_out];
     private static readonly byte?[][] SpeculativeRun_016B = [Signature_016B_mov, Signature_016E_call];
+    private static readonly byte?[][] SpeculativeRun_0171 = [Signature_0171_mov, Signature_0173_call];
+    private static readonly byte?[][] SpeculativeRun_0176 = [Signature_0176_mov, Signature_0179_call];
 
 }
 

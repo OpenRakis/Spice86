@@ -49,7 +49,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_01F7_F01F7(byte byte1) {
-        AL = byte1;
         byte flagOperand_01FD = 0;
         CheckExternalEvents(biosSegment, 0x01F7);
         DI = 0x03A1;
@@ -81,15 +80,15 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_020B_F020B(byte byte1, ushort word1) {
-        AL = byte1;
         DS = word1;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x020B);
         DI = 0x03CB;
-        CX = SegmentF000Globals.Word03CB;
+        count = SegmentF000Globals.Word03CB;
         DI = 0x03CD;
         if (DsGlobals.Byte0500 == 0xFF) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x021B, Signature_021B_sub);
-            CX--;
+            count--;
         }
         do {
             CheckExternalEvents(biosSegment, 0x021E);
@@ -97,8 +96,8 @@ public partial class CfgGeneratedOverrides {
                 goto L_022A;
             }
             DI += 0x000E;
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         CarryFlag = false;
         NearReturn();
         return (DI, CarryFlag);
@@ -116,31 +115,34 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_022C_F022C(byte byte1, ushort word1) {
-        AL = byte1;
         DS = word1;
+        ushort count = 0;
+        ushort index = 0;
         CheckExternalEvents(biosSegment, 0x022C);
         if (DsGlobals.Byte0500 != 0) {
             VerifySpeculativeRunOrFail(biosSegment, 0x023E, SpeculativeRun_023E);
-            DI = 0x0415;
-            CX = 2;
+            index = 0x0415;
+            count = 2;
         }
         else {
-            CX = SegmentF000Globals.Word03F7;
-            DI = 0x03F9;
+            count = SegmentF000Globals.Word03F7;
+            index = 0x03F9;
         }
         do {
             CheckExternalEvents(biosSegment, 0x0244);
-            if (UInt8[CS, DI] == byte1) {
+            if (UInt8[CS, index] == byte1) {
                 goto L_0250;
             }
-            DI += 0x000E;
-            CX--;
-        } while (CX != 0);
+            index += 0x000E;
+            count--;
+        } while (count != 0);
         CarryFlag = false;
+        DI = index;
         NearReturn();
         return (DI, CarryFlag);
     L_0250:
         CarryFlag = true;
+        DI = index;
         NearReturn();
         return (DI, CarryFlag);
     }
@@ -153,7 +155,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: CF. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_0252_F0252(byte byte1) {
-        AL = byte1;
         byte flagOperand_0258 = 0;
         CheckExternalEvents(biosSegment, 0x0252);
         DI = 0x043F;
@@ -186,18 +187,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_0266_F0266(byte byte1) {
-        AL = byte1;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x0266);
         DI = 0x0493;
-        CX = 3;
+        count = 3;
         do {
             CheckExternalEvents(biosSegment, 0x026C);
             if (UInt8[CS, DI] == byte1) {
                 goto L_0278;
             }
             DI += 0x000E;
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         CarryFlag = false;
         NearReturn();
         return (DI, CarryFlag);
@@ -215,7 +216,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: DI, CF. Changes: DI, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_027A_F027A(ushort word1) {
-        AX = word1;
         CheckExternalEvents(biosSegment, 0x027A);
         DI = 0x04BF;
         if (word1 != 0x0011) {
@@ -303,19 +303,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_02BB_F02BB(byte byte1, ushort word1) {
-        AL = byte1;
-        DS = word1;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x02BB);
         DI = 0;
-        CX = 3;
+        count = 3;
         do {
             CheckExternalEvents(biosSegment, 0x02C1);
             if (UInt8[word1, DI] == byte1) {
                 goto L_02CC;
             }
             DI += 0x000E;
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         CarryFlag = false;
         NearReturn();
         return (DI, CarryFlag);
@@ -333,18 +332,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_02CE_F02CE(byte byte1) {
-        AL = byte1;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x02CE);
         DI = 0x055B;
-        CX = 3;
+        count = 3;
         do {
             CheckExternalEvents(biosSegment, 0x02D4);
             if (UInt8[CS, DI] == byte1) {
                 goto L_02E0;
             }
             DI += 0x000E;
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         CarryFlag = false;
         NearReturn();
         return (DI, CarryFlag);
@@ -362,7 +361,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: CF. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual bool unknown_F000_02E2_F02E2(byte byte1) {
-        AL = byte1;
         byte flagOperand_02EC = 0;
         CheckExternalEvents(biosSegment, 0x02E2);
         DI = 0x0585;
@@ -410,7 +408,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL. Outputs: DI, CF. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, bool result2) unknown_F000_02FE_F02FE(byte byte1) {
-        AL = byte1;
         byte flagOperand_0304 = 0;
         CheckExternalEvents(biosSegment, 0x02FE);
         DI = 0x053D;
@@ -443,7 +440,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: none. Changes: DI.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_0312_F0312(ushort word1) {
-        AX = word1;
         CheckExternalEvents(biosSegment, 0x0312);
         DI = word1;
         NearReturn();
@@ -532,7 +528,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Outputs: none. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_0341_F0341(byte byte1, ushort word1) {
-        AL = byte1;
         DS = word1;
         byte flagOperand_0341 = 0;
         CheckExternalEvents(biosSegment, 0x0341);
@@ -563,7 +558,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_0356_F0356(ushort word1, ushort word2) {
-        AX = word1;
         DS = word2;
         byte flagOperand_0356 = 0;
         CheckExternalEvents(biosSegment, 0x0356);
@@ -661,7 +655,6 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Outputs: none. Changes: CX, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_038F_F038F(byte byte1, ushort word1) {
-        AL = byte1;
         DS = word1;
         byte flagOperand_038F = 0;
         CheckExternalEvents(biosSegment, 0x038F);

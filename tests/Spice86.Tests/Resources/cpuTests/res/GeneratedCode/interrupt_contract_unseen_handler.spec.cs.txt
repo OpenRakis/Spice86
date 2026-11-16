@@ -22,6 +22,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort count = 0;
+        ushort index = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -31,15 +33,15 @@ public partial class CfgGeneratedOverrides {
         AX = DS;
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x001F);
-        CX = 4;
-        DI = 0x0040;
+        count = 4;
+        index = 0x0040;
         do {
             CheckExternalEvents(biosSegment, 0x0028);
-            UInt16[DS, DI] = 0x0042;
-            DI += 2;
-            CX--;
-        } while (CX != 0);
-        UInt16[DS, DI] = 0x0042;
+            UInt16[DS, index] = 0x0042;
+            index += 2;
+            count--;
+        } while (count != 0);
+        UInt16[DS, index] = 0x0042;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }

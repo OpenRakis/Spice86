@@ -19,35 +19,23 @@ public partial class CfgGeneratedOverrides {
         DS = CS;
         Stack.Push16(DS);
         ES = Stack.Pop16();
-        DX = 0x0519;
-        AuxiliaryFlag = true;
-        DX = 0x0051;
-        ParityFlag = false;
-        ZeroFlag = false;
-        SignFlag = false;
-        OverflowFlag = false;
         (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, 0x0051));
         if (!CarryFlag) {
             AL = 0x53;
             BX = NearCall(cs1, 0x0121, () => unknown_016F_01C0_018B0(AX, BX));
-            DX = 0x01CB;
             AH = 0x16;
             AL = ServiceCall(Dos, () => Dos.FcbCreateFile(DS, 0x01CB));
-            Alu8.Sub(AL, 0);
             if (AL == 0) {
                 AL = 0x43;
                 BX = NearCall(cs1, 0x0133, () => unknown_016F_01C0_018B0(0x1643, BX));
                 ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x01F0));
-                DX = 0x01CB;
                 AH = 0x15;
                 AL = ServiceCall(Dos, () => Dos.FcbSequentialWrite(DS, 0x01CB));
-                Alu8.Sub(AL, 0);
                 if (AL == 0) {
                     AL = 0x57;
                     BX = NearCall(cs1, 0x014A, () => unknown_016F_01C0_018B0(0x1557, BX));
                     AH = 0x10;
                     AL = ServiceCall(Dos, () => Dos.FcbCloseFile(DS, 0x01CB));
-                    DX = 0x01CB;
                     AH = 0x0F;
                     AL = ServiceCall(Dos, () => Dos.FcbOpenFile(DS, 0x01CB));
                     Alu8.Sub(AL, 0);
@@ -65,7 +53,6 @@ public partial class CfgGeneratedOverrides {
                         AL = 0x45;
                         BX = NearCall(cs1, 0x0173, () => unknown_016F_01C0_018B0(AX, BX));
                         ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x026F));
-                        DX = 0x01CB;
                         AH = 0x14;
                         AL = ServiceCall(Dos, () => Dos.FcbSequentialRead(DS, 0x01CB));
                         Alu8.Sub(AL, 0);
@@ -103,8 +90,14 @@ public partial class CfgGeneratedOverrides {
     L_01B0:
         VerifySpeculativeRunOrFail(cs1, 0x01B0, SpeculativeRun_01B0);
         AL = 0x46;
-        NearCall(cs1, 0x01B5, unknown_016F_01C0_018B0_AsmEntry);
-        throw FailAsUntested("Untested return from call at 016F:01B2");
+        NearCall(cs1, 0x01B5, () => unknown_016F_01C0_018B0(AX, BX));
+        VerifySpeculativeRunOrFail(cs1, 0x01B5, SpeculativeRun_01B5);
+        DX = 0x00E9;
+        AL = 0x46;
+        Out8(0x00E9 /* no device */, 0x46);
+        VerifySpeculativeRunOrFail(cs1, 0x01BB, SpeculativeRun_01BB);
+        AX = 0x4C01;
+        throw FailAsUntested("Untested interrupt at 016F:01BE");
     }
 
     /// <summary>Inputs: AX, BX. Outputs: BX. Changes: AH, BX.</summary>
@@ -170,6 +163,7 @@ public partial class CfgGeneratedOverrides {
             }
         }
     L_00AA:
+        CheckExternalEvents(biosSegment, 0x00AA);
         VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
@@ -310,6 +304,11 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_01B0_mov = [0xB0, 0x46];
     private static readonly byte?[] Signature_01B2_call = [0xE8, 0x0B, 0x00];
+    private static readonly byte?[] Signature_01B5_mov = [0xBA, 0xE9, 0x00];
+    private static readonly byte?[] Signature_01B8_mov = [0xB0, 0x46];
+    private static readonly byte?[] Signature_01BA_out = [0xEE];
+    private static readonly byte?[] Signature_01BB_mov = [0xB8, 0x01, 0x4C];
+    private static readonly byte?[] Signature_01BE_int = [0xCD, 0x21];
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_push = [0x1E];
     private static readonly byte?[] Signature_000B_push = [0x50];
@@ -344,6 +343,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
     private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
     private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B9_jmp = [0xEB, 0xEF];
     private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
     private static readonly byte?[] Signature_00BF_iret = [0xCF];
     private static readonly byte?[] Signature_00E8_ret = [0xCB];
@@ -353,6 +353,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_00F6_ret = [0xCB];
 
     private static readonly byte?[][] SpeculativeRun_01B0 = [Signature_01B0_mov, Signature_01B2_call];
+    private static readonly byte?[][] SpeculativeRun_01B5 = [Signature_01B5_mov, Signature_01B8_mov, Signature_01BA_out];
+    private static readonly byte?[][] SpeculativeRun_01BB = [Signature_01BB_mov, Signature_01BE_int];
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
 }
