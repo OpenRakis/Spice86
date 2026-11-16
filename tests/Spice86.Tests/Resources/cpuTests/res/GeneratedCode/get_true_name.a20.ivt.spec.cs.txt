@@ -29,6 +29,8 @@ public partial class CfgGeneratedOverrides {
         ushort index12 = 0;
         ushort index13 = 0;
         ushort index14 = 0;
+        bool failed = false;
+        bool failed2 = false;
         byte byte1 = 0;
         byte flagOperand_0122 = 0;
         byte flagOperand_015F = 0;
@@ -341,8 +343,8 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x02C2, Signature_02C2_jmp);
         }
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0405, ES, 0x0411));
-        if (CarryFlag) {
+        (AX, failed) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0405, ES, 0x0411));
+        if (failed) {
             if (AL != 2) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0303, Signature_0303_mov);
                 ImageMinus0002Globals.Byte0491 = 1;
@@ -355,8 +357,8 @@ public partial class CfgGeneratedOverrides {
             AL = 0xFF;
         }
         Out8(0x0998, AL);
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0406, ES, 0x0411));
-        if (CarryFlag) {
+        (AX, failed2) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0406, ES, 0x0411));
+        if (failed2) {
             if (AL != 0x0F) {
                 VerifySpeculativeEntryOrFail(cs1, 0x0327, Signature_0327_mov);
                 ImageMinus0002Globals.Byte0491 = 1;

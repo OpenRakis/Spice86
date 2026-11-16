@@ -14,35 +14,37 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS, ZF. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        bool flag1;
+        bool flag2 = false;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SP = 0x1000;
         SS = SP;
         Stack.Push16(0x0040);
-        CarryFlag = true;
-        if (!CarryFlag && !ZeroFlag) {
+        flag1 = true;
+        if (!flag1 && !ZeroFlag) {
             throw FailAsUntested("Untested jump at F000:0011");
         }
-        CarryFlag = false;
-        if (CarryFlag || ZeroFlag) {
+        flag1 = false;
+        if (flag1 || ZeroFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0014");
         }
-        CarryFlag = true;
-        if (!CarryFlag) {
+        flag1 = true;
+        if (!flag1) {
             throw FailAsUntested("Untested jump at F000:0019");
         }
-        CarryFlag = false;
-        if (CarryFlag) {
+        flag2 = false;
+        if (flag2) {
             throw FailAsUntested("Untested fallthrough at F000:001C");
         }
-        if (CarryFlag) {
+        if (flag2) {
             throw FailAsUntested("Untested jump at F000:0020");
         }
-        CarryFlag = true;
-        if (!CarryFlag) {
+        flag1 = true;
+        if (!flag1) {
             throw FailAsUntested("Untested fallthrough at F000:0023");
         }
-        CarryFlag = false;
-        if (CarryFlag || ZeroFlag) {
+        flag1 = false;
+        if (flag1 || ZeroFlag) {
             throw FailAsUntested("Untested jump at F000:0028");
         }
         FlagRegister16 = Stack.Pop16();

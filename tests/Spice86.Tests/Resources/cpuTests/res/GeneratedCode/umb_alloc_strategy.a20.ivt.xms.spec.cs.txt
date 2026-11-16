@@ -16,58 +16,59 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort blockSegment = 0;
+        bool flag1 = false;
         ushort word1 = 0;
         ushort word2 = 0;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         blockSegment = Stack.Pop16();
-        (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(blockSegment, 0x1000));
-        if (!CarryFlag) {
-            (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040));
-            if (!CarryFlag) {
-                (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
-                if (CarryFlag && word2 == 0x1FFF) {
-                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x1FFF));
-                    if (CarryFlag || word1 != 0xD001) {
+        (word1, word2, flag1) = ServiceCall(Dos, () => Dos.ModifyMemory(blockSegment, 0x1000));
+        if (!flag1) {
+            (word1, flag1) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0040));
+            if (!flag1) {
+                (word1, word2, flag1) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
+                if (flag1 && word2 == 0x1FFF) {
+                    (word1, word2, flag1) = ServiceCall(Dos, () => Dos.AllocateMemory(0x1FFF));
+                    if (flag1 || word1 != 0xD001) {
                         goto L_01AA;
                     }
                     ImageMinus0002Globals.Word01B1 = word1;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080));
-                    if (CarryFlag) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x0080));
+                    if (flag1) {
                         goto L_01AA;
                     }
-                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
-                    if (CarryFlag || word1 >= 0xA000) {
+                    (word1, word2, flag1) = ServiceCall(Dos, () => Dos.AllocateMemory(0x2000));
+                    if (flag1 || word1 >= 0xA000) {
                         goto L_01AA;
                     }
                     ImageMinus0002Globals.Word01B3 = word1;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3));
-                    if (!CarryFlag || word1 != 1) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C3));
+                    if (!flag1 || word1 != 1) {
                         goto L_01AA;
                     }
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0));
-                    if (CarryFlag) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.MemoryAllocationStrategy(0x5801, 0x00C0));
+                    if (flag1) {
                         goto L_01AA;
                     }
-                    (word1, word2, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0100));
-                    if (CarryFlag || word1 >= 0xA000) {
+                    (word1, word2, flag1) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0100));
+                    if (flag1 || word1 >= 0xA000) {
                         goto L_01AA;
                     }
                     ImageMinus0002Globals.Word01B5 = word1;
                     blockSegment = ImageMinus0002Globals.Word01B5;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
-                    if (CarryFlag) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
+                    if (flag1) {
                         goto L_01AA;
                     }
                     blockSegment = ImageMinus0002Globals.Word01B3;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
-                    if (CarryFlag) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
+                    if (flag1) {
                         goto L_01AA;
                     }
                     blockSegment = ImageMinus0002Globals.Word01B1;
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
-                    if (CarryFlag) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.FreeMemory(blockSegment, 0x4900));
+                    if (flag1) {
                         goto L_01AA;
                     }
                     AX = word1;

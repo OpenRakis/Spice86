@@ -15,12 +15,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AL, DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        bool flag1 = false;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0119;
         AH = 0x39;
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CreateDirectory(Dos.StringDecoder.GetDosString(DS, 0x0119, '\0', ""), AX));
-        if (CarryFlag) {
+        (AX, flag1) = ServiceCall(Dos, () => Dos.CreateDirectory(Dos.StringDecoder.GetDosString(DS, 0x0119, '\0', ""), AX));
+        if (flag1) {
             if (AX != 3) {
                 goto L_0112;
             }

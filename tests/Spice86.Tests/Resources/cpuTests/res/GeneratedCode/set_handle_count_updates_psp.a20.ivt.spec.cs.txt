@@ -16,14 +16,15 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
+        bool flag1 = false;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
         word1 = Dos.ReadPspAddress();
         ES = word1;
         AH = 0x67;
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ResizeHandleTable(0x0030, AX));
-        if (!CarryFlag) {
+        (AX, flag1) = ServiceCall(Dos, () => Dos.ResizeHandleTable(0x0030, AX));
+        if (!flag1) {
             if (EsGlobals.Word0032 != 0x0030) {
                 goto L_011B;
             }

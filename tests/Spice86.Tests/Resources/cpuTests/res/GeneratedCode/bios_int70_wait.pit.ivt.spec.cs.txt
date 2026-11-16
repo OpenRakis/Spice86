@@ -17,6 +17,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016F_0100_017F0() {
         ushort word1 = 0;
         ushort callbackSegment = 0;
+        bool flag1 = false;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         word1 = Stack.Pop16();
@@ -27,8 +28,8 @@ public partial class CfgGeneratedOverrides {
         AX = 0x8300;
         Stack.Push16(CS);
         callbackSegment = Stack.Pop16();
-        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2710, callbackSegment, 0x01A2, 0x83));
-        if (!CarryFlag) {
+        (AH, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2710, callbackSegment, 0x01A2, 0x83));
+        if (!flag1) {
             Out8(0x0998, 2);
             Stack.Push16(word1);
             AX = 0x0040;
@@ -49,8 +50,8 @@ public partial class CfgGeneratedOverrides {
                         AL = 5;
                         Out8(0x0998, 5);
                         AX = 0x8301;
-                        (AH, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0x01A2, 0x83));
-                        if (CarryFlag) {
+                        (AH, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0x01A2, 0x83));
+                        if (flag1) {
                             goto L_019B;
                         }
                         Out8(0x0998, 6);

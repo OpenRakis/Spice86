@@ -16,13 +16,14 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
+        bool flag1 = false;
         ushort fileHandle = 0;
         ushort word2 = 0;
         byte flagOperand_0157 = 0;
         CheckExternalEvents(cs1, 0x0100);
         word1 = 0x017A;
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017A, '\0', "SEEKTEST.BIN")));
-        if (CarryFlag) {
+        (AX, flag1) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017A, '\0', "SEEKTEST.BIN")));
+        if (flag1) {
             VerifySpeculativeEntryOrFail(cs1, 0x0170, Signature_0170_mov);
             AL = 0xFF;
         }
@@ -59,7 +60,7 @@ public partial class CfgGeneratedOverrides {
         L_0164:
             Stack.Push16(AX);
             BX = ImageMinus0002Globals.Word0177;
-            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+            (AX, flag1) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
         }
         Out8(0x0999, AL);

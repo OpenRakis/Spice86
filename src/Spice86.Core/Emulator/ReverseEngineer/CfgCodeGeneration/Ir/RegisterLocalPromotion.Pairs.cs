@@ -50,7 +50,7 @@ internal static partial class RegisterLocalPromotion {
             }
             foreach ((Candidate other, string otherName) in eligible) {
                 if (ReferenceEquals(candidate, other) || consumed.Contains(other)
-                    || (IrValueSets.Of(candidate.Register) & IrValueSets.Of(other.Register))
+                    || (MaskOf(candidate.Register) & MaskOf(other.Register))
                         != CpuValues.None) {
                     continue;
                 }

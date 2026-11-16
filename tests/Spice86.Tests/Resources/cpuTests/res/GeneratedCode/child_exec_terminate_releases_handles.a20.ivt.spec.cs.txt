@@ -100,6 +100,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, EBX, EBP, ESI, EDI, FS, GS, CF, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         ushort word1 = 0;
+        bool flag1 = false;
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
         Alu8.Sub(AH, 7);
@@ -123,8 +124,8 @@ public partial class CfgGeneratedOverrides {
             L_0106:
                 CheckExternalEvents(cs2, 0x0106);
                 AX = 0x3D00;
-                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')));
-                if (!CarryFlag) {
+                (AX, flag1) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')));
+                if (!flag1) {
                     if (AX != word1) {
                         goto L_011C;
                     }

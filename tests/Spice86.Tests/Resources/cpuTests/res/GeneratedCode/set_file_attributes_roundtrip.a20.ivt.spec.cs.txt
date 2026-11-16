@@ -15,13 +15,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        bool flag1 = false;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x012D;
-        (AX, CX, CarryFlag) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4301, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), 0x0021));
-        if (!CarryFlag) {
-            (AX, CX, CarryFlag) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4300, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), CX));
-            if (!CarryFlag) {
+        (AX, CX, flag1) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4301, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), 0x0021));
+        if (!flag1) {
+            (AX, CX, flag1) = ServiceCall(Dos, () => Dos.GetSetFileAttributes(0x4300, Dos.StringDecoder.GetDosString(DS, 0x012D, '\0', "SETATR.TXT"), CX));
+            if (!flag1) {
                 AL = CL;
                 Out8(0x0998, AL);
                 if ((CL & 1) == 0) {

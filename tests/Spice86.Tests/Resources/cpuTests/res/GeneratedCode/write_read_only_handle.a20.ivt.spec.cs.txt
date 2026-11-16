@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        bool flag1 = false;
         ushort word1 = 0;
         ushort fileHandle = 0;
         ushort word2 = 0;
@@ -22,18 +23,18 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0156 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x017E;
-        (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
-        if (!CarryFlag) {
+        (word1, flag1) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
+        if (!flag1) {
             ImageMinus0002Globals.Word0177 = word1;
             fileHandle = ImageMinus0002Globals.Word0177;
             // DOS 40h write "x"
             (word2, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(fileHandle, 1, DS, 0x0179));
             if (CarryFlag && word2 == 5) {
                 BX = ImageMinus0002Globals.Word0177;
-                (word1, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
-                if (!CarryFlag) {
-                    (word1, CarryFlag) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
-                    if (CarryFlag) {
+                (word1, flag1) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+                if (!flag1) {
+                    (word1, flag1) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x017E, '\0', "RO.TXT")));
+                    if (flag1) {
                         goto L_0170;
                     }
                     ImageMinus0002Globals.Word0177 = word1;
@@ -65,7 +66,7 @@ public partial class CfgGeneratedOverrides {
         L_0164:
             Stack.Push16(AX);
             BX = ImageMinus0002Globals.Word0177;
-            (AX, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+            (AX, flag1) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
             AX = Stack.Pop16();
             goto L_0172;
         }

@@ -302,7 +302,7 @@ internal static class IrAstChildren {
             or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
             or SegmentedAddressListNode or RegisterLocalNode => node,
         RegisterWriteBackNode writeBack => Map(node, map, [writeBack.Register, writeBack.Local],
-            c => new RegisterWriteBackNode(Child<RegisterNode>(c[0]), Child<RegisterLocalNode>(c[1]))),
+            c => new RegisterWriteBackNode(Child<ValueNode>(c[0]), Child<RegisterLocalNode>(c[1]))),
         _ => throw new NotSupportedException(
             $"{node.GetType().Name} has no AST children mapping."),
     };

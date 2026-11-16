@@ -342,7 +342,7 @@ internal static class StackRuns {
     private static bool IsSaveRegister(ValueNode node) {
         RegisterNode? register = node switch {
             RegisterNode direct => direct,
-            RegisterLocalNode local => local.Register,
+            RegisterLocalNode local => local.Register as RegisterNode,
             _ => null
         };
         return register is not null

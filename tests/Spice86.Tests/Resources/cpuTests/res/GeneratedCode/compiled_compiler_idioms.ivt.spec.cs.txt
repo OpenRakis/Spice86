@@ -284,6 +284,7 @@ public partial class CfgGeneratedOverrides {
         SI = word6;
         ushort word7 = 0;
         ushort word8 = 0;
+        bool flag1;
         CheckExternalEvents(cs1, 0x01B1);
         if (word2 != 0) {
             VerifySpeculativeRunOrFail(cs1, 0x01CF, SpeculativeRun_01CF);
@@ -341,9 +342,9 @@ public partial class CfgGeneratedOverrides {
                         goto L_0226;
                     }
                     VerifySpeculativeRunOrFail(cs1, 0x021A, SpeculativeRun_021A);
-                    CarryFlag = (CX & 1) != 0;
+                    flag1 = (CX & 1) != 0;
                     CX >>= 1;
-                    word4 = (ushort)(word4 >> 1 | (CarryFlag ? 1 : 0) << 15);
+                    word4 = (ushort)(word4 >> 1 | (flag1 ? 1 : 0) << 15);
                     AX = Alu16.Add(AX, word4);
                     word3 = Alu16.Adc(word3, CX);
                 } while (!CarryFlag);
@@ -3057,6 +3058,7 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = count2;
         ushort index = 0;
         ushort index2 = 0;
+        bool flag1 = false;
         CheckExternalEvents(cs1, 0x173D);
         Stack.Save(CX, SI, DI);
         CX = word3;
@@ -3064,7 +3066,7 @@ public partial class CfgGeneratedOverrides {
         index2 = word1;
         Stack.Push16(index2);
         ES = count;
-        CarryFlag = (CX & 1) != 0;
+        flag1 = (CX & 1) != 0;
         CX >>= 1;
         while (CX != 0) {
             UInt16[ES, index2] = UInt16[count, index];
@@ -3072,7 +3074,7 @@ public partial class CfgGeneratedOverrides {
             index2 += 2;
             CX--;
         }
-        CX = (ushort)(CX + CX + (CarryFlag ? 1 : 0));
+        CX = (ushort)(CX + CX + (flag1 ? 1 : 0));
         while (CX != 0) {
             UInt8[ES, index2] = UInt8[count, index];
             index++;
@@ -3853,6 +3855,7 @@ public partial class CfgGeneratedOverrides {
         ushort word5 = 0;
         ushort word6 = 0;
         ushort offset = 0;
+        bool flag1 = false;
         ushort word7 = 0;
         ushort word8 = 0;
         unknown_017E_1BF2_033D2Frame frame = new(Memory, State.SegmentRegisters, SP);
@@ -3868,8 +3871,8 @@ public partial class CfgGeneratedOverrides {
             offset = frame.Local10;
             CX = word6;
             BX = word5;
-            (word7, CarryFlag) = ServiceCall(Dos, () => Dos.WriteFile(BX, CX, word4, offset));
-            word8 = (ushort)(CarryFlag ? 0xFFFF : 0);
+            (word7, flag1) = ServiceCall(Dos, () => Dos.WriteFile(BX, CX, word4, offset));
+            word8 = (ushort)(flag1 ? 0xFFFF : 0);
             Alu16.And(word8, word8);
             if ((short)word8 < 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x1C43, Signature_1C43_call);
@@ -4618,13 +4621,14 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3) unknown_017E_205E_0383E(ushort word1, ushort word2, ushort word3, ushort word4) {
         ushort word5 = 0;
+        bool flag1 = false;
         ushort word6 = 0;
         ushort word7 = 0;
         CheckExternalEvents(cs1, 0x205E);
         Stack.Save(BX, word3);
         word5 = word1;
-        (AX, word6, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4400, word2, word3, word5, word4));
-        word7 = (ushort)(CarryFlag ? 0xFFFF : 0);
+        (AX, word6, flag1) = ServiceCall(Dos, () => Dos.IoControl(0x4400, word2, word3, word5, word4));
+        word7 = (ushort)(flag1 ? 0xFFFF : 0);
         if (word7 == 0) {
             AX = word6;
         }
@@ -4888,6 +4892,7 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2, ushort result3) unknown_017E_223C_03A1C(ushort word1, byte byte1, ushort word2, bool count) {
         DirectionFlag = count;
         ushort index = 0;
+        bool flag1 = false;
         ushort word3;
         CheckExternalEvents(cs1, 0x223C);
         Stack.Save(CX, DI);
@@ -4898,14 +4903,14 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         ES = Stack.Pop16();
         AH = AL;
-        CarryFlag = (CX & 1) != 0;
+        flag1 = (CX & 1) != 0;
         CX >>= 1;
         while (CX != 0) {
             UInt16[ES, index] = AX;
             index += 2;
             CX--;
         }
-        CX = (ushort)(CX + CX + (CarryFlag ? 1 : 0));
+        CX = (ushort)(CX + CX + (flag1 ? 1 : 0));
         while (CX != 0) {
             UInt8[ES, index] = AL;
             index++;
@@ -4926,21 +4931,23 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: CX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS, CF.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7, ushort result8) unknown_017E_2257_03A37(ushort previousSi) {
+        bool previousCarry;
         ushort previousDs;
         ushort previousDs2 = 0;
+        bool previousCarry2 = false;
         byte byte1 = 0;
         ushort previousSi2 = 0;
         ushort word1 = 0;
         CheckExternalEvents(cs1, 0x2257);
         Stack.Save(BX, CX, previousSi, DI, BP);
         Stack.Push16(DS);
-        CarryFlag = false;
+        previousCarry = false;
         AX = 0;
         previousDs = 0;
         AH = 0x63;
-        (byte1, previousSi2, previousDs2, CarryFlag) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, previousSi, previousDs, CarryFlag));
+        (byte1, previousSi2, previousDs2, previousCarry2) = ServiceCall(Dos, () => Dos.ReadLeadByteTable(0, previousSi, previousDs, previousCarry));
         word1 = previousDs2;
-        if (!CarryFlag && (byte1 == 0 && word1 != 0)) {
+        if (!previousCarry2 && (byte1 == 0 && word1 != 0)) {
             goto L_2275;
         }
         VerifySpeculativeRunOrFail(cs1, 0x2271, SpeculativeRun_2271);

@@ -17,7 +17,9 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016F_0100_017F0() {
         ushort word1 = 0;
         ushort word2 = 0;
+        bool flag1 = false;
         ushort word3 = 0;
+        bool flag2 = false;
         ushort word4 = 0;
         byte flagOperand_0145 = 0;
         CheckExternalEvents(cs1, 0x0100);
@@ -72,13 +74,13 @@ public partial class CfgGeneratedOverrides {
             (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0150, () => unknown_016F_0246_01936(SI, word1));
             AL = 0x45;
             NearCall(cs1, 0x0155, () => unknown_016F_02E0_019D0(0x45));
-            (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0020));
-            if (!CarryFlag) {
+            (AX, BX, flag1) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0020));
+            if (!flag1) {
                 ImageMinus0001Globals.Word02E9 = AX;
                 ES = AX;
                 AH = 0x49;
-                (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FreeMemory(ES, AX));
-                if (!CarryFlag) {
+                (AX, flag1) = ServiceCall(Dos, () => Dos.FreeMemory(ES, AX));
+                if (!flag1) {
                     Stack.Push16(word1);
                     ES = Stack.Pop16();
                     AL = 0x4D;
@@ -89,6 +91,7 @@ public partial class CfgGeneratedOverrides {
                     Stack.Push16(CS);
                     ES = Stack.Pop16();
                     BX = 0x0371;
+                    CarryFlag = flag1;
                     // DOS 4Bh LoadAndOrExecute "CHILD.COM"
                     InterruptCall(cs1, 0x0193, 0x21);
                     if (!CarryFlag) {
@@ -127,8 +130,8 @@ public partial class CfgGeneratedOverrides {
                                     AX = word3;
                                     AL = 0x4C;
                                     NearCall(cs1, 0x01F2, () => unknown_016F_02E0_019D0(0x4C));
-                                    (word4, BX, CarryFlag) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0040));
-                                    if (CarryFlag) {
+                                    (word4, BX, flag2) = ServiceCall(Dos, () => Dos.AllocateMemory(0x0040));
+                                    if (flag2) {
                                         goto L_0240;
                                     }
                                     DsGlobals.Word02EB = word4;
@@ -137,8 +140,8 @@ public partial class CfgGeneratedOverrides {
                                     Stack.Push16(CS);
                                     ES = Stack.Pop16();
                                     BX = 0x0387;
-                                    (word4, DX, CarryFlag) = ServiceCall(Dos, () => Dos.LoadProgramOverlay(Dos.StringDecoder.GetDosString(DS, 0x02F1, '\0'), ES, 0x0387, 0x4B03, 0x02F1));
-                                    if (!CarryFlag) {
+                                    (word4, DX, flag2) = ServiceCall(Dos, () => Dos.LoadProgramOverlay(Dos.StringDecoder.GetDosString(DS, 0x02F1, '\0'), ES, 0x0387, 0x4B03, 0x02F1));
+                                    if (!flag2) {
                                         DsGlobals.Word02ED = 0;
                                         AX = DsGlobals.Word02EB;
                                         DsGlobals.Word02EF = AX;
@@ -146,12 +149,14 @@ public partial class CfgGeneratedOverrides {
                                         Stack.Push16(0x0239);
                                         Stack.Push16(DsGlobals.Word02EF);
                                         Stack.Push16(DsGlobals.Word02ED);
+                                        CarryFlag = flag2;
                                         return FarRet();
                                     }
                                 L_0240:
                                     VerifySpeculativeRunOrFail(cs1, 0x0240, SpeculativeRun_0240);
                                     AX = word4;
                                     AL = 0x76;
+                                    CarryFlag = flag2;
                                     NearCall(cs1, 0x0245, unknown_016F_02E0_019D0_AsmEntry);
                                     throw FailAsUntested("Untested return from call at 016F:0242");
                                 }
@@ -180,6 +185,7 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeRunOrFail(cs1, 0x017C, SpeculativeRun_017C);
             ES = Stack.Pop16();
             AL = 0x6D;
+            CarryFlag = flag1;
             NearCall(cs1, 0x0182, unknown_016F_02E0_019D0_AsmEntry);
             throw FailAsUntested("Untested return from call at 016F:017F");
         }

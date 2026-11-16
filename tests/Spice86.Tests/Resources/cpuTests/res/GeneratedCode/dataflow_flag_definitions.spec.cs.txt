@@ -38,6 +38,7 @@ public partial class CfgGeneratedOverrides {
         ushort index2 = 0;
         ushort word1 = 0;
         ushort word2 = 0;
+        bool flag1;
         ushort word3 = 0;
         ushort word4 = 0;
         ushort word5 = 0;
@@ -59,8 +60,8 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, index] = 1;
             Alu16.Sub(word1, word2);
             DX++;
-            ZeroFlag = DX == 0;
-            if (!CarryFlag && !ZeroFlag) {
+            flag1 = DX == 0;
+            if (!CarryFlag && !flag1) {
                 UInt8[DS, index] = 2;
             }
             UInt16[DS, index + 2] = DX;

@@ -18,6 +18,7 @@ public partial class CfgGeneratedOverrides {
         ushort index2 = 0;
         ushort word1;
         byte byte1;
+        bool flag1;
         ushort word2;
         byte byte2;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -58,28 +59,28 @@ public partial class CfgGeneratedOverrides {
             DX = (ushort)(DX >> 4 | DX << 12);
             UInt16[DS, index + 0x14] = DX;
             AX = UInt16[CS, index2 + 4];
-            CarryFlag = (AX & 1) != 0;
+            flag1 = (AX & 1) != 0;
             AX >>= 1;
             DX = UInt16[CS, index2];
-            DX = (ushort)(DX << 1 | (CarryFlag ? 1 : 0));
+            DX = (ushort)(DX << 1 | (flag1 ? 1 : 0));
             UInt16[DS, index + 0x16] = DX;
             AX = UInt16[CS, index2 + 4];
-            CarryFlag = (AX & 1) != 0;
+            flag1 = (AX & 1) != 0;
             AX >>= 1;
             DX = UInt16[CS, index2];
-            DX = (ushort)(DX >> 1 | (CarryFlag ? 1 : 0) << 15);
+            DX = (ushort)(DX >> 1 | (flag1 ? 1 : 0) << 15);
             UInt16[DS, index + 0x18] = DX;
             AX = UInt16[CS, index2 + 4];
-            CarryFlag = (AX & 1) != 0;
+            flag1 = (AX & 1) != 0;
             AX >>= 1;
             DX = UInt16[CS, index2];
-            DX = (ushort)(DX + 5 + (CarryFlag ? 1 : 0));
+            DX = (ushort)(DX + 5 + (flag1 ? 1 : 0));
             UInt16[DS, index + 0x1A] = DX;
             AX = UInt16[CS, index2 + 4];
-            CarryFlag = (AX & 1) != 0;
+            flag1 = (AX & 1) != 0;
             AX >>= 1;
             DX = UInt16[CS, index2];
-            DX = (ushort)(DX - 5 - (CarryFlag ? 1 : 0));
+            DX = (ushort)(DX - 5 - (flag1 ? 1 : 0));
             UInt16[DS, index + 0x1C] = DX;
             word2 = UInt16[CS, index2];
             (AX, word1) = Mul16(word2, 3);
@@ -123,16 +124,16 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, index + 0x3C] = DX;
             UInt8[DS, index + 0x3E] = 1;
             DX = UInt16[CS, index2];
-            CarryFlag = (DX & 1) != 0;
+            flag1 = (DX & 1) != 0;
             DX >>= 1;
-            if (!CarryFlag) {
+            if (!flag1) {
                 UInt8[DS, index + 0x3E] = 2;
             }
             UInt8[DS, index + 0x3F] = 1;
             DX = UInt16[CS, index2];
-            CarryFlag = (DX & 0x8000) != 0;
+            flag1 = (DX & 0x8000) != 0;
             DX <<= 1;
-            if (!CarryFlag) {
+            if (!flag1) {
                 UInt8[DS, index + 0x3F] = 2;
             }
             UInt8[DS, index + 0x40] = 1;

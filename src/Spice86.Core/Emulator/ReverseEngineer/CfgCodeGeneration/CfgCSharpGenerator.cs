@@ -299,7 +299,8 @@ internal sealed class CfgCSharpGenerator {
             census.Merge(methodCensus.Gotos);
             if (_collectCensuses) {
                 flagReadCensus.Merge(IrFlagReadCensusClassifier.Classify(preparedMethod.IrMethod,
-                    preparedMethod.Ssa, analyzed.Body));
+                    preparedMethod.Ssa, analyzed.Body,
+                    analyzed.RegisterLocals?.Reads));
             }
             if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
                 MethodPlan method = preparedMethod.Method;

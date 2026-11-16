@@ -556,6 +556,13 @@ bare name, a definition's right side is cast to the local's type (`word1 = (shor
 trip disappears when the right side already converts from it), and a write-back casts the local to
 the register's type (`AX = (ushort)word1;`).
 
+Status and direction flags take the same treatment: `IrSsaValue` holds one value per flag and
+`CpuFlagNode` is its read/target node, so a flag web promotes to a `bool` local under the same
+rules as a register web - `flag1 = (CX & 1) != 0;` for a shift carry, a tuple element for a
+service or typed call's flag result, a parameter name for a flag input - and the machine flag
+is written back (`CarryFlag = flag1;`) only before an implicit observer such as an event check,
+an untyped call, `pushf` or an exit that demands it (RL-20).
+
 ### Counted loops
 
 A pre-test loop whose condition compares a register local against a constant, whose last body

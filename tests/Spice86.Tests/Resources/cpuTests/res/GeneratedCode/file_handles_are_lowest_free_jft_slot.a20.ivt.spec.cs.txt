@@ -127,11 +127,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DX, DS, flags, DF. Outputs: AX. Changes: AX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016E.
     public virtual Action unknown_016E_01D8_018B8() {
+        bool flag1 = false;
         ushort word1 = 0;
         CheckExternalEvents(cs1, 0x01D8);
         AX = 0x3D00;
-        (word1, CarryFlag) = ServiceCall(cs1, 0x01DD, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')), r => CarryOnInterruptStack(r.carryFlag));
-        if (CarryFlag) {
+        (word1, flag1) = ServiceCall(cs1, 0x01DD, Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')), r => CarryOnInterruptStack(r.carryFlag));
+        if (flag1) {
             VerifySpeculativeEntryOrFail(cs1, 0x01DF, Signature_01DF_mov);
             word1 = 0xFFFF;
         }

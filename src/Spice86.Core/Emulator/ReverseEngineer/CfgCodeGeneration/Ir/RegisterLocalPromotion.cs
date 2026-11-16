@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -36,9 +37,16 @@ internal static partial class RegisterLocalPromotion {
     /// versions need a write-back when promoted.</summary>
     internal static readonly CpuValues PromotableMask =
         CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx
-        | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi | CpuValues.Es | CpuValues.Ds;
+        | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi | CpuValues.Es | CpuValues.Ds
+        | CpuValues.Carry | CpuValues.Parity | CpuValues.Auxiliary | CpuValues.Zero
+        | CpuValues.Sign | CpuValues.Overflow | CpuValues.Direction;
 
     private static readonly IrSsaValue[] Promotable = IrValueSets.ValuesIn(PromotableMask);
+
+    /// <summary>The local-name bases of the promotable flags, in <see cref="IrSsaValue"/> order
+    /// from <see cref="IrSsaValue.Carry"/>.</summary>
+    private static readonly string[] FlagLocalNames =
+        ["carry", "parity", "auxiliary", "zero", "sign", "overflow", "direction"];
 
 
     /// <summary>
@@ -145,7 +153,8 @@ internal static partial class RegisterLocalPromotion {
             string name = candidate.Parameter is { } parameter ? parameter.Name
                 : hint is null || !RoleNames.IsIdentifier(hint)
                 ? GenericValueNames.Next(
-                    GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken)
+                    candidate.Register.DataType == DataType.BOOL ? "flag"
+                        : GenericValueNames.Prefix(candidate.Register.DataType.BitWidth), taken)
                 : RoleNames.Next(hint, taken);
             taken.Add(name);
             names[legacyName] = name;
@@ -174,15 +183,17 @@ internal static partial class RegisterLocalPromotion {
             votes[name] = (signed + candidate.SignedVotes, unsigned + candidate.UnsignedVotes);
         }
         foreach ((Candidate candidate, string name) in accepted) {
-            DataType signedType = DataType.SignedFromBitWidth(candidate.Register.DataType.BitWidth);
-            bool signed = candidate.Parameter is null && !unsignedNames.Contains(name)
+            bool flag = candidate.Register.DataType == DataType.BOOL;
+            DataType signedType = flag ? DataType.BOOL
+                : DataType.SignedFromBitWidth(candidate.Register.DataType.BitWidth);
+            bool signed = !flag && candidate.Parameter is null && !unsignedNames.Contains(name)
                 && votes[name].Unsigned < votes[name].Signed;
             DataType localType = signed ? signedType : candidate.Register.DataType;
             if (candidate.Parameter is null && declared.Add(name)) {
                 declarations.Add(new LocalDeclarationNode(localType, name,
                     candidate.SingleBlock ? null : new ConstantNode(localType, 0)));
             }
-            foreach (RegisterNode target in candidate.DefTargets) {
+            foreach (ValueNode target in candidate.DefTargets) {
                 reads[target] = new SubstitutedRead(name, signed ? localType : null);
             }
             foreach ((IVisitableAstNode node, IVisitableAstNode? readParent) in candidate.Reads) {
@@ -199,14 +210,15 @@ internal static partial class RegisterLocalPromotion {
                 }
             }
             foreach (Use use in candidate.WriteBackUses) {
-                RegisterNode fresh = FreshRegister(candidate.Register);
+                ValueNode fresh = FreshRegister(candidate.Register);
                 writeBacks.Add(new RegisterLocalWriteBack(use.Origin, AnchorOf(use),
                     new RegisterWriteBackNode(fresh, new RegisterLocalNode(fresh, name, localType))));
             }
         }
         Dictionary<IVisitableAstNode, IVisitableAstNode> replacements =
             new(ReferenceEqualityComparer.Instance);
-        PlanPairs(method, [.. accepted.Where(item => item.Candidate.Parameter is null)],
+        PlanPairs(method, [.. accepted.Where(item => item.Candidate.Parameter is null
+            && item.Candidate.Register is RegisterNode)],
             reservedNames, declared, reads, declarations, writeBacks,
             dropped, replacements);
         return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
@@ -322,7 +334,7 @@ internal static partial class RegisterLocalPromotion {
                     }
                     List<int> merged = [.. webs[usedRoot], .. webs[definedRoot]];
                     if (UniformRegister(ssa, merged) is not { } register
-                        || !callPreserves(statement, IrValueSets.Of(register))) {
+                        || !callPreserves(statement, MaskOf(register))) {
                         continue;
                     }
                     union(used, defined);
@@ -341,12 +353,13 @@ internal static partial class RegisterLocalPromotion {
         }
     }
 
-    /// <summary>The register outputs a statement defines: an assignment's left, both halves of a
-    /// multiplication or division tuple, or a service call's result lvalues.</summary>
-    private static IEnumerable<RegisterNode> DefinitionTargets(IVisitableAstNode node) {
+    /// <summary>The value outputs a statement defines: an assignment's register or flag left,
+    /// both halves of a multiplication or division tuple, or a service call's result lvalues.</summary>
+    private static IEnumerable<ValueNode> DefinitionTargets(IVisitableAstNode node) {
         switch (node) {
-            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register }:
-                yield return register;
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: RegisterNode or CpuFlagNode } assignment:
+                yield return (ValueNode)assignment.Left;
                 break;
             case MultiplicationNode multiplication:
                 yield return multiplication.Low;
@@ -357,8 +370,10 @@ internal static partial class RegisterLocalPromotion {
                 yield return division.Division.High;
                 break;
             case InterruptServiceCallNode serviceCall:
-                foreach (RegisterNode result in serviceCall.Results.OfType<RegisterNode>()) {
-                    yield return result;
+                foreach (ValueNode result in serviceCall.Results) {
+                    if (result is RegisterNode or CpuFlagNode) {
+                        yield return result;
+                    }
                 }
                 break;
         }
@@ -382,8 +397,8 @@ internal static partial class RegisterLocalPromotion {
 
     /// <summary>The one register the plain definitions of <paramref name="members"/> assign, or
     /// <c>null</c> when they do not agree or there is none yet.</summary>
-    private static RegisterNode? UniformRegister(IrSsa ssa, List<int> members) {
-        RegisterNode? register = null;
+    private static ValueNode? UniformRegister(IrSsa ssa, List<int> members) {
+        ValueNode? register = null;
         foreach (int version in members) {
             IrSsaVersionInfo info = ssa.Info(version);
             if (info.Kind is not (IrSsaDefinitionKind.Definition
@@ -393,7 +408,7 @@ internal static partial class RegisterLocalPromotion {
             if (DefinitionSite(ssa, info, version) is not { } site) {
                 continue;
             }
-            RegisterNode[] candidates = [.. DefinitionTargets(site.Statement.Node)
+            ValueNode[] candidates = [.. DefinitionTargets(site.Statement.Node)
                 .Where(target => RegisterMatchesValue(target, info.Value)).Take(2)];
             if (candidates.Length != 1) {
                 continue;
@@ -464,8 +479,8 @@ internal static partial class RegisterLocalPromotion {
             || collected.DefTargets.Any(target => !target.Equals(collected.DefTargets[0]))) {
             return null;
         }
-        RegisterNode webRegister = collected.DefTargets[0];
-        CpuValues registerBytes = IrValueSets.Of(webRegister);
+        ValueNode webRegister = collected.DefTargets[0];
+        CpuValues registerBytes = MaskOf(webRegister);
         // A method-entry member promotes only as a typed parameter: the signature must reach it
         // from its own entry block and a parameter must cover the register's exact bytes. The
         // parameter name is the local's, so nothing declares or copies it in.
@@ -521,8 +536,10 @@ internal static partial class RegisterLocalPromotion {
                 writeBackUses, entryParameter)) {
             return null;
         }
-        (int signedVotes, int unsignedVotes) = CountSignedVotes(webRegister, classification.WebReads,
-            collected.Sites, writeBackUses);
+        (int signedVotes, int unsignedVotes) = webRegister is CpuFlagNode
+            ? (0, classification.WebReads.Count)
+            : CountSignedVotes(webRegister, classification.WebReads,
+                collected.Sites, writeBackUses);
         HashSet<IrBlock> touched = [.. collected.Sites.Select(definition => definition.Block),
             .. uses.Select(use => use.Site.Block)];
         bool singleBlock = !collected.HasCall && touched.Count == 1;
@@ -560,7 +577,7 @@ internal static partial class RegisterLocalPromotion {
         IrSsaValue value, Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
         TypedSignature? signature) {
-        List<RegisterNode> defTargets = [];
+        List<ValueNode> defTargets = [];
         List<Definition> definitions = [];
         bool hasCall = false;
         IrBlock? entryBlock = null;
@@ -599,7 +616,7 @@ internal static partial class RegisterLocalPromotion {
             // call's result lvalue. A byte division can put two halves (AL and AH) on the same SSA
             // value: with more than one matching target the local would rename one half while the
             // tuple writes both, so the web refuses.
-            RegisterNode[] targets = [.. DefinitionTargets(definition.Node)
+            ValueNode[] targets = [.. DefinitionTargets(definition.Node)
                 .Where(target => RegisterMatchesValue(target, value)).Take(2)];
             if (targets.Length != 1
                 || !OccurrencesInWeb(method, occurrences, targets[0], definition, ssa, value,
@@ -641,9 +658,9 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>The web's uses split into explicit reads (which the local substitutes), implicit
     /// uses (which take a write-back) and killing uses, or <c>null</c> when a use is a terminator
     /// the local cannot serve or the web has no explicit read at all.</summary>
-    private static WebUses? ClassifyWebUses(RegisterNode webRegister, string baseName,
+    private static WebUses? ClassifyWebUses(ValueNode webRegister, string baseName,
         IrSsaValue value, List<Use> uses, HashSet<IVisitableAstNode> nonSubstitutable,
-        IReadOnlyList<RegisterNode> defTargets) {
+        IReadOnlyList<ValueNode> defTargets) {
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> webReads = [];
         HashSet<IVisitableAstNode> explicitRoots = new(ReferenceEqualityComparer.Instance);
         List<Use> implicitUses = [];
@@ -740,7 +757,7 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>The signed-type vote of the web: reads under a same-width signed conversion and
     /// definitions from one on the signed side, every other read, definition and write-back on the
     /// unsigned side.</summary>
-    private static (int Signed, int Unsigned) CountSignedVotes(RegisterNode webRegister,
+    private static (int Signed, int Unsigned) CountSignedVotes(ValueNode webRegister,
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> webReads,
         List<Definition> definitions, List<Use> writeBackUses) {
         DataType signedType = DataType.SignedFromBitWidth(webRegister.DataType.BitWidth);
@@ -924,8 +941,8 @@ internal static partial class RegisterLocalPromotion {
     /// an exit terminator is implicit; so is a use whose copy still reads a byte of the local's
     /// register. The roots the substituted instances live in are added to
     /// <paramref name="explicitRoots"/>.</summary>
-    private static bool Classify(RegisterNode register, string name, Use use,
-        HashSet<IVisitableAstNode> nonSubstitutable, IReadOnlyList<RegisterNode> defTargets,
+    private static bool Classify(ValueNode register, string name, Use use,
+        HashSet<IVisitableAstNode> nonSubstitutable, IReadOnlyList<ValueNode> defTargets,
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> reads,
         HashSet<IVisitableAstNode> explicitRoots) {
         IrSsaUse site = use.Site;
@@ -958,7 +975,7 @@ internal static partial class RegisterLocalPromotion {
         IVisitableAstNode copy = ReplaceReads(root, null);
         IrEffects copyEffects = IrEffectsVisitor.Of(copy, mayFault);
         if ((replaced.Count == 0 && sharedTargetReads == 0) || copyEffects.MayFault
-            || (copyEffects.Reads & IrValueSets.Of(register)) != CpuValues.None) {
+            || (copyEffects.Reads & MaskOf(register)) != CpuValues.None) {
             return false;
         }
         reads.AddRange(replaced);
@@ -979,7 +996,7 @@ internal static partial class RegisterLocalPromotion {
         return true;
 
         IVisitableAstNode ReplaceReads(IVisitableAstNode node, IVisitableAstNode? parent) {
-            if (node is RegisterNode nodeRegister && nodeRegister.Equals(register)) {
+            if (node is RegisterNode or CpuFlagNode && node.Equals(register)) {
                 if (nonSubstitutable.Contains(node)) {
                     if (defTargetSet.Contains(node) && parent is not null
                         && !SpecialSlot(node, parent)) {
@@ -999,13 +1016,13 @@ internal static partial class RegisterLocalPromotion {
     /// <paramref name="value"/> and keeps bytes of <paramref name="register"/>'s web it does not
     /// rewrite: the register must then hold the local's value before the statement runs, like the
     /// conditional link of <see cref="IrSsaUse.ConditionalNewVersion"/> already requires.</summary>
-    private static bool PartialWriteNeedsRegister(RegisterNode register, IrSsaValue value, Use use) {
+    private static bool PartialWriteNeedsRegister(ValueNode register, IrSsaValue value, Use use) {
         if (use.Site.Statement is not { } statement
             || (IrSsaValues.WriteBits(statement.Effects).Partial & (1u << (int)value)) == 0) {
             return false;
         }
         CpuValues written = statement.Effects.MustWrite & IrSsaValues.MaskOf(value);
-        return (IrValueSets.Of(register) & ~written) != CpuValues.None;
+        return (MaskOf(register) & ~written) != CpuValues.None;
     }
 
     /// <summary>Whether <paramref name="use"/> is a killing use: a statement that reads no byte of
@@ -1013,11 +1030,11 @@ internal static partial class RegisterLocalPromotion {
     /// the register there, so such a use takes no write-back and is not printed; it ends the
     /// register's currency in the block. The typical site is the version link of the next
     /// full-width definition (<see cref="IrSsaUse.ConditionalNewVersion"/>).</summary>
-    private static bool IsKillingUse(RegisterNode register, Use use) =>
+    private static bool IsKillingUse(ValueNode register, Use use) =>
         use.Site.Statement is { } statement
         && !statement.Effects.MayFault
-        && (statement.Effects.Reads & IrValueSets.Of(register)) == CpuValues.None
-        && (IrValueSets.Of(register) & ~statement.Effects.MustWrite) == CpuValues.None;
+        && (statement.Effects.Reads & MaskOf(register)) == CpuValues.None
+        && (MaskOf(register) & ~statement.Effects.MustWrite) == CpuValues.None;
 
     /// <summary>Assignment targets, tuple-swap operands, division results and pointer segments may
     /// never print as a local: the printer needs the register there. The reads map substitutes by
@@ -1155,17 +1172,17 @@ internal static partial class RegisterLocalPromotion {
                 origins.Add(instruction);
             }
         }
-        HashSet<string> sinks = RoleNames.SinkNames(roots, value, candidate.Register, readNodes,
-            roles.Signatures);
+        HashSet<string> sinks = RoleNames.SinkNames(roots, value,
+            candidate.Register as RegisterNode, readNodes, roles.Signatures);
         if (RoleNames.UniqueName(sinks) is { } sink) {
             return sink;
         }
-        HashSet<string> sources = RoleNames.SourceNames(definitions, value, candidate.Register,
-            roles.Signatures, roles.FramePlan);
+        HashSet<string> sources = RoleNames.SourceNames(definitions, value,
+            candidate.Register as RegisterNode, roles.Signatures, roles.FramePlan);
         if (RoleNames.UniqueName(sources) is { } source) {
             return source;
         }
-        return RoleNames.RoleName(roots, value, candidate.Register,
+        return RoleNames.RoleName(roots, value, candidate.Register as RegisterNode,
             candidate.Register is SegmentRegisterNode, origins);
     }
 
@@ -1180,7 +1197,8 @@ internal static partial class RegisterLocalPromotion {
             foreach (IVisitableAstNode root in block.Statements.Select(statement => statement.Node)
                     .Concat(IrAstChildren.RootsOf(block.Terminator))) {
                 foreach (IVisitableAstNode node in IrAstChildren.Descendants(root)) {
-                    if (node is not RegisterNode and not SegmentRegisterNode) {
+                    if (node is not RegisterNode and not SegmentRegisterNode
+                            and not CpuFlagNode) {
                         continue;
                     }
                     if (!occurrences.TryGetValue(node, out List<IVisitableAstNode>? roots)) {
@@ -1201,15 +1219,19 @@ internal static partial class RegisterLocalPromotion {
     /// statement or terminator root may print the local everywhere only when each such site's used
     /// version is a member of the web - otherwise it would rename a read of another version.</summary>
     private static bool OccurrencesInWeb(IrMethod method,
-        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences, RegisterNode target,
+        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences, ValueNode target,
         IrStatement definition, IrSsa ssa, IrSsaValue value, HashSet<int> memberVersions) {
         if (!occurrences.TryGetValue(target, out List<IVisitableAstNode>? roots)) {
             return true;
         }
-        int selfReads = 0;
+        // Roots are whole statements: one def root can still hold the instance in operand
+        // positions too (inc bx, cmc). Count positions in the definition itself - the operand
+        // positions read the previous version, so they are only safe when that version is a
+        // web member.
+        int selfReads = IrAstChildren.Descendants(definition.Node)
+            .Count(node => ReferenceEquals(node, target));
         foreach (IVisitableAstNode root in roots) {
             if (ReferenceEquals(root, definition.Node)) {
-                selfReads++;
                 continue;
             }
             if (SiteOf(method, root) is not { } site
@@ -1268,13 +1290,23 @@ internal static partial class RegisterLocalPromotion {
 
     /// <summary>Whether <paramref name="register"/> covers only bytes of <paramref name="value"/>,
     /// which also pins a segment register to its value.</summary>
-    private static bool RegisterMatchesValue(RegisterNode register, IrSsaValue value) {
+    private static bool RegisterMatchesValue(ValueNode register, IrSsaValue value) {
+        if (register is CpuFlagNode flag) {
+            return TypedSignatures.ValueOf(flag) == value;
+        }
         if (register is SegmentRegisterNode segment) {
             return value == (IrSsaValue)((int)IrSsaValue.Es + segment.RegisterIndex);
         }
         return value <= IrSsaValue.Edi
-            && (IrValueSets.Of(register) & ~IrSsaValues.MaskOf(value)) == CpuValues.None;
+            && (MaskOf(register) & ~IrSsaValues.MaskOf(value)) == CpuValues.None;
     }
+
+    /// <summary>The <see cref="CpuValues"/> a promotable target node stands for.</summary>
+    private static CpuValues MaskOf(ValueNode target) => target switch {
+        CpuFlagNode flag => IrValueSets.FromStatusFlags((StatusFlags)flag.FlagMask),
+        RegisterNode register => IrValueSets.Of(register),
+        _ => CpuValues.None
+    };
 
     /// <summary>The node inside the write-back's boundary the insertion searches for: the implicit
     /// use's statement node, or the transfer of the exit terminator.</summary>
@@ -1291,11 +1323,14 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>A register equal to <paramref name="register"/> but a distinct instance: the
     /// write-back's register and local must not share the target's instance, which the reads map
     /// prints as the local.</summary>
-    private static RegisterNode FreshRegister(RegisterNode register) {
-        if (register is SegmentRegisterNode) {
-            return new SegmentRegisterNode(register.RegisterIndex);
+    private static ValueNode FreshRegister(ValueNode register) {
+        if (register is SegmentRegisterNode segment) {
+            return new SegmentRegisterNode(segment.RegisterIndex);
         }
-        return new RegisterNode(register.DataType, register.RegisterIndex);
+        if (register is CpuFlagNode flag) {
+            return new CpuFlagNode(flag.FlagMask);
+        }
+        return new RegisterNode(register.DataType, ((RegisterNode)register).RegisterIndex);
     }
 
     /// <summary>Whether <paramref name="node"/> converts a value to <paramref name="dataType"/>.</summary>
@@ -1313,14 +1348,18 @@ internal static partial class RegisterLocalPromotion {
     };
 
     /// <summary>The local name of <paramref name="register"/>: the lowercase register name.</summary>
-    private static string LocalName(RegisterNode register) {
+    private static string LocalName(ValueNode register) {
+        if (register is CpuFlagNode flag) {
+            return FlagLocalNames[(int)(TypedSignatures.ValueOf(flag) ?? IrSsaValue.Carry)
+                - (int)IrSsaValue.Carry];
+        }
         if (register is SegmentRegisterNode segment) {
             return RegisterNames.Segments[segment.RegisterIndex];
         }
         return register.DataType.BitWidth switch {
-            BitWidth.BYTE_8 => ByteName(register.RegisterIndex),
-            BitWidth.WORD_16 => RegisterNames.Word16[register.RegisterIndex],
-            _ => $"e{RegisterNames.Word16[register.RegisterIndex]}"
+            BitWidth.BYTE_8 => ByteName(((RegisterNode)register).RegisterIndex),
+            BitWidth.WORD_16 => RegisterNames.Word16[((RegisterNode)register).RegisterIndex],
+            _ => $"e{RegisterNames.Word16[((RegisterNode)register).RegisterIndex]}"
         };
     }
 
@@ -1356,7 +1395,7 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>The definitions <see cref="CollectWebDefinitions"/> collected: the register
     /// targets of the web's plain definitions, every definition site (a phi counts with index -1)
     /// and whether a call's preserved value counts as a definition.</summary>
-    private sealed record WebDefinitions(List<RegisterNode> DefTargets, List<Definition> Sites,
+    private sealed record WebDefinitions(List<ValueNode> DefTargets, List<Definition> Sites,
         bool HasCall, IrBlock? EntryBlock);
 
     /// <summary>The uses <see cref="ClassifyWebUses"/> split: the explicit reads and their roots,
@@ -1373,8 +1412,8 @@ internal static partial class RegisterLocalPromotion {
     /// one on the signed side, every other read, definition and write-back on the unsigned side.
     /// </summary>
     private sealed record Candidate(IrBlock Block, bool SingleBlock, int FirstBlockOrder,
-        int FirstIndex, int DefIndex, int End, RegisterNode Register, string BaseName,
-        IReadOnlyList<RegisterNode> DefTargets, IReadOnlyList<Definition> Sites,
+        int FirstIndex, int DefIndex, int End, ValueNode Register, string BaseName,
+        IReadOnlyList<ValueNode> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
         IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes,
         SegmentedAddress FirstAddress, WebUses Uses, TypedParameter? Parameter);

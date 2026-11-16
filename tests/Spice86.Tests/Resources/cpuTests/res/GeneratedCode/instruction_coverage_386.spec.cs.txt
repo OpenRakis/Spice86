@@ -14,43 +14,46 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: SI. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        bool flag1;
         ushort word1 = 0;
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4;
         ushort index;
         ushort word5;
+        bool flag2 = false;
+        bool flag3 = false;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        CarryFlag = (0x00F0 & 1 << 4 % 0x0010) != 0;
-        if (CarryFlag) {
+        flag1 = (0x00F0 & 1 << 4 % 0x0010) != 0;
+        if (flag1) {
             Segment2000Globals.Byte0000 = 1;
         }
         else {
             Segment2000Globals.Byte0000 = 0;
         }
-        CarryFlag = (0x00F0 & 1 << 0 % 0x0010) != 0;
+        flag1 = (0x00F0 & 1 << 0 % 0x0010) != 0;
         DX = (ushort)(0x00F0 | 1 << 0 % 0x0010);
-        if (CarryFlag) {
+        if (flag1) {
             Segment2000Globals.Byte0001 = 1;
         }
         else {
             Segment2000Globals.Byte0001 = 0;
         }
-        CarryFlag = (DX & 1 << 4 % 0x0010) != 0;
+        flag1 = (DX & 1 << 4 % 0x0010) != 0;
         DX = (ushort)(DX & ~(1 << 4 % 0x0010));
-        if (CarryFlag) {
+        if (flag1) {
             Segment2000Globals.Byte0002 = 1;
         }
         else {
             Segment2000Globals.Byte0002 = 0;
         }
-        CarryFlag = (DX & 1 << 8 % 0x0010) != 0;
+        flag1 = (DX & 1 << 8 % 0x0010) != 0;
         DX = (ushort)(DX ^ 1 << 8 % 0x0010);
-        if (CarryFlag) {
+        if (flag1) {
             Segment2000Globals.Byte0003 = 1;
         }
         else {
@@ -102,8 +105,8 @@ public partial class CfgGeneratedOverrides {
         UInt16[DS, BX + 0x38] = CX;
         UInt16[DS, BX + 0x3A] = DX;
         UInt16[DS, BX + 0x3E] = BP;
-        ParityFlag = true;
-        OverflowFlag = false;
+        flag2 = true;
+        flag3 = false;
         UInt8[DS, BX + 0x40] = 1;
         UInt8[DS, BX + 0x41] = 0;
         UInt8[DS, BX + 0x42] = 1;
@@ -114,25 +117,25 @@ public partial class CfgGeneratedOverrides {
         UInt8[DS, BX + 0x47] = 0;
         UInt8[DS, BX + 0x48] = 1;
         UInt8[DS, BX + 0x49] = 0;
-        if (OverflowFlag) {
+        if (flag3) {
             UInt8[DS, BX + 0x4A] = 1;
         }
         else {
             UInt8[DS, BX + 0x4A] = 0;
         }
-        if (!OverflowFlag) {
+        if (!flag3) {
             UInt8[DS, BX + 0x4B] = 1;
         }
         else {
             UInt8[DS, BX + 0x4B] = 0;
         }
-        if (ParityFlag) {
+        if (flag2) {
             UInt8[DS, BX + 0x4C] = 1;
         }
         else {
             UInt8[DS, BX + 0x4C] = 0;
         }
-        if (!ParityFlag) {
+        if (!flag2) {
             UInt8[DS, BX + 0x4D] = 1;
         }
         else {

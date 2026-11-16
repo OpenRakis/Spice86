@@ -16,6 +16,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         ushort callbackSegment = 0;
+        bool flag1 = false;
         byte byte1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0998;
@@ -24,29 +25,29 @@ public partial class CfgGeneratedOverrides {
         AX = 0x8300;
         Stack.Push16(CS);
         callbackSegment = Stack.Pop16();
-        (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
-        if (!CarryFlag) {
+        (byte1, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
+        if (!flag1) {
             AH = byte1;
             AL = 2;
             Out8(0x0998, 2);
             AX = 0x8300;
             Stack.Push16(CS);
             callbackSegment = Stack.Pop16();
-            (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
-            if (CarryFlag && byte1 == 0x80) {
+            (byte1, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x1000, callbackSegment, 0, 0x83));
+            if (flag1 && byte1 == 0x80) {
                 Out8(0x0998, 3);
-                (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
-                if (!CarryFlag) {
+                (byte1, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
+                if (!flag1) {
                     Out8(0x0998, 4);
                     Stack.Push16(CS);
                     callbackSegment = Stack.Pop16();
-                    (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83));
-                    if (CarryFlag) {
+                    (byte1, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(0, 0, 0x2000, callbackSegment, 0, 0x83));
+                    if (flag1) {
                         goto L_0173;
                     }
                     Out8(0x0998, 5);
-                    (byte1, CarryFlag) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
-                    if (!CarryFlag) {
+                    (byte1, flag1) = ServiceCall(SystemBios, () => SystemBios.WaitFunction(1, 0, 0x0998, callbackSegment, 0, 0x83));
+                    if (!flag1) {
                         Out8(0x0999, 0);
                         return Hlt();
                     }

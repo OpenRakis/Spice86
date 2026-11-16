@@ -24,11 +24,14 @@ using System.Numerics;
 /// </summary>
 internal static class IrFlagReadCensusClassifier {
     /// <summary>Classifies every status-flag read of <paramref name="body"/> through <paramref name="ssa"/>.</summary>
-    public static FlagReadCensus Classify(IrMethod method, IrSsa ssa, IVisitableAstNode body) {
+    /// <param name="substituted">The node instances the register-local plan prints as a local
+    /// instead: they are not printed flag reads, so the census must not count them.</param>
+    public static FlagReadCensus Classify(IrMethod method, IrSsa ssa, IVisitableAstNode body,
+        IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? substituted = null) {
         FlagReadCensus census = new();
         Positions(method, ssa, out Dictionary<IVisitableAstNode, (IrBlock Block, int Index)> positions,
             out Dictionary<int, (IrStatement Statement, int Index)> setterByVersion);
-        Classifier classifier = new(ssa, positions, setterByVersion);
+        Classifier classifier = new(ssa, positions, setterByVersion, substituted);
         classifier.Walk(body, null, false, census);
         return census;
     }
@@ -60,7 +63,8 @@ internal static class IrFlagReadCensusClassifier {
     private sealed class Classifier(
         IrSsa ssa,
         Dictionary<IVisitableAstNode, (IrBlock Block, int Index)> positions,
-        Dictionary<int, (IrStatement Statement, int Index)> setterByVersion) {
+        Dictionary<int, (IrStatement Statement, int Index)> setterByVersion,
+        IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? substituted) {
 
         /// <summary>Walks the structured body on an explicit stack, so deeply nested <c>if</c> / <c>else</c>
         /// chains cannot overflow the thread's stack; <paramref name="position"/> is the lifted position of
@@ -77,6 +81,7 @@ internal static class IrFlagReadCensusClassifier {
                     currentPosition = found;
                 }
                 if (!currentInWrite && currentPosition is { } read && current is CpuFlagNode flag
+                    && substituted?.ContainsKey(current) != true
                     && ValueOf(flag.FlagMask) is IrSsaValue value) {
                     ClassifyRead(read, value, census);
                 }
@@ -91,6 +96,12 @@ internal static class IrFlagReadCensusClassifier {
             if (node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assign) {
                 yield return (assign.Left, true);
                 yield return (assign.Right, false);
+                yield break;
+            }
+            if (node is RegisterWriteBackNode writeBack) {
+                // The target is a flag write, not a read; the local's effects are none.
+                yield return (writeBack.Register, true);
+                yield return (writeBack.Local, false);
                 yield break;
             }
             if (node is InterruptServiceCallNode) {

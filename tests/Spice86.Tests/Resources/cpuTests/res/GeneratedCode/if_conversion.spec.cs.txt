@@ -19,8 +19,12 @@ public partial class CfgGeneratedOverrides {
         byte byte2 = 0;
         ushort word2 = 0;
         ushort word3 = 0;
+        bool flag1 = false;
         ushort word4 = 0;
         ushort word5 = 0;
+        bool flag2 = false;
+        bool flag3 = false;
+        bool flag4 = false;
         ushort word6 = 0;
         ushort word7 = 0;
         ushort word8 = 0;
@@ -48,12 +52,12 @@ public partial class CfgGeneratedOverrides {
         word3 = 0xFFFF;
         if (word2 != 0) {
             word3 = BitScanForward16(word2);
-            ZeroFlag = false;
+            flag1 = false;
         }
         else {
-            ZeroFlag = true;
+            flag1 = true;
         }
-        if (ZeroFlag) {
+        if (flag1) {
             Segment2000Globals.Byte0046 = 1;
         }
         else {
@@ -64,12 +68,12 @@ public partial class CfgGeneratedOverrides {
         word5 = 0xFFFF;
         if (word4 != 0) {
             word5 = BitScanForward16(word4);
-            ZeroFlag = false;
+            flag2 = false;
         }
         else {
-            ZeroFlag = true;
+            flag2 = true;
         }
-        if (ZeroFlag) {
+        if (flag2) {
             Segment2000Globals.Byte0049 = 1;
         }
         else {
@@ -95,8 +99,8 @@ public partial class CfgGeneratedOverrides {
         }
         Alu8.UpdateFlags(AL);
         AuxiliaryFlag = finalAuxiliaryFlag_0068;
-        CarryFlag = finalCarryFlag_0068;
-        AH = (byte)(CarryFlag ? 1 : 0);
+        flag3 = finalCarryFlag_0068;
+        AH = (byte)(flag3 ? 1 : 0);
         Segment2000Globals.Word004C = AX;
         AL = SegmentF000Globals.Byte00CF;
         AL = Alu8.Add(AL, SegmentF000Globals.Byte00D0);
@@ -117,8 +121,8 @@ public partial class CfgGeneratedOverrides {
         }
         Alu8.UpdateFlags(AL);
         AuxiliaryFlag = finalAuxiliaryFlag_0077;
-        CarryFlag = finalCarryFlag_0077;
-        AH = (byte)(CarryFlag ? 1 : 0);
+        flag4 = finalCarryFlag_0077;
+        AH = (byte)(flag4 ? 1 : 0);
         Segment2000Globals.Word004E = AX;
         word6 = SegmentF000Globals.Word00C3;
         word7 = SegmentF000Globals.Word00C3;

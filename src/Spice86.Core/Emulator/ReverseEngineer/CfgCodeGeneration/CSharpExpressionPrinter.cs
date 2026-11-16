@@ -909,6 +909,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     public CSharpFragment VisitCpuFlagNode(CpuFlagNode node) {
+        if (LocalReads is not null && LocalReads.TryGetValue(node, out SubstitutedRead? read)) {
+            return Atomic(read.Text, read.Type ?? node.DataType);
+        }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
             PrintedParameterReads.Add(node);
             return Atomic(parameter, DataType.BOOL);
