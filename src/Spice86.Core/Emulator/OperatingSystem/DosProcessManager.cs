@@ -760,9 +760,16 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 // Halt emulation; COMMAND.COM has no execution context.
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
+            } else {
+                TerminateResumedBatchLaunch = true;
             }
         }
     }
+
+    /// <summary>Whether a terminate during the run resumed by the batch engine launching the
+    /// next program: that resume only exists as the interrupt stub's callback-moved-CS:IP path,
+    /// so the generated program keeps terminate calls untyped.</summary>
+    internal bool TerminateResumedBatchLaunch { get; private set; }
 
     private bool ResumeBatchExecutionFromRoot() {
         while (_batchExecutionEngine.TryContinue(LastChildReturnCode, out LaunchRequest launchRequest)) {

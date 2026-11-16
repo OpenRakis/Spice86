@@ -12,14 +12,15 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
+    /// <summary>Inputs: DS, PF, AF, ZF, SF, OF, DF. Does not return.</summary>
     public virtual Action unknown_016E_0100_017E0() {
+        ushort offset = 0;
         CheckExternalEvents(cs1, 0x0100);
         BX = 0;
-        DX = UInt16[0x000017E4];
+        offset = UInt16[0x000017E4];
         CX = 1;
         AH = 0x3F;
-        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0, 1, DS, DX));
+        (AX, CarryFlag) = ServiceCall(Dos, () => Dos.ReadFile(0, 1, DS, offset));
         if (SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_123)) {
             AX = 0xB800;
             ES = 0xB800;

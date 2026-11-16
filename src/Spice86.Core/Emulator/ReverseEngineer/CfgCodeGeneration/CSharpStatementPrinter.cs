@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -128,6 +129,16 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case ReturnNode { Value: ProcedureReturnHelperNode helper } when
                     expressions.TypedSignature is { } typed:
                 PrintTypedReturn(helper, typed);
+                return;
+            case ReturnNode { Value: InterruptServiceCallNode {
+                    Contract.Transfer: ServiceTransferKind.Terminates } terminating }:
+                // A terminating service never reaches the code after the site: the call is the
+                // method's exit, and TerminateCall positions CS:IP at the int's return address so
+                // the implementation pushes the frame bytes the interpreted int pushed.
+                writer.Line($"return {HelperCallNames.TerminateCallMethodName}(" +
+                    $"{expressions.Print(terminating.ReturnSegment).Text}, " +
+                    $"{expressions.Print(terminating.ReturnOffset).Text}, " +
+                    $"() => {expressions.Print(terminating).Text});");
                 return;
             case ReturnNode { Value: MethodCallNode tailCall }
                     when expressions.TypedSignature is not null

@@ -12,13 +12,13 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: ECX, DX, BX, EBP, ESI, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: CX, DX, BX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort index;
         ushort word1;
         CheckExternalEvents(cs1, 0x0100);
-        AX = 0x440A;
+        AH = 0x44;
         BX = Alu16.Xor(BX, BX);
         (AX, DX, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x440A, CX, DX, 0, DS));
         DL = AL;
@@ -28,15 +28,13 @@ public partial class CfgGeneratedOverrides {
         AH = 7;
         BX = 0xB800;
         ES = 0xB800;
-        DI = 0;
         SegmentB800Globals.Word0000 = AX;
         index = (ushort)(DirectionFlag ? -2 : 2);
         word1 = (ushort)(DL | 0x0700);
         UInt16[ES, index] = word1;
         DI = (ushort)(index + (ushort)(DirectionFlag ? -2 : 2));
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0123, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0121");
+        return TerminateCall(cs1, 0x0123, () => Dos.Terminate(AL));
     }
 
 }

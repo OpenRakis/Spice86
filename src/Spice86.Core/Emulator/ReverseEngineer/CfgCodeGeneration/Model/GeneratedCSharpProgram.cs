@@ -77,9 +77,11 @@ internal sealed class GeneratedCSharpProgram {
     /// </summary>
     public IReadOnlyList<DataSymbolLabel> DataSymbolLabels { get; init; } = [];
 
-    /// <summary>The addresses of the <c>int</c> instructions whose typed service call writes no
-    /// interrupt frame: the differential gate excludes exactly the six bytes such a frame would
-    /// have occupied below the recorded caller stack pointer.</summary>
+    /// <summary>The addresses of the <c>int</c> instructions whose typed service call's frame
+    /// bytes are excluded from the differential gate: frameless calls, which write no interrupt
+    /// frame at all, and terminating calls, whose pushed frame's flag image can legitimately
+    /// differ because the typed convention drops flag outputs. The gate excludes the six bytes
+    /// such a frame occupies below the recorded caller stack pointer.</summary>
     public IReadOnlyList<SegmentedAddress> FramelessServiceCallSites { get; init; } = [];
 
 

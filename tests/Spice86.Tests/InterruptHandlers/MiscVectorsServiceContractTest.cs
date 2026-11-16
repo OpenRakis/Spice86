@@ -2,6 +2,7 @@ namespace Spice86.Tests.InterruptHandlers;
 
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.IOPorts;
 
 using Xunit;
@@ -84,5 +85,17 @@ public class MiscVectorsServiceContractTest {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContract(
             new ServiceContractCase { Vector = 0, SelectorValue = 0, CallbackNumber = callbackNumber });
+    }
+
+    /// <summary>The terminating whole-vector DOS services (INT 20h legacy terminate, direct
+    /// INT 22h and INT 23h) declare <see cref="ServiceTransferKind.Terminates"/> and running
+    /// them through the installed stub never reaches the <c>int</c>'s return address.</summary>
+    [Theory]
+    [InlineData(0x20)]
+    [InlineData(0x22)]
+    [InlineData(0x23)]
+    public void TerminatingVectorsNeverReturnToCaller(byte vector) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertTerminatesThroughStub(vector, 0);
     }
 }

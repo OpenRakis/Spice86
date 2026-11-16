@@ -64,6 +64,11 @@ internal sealed record HardwareInterruptSetup {
     /// frame.</summary>
     public bool ProgramSetCurrentPsp { get; init; }
 
+    /// <summary>A terminate during the run resumed by the batch engine launching the next
+    /// program: that resume only exists as the interrupt stub's callback-moved-CS:IP path, so
+    /// generated code of such a program keeps terminate calls untyped.</summary>
+    public bool TerminateResumedBatchLaunch { get; init; }
+
     /// <summary>Captures the setup from the installed handlers, the current interrupt vector
     /// table, the registered callbacks and whether a mouse user subroutine was registered during
     /// the run.</summary>
@@ -91,7 +96,9 @@ internal sealed record HardwareInterruptSetup {
             SwitcherPatchedCalls = CaptureSwitcherPatchedCalls(callbackHandler),
             MouseUserSubroutineRegistered = mouseUserSubroutineRegistered,
             ProgramSetCurrentPsp = installed.Handlers.Values
-                .OfType<DosInt21Handler>().Any(handler => handler.ProgramSetCurrentPsp)
+                .OfType<DosInt21Handler>().Any(handler => handler.ProgramSetCurrentPsp),
+            TerminateResumedBatchLaunch = installed.Handlers.Values
+                .OfType<DosInt21Handler>().Any(handler => handler.TerminateResumedBatchLaunch)
         };
     }
 

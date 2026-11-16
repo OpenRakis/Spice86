@@ -90,7 +90,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_005E_0183E() {
         ushort word1 = 0;
@@ -424,7 +424,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS. Outputs: BP, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS. Outputs: BP, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0235_01A15() {
         ushort index;
@@ -448,7 +448,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBP, ESI, DS, FS, GS. Outputs: none. Changes: AX, CX, DX, BX, ES.</summary>
+    /// <summary>Inputs: BP, DS. Outputs: none. Changes: AX, CX, DX, BX, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_017E_024A_01A2A() {
         ushort word1 = 0;
@@ -511,8 +511,6 @@ public partial class CfgGeneratedOverrides {
             word6 = Segment03A9Globals.Word01B8;
             ES = word6;
             BX -= word6;
-            AX = word6;
-            AH = 0x4A;
             (AX, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, BX));
         }
         word7 = DS;
@@ -550,7 +548,6 @@ public partial class CfgGeneratedOverrides {
         UInt8[ES, index3] = 0;
         index4 = (ushort)(index3 + 1);
         UInt8[ES, index4] = 0;
-        AH = 0x30;
         (AX, CX, BX) = ServiceCall(Dos, () => Dos.ReadDosVersion());
         Segment03A9Globals.Byte01BA = AL;
         Segment03A9Globals.Byte01BB = AH;
@@ -622,7 +619,6 @@ public partial class CfgGeneratedOverrides {
         Segment03A9Globals.Byte01C6 = AL;
         Segment03A9Globals.Byte02F8 &= AH;
         Segment03A9Globals.Word01BE = index4;
-        CX = 0x0494;
         index6 = 0x0376;
         count = 0x011E;
         AL = 0;
@@ -639,7 +635,6 @@ public partial class CfgGeneratedOverrides {
         }
         BP = 0;
         ZeroFlag = true;
-        AX = 0x04DF;
         Segment03A9Globals.Dword01D3 = 0x000004DF | (uint)CS << 16;
         AX = 0x00FF;
         DI = index6;
@@ -667,7 +662,6 @@ public partial class CfgGeneratedOverrides {
         NearCall(cs1, 0x1670, unknown_017E_1658_02E38Entry);
         word12 = BX;
         Stack.Push16(word12);
-        DX = 0x03A9;
         DS = 0x03A9;
         DirectionFlag = false;
         index7 = 0;
@@ -696,8 +690,7 @@ public partial class CfgGeneratedOverrides {
             NearCall(cs1, 0x044C, unknown_017E_063B_01E1BEntry);
             AX = Stack.Pop16();
             AH = 0x4C;
-            InterruptCall(cs1, 0x0451, 0x21);
-            throw FailAsUntested("Untested return from call at 017E:044F");
+            return TerminateCall(cs1, 0x0451, () => Dos.Terminate(AL));
         }
         VerifySpeculativeRunOrFail(cs1, 0x040B, SpeculativeRun_040B);
         word10 = Stack.Pop16();
@@ -733,7 +726,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS. Outputs: BX, BP, SI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, DS. Outputs: BX, BP, SI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_04FC_01CDC() {
         CheckExternalEvents(cs1, 0x04FC);
@@ -748,7 +741,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_050D_01CED() {
         ushort word1 = 0;
@@ -829,7 +822,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_05B2_01D92() {
         ushort flagOperand_05B9 = 0;
@@ -898,7 +891,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested indirect far call at 017E:05DF");
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Segment values at entry, from every call site: ES = 0x03A9, DS = 0x03A9.
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_05E4_01DC4() {
@@ -956,7 +949,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, ES, DS, DF. Outputs: CX, DX, BX, BP, SI, DI, ES, DS, flags. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, BP, SI, DI, DS, DF. Outputs: BX, BP, SI, DS, ZF. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_063B_01E1B() {
         byte flagOperand_0681 = 0;
@@ -1006,7 +999,7 @@ public partial class CfgGeneratedOverrides {
     L_0690:
         DS = Stack.Pop16();
         SP = BP;
-        (BP, DI, SI, CX, BX) = Stack.Restore5();
+        (BP, _, SI, _, BX) = Stack.Restore5();
         return NearRet();
     }
 
@@ -1200,7 +1193,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: AX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0776_01F56() {
         ushort index;
@@ -1240,7 +1233,7 @@ public partial class CfgGeneratedOverrides {
         if (SI != 0) {
             word3 = DI;
             AX = SI;
-            (CX, SI, DI, ES) = NearCall(cs1, 0x07D9, () => unknown_017E_173D_02F1D(AX, word3, BX, DS, DirectionFlag));
+            (CX, SI, DI) = NearCall(cs1, 0x07D9, () => unknown_017E_173D_02F1D(AX, word3, BX, DS, DirectionFlag));
             word1 = SsUInt16[BP - 0x10];
             DX = SI;
             index2 = (ushort)(SI + CX);
@@ -1273,7 +1266,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local12 { get => _slots.GetWord(-0x000C); set => _slots.SetWord(-0x000C, value); }
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS, DF. Outputs: AX, CX, BP, SI, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0801_01FE1() {
         ushort word1;
@@ -1339,7 +1332,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BP, SI, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0859_02039() {
         ushort word1 = 0;
@@ -1473,7 +1466,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, DX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_093E_0211E() {
         ushort flagOperand_0969 = 0;
@@ -1562,7 +1555,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: DX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: DX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_09E4_021C4() {
         ushort index;
@@ -1940,9 +1933,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, DX, BX, SI, DI. Outputs: AX, BX, SI, ES. Changes: AX, DX, BX, SI, DI, ES.</summary>
+    /// <summary>Inputs: AX, DX, BX, SI, DI. Outputs: AX, BX, SI. Changes: AX, DX, BX, SI, DI, ES.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_0BE9_023C9(ushort word1, ushort word2, ushort word3) {
+    public virtual (ushort result, ushort result2, ushort result3) unknown_017E_0BE9_023C9(ushort word1, ushort word2, ushort word3) {
         ushort word4 = 0;
         ushort word5;
         ushort word6 = 0;
@@ -1970,11 +1963,11 @@ public partial class CfgGeneratedOverrides {
         BX = word3;
         AX = word7;
         NearReturn();
-        return (AX, BX, SI, ES);
+        return (AX, BX, SI);
     }
 
     public virtual Action unknown_017E_0BE9_023C9_Asm() {
-        (AX, BX, SI, ES) = unknown_017E_0BE9_023C9(AX, DX, BX);
+        (AX, BX, SI) = unknown_017E_0BE9_023C9(AX, DX, BX);
         return Returned;
     }
 
@@ -2055,7 +2048,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, DX, BP, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BP, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0E94_02674() {
         ushort word1;
@@ -2379,7 +2372,7 @@ public partial class CfgGeneratedOverrides {
                 BX = 0xFFFF;
                 AX = SsUInt16[BP - 8];
                 DX = SsUInt16[BP - 6];
-                (AX, BX, SI, ES) = NearCall(cs1, 0x1216, () => unknown_017E_0BE9_023C9(AX, DX, 0xFFFF));
+                (AX, BX, SI) = NearCall(cs1, 0x1216, () => unknown_017E_0BE9_023C9(AX, DX, 0xFFFF));
                 goto L_1216;
             }
             else {
@@ -2507,7 +2500,7 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, BX, BP, SI, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_136B_02B4B() {
         byte byte1 = 0;
@@ -2943,7 +2936,7 @@ public partial class CfgGeneratedOverrides {
         return NearRet();
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, DX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_1684_02E64() {
         ushort flagOperand_16DC = 0;
@@ -2996,7 +2989,7 @@ public partial class CfgGeneratedOverrides {
                         DX = DS;
                         BX = SI;
                         AX = DI;
-                        (AX, CX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x16D6, () => unknown_017E_1C50_03430(AX, DX, BX));
+                        (AX, CX, BX, BP, SI, DS) = NearCall(cs1, 0x16D6, () => unknown_017E_1C50_03430(AX, DX, BX));
                         DX = AX;
                         if (AX != 0) {
                             goto L_1739;
@@ -3052,9 +3045,9 @@ public partial class CfgGeneratedOverrides {
         public byte Local14Byte { get => _slots.GetByte(-0x000E); set => _slots.SetByte(-0x000E, value); }
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, SI, DI, ES. Changes: CX, SI, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, SI, DI. Changes: CX, SI, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_173D_02F1D(ushort word1, ushort word2, ushort word3, ushort count, bool count2) {
+    public virtual (ushort result, ushort result2, ushort result3) unknown_017E_173D_02F1D(ushort word1, ushort word2, ushort word3, ushort count, bool count2) {
         DirectionFlag = count2;
         ushort index = 0;
         ushort index2 = 0;
@@ -3086,11 +3079,11 @@ public partial class CfgGeneratedOverrides {
         SI = Stack.Pop16();
         CX = Stack.Pop16();
         NearReturn();
-        return (CX, SI, DI, ES);
+        return (CX, SI, DI);
     }
 
     public virtual Action unknown_017E_173D_02F1D_Asm() {
-        (CX, SI, DI, ES) = unknown_017E_173D_02F1D(AX, DX, BX, DS, DirectionFlag);
+        (CX, SI, DI) = unknown_017E_173D_02F1D(AX, DX, BX, DS, DirectionFlag);
         return Returned;
     }
 
@@ -3759,9 +3752,9 @@ public partial class CfgGeneratedOverrides {
         public ushort Local8 { get => _slots.GetWord(-0x0008); set => _slots.SetWord(-0x0008, value); }
     }
 
-    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, CX, BP, SI, DI, ES. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, BP, SI, DI, DS, DF. Outputs: AX, CX, BP, SI, DI. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6) unknown_017E_1BB5_03395(ushort word1, ushort word2, ushort word3, ushort previousSi, ushort word4, ushort word5, bool count) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_1BB5_03395(ushort word1, ushort word2, ushort word3, ushort previousSi, ushort word4, ushort word5, bool count) {
         CX = word1;
         BX = word2;
         BP = word3;
@@ -3774,7 +3767,7 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(word2);
         Stack.Push16(DX);
         DX = 0;
-        (CX, DX, BX, DI, ES) = NearCall(cs1, 0x20DE, () => unknown_017E_2084_03864(word1, word4, word5, count));
+        (CX, DX, BX, DI) = NearCall(cs1, 0x20DE, () => unknown_017E_2084_03864(word1, word4, word5, count));
         if (DX != 0xFFFF && DX != 0xFFFE) {
             if (DX == 0xFFFD) {
                 goto L_2136;
@@ -3794,7 +3787,7 @@ public partial class CfgGeneratedOverrides {
                 AX = 1;
                 (DX, BX) = Stack.Restore2();
                 NearReturn();
-                return (AX, CX, BP, SI, DI, ES);
+                return (AX, CX, BP, SI, DI);
             }
         }
         (AX, CX, DX, BX, BP, SI, DI, DS) = NearCall(cs1, 0x2125, () => unknown_017E_2257_03A37(previousSi));
@@ -3806,18 +3799,18 @@ public partial class CfgGeneratedOverrides {
                 goto L_2136;
             }
         }
-        (CX, BX, SI, ES, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017E_209C_0387C(AX, DX, DS));
+        (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x2130, () => unknown_017E_209C_0387C(AX, DX, DS));
         NearCall(cs1, 0x2133, unknown_017E_2280_03A60Entry);
         DsGlobals.Word030A = AX;
     L_2136:
         AX = 0;
         Stack.Release(2);
         NearReturn();
-        return (AX, CX, BP, SI, DI, ES);
+        return (AX, CX, BP, SI, DI);
     }
 
     public virtual Action unknown_017E_1BB5_03395_Asm() {
-        (AX, CX, BP, SI, DI, ES) = unknown_017E_1BB5_03395(CX, BX, BP, SI, DI, DS, DirectionFlag);
+        (AX, CX, BP, SI, DI) = unknown_017E_1BB5_03395(CX, BX, BP, SI, DI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -3947,9 +3940,9 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, CX, BX, BP, SI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, DS.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6, ushort result7) unknown_017E_1C50_03430(ushort word1, ushort word2, ushort word3) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5, ushort result6) unknown_017E_1C50_03430(ushort word1, ushort word2, ushort word3) {
         ushort index = 0;
         ushort index2 = 0;
         ushort word4 = 0;
@@ -4059,11 +4052,11 @@ public partial class CfgGeneratedOverrides {
         BX = word3;
         DX = local12;
         NearReturn();
-        return (AX, CX, BX, BP, SI, DI, DS);
+        return (AX, CX, BX, BP, SI, DS);
     }
 
     public virtual Action unknown_017E_1C50_03430_Asm() {
-        (AX, CX, BX, BP, SI, DI, DS) = unknown_017E_1C50_03430(AX, DX, BX);
+        (AX, CX, BX, BP, SI, DS) = unknown_017E_1C50_03430(AX, DX, BX);
         return Returned;
     }
 
@@ -4468,7 +4461,7 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, ES, DS. Outputs: AX, BP, DI, ES, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, BP, SI, DI, DS. Outputs: AX, BP, DI, DS. Changes: AX, CX, DX, BX, BP, SI, DI, ES, DS, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_1F62_03742() {
         ushort local10 = 0;
@@ -4492,7 +4485,7 @@ public partial class CfgGeneratedOverrides {
                     }
                     AX = local10;
                     BX = local10;
-                    (AX, CX, DX, BX, ES) = NearCall(cs1, 0x1F9E, () => unknown_017E_21E5_039C5(AX, ES, DS));
+                    (AX, CX, DX, BX) = NearCall(cs1, 0x1F9E, () => unknown_017E_21E5_039C5(AX, DS));
                     SI = AX;
                     if (AX != 0xFFFF) {
                         if (AX > 0xFFF8 || BX <= AX) {
@@ -4654,9 +4647,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX, BX, DI, DS, DF. Outputs: CX, DX, BX, DI, ES. Changes: AX, CX, DX, BX, DI, ES, flags.</summary>
+    /// <summary>Inputs: CX, DX, BX, DI, DS, DF. Outputs: CX, DX, BX, DI. Changes: AX, CX, DX, BX, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_2084_03864(ushort word1, ushort word2, ushort word3, bool count) {
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_2084_03864(ushort word1, ushort word2, ushort word3, bool count) {
         CX = word1;
         DI = word2;
         DS = word3;
@@ -4665,20 +4658,20 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Word0350 = 0;
         DsGlobals.Word030A = 0;
         AX = 0x0390;
-        (CX, DI, ES) = NearCall(cs1, 0x2099, () => unknown_017E_223C_03A1C(0x0390, 0, 0x0101, count));
+        (CX, DI) = NearCall(cs1, 0x2099, () => unknown_017E_223C_03A1C(0x0390, 0, 0x0101, count));
         (DX, BX) = Stack.Restore2();
         NearReturn();
-        return (CX, DX, BX, DI, ES);
+        return (CX, DX, BX, DI);
     }
 
     public virtual Action unknown_017E_2084_03864_Asm() {
-        (CX, DX, BX, DI, ES) = unknown_017E_2084_03864(CX, DI, DS, DirectionFlag);
+        (CX, DX, BX, DI) = unknown_017E_2084_03864(CX, DI, DS, DirectionFlag);
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, BX, SI, ES, flags. Changes: AX, CX, BX, SI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, SI, DI, DS, DF. Outputs: CX, BX, SI, flags. Changes: AX, CX, BX, SI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, bool result5, bool result6, bool result7, bool result8, bool result9, bool result10) unknown_017E_209C_0387C(ushort word1, ushort word2, ushort word3) {
+    public virtual (ushort result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_017E_209C_0387C(ushort word1, ushort word2, ushort word3) {
         DS = word3;
         ushort index = 0;
         ushort flagOperand_20A5 = 0;
@@ -4717,11 +4710,11 @@ public partial class CfgGeneratedOverrides {
         }
         (SI, CX, BX) = Stack.Restore3();
         NearReturn();
-        return (CX, BX, SI, ES, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }
 
     public virtual Action unknown_017E_209C_0387C_Asm() {
-        (CX, BX, SI, ES, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017E_209C_0387C(AX, DX, DS);
+        (CX, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_017E_209C_0387C(AX, DX, DS);
         return Returned;
     }
 
@@ -4834,21 +4827,21 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DX, BX, ES, DS. Outputs: AX, CX, DX, BX, ES. Changes: AX, CX, DX, BX, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DX, BX, DS. Outputs: AX, CX, DX, BX. Changes: AX, CX, DX, BX, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3, ushort result4, ushort result5) unknown_017E_21E5_039C5(ushort word1, ushort word2, ushort word3) {
-        DS = word3;
-        ushort word4 = 0;
+    public virtual (ushort result, ushort result2, ushort result3, ushort result4) unknown_017E_21E5_039C5(ushort word1, ushort word2) {
+        DS = word2;
+        ushort word3 = 0;
         ushort paragraphs = 0;
-        ushort word5 = 0;
+        ushort word4 = 0;
         byte flagOperand_2202 = 0;
         CheckExternalEvents(cs1, 0x21E5);
         Stack.Save(BX, CX, DX);
-        word4 = word1;
+        word3 = word1;
         if (word1 >= DsGlobals.Word01C0) {
             CL = 4;
-            paragraphs = (ushort)((ushort)(word4 + 0x000F) >> 4);
-            word5 = word3;
+            paragraphs = (ushort)((ushort)(word3 + 0x000F) >> 4);
+            word4 = word2;
             if (paragraphs == 0) {
                 VerifySpeculativeEntryOrFail(cs1, 0x21FF, Signature_21FF_mov);
                 paragraphs = 0x1000;
@@ -4858,16 +4851,16 @@ public partial class CfgGeneratedOverrides {
             if (flagOperand_2202 == 0) {
                 AX = (ushort)(SS - DsGlobals.Word01B8);
                 paragraphs += AX;
-                word5 = DsGlobals.Word01B8;
+                word4 = DsGlobals.Word01B8;
             }
-            word2 = word5;
-            (word1, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(word2, paragraphs));
+            ES = word4;
+            (word1, BX, CarryFlag) = ServiceCall(Dos, () => Dos.ModifyMemory(ES, paragraphs));
             BX = (ushort)(CarryFlag ? 0xFFFF : 0);
             if ((short)BX < 0) {
                 goto L_222B;
             }
             AX = DsGlobals.Word01B6;
-            DsGlobals.Word01B6 = word4;
+            DsGlobals.Word01B6 = word3;
             goto L_2227;
         }
     L_222B:
@@ -4877,19 +4870,18 @@ public partial class CfgGeneratedOverrides {
         AX = 0xFFFF;
     L_2227:
         (DX, CX, BX) = Stack.Restore3();
-        ES = word2;
         NearReturn();
-        return (AX, CX, DX, BX, ES);
+        return (AX, CX, DX, BX);
     }
 
     public virtual Action unknown_017E_21E5_039C5_Asm() {
-        (AX, CX, DX, BX, ES) = unknown_017E_21E5_039C5(AX, ES, DS);
+        (AX, CX, DX, BX) = unknown_017E_21E5_039C5(AX, DS);
         return Returned;
     }
 
-    /// <summary>Inputs: AX, CX, DL, BX, DI, DS, DF. Outputs: CX, DI, ES. Changes: AX, CX, DI, ES, flags.</summary>
+    /// <summary>Inputs: AX, CX, DL, BX, DI, DS, DF. Outputs: CX, DI. Changes: AX, CX, DI, ES, flags.</summary>
     /// Direction flag at entry, from every call site: clear.
-    public virtual (ushort result, ushort result2, ushort result3) unknown_017E_223C_03A1C(ushort word1, byte byte1, ushort word2, bool count) {
+    public virtual (ushort result, ushort result2) unknown_017E_223C_03A1C(ushort word1, byte byte1, ushort word2, bool count) {
         DirectionFlag = count;
         ushort index = 0;
         bool flag1 = false;
@@ -4920,11 +4912,11 @@ public partial class CfgGeneratedOverrides {
         AX = word3;
         (DI, CX) = Stack.Restore2();
         NearReturn();
-        return (CX, DI, ES);
+        return (CX, DI);
     }
 
     public virtual Action unknown_017E_223C_03A1C_Asm() {
-        (CX, DI, ES) = unknown_017E_223C_03A1C(AX, DL, BX, DirectionFlag);
+        (CX, DI) = unknown_017E_223C_03A1C(AX, DL, BX, DirectionFlag);
         return Returned;
     }
 

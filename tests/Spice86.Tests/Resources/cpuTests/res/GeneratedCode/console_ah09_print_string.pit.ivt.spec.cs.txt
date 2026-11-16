@@ -12,11 +12,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Does not return.</summary>
+    /// <summary>Inputs: AL. Does not return.</summary>
     public virtual Action unknown_016E_0000_016E0() {
         CheckExternalEvents(cs1, 0x0000);
-        InterruptCall(cs1, 0x0002, 0x20);
-        throw FailAsUntested("Untested return from call at 016E:0000");
+        return TerminateCall(cs1, 0x0002, () => DosInt20.Terminate(AL));
     }
 
     /// <summary>Inputs: DS, flags, DF. Outputs: none. Changes: AH, DX.</summary>
@@ -315,10 +314,10 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: flags, DF.</summary>
     public virtual Action unknown_F000_0090_F0090() {
         CheckExternalEvents(biosSegment, 0x0090);
-        // INT 20h: DosInt20Handler
+        // INT 20h: DosInt20.Run
         Callback(biosSegment, 0x0090, 0x0020);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0094, Signature_0094_iret);
         return InterruptRet();

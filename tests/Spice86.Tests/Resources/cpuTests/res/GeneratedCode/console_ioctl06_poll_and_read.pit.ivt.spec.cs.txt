@@ -17,7 +17,7 @@ public partial class CfgGeneratedOverrides {
     public virtual Action unknown_016E_0100_017E0() {
         do {
             CheckExternalEvents(cs1, 0x0100);
-            AX = 0x4406;
+            AH = 0x44;
             BX = 0;
             (AX, DX, CarryFlag) = ServiceCall(Dos, () => Dos.IoControl(0x4406, CX, DX, 0, DS));
             AL = Alu8.Or(AL, AL);
@@ -27,12 +27,10 @@ public partial class CfgGeneratedOverrides {
         AH = 7;
         BX = 0xB800;
         ES = 0xB800;
-        DI = 0;
         SegmentB800Globals.Word0000 = AX;
         DI = (ushort)(DirectionFlag ? -2 : 2);
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0120, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:011E");
+        return TerminateCall(cs1, 0x0120, () => Dos.Terminate(AL));
     }
 
 }
@@ -326,7 +324,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

@@ -18,11 +18,10 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         NearCall(cs1, 0x0103, unknown_016E_0108_017E8Entry);
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0108, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0106");
+        return TerminateCall(cs1, 0x0108, () => Dos.Terminate(AL));
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Outputs: none. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0108_017E8() {
         ushort word1 = 0;
@@ -34,15 +33,14 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x0110, 0x2F);
         Stack.Push16(BP);
         (AX, CX, BX) = ServiceCall(Dos, () => Dos.ReadDosVersion());
-        BP = Stack.Pop16();
+        Stack.Release(1);
         word1 = Dos.ReadPspAddress();
         ES = word1;
         DS = 0x3000;
         word2 = EsGlobals.Word002E;
         Segment3000Globals.Word0000 = word2;
-        AX = EsGlobals.Word0030;
-        Segment3000Globals.Dword0002 = (uint)AX | (uint)word1 << 16;
-        BX = word1;
+        Segment3000Globals.Word0002 = EsGlobals.Word0030;
+        Segment3000Globals.Word0004 = word1;
         return NearRet();
     }
 
@@ -113,7 +111,9 @@ public sealed class Segment3000Globals : MemoryBasedDataStructure {
 
     public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 
-    public uint Dword0002 { get => _memory.UInt32[Segment, 0x0002]; set => _memory.UInt32[Segment, 0x0002] = value; }
+    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
 }
 
 // ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
@@ -416,7 +416,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at F000:00B7");
     }
 
-    /// <summary>Inputs: all. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: BP. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_00CA_F00CA() {
         CheckExternalEvents(biosSegment, 0x00CA);

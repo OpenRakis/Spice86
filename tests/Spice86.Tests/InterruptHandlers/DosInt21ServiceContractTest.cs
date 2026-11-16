@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -718,6 +719,53 @@ public class DosInt21ServiceContractTest {
         interrupt.Should().Throw<UnhandledOperationException>();
         state.CarryFlag.Should().BeFalse();
         state.AX.Should().Be(0x4302);
+    }
+
+    /// <summary>The terminating INT 21h services declare <see cref="ServiceTransferKind.Terminates"/>
+    /// and running them through the installed stub never reaches the <c>int</c>'s return
+    /// address: terminating the harness's root program stops the machine instead.</summary>
+    [Theory]
+    [InlineData(0x00)]
+    [InlineData(0x31)]
+    [InlineData(0x4C)]
+    public void TerminatingServicesNeverReturnToCaller(int selector) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertTerminatesThroughStub(0x21, selector);
+    }
+
+    /// <summary>Every Ctrl-C-checking service with a declared contract is
+    /// <see cref="ServiceTransferKind.MayTerminate"/>: it normally returns but can leave through
+    /// process termination instead.</summary>
+    [Fact]
+    public void CtrlCCheckingServicesDeclareMayTerminate() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        IInterruptHandler handler = machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+
+        // Act / Assert
+        foreach (int selector in new[] { 0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0B }) {
+            InterruptServiceEntry entry = ServiceContractHarness.EntryOf(handler, selector)!;
+            entry.Contract.Transfer.Should().Be(ServiceTransferKind.MayTerminate,
+                "service 0x{0:X2} checks the keyboard buffer for Ctrl-C", selector);
+        }
+    }
+
+    /// <summary>The AL=00h EXEC variant declares <see cref="ServiceTransferKind.RunsChild"/>;
+    /// the AL=01h and AL=03h load-only variants stay ordinary returning services.</summary>
+    [Fact]
+    public void ExecAlVariantsDeclareTheirTransferKinds() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        IInterruptHandler handler = machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+        InterruptServiceEntry exec = ServiceContractHarness.EntryOf(handler, 0x4B)!;
+
+        // Act / Assert
+        exec.Variants.Single(variant => variant.Al == 0x00).Contract.Transfer
+            .Should().Be(ServiceTransferKind.RunsChild);
+        exec.Variants.Single(variant => variant.Al == 0x01).Contract.Transfer
+            .Should().Be(ServiceTransferKind.Returns);
+        exec.Variants.Single(variant => variant.Al == 0x03).Contract.Transfer
+            .Should().Be(ServiceTransferKind.Returns);
     }
 
     private sealed class StateSnapshot {

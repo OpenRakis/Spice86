@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: flags, DF. Does not return.</summary>
     public virtual Action unknown_016E_0100_017E0() {
         ushort index;
         CheckExternalEvents(cs1, 0x0100);

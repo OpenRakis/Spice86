@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, BL, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: BL. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         ushort index = 0;
@@ -20,33 +20,25 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AX = 4;
         AL = ServiceCall(Video, () => Video.SetVideoMode(4));
-        AH = 2;
         BH = 0;
         DX = 0;
         ServiceCall(Video, () => Video.SetCursorPosition(0, BX));
         AX = 0x09DB;
         BX = 3;
-        CX = 0x0028;
         ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 3));
-        AH = 2;
-        BH = 0;
         DX = 0x0100;
         ServiceCall(Video, () => Video.SetCursorPosition(0x0100, 3));
         AX = 0x0920;
         BX = 0;
-        CX = 0x0028;
         ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0x20, 0x0028, 0));
-        AH = 2;
-        BH = 0;
         DX = 0x0200;
         ServiceCall(Video, () => Video.SetCursorPosition(0x0200, 0));
         AX = 0x09DB;
         BX = 1;
         CX = 0x0028;
         ServiceCall(Video, () => Video.WriteCharacterAndAttributeAtCursor(0xDB, 0x0028, 1));
-        AX = 0x0601;
-        BH = 0;
-        CX = 0;
+        AH = 6;
+        CH = 0;
         DX = 0x0227;
         ServiceCall(Video, () => Video.ScrollPageUp(1, 0, 0x0227, 1));
         AX = 0xB800;
@@ -89,8 +81,7 @@ public partial class CfgGeneratedOverrides {
         AX = 0x4C00;
         BX = index;
         CX = count;
-        InterruptCall(cs1, 0x0195, 0x21);
-        throw FailAsUntested("Untested return from call at 016F:0193");
+        return TerminateCall(cs1, 0x0195, () => Dos.Terminate(AL));
     }
 
 }

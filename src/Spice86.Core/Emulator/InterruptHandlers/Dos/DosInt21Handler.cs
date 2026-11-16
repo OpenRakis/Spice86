@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -526,7 +527,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Standard AUX is usually the first serial port (COM1). <br/>
     /// Checks for Ctrl-C/Ctrl-Break in STDIN before reading. <br/>
     /// </remarks>
-    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void ReadCharacterFromStdAux() {
         if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -550,7 +552,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <remarks>
     /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing. <br/>
     /// </remarks>
-    [InterruptService(0x04, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x04, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void WriteCharacterToStdAux() {
         if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -575,7 +578,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing. <br/>
     /// TODO: If the printer is busy, this function will wait. <br/>
     /// </remarks>
-    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void PrinterOutput() {
         if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -597,7 +601,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
     /// When the break flag is set, also checks for Ctrl-C in the keyboard buffer.
     /// </summary>
-    [InterruptService(0x0B, Reads = CpuValues.Ah | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite)]
+    [InterruptService(0x0B, Reads = CpuValues.Ah | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void CheckStandardInputStatus() {
         if (_isCtrlCFlag && CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -1097,7 +1102,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Otherwise, the Zero flag is cleared and the keycode is in AL.
     /// </returns>
     [InterruptService(0x06, Reads = CpuValues.Ah | CpuValues.Dl | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al | CpuValues.Zero, Memory = ServiceMemoryEffect.ReadWrite,
-        Implementation = nameof(DirectConsoleIo), Inputs = [CpuValues.Dl, CpuValues.Al, CpuValues.Zero])]
+        Implementation = nameof(DirectConsoleIo), Inputs = [CpuValues.Dl, CpuValues.Al, CpuValues.Zero],
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void DirectConsoleIo() {
         (byte al, bool zeroFlag) = DirectConsoleIo(
             State.DL, State.AL, ReadZeroFlag());
@@ -1167,7 +1173,8 @@ public class DosInt21Handler : InterruptHandler {
     /// FreeDOS equivalent: lr.AL = lr.DL; write_char_stdout(lr.AL); <br/>
     /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing, like FreeDOS check_handle_break.
     /// </remarks>
-    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Dl | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Dl | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void DisplayOutput() {
         if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -1530,11 +1537,24 @@ public class DosInt21Handler : InterruptHandler {
     /// <remarks>
     /// Input: AL = return code, DX = number of paragraphs to keep resident
     /// </remarks>
-    [InterruptService(0x31, Unknown = true)]
+    [InterruptService(0x31, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx | CpuValues.Ss | CpuValues.Sp,
+        Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(TerminateAndStayResident), Inputs = [CpuValues.Al, CpuValues.Dx],
+        Transfer = ServiceTransferKind.Terminates)]
     private void TerminateAndStayResident() {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
+        KeepResidentMemory(returnCode, paragraphsToKeep);
+
+        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
+    }
+
+    /// <summary>
+    /// Resizes the current program's memory block to <paramref name="paragraphsToKeep"/> paragraphs
+    /// and tracks it as resident; the way INT 21h AH=31h keeps part of a TSR in memory.
+    /// </summary>
+    private void KeepResidentMemory(byte returnCode, ushort paragraphsToKeep) {
         ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
 
         if (LoggerService.IsEnabled(LogLevel.Information)) {
@@ -1558,8 +1578,17 @@ public class DosInt21Handler : InterruptHandler {
                 "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
                 paragraphsToKeep, errorCode);
         }
+    }
 
-        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
+    /// <summary>
+    /// Generated-code implementation of INT 21h AH=31h: keeps
+    /// <paramref name="paragraphsToKeep"/> paragraphs resident and terminates the current
+    /// process with <paramref name="returnCode"/>. Never returns to the call site: it halts when
+    /// the machine stopped, otherwise unwinds to the parent's resume address.
+    /// </summary>
+    public Action TerminateAndStayResident(byte returnCode, ushort paragraphsToKeep) {
+        KeepResidentMemory(returnCode, paragraphsToKeep);
+        return TerminateProcessAndThrow(returnCode, DosTerminationType.TSR, true);
     }
 
     /// <summary>
@@ -1728,7 +1757,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_keyboardInt16Handler.TryGetPendingKeyCode(out ushort? keyCode) &&
             ((keyCode.Value & 0xFF) == 0x03 || keyCode.Value == 0x0000)) {
             _keyboardInt16Handler.FlushKeyboardBuffer();
-            _dosProcessManager.TerminateProcess(0xFF, DosTerminationType.CtrlC);
+            TerminateProcessLeavingNoFrame(0xFF, DosTerminationType.CtrlC, false);
             return true;
         }
         return false;
@@ -1900,6 +1929,13 @@ public class DosInt21Handler : InterruptHandler {
     /// </para>
     /// </summary>
     [InterruptService(0x4B, Unknown = true, StringArgument = ServiceStringArgument.AsciiZ)]
+    [InterruptService(0x4B, Al = 0x00, Name = "ExecuteProgram",
+        StringArgument = ServiceStringArgument.AsciiZ,
+        Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx | CpuValues.Es
+            | CpuValues.Bx | CpuValues.Ss | CpuValues.Sp | CpuValues.Ax,
+        Writes = CpuValues.Ax | CpuValues.Carry,
+        Memory = ServiceMemoryEffect.ReadWrite, ReadsFrame = true,
+        Transfer = ServiceTransferKind.RunsChild)]
     [InterruptService(0x4B, Al = 0x01, Name = "LoadProgramOnly",
         StringArgument = ServiceStringArgument.AsciiZ,
         Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Ds | CpuValues.Dx | CpuValues.Es
@@ -2094,7 +2130,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Prints a dollar terminated string pointed by DS:DX to the standard output.
     /// </summary>
-    [InterruptService(0x09, StringArgument = ServiceStringArgument.DollarTerminated, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Dx | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
+    [InterruptService(0x09, StringArgument = ServiceStringArgument.DollarTerminated, Reads = CpuValues.Ah | CpuValues.Ds | CpuValues.Dx | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.None, Memory = ServiceMemoryEffect.ReadWrite, Io = true,
+        Transfer = ServiceTransferKind.MayTerminate)]
     public void PrintString() {
         if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
@@ -2120,7 +2157,10 @@ public class DosInt21Handler : InterruptHandler {
     /// Legacy CP/M program termination handler (INT 21h, AH=00h).
     /// Behaves like INT 21h, AH=4Ch with AL=0.
     /// </summary>
-    [InterruptService(0x00, Unknown = true)]
+    [InterruptService(0x00, Reads = CpuValues.Ah, Writes = CpuValues.None,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(Terminate), Inputs = [],
+        Transfer = ServiceTransferKind.Terminates)]
     public void LegacyTerminateProgram() {
         State.AL = 0;
         State.AH = 0x4C;
@@ -2135,7 +2175,10 @@ public class DosInt21Handler : InterruptHandler {
     /// <remarks>
     /// INT 20h is an alias for this function with AL=0.
     /// </remarks>
-    [InterruptService(0x4C, Unknown = true)]
+    [InterruptService(0x4C, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.None,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(Terminate), Inputs = [CpuValues.Al],
+        Transfer = ServiceTransferKind.Terminates)]
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
         // Determine termination type based on break flag
@@ -2154,6 +2197,70 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         _dosProcessManager.TerminateProcess(exitCode, terminationType);
+    }
+
+    /// <summary>
+    /// Generated-code implementation of INT 21h AH=00h (and the INT 20h alias): terminates the
+    /// current process with exit code 0. Never returns to the call site.
+    /// </summary>
+    public Action Terminate() => Terminate(0);
+
+    /// <summary>
+    /// Generated-code implementation of INT 21h AH=4Ch: terminates the current process with
+    /// <paramref name="exitCode"/>. Never returns to the call site: it halts when process
+    /// termination already stopped the machine, otherwise unwinds to the parent's resume
+    /// address through a <see cref="Spice86.Shared.Emulator.Errors.ProcessTerminatedException"/>.
+    /// </summary>
+    public Action Terminate(byte exitCode) {
+        DosTerminationType terminationType = DosTerminationType.Normal;
+        if (_isCtrlCFlag) {
+            terminationType = DosTerminationType.CtrlC;
+            _isCtrlCFlag = false;
+        }
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
+        }
+        return TerminateProcessAndThrow(exitCode, terminationType, true);
+    }
+
+    /// <summary>
+    /// Terminates like <see cref="Terminate(byte)"/> for a generated call whose interpreted form
+    /// does not go through the INT 21h caller-stack save (<c>int 20h</c> runs
+    /// <see cref="QuitWithExitCode"/> directly): no PSP caller-stack record.
+    /// </summary>
+    internal Action TerminateWithoutCallerStackRecord(byte exitCode) {
+        DosTerminationType terminationType = DosTerminationType.Normal;
+        if (_isCtrlCFlag) {
+            terminationType = DosTerminationType.CtrlC;
+            _isCtrlCFlag = false;
+        }
+        return TerminateProcessAndThrow(exitCode, terminationType, false);
+    }
+
+    /// <summary>
+    /// Runs DOS process termination for generated code that calls a terminate service directly:
+    /// pushes the frame the interpreted <c>int</c> pushed (its bytes stay observable in memory),
+    /// records the caller stack like <see cref="Run()"/>'s entry save when the service has one,
+    /// performs the full termination bookkeeping, then halts or unwinds instead of returning.
+    /// </summary>
+    internal Action TerminateProcessAndThrow(byte exitCode, DosTerminationType terminationType,
+            bool savesCallerStack) {
+        PushInterruptFrame();
+        if (savesCallerStack) {
+            RecordCallerStack(State.SS, (ushort)(State.SP + 6));
+        }
+        return TerminateProcessLeavingNoFrame(exitCode, terminationType, true);
+    }
+
+    /// <summary>Process termination when the interrupt frame is already in place (the
+    /// interpreted stub or a frame-keeping generated service call left it): performs the full
+    /// bookkeeping, then halts or unwinds instead of returning.</summary>
+    private Action TerminateProcessLeavingNoFrame(byte exitCode, DosTerminationType terminationType,
+            bool emulatesIret) {
+        ushort terminatedPsp = _sda.CurrentProgramSegmentPrefix;
+        SegmentedAddress ipBefore = State.IpSegmentedAddress;
+        _dosProcessManager.TerminateProcess(exitCode, terminationType);
+        return ExitOrThrowProcessTerminated(terminatedPsp, ipBefore, emulatesIret);
     }
 
     /// <summary>
@@ -2329,15 +2436,26 @@ public class DosInt21Handler : InterruptHandler {
         if (SavesCallerStack(State.AH)) {
             OnInterruptEntry();
         }
-        Run(State.AH);
+        try {
+            Run(State.AH);
+        } catch (ProcessTerminatedException) {
+            // A service detected Ctrl-C/Ctrl-Break and terminated the process: the interpreted
+            // int path continues from the machine state termination left; only generated code
+            // consumes the exception, so it is swallowed here.
+        }
     }
 
     /// <summary>Whether the program set the current PSP itself through AH=50h or created a child
-    /// PSP through AH=55h: a terminate can then resume the parent through the interrupt frame a
-    /// typed call would have left on the recorded caller stack, so generated service calls of
-    /// such a program keep writing the frame. Set by the AH=50h and AH=55h dispatch wrappers only;
-    /// internal callers of the typed overloads do not set it.</summary>
+    /// PSP through AH=55h: a terminate can then resume the parent at whatever address the
+    /// recorded caller stack names, so generated service calls of such a program keep writing
+    /// the interrupt frame and its terminate calls stay untyped. Set by the AH=50h and AH=55h
+    /// dispatch wrappers only; internal callers of the typed overloads do not set it.</summary>
     public bool ProgramSetCurrentPsp { get; private set; }
+
+    /// <summary>Whether a terminate during the run resumed by the batch engine launching the
+    /// next program: that resume only exists as the interrupt stub's callback-moved-CS:IP path,
+    /// so the generated program keeps terminate calls untyped.</summary>
+    public bool TerminateResumedBatchLaunch => _dosProcessManager.TerminateResumedBatchLaunch;
 
     /// <summary>Whether <paramref name="operation"/> enters through the caller-stack save DOS
     /// performs on service entry: every operation except the PSP get/set functions.</summary>

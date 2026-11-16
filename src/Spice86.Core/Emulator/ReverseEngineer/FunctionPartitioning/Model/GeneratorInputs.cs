@@ -30,7 +30,8 @@ internal sealed record GeneratorInputs(
             CallbackContracts = new Dictionary<ushort, ServiceContract>(),
             SwitcherPatchedCalls = new HashSet<SegmentedAddress>(),
             MouseUserSubroutineRegistered = false,
-            ProgramSetCurrentPsp = false
+            ProgramSetCurrentPsp = false,
+            TerminateResumedBatchLaunch = false
         },
         new ProgramImages(0, [], []),
         new ChangedMemorySnapshot { WatchedAreas = [], ChangedRanges = [] },

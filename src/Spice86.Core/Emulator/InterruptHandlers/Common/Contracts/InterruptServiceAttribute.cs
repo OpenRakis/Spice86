@@ -54,6 +54,10 @@ public sealed class InterruptServiceAttribute : Attribute {
     /// </summary>
     public CpuValues Writes { get; init; }
 
+    /// <summary>How the service hands control back: whether it returns to the caller, runs a
+    /// child program, or terminates the current process.</summary>
+    public ServiceTransferKind Transfer { get; init; }
+
     /// <summary>The effect the service has on emulated memory.</summary>
     public ServiceMemoryEffect Memory { get; init; }
 
@@ -91,10 +95,11 @@ public sealed class InterruptServiceAttribute : Attribute {
         }
         if (Unknown) {
             if (Reads != CpuValues.None || Writes != CpuValues.None ||
-                Memory != ServiceMemoryEffect.None || Io) {
+                Memory != ServiceMemoryEffect.None || Io ||
+                Transfer != ServiceTransferKind.Returns) {
                 throw new InvalidOperationException(
                     $"{declaringTypeName}.{methodName}: [InterruptService(Unknown = true)] cannot be combined " +
-                    "with Reads, Writes, Memory or Io");
+                    "with Reads, Writes, Memory, Io or Transfer");
             }
             if (Implementation is not null || Inputs is not null) {
                 throw new InvalidOperationException(
@@ -105,7 +110,7 @@ public sealed class InterruptServiceAttribute : Attribute {
                 ServiceContract.Unknown, StringArgument, null, [], Al);
         }
         return new InterruptServiceEntry(SelectorValue ?? 0, Name ?? methodName,
-            new ServiceContract(new CallEffect(Reads, Writes), Memory, Io),
+            new ServiceContract(new CallEffect(Reads, Writes), Memory, Io, Transfer),
             StringArgument, null, [], Al) { ReadsFrame = ReadsFrame };
     }
 }

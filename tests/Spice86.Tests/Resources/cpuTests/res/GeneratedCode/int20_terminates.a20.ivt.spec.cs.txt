@@ -12,15 +12,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: none. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         AL = 0;
         DX = 0x0999;
         Out8(0x0999, 0);
-        InterruptCall(cs1, 0x0108, 0x20);
-        throw FailAsUntested("Untested return from call at 016E:0106");
+        return TerminateCall(cs1, 0x0108, () => DosInt20.Terminate(AL));
     }
 
 }
@@ -268,11 +267,11 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0090_F0090() {
         CheckExternalEvents(biosSegment, 0x0090);
-        // INT 20h: DosInt20Handler
+        // INT 20h: DosInt20.Run
         Callback(biosSegment, 0x0090, 0x0020);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0094, Signature_0094_iret);
         return InterruptRet();

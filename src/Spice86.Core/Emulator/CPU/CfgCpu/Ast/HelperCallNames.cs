@@ -82,6 +82,9 @@ internal static class HelperCallNames {
     /// <summary>The <c>ServiceCall</c> method name.</summary>
     public static string ServiceCallMethodName => nameof(CSharpOverrideHelper.ServiceCall);
 
+    /// <summary>The <c>TerminateCall</c> method name.</summary>
+    public static string TerminateCallMethodName => nameof(CSharpOverrideHelper.TerminateCall);
+
     /// <summary>The <c>InterruptCallReturnedElsewhere</c> method name.</summary>
     public static string InterruptCallReturnedElsewhereMethodName => nameof(CSharpOverrideHelper.InterruptCallReturnedElsewhere);
 

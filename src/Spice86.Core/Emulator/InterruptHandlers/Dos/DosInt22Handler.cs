@@ -8,7 +8,12 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
+using System;
 
 /// <summary>
 /// Implements INT 22h - Terminate address handler.
@@ -27,13 +32,30 @@ public class DosInt22Handler : InterruptHandler {
 
     /// <inheritdoc />
 
-    [InterruptService(Unknown = true)]
+    [InterruptService(Reads = CpuValues.None, Writes = CpuValues.None,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(Terminate), Inputs = [],
+        Transfer = ServiceTransferKind.Terminates)]
     public override void Run() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 22h: Terminate address invoked, terminating current process.");
         }
 
         _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal);
+    }
+
+    /// <summary>
+    /// Generated-code implementation of a direct INT 22h: terminates the current process
+    /// normally. Never returns to the call site.
+    /// </summary>
+    public Action Terminate() {
+        ushort terminatedPsp = new DosSwappableDataArea(Memory,
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0))
+            .CurrentProgramSegmentPrefix;
+        SegmentedAddress ipBefore = State.IpSegmentedAddress;
+        PushInterruptFrame();
+        _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal);
+        return ExitOrThrowProcessTerminated(terminatedPsp, ipBefore, true);
     }
 }
 

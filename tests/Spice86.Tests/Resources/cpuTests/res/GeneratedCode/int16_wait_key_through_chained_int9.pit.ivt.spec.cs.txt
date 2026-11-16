@@ -26,7 +26,6 @@ public partial class CfgGeneratedOverrides {
         AX = Segment0000Globals.Word0026;
         CsGlobals.Word0169 = AX;
         Segment0000Globals.Dword0024 = 0x00000159 | (uint)CS << 16;
-        AL = 0xD2;
         KeyboardControllerPorts.WriteCommand(0xD2);
         AL = 0x1E;
         KeyboardControllerPorts.WriteData(0x1E);
@@ -51,8 +50,7 @@ public partial class CfgGeneratedOverrides {
         UInt16[ES, DI] = AX;
         DI += (ushort)(DirectionFlag ? -2 : 2);
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0159, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0157");
+        return TerminateCall(cs1, 0x0159, () => Dos.Terminate(AL));
     }
 
     /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
@@ -365,7 +363,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, DI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, DI, ES, DF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x0000.
     public virtual Action unknown_F000_0035_F0035() {
         CheckExternalEvents(biosSegment, 0x0035);

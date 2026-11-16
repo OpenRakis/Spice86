@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: AL, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: AL, DS, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
@@ -60,11 +60,10 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016E:014D");
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: DS, flags, DF. Does not return.</summary>
     public virtual Action unknown_016E_0152_01832() {
         ushort word1;
         ushort segment = 0;
-        ushort index = 0;
         unknown_016E_0152_01832Frame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(cs1, 0x0152);
         Stack.Push16(FlagRegister16);
@@ -96,7 +95,6 @@ public partial class CfgGeneratedOverrides {
         AH = 0x11;
         FlagRegister = FlagRegister & 0xFFFFFF00u | 0x00000011;
         DirectionFlag = true;
-        index = SP;
         frame.Local6 = 0x1111;
         frame.Local4 = 0x2222;
         frame.Local2 = 0x5A5A;
@@ -130,7 +128,6 @@ public partial class CfgGeneratedOverrides {
         ES = 0x2100;
         Segment2100Globals.Dword000A = 0x000001E2 | (uint)CS << 16;
         AX = 0x4C00;
-        BP = index;
         InterruptCall(cs1, 0x01E0, 0x21);
         throw FailAsUntested("Untested return from call at 016E:01DE");
     }

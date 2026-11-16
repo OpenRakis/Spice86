@@ -10,9 +10,12 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System;
 using System.Reflection;
 
 /// <summary>
@@ -188,5 +191,52 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>Reads the caller's Zero Flag from the stacked flag word of the interrupt frame.</summary>
     protected bool ReadZeroFlag() {
         return (Stack.Peek16(4) & Flags.Zero) != 0;
+    }
+
+    /// <summary>
+    /// Pushes the FLAGS/CS:IP frame a hardware-style <c>int</c> pushes before the handler runs and
+    /// clears IF: a generated terminate call replaces the whole interrupt entry, so it needs the
+    /// same frame on the stack for the termination bookkeeping the interpreted path performs with
+    /// the real frame, and for the emulated iret that consumes it.
+    /// </summary>
+    protected void PushInterruptFrame() {
+        Stack.Push16(State.Flags.FlagRegister16);
+        Stack.PushSegmentedAddress(State.IpSegmentedAddress);
+        State.InterruptFlag = false;
+    }
+
+    /// <summary>
+    /// Finishes a terminate service invoked directly by generated code: halts when process
+    /// termination already stopped the machine (a root program exiting back to its loader),
+    /// otherwise unwinds to the resume address the termination poked on the restored parent
+    /// stack, like the interpreted <c>int</c> stub's iret landing on the terminate address.
+    /// </summary>
+    /// <param name="terminatedPsp">The PSP segment of the process that terminated.</param>
+    /// <param name="ipBefore">CS:IP before the termination ran: when the termination left a new
+    /// value (a batch engine continue launching the next program) it is the resume target;
+    /// otherwise the resume is the address it poked on the restored parent stack, where the
+    /// stub's iret would land.</param>
+    /// <param name="emulatesIret">When true the caller replaces the interrupt stub's iret (a
+    /// generated terminate call): the frame the termination restored is consumed like iret does,
+    /// landing on the poked address with the stacked flags restored. When false the frame stays
+    /// in place for a following iret (an interpreted interrupt handler whose Run call unwound).</param>
+    /// <exception cref="HaltRequestedException">The machine stopped.</exception>
+    /// <exception cref="ProcessTerminatedException">Control resumes at another address.</exception>
+    /// <returns>Never returns: the return type only lets a generated terminate call print as a
+    /// method's returned action.</returns>
+    protected Action ExitOrThrowProcessTerminated(ushort terminatedPsp, SegmentedAddress ipBefore, bool emulatesIret) {
+        if (!State.IsRunning) {
+            LoggerService.LogTrace("Program terminated; the machine is stopping.");
+            throw new HaltRequestedException();
+        }
+        if (State.IpSegmentedAddress != ipBefore) {
+            throw new ProcessTerminatedException(State.IpSegmentedAddress, terminatedPsp);
+        }
+        if (emulatesIret) {
+            State.IpSegmentedAddress = Stack.PopSegmentedAddress();
+            State.Flags.FlagRegister16 = Stack.Pop16();
+            throw new ProcessTerminatedException(State.IpSegmentedAddress, terminatedPsp);
+        }
+        throw new ProcessTerminatedException(new SegmentedAddress(Stack.Peek16(2), Stack.Peek16(0)), terminatedPsp);
     }
 }

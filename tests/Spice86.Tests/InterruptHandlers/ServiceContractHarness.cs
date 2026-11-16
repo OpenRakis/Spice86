@@ -430,6 +430,39 @@ internal static class ServiceContractHarness {
             entry.Name, StubStepLimit);
     }
 
+    /// <summary>Runs a <see cref="ServiceTransferKind.Terminates"/> service through the vector's
+    /// installed stub and asserts it never reaches the <c>int</c>'s return address: terminating
+    /// the harness's root program stops the machine instead of returning to the caller.</summary>
+    internal static void AssertTerminatesThroughStub(byte vector, int selectorValue) {
+        using ServiceContractMachine machine = new(false, false);
+        Spice86DependencyInjection spice86 = machine.Spice86;
+        IInterruptHandler handler = spice86.Machine.InstalledInterruptHandlers
+            .Handlers[vector];
+        InterruptServiceEntry entry = EntryOf(handler, selectorValue)
+            ?? throw new InvalidOperationException(
+                $"int 0x{vector:X2} selector 0x{selectorValue:X2} has no service entry");
+        entry.Contract.Transfer.Should().Be(ServiceTransferKind.Terminates,
+            "the declared kind of {0}", entry.Name);
+        State state = spice86.Machine.CpuState;
+        SetSelector(state, SelectorOf(handler), selectorValue);
+        spice86.Machine.Memory.UInt8[ScratchLinear] = 0xCD;
+        spice86.Machine.Memory.UInt8[ScratchLinear + 1] = vector;
+        state.CS = ScratchSegment;
+        state.IP = ScratchOffset;
+        state.InterruptFlag = false;
+        int steps = 0;
+        while (state.IsRunning
+               && (state.CS != ScratchSegment || state.IP != ScratchReturnOffset)
+               && steps < StubStepLimit) {
+            spice86.Machine.CfgCpu.ExecuteNext();
+            steps++;
+        }
+        (state.CS == ScratchSegment && state.IP == ScratchReturnOffset).Should().BeFalse(
+            "the Terminates service {0} returned to the int's return address", entry.Name);
+        state.IsRunning.Should().BeFalse(
+            "terminating the harness's root program stops the machine");
+    }
+
     internal static void RandomizeInputs(State state, Random random) {
         state.EAX = (uint)random.Next();
         state.EBX = (uint)random.Next();

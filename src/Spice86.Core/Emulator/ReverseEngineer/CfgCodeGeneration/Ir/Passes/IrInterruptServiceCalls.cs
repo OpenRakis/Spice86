@@ -73,8 +73,12 @@ internal static class IrInterruptServiceCalls {
     /// vector observed only the installed stub.</param>
     /// <param name="programSetCurrentPsp">Whether the program set the current PSP itself through
     /// DOS AH=50h/55h; then every typed service call keeps writing the interrupt frame.</param>
+    /// <param name="terminateResumedBatchLaunch">Whether a terminate during the run resumed by
+    /// the batch engine launching the next program: that resume only exists as the interrupt
+    /// stub's callback-moved-CS:IP path, so terminate calls keep the untyped call.</param>
     public static int Apply(IrMethod method, IrEditor editor, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        bool terminateResumedBatchLaunch) {
         List<(IrBlock Block, int Index, IrStatement Replacement)> typed = [];
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
@@ -85,7 +89,7 @@ internal static class IrInterruptServiceCalls {
                     continue;
                 }
                 IVisitableAstNode replacement = Classify(call, service, block, index, facts,
-                    hasOnlyBuiltInTargets, programSetCurrentPsp);
+                    hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch);
                 if (ReferenceEquals(replacement, call)) {
                     continue;
                 }
@@ -93,6 +97,16 @@ internal static class IrInterruptServiceCalls {
             }
         }
         foreach ((IrBlock block, int index, IrStatement replacement) in typed) {
+            if (replacement.Node is InterruptServiceCallNode {
+                    Contract.Transfer: ServiceTransferKind.Terminates
+                } terminatingCall) {
+                // A terminate never reaches the code after the call site: the statement becomes
+                // the method's exit and the unobserved-return FailAsUntested it replaces is gone.
+                editor.Remove(block, index);
+                editor.SetTerminator(block,
+                    new IrExit(block.Terminator.Origin, new ReturnNode(terminatingCall)));
+                continue;
+            }
             editor.Replace(block, index, replacement);
         }
         return typed.Count;
@@ -100,7 +114,8 @@ internal static class IrInterruptServiceCalls {
 
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,
         InterruptServiceVector service, IrBlock block, int index, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        bool terminateResumedBatchLaunch) {
         InterruptServiceEntry? entry;
         ServiceSelector? selector = null;
         int? selectorValue = null;
@@ -130,6 +145,26 @@ internal static class IrInterruptServiceCalls {
         }
         if (entry is null || ReferenceEquals(entry.Contract, ServiceContract.Unknown)) {
             return new InterruptCallHelperNode(InterruptSiteKind.NoContract, service,
+                selectorValue, [.. call.Arguments]);
+        }
+        if (entry.Contract.Transfer is ServiceTransferKind.RunsChild) {
+            // A child EXEC is not an ordinary typed call: the parent/child transfer is modelled
+            // separately, so the site keeps the untyped call until then.
+            return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
+                selectorValue, [.. call.Arguments]);
+        }
+        if (entry.Contract.Transfer is ServiceTransferKind.Terminates
+            && (terminateResumedBatchLaunch || programSetCurrentPsp
+                || index != block.Statements.Count - 1
+                || block.Terminator is not IrExit { Transfer: FailAsUntestedNode })) {
+            // A terminate only prints as a method exit when nothing after the call was observed
+            // and the resume is consumable by the override chain: a program whose terminate
+            // relaunched a batch-kept program resumes through the stub's callback-moved-CS:IP
+            // path only; a program that manages its own PSP (AH=50h/55h) can resume at the
+            // arbitrary address the recorded caller stack names, which generated control flow
+            // cannot express; and a site with observed code after it could fall through. All
+            // keep the untyped call.
+            return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
                 selectorValue, [.. call.Arguments]);
         }
         if (entry.Implementation is null

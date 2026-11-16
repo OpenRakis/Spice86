@@ -157,7 +157,11 @@ public static class InterruptServiceAttributes {
         Type[] outputTypes = ServiceCallSignature.Outputs(entry.Contract)
             .Select(output => ClrTypeOf(entry, output.Type)).ToArray();
         bool returnMatches = outputTypes.Length switch {
-            0 => returnType == typeof(void),
+            // A terminating service's implementation returns Action nominally so generated code
+            // can print it as the method's returned action; it never produces the value.
+            0 => returnType == typeof(void)
+                || (entry.Contract.Transfer is ServiceTransferKind.Terminates
+                    && returnType == typeof(Action)),
             1 => returnType == outputTypes[0],
             <= 7 => returnType.IsGenericType
                 && returnType.Assembly == typeof(ValueTuple).Assembly

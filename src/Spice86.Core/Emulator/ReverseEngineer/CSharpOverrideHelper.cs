@@ -600,6 +600,15 @@ public class CSharpOverrideHelper {
     /// <summary>The installed INT 21h DOS handler.</summary>
     public DosInt21Handler Dos => GetInterruptHandler<DosInt21Handler>();
 
+    /// <summary>DOS INT 20h handler (legacy program terminate).</summary>
+    public DosInt20Handler DosInt20 => GetInterruptHandler<DosInt20Handler>();
+
+    /// <summary>DOS INT 22h handler (terminate address, invoked directly).</summary>
+    public DosInt22Handler DosInt22 => GetInterruptHandler<DosInt22Handler>();
+
+    /// <summary>DOS INT 23h handler (Ctrl-Break terminate).</summary>
+    public DosInt23Handler DosInt23 => GetInterruptHandler<DosInt23Handler>();
+
     /// <summary>The installed INT 24h critical error handler.</summary>
     public DosInt24Handler CriticalError => GetInterruptHandler<DosInt24Handler>();
 
@@ -1369,6 +1378,23 @@ public class CSharpOverrideHelper {
         T result = invocation();
         State.InterruptFlag = callerInterruptFlag;
         return result;
+    }
+
+    /// <summary>
+    /// A terminating service call invoked directly by generated code
+    /// (<c>return TerminateCall(cs1, 0x0451, () => Dos.Terminate(AL))</c>): positions CS:IP at the
+    /// <c>int</c>'s return address so the implementation pushes the same frame bytes the
+    /// interpreted <c>int</c> pushed, then never returns to the call site - it halts or unwinds.
+    /// </summary>
+    /// <param name="expectedReturnCs">The segment the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="expectedReturnIp">The offset the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="invocation">The terminating service implementation to call.</param>
+    /// <returns>Never returns: the type only lets the call print as a method's returned action.</returns>
+    public Action TerminateCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<Action> invocation) {
+        State.CS = expectedReturnCs;
+        State.IP = expectedReturnIp;
+        return invocation.Invoke();
     }
 
     /// <summary>Writes a carry result into the stacked FLAGS of a

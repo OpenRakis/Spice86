@@ -359,7 +359,13 @@ internal sealed class CfgCSharpGenerator {
             FramelessServiceCallSites = [.. prepared
                 .SelectMany(method => method.IrMethod.Blocks.SelectMany(block => block.Statements))
                 .Where(statement => statement.Node is InterruptServiceCallNode { WritesFrame: false })
-                .Select(statement => statement.Origin.Address)]
+                .Select(statement => statement.Origin.Address)
+                .Concat(prepared
+                    .SelectMany(method => method.IrMethod.Blocks)
+                    .Where(block => block.Terminator is IrExit {
+                        Transfer: ReturnNode { Value: InterruptServiceCallNode {
+                            Contract.Transfer: ServiceTransferKind.Terminates } } })
+                    .Select(block => block.Terminator.Origin.Address))]
         };
     }
 

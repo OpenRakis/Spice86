@@ -123,7 +123,6 @@ public partial class CfgGeneratedOverrides {
                 word1 = 5;
             L_0106:
                 CheckExternalEvents(cs2, 0x0106);
-                AX = 0x3D00;
                 (AX, flag1) = ServiceCall(Dos, () => Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, DX, '\0')));
                 if (!flag1) {
                     if (AX != word1) {
@@ -134,8 +133,7 @@ public partial class CfgGeneratedOverrides {
                     if (word1 == 8) {
                         AX = 0x4C00;
                         CX = word1;
-                        InterruptCall(cs2, 0x011C, 0x21);
-                        throw FailAsUntested("Untested return from call at 117D:011A");
+                        return TerminateCall(cs2, 0x011C, () => Dos.Terminate(AL));
                     }
                     goto L_0106;
                 }

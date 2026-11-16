@@ -24,6 +24,7 @@ public partial class CfgGeneratedOverrides {
         ushort index2 = 0;
         ushort count = 0;
         ushort word4 = 0;
+        ushort segment;
         CheckExternalEvents(cs1, 0x0100);
         Stack.Push16(CS);
         word1 = Stack.Pop16();
@@ -72,24 +73,21 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(CS);
         word4 = Stack.Pop16();
         EsGlobals.Word000C = word4;
-        BX = DsGlobals.Word03D4;
-        ServiceCall(cs1, 0x0159, () => Dos.SetCurrentPsp(BX));
+        segment = DsGlobals.Word03D4;
+        ServiceCall(cs1, 0x0159, () => Dos.SetCurrentPsp(segment));
         word1 = DsGlobals.Word03D4;
-        DS = word1;
-        ES = word1;
         SS = word1;
         SP = 0x0128;
         Stack.Push16(word1);
         Stack.Push16(0x0100);
-        SI = index;
-        DI = index2;
-        CX = count;
         return FarRet();
     }
 
-    /// <summary>Inputs: ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: flags, DF. Does not return.</summary>
     public virtual Action unknown_016E_016A_0184A() {
         ushort word1;
+        ushort segment;
+        ushort blockSegment;
         CheckExternalEvents(cs1, 0x016A);
         Stack.Push16(CS);
         word1 = Stack.Pop16();
@@ -106,13 +104,13 @@ public partial class CfgGeneratedOverrides {
             AX = 0x4C06;
             throw FailAsUntested("Untested interrupt at 016E:0196");
         }
-        BX = CS;
+        segment = CS;
         AH = 0x50;
-        ServiceCall(cs1, 0x0183, () => Dos.SetCurrentPsp(BX));
+        ServiceCall(cs1, 0x0183, () => Dos.SetCurrentPsp(segment));
         AX = DsGlobals.Word03D4;
-        ES = AX;
+        blockSegment = AX;
         AH = 0x49;
-        (AX, CarryFlag) = ServiceCall(cs1, 0x018C, Dos, () => Dos.FreeMemory(ES, AX), r => CarryOnInterruptStack(r.carryFlag));
+        (AX, CarryFlag) = ServiceCall(cs1, 0x018C, Dos, () => Dos.FreeMemory(blockSegment, AX), r => CarryOnInterruptStack(r.carryFlag));
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0198, SpeculativeRun_0198);
             AX = 0x4C05;
@@ -139,7 +137,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: flags, DF. Does not return.</summary>
     public virtual Action unknown_01AD_0100_01BD0() {
         CheckExternalEvents(cs2, 0x0100);
         DX = 0x0013;

@@ -81,7 +81,8 @@ internal sealed class IrMethodEmitter(
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
             context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets,
-            context.Program.Inputs.HardwareInterrupts.ProgramSetCurrentPsp, context.Policy,
+            context.Program.Inputs.HardwareInterrupts.ProgramSetCurrentPsp,
+            context.Program.Inputs.HardwareInterrupts.TerminateResumedBatchLaunch, context.Policy,
             timer);
         ConstantMemoryAccessTable constantMemoryAccesses = IrConstantMemoryAccesses.Collect(irMethod);
         (BlockNode EntryDispatch, BlockNode Body, GotoCensus Census, GotoTargets Targets) structured =

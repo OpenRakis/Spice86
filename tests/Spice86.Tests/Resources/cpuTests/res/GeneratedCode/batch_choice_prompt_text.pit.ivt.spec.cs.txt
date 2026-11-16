@@ -47,8 +47,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested interrupt at 0160:0127");
     L_011F:
         AX = 0x4C01;
-        InterruptCall(cs1, 0x0124, 0x21);
-        throw FailAsUntested("Untested return from call at 0160:0122");
+        return TerminateCall(cs1, 0x0124, () => Dos.Terminate(AL));
     }
 
 }

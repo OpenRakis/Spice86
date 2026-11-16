@@ -23,12 +23,10 @@ public partial class CfgGeneratedOverrides {
         AH = 7;
         BX = 0xB800;
         ES = 0xB800;
-        DI = 0;
         SegmentB800Globals.Word0000 = AX;
         DI = (ushort)(DirectionFlag ? -2 : 2);
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0118, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0116");
+        return TerminateCall(cs1, 0x0118, () => Dos.Terminate(AL));
     }
 
 }
@@ -330,7 +328,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL, DF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

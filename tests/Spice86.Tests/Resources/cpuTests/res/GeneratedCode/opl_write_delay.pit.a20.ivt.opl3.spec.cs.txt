@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: CX, BX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         byte byte1 = 0;
@@ -20,8 +20,7 @@ public partial class CfgGeneratedOverrides {
         byte byte2;
         CheckExternalEvents(cs1, 0x0100);
         CX = NearCall(cs1, 0x0103, () => unknown_016F_01A4_01894(CX));
-        (AL, CX, DX) = NearCall(cs1, 0x0106, () => unknown_016F_01B7_018A7(CX));
-        DX = 0x0388;
+        (AL, CX) = NearCall(cs1, 0x0106, () => unknown_016F_01B7_018A7(CX));
         byte1 = Opl3Ports.ReadAdlibAddress0();
         Alu8.And(byte1, 0xE0);
         if ((byte1 & 0xE0) == 0) {
@@ -32,7 +31,7 @@ public partial class CfgGeneratedOverrides {
             DX = 0x0389;
             AL = 0xFF;
             Opl3Ports.WriteAdlibData0(0xFF);
-            (AL, CX, DX) = NearCall(cs1, 0x0135, () => unknown_016F_01D8_018C8());
+            (AL, CX) = NearCall(cs1, 0x0135, () => unknown_016F_01D8_018C8());
             DX = 0x0388;
             AL = 4;
             Opl3Ports.WriteAdlibAddress0(4);
@@ -40,9 +39,8 @@ public partial class CfgGeneratedOverrides {
             DX = 0x0389;
             AL = 0x21;
             Opl3Ports.WriteAdlibData0(0x21);
-            (AL, CX, DX) = NearCall(cs1, 0x0147, () => unknown_016F_01D8_018C8());
+            (AL, CX) = NearCall(cs1, 0x0147, () => unknown_016F_01D8_018C8());
             word1 = 0;
-            DX = 0x0388;
             while (true) {
                 CheckExternalEvents(cs1, 0x014C);
                 Alu16.Sub(word1, 0x1388);
@@ -57,7 +55,6 @@ public partial class CfgGeneratedOverrides {
                 }
                 VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_jmp);
             }
-            DX = 0x0998;
             CX = word1;
             byte2 = CL;
             Out8(0x0998, byte2);
@@ -67,15 +64,14 @@ public partial class CfgGeneratedOverrides {
             AL = 0;
             Out8(0x0999, 0);
             SI = 0x0217;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0191, () => unknown_016F_01E6_018D6(BX, 0x0217, DS, DirectionFlag));
+            BX = NearCall(cs1, 0x0191, () => unknown_016F_01E6_018D6(BX, 0x0217, DS, DirectionFlag));
             AX = word1;
             NearCall(cs1, 0x0196, unknown_016F_01F5_018E5Entry);
             SI = 0x0233;
-            (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x019C, () => unknown_016F_01E6_018D6(BX, 0x0233, DS, DirectionFlag));
+            BX = NearCall(cs1, 0x019C, () => unknown_016F_01E6_018D6(BX, 0x0233, DS, DirectionFlag));
             CX = NearCall(cs1, 0x019F, () => unknown_016F_01A4_01894(CX));
-            (AL, CX, DX) = NearCall(cs1, 0x01A2, () => unknown_016F_01B7_018A7(CX));
-            InterruptCall(cs1, 0x01A4, 0x20);
-            throw FailAsUntested("Untested return from call at 016F:01A2");
+            (AL, CX) = NearCall(cs1, 0x01A2, () => unknown_016F_01B7_018A7(CX));
+            return TerminateCall(cs1, 0x01A4, () => DosInt20.Terminate(AL));
         L_015A:
             VerifySpeculativeRunOrFail(cs1, 0x015A, SpeculativeRun_015A);
             DX = 0x0998;
@@ -120,7 +116,7 @@ public partial class CfgGeneratedOverrides {
         CX = NearCall(cs1, 0x01AD, () => unknown_016F_01CA_018BA());
         DX = 0x0389;
         Opl3Ports.WriteAdlibData0(0x60);
-        (_, CX, _) = NearCall(cs1, 0x01B6, () => unknown_016F_01D8_018C8());
+        (_, CX) = NearCall(cs1, 0x01B6, () => unknown_016F_01D8_018C8());
         NearReturn();
         return CX;
     }
@@ -130,9 +126,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
+    /// <summary>Inputs: CX. Outputs: AL, CX. Changes: AL, CX, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
-    public virtual (byte result, ushort result2, ushort result3) unknown_016F_01B7_018A7(ushort word1) {
+    public virtual (byte result, ushort result2) unknown_016F_01B7_018A7(ushort word1) {
         CX = word1;
         CheckExternalEvents(cs1, 0x01B7);
         DX = 0x0388;
@@ -142,13 +138,13 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0389;
         AL = 0x80;
         Opl3Ports.WriteAdlibData0(0x80);
-        (AL, CX, DX) = NearCall(cs1, 0x01C9, () => unknown_016F_01D8_018C8());
+        (AL, CX) = NearCall(cs1, 0x01C9, () => unknown_016F_01D8_018C8());
         NearReturn();
-        return (AL, CX, DX);
+        return (AL, CX);
     }
 
     public virtual Action unknown_016F_01B7_018A7_Asm() {
-        (AL, CX, DX) = unknown_016F_01B7_018A7(CX);
+        (AL, CX) = unknown_016F_01B7_018A7(CX);
         return Returned;
     }
 
@@ -174,9 +170,9 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: CX, DX. Outputs: AL, CX, DX. Changes: AL, CX, DX.</summary>
+    /// <summary>Inputs: CX, DX. Outputs: AL, CX. Changes: AL, CX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
-    public virtual (byte result, ushort result2, ushort result3) unknown_016F_01D8_018C8() {
+    public virtual (byte result, ushort result2) unknown_016F_01D8_018C8() {
         ushort count = 0;
         CheckExternalEvents(cs1, 0x01D8);
         Stack.Save(CX, DX);
@@ -186,25 +182,26 @@ public partial class CfgGeneratedOverrides {
             AL = Opl3Ports.ReadAdlibAddress0();
             count--;
         } while (count != 0);
-        (DX, CX) = Stack.Restore2();
+        (_, CX) = Stack.Restore2();
         NearReturn();
-        return (AL, CX, DX);
+        return (AL, CX);
     }
 
     public virtual Action unknown_016F_01D8_018C8_Asm() {
-        (AL, CX, DX) = unknown_016F_01D8_018C8();
+        (AL, CX) = unknown_016F_01D8_018C8();
         return Returned;
     }
 
-    /// <summary>Inputs: BX, SI, DS, DF. Outputs: AH, BX, SI, flags. Changes: AX, BX, SI, flags.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: BX. Changes: AX, BX, SI, ZF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
-    public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016F_01E6_018D6(ushort word1, ushort index, ushort word2, bool flag1) {
+    public virtual ushort unknown_016F_01E6_018D6(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
+        SI = index;
         while (true) {
             CheckExternalEvents(cs1, 0x01E6);
-            AL = UInt8[word2, index];
-            index += (ushort)(flag1 ? -1 : 1);
-            AL = Alu8.Or(AL, AL);
+            AL = UInt8[word2, SI];
+            SI += (ushort)(flag1 ? -1 : 1);
+            ZeroFlag = AL == 0;
             if (ZeroFlag) {
                 break;
             }
@@ -212,13 +209,12 @@ public partial class CfgGeneratedOverrides {
             BX = 7;
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         }
-        SI = index;
         NearReturn();
-        return (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return BX;
     }
 
     public virtual Action unknown_016F_01E6_018D6_Asm() {
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016F_01E6_018D6(BX, SI, DS, DirectionFlag);
+        BX = unknown_016F_01E6_018D6(BX, SI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -552,11 +548,11 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_F000_0090_F0090() {
         CheckExternalEvents(biosSegment, 0x0090);
-        // INT 20h: DosInt20Handler
+        // INT 20h: DosInt20.Run
         Callback(biosSegment, 0x0090, 0x0020);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0094, Signature_0094_iret);
         return InterruptRet();

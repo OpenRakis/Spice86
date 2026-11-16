@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System;
+
 /// <summary>
 /// Implements INT 20h - Program Terminate.
 /// </summary>
@@ -32,7 +34,10 @@ public class DosInt20Handler : InterruptHandler {
     public override byte VectorNumber => 0x20;
 
     /// <inheritdoc />
-    [InterruptService(Unknown = true)]
+    [InterruptService(Reads = CpuValues.Al, Writes = CpuValues.None,
+        Memory = ServiceMemoryEffect.ReadWrite,
+        Implementation = nameof(Terminate), Inputs = [CpuValues.Al],
+        Transfer = ServiceTransferKind.Terminates)]
     public override void Run() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 20h: PROGRAM TERMINATE (legacy CP/M INT20H handler)");
@@ -41,5 +46,19 @@ public class DosInt20Handler : InterruptHandler {
         // FreeDOS calls INT 21h AH=0 to legacy CP/M programs termination
         State.AH = 0x00;
         _dosInt21Handler.QuitWithExitCode();
+    }
+
+    /// <summary>
+    /// Generated-code implementation of INT 20h: terminates the current process with
+    /// <paramref name="exitCode"/> like INT 21h AH=4Ch. Never returns to the call site.
+    /// </summary>
+    /// <remarks>
+    /// Replicates the interpreted entry: <see cref="Run"/>'s AH=00h dispatch into
+    /// <see cref="DosInt21Handler.QuitWithExitCode"/>, which bypasses the INT 21h caller-stack
+    /// save; the shared terminate path pushes the <c>int</c>'s frame.
+    /// </remarks>
+    public Action Terminate(byte exitCode) {
+        State.AH = 0x00;
+        return _dosInt21Handler.TerminateWithoutCallerStackRecord(exitCode);
     }
 }

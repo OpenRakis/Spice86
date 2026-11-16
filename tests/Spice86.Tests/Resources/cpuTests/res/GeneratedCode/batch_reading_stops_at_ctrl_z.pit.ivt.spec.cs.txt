@@ -12,19 +12,17 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         AX = 0xB800;
         ES = 0xB800;
-        DI = 0;
-        AX = 0x0748;
+        AL = 0x48;
         SegmentB800Globals.Word0000 = 0x0748;
         DI = (ushort)(DirectionFlag ? -2 : 2);
         AX = 0x4C00;
-        InterruptCall(cs1, 0x0112, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:0110");
+        return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));
     }
 
 }

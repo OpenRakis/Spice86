@@ -414,23 +414,19 @@ public partial class CfgGeneratedOverrides {
                     if (!SelectorSignatureMatches(cs2, 0x0100, Signature_0100_mov)) {
                         throw FailAsUntested("Untested code variant at 01D9:0100");
                     }
-                    AX = 0x0E4A;
+                    AH = 0x0E;
                     BX = 7;
                     ServiceCall(Video, () => Video.WriteTextInTeletypeMode(0x4A, 7));
                     AX = 0x4C42;
-                    InterruptCall(cs2, 0x010F, 0x21);
-                    throw FailAsUntested("Untested return from call at 01D9:010D");
+                    return TerminateCall(cs2, 0x010F, () => Dos.Terminate(AL));
                 L_0100_433:
                     Stack.Push16(CS);
                     DS = Stack.Pop16();
-                    DX = 0x0118;
-                    AX = 0x2560;
                     ServiceCall(Dos, () => Dos.SetInterruptVector(0x60, DS, 0x0118));
                 }
                 else {
                     return InterruptRet();
                 }
-                DX = 0x011B;
                 DX = 0x012A;
                 AuxiliaryFlag = true;
                 DX = 0x0012;
@@ -440,8 +436,7 @@ public partial class CfgGeneratedOverrides {
                 SignFlag = false;
                 OverflowFlag = false;
                 AX = 0x3100;
-                InterruptCall(cs2, 0x0118, 0x21);
-                throw FailAsUntested("Untested return from call at 01D9:0116");
+                return TerminateCall(cs2, 0x0118, () => Dos.TerminateAndStayResident(AL, DX));
             }
         }
     L_00AA:

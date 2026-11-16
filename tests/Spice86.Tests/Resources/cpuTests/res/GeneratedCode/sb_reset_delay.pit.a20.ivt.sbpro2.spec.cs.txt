@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: BX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
         byte byte1 = 0;
@@ -20,9 +20,7 @@ public partial class CfgGeneratedOverrides {
         byte byte2;
         CheckExternalEvents(cs1, 0x0100);
         SI = 0x01A5;
-        (AH, BX, SI, _, _, _, _, _, _) = NearCall(cs1, 0x0106, () => unknown_016F_0174_01864(BX, 0x01A5, DS, DirectionFlag));
-        DX = 0x0226;
-        AL = 1;
+        BX = NearCall(cs1, 0x0106, () => unknown_016F_0174_01864(BX, 0x01A5, DS, DirectionFlag));
         SoundBlasterPorts.WriteDspReset(1);
         DX = 0x0226;
         byte1 = 0;
@@ -48,13 +46,12 @@ public partial class CfgGeneratedOverrides {
         }
         SI = 0x01BB;
         AL = byte1;
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0158, () => unknown_016F_0174_01864(BX, 0x01BB, DS, DirectionFlag));
+        BX = NearCall(cs1, 0x0158, () => unknown_016F_0174_01864(BX, 0x01BB, DS, DirectionFlag));
         AX = word1;
         CX = word1;
         NearCall(cs1, 0x015D, unknown_016F_0183_01873Entry);
         SI = 0x01CB;
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = NearCall(cs1, 0x0163, () => unknown_016F_0174_01864(BX, 0x01CB, DS, DirectionFlag));
-        DX = 0x0998;
+        BX = NearCall(cs1, 0x0163, () => unknown_016F_0174_01864(BX, 0x01CB, DS, DirectionFlag));
         byte2 = CL;
         Out8(0x0998, byte2);
         AL = CH;
@@ -62,8 +59,7 @@ public partial class CfgGeneratedOverrides {
         DX = 0x0999;
         AL = 0;
         Out8(0x0999, 0);
-        InterruptCall(cs1, 0x0174, 0x20);
-        throw FailAsUntested("Untested return from call at 016F:0172");
+        return TerminateCall(cs1, 0x0174, () => DosInt20.Terminate(AL));
     L_0130:
         VerifySpeculativeRunOrFail(cs1, 0x0130, SpeculativeRun_0130);
         SI = 0x01D9;
@@ -73,15 +69,16 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016F:0133");
     }
 
-    /// <summary>Inputs: BX, SI, DS, DF. Outputs: AH, BX, SI, flags. Changes: AX, BX, SI, flags.</summary>
+    /// <summary>Inputs: BX, SI, DS, DF. Outputs: BX. Changes: AX, BX, SI, ZF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
-    public virtual (byte result, ushort result2, ushort result3, bool result4, bool result5, bool result6, bool result7, bool result8, bool result9) unknown_016F_0174_01864(ushort word1, ushort index, ushort word2, bool flag1) {
+    public virtual ushort unknown_016F_0174_01864(ushort word1, ushort index, ushort word2, bool flag1) {
         BX = word1;
+        SI = index;
         while (true) {
             CheckExternalEvents(cs1, 0x0174);
-            AL = UInt8[word2, index];
-            index += (ushort)(flag1 ? -1 : 1);
-            AL = Alu8.Or(AL, AL);
+            AL = UInt8[word2, SI];
+            SI += (ushort)(flag1 ? -1 : 1);
+            ZeroFlag = AL == 0;
             if (ZeroFlag) {
                 break;
             }
@@ -89,13 +86,12 @@ public partial class CfgGeneratedOverrides {
             BX = 7;
             ServiceCall(Video, () => Video.WriteTextInTeletypeMode(AL, 7));
         }
-        SI = index;
         NearReturn();
-        return (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
+        return BX;
     }
 
     public virtual Action unknown_016F_0174_01864_Asm() {
-        (AH, BX, SI, CarryFlag, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag) = unknown_016F_0174_01864(BX, SI, DS, DirectionFlag);
+        BX = unknown_016F_0174_01864(BX, SI, DS, DirectionFlag);
         return Returned;
     }
 
@@ -393,11 +389,11 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
+    /// <summary>Inputs: AL. Outputs: none. Changes: flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_F000_0090_F0090() {
         CheckExternalEvents(biosSegment, 0x0090);
-        // INT 20h: DosInt20Handler
+        // INT 20h: DosInt20.Run
         Callback(biosSegment, 0x0090, 0x0020);
         VerifySpeculativeEntryOrFail(biosSegment, 0x0094, Signature_0094_iret);
         return InterruptRet();
