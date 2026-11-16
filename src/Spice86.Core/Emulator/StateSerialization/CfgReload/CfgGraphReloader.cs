@@ -118,7 +118,8 @@ internal sealed class CfgGraphReloader {
     /// <summary>
     /// Rebuilds the call-return evidence index from the reloaded typed edges and re-runs the
     /// call-continuation rule on every reloaded call node, so continuations are wired again
-    /// without re-executing the program. Runs separately from <see cref="Reload"/> because the
+    /// without re-executing the program, and marks every restored observed instruction for the
+    /// anchor walk that runs at its first execution. Runs separately from <see cref="Reload"/> because the
     /// continuation pass decodes live memory: it must run only after the program image is loaded,
     /// which on the DI path happens after the graph restore itself.
     /// </summary>

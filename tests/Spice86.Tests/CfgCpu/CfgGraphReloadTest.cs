@@ -307,6 +307,68 @@ public class CfgGraphReloadTest {
         AssertNoCallContinuation(index, "F000:007C");
     }
 
+    /// <summary>
+    /// A reloaded graph carries no anchor dependents: they are registered lazily, the first time
+    /// each restored observed instruction executes its anchor walk. Stripping the Normal edge from
+    /// the speculative <c>call near DI</c> site to cb_a before reloading proves the second run
+    /// re-registers and re-evaluates the site's register dependent: the edge is rebuilt from the
+    /// anchor's walk, without which nothing would propose the target again. The observed arm of
+    /// speculative_anchor_values runs with the selector byte at its default, so the call arm stays
+    /// speculative and only anchor evaluations reach the callbacks.
+    /// </summary>
+    [Fact]
+    public void ReloadedAnchorRegistersItsSiteAgainAtFirstExecution() {
+        using TempFile recordedDataDirectory = new(nameof(ReloadedAnchorRegistersItsSiteAgainAtFirstExecution));
+
+        using (Spice86Creator creator = new(binName: "speculative_anchor_values", maxCycles: 0x4000,
+                   jitMode: JitMode.InterpretedOnly, recordedDataDirectory: recordedDataDirectory.Path,
+                   reloadCfgGraph: false))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.ProgramExecutor.Run();
+        }
+
+        // S = F000:0084 `call near DI`, the s1_dispatch call arm: speculative on the observed arm.
+        // T = F000:00D2 cb_a, proposed for S only by the anchor's register dependent (DI = cb_a
+        // when the second s1_dispatch call executes). Remove only that Normal edge, keep the nodes.
+        const string siteAddress = "F000:0084";
+        const string targetAddress = "F000:00D2";
+        // The recorded-data root is per-program: the dump lands in a subdirectory of it.
+        string dumpPath = Directory.GetFiles(recordedDataDirectory.Path,
+            "spice86dumpCfgReload.json", SearchOption.AllDirectories).Single();
+        CfgReloadDump dump = JsonSerializer.Deserialize<CfgReloadDump>(
+            File.ReadAllText(dumpPath), CfgReloadSerialization.Options)!;
+        int siteId = dump.Nodes.Where(n => n.Addr == siteAddress).Select(n => n.Id).Single();
+        int targetId = dump.Nodes.Where(n => n.Addr == targetAddress).Select(n => n.Id).Single();
+        CfgReloadEdgeInfo[] strippedEdges = dump.Edges
+            .Where(e => !(e.From == siteId && e.To == targetId
+                          && e.Type == nameof(InstructionSuccessorType.Normal)))
+            .ToArray();
+        Assert.Equal(dump.Edges.Length - 1, strippedEdges.Length);
+        File.WriteAllText(dumpPath, JsonSerializer.Serialize(
+            dump with { Edges = strippedEdges }, CfgReloadSerialization.Options));
+
+        using (Spice86Creator creator = new(binName: "speculative_anchor_values", maxCycles: 0x4000,
+                   jitMode: JitMode.InterpretedOnly, recordedDataDirectory: recordedDataDirectory.Path,
+                   reloadCfgGraph: true))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.ProgramExecutor.Run();
+            CfgNodeIndex index = di.Machine.CfgCpu.CfgNodeFeeder.NodeIndex;
+
+            CfgInstruction site = index.GetAtAddress(ParseAddress(siteAddress)).Single();
+            Assert.True(site.IsSpeculative, $"site {siteAddress} must stay speculative on the observed arm");
+            Assert.True(
+                site.SuccessorsPerType.TryGetValue(InstructionSuccessorType.Normal, out ISet<ICfgNode>? successors)
+                && successors.Any(successor => successor.Address == ParseAddress(targetAddress)),
+                $"speculative site {siteAddress} must reach {targetAddress} again after reload");
+
+            // The first instruction of the image is a plain restored node before every anchor:
+            // its one-shot walk ran at first execution and found nothing, so the flag is cleared.
+            CfgInstruction first = index.GetAtAddress(new SegmentedAddress(0xF000, 0x0000)).Single();
+            Assert.False(first.HasDiscoveryDependents,
+                "a restored instruction whose walk found no dependents must not keep paying the per-execution test");
+        }
+    }
+
     private static void AssertCallContinuation(CfgNodeIndex index, string callSiteAddr, string continuationAddr) {
         CfgInstruction callSite = index.GetAtAddress(ParseAddress(callSiteAddr)).Single();
         SegmentedAddress continuation = ParseAddress(continuationAddr);

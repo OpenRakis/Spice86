@@ -123,7 +123,8 @@ public class InstructionsFeeder : IClearable {
 
     /// <summary>
     /// Rebuilds the speculative call-return evidence index after a CFG graph reload and re-runs the
-    /// call-continuation rule on every reloaded call node. No-op when speculative exploration is
+    /// call-continuation rule on every reloaded call node. Also marks every restored observed
+    /// instruction for an anchor walk at its first execution. No-op when speculative exploration is
     /// disabled.
     /// </summary>
     internal void RebuildCallReturnEvidence(IEnumerable<ICfgNode> nodes) =>

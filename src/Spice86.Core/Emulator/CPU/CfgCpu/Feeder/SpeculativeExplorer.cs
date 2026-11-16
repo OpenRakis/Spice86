@@ -98,6 +98,7 @@ public class SpeculativeExplorer : InstructionReplacer {
     private readonly Dictionary<CfgInstruction, HashSet<SegmentedAddress>> _siteTargets = new();
     private readonly WatchedPointerCells _watchedCells;
     private readonly Dictionary<CfgInstruction, List<AnchorDependent>> _anchorDependents = new();
+    private readonly HashSet<CfgInstruction> _pendingAnchorWalks = [];
     private readonly HashSet<(CfgInstruction Site, CfgInstruction Anchor)> _anchorSitePairs = new();
     private readonly Dictionary<CfgInstruction, ushort> _anchorKnownUnion = new();
     private readonly HashSet<(uint Start, int Size, CfgInstruction Site)> _watchedSiteCells = new();
@@ -175,6 +176,7 @@ public class SpeculativeExplorer : InstructionReplacer {
         }
         _anchorSitePairs.RemoveWhere(pair => ReferenceEquals(pair.Site, instruction) || ReferenceEquals(pair.Anchor, instruction));
         _anchorKnownUnion.Remove(instruction);
+        _pendingAnchorWalks.Remove(instruction);
         _siteTargets.Remove(instruction);
         _cappedSites.Remove(instruction);
         _watchedSiteCells.RemoveWhere(cell => ReferenceEquals(cell.Site, instruction));
@@ -844,12 +846,22 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// write proposes the new value under the writing instruction as trigger.
     /// </summary>
     public void EvaluateAnchorDependents(CfgInstruction anchor) {
-        RetryPending(anchor);
-        if (!_anchorDependents.TryGetValue(anchor, out List<AnchorDependent>? dependents)) {
-            return;
+        // A restored node owes its anchor walk: run it once at first execution, then let the
+        // normal evaluation below propose what the freshly registered dependents read.
+        bool firstWalk = _pendingAnchorWalks.Remove(anchor);
+        if (firstWalk) {
+            ExploreFrom(anchor);
         }
-        foreach (AnchorDependent dependent in dependents) {
-            EvaluateDependent(anchor, dependent);
+        RetryPending(anchor);
+        if (_anchorDependents.TryGetValue(anchor, out List<AnchorDependent>? dependents)) {
+            foreach (AnchorDependent dependent in dependents) {
+                EvaluateDependent(anchor, dependent);
+            }
+        }
+        // The walk was a one-shot cost: a reloaded instruction that claimed nothing must not keep
+        // paying the per-execution test. A later AddDependent/AddPending re-arms the flag itself.
+        if (firstWalk && !_anchorDependents.ContainsKey(anchor) && !_pending.ContainsKey(anchor)) {
+            anchor.HasDiscoveryDependents = false;
         }
     }
 
@@ -957,8 +969,9 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// <summary>
     /// Rebuilds the return evidence index from a reloaded graph and re-runs the call-continuation
     /// rule on every reloaded call node, so continuations that a dump contains only as evidence
-    /// are wired again without re-executing the program. Called once at the end of
-    /// <c>CfgGraphReloader.Reload</c>.
+    /// are wired again without re-executing the program, and marks every restored observed
+    /// instruction for the anchor walk it never got, run once at its first execution. Called once
+    /// at the end of <c>CfgGraphReloader.Reload</c>.
     /// </summary>
     public void RebuildReturnEvidence(IEnumerable<ICfgNode> nodes) {
         List<CfgInstruction> callNodes = nodes.OfType<CfgInstruction>().Where(node => node.IsCall).ToList();
@@ -983,6 +996,15 @@ public class SpeculativeExplorer : InstructionReplacer {
             TryExploreCallContinuation(callNode, worklist, null);
         }
         Drain(worklist);
+        // Restored observed nodes were never parsed in this run, so no anchor walk registered
+        // their speculative-site dependents. Mark each for a one-shot walk at first execution;
+        // speculative nodes are skipped because the walks of the observed ones already reach them.
+        foreach (ICfgNode node in nodes) {
+            if (node is CfgInstruction { IsSpeculative: false } instruction) {
+                _pendingAnchorWalks.Add(instruction);
+                instruction.HasDiscoveryDependents = true;
+            }
+        }
     }
 
     private static readonly (InstructionSuccessorType Type, bool Aligned)[] ReturnEdgeTypes = [
