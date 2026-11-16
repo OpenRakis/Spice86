@@ -215,7 +215,7 @@ internal sealed class CalleeReturnScanner {
     /// <paramref name="frame"/>. Accepts only the statement shapes the scan tracks; uses
     /// <see cref="RegisterWriteSet"/> so a write to SP outside those shapes refuses.
     /// </summary>
-    private static bool ApplyStackEffect(CfgInstruction node, ref int pushed, ref int? frame) {
+    internal static bool ApplyStackEffect(CfgInstruction node, ref int pushed, ref int? frame) {
         bool spAccounted = false;
         IVisitableAstNode ast = node.ExecutionAst!;
         IEnumerable<IVisitableAstNode> statements = ast is BlockNode block ? block.Statements : [ast];

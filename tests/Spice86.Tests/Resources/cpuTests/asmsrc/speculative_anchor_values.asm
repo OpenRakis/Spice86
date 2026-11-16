@@ -20,6 +20,9 @@
 ;   S5: `call di` sits past `call s5_leaf` on the call arm. The leaf writes AX
 ;       only, so the register knowledge the anchor carried survives the
 ;       continuation and the site registers like S1.
+;   S6: same shape but s6_leaf writes DI after saving it (`push di` /
+;       `pop di`): the restored register keeps the continuation knowledge and
+;       the site registers too.
 ;   N1 (negative): `mov di, ax` on the speculative path before `call di` kills
 ;       the known register, so the site is refused (golden-only).
 ;   N2 (negative): a pointer cell holding 0x0000 is evaluated and refused
@@ -29,6 +32,9 @@
 ;   N4 (negative): same shape but n4_leaf holds an indirect call on its own
 ;       dead arm, so the callee write scan is unknown and everything is
 ;       cleared (golden-only).
+;   N5 (negative): same shape as S6 but n5_leaf pops DI from a different stack
+;       slot (`push di` / `push ax` / `pop di` / `pop ax`), so the registers
+;       cross the call clobbered and the site is refused (golden-only).
 ;
 ; Selector byte at DS:0500h: 0 = discovery run (call arms never taken),
 ; 1 = unobserved run (every arm taken). DS = CS (flat bin).
@@ -42,6 +48,7 @@
 ;   [0405] = cb3b  invocations (warmup + the post-rewrite arm entry)
 ;   [0406] = cb_s4 invocations
 ;   [0407] = cb_s5 invocations (warmup + S5 arm calls)
+;   [0408] = cb_s6 invocations (warmup + S6 arm calls)
 
 use16
 
@@ -54,6 +61,7 @@ start:
     mov byte [0x0405], 0x00
     mov byte [0x0406], 0x00
     mov byte [0x0407], 0x00
+    mov byte [0x0408], 0x00
 
     ; Warmup: one observed call per callback builds the return evidence the
     ; speculative call sites need for their continuations.
@@ -64,9 +72,12 @@ start:
     call cb3b
     call cb_s4
     call cb_s5
+    call cb_s6
     call s5_leaf
+    call s6_leaf
     call n3_leaf
     call n4_leaf
+    call n5_leaf
 ; --- S1: callback in DI, `call di` on the unexecuted arm ---
     mov di, cb_a
     call s1_dispatch
@@ -114,6 +125,16 @@ s3_done:
     mov di, cb_s5
     call n4_dispatch
     call n4_dispatch
+
+; --- S6: leaf saves and restores DI -> continuation knowledge survives ---
+    mov di, cb_s6
+    call s6_dispatch                  ; registers the site past the leaf call
+    call s6_dispatch                  ; evaluation proposes cb_s6
+
+; --- N5: leaf pops DI from a different slot -> site refused ---
+    mov di, cb_s5
+    call n5_dispatch
+    call n5_dispatch
 
     mov byte [0x0400], 0x02
     hlt
@@ -235,6 +256,41 @@ cb_s4:
     ret
 cb_s5:
     inc byte [0x0407]
+    ret
+
+s6_dispatch:
+    cmp byte [0x0500], 0
+    jne s6_call
+    ret
+s6_call:
+    call s6_leaf
+    call di
+    ret
+s6_leaf:
+    push di
+    mov di, 0x1234
+    mov ax, di
+    pop di
+    ret
+
+n5_dispatch:
+    cmp byte [0x0500], 0xFF
+    je n5_dead
+    ret
+n5_dead:
+    call n5_leaf
+    call di
+    ret
+n5_leaf:
+    push di
+    push ax
+    mov di, 0x1234
+    pop di
+    pop ax
+    ret
+
+cb_s6:
+    inc byte [0x0408]
     ret
 
 rb 65520-$

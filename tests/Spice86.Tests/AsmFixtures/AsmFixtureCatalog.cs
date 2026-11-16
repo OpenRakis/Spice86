@@ -695,10 +695,13 @@ internal static class AsmFixtureCatalog {
     /// the constant cell, the rewritten watched cell and the BX-indexed cell the anchor
     /// evaluations proposed. The S5 call arm puts a leaf call writing only AX between the
     /// dispatcher and the `call di` site: the anchor's register knowledge survives the
-    /// continuation and resolves it. The dead arms (a path write to DI, a zero cell, a leaf
-    /// writing DI, a leaf whose scan is unknown) stay undiscovered.</summary>
+    /// continuation and resolves it. The S6 leaf writes DI after saving it on the stack and
+    /// restoring it before its return: the callee write scan sees the restore and the site
+    /// resolves the same way. The dead arms (a path write to DI, a zero cell, a leaf
+    /// writing DI, a leaf whose scan is unknown, a leaf whose pops read the wrong slots)
+    /// stay undiscovered.</summary>
     public static AsmFixture SpeculativeAnchorValues(SpeculativeArm arm) {
-        byte[] expectedMemory = new byte[0x408];
+        byte[] expectedMemory = new byte[0x409];
         expectedMemory[0x400] = 0x02;
         if (arm == SpeculativeArm.Unobserved) {
             expectedMemory[0x401] = 0x03;
@@ -708,8 +711,9 @@ internal static class AsmFixtureCatalog {
             expectedMemory[0x405] = 0x02;
             expectedMemory[0x406] = 0x03;
             expectedMemory[0x407] = 0x03;
+            expectedMemory[0x408] = 0x03;
         } else {
-            for (int i = 0x401; i <= 0x407; i++) {
+            for (int i = 0x401; i <= 0x408; i++) {
                 expectedMemory[i] = 0x01;
             }
         }

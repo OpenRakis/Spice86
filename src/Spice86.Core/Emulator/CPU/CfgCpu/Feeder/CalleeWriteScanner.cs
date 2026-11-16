@@ -23,10 +23,13 @@ using Spice86.Shared.Emulator.Memory;
 /// <see cref="CalleeReturnScanner.MaxNodes"/> nodes - makes the whole result unknown
 /// (<see cref="RegisterBits.AllExceptCs"/>).
 ///
-/// <para>Returns add SP to the raw mask; <see cref="MayWrite"/> removes SP from the answer only
-/// when <paramref name="returnsBalanced"/> says the callee returns balanced and no return of its
-/// own subgraph pops an immediate. The SP rule is applied at query time because the balance
-/// evidence may change after a result was cached.</para>
+/// <para>Returns add SP to the raw mask; <see cref="MayWrite"/> removes SP and the registers
+/// the callee saves and restores from the answer only when
+/// <paramref name="returnsBalanced"/> says the callee returns balanced and no return of its
+/// own subgraph pops an immediate. The rule is applied at query time because the balance
+/// evidence may change after a result was cached. A write to a saved stack slot through
+/// memory (for example <c>mov [bp+2],ax</c>) is not detected: acceptable because the scan
+/// is discovery-only and its results only propose guarded cases.</para>
 ///
 /// <para>Complete results are cached per callee entry together with the addresses the scan
 /// visited; <see cref="CfgNodeIndex.AddressChanged"/> drops every cached scan that visited the
@@ -34,10 +37,11 @@ using Spice86.Shared.Emulator.Memory;
 /// that are unknown or went through an <c>int</c> (IVT- and AH-dependent) are never cached.</para>
 /// </summary>
 internal sealed class CalleeWriteScanner {
-    /// <summary>One cached scan: the raw write mask (SP included), whether one of the callee's
-    /// own returns pops an immediate, and every address the scan visited (including nested
-    /// callees), used for invalidation.</summary>
-    private sealed record CachedScan(ushort Mask, bool PopsImmediate, HashSet<SegmentedAddress> Addresses);
+    /// <summary>One cached scan: the raw write mask (SP included), the registers the callee
+    /// saves and restores, whether one of the callee's own returns pops an immediate, and
+    /// every address the scan visited (including nested callees), used for invalidation.</summary>
+    private sealed record CachedScan(ushort Mask, ushort Saved, bool PopsImmediate,
+        HashSet<SegmentedAddress> Addresses);
 
     /// <summary>Per top-level scan context: the entries currently being scanned (a nested call
     /// back into one of them is a cycle and gives unknown) and whether such a cycle was hit, in
@@ -66,9 +70,9 @@ internal sealed class CalleeWriteScanner {
     }
 
     /// <summary>The <see cref="RegisterBits"/> mask of registers the callee at
-    /// <paramref name="calleeEntry"/> may write, SP removed when the callee is known to return
-    /// balanced. <see cref="RegisterBits.AllExceptCs"/> when the subgraph is not fully
-    /// understood.</summary>
+    /// <paramref name="calleeEntry"/> may write, SP and registers the callee saves and restores
+    /// removed when the callee is known to return balanced.
+    /// <see cref="RegisterBits.AllExceptCs"/> when the subgraph is not fully understood.</summary>
     public ushort MayWrite(SegmentedAddress calleeEntry) => MayWrite(calleeEntry, new ScanContext()).Mask;
 
     /// <summary>What executing <paramref name="callNode"/> may change for the code after it:
@@ -85,7 +89,7 @@ internal sealed class CalleeWriteScanner {
 
     private NestedResult MayWrite(SegmentedAddress calleeEntry, ScanContext context) {
         if (_cache.TryGetValue(calleeEntry, out CachedScan? cached)) {
-            return new NestedResult(ApplyStackPointer(calleeEntry, cached), true, cached.Addresses);
+            return new NestedResult(ApplyBalance(calleeEntry, cached), true, cached.Addresses);
         }
         if (!context.InProgress.Add(calleeEntry)) {
             context.ContextDependent = true;
@@ -96,11 +100,11 @@ internal sealed class CalleeWriteScanner {
         if (!outcome.Succeeded) {
             return NestedResult.UnknownResult;
         }
-        cached = new CachedScan(outcome.Mask, outcome.PopsImmediate, outcome.Addresses);
+        cached = new CachedScan(outcome.Mask, outcome.Saved, outcome.PopsImmediate, outcome.Addresses);
         if (outcome.Cacheable && !context.ContextDependent) {
             Store(calleeEntry, cached);
         }
-        return new NestedResult(ApplyStackPointer(calleeEntry, cached), outcome.Cacheable,
+        return new NestedResult(ApplyBalance(calleeEntry, cached), outcome.Cacheable,
             outcome.Addresses);
     }
 
@@ -115,11 +119,11 @@ internal sealed class CalleeWriteScanner {
         return NestedResult.UnknownResult;
     }
 
-    /// <summary>The raw mask a scan computes: SP kept, since only the query side knows whether
-    /// the callee's return is balanced.</summary>
-    private sealed record ScanOutcome(bool Succeeded, bool Cacheable, ushort Mask,
+    /// <summary>The raw mask and saved registers a scan computes: SP and Saved kept, since only
+    /// the query side knows whether the callee's return is balanced.</summary>
+    private sealed record ScanOutcome(bool Succeeded, bool Cacheable, ushort Mask, ushort Saved,
         bool PopsImmediate, HashSet<SegmentedAddress> Addresses) {
-        public static ScanOutcome Unknown { get; } = new(false, false, 0, false, []);
+        public static ScanOutcome Unknown { get; } = new(false, false, 0, 0, false, []);
     }
 
     private ScanOutcome Scan(SegmentedAddress calleeEntry, ScanContext context) {
@@ -129,6 +133,7 @@ internal sealed class CalleeWriteScanner {
         }
         HashSet<CfgInstruction> visited = [];
         HashSet<SegmentedAddress> addresses = [calleeEntry];
+        Dictionary<CfgInstruction, ushort> acrossMasks = [];
         ushort mask = 0;
         bool popsImmediate = false;
         bool cacheable = true;
@@ -164,6 +169,7 @@ internal sealed class CalleeWriteScanner {
                 if (across.Mask == Unknown) {
                     return ScanOutcome.Unknown;
                 }
+                acrossMasks[node] = across.Mask;
                 mask |= across.Mask;
                 cacheable &= across.Cacheable;
                 addresses.UnionWith(across.Addresses);
@@ -195,7 +201,8 @@ internal sealed class CalleeWriteScanner {
                 return ScanOutcome.Unknown;
             }
         }
-        return new ScanOutcome(true, cacheable, mask, popsImmediate, addresses);
+        ushort saved = CalleeSavedRegisters.Compute(calleeEntry, _nodeIndex, visited, acrossMasks);
+        return new ScanOutcome(true, cacheable, mask, saved, popsImmediate, addresses);
     }
 
     private bool EnqueueSuccessors(Queue<CfgInstruction> work, CfgInstruction node) {
@@ -269,11 +276,12 @@ internal sealed class CalleeWriteScanner {
         return mask;
     }
 
-    /// <summary>Applies the SP rule at query time: SP comes out of the mask only when the callee
-    /// is known to return balanced and none of its own returns pops an immediate.</summary>
-    private ushort ApplyStackPointer(SegmentedAddress calleeEntry, CachedScan scan) =>
+    /// <summary>Applies the balance rule at query time: SP and the registers the callee saves
+    /// and restores come out of the mask only when the callee is known to return balanced and
+    /// none of its own returns pops an immediate.</summary>
+    private ushort ApplyBalance(SegmentedAddress calleeEntry, CachedScan scan) =>
         _returnsBalanced(calleeEntry) && !scan.PopsImmediate
-            ? (ushort)(scan.Mask & ~(ushort)RegisterBits.Sp)
+            ? (ushort)(scan.Mask & ~(ushort)RegisterBits.Sp & ~scan.Saved)
             : scan.Mask;
 
     private void Store(SegmentedAddress entry, CachedScan scan) {

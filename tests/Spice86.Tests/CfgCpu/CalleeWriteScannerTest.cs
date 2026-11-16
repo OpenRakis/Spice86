@@ -84,11 +84,66 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
     }
 
     [Fact]
-    public void PushPopPairIsBalanced() {
-        // push si; mov si,1; pop si; ret - the push only moves SP, the pop restores both
+    public void SavedAndRestoredRegisterIsNotWritten() {
+        // push si; mov si,1; pop si; ret - the write is undone by the restore
         DecodeRoutine(0x100, 0x56, 0xBE, 0x01, 0x00, 0x5E, 0xC3);
-        Assert.Equal(Regs(RegisterBits.Si),
+        Assert.Equal(0, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void SavedRegisterKeptWhenOneReturnLacksPop() {
+        // push di; mov di,1; jz L; pop di; ret; L: ret - the second return does not
+        // restore DI, so the write must stay in the mask
+        DecodeRoutine(0x100, 0x57, 0xBF, 0x01, 0x00, 0x74, 0x02, 0x5F, 0xC3, 0xC3);
+        Assert.Equal(Regs(RegisterBits.Di),
             CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void PopsInWrongOrderKeepRegisters() {
+        // push si; push di; mov si,1; mov di,1; pop si; pop di; ret - the pops do not
+        // mirror the pushes, so neither register is restored
+        DecodeRoutine(0x100, 0x56, 0x57, 0xBE, 0x01, 0x00, 0xBF, 0x01, 0x00, 0x5E, 0x5F, 0xC3);
+        Assert.Equal(Regs(RegisterBits.Si, RegisterBits.Di),
+            CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void PushaPopaCalleeWritesNoGeneralRegister() {
+        // pusha; mov ax,1; mov di,2; popa; ret - every general register is restored
+        DecodeRoutine(0x100, 0x60, 0xB8, 0x01, 0x00, 0xBF, 0x02, 0x00, 0x61, 0xC3);
+        Assert.Equal(0, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void FrameCalleeSavesDiAndBp() {
+        // push bp; mov bp,sp; push di; mov di,1; pop di; mov sp,bp; pop bp; ret
+        DecodeRoutine(0x100, 0x55, 0x89, 0xE5, 0x57, 0xBF, 0x01, 0x00, 0x5F, 0x89, 0xEC, 0x5D, 0xC3);
+        Assert.Equal(0, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void LeaveCalleeSavesDiAndBp() {
+        // push bp; mov bp,sp; push di; mov di,1; pop di; leave; ret
+        DecodeRoutine(0x100, 0x55, 0x89, 0xE5, 0x57, 0xBF, 0x01, 0x00, 0x5F, 0xC9, 0xC3);
+        Assert.Equal(0, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void UnbalancedStackAdjustKeepsSavedRegister() {
+        // push di; mov di,1; add sp,2; pop di; ret - the pop no longer reads the
+        // saved slot, so DI is not provably restored
+        DecodeRoutine(0x100, 0x57, 0xBF, 0x01, 0x00, 0x83, 0xC4, 0x02, 0x5F, 0xC3);
+        Assert.Equal(Regs(RegisterBits.Di),
+            CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void SavedRegisterKeptWhenNotBalanced() {
+        // push si; mov si,1; pop si; ret - without the balance evidence nothing is removed
+        DecodeRoutine(0x100, 0x56, 0xBE, 0x01, 0x00, 0x5E, 0xC3);
+        Assert.Equal(Regs(RegisterBits.Si, RegisterBits.Sp),
+            CreateScanner(returnsBalanced: false).MayWrite(At(0x100)));
     }
 
     [Fact]
