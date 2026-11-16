@@ -22,6 +22,13 @@ public partial class CfgGeneratedOverrides {
         ushort index5 = 0;
         ushort index6 = 0;
         ushort index7 = 0;
+        ushort index8 = 0;
+        ushort index9 = 0;
+        ushort index10 = 0;
+        ushort index11 = 0;
+        ushort index12 = 0;
+        ushort index13 = 0;
+        ushort index14 = 0;
         byte byte1 = 0;
         byte flagOperand_0122 = 0;
         byte flagOperand_015F = 0;
@@ -33,21 +40,21 @@ public partial class CfgGeneratedOverrides {
         byte flagOperand_02CD = 0;
         CheckExternalEvents(cs1, 0x0100);
         index = 0x0342;
-        DI = 0x0411;
+        index2 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0342, ES, 0x0411));
         if (!CarryFlag) {
             index = 0x0411;
-            DI = 0x034B;
+            index2 = 0x034B;
             while (true) {
                 CheckExternalEvents(cs1, 0x0121);
                 AL = UInt8[DS, index];
                 index += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_0122 = UInt8[DS, DI];
+                flagOperand_0122 = UInt8[DS, index2];
                 Alu8.Sub(AL, flagOperand_0122);
                 if (AL != flagOperand_0122) {
                     goto L_0131;
                 }
-                DI++;
+                index2++;
                 if (AL == 0) {
                     break;
                 }
@@ -70,22 +77,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x0117, Signature_0117_jmp);
         }
-        index2 = 0x0357;
-        DI = 0x0411;
+        index3 = 0x0357;
+        index4 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x0357, ES, 0x0411));
         if (!CarryFlag) {
-            index2 = 0x0411;
-            DI = 0x0362;
+            index3 = 0x0411;
+            index4 = 0x0362;
             while (true) {
                 CheckExternalEvents(cs1, 0x015E);
-                AL = UInt8[DS, index2];
-                index2 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_015F = UInt8[DS, DI];
+                AL = UInt8[DS, index3];
+                index3 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_015F = UInt8[DS, index4];
                 Alu8.Sub(AL, flagOperand_015F);
                 if (AL != flagOperand_015F) {
                     goto L_016E;
                 }
-                DI++;
+                index4++;
                 if (AL == 0) {
                     break;
                 }
@@ -108,22 +115,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x0154, Signature_0154_jmp);
         }
-        index3 = 0x036E;
-        DI = 0x0411;
+        index5 = 0x036E;
+        index6 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x036E, ES, 0x0411));
         if (!CarryFlag) {
-            index3 = 0x0411;
-            DI = 0x037B;
+            index5 = 0x0411;
+            index6 = 0x037B;
             while (true) {
                 CheckExternalEvents(cs1, 0x019B);
-                AL = UInt8[DS, index3];
-                index3 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_019C = UInt8[DS, DI];
+                AL = UInt8[DS, index5];
+                index5 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_019C = UInt8[DS, index6];
                 Alu8.Sub(AL, flagOperand_019C);
                 if (AL != flagOperand_019C) {
                     goto L_01AB;
                 }
-                DI++;
+                index6++;
                 if (AL == 0) {
                     break;
                 }
@@ -146,22 +153,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x0191, Signature_0191_jmp);
         }
-        index4 = 0x038B;
-        DI = 0x0411;
+        index7 = 0x038B;
+        index8 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x038B, ES, 0x0411));
         if (!CarryFlag) {
-            index4 = 0x0411;
-            DI = 0x0398;
+            index7 = 0x0411;
+            index8 = 0x0398;
             while (true) {
                 CheckExternalEvents(cs1, 0x01D8);
-                AL = UInt8[DS, index4];
-                index4 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_01D9 = UInt8[DS, DI];
+                AL = UInt8[DS, index7];
+                index7 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_01D9 = UInt8[DS, index8];
                 Alu8.Sub(AL, flagOperand_01D9);
                 if (AL != flagOperand_01D9) {
                     goto L_01E8;
                 }
-                DI++;
+                index8++;
                 if (AL == 0) {
                     break;
                 }
@@ -184,22 +191,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x01CE, Signature_01CE_jmp);
         }
-        index5 = 0x03A8;
-        DI = 0x0411;
+        index9 = 0x03A8;
+        index10 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x03A8, ES, 0x0411));
         if (!CarryFlag) {
-            index5 = 0x0411;
-            DI = 0x03B8;
+            index9 = 0x0411;
+            index10 = 0x03B8;
             while (true) {
                 CheckExternalEvents(cs1, 0x0215);
-                AL = UInt8[DS, index5];
-                index5 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_0216 = UInt8[DS, DI];
+                AL = UInt8[DS, index9];
+                index9 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_0216 = UInt8[DS, index10];
                 Alu8.Sub(AL, flagOperand_0216);
                 if (AL != flagOperand_0216) {
                     goto L_0225;
                 }
-                DI++;
+                index10++;
                 if (AL == 0) {
                     break;
                 }
@@ -222,22 +229,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x020B, Signature_020B_jmp);
         }
-        index6 = 0x03C4;
-        DI = 0x0411;
+        index11 = 0x03C4;
+        index12 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x03C4, ES, 0x0411));
         if (!CarryFlag) {
-            index6 = 0x0411;
-            DI = 0x03D0;
+            index11 = 0x0411;
+            index12 = 0x03D0;
             while (true) {
                 CheckExternalEvents(cs1, 0x0252);
-                AL = UInt8[DS, index6];
-                index6 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_0253 = UInt8[DS, DI];
+                AL = UInt8[DS, index11];
+                index11 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_0253 = UInt8[DS, index12];
                 Alu8.Sub(AL, flagOperand_0253);
                 if (AL != flagOperand_0253) {
                     goto L_0262;
                 }
-                DI++;
+                index12++;
                 if (AL == 0) {
                     break;
                 }
@@ -260,22 +267,22 @@ public partial class CfgGeneratedOverrides {
             Out8(0x0998, AL);
             VerifySpeculativeEntryOrFail(cs1, 0x0248, Signature_0248_jmp);
         }
-        index7 = 0x03DC;
-        DI = 0x0411;
+        index13 = 0x03DC;
+        index14 = 0x0411;
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x03DC, ES, 0x0411));
         if (!CarryFlag) {
-            index7 = 0x0411;
-            DI = 0x03DE;
+            index13 = 0x0411;
+            index14 = 0x03DE;
             while (true) {
                 CheckExternalEvents(cs1, 0x028F);
-                AL = UInt8[DS, index7];
-                index7 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_0290 = UInt8[DS, DI];
+                AL = UInt8[DS, index13];
+                index13 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_0290 = UInt8[DS, index14];
                 Alu8.Sub(AL, flagOperand_0290);
                 if (AL != flagOperand_0290) {
                     goto L_029F;
                 }
-                DI++;
+                index14++;
                 if (AL == 0) {
                     break;
                 }
@@ -300,18 +307,18 @@ public partial class CfgGeneratedOverrides {
         }
         (AX, CarryFlag) = ServiceCall(Dos, () => Dos.GetTrueName(DS, 0x03E2, ES, 0x0411));
         if (!CarryFlag) {
-            index7 = 0x0411;
-            DI = 0x03F8;
+            index13 = 0x0411;
+            index14 = 0x03F8;
             while (true) {
                 CheckExternalEvents(cs1, 0x02CC);
-                AL = UInt8[DS, index7];
-                index7 += (ushort)(DirectionFlag ? -1 : 1);
-                flagOperand_02CD = UInt8[DS, DI];
+                AL = UInt8[DS, index13];
+                index13 += (ushort)(DirectionFlag ? -1 : 1);
+                flagOperand_02CD = UInt8[DS, index14];
                 Alu8.Sub(AL, flagOperand_02CD);
                 if (AL != flagOperand_02CD) {
                     goto L_02DC;
                 }
-                DI++;
+                index14++;
                 if (AL == 0) {
                     break;
                 }

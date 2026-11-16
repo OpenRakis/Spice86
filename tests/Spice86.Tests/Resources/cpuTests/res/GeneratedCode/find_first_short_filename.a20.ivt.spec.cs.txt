@@ -15,37 +15,39 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort index = 0;
+        ushort word1 = 0;
         byte byte1 = 0;
         byte byte2 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x1A;
         DX = 0x0288;
         ServiceCall(Dos, () => Dos.SetDiskTransferAddress(DS, 0x0288));
-        SI = 0x0162;
-        CX = 0;
+        index = 0x0162;
+        word1 = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x010D);
-            BX = UInt16[DS, SI];
+            BX = UInt16[DS, index];
             if (BX == 0) {
                 goto L_015B;
             }
-            Stack.Push16(CX);
-            Stack.Push16(SI);
-            byte1 = UInt8[DS, SI + 4];
+            Stack.Push16(word1);
+            Stack.Push16(index);
+            byte1 = UInt8[DS, index + 4];
             if (byte1 != 0) {
                 (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FindNext());
             }
             else {
                 DX = BX;
-                CX = 0;
+                word1 = 0;
                 (AX, CarryFlag) = ServiceCall(Dos, () => Dos.FindFirst(Dos.StringDecoder.GetDosString(DS, DX, '\0'), 0));
             }
-            SI = Stack.Pop16();
-            CX = Stack.Pop16();
+            index = Stack.Pop16();
+            word1 = Stack.Pop16();
             if (CarryFlag) {
                 goto L_0149;
             }
-            DI = UInt16[DS, SI + 2];
+            DI = UInt16[DS, index + 2];
             BX = 0x02A6;
             while (true) {
                 CheckExternalEvents(cs1, 0x0135);
@@ -60,15 +62,17 @@ public partial class CfgGeneratedOverrides {
                 BX++;
                 DI++;
             }
-            CX++;
-            SI += 5;
+            word1++;
+            index += 5;
         }
     L_0145:
         VerifySpeculativeRunOrFail(cs1, 0x0145, SpeculativeRun_0145);
+        CX = word1;
         AL = CL;
         goto L_014D;
     L_0149:
         VerifySpeculativeRunOrFail(cs1, 0x0149, SpeculativeRun_0149);
+        CX = word1;
         AL = CL;
         AL |= 0x80;
     L_014D:

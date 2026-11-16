@@ -17,13 +17,14 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F000_1000_F1000(ushort word1) {
         DS = word1;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0x1000);
-        CX = 4;
+        word2 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x1003);
-            if (CX != 4) {
-                if (CX != 3) {
-                    SI = (ushort)(CX - 1 << 1);
+            if (word2 != 4) {
+                if (word2 != 3) {
+                    SI = (ushort)(word2 - 1 << 1);
                     ES = 0xF000;
                     if (SI > 2) {
                         break;
@@ -43,8 +44,8 @@ public partial class CfgGeneratedOverrides {
         L_1027:
             Segment2000Globals.Word0042 += 1;
         L_1021:
-            CX--;
-        } while (CX != 0);
+            word2--;
+        } while (word2 != 0);
         FarReturn();
         return;
     }
@@ -89,13 +90,14 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual void unknown_F100_1000_F2000(ushort word1) {
         DS = word1;
+        ushort word2 = 0;
         CheckExternalEvents(cs1, 0x1000);
-        CX = 4;
+        word2 = 4;
         do {
             CheckExternalEvents(cs1, 0x1003);
-            if (CX != 4) {
-                if (CX != 3) {
-                    SI = (ushort)(CX - 1 << 1);
+            if (word2 != 4) {
+                if (word2 != 3) {
+                    SI = (ushort)(word2 - 1 << 1);
                     ES = 0xF100;
                     if (SI > 2) {
                         break;
@@ -115,8 +117,8 @@ public partial class CfgGeneratedOverrides {
         L_1027:
             Segment2000Globals.Word0046 += 1;
         L_1021:
-            CX--;
-        } while (CX != 0);
+            word2--;
+        } while (word2 != 0);
         FarReturn();
         return;
     }

@@ -54,16 +54,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: DI, ES. Changes: AX, BX, DI, ES.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual ushort unknown_016E_013C_0181C() {
+        ushort index = 0;
         CheckExternalEvents(cs1, 0x013C);
         NearCall(cs1, 0x013F, unknown_016E_012B_0180BEntry);
-        DI = 0;
+        index = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0141);
-            if (UInt8[ES, DI] == 0 && UInt8[ES, DI + 1] == 0) {
+            if (UInt8[ES, index] == 0 && UInt8[ES, index + 1] == 0) {
                 break;
             }
-            DI++;
+            index++;
         }
+        DI = index;
         DI += 2;
         NearReturn();
         return DI;

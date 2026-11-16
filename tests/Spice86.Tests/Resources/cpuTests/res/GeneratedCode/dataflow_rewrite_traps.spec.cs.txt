@@ -14,6 +14,8 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index = 0;
+        ushort index2 = 0;
         uint dword1;
         ushort word1 = 0;
         ushort word2 = 0;
@@ -22,18 +24,18 @@ public partial class CfgGeneratedOverrides {
         SS = 0x2000;
         SP = 0x1000;
         DirectionFlag = false;
-        BX = 0;
-        SI = 0x00C6;
+        index = 0;
+        index2 = 0x00C6;
         Segment2000Globals.Word0F00 = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0018);
-            dword1 = UInt32[CS, SI + 4];
-            UInt32[DS, BX] = dword1;
-            UInt32[DS, BX + 0x0080] = dword1;
+            dword1 = UInt32[CS, index2 + 4];
+            UInt32[DS, index] = dword1;
+            UInt32[DS, index + 0x0080] = dword1;
             EAX = 0;
-            AX = UInt16[CS, SI];
-            UInt32[DS, BX + 4] = EAX;
-            DX = UInt16[CS, SI + 8];
+            AX = UInt16[CS, index2];
+            UInt32[DS, index + 4] = EAX;
+            DX = UInt16[CS, index2 + 8];
             if ((DL & 1) == 0) {
                 EAX = 0x12349905;
             }
@@ -48,11 +50,11 @@ public partial class CfgGeneratedOverrides {
                 }
                 AL = 5;
             }
-            UInt16[DS, BX + 8] = AX;
-            UInt8[DS, BX + 0x0A] = AH;
-            word1 = UInt16[CS, SI + 0x0A];
-            word2 = UInt16[CS, SI + 0x0C];
-            CX = UInt16[CS, SI + 0x0E];
+            UInt16[DS, index + 8] = AX;
+            UInt8[DS, index + 0x0A] = AH;
+            word1 = UInt16[CS, index2 + 0x0A];
+            word2 = UInt16[CS, index2 + 0x0C];
+            CX = UInt16[CS, index2 + 0x0E];
             do {
                 CheckExternalEvents(biosSegment, 0x006A);
                 if ((DH & 4) != 0) {
@@ -71,23 +73,23 @@ public partial class CfgGeneratedOverrides {
             if (word2 == 2) {
                 goto L_0085;
             }
-            UInt16[DS, BX + 0x0C] = 0;
+            UInt16[DS, index + 0x0C] = 0;
             goto L_008A;
         L_0085:
-            UInt16[DS, BX + 0x0C] = 1;
+            UInt16[DS, index + 0x0C] = 1;
         L_008A:
-            AX = UInt16[CS, SI + 0x10];
-            BP = UInt16[CS, SI + 0x12];
+            AX = UInt16[CS, index2 + 0x10];
+            BP = UInt16[CS, index2 + 0x12];
             if ((DL & 2) == 0 && AX != 1 || BP != 2) {
                 goto L_00A8;
             }
-            UInt16[DS, BX + 0x0E] = 1;
+            UInt16[DS, index + 0x0E] = 1;
             goto L_00AD;
         L_00A8:
-            UInt16[DS, BX + 0x0E] = 0;
+            UInt16[DS, index + 0x0E] = 0;
         L_00AD:
-            BX += 0x0040;
-            SI += 0x0016;
+            index += 0x0040;
+            index2 += 0x0016;
             Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
         } while (!ZeroFlag);
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;

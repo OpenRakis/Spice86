@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DH, BX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort count = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 0x3301;
         DL = 1;
@@ -22,11 +23,11 @@ public partial class CfgGeneratedOverrides {
         AL = 0;
         DX = 0x0999;
         Out8(0x0999, 0);
-        CX = 0x03E8;
+        count = 0x03E8;
         do {
             CheckExternalEvents(cs1, 0x0111);
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         AH = 0x0B;
         InterruptCall(cs1, 0x0117, 0x21);
         throw FailAsUntested("Untested return from call at 016E:0115");

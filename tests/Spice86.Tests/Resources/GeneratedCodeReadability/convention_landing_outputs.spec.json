@@ -33,8 +33,8 @@
     },
     "maximum": {
       "AluCalls": 0,
-      "AluCalls\u002BCasts": 0,
-      "AluCalls\u002BStatusFlagReads": 0,
+      "AluCalls+Casts": 0,
+      "AluCalls+StatusFlagReads": 0,
       "BookkeepingCalls": 0,
       "BreakStatements": 0,
       "Casts": 0,
@@ -105,8 +105,8 @@
     },
     "maximum": {
       "AluCalls": 0,
-      "AluCalls\u002BCasts": 0,
-      "AluCalls\u002BStatusFlagReads": 0,
+      "AluCalls+Casts": 0,
+      "AluCalls+StatusFlagReads": 0,
       "BookkeepingCalls": 0,
       "BreakStatements": 0,
       "Casts": 0,

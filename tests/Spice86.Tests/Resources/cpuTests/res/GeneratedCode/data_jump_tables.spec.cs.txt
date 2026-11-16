@@ -46,6 +46,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -117,12 +119,12 @@ public partial class CfgGeneratedOverrides {
                 }
             }
         }
-        CX = 4;
+        word1 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x00E8);
-            if (CX != 4) {
-                if (CX != 3) {
-                    SI = (ushort)(CX - 1 << 1);
+            if (word1 != 4) {
+                if (word1 != 3) {
+                    SI = (ushort)(word1 - 1 << 1);
                     ES = 0xF000;
                     if (SI > 2) {
                         break;
@@ -142,8 +144,8 @@ public partial class CfgGeneratedOverrides {
         L_0272:
             Segment2000Globals.Word0062 = 1;
         L_010A:
-            CX--;
-        } while (CX != 0);
+            word1--;
+        } while (word1 != 0);
         Segment2000Globals.Word0080 = 1;
         ES = 0xF000;
         SI = 2;
@@ -162,15 +164,15 @@ public partial class CfgGeneratedOverrides {
             }
             Segment2000Globals.Word0074 = 0x1155;
         }
-        BX = 0;
+        word2 = 0;
         CX = 5;
         do {
             CheckExternalEvents(biosSegment, 0x0151);
-            if (BX > 3) {
+            if (word2 > 3) {
                 Segment2000Globals.Word0048 = 0x9999;
             }
             else {
-                SI = (ushort)(BX << 1);
+                SI = (ushort)(word2 << 1);
                 switch (UInt16[CS, SI + 0x02F4]) {
                     case 0x015F:
                         Segment2000Globals.Word0040 = 0x1111;
@@ -188,7 +190,7 @@ public partial class CfgGeneratedOverrides {
                         throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, SI + 0x02F4]:X4} at F000:015A");
                 }
             }
-            BX++;
+            word2++;
             CX--;
         } while (CX != 0);
         Segment2000Globals.Dword0100 = 0x01A2019A;

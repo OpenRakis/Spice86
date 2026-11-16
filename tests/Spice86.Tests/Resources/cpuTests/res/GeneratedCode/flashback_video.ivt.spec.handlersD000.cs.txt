@@ -15,7 +15,10 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort index = 0;
+        ushort count = 0;
+        ushort word1 = 0;
         ushort index2 = 0;
+        ushort word2 = 0;
         byte byte1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
@@ -40,53 +43,51 @@ public partial class CfgGeneratedOverrides {
         Vga.WriteSequencerRegister(2, 0x0F);
         index = 0;
         AX = 0;
-        CX = 0x8000;
-        while (CX != 0) {
+        for (count = 0x8000; count != 0; count--) {
             UInt16[ES, index] = AX;
             index += 2;
-            CX--;
         }
-        BP = 1;
+        word1 = 1;
         do {
             CheckExternalEvents(biosSegment, 0x405A);
-            AX = BP;
+            AX = word1;
             AX = (ushort)(2 | AL << 8);
             Vga.WriteSequencerRegister((byte)AX, (byte)(AX >> 8));
             index2 = 0;
-            BX = 0;
+            word2 = 0;
             do {
                 CheckExternalEvents(biosSegment, 0x4065);
-                CX = 0x0040;
-                AX = (ushort)(BX + BP);
+                count = 0x0040;
+                AX = (ushort)(word2 + word1);
                 AL += 0x41;
                 do {
                     CheckExternalEvents(biosSegment, 0x406E);
                     UInt8[ES, index2] = AL;
                     index2++;
                     AL++;
-                    CX--;
-                } while (CX != 0);
-                BX++;
-            } while (BX < 0x00E1);
+                    count--;
+                } while (count != 0);
+                word2++;
+            } while (word2 < 0x00E1);
             index = 0x3A00;
             BX = 0;
             do {
                 CheckExternalEvents(biosSegment, 0x407F);
-                CX = 0x0040;
+                count = 0x0040;
                 AX = BX;
                 AL++;
-                AX += BP;
+                AX += word1;
                 do {
                     CheckExternalEvents(biosSegment, 0x4088);
                     UInt8[ES, index] = AL;
                     index++;
                     AL++;
-                    CX--;
-                } while (CX != 0);
+                    count--;
+                } while (count != 0);
                 BX++;
             } while (BX < 0x00E1);
-            BP <<= 1;
-        } while (BP < 0x0010);
+            word1 <<= 1;
+        } while (word1 < 0x0010);
         AX = 0;
         DS = 0;
         AH = Segment0000Globals.Byte0503;

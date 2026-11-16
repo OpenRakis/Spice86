@@ -36,14 +36,15 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX, CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0062_F0062(ushort word1) {
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x0062);
-        CX = word1;
+        count = word1;
         AX = 0;
         do {
             CheckExternalEvents(biosSegment, 0x0066);
             AX = NearCall(biosSegment, 0x0069, () => unknown_F000_006C_F006C(AX));
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         NearReturn();
         return AX;
     }
@@ -86,13 +87,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AX. Changes: AX, CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_0070_F0070() {
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x0070);
-        CX = 2;
+        count = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0073);
-            Stack.Push16(CX);
-            CX--;
-        } while (CX != 0);
+            Stack.Push16(count);
+            count--;
+        } while (count != 0);
         AX = SsUInt16[SP + 6];
         SP += 4;
         return NearRet();
@@ -114,13 +116,14 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: none. Changes: CX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual Action unknown_F000_0091_F0091() {
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x0091);
-        CX = 2;
+        count = 2;
         do {
             CheckExternalEvents(biosSegment, 0x0094);
-            Stack.Push16(CX);
-            CX--;
-        } while (CX != 0);
+            Stack.Push16(count);
+            count--;
+        } while (count != 0);
         SP += 4;
         return NearRet(2);
     }

@@ -15,17 +15,18 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SP = 0x1000;
         ES = 0;
         if (Segment0000Globals.Byte0500 == 0) {
             InterruptFlag = true;
             CheckExternalEvents(biosSegment, 0x0026);
-            CX = 0x0400;
+            count = 0x0400;
             do {
                 CheckExternalEvents(biosSegment, 0x0029);
-                CX--;
-            } while (CX != 0);
+                count--;
+            } while (count != 0);
             InterruptFlag = false;
             return Hlt();
         }

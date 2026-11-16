@@ -208,20 +208,23 @@ public partial class CfgGeneratedOverrides {
         SI = word1;
         DS = word2;
         ushort word3;
-        ushort word4;
+        ushort word4 = 0;
+        ushort word5;
+        ushort index = 0;
         CheckExternalEvents(cs1, 0x0246);
         word3 = ImageMinus0001Globals.Word002C;
         ES = word3;
         DI = 0;
-        CX = 0x0400;
+        word4 = 0x0400;
         while (true) {
             CheckExternalEvents(cs1, 0x0251);
-            Alu16.Sub(CX, 0);
-            if (CX == 0) {
+            Alu16.Sub(word4, 0);
+            if (word4 == 0) {
+                CX = word4;
                 NearReturn();
                 return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
             }
-            CX--;
+            word4--;
             AL = UInt8[ES, DI];
             DI++;
             if (AL != 0) {
@@ -231,16 +234,17 @@ public partial class CfgGeneratedOverrides {
                 break;
             }
         }
-        word4 = (ushort)(DI + 3);
-        SI = word4;
-        DI = 0x02F1;
+        word5 = (ushort)(DI + 3);
+        SI = word5;
+        index = 0x02F1;
         do {
             CheckExternalEvents(cs1, 0x026F);
             AL = UInt8[ES, SI];
-            UInt8[word2, DI] = AL;
+            UInt8[word2, index] = AL;
             SI++;
-            DI++;
+            index++;
         } while (AL != 0);
+        DI = index;
         DI--;
         while (true) {
             CheckExternalEvents(cs1, 0x027B);
@@ -262,6 +266,7 @@ public partial class CfgGeneratedOverrides {
         UInt8[word2, DI + 2] = 0x30;
         UInt8[word2, DI + 3] = 0x30;
         UInt8[word2, DI + 4] = 0;
+        CX = word4;
         NearReturn();
         return (CX, SI, DI, ParityFlag, AuxiliaryFlag, ZeroFlag, SignFlag, OverflowFlag);
     }

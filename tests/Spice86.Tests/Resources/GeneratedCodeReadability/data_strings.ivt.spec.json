@@ -29,8 +29,8 @@
     },
     "maximum": {
       "AluCalls": 1,
-      "AluCalls\u002BCasts": 7,
-      "AluCalls\u002BStatusFlagReads": 2,
+      "AluCalls+Casts": 7,
+      "AluCalls+StatusFlagReads": 2,
       "BookkeepingCalls": 0,
       "Casts": 6,
       "CheckExternalEvents": 1,
@@ -79,8 +79,8 @@
     },
     "maximum": {
       "AluCalls": 4,
-      "AluCalls\u002BCasts": 5,
-      "AluCalls\u002BStatusFlagReads": 4,
+      "AluCalls+Casts": 5,
+      "AluCalls+StatusFlagReads": 4,
       "BookkeepingCalls": 0,
       "Casts": 1,
       "CheckExternalEvents": 14,

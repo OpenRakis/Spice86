@@ -71,19 +71,21 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ZF. Outputs: CX, BX. Changes: AX, CX, DX, BX, DS, flags, DF.</summary>
     public virtual Action unknown_F000_0000_F0000() {
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0x0000);
         BX = 0xF000;
         DS = 0xF000;
         AX = 0x1290;
-        CX = 5;
+        count = 5;
         do {
             CheckExternalEvents(biosSegment, 0x000B);
-            Stack.Push16(CX);
-            CX--;
-        } while (CX != 0);
+            Stack.Push16(count);
+            count--;
+        } while (count != 0);
         if (AX != 0x1290) {
             throw FailAsUntested($"Untested near call target 0x{AX:X4} at F000:000E");
         }
+        CX = count;
         NearCall(biosSegment, 0x0010, unknown_F000_1290_F1290Entry);
         return NearRet();
     }

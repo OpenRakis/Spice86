@@ -14,19 +14,21 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
         SP = 0x0100;
-        DX = 0;
-        CX = 3;
+        word1 = 0;
+        word2 = 3;
         do {
             CheckExternalEvents(biosSegment, 0x0012);
-            DX++;
-            CX--;
-        } while (CX != 0);
+            word1++;
+            word2--;
+        } while (word2 != 0);
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
-        SsUInt16[0x060A] = DX;
-        SsUInt16[0x0608] = CX;
+        SsUInt16[0x060A] = word1;
+        SsUInt16[0x0608] = word2;
         return Hlt();
     }
 

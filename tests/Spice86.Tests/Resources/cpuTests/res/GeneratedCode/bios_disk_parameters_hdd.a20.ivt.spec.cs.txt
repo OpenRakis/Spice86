@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP, DI, ES, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort index = 0;
         ushort word1 = 0;
         byte byte1 = 0;
         ushort word2;
@@ -32,14 +33,14 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_027E = 0;
         ushort flagOperand_0289 = 0;
         CheckExternalEvents(cs1, 0x0100);
-        SI = 0x0081;
+        index = 0x0081;
         while (true) {
             CheckExternalEvents(cs1, 0x0103);
-            AL = UInt8[DS, SI];
+            AL = UInt8[DS, index];
             if (AL != 0x20) {
                 break;
             }
-            SI++;
+            index++;
         }
         ImageMinus0002Globals.Byte02FB = AL;
         DL = 0x80;
@@ -78,7 +79,7 @@ public partial class CfgGeneratedOverrides {
                 ImageMinus0002Globals.Word0304 = SP;
                 ImageMinus0002Globals.Word0306 = DS;
                 ImageMinus0002Globals.Word0308 = ES;
-                ImageMinus0002Globals.Word030A = SI;
+                ImageMinus0002Globals.Word030A = index;
                 ImageMinus0002Globals.Word030C = DI;
                 ImageMinus0002Globals.Word030E = BP;
                 (AX, CX, DX, BX, CarryFlag) = ServiceCall(Disk, () => Disk.GetDriveParameters(DL, 0x5A, 0x1234, 0x56, 0xA5C3));
@@ -96,7 +97,7 @@ public partial class CfgGeneratedOverrides {
                     AX = DS;
                     if (AX == ImageMinus0002Globals.Word0306) {
                         AX = ES;
-                        if (AX != ImageMinus0002Globals.Word0308 || SI != ImageMinus0002Globals.Word030A || DI != ImageMinus0002Globals.Word030C || BP != ImageMinus0002Globals.Word030E) {
+                        if (AX != ImageMinus0002Globals.Word0308 || index != ImageMinus0002Globals.Word030A || DI != ImageMinus0002Globals.Word030C || BP != ImageMinus0002Globals.Word030E) {
                             goto L_02F0;
                         }
                         byte1 = ImageMinus0002Globals.Byte02FB;

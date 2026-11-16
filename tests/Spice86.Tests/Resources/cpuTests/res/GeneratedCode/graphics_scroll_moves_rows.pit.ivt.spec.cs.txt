@@ -15,6 +15,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, BL, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016F, DS = 0x016F.
     public virtual Action unknown_016F_0100_017F0() {
+        ushort index = 0;
+        ushort count = 0;
         CheckExternalEvents(cs1, 0x0100);
         AX = 4;
         AL = ServiceCall(Video, () => Video.SetVideoMode(4));
@@ -49,26 +51,26 @@ public partial class CfgGeneratedOverrides {
         ServiceCall(Video, () => Video.ScrollPageUp(1, 0, 0x0227, 1));
         AX = 0xB800;
         ES = 0xB800;
-        BX = 0;
-        CX = 8;
+        index = 0;
+        count = 8;
         DH = 0;
         do {
             CheckExternalEvents(cs1, 0x0166);
-            DH |= UInt8[ES, BX];
-            BX++;
-            CX--;
-        } while (CX != 0);
+            DH |= UInt8[ES, index];
+            index++;
+            count--;
+        } while (count != 0);
         DH = Alu8.Or(DH, DH);
         if (DH == 0) {
-            BX = 0x0140;
-            CX = 8;
+            index = 0x0140;
+            count = 8;
             DH = 0;
             do {
                 CheckExternalEvents(cs1, 0x0178);
-                DH |= UInt8[ES, BX];
-                BX++;
-                CX--;
-            } while (CX != 0);
+                DH |= UInt8[ES, index];
+                index++;
+                count--;
+            } while (count != 0);
             DH = Alu8.Or(DH, DH);
             if (DH == 0) {
                 goto L_018A;
@@ -85,6 +87,8 @@ public partial class CfgGeneratedOverrides {
         Out8(0x0999, 0xFF);
     L_0190:
         AX = 0x4C00;
+        BX = index;
+        CX = count;
         InterruptCall(cs1, 0x0195, 0x21);
         throw FailAsUntested("Untested return from call at 016F:0193");
     }

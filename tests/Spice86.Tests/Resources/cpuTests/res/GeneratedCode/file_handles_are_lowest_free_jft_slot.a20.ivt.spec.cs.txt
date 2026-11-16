@@ -16,6 +16,7 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         ushort word1 = 0;
+        ushort word2 = 0;
         byte byte1 = 0;
         byte flagOperand_0157 = 0;
         byte flagOperand_0168 = 0;
@@ -29,9 +30,9 @@ public partial class CfgGeneratedOverrides {
         SI = 0x0010;
         AH = 0x55;
         InterruptCall(cs1, 0x0112, 0x21);
-        BX = ImageMinus0002Globals.Word01EB;
+        word2 = ImageMinus0002Globals.Word01EB;
         AH = 0x50;
-        ServiceCall(cs1, 0x011A, () => Dos.SetCurrentPsp(BX));
+        ServiceCall(cs1, 0x011A, () => Dos.SetCurrentPsp(word2));
         DX = 0x01ED;
         NearCall(cs1, 0x0120, unknown_016E_01D8_018B8Entry);
         Alu16.Sub(AX, 5);
@@ -88,24 +89,24 @@ public partial class CfgGeneratedOverrides {
                         if (AL != flagOperand_01A4) {
                             goto L_01D1;
                         }
-                        BX = 5;
+                        word2 = 5;
                         do {
                             CheckExternalEvents(cs1, 0x01AE);
-                            (AX, CarryFlag) = ServiceCall(cs1, 0x01B2, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                            (AX, CarryFlag) = ServiceCall(cs1, 0x01B2, Dos, () => Dos.CloseFile(word2, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                             if (CarryFlag) {
                                 goto L_01D1;
                             }
-                            BX++;
-                            Alu16.Sub(BX, 9);
-                        } while (BX != 9);
+                            word2++;
+                            Alu16.Sub(word2, 9);
+                        } while (word2 != 9);
                         DX = 0x01ED;
                         NearCall(cs1, 0x01C0, unknown_016E_01D8_018B8Entry);
                         Alu16.Sub(AX, 5);
                         if (AX != 5) {
                             goto L_01D1;
                         }
-                        BX = AX;
-                        (AX, CarryFlag) = ServiceCall(cs1, 0x01CB, Dos, () => Dos.CloseFile(BX, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
+                        word2 = AX;
+                        (AX, CarryFlag) = ServiceCall(cs1, 0x01CB, Dos, () => Dos.CloseFile(word2, 0x3E), r => CarryOnInterruptStack(r.carryFlag));
                         if (CarryFlag) {
                             goto L_01D1;
                         }

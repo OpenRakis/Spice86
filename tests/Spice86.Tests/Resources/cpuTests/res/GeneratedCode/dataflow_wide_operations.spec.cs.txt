@@ -34,6 +34,7 @@ public partial class CfgGeneratedOverrides {
         ushort word7 = 0;
         ushort word10 = 0;
         ushort word11 = 0;
+        ushort count = 0;
         ushort word12 = 0;
         ushort word13 = 0;
         uint dword1 = 0;
@@ -131,14 +132,14 @@ public partial class CfgGeneratedOverrides {
             UInt8[DS, index + 0x2E] = BL;
             word10 = UInt16[CS, index2];
             word11 = UInt16[CS, index2 + 2];
-            CX = 3;
+            count = 3;
             do {
                 CheckExternalEvents(biosSegment, 0x0117);
                 uint dxAx_0117 = ((uint)word10 | (uint)word11 << 16) << 1;
                 word10 = (ushort)dxAx_0117;
                 word11 = (ushort)(dxAx_0117 >> 16);
-                CX--;
-            } while (CX != 0);
+                count--;
+            } while (count != 0);
             UInt16[DS, index + 0x1C] = word10;
             UInt16[DS, index + 0x1E] = word11;
             word12 = UInt16[CS, index2];

@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort index = 0;
+        ushort word1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         SS = 0x1000;
@@ -25,12 +26,12 @@ public partial class CfgGeneratedOverrides {
         AX = 0xA000;
         ES = 0xA000;
         index = 0;
-        BX = 0;
+        word1 = 0;
         DirectionFlag = false;
         do {
             CheckExternalEvents(biosSegment, 0x4019);
             CX = 0x0140;
-            AX = BX;
+            AX = word1;
             do {
                 CheckExternalEvents(biosSegment, 0x401E);
                 UInt8[ES, index] = AL;
@@ -38,8 +39,8 @@ public partial class CfgGeneratedOverrides {
                 AL++;
                 CX--;
             } while (CX != 0);
-            BX++;
-        } while (BX < 0x00C8);
+            word1++;
+        } while (word1 < 0x00C8);
         return Hlt();
     }
 

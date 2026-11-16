@@ -15,6 +15,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort fileHandle = 0;
         ushort previousAx = 0;
         byte byte1 = 0;
         ushort flagOperand_0126 = 0;
@@ -22,9 +23,9 @@ public partial class CfgGeneratedOverrides {
         ushort flagOperand_0166 = 0;
         CheckExternalEvents(cs1, 0x0100);
         AH = 0x62;
-        BX = Dos.ReadPspAddress();
-        ImageMinus0002Globals.Word0186 = BX;
-        ES = BX;
+        fileHandle = Dos.ReadPspAddress();
+        ImageMinus0002Globals.Word0186 = fileHandle;
+        ES = fileHandle;
         AX = EsGlobals.Word002C;
         ImageMinus0002Globals.Word0188 = AX;
         AH = 0x67;
@@ -63,15 +64,15 @@ public partial class CfgGeneratedOverrides {
                     if (previousAx != flagOperand_0166) {
                         goto L_017F;
                     }
-                    BX = 5;
+                    fileHandle = 5;
                     do {
                         CheckExternalEvents(cs1, 0x016F);
-                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(BX, 0x3E));
+                        (previousAx, CarryFlag) = ServiceCall(Dos, () => Dos.CloseFile(fileHandle, 0x3E));
                         if (CarryFlag) {
                             goto L_017F;
                         }
-                        BX++;
-                    } while (BX != 0x001E);
+                        fileHandle++;
+                    } while (fileHandle != 0x001E);
                     AX = previousAx;
                     byte1 = 0;
                     goto L_0181;

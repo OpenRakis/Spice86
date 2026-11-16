@@ -14,32 +14,34 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
+        ushort count = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         SS = 0x1000;
         SP = 0x0100;
-        DX = 0;
-        CX = 3;
+        word1 = 0;
+        count = 3;
         do {
             CheckExternalEvents(biosSegment, 0x000D);
-            BX = (ushort)(CX - 1 << 1);
+            BX = (ushort)(count - 1 << 1);
             switch (UInt16[CS, BX + 0x40]) {
                 case 0x0016:
-                    DX++;
+                    word1++;
                     break;
                 case 0x001B:
-                    DX += 0x0010;
+                    word1 += 0x0010;
                     break;
                 case 0x0020:
-                    DX += 0x0100;
+                    word1 += 0x0100;
                     break;
                 default:
                     throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, BX + 0x40]:X4} at F000:0012");
             }
-            CX--;
-        } while (CX != 0);
+            count--;
+        } while (count != 0);
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
-        SsUInt16[0x060A] = DX;
-        SsUInt16[0x0608] = CX;
+        SsUInt16[0x060A] = word1;
+        SsUInt16[0x0608] = count;
         SsUInt16[0x0606] = BX;
         return Hlt();
     }

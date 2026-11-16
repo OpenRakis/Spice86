@@ -43,22 +43,23 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_F000_01A4_F01A4() {
         ushort word1 = 0;
+        ushort word2 = 0;
         CheckExternalEvents(biosSegment, 0x01A4);
         if (AX != 0) {
             word1 = UInt16[CS, SI + 2];
             UInt8[DS, DI + 0x22] = 2;
             UInt16[DS, DI + 0x24] = word1;
-            CX = 2;
+            word2 = 2;
             while (true) {
                 CheckExternalEvents(biosSegment, 0x01DD);
-                if (CX == 9) {
+                if (word2 == 9) {
                     break;
                 }
-                if (CX == 1) {
+                if (word2 == 1) {
                     BX = word1;
                     return NearRet();
                 }
-                CX--;
+                word2--;
             }
             VerifySpeculativeRunOrFail(biosSegment, 0x01EA, SpeculativeRun_01EA);
             SsUInt16[0x0600] = SP;
@@ -71,17 +72,17 @@ public partial class CfgGeneratedOverrides {
             word1 = UInt16[CS, SI];
             UInt8[DS, DI + 0x22] = 1;
             UInt16[DS, DI + 0x24] = word1;
-            CX = 3;
+            word2 = 3;
             while (true) {
                 CheckExternalEvents(biosSegment, 0x01B6);
-                if (CX == 9) {
+                if (word2 == 9) {
                     break;
                 }
-                if (CX == 1) {
+                if (word2 == 1) {
                     BX = word1;
                     return NearRet();
                 }
-                CX--;
+                word2--;
             }
             VerifySpeculativeRunOrFail(biosSegment, 0x01C3, SpeculativeRun_01C3);
             SsUInt16[0x0600] = SP;
@@ -176,20 +177,24 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         ushort word1 = 0;
+        ushort index = 0;
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
         ushort word5 = 0;
-        byte byte1;
         ushort word6 = 0;
+        byte byte1;
         ushort word7 = 0;
         ushort word8 = 0;
         ushort word9 = 0;
-        ushort word10;
+        ushort word10 = 0;
         ushort word11;
         ushort word12;
-        ushort word13 = 0;
-        ushort index = 0;
+        ushort word13;
+        ushort index2 = 0;
+        ushort word14 = 0;
+        ushort word15 = 0;
+        ushort index3 = 0;
         ushort count = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -200,15 +205,15 @@ public partial class CfgGeneratedOverrides {
         BX = SegmentF000Globals.Word0236;
         word1 = SegmentF000Globals.Word0238;
         Segment2000Globals.Word0040 = word1;
-        SI = 0;
+        index = 0;
         AX = 0;
         do {
             CheckExternalEvents(biosSegment, 0x0028);
-            CX = UInt16[CS, SI + 0x0228];
+            CX = UInt16[CS, index + 0x0228];
             AX += CX;
-            SI += 2;
-        } while (SI != 6);
-        Segment2000Globals.Dword0042 = (uint)AX | (uint)SI << 16;
+            index += 2;
+        } while (index != 6);
+        Segment2000Globals.Dword0042 = (uint)AX | (uint)index << 16;
         word2 = SegmentF000Globals.Word023E;
         NearCall(biosSegment, 0x0047, unknown_F000_01A0_F01A0Entry);
         Segment2000Globals.Word0046 = word2;
@@ -241,26 +246,26 @@ public partial class CfgGeneratedOverrides {
         } while (Segment2000Globals.Byte0E60 == 0);
         InterruptFlag = false;
         Segment2000Globals.Word004E = AX;
-        CX = 0xFFFF;
+        word5 = 0xFFFF;
         do {
             CheckExternalEvents(biosSegment, 0x00A2);
-            CX--;
-        } while (CX != 0);
+            word5--;
+        } while (word5 != 0);
         DX = SegmentF000Globals.Word023E;
         DX = NearCall(biosSegment, 0x00AC, () => unknown_F000_01A1_F01A1());
         Segment2000Globals.Word0054 = DX;
         InterruptFlag = false;
         DX = 0;
-        word5 = 0x0040;
+        word6 = 0x0040;
         NearCall(biosSegment, 0x00B9, unknown_F000_01A0_F01A0Entry);
         CX = 3;
         do {
             CheckExternalEvents(biosSegment, 0x00BC);
-            NearCall(biosSegment, 0x00BF, () => unknown_F000_01FA_F01FA(word5, 0x0040, DS));
-            Stack.Push16(word5);
+            NearCall(biosSegment, 0x00BF, () => unknown_F000_01FA_F01FA(word6, 0x0040, DS));
+            Stack.Push16(word6);
             AX = Stack.Pop16();
             AX++;
-            word5 = AX;
+            word6 = AX;
             CX--;
         } while (CX != 0);
         BP = 0xF000;
@@ -283,23 +288,23 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x00F5, unknown_F000_01A0_F01A0Entry);
         BX = NearCall(biosSegment, 0x00F8, () => unknown_F000_0204_F0204());
         AX = BX;
-        word6 = AX;
-        Stack.Push16(word6);
-        word7 = Stack.Pop16();
-        Segment2000Globals.Word0096 = word7;
+        word7 = AX;
+        Stack.Push16(word7);
+        word8 = Stack.Pop16();
+        Segment2000Globals.Word0096 = word8;
         NearCall(biosSegment, 0x0104, unknown_F000_01A0_F01A0Entry);
         AX = 0x0040;
         Stack.Push16(0x0040);
-        word8 = Stack.Pop16();
-        Segment2000Globals.Dword009A = (uint)word8 | 0x00400000;
+        word9 = Stack.Pop16();
+        Segment2000Globals.Dword009A = (uint)word9 | 0x00400000;
         Segment2000Globals.Byte0E60 = 0;
         InterruptFlag = true;
         do {
             CheckExternalEvents(biosSegment, 0x0115);
         } while (Segment2000Globals.Byte0E60 == 0);
         InterruptFlag = false;
-        word9 = AX;
-        AX = word9;
+        word10 = AX;
+        AX = word10;
         Stack.Push16(AX);
         DX = Stack.Pop16();
         Segment2000Globals.Word009E = DX;
@@ -307,47 +312,48 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(0);
         CX = Stack.Pop16();
         CX += 0x0100;
-        word10 = SegmentF000Globals.Word023E;
-        (AX, DX) = Div16(divisor: CX, dividend: (uint)word10);
+        word11 = SegmentF000Globals.Word023E;
+        (AX, DX) = Div16(divisor: CX, dividend: (uint)word11);
         DL = 0x55;
-        word11 = DX;
-        word12 = word11;
-        Stack.Push16(word12);
+        word12 = DX;
+        word13 = word12;
+        Stack.Push16(word13);
         BX = Stack.Pop16();
         AX += BX;
-        (word10, DX) = Div16(divisor: CX, dividend: (uint)word12 << 16 | (uint)AX);
-        Segment2000Globals.Dword007C = (uint)word10 | (uint)DX << 16;
+        (word11, DX) = Div16(divisor: CX, dividend: (uint)word13 << 16 | (uint)AX);
+        Segment2000Globals.Dword007C = (uint)word11 | (uint)DX << 16;
         ES = 0x2000;
         AX = 0;
-        SI = 0;
-        BX = 0;
+        index2 = 0;
+        word14 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0155);
-            if (BX >= 0x000A) {
+            if (word14 >= 0x000A) {
                 break;
             }
-            BX += UInt16[CS, SI + 0x022E];
-            SI += 2;
-            AX += BX;
-            if ((BX & 1) != 0) {
+            word14 += UInt16[CS, index2 + 0x022E];
+            index2 += 2;
+            AX += word14;
+            if ((word14 & 1) != 0) {
                 continue;
             }
-            BX++;
+            word14++;
         }
-        Segment2000Globals.Dword0050 = (uint)AX | (uint)BX << 16;
+        Segment2000Globals.Dword0050 = (uint)AX | (uint)word14 << 16;
         SI = 0x0236;
         AX = 0;
+        BX = word14;
         NearCall(biosSegment, 0x017B, unknown_F000_01A4_F01A4Entry);
         Segment2000Globals.Word0066 = BX;
         DI = 0x0048;
         AX = 1;
         NearCall(biosSegment, 0x0187, unknown_F000_01A4_F01A4Entry);
         Segment2000Globals.Word006E = BX;
-        word13 = 0x5555;
-        index = 0x0058;
+        word15 = 0x5555;
+        index3 = 0x0058;
         for (count = 5; count != 0; count--) {
-            UInt16[ES, index] = word13;
-            index += 2;
+            UInt16[ES, index3] = word15;
+            index3 += 2;
         }
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();

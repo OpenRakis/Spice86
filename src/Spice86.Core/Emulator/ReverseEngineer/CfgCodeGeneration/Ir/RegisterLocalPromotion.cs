@@ -23,8 +23,10 @@ using System.Linq;
 /// whose definitions and uses the local can all serve becomes a local (<c>ax</c> inside one block, a
 /// numbered <c>ax1</c> when it spans blocks or a call), written back to the register
 /// (<c>AX = ax;</c>) before every use the local cannot serve where the register may hold another
-/// value: a use whose every incoming path still holds the local takes no write-back. Only printing
-/// changes: the plan maps
+/// value: a use whose every incoming path still holds the local takes no write-back. A register node
+/// instance shared between a definition target and an operand (<c>inc bx</c> gives both positions one
+/// node) joins the plan only when every root holding it uses a web member; elsewhere the local would
+/// rename a read of another version. Only printing changes: the plan maps
 /// read and target node instances to the local name, like
 /// <see cref="CSharpExpressionPrinter.ParameterReads"/> does for typed parameters.
 /// </summary>
@@ -180,6 +182,9 @@ internal static partial class RegisterLocalPromotion {
                 reads[target] = new SubstitutedRead(name, signed ? localType : null);
             }
             foreach ((IVisitableAstNode node, IVisitableAstNode? readParent) in candidate.Reads) {
+                if (reads.ContainsKey(node)) {
+                    continue;
+                }
                 if (!signed) {
                     reads[node] = new SubstitutedRead(name, null);
                 } else if (ConvertsTo(readParent, localType)) {
@@ -399,8 +404,9 @@ internal static partial class RegisterLocalPromotion {
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
         IReadOnlySet<IVisitableAstNode> unprinted, HashSet<IVisitableAstNode> dropped) {
         IrSsaValue value = ssa.Info(members[0]).Value;
-        WebDefinitions? collected = CollectWebDefinitions(ssa, members, value, preservedByCall,
-            occurrences);
+        HashSet<int> memberVersions = [.. members];
+        WebDefinitions? collected = CollectWebDefinitions(method, ssa, members, memberVersions,
+            value, preservedByCall, occurrences);
         if (collected is null || collected.DefTargets.Count == 0
             || collected.DefTargets.Any(target => !target.Equals(collected.DefTargets[0]))) {
             return null;
@@ -413,7 +419,7 @@ internal static partial class RegisterLocalPromotion {
             return null;
         }
         WebUses? classification = ClassifyWebUses(webRegister, baseName, value, uses,
-            nonSubstitutable);
+            nonSubstitutable, collected.DefTargets);
         if (classification is null) {
             return null;
         }
@@ -482,8 +488,9 @@ internal static partial class RegisterLocalPromotion {
     /// the web: a method-entry version, a version with no site, a faulting definition, a statement
     /// with no register definition target (an <c>ASSIGN</c> left, a multiplication or division
     /// tuple half, a service call result), a target of another register or more than one target on
-    /// the web's value, or a shared register node.</summary>
-    private static WebDefinitions? CollectWebDefinitions(IrSsa ssa, List<int> members,
+    /// the web's value, or a target instance shared into a site outside the web.</summary>
+    private static WebDefinitions? CollectWebDefinitions(IrMethod method, IrSsa ssa,
+        List<int> members, HashSet<int> memberVersions,
         IrSsaValue value, Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences) {
         List<RegisterNode> defTargets = [];
@@ -519,7 +526,9 @@ internal static partial class RegisterLocalPromotion {
             // tuple writes both, so the web refuses.
             RegisterNode[] targets = [.. DefinitionTargets(definition.Node)
                 .Where(target => RegisterMatchesValue(target, value)).Take(2)];
-            if (targets.Length != 1 || !SingleOccurrence(occurrences, targets[0], definition)) {
+            if (targets.Length != 1
+                || !OccurrencesInWeb(method, occurrences, targets[0], definition, ssa, value,
+                    memberVersions)) {
                 return null;
             }
             if (definition.Node is InterruptServiceCallNode) {
@@ -558,7 +567,8 @@ internal static partial class RegisterLocalPromotion {
     /// uses (which take a write-back) and killing uses, or <c>null</c> when a use is a terminator
     /// the local cannot serve or the web has no explicit read at all.</summary>
     private static WebUses? ClassifyWebUses(RegisterNode webRegister, string baseName,
-        IrSsaValue value, List<Use> uses, HashSet<IVisitableAstNode> nonSubstitutable) {
+        IrSsaValue value, List<Use> uses, HashSet<IVisitableAstNode> nonSubstitutable,
+        IReadOnlyList<RegisterNode> defTargets) {
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> webReads = [];
         HashSet<IVisitableAstNode> explicitRoots = new(ReferenceEqualityComparer.Instance);
         List<Use> implicitUses = [];
@@ -568,7 +578,8 @@ internal static partial class RegisterLocalPromotion {
                 killingUses.Add(use);
                 continue;
             }
-            if (Classify(webRegister, baseName, use, nonSubstitutable, webReads, explicitRoots)) {
+            if (Classify(webRegister, baseName, use, nonSubstitutable, defTargets, webReads,
+                    explicitRoots)) {
                 // A statement can read the register and partially define it in the same use (the
                 // link to the previous version swallows the explicit read): the partial write still
                 // needs the register to hold the local's value for the bytes it does not rewrite.
@@ -836,7 +847,7 @@ internal static partial class RegisterLocalPromotion {
     /// register. The roots the substituted instances live in are added to
     /// <paramref name="explicitRoots"/>.</summary>
     private static bool Classify(RegisterNode register, string name, Use use,
-        HashSet<IVisitableAstNode> nonSubstitutable,
+        HashSet<IVisitableAstNode> nonSubstitutable, IReadOnlyList<RegisterNode> defTargets,
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> reads,
         HashSet<IVisitableAstNode> explicitRoots) {
         IrSsaUse site = use.Site;
@@ -863,13 +874,23 @@ internal static partial class RegisterLocalPromotion {
             }
         }
         List<(IVisitableAstNode Node, IVisitableAstNode? Parent)> replaced = [];
+        HashSet<IVisitableAstNode> defTargetSet = new(defTargets,
+            ReferenceEqualityComparer.Instance);
+        int sharedTargetReads = 0;
         IVisitableAstNode copy = ReplaceReads(root, null);
         IrEffects copyEffects = IrEffectsVisitor.Of(copy, mayFault);
-        if (replaced.Count == 0 || copyEffects.MayFault
+        if ((replaced.Count == 0 && sharedTargetReads == 0) || copyEffects.MayFault
             || (copyEffects.Reads & IrValueSets.Of(register)) != CpuValues.None) {
             return false;
         }
         reads.AddRange(replaced);
+        static bool SpecialSlot(IVisitableAstNode node, IVisitableAstNode parent) => parent switch {
+            BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assignment
+                => ReferenceEquals(assignment.Left, node),
+            TupleSwapNode or MultiplicationNode or DivisionNode or InterruptServiceCallNode
+                or SegmentedPointerNode => true,
+            _ => false
+        };
         if (site.Statement is { } owner) {
             explicitRoots.Add(owner.Node);
         } else if (site.Terminator is { } terminator) {
@@ -880,8 +901,15 @@ internal static partial class RegisterLocalPromotion {
         return true;
 
         IVisitableAstNode ReplaceReads(IVisitableAstNode node, IVisitableAstNode? parent) {
-            if (node is RegisterNode nodeRegister && nodeRegister.Equals(register)
-                && !nonSubstitutable.Contains(node)) {
+            if (node is RegisterNode nodeRegister && nodeRegister.Equals(register)) {
+                if (nonSubstitutable.Contains(node)) {
+                    if (defTargetSet.Contains(node) && parent is not null
+                        && !SpecialSlot(node, parent)) {
+                        sharedTargetReads++;
+                        return new RegisterLocalNode(register, name);
+                    }
+                    return node;
+                }
                 replaced.Add((node, parent));
                 return new RegisterLocalNode(register, name);
             }
@@ -1088,15 +1116,54 @@ internal static partial class RegisterLocalPromotion {
         return occurrences;
     }
 
-    /// <summary>Whether <paramref name="register"/> occurs exactly once in the method, inside its
-    /// <paramref name="definition"/>: a shared instance (an <c>and dx,imm</c> whose left and right
-    /// are one node) also reads the previous version, which the local must not rename.</summary>
-    private static bool SingleOccurrence(
-        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences, RegisterNode register,
-        IrStatement definition) {
-        return !occurrences.TryGetValue(register, out List<IVisitableAstNode>? roots)
-            || (roots.Count == 1 && ReferenceEquals(roots[0], definition.Node));
+    /// <summary>Whether every occurrence of <paramref name="target"/> belongs to the same web as
+    /// <paramref name="value"/>: an instance shared between the assignment target of
+    /// <paramref name="definition"/> and an operand of the same statement (the parser gives
+    /// <c>inc bx</c> and <c>and dx,imm</c> one node for target and operand) or into another
+    /// statement or terminator root may print the local everywhere only when each such site's used
+    /// version is a member of the web - otherwise it would rename a read of another version.</summary>
+    private static bool OccurrencesInWeb(IrMethod method,
+        Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences, RegisterNode target,
+        IrStatement definition, IrSsa ssa, IrSsaValue value, HashSet<int> memberVersions) {
+        if (!occurrences.TryGetValue(target, out List<IVisitableAstNode>? roots)) {
+            return true;
+        }
+        int selfReads = 0;
+        foreach (IVisitableAstNode root in roots) {
+            if (ReferenceEquals(root, definition.Node)) {
+                selfReads++;
+                continue;
+            }
+            if (SiteOf(method, root) is not { } site
+                || !memberVersions.Contains(VersionUsedAt(ssa, site, value))) {
+                return false;
+            }
+        }
+        return selfReads <= 1 || memberVersions.Contains(ssa.VersionUsed(definition, value));
     }
+
+    /// <summary>The statement or terminator a statement node or terminator root belongs to,
+    /// resolved by identity over the method's blocks.</summary>
+    private static object? SiteOf(IrMethod method, IVisitableAstNode root) {
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (ReferenceEquals(statement.Node, root)) {
+                    return statement;
+                }
+            }
+            if (IrAstChildren.RootsOf(block.Terminator).Contains(root)) {
+                return block.Terminator;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The version <paramref name="site"/> uses of <paramref name="value"/>, for a
+    /// statement or terminator site.</summary>
+    private static int VersionUsedAt(IrSsa ssa, object site, IrSsaValue value) =>
+        site is IrStatement statement
+            ? ssa.VersionUsed(statement, value)
+            : ssa.VersionUsed((IrTerminator)site, value);
 
     /// <summary>Whether every substituted read instance occurs only inside the positions that
     /// substituted it: an instance shared with another position would print the local where it
