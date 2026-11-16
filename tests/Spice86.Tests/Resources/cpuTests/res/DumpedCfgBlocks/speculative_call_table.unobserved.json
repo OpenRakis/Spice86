@@ -6,16 +6,16 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:003D",
-  "lastExecutedBlockId": 103,
+  "lastExecutedBlockId": 107,
   "blocks": [
     {
-      "id": 103,
+      "id": 107,
       "entry": "F000:003D",
       "term": "F000:003D",
       "pred": [
         11,
         56,
-        110
+        121
       ],
       "succ": [],
       "asm": [
@@ -43,7 +43,7 @@
         53
       ],
       "succ": [
-        103
+        107
       ],
       "asm": [
         "FE060204|inc byte ptr DS:[0x0402]",
@@ -59,7 +59,7 @@
       ],
       "succ": [
         18,
-        103
+        107
       ],
       "asm": [
         "2EC7066A005F00|mov word ptr CS:[0x006A],0x005F",
@@ -68,15 +68,15 @@
       ]
     },
     {
-      "id": 110,
+      "id": 121,
       "entry": "F000:002E",
       "dead": true,
       "term": "F000:002E",
       "pred": [
-        105
+        109
       ],
       "succ": [
-        103
+        107
       ],
       "asm": [
         "EB0D|jmp short 0x003D"
@@ -113,8 +113,8 @@
       "succ": [
         53,
         56,
-        70,
-        73
+        72,
+        75
       ],
       "asm": [
         "89C3|mov BX,AX",
@@ -144,7 +144,7 @@
       "pred": [
         11,
         13,
-        105
+        109
       ],
       "succ": [
         23,
@@ -157,7 +157,7 @@
       ]
     },
     {
-      "id": 105,
+      "id": 109,
       "entry": "F000:0021",
       "dead": true,
       "term": "F000:002B",
@@ -166,7 +166,7 @@
       ],
       "succ": [
         18,
-        110
+        121
       ],
       "asm": [
         "2EC7066A005F00|mov word ptr CS:[0x006A],0x005F",
@@ -184,7 +184,7 @@
       ],
       "succ": [
         18,
-        105
+        109
       ],
       "asm": [
         "B90000|mov CX,0",
@@ -192,7 +192,7 @@
       ]
     },
     {
-      "id": 70,
+      "id": 72,
       "entry": "F000:0053",
       "dead": true,
       "term": "F000:0058",
@@ -206,7 +206,7 @@
       ]
     },
     {
-      "id": 73,
+      "id": 75,
       "entry": "F000:0059",
       "dead": true,
       "term": "F000:005E",

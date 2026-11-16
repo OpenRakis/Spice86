@@ -168,12 +168,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        159,
-        160
+        165,
+        166
       ],
       "entries": [
         {
-          "block": 159,
+          "block": 165,
           "address": "D000:00E3",
           "kind": "functionEntry"
         }
@@ -185,9 +185,9 @@
       "name": "unknown",
       "blocks": [
         25,
-        178,
-        210,
-        211
+        186,
+        218,
+        219
       ],
       "entries": [
         {
@@ -202,11 +202,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        181
+        189
       ],
       "entries": [
         {
-          "block": 181,
+          "block": 189,
           "address": "F000:002D",
           "kind": "functionEntry"
         }
@@ -250,7 +250,7 @@
       "kind": "alignedReturn",
       "fromPartition": 11,
       "toPartition": 14,
-      "fromBlock": 160,
+      "fromBlock": 166,
       "toBlock": 74,
       "from": "D000:00E7",
       "target": "F000:0025"
@@ -259,7 +259,7 @@
       "kind": "alignedReturn",
       "fromPartition": 12,
       "toPartition": 4,
-      "fromBlock": 211,
+      "fromBlock": 219,
       "toBlock": 27,
       "from": "D000:00F6",
       "target": "D000:0068"
@@ -268,19 +268,19 @@
       "kind": "callOut",
       "fromPartition": 12,
       "toPartition": 13,
-      "fromBlock": 178,
-      "toBlock": 181,
+      "fromBlock": 186,
+      "toBlock": 189,
       "from": "D000:00ED",
       "target": "F000:002D",
-      "callContinuationBlock": 210,
+      "callContinuationBlock": 218,
       "callContinuationAddress": "D000:00F2"
     },
     {
       "kind": "alignedReturn",
       "fromPartition": 13,
       "toPartition": 12,
-      "fromBlock": 181,
-      "toBlock": 210,
+      "fromBlock": 189,
+      "toBlock": 218,
       "from": "F000:003C",
       "target": "D000:00F2"
     },
@@ -289,7 +289,7 @@
       "fromPartition": 14,
       "toPartition": 11,
       "fromBlock": 76,
-      "toBlock": 159,
+      "toBlock": 165,
       "from": "F000:0023",
       "target": "D000:00E3",
       "callContinuationBlock": 74,

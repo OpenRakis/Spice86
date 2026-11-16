@@ -71,20 +71,20 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        146,
-        150,
-        157,
-        163,
         148,
-        154,
-        161,
-        167,
+        152,
         159,
-        165
+        165,
+        150,
+        156,
+        163,
+        169,
+        161,
+        167
       ],
       "entries": [
         {
-          "block": 146,
+          "block": 148,
           "address": "F000:0035",
           "kind": "functionEntry"
         }
@@ -224,22 +224,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        294,
-        298,
-        306,
-        315,
-        321,
         296,
         300,
-        303,
+        308,
+        317,
+        323,
+        298,
+        302,
+        305,
+        314,
+        321,
         312,
-        319,
-        310,
-        317
+        319
       ],
       "entries": [
         {
-          "block": 294,
+          "block": 296,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -285,7 +285,7 @@
       "fromPartition": 1,
       "toPartition": 5,
       "fromBlock": 64,
-      "toBlock": 146,
+      "toBlock": 148,
       "from": "016E:012B",
       "target": "F000:0035",
       "callContinuationBlock": 79,
@@ -296,7 +296,7 @@
       "fromPartition": 1,
       "toPartition": 14,
       "fromBlock": 81,
-      "toBlock": 294,
+      "toBlock": 296,
       "from": "016E:0157",
       "target": "F000:0096"
     },
@@ -313,7 +313,7 @@
       "kind": "alignedReturn",
       "fromPartition": 5,
       "toPartition": 1,
-      "fromBlock": 165,
+      "fromBlock": 167,
       "toBlock": 79,
       "from": "F000:0052",
       "target": "016E:012D"

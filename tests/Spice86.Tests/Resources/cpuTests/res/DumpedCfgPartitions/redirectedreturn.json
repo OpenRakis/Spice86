@@ -71,7 +71,7 @@
         47,
         52,
         70,
-        88,
+        90,
         2
       ],
       "entries": [
@@ -109,7 +109,7 @@
       "fromPartition": 2,
       "toPartition": 5,
       "fromBlock": 73,
-      "toBlock": 88,
+      "toBlock": 90,
       "from": "F000:004C",
       "target": "F000:003D"
     },
@@ -159,7 +159,7 @@
       "toBlock": 73,
       "from": "F000:0039",
       "target": "F000:0047",
-      "callContinuationBlock": 88,
+      "callContinuationBlock": 90,
       "callContinuationAddress": "F000:003D"
     },
     {

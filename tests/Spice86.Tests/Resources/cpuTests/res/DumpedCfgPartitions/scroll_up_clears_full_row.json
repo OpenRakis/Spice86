@@ -207,22 +207,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        250,
-        254,
-        262,
-        271,
-        277,
-        252,
-        256,
-        259,
-        268,
-        275,
-        266,
-        273
+        278,
+        282,
+        290,
+        299,
+        305,
+        280,
+        284,
+        287,
+        296,
+        303,
+        294,
+        301
       ],
       "entries": [
         {
-          "block": 250,
+          "block": 278,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -356,7 +356,7 @@
       "fromPartition": 1,
       "toPartition": 13,
       "fromBlock": 114,
-      "toBlock": 250,
+      "toBlock": 278,
       "from": "016F:015D",
       "target": "F000:0096"
     },
