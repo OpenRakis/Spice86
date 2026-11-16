@@ -46,9 +46,11 @@ internal enum RegisterBits : ushort {
 /// register; assignments to memory, temporaries and flags mark nothing. The assigned value is
 /// walked too: a <see cref="StackCallValueNode"/> marks SP, pure reads mark nothing, and any
 /// value the walker does not understand marks every register except CS. Anything else the walker
-/// does not understand - helper calls, string ops, stack pushes, mul/div, control flow other
+/// does not understand - other helper calls, string ops, mul/div, control flow other
 /// than a plain jump - marks every register except CS, so callers can treat the result as
-/// "definitely not written" rather than "exactly written".
+/// "definitely not written" rather than "exactly written". Stack helper calls are exact:
+/// a push marks SP plus what its argument reads may write, PUSHA marks SP, POPA every
+/// general register and LEAVE SP and BP.
 /// </summary>
 internal static class RegisterWriteSet {
     /// <summary>Returns the <see cref="RegisterBits"/> mask of registers
@@ -63,8 +65,17 @@ internal static class RegisterWriteSet {
         BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: var target, Right: var value } =>
             (ushort)(MaskForTarget(target) | MaskForValue(value)),
         VariableDeclarationNode declaration => MaskForValue(declaration.Initializer),
+        StackCallNode stackCall => MaskForStackCall(stackCall),
         AluCallNode or AluCallValueNode => 0,
         JumpNearNode or JumpFarNode or MoveIpNextNode or SelectorNode => 0,
+        _ => (ushort)RegisterBits.AllExceptCs
+    };
+
+    private static ushort MaskForStackCall(StackCallNode stackCall) => stackCall.Operation switch {
+        StackOperation.Push => (ushort)((ushort)RegisterBits.Sp | MaskForArguments(stackCall)),
+        StackOperation.PushAll => (ushort)RegisterBits.Sp,
+        StackOperation.PopAll => (ushort)RegisterBits.AllGeneralPurpose,
+        StackOperation.Leave => (ushort)((ushort)RegisterBits.Sp | (ushort)RegisterBits.Bp),
         _ => (ushort)RegisterBits.AllExceptCs
     };
 
@@ -96,7 +107,10 @@ internal static class RegisterWriteSet {
     };
 
     private static ushort MaskForArguments(MethodCallValueNode call) =>
-        call.CallNode.Arguments.Aggregate<IVisitableAstNode, ushort>(0,
+        MaskForArguments(call.CallNode);
+
+    private static ushort MaskForArguments(MethodCallNode call) =>
+        call.Arguments.Aggregate<IVisitableAstNode, ushort>(0,
             (mask, argument) => (ushort)(mask | MaskForValue(argument)));
 
     /// <summary>The 16-bit register a register node belongs to. 16/32-bit nodes index the eight

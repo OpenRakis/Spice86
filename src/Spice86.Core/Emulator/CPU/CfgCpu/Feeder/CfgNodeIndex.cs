@@ -36,6 +36,12 @@ public class CfgNodeIndex : InstructionReplacer {
     }
 
     /// <summary>
+    /// Raised when the set of nodes at an address changes: a node was inserted, removed or
+    /// replaced. Analyses cached over the indexed subgraph subscribe to drop stale results.
+    /// </summary>
+    internal event Action<SegmentedAddress>? AddressChanged;
+
+    /// <summary>
     /// Inserts <paramref name="node"/> into the index.
     /// Idempotent by node identity: inserting a node already present at its address is a no-op.
     /// </summary>
@@ -43,6 +49,7 @@ public class CfgNodeIndex : InstructionReplacer {
         List<CfgInstruction> atAddress = DictionaryUtils.GetOrAddList(_index, node.Address);
         if (!atAddress.Contains(node)) {
             atAddress.Add(node);
+            AddressChanged?.Invoke(node.Address);
         }
     }
 
@@ -50,7 +57,9 @@ public class CfgNodeIndex : InstructionReplacer {
     /// Removes <paramref name="node"/> from the index. Does not touch graph edges.
     /// </summary>
     public void Remove(CfgInstruction node) {
-        DictionaryUtils.RemoveFromCollection(_index, node.Address, node);
+        if (DictionaryUtils.RemoveFromCollection(_index, node.Address, node)) {
+            AddressChanged?.Invoke(node.Address);
+        }
     }
 
     /// <summary>
@@ -113,6 +122,7 @@ public class CfgNodeIndex : InstructionReplacer {
         if (!atAddress.Contains(newInstruction)) {
             atAddress.Add(newInstruction);
         }
+        AddressChanged?.Invoke(oldInstruction.Address);
     }
 
     /// <summary>

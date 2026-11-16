@@ -129,6 +129,7 @@ public class SpeculativeExplorer : InstructionReplacer {
     private readonly Dictionary<SegmentedAddress, CallDistance> _provedReturnKind = new();
     private readonly HashSet<SegmentedAddress> _refusedCalleeProof = [];
     private readonly HashSet<SegmentedAddress> _incompleteCalleeProof = [];
+    private readonly CalleeWriteScanner _calleeWriteScanner;
     private int _drainNesting;
     private bool _drainInserted;
     private readonly SpeculativeReachabilityPruner _pruner;
@@ -152,6 +153,8 @@ public class SpeculativeExplorer : InstructionReplacer {
         _watchedCells = watchedCells;
         _loggerService = loggerService;
         _calleeReturnScanner = new CalleeReturnScanner(nodeIndex);
+        _calleeWriteScanner = new CalleeWriteScanner(nodeIndex, installedInterruptHandlers,
+            interruptVectorTable, ReturnsBalanced);
         _pruner = new SpeculativeReachabilityPruner(replacerRegistry);
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
         // Catalogue entries are trust-checked against the loaded bytes, so they can only be
@@ -1037,27 +1040,10 @@ public class SpeculativeExplorer : InstructionReplacer {
         if (callNode.StaticSuccessorAddresses.Count == 1) {
             return callNode.StaticSuccessorAddresses[0];
         }
-        if (TryGetInterruptVector(callNode, out byte vector)) {
+        if (InterruptCallFacts.TryGetInterruptVector(callNode, out byte vector)) {
             return _interruptVectorTable[vector];
         }
         return null;
-    }
-
-    private static bool TryGetInterruptVector(CfgInstruction node, out byte vector) {
-        vector = 0;
-        if (node.ExecutionAst is not InterruptCallNode call) {
-            return false;
-        }
-        ulong? number = call.VectorNumber switch {
-            ConstantNode constant => constant.Value,
-            InstructionFieldNode field => field.ConstantValue,
-            _ => null
-        };
-        if (number is null) {
-            return false;
-        }
-        vector = (byte)number.Value;
-        return true;
     }
 
     /// <summary>
@@ -1082,14 +1068,14 @@ public class SpeculativeExplorer : InstructionReplacer {
         if (callee is null) {
             return false;
         }
-        if (TryGetInterruptVector(callNode, out byte vector)
+        if (InterruptCallFacts.TryGetInterruptVector(callNode, out byte vector)
             && _installedInterruptHandlers.IsInstalledHandler(callee.Value)) {
             // An int that still targets an emulator-installed handler returns, except the
             // DOS termination services.
             if (vector is 0x20 or 0x27) {
                 return false;
             }
-            return vector != 0x21 || !IsDosExitMovPredecessor(callNode);
+            return vector != 0x21 || InterruptCallFacts.AhLoadedBefore(callNode) is not (0x00 or 0x31 or 0x4C);
         }
         if (_calleeReturnEvidence.IsKnownToReturn(callee.Value)) {
             return true;
@@ -1118,6 +1104,14 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// inserted nodes. A proof drains the pending sites of the matching distance, which may
     /// insert nodes and let further callees prove in the same round.
     /// </summary>
+    /// <summary>Whether the callee at <paramref name="entry"/> is known to return with its own
+    /// stack balanced: observed return evidence, or a proof the evidence has not disproved
+    /// since. Passed to <see cref="CalleeWriteScanner"/> at construction so the SP rule reads
+    /// the evidence as it stands at each query.</summary>
+    private bool ReturnsBalanced(SegmentedAddress entry) =>
+        _calleeReturnEvidence.IsKnownToReturn(entry)
+        || (_provedReturnKind.ContainsKey(entry) && !_calleeReturnEvidence.IsDisproved(entry));
+
     private void ScanPendingCallCallees() {
         if (_pendingCallSites.Count == 0) {
             return;
@@ -1164,48 +1158,6 @@ public class SpeculativeExplorer : InstructionReplacer {
         _loggerService.LogDebug("Callee {Address} proven to return ({Kind}) by its speculative subgraph",
             callee, kind);
         DrainPendingCallSites(callee, kind);
-    }
-
-    /// <summary>
-    /// True when the single predecessor of <paramref name="node"/> inside its own block is a
-    /// <c>mov ah, imm8</c> or <c>mov ax, imm16</c> loading a DOS exit function (00h, 31h, 4Ch) into
-    /// AH, the canonical setup of the terminating int 21h calls.
-    /// </summary>
-    private static bool IsDosExitMovPredecessor(CfgInstruction node) {
-        CfgInstruction? previous = null;
-        foreach (ICfgNode predecessor in node.Predecessors) {
-            if (predecessor is CfgInstruction instruction && instruction.ContainingBlock == node.ContainingBlock) {
-                if (previous is not null) {
-                    return false;
-                }
-                previous = instruction;
-            }
-        }
-        if (previous is null) {
-            return false;
-        }
-        if (previous.ExecutionAst is not BlockNode block || block.Statements.Count == 0
-            || block.Statements[0] is not BinaryOperationNode {
-                BinaryOperation: BinaryOperation.ASSIGN,
-                Left: RegisterNode destination
-            } assign) {
-            return false;
-        }
-        ulong? immediate = assign.Right switch {
-            ConstantNode constant => constant.Value,
-            InstructionFieldNode field => field.ConstantValue,
-            _ => null
-        };
-        if (immediate is null) {
-            return false;
-        }
-        // The byte the mov loads into AH: the immediate itself for mov ah,imm8, the high byte for mov ax,imm16.
-        ulong? ah = destination switch {
-            { DataType.BitWidth: BitWidth.BYTE_8, RegisterIndex: 4 } => immediate.Value,
-            { DataType.BitWidth: BitWidth.WORD_16, RegisterIndex: 0 } => immediate.Value >> 8,
-            _ => null
-        };
-        return ah is 0x00 or 0x31 or 0x4C;
     }
 
     // A call site is usable while it is a live observed instruction or still a speculative

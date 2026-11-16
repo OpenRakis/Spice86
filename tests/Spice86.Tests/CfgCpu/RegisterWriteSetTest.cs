@@ -100,9 +100,27 @@ public class RegisterWriteSetTest : SpeculativeTestBase {
     }
 
     [Fact]
-    public void PushIsConservative() {
-        // push ax - a helper call the walker does not unpack
-        Assert.Equal((ushort)RegisterBits.AllExceptCs, RegisterWriteSet.MayWrite(Parse(0x50)));
+    public void PushMarksOnlySp() {
+        // push ax - pushing a pure register read only moves SP
+        Assert.Equal(Regs(RegisterBits.Sp), RegisterWriteSet.MayWrite(Parse(0x50)));
+    }
+
+    [Fact]
+    public void PushaMarksOnlySp() {
+        // pusha - the pushed values are reads; only SP changes
+        Assert.Equal(Regs(RegisterBits.Sp), RegisterWriteSet.MayWrite(Parse(0x60)));
+    }
+
+    [Fact]
+    public void PopaMarksAllGeneralRegisters() {
+        // popa - every general register is reloaded, SP included
+        Assert.Equal((ushort)RegisterBits.AllGeneralPurpose, RegisterWriteSet.MayWrite(Parse(0x61)));
+    }
+
+    [Fact]
+    public void LeaveMarksSpAndBp() {
+        // leave - SP takes BP's value and BP is popped
+        Assert.Equal(Regs(RegisterBits.Sp, RegisterBits.Bp), RegisterWriteSet.MayWrite(Parse(0xC9)));
     }
 
     [Fact]
