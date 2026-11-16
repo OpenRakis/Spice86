@@ -20,13 +20,19 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DS, flags, DF. Outputs: none. Changes: AH, DX.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
-    public virtual Action unknown_016E_0100_017E0() {
+    public virtual void unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         DX = 0x0108;
         AH = 9;
         // DOS 09h print "Hello DOS$"
         InterruptCall(cs1, 0x0107, 0x21);
-        return NearRet();
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_016E_0100_017E0_Asm() {
+        unknown_016E_0100_017E0();
+        return Returned;
     }
 
 }
@@ -71,7 +77,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_016E_0000_016E0Entry;
-    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_016E_0100_017E0_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -95,7 +101,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
 
         unknown_016E_0000_016E0Entry = _ => unknown_016E_0000_016E0();
-        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_016E_0100_017E0_AsmEntry = _ => unknown_016E_0100_017E0_Asm();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -111,7 +117,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0000, unknown_016E_0000_016E0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");

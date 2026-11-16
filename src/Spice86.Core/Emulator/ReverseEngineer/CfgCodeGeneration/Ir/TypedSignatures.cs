@@ -261,8 +261,16 @@ internal sealed class TypedSignatures {
     /// machine value.</summary>
     private static bool HasUntypedCall(IrStatement statement,
         Func<ProcedureCallHelperNode, bool> isTypedCall) =>
-        IrAstChildren.Descendants(statement.Node).OfType<ProcedureCallHelperNode>()
-            .Any(node => !isTypedCall(node));
+        IrAstChildren.Descendants(statement.Node).Any(node =>
+            node is ProcedureCallHelperNode call && !isTypedCall(call)
+            || IsMachineInterrupt(node));
+
+    /// <summary>A frame-writing typed service call or a built-in-dispatch <c>int</c>: both read
+    /// the FLAGS image (and, for a dispatch, the registers the handler may read) from the machine
+    /// like an untyped call does, so the bytes they read stay machine inputs.</summary>
+    private static bool IsMachineInterrupt(IVisitableAstNode node) =>
+        node is InterruptServiceCallNode { WritesFrame: true }
+            or InterruptCallHelperNode { Kind: InterruptSiteKind.BuiltInDispatch };
 
     /// <summary>The input bytes whose value the method only saves, merges, or feeds an untyped
     /// call: a general or segment register is a machine input when the worklist over its entry
@@ -532,22 +540,19 @@ internal sealed class TypedSignatures {
     /// <summary>Whether any statement or terminator of <paramref name="method"/> is an
     /// <c>int</c> or a callback whose effects are not fully described by a service contract:
     /// either can end the program or move CS:IP, which the typed return check would turn into a
-    /// failure. Only a typed <see cref="InterruptServiceCallNode"/> that does not write the
-    /// interrupt frame (<see cref="InterruptServiceCallNode.WritesFrame"/>) stays allowed: it
-    /// does neither on a normal return and keeps its own statement effects (IS-8). A
-    /// frame-writing call or a <see cref="InterruptSiteKind.BuiltInDispatch"/> site pushes the
-    /// FLAGS image, which would put six status-flag parameters only the frame reads on the
-    /// signature - worse than the untyped method, so those wait for flags as values.</summary>
+    /// failure. A typed <see cref="InterruptServiceCallNode"/> stays allowed - frame-writing or
+    /// not - and so does a <see cref="InterruptSiteKind.BuiltInDispatch"/> site: both keep their
+    /// own statement effects and read the FLAGS image from the machine, which
+    /// <see cref="IsMachineInterrupt"/> accounts as a machine input.</summary>
     private static bool HasInterruptOrCallback(IrMethod method) =>
         method.Blocks.SelectMany(block =>
                 block.Statements.Select(statement => statement.Node)
                     .Concat(IrAstChildren.RootsOf(block.Terminator)))
             .Any(root => IrAstChildren.Descendants(root).Any(node =>
                 node is ProgramInterruptCallHelperNode
-                    or InterruptCallHelperNode
                     or InterruptCallReturnedElsewhereHelperNode
                     or CallbackHelperNode or CallbackMovedCsIpHelperNode
-                    || node is InterruptServiceCallNode { WritesFrame: true }));
+                    || node is InterruptCallHelperNode { Kind: not InterruptSiteKind.BuiltInDispatch }));
 
     /// <summary>
     /// The read-position register / flag occurrences of <paramref name="method"/> that print as

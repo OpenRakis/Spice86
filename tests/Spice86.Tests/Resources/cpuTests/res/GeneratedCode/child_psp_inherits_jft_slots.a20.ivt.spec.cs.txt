@@ -24,15 +24,15 @@ public partial class CfgGeneratedOverrides {
         fileHandle = ServiceCall(cs1, 0x0104, () => Dos.ReadPspAddress());
         ImageMinus0002Globals.Word01CE = fileHandle;
         DX = 0x01D1;
-        NearCall(cs1, 0x010E, unknown_016E_01BB_0189BEntry);
+        AX = NearCall(cs1, 0x010E, () => unknown_016E_01BB_0189B());
         Alu16.Sub(AX, 5);
         if (AX == 5) {
             DX = 0x01D7;
-            NearCall(cs1, 0x011B, unknown_016E_01BB_0189BEntry);
+            AX = NearCall(cs1, 0x011B, () => unknown_016E_01BB_0189B());
             Alu16.Sub(AX, 6);
             if (AX == 6) {
                 DX = 0x01DD;
-                NearCall(cs1, 0x0128, unknown_016E_01BB_0189BEntry);
+                AX = NearCall(cs1, 0x0128, () => unknown_016E_01BB_0189B());
                 Alu16.Sub(AX, 7);
                 if (AX == 7) {
                     DX = 0x2000;
@@ -66,7 +66,7 @@ public partial class CfgGeneratedOverrides {
                             goto L_01B4;
                         }
                         DX = 0x01E3;
-                        NearCall(cs1, 0x017D, unknown_016E_01BB_0189BEntry);
+                        AX = NearCall(cs1, 0x017D, () => unknown_016E_01BB_0189B());
                         Alu16.Sub(AX, 8);
                         if (AX != 8) {
                             goto L_01B4;
@@ -115,7 +115,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: DX, DS, flags, DF. Outputs: AX. Changes: AX, CF.</summary>
     /// Segment values at entry, from every call site: DS = 0x016E.
-    public virtual Action unknown_016E_01BB_0189B() {
+    public virtual ushort unknown_016E_01BB_0189B() {
         bool flag1 = false;
         ushort word1 = 0;
         CheckExternalEvents(cs1, 0x01BB);
@@ -130,7 +130,13 @@ public partial class CfgGeneratedOverrides {
         AX = word1;
         Out8(0x0998, AL);
         (_, AX) = Stack.Restore2();
-        return NearRet();
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_016E_01BB_0189B_Asm() {
+        AX = unknown_016E_01BB_0189B();
+        return Returned;
     }
 
 }
@@ -196,7 +202,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
-    private readonly Func<int, Action> unknown_016E_01BB_0189BEntry;
+    private readonly Func<int, Action> unknown_016E_01BB_0189B_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -221,7 +227,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         ImageMinus0002Globals = new ImageMinus0002Globals(Memory, programStartSegment);
 
         unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
-        unknown_016E_01BB_0189BEntry = _ => unknown_016E_01BB_0189B();
+        unknown_016E_01BB_0189B_AsmEntry = _ => unknown_016E_01BB_0189B_Asm();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -236,7 +242,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01BB, unknown_016E_01BB_0189BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x01BB, unknown_016E_01BB_0189B_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
