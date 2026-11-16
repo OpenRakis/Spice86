@@ -191,6 +191,22 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
+    /// Record arrays: each caller's <c>call [cs:di+0x0C]</c> (or <c>call far [cs:di+0x0A]</c>)
+    /// site sits behind a search loop or a constant record address, so the discovery run proposes
+    /// every record's handler as a guarded speculative target. The unobserved run (selector=1)
+    /// finds a later record in each list and the generated code must call its handler instead of
+    /// failing "Untested near call target" / "Untested far call target"; the negative arms stay
+    /// untested.
+    /// </summary>
+    [Fact]
+    public void SpeculativeRecordArrayExecutesCorrectlyOnBothPaths() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeRecordArray(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeRecordArray(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeRecordArray(SpeculativeArm.Unobserved)]);
+    }
+
+    /// <summary>
     /// Regression for the cross-variant convergence leak: running the self-modifying fixture with
     /// speculation on must not introduce a SelectorNode at F000:1403. The three opcodes that occupy
     /// that address over time (push AX / shl BX / inc CX) are reached on distinct predecessor edges,

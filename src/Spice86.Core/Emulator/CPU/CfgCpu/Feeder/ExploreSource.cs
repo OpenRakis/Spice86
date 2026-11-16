@@ -25,5 +25,8 @@ public enum ExploreSource {
     /// <summary>A target read through a pointer cell (a global or a register-indirect read).</summary>
     PointerValue,
     /// <summary>A variant of an instruction the program wrote into memory.</summary>
-    CodeVariant
+    CodeVariant,
+    /// <summary>A handler read from a record of an array a search loop walks, or from a constant
+    /// record address.</summary>
+    RecordEntry
 }

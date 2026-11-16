@@ -123,6 +123,11 @@ public class SpeculativeExplorer : InstructionReplacer {
     private sealed record TableDependent(CfgInstruction Site, bool IsCall,
         int SegmentRegisterIndex, ushort BaseOffset, ushort Step, ushort Bound)
         : AnchorDependent(Site, IsCall);
+
+    /// <summary>Reads the handler field of every record the site's backward walk proved the index
+    /// register can point at, and proposes each as a guarded target.</summary>
+    private sealed record RecordArrayDependent(CfgInstruction Site, bool IsCall,
+        RecordArrayRecognizer.RecordArrayShape Shape) : AnchorDependent(Site, IsCall);
     /// <summary>One call site pending on its callee's return proof, with the (known-registers,
     /// anchor) pairs that reached it: when the callee proves, each pair resumes its walk past the
     /// call with the registers the callee does not write.</summary>
@@ -136,6 +141,7 @@ public class SpeculativeExplorer : InstructionReplacer {
     private readonly HashSet<SegmentedAddress> _refusedCalleeProof = [];
     private readonly HashSet<SegmentedAddress> _incompleteCalleeProof = [];
     private readonly CalleeWriteScanner _calleeWriteScanner;
+    private readonly RecordArrayRecognizer _recordArrayRecognizer;
     private int _drainNesting;
     private bool _drainInserted;
     private readonly SpeculativeReachabilityPruner _pruner;
@@ -161,6 +167,7 @@ public class SpeculativeExplorer : InstructionReplacer {
         _calleeReturnScanner = new CalleeReturnScanner(nodeIndex);
         _calleeWriteScanner = new CalleeWriteScanner(nodeIndex, installedInterruptHandlers,
             interruptVectorTable, ReturnsBalanced);
+        _recordArrayRecognizer = new RecordArrayRecognizer(nodeIndex, _calleeWriteScanner.MayWriteAcross);
         _pruner = new SpeculativeReachabilityPruner(replacerRegistry);
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
         // Catalogue entries are trust-checked against the loaded bytes, so they can only be
@@ -330,6 +337,10 @@ public class SpeculativeExplorer : InstructionReplacer {
         }
         SwitchTableRecognizer.TableShape? table = _tableRecognizer.Recognize(transfer);
         if (table is null) {
+            // Not a bounded table: maybe an index into an array of records a search loop walked.
+            if (_recordArrayRecognizer.Recognize(transfer) is { } shape) {
+                EvaluateRecordArray(transfer, shape, transfer);
+            }
             return;
         }
         int count = table.Bound + 1;
@@ -383,6 +394,87 @@ public class SpeculativeExplorer : InstructionReplacer {
         }
         Drain(worklist);
     }
+
+    /// <summary>
+    /// Reads the handler field of every record the recognized lists cover, under the site's
+    /// current segment register value (counts in memory cells are read now, never at recognition
+    /// time). Every observed Normal target of the site must be one of the read records, else the
+    /// recognition is refused; the rest are proposed as <see cref="ExploreSource.RecordEntry"/>
+    /// candidates under <paramref name="trigger"/>.
+    /// </summary>
+    private void EvaluateRecordArray(CfgInstruction site,
+        RecordArrayRecognizer.RecordArrayShape shape, CfgInstruction trigger) {
+        ushort segment = _state.SegmentRegisters.UInt16[(uint)shape.SegmentRegisterIndex];
+        HashSet<SegmentedAddress> targets = [];
+        foreach (RecordArrayRecognizer.RecordList list in shape.Lists) {
+            ushort count = list.CountConstant ?? ReadSegmentWord(list.CountSegmentRegisterIndex,
+                list.CountCellOffset);
+            if (count > 256) {
+                _loggerService.LogDebug("Record array at {Address}: list count {Count} over the 256 maximum",
+                    site.Address, count);
+                return;
+            }
+            for (int index = 0; index < count; index++) {
+                uint at = (uint)(list.Base + index * list.Stride + shape.Displacement);
+                SegmentedAddress? target = ReadRecordTarget(site.Address.Segment, segment, at,
+                    shape.IsFar);
+                if (target is not null) {
+                    targets.Add(target.Value);
+                }
+            }
+        }
+        // Every observed jump/call target of the site must be one of the read records, else the
+        // recognized lists do not describe this transfer (a path the walk did not track produced
+        // the pointer).
+        if (!site.SuccessorsPerType.TryGetValue(InstructionSuccessorType.Normal, out ISet<ICfgNode>? targetSuccessors)) {
+            targetSuccessors = new HashSet<ICfgNode>();
+        }
+        foreach (ICfgNode successor in targetSuccessors) {
+            if (!successor.IsSpeculative && !targets.Contains(successor.Address)) {
+                _loggerService.LogDebug("Record array at {Address} refused: observed target {Target} is not a record",
+                    site.Address, successor.Address);
+                return;
+            }
+        }
+        if (targets.Count > MaxCandidatesPerSite) {
+            _loggerService.LogDebug("Record array at {Address} read {Count} targets, over the {Max} site maximum",
+                site.Address, targets.Count, MaxCandidatesPerSite);
+        }
+        List<DiscoveryCandidate> candidates = targets
+            .Where(address => !site.SuccessorsPerAddress.ContainsKey(address))
+            .Select(address => new DiscoveryCandidate(address, site, InstructionSuccessorType.Normal,
+                ExploreSource.RecordEntry))
+            .ToList();
+        ExploreCandidates(trigger, candidates);
+        if (!site.IsCall) {
+            return;
+        }
+        Queue<ExploreItem> worklist = new();
+        foreach (SegmentedAddress target in targets) {
+            TryExploreCallContinuationForCallee(site, target, worklist);
+        }
+        Drain(worklist);
+    }
+
+    private SegmentedAddress? ReadRecordTarget(ushort siteSegment, ushort segment, uint at,
+        bool isFar) {
+        ushort offset = ReadSegmentWord(segment, at);
+        if (!isFar) {
+            return offset is 0x0000 or 0xFFFF ? null : new SegmentedAddress(siteSegment, offset);
+        }
+        ushort targetSegment = ReadSegmentWord(segment, at + 2);
+        return offset is 0x0000 or 0xFFFF || targetSegment is 0x0000 or 0xFFFF
+            ? null
+            : new SegmentedAddress(targetSegment, offset);
+    }
+
+    private ushort ReadSegmentWord(int segmentRegisterIndex, uint offset) {
+        ushort segment = _state.SegmentRegisters.UInt16[(uint)segmentRegisterIndex];
+        return ReadSegmentWord(segment, offset);
+    }
+
+    private ushort ReadSegmentWord(ushort segment, uint offset) =>
+        (ushort)(SneakilyReadCodeByte(segment, offset) | SneakilyReadCodeByte(segment, offset + 1) << 8);
 
     /// <summary>
     /// The call-continuation rule with an explicitly given callee entry, for callers that know
@@ -491,7 +583,7 @@ public class SpeculativeExplorer : InstructionReplacer {
 
     private static bool IsDataSource(ExploreSource source) => source is
         ExploreSource.TableEntry or ExploreSource.CatalogueEntry or ExploreSource.InterruptVector
-        or ExploreSource.RegisterValue or ExploreSource.PointerValue;
+        or ExploreSource.RegisterValue or ExploreSource.PointerValue or ExploreSource.RecordEntry;
 
     private static bool IsGuess(ExploreSource source) =>
         IsDataSource(source) || source is ExploreSource.PushedReturn;
@@ -831,16 +923,43 @@ public class SpeculativeExplorer : InstructionReplacer {
         if (!IsKnown(item.KnownRegisters, indexRegister)) {
             // Bounded indexed-table form: the backward walk supplies the reachable entry offsets,
             // so the index register itself need not be known, only the segment.
-            if (isFar || SwitchTableRecognizer.RecognizeSpeculative(site) is not { } table
-                || table.Bound + 1 > MaxTableEntries) {
-                _refusedAnchorSiteForms++;
+            if (!isFar && SwitchTableRecognizer.RecognizeSpeculative(site) is { } table
+                && table.Bound + 1 <= MaxTableEntries) {
+                AddDependent(item.Anchor, new TableDependent(site, isCall, segmentRegisterIndex,
+                    table.BaseOffset, table.Step, table.Bound));
                 return;
             }
-            AddDependent(item.Anchor, new TableDependent(site, isCall, segmentRegisterIndex,
-                table.BaseOffset, table.Step, table.Bound));
+            // Index register unknown: the record-array walk may still prove which records it can
+            // point at (near or far sites).
+            if (TryRecordArrayDependent(item, site, isCall) is { } unknownIndexDependent) {
+                AddDependent(item.Anchor, unknownIndexDependent);
+                return;
+            }
+            _refusedAnchorSiteForms++;
             return;
         }
         AddDependent(item.Anchor, new CellDependent(site, isCall, expectedSize, segmentRegisterIndex, indexRegister, displacement));
+        // The cell alone gives one record's handler; the array gives them all.
+        if (TryRecordArrayDependent(item, site, isCall) is { } recordDependent) {
+            AddDependent(item.Anchor, recordDependent);
+        }
+    }
+
+    /// <summary>Recognizes the site as a record array for anchor registration: lists whose count
+    /// cell lives in a segment register the anchor does not know are dropped.</summary>
+    private RecordArrayDependent? TryRecordArrayDependent(ExploreItem item, CfgInstruction site, bool isCall) {
+        if (_recordArrayRecognizer.Recognize(site) is not { } shape) {
+            return null;
+        }
+        List<RecordArrayRecognizer.RecordList> lists = shape.Lists
+            .Where(list => list.CountConstant is not null
+                || IsKnown(item.KnownRegisters, 8 + list.CountSegmentRegisterIndex))
+            .ToList();
+        if (lists.Count == 0) {
+            return null;
+        }
+        return new RecordArrayDependent(site, isCall,
+            shape with { Lists = lists });
     }
 
     private void AddDependent(CfgInstruction anchor, AnchorDependent dependent) {
@@ -885,6 +1004,9 @@ public class SpeculativeExplorer : InstructionReplacer {
         switch (dependent) {
             case TableDependent table:
                 EvaluateTableDependent(anchor, table);
+                return;
+            case RecordArrayDependent recordArray:
+                EvaluateRecordArray(recordArray.Site, recordArray.Shape, anchor);
                 return;
             case RegisterDependent register: {
                 ushort offset = _state.GeneralRegisters.UInt16[(uint)register.Register];

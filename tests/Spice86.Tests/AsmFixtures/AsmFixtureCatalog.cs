@@ -721,6 +721,51 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs speculative_record_array: every caller's <c>call [cs:di+0x0C]</c> (or
+    /// <c>call far [cs:di+0x0A]</c>) site sits behind a search loop or a constant record address,
+    /// so each record's handler is proposed as a guarded target. On the unobserved arm the
+    /// searches find record 2 (record 1 for the P7 compare ladder, whose key table differs): P1
+    /// count-immediate, P2 count-in-header, P3's second list, P4's far handlers on the speculative
+    /// arm, P5's inline loop, P6's loop with a global-path sibling, and P7's ladder all reach the
+    /// proposed handler. The negative arms (DI written after the return, a DI-writing call, a
+    /// register stride, an unrecognized count) stay untested, and N5's global-path observed
+    /// target keeps the site refused.</summary>
+    public static AsmFixture SpeculativeRecordArray(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x41F];
+        expectedMemory[0x400] = 0x02;
+        for (int i = 0x401; i <= 0x41E; i++) {
+            expectedMemory[i] = 0x01;
+        }
+        if (arm == SpeculativeArm.Unobserved) {
+            expectedMemory[0x403] = 0x03;
+            expectedMemory[0x406] = 0x03;
+            expectedMemory[0x40A] = 0x03;
+            expectedMemory[0x40E] = 0x03;
+            expectedMemory[0x411] = 0x03;
+            expectedMemory[0x414] = 0x03;
+            expectedMemory[0x416] = 0x03;
+            expectedMemory[0x418] = 0x02;
+            expectedMemory[0x41B] = 0x03;
+            expectedMemory[0x41E] = 0x03;
+        } else {
+            expectedMemory[0x401] = 0x03;
+            expectedMemory[0x404] = 0x03;
+            expectedMemory[0x407] = 0x03;
+            expectedMemory[0x40F] = 0x03;
+            expectedMemory[0x412] = 0x03;
+            expectedMemory[0x415] = 0x03;
+            expectedMemory[0x418] = 0x02;
+            expectedMemory[0x419] = 0x03;
+            expectedMemory[0x41C] = 0x03;
+        }
+        AsmRunSettings settings = new() { BinName = "speculative_record_array", MaxCycles = 0x8000 };
+        if (arm == SpeculativeArm.Observed) {
+            return MemoryFixture(settings, expectedMemory);
+        }
+        settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
