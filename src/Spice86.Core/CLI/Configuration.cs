@@ -58,6 +58,13 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--GeneratedCodeAssumeAbandonedStackSlotsUnobserved")]
     public bool GeneratedCodeAssumeAbandonedStackSlotsUnobserved { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides assume a slot a save push of a register
+    /// wrote is written only by its pop, so the slot survives call and service boundaries when
+    /// the method lets no stack address escape; off by default - strict mode drops every slot at
+    /// a full memory boundary.</summary>
+    [CommandOption("--GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops")]
+    public bool GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

@@ -64,6 +64,8 @@ internal sealed class IrStackSlots {
     public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias,
         Func<IrStatement, int?> callPopCounts) {
         IrStackSlots slots = new(alias, callPopCounts);
+        slots._keepSavedAtBoundaries =
+            alias.Policy.AssumeSavedSlotsWrittenOnlyByPops && !StackEscapes(method);
         BlockGraph<IrBlock> graph = method.ToStructuringGraph();
         DepthFirstOrdering<IrBlock> traversal = new(
             [.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
@@ -83,6 +85,7 @@ internal sealed class IrStackSlots {
 
     private readonly IrMemoryAliasAnalysis? _alias;
     private readonly Func<IrStatement, int?>? _callPopCounts;
+    private bool _keepSavedAtBoundaries;
 
     private IrStackSlots(IrMemoryAliasAnalysis? alias, Func<IrStatement, int?>? callPopCounts) {
         _alias = alias;
@@ -153,26 +156,121 @@ internal sealed class IrStackSlots {
     private IrStackState TransferredState(IrBlock block, int index, IrStatement statement,
         IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         if (alias.IsFullMemoryBoundary(block, index)) {
+            IrStackState stripped = _keepSavedAtBoundaries
+                ? OnlySavedSlots(state) : state.WithoutSlots();
             if (_callPopCounts?.Invoke(statement) is { } pop) {
                 // A call proved to return to its caller with "ret n": the return address the call
                 // pushed and the callee popped cancel out, so SP advances by n on the same base.
-                // The slot contents are still dropped - the callee may write any memory.
-                IrStackOffset offset = state.Offset;
+                // The slot contents are dropped - the callee may write any memory - except
+                // saved-register slots when the policy assumes them written only by their pops.
+                IrStackOffset offset = stripped.Offset;
                 if (offset.Kind == IrStackOffsetKind.Known) {
                     offset = IrStackOffset.Known(offset.Base, offset.Delta + pop);
                 }
-                return TrackBp(statement, state.WithOffset(offset).WithoutSlots());
+                return TrackBp(statement, stripped.WithOffset(offset));
             }
             if (((statement.Effects.MustWrite | statement.Effects.MayWrite) & StackWrites)
                     == CpuValues.None) {
                 // A boundary that cannot move SP (an event check, a wide store): the offset and
-                // the BP copy survive, only the slot contents are dropped.
-                return TrackBp(statement, state.WithoutSlots());
+                // the BP copy survive, only the slot contents are dropped - saved-register slots
+                // of a non-escaping method excepted under the relaxation.
+                return TrackBp(statement, stripped);
             }
             return IrStackState.Rebase(statement);
         }
         return ApplyStatement(block, index, statement, state, record, alias);
     }
+
+    /// <summary>The slots that survive a boundary under the saved-slots relaxation: only the
+    /// slots whose every definition is a push of a register - the save slots a restore pops
+    /// back. Every other slot is dropped as in strict mode.</summary>
+    private static IrStackState OnlySavedSlots(IrStackState state) {
+        if (state.Slots.Count == 0) {
+            return state;
+        }
+        List<int> dropped = [.. state.Slots
+            .Where(pair => !pair.Value.All(IsSavedRegisterPush))
+            .Select(pair => pair.Key)];
+        if (dropped.Count == 0) {
+            return state;
+        }
+        IrStackState kept = state.CopySlots();
+        foreach (int delta in dropped) {
+            kept.Slots.Remove(delta);
+            kept.PartialSlots.Remove(delta);
+        }
+        return kept;
+    }
+
+    private static bool IsSavedRegisterPush(IrStackSlotDefinition definition) =>
+        definition.Statement.Node is StackCallNode { Operation: StackOperation.Push,
+            Arguments: [RegisterNode] };
+
+    /// <summary>Whether any statement of <paramref name="method"/> lets a stack address escape
+    /// the frame: an SS write, an SS push, an SS or SP/BP value copied into a segment register,
+    /// or a statement materializing an SP- or BP-derived value in a register outside SP and BP
+    /// (a <c>lea</c> of an SS-relative address, an SP/BP copy or an exchange another segment's
+    /// pointer can use). Such a pointer can reach the saved slots through other code, so the
+    /// saved-slots relaxation refuses the method.</summary>
+    private static bool StackEscapes(IrMethod method) {
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (EscapesStack(statement)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static bool EscapesStack(IrStatement statement) {
+        if (((statement.Effects.MustWrite | statement.Effects.MayWrite) & CpuValues.Ss)
+                != CpuValues.None) {
+            return true;
+        }
+        foreach (IVisitableAstNode node
+                in IrAstChildren.Descendants(statement.Node).Prepend(statement.Node)) {
+            switch (node) {
+                case StackCallNode { Operation: StackOperation.Push,
+                        Arguments: [SegmentRegisterNode {
+                            RegisterIndex: (int)SegmentRegisterIndex.SsIndex }] }:
+                    return true;
+                case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: SegmentRegisterNode, Right: { } segmentRight }:
+                    if (ReadsStackValue(segmentRight, true)) {
+                        return true;
+                    }
+                    break;
+                case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: RegisterNode {
+                            RegisterIndex: not ((int)RegisterIndex.SpIndex
+                                or (int)RegisterIndex.BpIndex) },
+                        Right: { } right }:
+                    if (ReadsStackValue(right, false)) {
+                        return true;
+                    }
+                    break;
+                case InstructionNode:
+                    if ((statement.Effects.Reads & (CpuValues.Esp | CpuValues.Ebp))
+                            != CpuValues.None
+                        && ((statement.Effects.MustWrite | statement.Effects.MayWrite)
+                            & CpuValues.Registers
+                            & ~(CpuValues.Esp | CpuValues.Ebp | CpuValues.Ss)) != CpuValues.None) {
+                        return true;
+                    }
+                    break;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether <paramref name="node"/> reads the SP or BP register - or, when
+    /// <paramref name="includeStackSegment"/>, the SS segment register.</summary>
+    private static bool ReadsStackValue(IVisitableAstNode node, bool includeStackSegment) =>
+        IrAstChildren.Descendants(node).Prepend(node).OfType<RegisterNode>().Any(register =>
+            register.RegisterIndex is (int)RegisterIndex.SpIndex or (int)RegisterIndex.BpIndex
+            || (includeStackSegment && register is SegmentRegisterNode {
+                RegisterIndex: (int)SegmentRegisterIndex.SsIndex }));
 
     private IrStackState ApplyStatement(IrBlock block, int index, IrStatement statement,
         IrStackState state, bool record, IrMemoryAliasAnalysis alias) {

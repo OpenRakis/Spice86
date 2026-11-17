@@ -3,8 +3,11 @@
 ; the caller observes, S2 restores registers the caller never reads, S3 puts a
 ; "push sp" inside the entry run, S4 has a second exit path with a statement
 ; between the pops. Every callee calls leaf: ret right after its pushes so a
-; call sits between each push and its pop. DS = SS = 2000h, SP = 1000h.
-; Results go to offsets 40h-55h (physical 20040h-20055h).
+; call sits between each push and its pop. S5 leaks a saved slot's address to a
+; routine an int reaches, which writes through it, so the saved-slots
+; relaxation must refuse it.
+; DS = SS = 2000h, SP = 1000h.
+; Results go to offsets 40h-57h (physical 20040h-20057h).
 use16
 start:
     mov ax, 2000h
@@ -51,6 +54,19 @@ start:
     mov [50h], ax
     mov [52h], si
     mov [54h], di
+
+; S5: callee_e pushes bp and si, builds the frame pointer, then leaks the saved
+; si slot's address in bx to int 60h, whose handler writes through it. The pop
+; has to observe that write: under the saved-slots relaxation the method must
+; refuse because the stack address escapes.
+    xor ax, ax
+    mov es, ax
+    mov word [es:180h], int60_handler
+    mov ax, cs
+    mov word [es:182h], ax
+    mov si, 0C3C3h
+    call callee_e
+    mov [56h], si
 
     mov word [ss:600h], sp
     mov word [ss:602h], ss
@@ -101,6 +117,21 @@ d_path2:
     mov ax, 7
     pop si
     ret
+
+callee_e:
+    push bp
+    mov bp, sp
+    push si
+    lea bx, [bp-2]
+    int 60h
+    mov ax, [bp-2]
+    pop si
+    pop bp
+    ret
+
+int60_handler:
+    mov word [ss:bx], 5A5Ah
+    iret
 
 leaf:
     ret

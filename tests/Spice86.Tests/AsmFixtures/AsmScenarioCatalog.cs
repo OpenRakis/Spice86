@@ -46,7 +46,8 @@ internal static class AsmScenarioCatalog {
         .. BatchScenarios,
         .. BootstrapScenarios,
         .. ConsoleProgramScenarios,
-        CompiledCompilerIdioms()
+        CompiledCompilerIdioms(GenerationPolicy.Strict),
+        CompiledCompilerIdioms(RelaxedSavedSlotsPolicy)
     ];
 
     /// <summary>Batch scripts routed through COMMAND.COM: redirection, labels, subroutines, call expansion,
@@ -379,12 +380,13 @@ internal static class AsmScenarioCatalog {
     /// oracle checks the `total * 2 + w` long fold, the long `/10`, the signed `/2`, the `!count`
     /// boolean and the `1..9` range result of real compiler codegen.</summary>
     /// <returns>The scenario, with the compiled program as its primary resource.</returns>
-    private static AsmScenario CompiledCompilerIdioms() {
+    private static AsmScenario CompiledCompilerIdioms(GenerationPolicy policy) {
         return new AsmScenario("compiled_compiler_idioms", scope => {
             DosProgramRun run = new(scope, "compiled_compiler_idioms");
             run.ResourceCopy("NativeDosTests", "compiler_idioms.exe", "IDIOMS.EXE");
             AsmRunSettings settings = run.Settings("IDIOMS.EXE") with {
-                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000
+                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000,
+                GenerationPolicy = policy
             };
             return run.RunCustomSettings(settings, result =>
                 DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1"));
@@ -617,6 +619,9 @@ internal static class AsmScenarioCatalog {
                 () => AsmFixtureCatalog.Partition("cc_stack_frames")
                     .WithGenerationPolicy(RelaxedStackPolicy)),
             PartitionScenario("cc_saved_registers"),
+            AsmScenario.FromFixture("cc_saved_registers",
+                () => AsmFixtureCatalog.Partition("cc_saved_registers")
+                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy)),
             PartitionScenario("cc_call_shapes"),
             PartitionScenario("cc_calls_keep_stack_offset"),
             AsmScenario.FromFixture("cc_calls_keep_stack_offset",
@@ -719,4 +724,10 @@ internal static class AsmScenarioCatalog {
     /// them.</summary>
     private static readonly GenerationPolicy RelaxedStackPolicy =
         new(GenerationRelaxation.AbandonedStackSlotsUnobserved);
+
+    /// <summary>The saved-slots relaxation: a slot a save push of a register wrote is assumed
+    /// written only by its pop, so the slot survives call and service boundaries when the method
+    /// lets no stack address escape.</summary>
+    private static readonly GenerationPolicy RelaxedSavedSlotsPolicy =
+        new(GenerationRelaxation.SavedSlotsWrittenOnlyByPops);
 }
