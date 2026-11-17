@@ -45,6 +45,12 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--GeneratedCodeAssumeUnknownMemoryIsRam")]
     public bool GeneratedCodeAssumeUnknownMemoryIsRam { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides assume an indexed memory access whose
+    /// offset range is unproved stays inside its segment; off by default - strict mode assumes
+    /// it may wrap. An access proved to cross stays exact.</summary>
+    [CommandOption("--GeneratedCodeAssumeAccessesStayInSegment")]
+    public bool GeneratedCodeAssumeAccessesStayInSegment { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

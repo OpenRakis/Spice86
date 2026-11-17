@@ -102,7 +102,7 @@ internal static class IrJoinedMemory {
         }
         IrMemoryAccess lowAccess = alias.OfPointer(low, statement, block, index);
         IrMemoryAccess highAccess = alias.OfPointer(high, statement, block, index);
-        if (!AdjacentOffsets(low, high, lowAccess, highAccess)) {
+        if (!AdjacentOffsets(low, high, lowAccess, highAccess, alias.Policy)) {
             return false;
         }
         // Same segment: the same known value through the same register identity and version.
@@ -121,18 +121,24 @@ internal static class IrJoinedMemory {
     /// <summary>Adjacency without wrap: <paramref name="high"/> starts exactly two bytes above
     /// <paramref name="low"/> and the widened four-byte range stays inside the segment. A
     /// constant pair needs <c>high == low + 2</c>; an indexed pair needs the same single
-    /// register term at the same version with displacements <c>d</c> and <c>d + 2</c> and a
-    /// proven index interval whose widened top byte still fits the 16-bit offset.</summary>
+    /// register term at the same version with displacements <c>d</c> and <c>d + 2</c>. An index
+    /// with a proven interval joins only when the widened top byte still fits the 16-bit
+    /// offset; an index with no proven range joins under
+    /// <see cref="GenerationPolicy.AssumeAccessesStayInSegment"/>.</summary>
     private static bool AdjacentOffsets(SegmentedPointerNode low, SegmentedPointerNode high,
-            IrMemoryAccess lowAccess, IrMemoryAccess highAccess) {
+            IrMemoryAccess lowAccess, IrMemoryAccess highAccess, GenerationPolicy policy) {
         if (ConstantEvaluation.Resolved(low.Offset) is { } lowOffset
             && ConstantEvaluation.Resolved(high.Offset) is { } highOffset) {
             return lowOffset.Value <= 0xFFFC && highOffset.Value == lowOffset.Value + 2;
         }
-        return lowAccess.OffsetTerms is [OffsetTerm lowTerm]
-            && highAccess.OffsetTerms is [OffsetTerm highTerm] && lowTerm.Equals(highTerm)
-            && highAccess.OffsetDisplacement == lowAccess.OffsetDisplacement + 2
-            && lowAccess.OffsetRange is { } range && range.Hi + 3 <= 0xFFFF;
+        if (lowAccess.OffsetTerms is not [OffsetTerm lowTerm]
+            || highAccess.OffsetTerms is not [OffsetTerm highTerm] || !lowTerm.Equals(highTerm)
+            || highAccess.OffsetDisplacement != lowAccess.OffsetDisplacement + 2) {
+            return false;
+        }
+        return lowAccess.OffsetRange is { } range
+            ? range.Hi + 3 <= 0xFFFF
+            : policy.AssumeAccessesStayInSegment;
     }
 
     /// <summary>Whether the statement may be folded around at all: never faulting, never

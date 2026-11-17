@@ -14,9 +14,9 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, DS, flags, DF. Outputs: DF. Changes: DX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x2100, DS = 0x2000.
-    public virtual Action unknown_F000_0133_F0133() {
+    public virtual Action unknown_F000_0143_F0143() {
         ushort word1;
-        CheckExternalEvents(biosSegment, 0x0133);
+        CheckExternalEvents(biosSegment, 0x0143);
         UInt16[DS, BX + 0x1C] = AX;
         word1 = UInt16[DS, BX + 0x12];
         UInt16[DS, BX + 0x1E] = word1;
@@ -42,12 +42,12 @@ public partial class CfgGeneratedOverrides {
         SS = 0x2000;
         SP = 0x1000;
         ES = 0;
-        Segment0000Globals.Dword0190 = 0x00000133 | (uint)CS << 16;
+        Segment0000Globals.Dword0190 = 0x00000143 | (uint)CS << 16;
         word1 = 0x2100;
         ES = 0x2100;
         DirectionFlag = false;
         index = 0;
-        index2 = 0x0148;
+        index2 = 0x0158;
         word2 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x002A);
@@ -84,14 +84,14 @@ public partial class CfgGeneratedOverrides {
             AX = Segment2000Globals.Word0800;
             UInt16[DS, index + 0x10] = AX;
             BX = index;
-            InterruptCall(biosSegment, 0x009C, 0x64, biosSegment, 0x0133, unknown_F000_0133_F0133Entry);
+            InterruptCall(biosSegment, 0x009C, 0x64, biosSegment, 0x0143, unknown_F000_0143_F0143Entry);
             DX = Segment2000Globals.Word0802;
             UInt16[DS, index + 0x12] = DX;
             Alu16.Sub(word8, word8);
             Segment2000Globals.Word004A = 0x1234;
             AX = Segment2000Globals.Word0800;
             Segment2000Globals.Word0048 = AX;
-            InterruptCall(biosSegment, 0x00B3, 0x64, biosSegment, 0x0133, unknown_F000_0133_F0133Entry);
+            InterruptCall(biosSegment, 0x00B3, 0x64, biosSegment, 0x0143, unknown_F000_0143_F0143Entry);
             word6 = Segment2000Globals.Word0802;
             Segment2000Globals.Word004A = word6;
             word5 = Segment2000Globals.Word0800;
@@ -116,6 +116,8 @@ public partial class CfgGeneratedOverrides {
         DI &= 0xFFF0;
         UInt16[DS, DI + 0x0E] = 0x1111;
         UInt16[DS, DI + 0x10] = 0x2222;
+        Segment2000Globals.WordFFFE = 0x3333;
+        Segment2000Globals.Word0000 = 0x4444;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
@@ -157,6 +159,8 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
         Segment = 0x2000;
     }
 
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
     public uint Dword0044 { get => _memory.UInt32[Segment, 0x0044]; set => _memory.UInt32[Segment, 0x0044] = value; }
 
     public ushort Word0048 { get => _memory.UInt16[Segment, 0x0048]; set => _memory.UInt16[Segment, 0x0048] = value; }
@@ -170,6 +174,8 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
     public ushort Word0802 { get => _memory.UInt16[Segment, 0x0802]; set => _memory.UInt16[Segment, 0x0802] = value; }
 
     public uint Dword0804 { get => _memory.UInt32[Segment, 0x0804]; set => _memory.UInt32[Segment, 0x0804] = value; }
+
+    public ushort WordFFFE { get => _memory.UInt16[Segment, 0xFFFE]; set => _memory.UInt16[Segment, 0xFFFE] = value; }
 }
 
 // ==== file: Segment2100Globals.cs ====
@@ -209,7 +215,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0133_F0133Entry;
+    private readonly Func<int, Action> unknown_F000_0143_F0143Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
@@ -222,9 +228,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         Segment2100Globals = new Segment2100Globals(Memory, programStartSegment);
 
-        unknown_F000_0133_F0133Entry = _ => unknown_F000_0133_F0133();
+        unknown_F000_0143_F0143Entry = _ => unknown_F000_0143_F0143();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0133, unknown_F000_0133_F0133Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0143, unknown_F000_0143_F0143Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 

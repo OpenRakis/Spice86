@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0132",
+  "lastExecutedAddress": "F000:0142",
   "lastExecutedBlockId": 174,
   "blocks": [
     {
       "id": 174,
       "entry": "F000:0110",
-      "term": "F000:0132",
+      "term": "F000:0142",
       "pred": [
         143
       ],
@@ -25,6 +25,12 @@
         "BA2222|mov DX,0x2222",
         "89450E|mov word ptr DS:[DI\u002B0x0E],AX",
         "895510|mov word ptr DS:[DI\u002B0x10],DX",
+        "39FF|cmp DI,DI",
+        "BFFEFF|mov DI,0xFFFE",
+        "B83333|mov AX,0x3333",
+        "BA4444|mov DX,0x4444",
+        "8905|mov word ptr DS:[DI],AX",
+        "895502|mov word ptr DS:[DI\u002B2],DX",
         "39FF|cmp DI,DI",
         "3689260006|mov word ptr SS:[0x0600],SP",
         "368C160206|mov word ptr SS:[0x0602],SS",
@@ -105,13 +111,13 @@
         "BC0010|mov SP,0x1000",
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C70690013301|mov word ptr ES:[0x0190],0x0133",
+        "26C70690014301|mov word ptr ES:[0x0190],0x0143",
         "268C0E9201|mov word ptr ES:[0x0192],CS",
         "B80021|mov AX,0x2100",
         "8EC0|mov ES,AX",
         "FC|cld",
         "31DB|xor BX,BX",
-        "BE4801|mov SI,0x0148",
+        "BE5801|mov SI,0x0158",
         "BD0400|mov BP,4"
       ]
     },
@@ -173,8 +179,8 @@
     },
     {
       "id": 117,
-      "entry": "F000:0133",
-      "term": "F000:0143",
+      "entry": "F000:0143",
+      "term": "F000:0153",
       "pred": [
         129,
         172

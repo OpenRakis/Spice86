@@ -139,6 +139,16 @@ pass_loop:
     mov [di+10h], dx        ;; wraps to DS:0000 = 2222h
     cmp di, di
 
+; J3: a crossing pair through a register known constant (di = FFFEh): the second word store
+; wraps to offset 0, a known fact - even under the stay-in-segment relaxation the pair stays
+; two word stores
+    mov di, 0FFFEh
+    mov ax, 3333h
+    mov dx, 4444h
+    mov [di], ax            ;; DS:FFFE = 3333h
+    mov [di+2], dx          ;; wraps to DS:0000 = 4444h, overwrites J2's word
+    cmp di, di
+
     mov word [ss:600h], sp
     mov word [ss:602h], ss
     hlt

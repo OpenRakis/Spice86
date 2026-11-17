@@ -650,6 +650,9 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("dataflow_joined_memory"),
             AsmScenario.FromFixture("dataflow_joined_memory",
                 AsmFixtureCatalog.DataflowJoinedMemory286),
+            AsmScenario.FromFixture("dataflow_joined_memory",
+                () => AsmFixtureCatalog.Partition("dataflow_joined_memory")
+                    .WithGenerationPolicy(RelaxedSegmentPolicy)),
             PartitionScenario("dataflow_wide_conditions"),
             PartitionScenario("dataflow_wide_operations"),
             PartitionScenario("dataflow_legality_traps"),
@@ -700,5 +703,8 @@ internal static class AsmScenarioCatalog {
     private static readonly GenerationPolicy RelaxedRamPolicy =
         new(GenerationRelaxation.UnknownMemoryIsRam);
 
-
+    /// <summary>The accesses-stay-in-segment relaxation: an indexed access with an unproved
+    /// range is assumed not to wrap the segment end.</summary>
+    private static readonly GenerationPolicy RelaxedSegmentPolicy =
+        new(GenerationRelaxation.AccessesStayInSegment);
 }

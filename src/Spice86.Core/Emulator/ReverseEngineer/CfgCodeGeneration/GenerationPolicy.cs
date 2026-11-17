@@ -11,7 +11,10 @@ internal enum GenerationRelaxation {
     /// <summary>No relaxation: strict mode, the baseline.</summary>
     None = 0,
     /// <summary>Memory the alias analysis cannot prove is treated as ordinary RAM.</summary>
-    UnknownMemoryIsRam = 1
+    UnknownMemoryIsRam = 1,
+    /// <summary>An indexed access whose offset range is unproved is assumed not to wrap the
+    /// segment end; a constant or proved range that crosses stays a fact.</summary>
+    AccessesStayInSegment = 2
 }
 
 /// <summary>The immutable set of relaxations the whole generation run shares: effects, SSA,
@@ -25,6 +28,11 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
     public bool AssumeUnknownMemoryIsRam =>
         Relaxations.HasFlag(GenerationRelaxation.UnknownMemoryIsRam);
 
+    /// <summary>Whether an indexed access with an unproved offset range is assumed not to wrap
+    /// the segment end.</summary>
+    public bool AssumeAccessesStayInSegment =>
+        Relaxations.HasFlag(GenerationRelaxation.AccessesStayInSegment);
+
     /// <summary>The policy name the differential report and the golden key record: the relaxation
     /// names joined, or <c>strict</c> when none is enabled.</summary>
     public string Name => Relaxations == GenerationRelaxation.None
@@ -34,9 +42,16 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
                 && Relaxations.HasFlag(relaxation))
             .Select(relaxation => relaxation.ToString()));
 
-    /// <summary>The golden-key suffix of the policy: <c>.ram</c> for
-    /// <see cref="GenerationRelaxation.UnknownMemoryIsRam"/>, empty in strict mode.</summary>
-    public string GoldenSuffix => AssumeUnknownMemoryIsRam ? ".ram" : "";
+    /// <summary>The golden-key suffix part of each relaxation, in flag order.</summary>
+    private static readonly (GenerationRelaxation Flag, string Suffix)[] GoldenSuffixParts = [
+        (GenerationRelaxation.UnknownMemoryIsRam, ".ram"),
+        (GenerationRelaxation.AccessesStayInSegment, ".seg")];
+
+    /// <summary>The golden-key suffix of the policy: each enabled relaxation's suffix part
+    /// concatenated in flag order, empty in strict mode.</summary>
+    public string GoldenSuffix => string.Concat(GoldenSuffixParts
+        .Where(part => Relaxations.HasFlag(part.Flag))
+        .Select(part => part.Suffix));
 
     /// <summary>The generated header line listing the enabled relaxations.</summary>
     public string HeaderLine => $"// Relaxations: {(Relaxations == GenerationRelaxation.None

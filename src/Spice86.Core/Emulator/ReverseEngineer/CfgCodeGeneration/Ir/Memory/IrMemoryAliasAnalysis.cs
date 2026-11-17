@@ -64,6 +64,10 @@ internal sealed class IrMemoryAliasAnalysis {
         _ranges = new Lazy<IrValueRanges>(() => IrValueRanges.Compute(method, ssa));
     }
 
+    /// <summary>The generation policy the analysis was built under: consumers ask the policy,
+    /// never the flag set.</summary>
+    public GenerationPolicy Policy => _policy;
+
     /// <summary>The pointer reads of the statement at <paramref name="index"/> in
     /// <paramref name="block"/>: every pointer occurrence that is not the store target, plus the
     /// <c>SS:[SP]</c> of a pop or a peek.</summary>
