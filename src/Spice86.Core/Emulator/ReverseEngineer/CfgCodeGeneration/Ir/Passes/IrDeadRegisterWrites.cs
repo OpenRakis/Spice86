@@ -72,7 +72,7 @@ internal static class IrDeadRegisterWrites {
         if (!method.Blocks.SelectMany(block => block.Statements).Any(IrFrames.IsPushBp)) {
             return statements;
         }
-        IrMemoryAliasAnalysis alias = new(ssa);
+        IrMemoryAliasAnalysis alias = new(method, ssa);
         IrFrames frames = IrFrames.Compute(method, ssa,
             IrStackSlots.Compute(method, alias, _ => null), _ => CpuValues.Registers);
         foreach (IrEntry entry in method.Entries) {

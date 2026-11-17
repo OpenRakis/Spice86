@@ -63,7 +63,7 @@ internal static class IrFlagPropagation {
             _method = method;
             _editor = editor;
             _ssa = ssa;
-            _alias = new IrMemoryAliasAnalysis(ssa);
+            _alias = new IrMemoryAliasAnalysis(method, ssa);
             _byOrigin = IrOrigins.ByOrigin(method);
             _entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
             _entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();

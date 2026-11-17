@@ -73,7 +73,7 @@ internal static class SaveRestorePairs {
                 statement.Node is StackCallNode { Operation: StackOperation.Push })) {
             return SavedPairPlan.Empty;
         }
-        IrMemoryAliasAnalysis alias = new(ssa, entryFacts, policy);
+        IrMemoryAliasAnalysis alias = new(method, ssa, entryFacts, policy);
         IrStackSlots slots = IrStackSlots.Compute(method, alias, _ => null);
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> dominators = DominatorTreeBuilder.BuildFromEntries(graph);

@@ -64,16 +64,16 @@ internal sealed class IrFrames {
     /// (<see cref="CpuValues.Registers"/> when unknown).</summary>
     internal static IrFrames Compute(IrMethod method, IrSsa ssa, IrStackSlots slots,
         Func<IrStatement, CpuValues> callWrites) {
-        IrFrames frames = new(ssa, slots, callWrites);
+        IrFrames frames = new(method, ssa, slots, callWrites);
         frames.CollectAccesses(method);
         frames.CollectFrames(method);
         return frames;
     }
 
-    private IrFrames(IrSsa ssa, IrStackSlots slots, Func<IrStatement, CpuValues> callWrites) {
+    private IrFrames(IrMethod method, IrSsa ssa, IrStackSlots slots, Func<IrStatement, CpuValues> callWrites) {
         _ssa = ssa;
         _slots = slots;
-        _alias = new IrMemoryAliasAnalysis(ssa);
+        _alias = new IrMemoryAliasAnalysis(method, ssa);
         _callWrites = callWrites;
         _phiByResult = ssa.Phis.ToDictionary(phi => phi.Result);
     }
@@ -107,16 +107,18 @@ internal sealed class IrFrames {
 
     private void CollectAccesses(IrMethod method) {
         foreach (IrBlock block in method.Blocks) {
-            foreach (IrStatement statement in block.Statements) {
-                CollectAccesses(statement);
+            for (int index = 0; index < block.Statements.Count; index++) {
+                CollectAccesses(block, index);
             }
         }
     }
 
-    /// <summary>Every pointer occurrence of <paramref name="statement"/> is evaluated once (the
-    /// store target of an <c>ASSIGN</c> is the write, every other occurrence a read), so a shared
-    /// node is judged occurrence by occurrence.</summary>
-    private void CollectAccesses(IrStatement statement) {
+    /// <summary>Every pointer occurrence of the statement at <paramref name="index"/> of
+    /// <paramref name="block"/> is evaluated once (the store target of an <c>ASSIGN</c> is the
+    /// write, every other occurrence a read), so a shared node is judged occurrence by
+    /// occurrence.</summary>
+    private void CollectAccesses(IrBlock block, int index) {
+        IrStatement statement = block.Statements[index];
         ValueNode? storeTarget = null;
         if (statement.Node is BinaryOperationNode {
                 BinaryOperation: BinaryOperation.ASSIGN,
@@ -127,7 +129,7 @@ internal sealed class IrFrames {
             if (node is not SegmentedPointerNode pointer) {
                 continue;
             }
-            IrFrameAccess? access = FrameAccessOf(statement, pointer,
+            IrFrameAccess? access = FrameAccessOf(statement, pointer, block, index,
                 ReferenceEquals(pointer, storeTarget));
             _pointerResults.Add((pointer, access));
             if (access is null) {
@@ -147,8 +149,8 @@ internal sealed class IrFrames {
     /// be through SS with exactly one 16-bit register term (not SP) whose version is an SP copy at
     /// a known entry delta.</summary>
     private IrFrameAccess? FrameAccessOf(IrStatement statement, SegmentedPointerNode pointer,
-        bool isWrite) {
-        IrMemoryAccess access = _alias.OfPointer(pointer, statement);
+        IrBlock block, int index, bool isWrite) {
+        IrMemoryAccess access = _alias.OfPointer(pointer, statement, block, index);
         if (access.SegmentRegister != IrSsaValue.Ss || access.OffsetTerms is not [OffsetTerm term]
             || term.Register.DataType.BitWidth != BitWidth.WORD_16
             || term.Register.RegisterIndex == (int)RegisterIndex.SpIndex) {

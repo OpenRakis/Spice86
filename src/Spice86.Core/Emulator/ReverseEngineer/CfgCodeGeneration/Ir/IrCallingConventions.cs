@@ -470,7 +470,7 @@ internal sealed class IrCallingConventions {
         IrStackSlots slots = IrStackSlots.Empty;
         if (NeedsStackSlots(method.Source.IrMethod)) {
             slots = IrStackSlots.Compute(method.Source.IrMethod,
-                new IrMemoryAliasAnalysis(method.Ssa, method.Source.EntryFacts, _context.Policy),
+                new IrMemoryAliasAnalysis(method.Source.IrMethod, method.Ssa, method.Source.EntryFacts, _context.Policy),
                 statement => CallPopCount(method, statement));
         }
         method.Slots = slots;
@@ -782,7 +782,7 @@ internal sealed class IrCallingConventions {
             IrStackSlots slots = IrStackSlots.Empty;
             if (NeedsStackSlots(source.IrMethod)) {
                 slots = IrStackSlots.Compute(source.IrMethod,
-                    new IrMemoryAliasAnalysis(source.Ssa, source.EntryFacts, _context.Policy),
+                    new IrMemoryAliasAnalysis(source.IrMethod, source.Ssa, source.EntryFacts, _context.Policy),
                     _ => null);
             }
             _methodByName[source.Method.MethodName] = new MethodData {

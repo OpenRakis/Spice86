@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ranges;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Shared.Emulator.Memory;
 
@@ -31,29 +32,36 @@ internal sealed class IrMemoryAliasAnalysis {
     private readonly IrSsa _ssa;
     private readonly IrSegmentValueResolver _segmentValues;
     private readonly GenerationPolicy _policy;
+    private readonly Lazy<IrValueRanges> _ranges;
 
-    /// <summary>Builds the analysis over the SSA of one method in strict mode.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa) : this(ssa, IrSegmentFacts.None, GenerationPolicy.Strict) {
+    /// <summary>Builds the analysis over <paramref name="method"/> and its SSA in strict mode.</summary>
+    public IrMemoryAliasAnalysis(IrMethod method, IrSsa ssa) :
+        this(method, ssa, IrSegmentFacts.None, GenerationPolicy.Strict) {
     }
 
-    /// <summary>Builds the analysis over the SSA of one method under <paramref name="policy"/>.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa, GenerationPolicy policy) :
-        this(ssa, IrSegmentFacts.None, policy) {
-    }
-
-    /// <summary>Builds the analysis over the SSA of one method, resolving entry versions through
-    /// the segment entry facts <paramref name="facts"/> a prepare round consumed, in strict mode.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts) :
-        this(ssa, facts, GenerationPolicy.Strict) {
-    }
-
-    /// <summary>Builds the analysis over the SSA of one method, resolving entry versions through
-    /// the segment entry facts <paramref name="facts"/> a prepare round consumed, under
+    /// <summary>Builds the analysis over <paramref name="method"/> and its SSA under
     /// <paramref name="policy"/>.</summary>
-    public IrMemoryAliasAnalysis(IrSsa ssa, IrSegmentFacts facts, GenerationPolicy policy) {
+    public IrMemoryAliasAnalysis(IrMethod method, IrSsa ssa, GenerationPolicy policy) :
+        this(method, ssa, IrSegmentFacts.None, policy) {
+    }
+
+    /// <summary>Builds the analysis over <paramref name="method"/> and its SSA, resolving entry
+    /// versions through the segment entry facts <paramref name="facts"/> a prepare round
+    /// consumed, in strict mode.</summary>
+    public IrMemoryAliasAnalysis(IrMethod method, IrSsa ssa, IrSegmentFacts facts) :
+        this(method, ssa, facts, GenerationPolicy.Strict) {
+    }
+
+    /// <summary>Builds the analysis over <paramref name="method"/> and its SSA, resolving entry
+    /// versions through the segment entry facts <paramref name="facts"/> a prepare round
+    /// consumed, under <paramref name="policy"/>. The method's <see cref="IrValueRanges"/> are
+    /// computed lazily, on the first access whose offset is one register term.</summary>
+    public IrMemoryAliasAnalysis(IrMethod method, IrSsa ssa, IrSegmentFacts facts,
+        GenerationPolicy policy) {
         _ssa = ssa;
         _segmentValues = new IrSegmentValueResolver(ssa, facts);
         _policy = policy;
+        _ranges = new Lazy<IrValueRanges>(() => IrValueRanges.Compute(method, ssa));
     }
 
     /// <summary>The pointer reads of the statement at <paramref name="index"/> in
@@ -69,7 +77,7 @@ internal sealed class IrMemoryAliasAnalysis {
             }
             switch (node) {
                 case SegmentedPointerNode or AbsolutePointerNode:
-                    reads.Add(OfPointer((ValueNode)node, statement));
+                    reads.Add(OfPointer((ValueNode)node, statement, block, index));
                     break;
                 case StackCallValueNode { Operation: StackOperation.Pop or StackOperation.Peek } stack:
                     reads.Add(OfStackAccess(stack.Width, block, index, 0));
@@ -87,8 +95,9 @@ internal sealed class IrMemoryAliasAnalysis {
         foreach (IVisitableAstNode node in IrAstChildren.TerminatorNodes(terminator)) {
             switch (node) {
                 case SegmentedPointerNode or AbsolutePointerNode:
-                    reads.Add(OfPointer((ValueNode)node,
-                        value => _ssa.VersionUsed(terminator, value)));
+                    reads.Add(WithOffsetRange(OfPointer((ValueNode)node,
+                        value => _ssa.VersionUsed(terminator, value)),
+                        block, block.Statements.Count));
                     break;
                 case StackCallValueNode { Operation: StackOperation.Pop or StackOperation.Peek }
                         stack:
@@ -105,7 +114,7 @@ internal sealed class IrMemoryAliasAnalysis {
     public IReadOnlyList<IrMemoryAccess> Writes(IrBlock block, int index) {
         IrStatement statement = block.Statements[index];
         if (StoreTarget(statement.Node) is { } target) {
-            return [OfPointer(target, statement)];
+            return [OfPointer(target, statement, block, index)];
         }
         if (statement.Node is StackCallNode { Operation: StackOperation.Push } push) {
             return [OfStackAccess(push.Width, block, index, -(int)push.Width / 8)];
@@ -125,7 +134,9 @@ internal sealed class IrMemoryAliasAnalysis {
     /// constant, so the slot's linear range can be compared against other accesses.</summary>
     public IrMemoryAccess ConstantStackAccess(IrBlock block, int index, int displacement,
         int width) =>
-        StackAccess(block, index, displacement & 0xFFFF, width) with { OffsetTerms = [] };
+        StackAccess(block, index, displacement & 0xFFFF, width) with {
+            OffsetTerms = [], OffsetRange = null
+        };
 
     /// <summary>The 16-bit value <paramref name="statement"/> leaves in SP when it is a plain
     /// <c>SP/ESP = constant</c> assignment, else null.</summary>
@@ -239,12 +250,16 @@ internal sealed class IrMemoryAliasAnalysis {
             return IrRamProof.Unknown;
         }
         uint segmentBase = (uint)segment * 16;
-        uint low = access.OffsetTerms is { Count: 0 }
-            ? segmentBase + (uint)(ushort)access.OffsetDisplacement
-            : segmentBase;
-        uint high = access.OffsetTerms is { Count: 0 }
-            ? low + (uint)access.Width
-            : segmentBase + 0xFFFF + (uint)access.Width;
+        uint low = segmentBase;
+        uint high = segmentBase + 0xFFFF + (uint)access.Width;
+        if (access.OffsetTerms is { Count: 0 }) {
+            low = segmentBase + (uint)(ushort)access.OffsetDisplacement;
+            high = low + (uint)access.Width;
+        } else if (access.OffsetRange is { } range
+            && range.Hi + (uint)access.Width - 1 <= 0xFFFF) {
+            low = segmentBase + range.Lo;
+            high = segmentBase + range.Hi + (uint)access.Width;
+        }
         if (high <= DeviceBase) {
             return IrRamProof.Proved;
         }
@@ -269,10 +284,12 @@ internal sealed class IrMemoryAliasAnalysis {
     /// policy: <see cref="RamDecision"/> without the provenance.</summary>
     public bool AllowsRam(IrMemoryAccess access) => RamDecision(access).Allowed;
 
-    /// <summary>The access of one pointer <paramref name="node"/> read or written by
-    /// <paramref name="statement"/>.</summary>
-    internal IrMemoryAccess OfPointer(ValueNode node, IrStatement statement) =>
-        OfPointer(node, value => _ssa.VersionUsed(statement, value));
+    /// <summary>The access of one pointer <paramref name="node"/> read or written by the
+    /// statement at <paramref name="index"/> of <paramref name="block"/>.</summary>
+    internal IrMemoryAccess OfPointer(ValueNode node, IrStatement statement, IrBlock block,
+        int index) =>
+        WithOffsetRange(OfPointer(node, value => _ssa.VersionUsed(statement, value)),
+            block, index);
 
     private IrMemoryAccess OfPointer(ValueNode node, Func<IrSsaValue, int> versionUsed) {
         switch (node) {
@@ -307,12 +324,31 @@ internal sealed class IrMemoryAliasAnalysis {
     private IrMemoryAccess OfStackAccess(BitWidth width, IrBlock block, int index,
         int displacement) {
         int segmentVersion = _ssa.VersionBefore(block, index, IrSsaValue.Ss);
-        return new IrMemoryAccess {
+        IrMemoryAccess access = new() {
             SegmentRegister = IrSsaValue.Ss, SegmentVersion = segmentVersion,
             SegmentValue = _segmentValues.KnownSegmentValue(segmentVersion),
             OffsetTerms = [new OffsetTerm(new RegisterNode(DataType.UINT16,
                 (int)RegisterIndex.SpIndex), _ssa.VersionBefore(block, index, IrSsaValue.Esp))],
             OffsetDisplacement = displacement, Width = (int)width / 8
+        };
+        return WithOffsetRange(access, block, index);
+    }
+
+    /// <summary><paramref name="access"/> with its <see cref="IrMemoryAccess.OffsetRange"/> set
+    /// when the offset is one register term whose value range at the access is known and does
+    /// not wrap 16 bits.</summary>
+    private IrMemoryAccess WithOffsetRange(IrMemoryAccess access, IrBlock block, int index) {
+        if (access.OffsetTerms is not [OffsetTerm single]) {
+            return access;
+        }
+        IrValueRange range = _ranges.Value.RangeAt(single.Register, block, index);
+        ulong displacement = (uint)(ushort)access.OffsetDisplacement;
+        ulong high = range.Max + displacement;
+        if (high > 0xFFFF) {
+            return access;
+        }
+        return access with {
+            OffsetRange = ((uint)(range.Min + displacement), (uint)high)
         };
     }
 
@@ -440,6 +476,14 @@ internal sealed class IrMemoryAliasAnalysis {
     private static IrAliasRelation OffsetRelation(IrMemoryAccess first, IrMemoryAccess second) {
         if (first.OffsetTerms is null || second.OffsetTerms is null
             || !first.OffsetTerms.SequenceEqual(second.OffsetTerms)) {
+            if (OffsetBounds(first) is { } firstBounds
+                && OffsetBounds(second) is { } secondBounds
+                && CircularDisjoint((int)firstBounds.Lo,
+                    (int)(firstBounds.Hi - firstBounds.Lo) + first.Width,
+                    (int)secondBounds.Lo,
+                    (int)(secondBounds.Hi - secondBounds.Lo) + second.Width)) {
+                return IrAliasRelation.Disjoint;
+            }
             return IrAliasRelation.MayAlias;
         }
         int firstStart = first.OffsetDisplacement & 0xFFFF;
@@ -451,6 +495,20 @@ internal sealed class IrMemoryAliasAnalysis {
             return IrAliasRelation.Disjoint;
         }
         return IrAliasRelation.MayAlias;
+    }
+
+    /// <summary>The inclusive offset interval an access reaches: the proved
+    /// <see cref="IrMemoryAccess.OffsetRange"/>, the point of a fully constant offset, or
+    /// nothing known.</summary>
+    private static (uint Lo, uint Hi)? OffsetBounds(IrMemoryAccess access) {
+        if (access.OffsetRange is { } range) {
+            return range;
+        }
+        if (access.OffsetTerms is { Count: 0 }) {
+            uint offset = (uint)(ushort)access.OffsetDisplacement;
+            return (offset, offset);
+        }
+        return null;
     }
 
     /// <summary>Whether the circular byte ranges <c>[start1, start1 + width1)</c> and
@@ -469,17 +527,32 @@ internal sealed class IrMemoryAliasAnalysis {
         if (access.LinearAddress is { } address) {
             return [(address, address + (uint)access.Width - 1)];
         }
-        if (access.SegmentValue is { } segment && access.OffsetTerms is { Count: 0 }) {
-            uint segmentBase = (uint)segment * 16;
+        if (access.SegmentValue is not { } segment) {
+            return null;
+        }
+        uint segmentBase = (uint)segment * 16;
+        if (access.OffsetTerms is { Count: 0 }) {
             uint offset = (uint)(ushort)access.OffsetDisplacement;
-            uint offsetEnd = offset + (uint)access.Width - 1;
-            if (offsetEnd <= 0xFFFF) {
-                return [(segmentBase + offset, segmentBase + offsetEnd)];
-            }
-            return [(segmentBase + offset, segmentBase + 0xFFFF),
-                (segmentBase, segmentBase + (offsetEnd & 0xFFFF))];
+            return LinearRanges(segmentBase, offset, offset + (uint)access.Width - 1);
+        }
+        if (access.OffsetRange is { } range) {
+
+            return LinearRanges(segmentBase, range.Lo,
+                range.Hi + (uint)access.Width - 1);
         }
         return null;
+    }
+
+    /// <summary>The linear byte ranges of a segmented access whose reachable offsets are
+    /// <c>[offsetStart, offsetEnd]</c>: one range, or two when the end wraps 16 bits - the bytes
+    /// before and after the wrap.</summary>
+    private static IReadOnlyList<(uint Start, uint End)> LinearRanges(uint segmentBase,
+        uint offsetStart, uint offsetEnd) {
+        if (offsetEnd <= 0xFFFF) {
+            return [(segmentBase + offsetStart, segmentBase + offsetEnd)];
+        }
+        return [(segmentBase + offsetStart, segmentBase + 0xFFFF),
+            (segmentBase, segmentBase + (offsetEnd & 0xFFFF))];
     }
 
     private static bool CrossesMegabyte((uint Start, uint End) range) =>

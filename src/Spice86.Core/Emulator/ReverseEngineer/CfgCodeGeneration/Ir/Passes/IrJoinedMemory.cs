@@ -53,15 +53,15 @@ internal static class IrJoinedMemory {
     private static int JoinBlock(IrBlock block, IrSsa ssa, IrMethod method,
             IrEditor editor, HashSet<ICfgNode> pinnedOrigins, GenerationPolicy policy) {
         IReadOnlyList<IrStatement> statements = block.Statements;
-        IrMemoryAliasAnalysis alias = new(ssa, policy);
+        IrMemoryAliasAnalysis alias = new(method, ssa, policy);
         int joined = 0;
         for (int i = 0; i < statements.Count; i++) {
             if (ssa.IsStale) {
                 ssa = editor.Rebind(method, "ssa rebind joined memory");
-                alias = new IrMemoryAliasAnalysis(ssa, policy);
+                alias = new IrMemoryAliasAnalysis(method, ssa, policy);
             }
             IrStatement statement = statements[i];
-            IVisitableAstNode node = RewriteReads(statement.Node, statement, alias);
+            IVisitableAstNode node = RewriteReads(statement.Node, statement, block, i, alias);
             if (!ReferenceEquals(node, statement.Node)) {
                 IrStatement rewritten = IrStatement.Create(node, statement.Origin);
                 editor.Replace(block, i, rewritten);
@@ -90,7 +90,7 @@ internal static class IrJoinedMemory {
     /// <summary>Whether <paramref name="low"/> and <paramref name="high"/> are provably the two
     /// halves of one four-byte RAM range, evaluated at <paramref name="statement"/>.</summary>
     private static bool ProvenPair(SegmentedPointerNode low, SegmentedPointerNode high,
-            IrStatement statement, IrMemoryAliasAnalysis alias) {
+            IrStatement statement, IrBlock block, int index, IrMemoryAliasAnalysis alias) {
         // Only 16-bit unsigned segment and offset expressions: a wider or signed address
         // expression could carry a value the word accesses never had.
         if (low.DataType != DataType.UINT16 || high.DataType != DataType.UINT16
@@ -104,8 +104,8 @@ internal static class IrJoinedMemory {
             // Adjacency without wrap: the widened range must not cross the 64 KiB boundary.
             return false;
         }
-        IrMemoryAccess lowAccess = alias.OfPointer(low, statement);
-        IrMemoryAccess highAccess = alias.OfPointer(high, statement);
+        IrMemoryAccess lowAccess = alias.OfPointer(low, statement, block, index);
+        IrMemoryAccess highAccess = alias.OfPointer(high, statement, block, index);
         // Same segment: the same known value through the same register identity and version.
         if (lowAccess.SegmentValue is not { } segment
             || highAccess.SegmentValue is not { } otherSegment || segment != otherSegment
@@ -134,29 +134,29 @@ internal static class IrJoinedMemory {
     /// write targets - an assignment's left, the halves of a multiplication, division or swap, a
     /// write-back's register, a service call's results - are never descended.</summary>
     private static IVisitableAstNode RewriteReads(IVisitableAstNode node, IrStatement statement,
-            IrMemoryAliasAnalysis alias) {
+            IrBlock block, int index, IrMemoryAliasAnalysis alias) {
         if (!PlainStatement(statement)) {
             return node;
         }
         return node switch {
             BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assign
-                => JoinedValue(assign.Right, statement, alias) is { } right
+                => JoinedValue(assign.Right, statement, block, index, alias) is { } right
                     && !ReferenceEquals(right, assign.Right)
                     ? assign with { Right = right }
                     : node,
             VariableDeclarationNode declaration
-                => JoinedValue(declaration.Initializer, statement, alias) is { } initializer
+                => JoinedValue(declaration.Initializer, statement, block, index, alias) is { } initializer
                     && !ReferenceEquals(initializer, declaration.Initializer)
                     ? declaration with { Initializer = initializer }
                     : node,
             MultiplicationNode multiplication
-                => RewriteOperands(multiplication.Left, multiplication.Right, statement, alias)
+                => RewriteOperands(multiplication.Left, multiplication.Right, statement, block, index, alias)
                     is { } operands
                     ? multiplication with { Left = operands.Left, Right = operands.Right }
                     : node,
             DivisionNode division
                 => RewriteOperands(division.Division.Dividend, division.Division.Divisor,
-                        statement, alias)
+                        statement, block, index, alias)
                     is { } operands
                     ? division with { Division = division.Division with {
                         Dividend = operands.Left, Divisor = operands.Right } }
@@ -164,14 +164,14 @@ internal static class IrJoinedMemory {
             TupleSwapNode or RegisterWriteBackNode or OpaqueNode or InstructionNode
                 or PreTestLoopNode or DoWhileNode or InfiniteLoopNode or SwitchNode => node,
             _ => IrAstChildren.MapChildren(node,
-                child => RewriteReads(child, statement, alias))
+                child => RewriteReads(child, statement, block, index, alias))
         };
     }
 
     private static (ValueNode Left, ValueNode Right)? RewriteOperands(ValueNode left,
-            ValueNode right, IrStatement statement, IrMemoryAliasAnalysis alias) {
-        ValueNode newLeft = JoinedValue(left, statement, alias) ?? left;
-        ValueNode newRight = JoinedValue(right, statement, alias) ?? right;
+            ValueNode right, IrStatement statement, IrBlock block, int index, IrMemoryAliasAnalysis alias) {
+        ValueNode newLeft = JoinedValue(left, statement, block, index, alias) ?? left;
+        ValueNode newRight = JoinedValue(right, statement, block, index, alias) ?? right;
         return ReferenceEquals(newLeft, left) && ReferenceEquals(newRight, right)
             ? null
             : (newLeft, newRight);
@@ -180,7 +180,7 @@ internal static class IrJoinedMemory {
     /// <summary><paramref name="node"/> with joined loads applied bottom-up, then itself matched
     /// as a pack expression.</summary>
     private static ValueNode? JoinedValue(ValueNode node, IrStatement statement,
-            IrMemoryAliasAnalysis alias) {
+            IrBlock block, int index, IrMemoryAliasAnalysis alias) {
         ValueNode rebuilt = node switch {
             BinaryOperationNode { BinaryOperation: not BinaryOperation.ASSIGN }
                 or UnaryOperationNode or TypeConversionNode or ConditionalValueNode
@@ -188,18 +188,18 @@ internal static class IrJoinedMemory {
                 or ExplicitCastNode =>
                 (ValueNode)IrAstChildren.MapChildren(node,
                     child => child is ValueNode value
-                        ? JoinedValue(value, statement, alias) ?? value
+                        ? JoinedValue(value, statement, block, index, alias) ?? value
                         : child),
             _ => node
         };
-        return JoinedLoad(rebuilt, statement, alias) ?? rebuilt;
+        return JoinedLoad(rebuilt, statement, block, index, alias) ?? rebuilt;
     }
 
     /// <summary><paramref name="node"/> as <c>(uint)low | ((uint)high &lt;&lt; 16)</c> (either
     /// operand order) over two word reads of one proven four-byte range: the widened pointer, or
     /// null.</summary>
     private static SegmentedPointerNode? JoinedLoad(ValueNode node, IrStatement statement,
-            IrMemoryAliasAnalysis alias) {
+            IrBlock block, int index, IrMemoryAliasAnalysis alias) {
         if (node is not BinaryOperationNode { DataType: { } orType,
                 BinaryOperation: BinaryOperation.BITWISE_OR, Left: { } left, Right: { } right }
             || orType != DataType.UINT32) {
@@ -217,7 +217,7 @@ internal static class IrJoinedMemory {
                 || count.Value != 16) {
                 continue;
             }
-            if (ProvenPair(low, high, statement, alias)) {
+            if (ProvenPair(low, high, statement, block, index, alias)) {
                 return low with { DataType = DataType.UINT32 };
             }
         }
@@ -262,7 +262,7 @@ internal static class IrJoinedMemory {
         // could alias the second target and observe the merged order instead of the original.
         if (!IrVerifier.IsPureArm(lowValue) || !IrVerifier.IsPureArm(highValue)
             || !PlainStatement(firstStatement) || !PlainStatement(secondStatement)
-            || !ProvenPair(low, high, secondStatement, alias)) {
+            || !ProvenPair(low, high, secondStatement, block, second, alias)) {
             return false;
         }
         IrEffects moved = IrEffectsVisitor.Of(lowValue, false);

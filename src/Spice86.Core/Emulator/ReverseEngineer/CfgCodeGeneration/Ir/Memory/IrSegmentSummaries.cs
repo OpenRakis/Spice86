@@ -219,7 +219,7 @@ internal sealed class IrSegmentSummaries {
         IrStackSlots slots = IrStackSlots.Empty;
         if (NeedsStackSlots(source.IrMethod)) {
             slots = IrStackSlots.Compute(source.IrMethod,
-                new IrMemoryAliasAnalysis(ssa, source.EntryFacts, _context.Policy), _ => null);
+                new IrMemoryAliasAnalysis(source.IrMethod, ssa, source.EntryFacts, _context.Policy), _ => null);
         }
         MethodData data = new MethodData {
             Source = source, Ssa = ssa, Slots = slots, Calls = [], Returns = [], FactEntries = []

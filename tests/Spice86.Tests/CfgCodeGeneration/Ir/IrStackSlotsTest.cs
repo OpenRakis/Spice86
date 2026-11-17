@@ -30,7 +30,7 @@ public sealed class IrStackSlotsTest {
     [Fact]
     public void UnprovedCallStillRebases() {
         (IrMethod method, IrBlock block, IrStatement call) = PushCallMethod();
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(IrSsa.Build(method)),
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, IrSsa.Build(method)),
             _ => null);
 
         IrStackOffset? offset = slots.OffsetAtBlockEnd(block);
@@ -43,7 +43,7 @@ public sealed class IrStackSlotsTest {
     [Fact]
     public void ProvedCallPopZeroKeepsDelta() {
         (IrMethod method, IrBlock block, IrStatement call) = PushCallMethod();
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(IrSsa.Build(method)),
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, IrSsa.Build(method)),
             statement => statement == call ? 0 : null);
 
         IrStackOffset? offset = slots.OffsetAtBlockEnd(block);
@@ -56,7 +56,7 @@ public sealed class IrStackSlotsTest {
     [Fact]
     public void ProvedCallPopNAdvancesDelta() {
         (IrMethod method, IrBlock block, IrStatement call) = PushCallMethod();
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(IrSsa.Build(method)),
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, IrSsa.Build(method)),
             statement => statement == call ? 2 : null);
 
         slots.OffsetAtBlockEnd(block)?.Delta.Should().Be(0);

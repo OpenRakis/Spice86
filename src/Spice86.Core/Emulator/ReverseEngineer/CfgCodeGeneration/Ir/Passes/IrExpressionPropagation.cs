@@ -51,7 +51,7 @@ internal static class IrExpressionPropagation {
                 editor.Rebind(method, "ssa rebind expression propagation");
             }
             MergeBlock(block, method, entryNodes, editor.Ssa, editor,
-                new IrMemoryAliasAnalysis(editor.Ssa, policy), policy);
+                new IrMemoryAliasAnalysis(method, editor.Ssa, policy), policy);
         }
     }
 
@@ -66,7 +66,7 @@ internal static class IrExpressionPropagation {
         for (int i = 0; i < block.Statements.Count; i++) {
             if (ssa.IsStale) {
                 ssa = editor.Rebind(method, "ssa rebind expression propagation");
-                alias = new IrMemoryAliasAnalysis(ssa, policy);
+                alias = new IrMemoryAliasAnalysis(method, ssa, policy);
             }
             if (covered[i] > 0) {
                 if (TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {

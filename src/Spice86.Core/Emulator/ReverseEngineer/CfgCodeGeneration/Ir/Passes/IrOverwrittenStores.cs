@@ -33,7 +33,7 @@ internal static class IrOverwrittenStores {
 
     public static int Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         IrSsa ssa = editor.Ssa;
-        IrMemoryAliasAnalysis alias = new(ssa, policy);
+        IrMemoryAliasAnalysis alias = new(method, ssa, policy);
         List<(IrBlock Block, int Index)> removable = [];
         foreach (IrBlock block in method.Blocks) {
             for (int s = 0; s < block.Statements.Count; s++) {
@@ -72,7 +72,7 @@ internal static class IrOverwrittenStores {
                 || alias.IsFullMemoryBoundary(block, k)
                 || alias.Reads(block, k).Any(read
                     => alias.Relation(read, storeAccess) != IrAliasRelation.Disjoint)
-                || !ValueReadsDisjoint(between, storeAccess, alias)) {
+                || !ValueReadsDisjoint(between, storeAccess, alias, block, k)) {
                 return false;
             }
             if (alias.Writes(block, k) is [IrMemoryAccess cover]
@@ -88,14 +88,14 @@ internal static class IrOverwrittenStores {
     /// sees only pointer occurrences other than the store target, but a read-modify-write shares one
     /// pointer instance between the two, so the value part is scanned directly.</summary>
     private static bool ValueReadsDisjoint(IrStatement statement, IrMemoryAccess removed,
-        IrMemoryAliasAnalysis alias) {
+        IrMemoryAliasAnalysis alias, IrBlock block, int index) {
         if (statement.Node is not BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN }
                 assign) {
             return true;
         }
         foreach (IVisitableAstNode node in IrAstChildren.Descendants(assign.Right)) {
             if (node is SegmentedPointerNode or AbsolutePointerNode
-                && alias.Relation(alias.OfPointer((ValueNode)node, statement), removed)
+                && alias.Relation(alias.OfPointer((ValueNode)node, statement, block, index), removed)
                     != IrAliasRelation.Disjoint) {
                 return false;
             }

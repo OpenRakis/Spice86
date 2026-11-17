@@ -53,7 +53,7 @@ internal static class IrSpeculativeGuardMerge {
         List<(IrBlock Block, int Index, IrStatement Statement)> replacements = [];
         List<(IrBlock Block, int Index)> removals = [];
         foreach (IrBlock block in method.Blocks) {
-            CollectBlock(block, new IrMemoryAliasAnalysis(editor.Ssa, policy), replacements, removals);
+            CollectBlock(block, new IrMemoryAliasAnalysis(method, editor.Ssa, policy), replacements, removals);
         }
         foreach ((IrBlock block, int index, IrStatement merged) in replacements) {
             editor.Replace(block, index, merged);

@@ -115,6 +115,7 @@ public partial class CfgGeneratedOverrides {
         ushort word11 = 0;
         byte byte1;
         byte byte2;
+        ushort savedEs_022C = 0;
         ushort flagOperand_0091 = 0;
         ushort flagOperand_0246 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
@@ -301,10 +302,10 @@ public partial class CfgGeneratedOverrides {
             InterruptFlag = false;
             UInt16[DS, index + 0x2E] = Segment2000Globals.Word0E08;
             PicPorts.WritePrimaryData(0xFF);
-            Stack.Push16(word9);
+            savedEs_022C = word9;
             ES = 0;
             Segment0000Globals.Word0020 = 0x0428;
-            word10 = Stack.Pop16();
+            word10 = savedEs_022C;
             UInt16[DS, index + 0x3A] = 7;
             Stack.Push16(0x1234);
             flagOperand_0246 = UInt16[DS, index + 0x3A];

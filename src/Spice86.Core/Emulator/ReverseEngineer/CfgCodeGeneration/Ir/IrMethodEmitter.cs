@@ -148,7 +148,7 @@ internal sealed class IrMethodEmitter(
             return null;
         }
         IrFrames frames = IrFrames.Compute(irMethod, ssa,
-            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(ssa, context.Policy),
+            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(irMethod, ssa, context.Policy),
                 _ => null),
             statement => {
                 if (statement.Origin is CfgInstruction instruction) {

@@ -36,7 +36,7 @@ internal static class IrStoreForwarding {
     public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         IrSsa ssa = editor.Ssa;
         foreach (IrBlock block in method.Blocks) {
-            ForwardBlock(block, method, ssa, editor, new IrMemoryAliasAnalysis(ssa, policy));
+            ForwardBlock(block, method, ssa, editor, new IrMemoryAliasAnalysis(method, ssa, policy));
         }
     }
 
@@ -76,7 +76,7 @@ internal static class IrStoreForwarding {
             return false;
         }
         foreach (ValueNode pointer in ReadPointersOf(reader)) {
-            IrMemoryAccess read = alias.OfPointer(pointer, reader);
+            IrMemoryAccess read = alias.OfPointer(pointer, reader, block, l);
             IrAliasRelation relation = alias.Relation(storeAccess, read);
             bool ram = alias.AllowsRam(read);
             bool clear = ClearBetween(block, s, l, storeAccess, alias);
