@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
@@ -27,6 +29,13 @@ using Spice86.Shared.Emulator.Memory;
 /// <see cref="CalleeReturnScanner.MaxNodes"/> nodes - makes the whole result unknown
 /// (<see cref="RegisterBits.AllExceptCs"/>).
 ///
+/// <para>When the static result for a callee is unknown and <see cref="ObservedCallPreservation"/>
+/// recorded at least one balanced return of it, the answer is every register except CS that was
+/// not given back unchanged on all of those returns. A known static result always wins. A scan
+/// that used such evidence is cached with <see cref="ObservedCallPreservation.Version"/> and
+/// recomputed once a recorded mask has shrunk or an entry was forgotten since, so a stale mask
+/// is never used. Discovery-only, like the rest of the scan: no generator code may use it.</para>
+///
 /// <para>Returns add SP to the raw mask; <see cref="MayWrite"/> removes SP and the registers
 /// the callee saves and restores from the answer only when
 /// <paramref name="returnsBalanced"/> says the callee returns balanced and no return of its
@@ -42,10 +51,12 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 internal sealed class CalleeWriteScanner {
     /// <summary>One cached scan: the raw write mask (SP included), the registers the callee
-    /// saves and restores, whether one of the callee's own returns pops an immediate, and
-    /// every address the scan visited (including nested callees), used for invalidation.</summary>
+    /// saves and restores, whether one of the callee's own returns pops an immediate, every
+    /// address the scan visited (including nested callees), used for invalidation, and the
+    /// <see cref="ObservedCallPreservation.Version"/> it was computed under when it used observed
+    /// evidence (null when it did not).</summary>
     private sealed record CachedScan(ushort Mask, ushort Saved, bool PopsImmediate,
-        HashSet<SegmentedAddress> Addresses);
+        HashSet<SegmentedAddress> Addresses, int? ObservedVersion);
 
     /// <summary>Per top-level scan context: the entries currently being scanned (a nested call
     /// back into one of them is a cycle and gives unknown) and whether such a cycle was hit, in
@@ -61,15 +72,20 @@ internal sealed class CalleeWriteScanner {
     private readonly InstalledInterruptHandlers _installedHandlers;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly Func<SegmentedAddress, bool> _returnsBalanced;
+    private readonly ObservedCallPreservation _observedPreservation;
+    private readonly ILogger _logger;
     private readonly Dictionary<SegmentedAddress, CachedScan> _cache = new();
     private readonly Dictionary<SegmentedAddress, List<SegmentedAddress>> _cachedEntriesByAddress = new();
 
     public CalleeWriteScanner(CfgNodeIndex nodeIndex, InstalledInterruptHandlers installedHandlers,
-        InterruptVectorTable interruptVectorTable, Func<SegmentedAddress, bool> returnsBalanced) {
+        InterruptVectorTable interruptVectorTable, Func<SegmentedAddress, bool> returnsBalanced,
+        ObservedCallPreservation observedPreservation, ILogger logger) {
         _nodeIndex = nodeIndex;
         _installedHandlers = installedHandlers;
         _interruptVectorTable = interruptVectorTable;
         _returnsBalanced = returnsBalanced;
+        _observedPreservation = observedPreservation;
+        _logger = logger;
         _nodeIndex.AddressChanged += ForgetScansThrough;
     }
 
@@ -85,15 +101,38 @@ internal sealed class CalleeWriteScanner {
     public ushort MayWriteAcross(CfgInstruction callNode) => MayWriteAcross(callNode, new ScanContext()).Mask;
 
     /// <summary>What a nested resolution reports to its caller: the mask, every address the
-    /// nested scan depends on (the caller's own invalidation must cover them), and whether the
-    /// result may be cached (false when it went through an <c>int</c>).</summary>
-    private sealed record NestedResult(ushort Mask, bool Cacheable, HashSet<SegmentedAddress> Addresses) {
-        public static NestedResult UnknownResult { get; } = new(Unknown, false, []);
+    /// nested scan depends on (the caller's own invalidation must cover them), whether the
+    /// result may be cached (false when it went through an <c>int</c>), and whether it used
+    /// observed evidence (then a cached caller must be checked against the evidence version).</summary>
+    private sealed record NestedResult(ushort Mask, bool Cacheable, bool Observed,
+        HashSet<SegmentedAddress> Addresses) {
+        public static NestedResult UnknownResult { get; } = new(Unknown, false, false, []);
     }
 
+    /// <summary>The static answer for <paramref name="calleeEntry"/>; when it is unknown and the
+    /// callee was seen to return balanced, the registers not preserved on every observed return.</summary>
     private NestedResult MayWrite(SegmentedAddress calleeEntry, ScanContext context) {
+        NestedResult result = StaticMayWrite(calleeEntry, context);
+        if (result.Mask != Unknown
+            || !_observedPreservation.TryGetPreserved(calleeEntry, out ushort preserved, out int count)) {
+            return result;
+        }
+        ushort mask = (ushort)(Unknown & ~preserved);
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug(
+                "Callee write scan: {Entry} has no static answer; {Count} observed balanced returns give writes {Mask:X4}",
+                calleeEntry, count, mask);
+        }
+        return new NestedResult(mask, true, true, []);
+    }
+
+    private NestedResult StaticMayWrite(SegmentedAddress calleeEntry, ScanContext context) {
         if (_cache.TryGetValue(calleeEntry, out CachedScan? cached)) {
-            return new NestedResult(ApplyBalance(calleeEntry, cached), true, cached.Addresses);
+            if (cached.ObservedVersion is not { } version || version == _observedPreservation.Version) {
+                return new NestedResult(ApplyBalance(calleeEntry, cached), true,
+                    cached.ObservedVersion is not null, cached.Addresses);
+            }
+            RemoveCached(calleeEntry);
         }
         if (!context.InProgress.Add(calleeEntry)) {
             context.ContextDependent = true;
@@ -104,18 +143,20 @@ internal sealed class CalleeWriteScanner {
         if (!outcome.Succeeded) {
             return NestedResult.UnknownResult;
         }
-        cached = new CachedScan(outcome.Mask, outcome.Saved, outcome.PopsImmediate, outcome.Addresses);
+        int? observedVersion = outcome.Observed ? _observedPreservation.Version : null;
+        cached = new CachedScan(outcome.Mask, outcome.Saved, outcome.PopsImmediate, outcome.Addresses,
+            observedVersion);
         if (outcome.Cacheable && !context.ContextDependent) {
             Store(calleeEntry, cached);
         }
-        return new NestedResult(ApplyBalance(calleeEntry, cached), outcome.Cacheable,
+        return new NestedResult(ApplyBalance(calleeEntry, cached), outcome.Cacheable, outcome.Observed,
             outcome.Addresses);
     }
 
     private NestedResult MayWriteAcross(CfgInstruction callNode, ScanContext context) {
         if (InterruptCallFacts.TryGetInterruptVector(callNode, out byte vector)) {
             // An int resolution depends on the IVT and on AH: never cached.
-            return new NestedResult(InterruptWrites(callNode, vector), false, []);
+            return new NestedResult(InterruptWrites(callNode, vector), false, false, []);
         }
         if (callNode.StaticSuccessorAddresses.Count == 1) {
             return MayWrite(callNode.StaticSuccessorAddresses[0], context);
@@ -125,9 +166,9 @@ internal sealed class CalleeWriteScanner {
 
     /// <summary>The raw mask and saved registers a scan computes: SP and Saved kept, since only
     /// the query side knows whether the callee's return is balanced.</summary>
-    private sealed record ScanOutcome(bool Succeeded, bool Cacheable, ushort Mask, ushort Saved,
+    private sealed record ScanOutcome(bool Succeeded, bool Cacheable, bool Observed, ushort Mask, ushort Saved,
         bool PopsImmediate, HashSet<SegmentedAddress> Addresses) {
-        public static ScanOutcome Unknown { get; } = new(false, false, 0, 0, false, []);
+        public static ScanOutcome Unknown { get; } = new(false, false, false, 0, 0, false, []);
     }
 
     private ScanOutcome Scan(SegmentedAddress calleeEntry, ScanContext context) {
@@ -141,6 +182,7 @@ internal sealed class CalleeWriteScanner {
         ushort mask = 0;
         bool popsImmediate = false;
         bool cacheable = true;
+        bool observed = false;
         while (work.Count > 0) {
             CfgInstruction node = work.Dequeue();
             if (!visited.Add(node)) {
@@ -176,6 +218,7 @@ internal sealed class CalleeWriteScanner {
                 acrossMasks[node] = across.Mask;
                 mask |= across.Mask;
                 cacheable &= across.Cacheable;
+                observed |= across.Observed;
                 addresses.UnionWith(across.Addresses);
                 // The call's own frame is balanced by construction; execution continues at the
                 // instruction after it, which must be decoded as well.
@@ -214,7 +257,7 @@ internal sealed class CalleeWriteScanner {
             }
         }
         ushort saved = CalleeSavedRegisters.Compute(calleeEntry, _nodeIndex, visited, acrossMasks);
-        return new ScanOutcome(true, cacheable, mask, saved, popsImmediate, addresses);
+        return new ScanOutcome(true, cacheable, observed, mask, saved, popsImmediate, addresses);
     }
 
     /// <summary>The distinct observed targets of an indirect site: its Normal-type successors
@@ -252,6 +295,7 @@ internal sealed class CalleeWriteScanner {
         ushort mask = 0;
         bool cacheable = true;
         HashSet<SegmentedAddress> addresses = [];
+        bool observed = false;
         foreach (SegmentedAddress target in targets) {
             NestedResult result = MayWrite(target, context);
             if (result.Mask == Unknown) {
@@ -259,9 +303,10 @@ internal sealed class CalleeWriteScanner {
             }
             mask |= result.Mask;
             cacheable &= result.Cacheable;
+            observed |= result.Observed;
             addresses.UnionWith(result.Addresses);
         }
-        return new NestedResult(mask, cacheable, addresses);
+        return new NestedResult(mask, cacheable, observed, addresses);
     }
 
     private bool EnqueueObservedTargets(Queue<CfgInstruction> work, CfgInstruction node) {
@@ -374,14 +419,18 @@ internal sealed class CalleeWriteScanner {
             return;
         }
         foreach (SegmentedAddress entry in affected) {
-            if (!_cache.Remove(entry, out CachedScan? scan)) {
-                continue;
-            }
-            foreach (SegmentedAddress visitedAddress in scan.Addresses) {
-                if (_cachedEntriesByAddress.TryGetValue(visitedAddress, out List<SegmentedAddress>? entries)
-                    && entries.Remove(entry) && entries.Count == 0) {
-                    _cachedEntriesByAddress.Remove(visitedAddress);
-                }
+            RemoveCached(entry);
+        }
+    }
+
+    private void RemoveCached(SegmentedAddress entry) {
+        if (!_cache.Remove(entry, out CachedScan? scan)) {
+            return;
+        }
+        foreach (SegmentedAddress visitedAddress in scan.Addresses) {
+            if (_cachedEntriesByAddress.TryGetValue(visitedAddress, out List<SegmentedAddress>? entries)
+                && entries.Remove(entry) && entries.Count == 0) {
+                _cachedEntriesByAddress.Remove(visitedAddress);
             }
         }
     }

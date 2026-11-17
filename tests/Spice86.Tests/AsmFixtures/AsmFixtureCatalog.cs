@@ -777,6 +777,29 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs speculative_observed_preservation: the leaf between the search loop and
+    /// <c>call word [cs:di+0x0C]</c> saves DI around a driver the static write scan cannot read; the
+    /// driver's observed balanced returns say what it changes, so every record's handler is proposed
+    /// as a guarded target. On the unobserved arm the search finds record 2 three times. The
+    /// negative sites (a driver that changed DI on one observed return, an unbalanced return) find
+    /// record 1 in both runs and keep only that observed target.</summary>
+    public static AsmFixture SpeculativeObservedPreservation(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x40A];
+        expectedMemory[0x400] = 0x02;
+        for (int i = 0x401; i <= 0x409; i++) {
+            expectedMemory[i] = 0x01;
+        }
+        int searchedHandler = arm == SpeculativeArm.Unobserved ? 0x403 : 0x401;
+        expectedMemory[searchedHandler] = 0x04;
+        expectedMemory[0x404] = 0x02;
+        expectedMemory[0x407] = 0x02;
+        AsmRunSettings settings = new() { BinName = "speculative_observed_preservation", MaxCycles = 0x8000 };
+        if (arm == SpeculativeArm.Unobserved) {
+            settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        }
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);

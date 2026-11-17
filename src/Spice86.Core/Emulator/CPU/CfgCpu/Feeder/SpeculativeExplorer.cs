@@ -165,8 +165,9 @@ public class SpeculativeExplorer : InstructionReplacer {
         _watchedCells = watchedCells;
         _loggerService = loggerService;
         _calleeReturnScanner = new CalleeReturnScanner(nodeIndex);
+        CallPreservation = new ObservedCallPreservation(state);
         _calleeWriteScanner = new CalleeWriteScanner(nodeIndex, installedInterruptHandlers,
-            interruptVectorTable, ReturnsBalanced);
+            interruptVectorTable, ReturnsBalanced, CallPreservation, loggerService);
         _recordArrayRecognizer = new RecordArrayRecognizer(nodeIndex, _calleeWriteScanner.MayWriteAcross);
         _pruner = new SpeculativeReachabilityPruner(replacerRegistry);
         _nodeLinker.CallReturnLinked += OnCallReturnLinked;
@@ -179,10 +180,12 @@ public class SpeculativeExplorer : InstructionReplacer {
     /// <inheritdoc />
     public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
         // Explorer state is keyed on the replaced node; nothing migrates to the new node today.
+        CallPreservation.Forget(oldInstruction.Address);
     }
 
     /// <inheritdoc />
     public override void RemoveInstruction(CfgInstruction instruction) {
+        CallPreservation.Forget(instruction.Address);
         _anchorDependents.Remove(instruction);
         foreach ((CfgInstruction anchor, List<AnchorDependent> dependents) in _anchorDependents.ToList()) {
             dependents.RemoveAll(dependent => ReferenceEquals(dependent.Site, instruction));
@@ -226,6 +229,10 @@ public class SpeculativeExplorer : InstructionReplacer {
             _incompleteCalleeProof.Remove(instruction.Address);
         }
     }
+
+    /// <summary>The registers each callee was seen to give back unchanged on its observed
+    /// balanced returns, fed by the CPU on every executed instruction.</summary>
+    internal ObservedCallPreservation CallPreservation { get; }
 
     /// <summary>Raised once a predecessorless seed node has been decoded and given a block.
     /// The execution context registers such nodes as generation entry points; a seed no observed
@@ -1089,14 +1096,23 @@ public class SpeculativeExplorer : InstructionReplacer {
 
     private void SubmitAnchorCandidate(CfgInstruction anchor, AnchorDependent dependent,
         SegmentedAddress target, ExploreSource source) {
-        ExploreCandidates(anchor,
-            [new DiscoveryCandidate(target, dependent.Site, InstructionSuccessorType.Normal, source)]);
-        if (dependent.IsCall) {
+        if (!IsAcceptedAndLinked(dependent.Site, target)) {
+            ExploreCandidates(anchor,
+                [new DiscoveryCandidate(target, dependent.Site, InstructionSuccessorType.Normal, source)]);
+        }
+        if (dependent.IsCall && !HasCallToReturnSuccessor(dependent.Site)) {
             Queue<ExploreItem> worklist = new();
             TryExploreCallContinuationForCallee(dependent.Site, target, worklist);
             Drain(worklist);
         }
     }
+
+    /// <summary>A target this site already accepted and is already linked to: submitting it again
+    /// would converge on the existing edge and change nothing. Hot anchors evaluate the same value
+    /// on every execution, so the check keeps that common case to two lookups.</summary>
+    private bool IsAcceptedAndLinked(CfgInstruction site, SegmentedAddress target) =>
+        _siteTargets.TryGetValue(site, out HashSet<SegmentedAddress>? accepted) && accepted.Contains(target)
+        && site.SuccessorsPerAddress.ContainsKey(target);
 
     /// <summary>
     /// Records one observed call-to-return-target link in <see cref="CalleeReturnEvidence"/> for the

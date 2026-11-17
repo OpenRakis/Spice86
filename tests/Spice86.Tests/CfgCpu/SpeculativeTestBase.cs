@@ -85,6 +85,43 @@ public abstract class SpeculativeTestBase : IDisposable {
         return node;
     }
 
+    /// <summary>Plays the CPU side of an observed near <c>call</c> at <paramref name="callOffset"/>
+    /// (segment F000) to <paramref name="calleeOffset"/>: writes and decodes the call, reports it
+    /// to <paramref name="preservation"/> as executed, and leaves SP and IP as the call does.
+    /// Returns the instruction after the call.</summary>
+    private protected CfgInstruction EnterObservedCall(ObservedCallPreservation preservation, ushort callOffset,
+        ushort calleeOffset) {
+        const ushort segment = 0xF000;
+        ushort continuationOffset = (ushort)(callOffset + 3);
+        ushort relative = (ushort)(calleeOffset - continuationOffset);
+        uint physical = MemoryUtils.ToPhysicalAddress(segment, callOffset);
+        Memory.UInt8[physical] = 0xE8;
+        Memory.UInt16[physical + 1] = relative;
+        Memory.UInt8[physical + 3] = Nop;
+        CfgInstruction call = Parser.ParseInstructionAt(new SegmentedAddress(segment, callOffset));
+        CfgInstruction continuation = Parser.ParseInstructionAt(new SegmentedAddress(segment, continuationOffset));
+        State.CS = segment;
+        State.IP = callOffset;
+        preservation.BeforeTransfer(call);
+        State.SP = (ushort)(State.SP - 2);
+        State.IP = calleeOffset;
+        preservation.AfterTransfer(call, faulted: false);
+        return continuation;
+    }
+
+    /// <summary>Plays a <c>ret</c> (decoded at F000:0E00) to <paramref name="continuation"/>: pops the
+    /// return address plus <paramref name="extraPop"/> bytes and reports the return as executed.</summary>
+    private protected void ReturnFromObservedCall(ObservedCallPreservation preservation, CfgInstruction continuation,
+        ushort extraPop = 0) {
+        SegmentedAddress retAddress = new(0xF000, 0x0E00);
+        Memory.UInt8[MemoryUtils.ToPhysicalAddress(retAddress.Segment, retAddress.Offset)] = 0xC3;
+        CfgInstruction ret = Parser.ParseInstructionAt(retAddress);
+        preservation.BeforeTransfer(ret);
+        State.SP = (ushort)(State.SP + 2 + extraPop);
+        State.IP = continuation.Address.Offset;
+        preservation.AfterTransfer(ret, faulted: false);
+    }
+
     protected static void WireEdge(ICfgNode from, ICfgNode to) {
         from.Successors.Add(to);
         to.Predecessors.Add(from);

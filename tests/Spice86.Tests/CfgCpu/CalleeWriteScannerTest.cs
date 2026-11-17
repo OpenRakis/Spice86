@@ -23,8 +23,61 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
     private const ushort Seg = 0xF000;
     private const ushort Unknown = (ushort)RegisterBits.AllExceptCs;
 
+    private readonly ObservedCallPreservation _observedPreservation;
+
+    public CalleeWriteScannerTest() {
+        _observedPreservation = new ObservedCallPreservation(State);
+        State.SS = 0x1000;
+        State.SP = 0x0100;
+    }
+
     private CalleeWriteScanner CreateScanner(bool returnsBalanced) =>
-        new(NodeIndex, InstalledInterrupts, InterruptVectors, _ => returnsBalanced);
+        new(NodeIndex, InstalledInterrupts, InterruptVectors, _ => returnsBalanced, _observedPreservation,
+            LoggerService);
+
+    /// <summary>Records one observed balanced call from F000:0F00 to <paramref name="calleeOffset"/>
+    /// during which <paramref name="inside"/> changes registers.</summary>
+    private void ObserveCall(ushort calleeOffset, Action inside) {
+        CfgInstruction continuation = EnterObservedCall(_observedPreservation, 0x0F00, calleeOffset);
+        inside();
+        ReturnFromObservedCall(_observedPreservation, continuation);
+    }
+
+    [Fact]
+    public void UnknownCalleeUsesRegistersObservedUnchanged() {
+        // jmp far F000:0300 - the static scan cannot follow a far jump
+        DecodeRoutine(0x100, 0xEA, 0x00, 0x03, 0x00, 0xF0);
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+
+        ObserveCall(0x100, () => State.AX = 3);
+        ObserveCall(0x100, () => State.AX = 4);
+
+        Assert.Equal(Regs(RegisterBits.Ax), CreateScanner(returnsBalanced: false).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void CachedScanThatUsedObservedEvidenceSeesAShrunkMask() {
+        // inner: jmp far F000:0300 (statically unknown)   outer: call inner; ret
+        DecodeRoutine(0x200, 0xEA, 0x00, 0x03, 0x00, 0xF0);
+        DecodeRoutine(0x100, 0xE8, 0xFD, 0x00, 0xC3);
+        CalleeWriteScanner scanner = CreateScanner(returnsBalanced: true);
+        ObserveCall(0x200, () => State.AX = 1);
+        Assert.Equal(Regs(RegisterBits.Ax), scanner.MayWrite(At(0x100)));
+
+        ObserveCall(0x200, () => State.BX = 2);
+
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Bx), scanner.MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void KnownStaticResultWinsOverObservedEvidence() {
+        // mov ax,1; mov bx,2; ret
+        DecodeRoutine(0x100, 0xB8, 0x01, 0x00, 0xBB, 0x02, 0x00, 0xC3);
+        ObserveCall(0x100, () => { });
+
+        Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Bx),
+            CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
 
     /// <summary>Writes <paramref name="bytes"/> at <paramref name="offset"/> in segment
     /// <see cref="Seg"/>, decodes each instruction in order and inserts it into the node index.

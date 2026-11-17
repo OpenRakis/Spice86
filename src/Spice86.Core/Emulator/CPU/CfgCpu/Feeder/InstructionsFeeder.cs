@@ -144,6 +144,10 @@ public class InstructionsFeeder : IClearable {
     internal void ForgetScansThrough(SegmentedAddress site) =>
         _speculativeExplorer?.ForgetScansThrough(site);
 
+    /// <summary>The per-callee record of registers given back unchanged on observed balanced
+    /// returns. Null when speculative exploration is disabled.</summary>
+    internal ObservedCallPreservation? ObservedCallPreservation => _speculativeExplorer?.CallPreservation;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
         // Try to get instruction from cache that represents current memory state.

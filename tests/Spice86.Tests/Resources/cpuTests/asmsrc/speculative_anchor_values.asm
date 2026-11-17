@@ -32,9 +32,10 @@
 ;       (golden-only).
 ;   N3 (negative): same shape as S5 but n3_leaf writes DI, so the continuation
 ;       knowledge loses it and the site is refused (golden-only).
-;   N4 (negative): same shape but n4_leaf holds an indirect call on its own
-;       dead arm, so the callee write scan is unknown and everything is
-;       cleared (golden-only).
+;   N4: same shape but n4_leaf holds an indirect call on its own dead arm, so
+;       the static write scan is unknown. Its observed balanced return gave
+;       every register back, so DI stays known across it and `call di` gets
+;       the guarded case (golden-only).
 ;   N5 (negative): same shape as S6 but n5_leaf pops DI from a different stack
 ;       slot (`push di` / `push ax` / `pop di` / `pop ax`), so the registers
 ;       cross the call clobbered and the site is refused (golden-only).

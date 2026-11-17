@@ -32,6 +32,9 @@ public class RegistersHolder {
     public UInt16RegistersIndexer UInt16 { get; }
     public UInt32RegistersIndexer UInt32 { get; }
 
+    /// <summary>The raw 32-bit value of every register, in index order.</summary>
+    internal ReadOnlySpan<uint> Values => _registers;
+
     /// <inheritdoc />
     public override bool Equals(object? obj) {
         if (obj == this) {

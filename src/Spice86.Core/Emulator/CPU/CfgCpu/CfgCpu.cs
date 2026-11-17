@@ -35,6 +35,8 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     private readonly CpuHeavyLogger? _cpuHeavyLogger;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
+    private readonly ObservedCallPreservation? _callPreservation;
+    private const InstructionKind CallOrReturn = InstructionKind.Call | InstructionKind.Return;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -52,6 +54,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration, changedMemoryMap, installedInterruptHandlers, interruptVectorTable, functionCatalogue, loggerService);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, installedInterruptHandlers, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
+        _callPreservation = CfgNodeFeeder.InstructionsFeeder.ObservedCallPreservation;
     }
 
     /// <summary>
@@ -138,6 +141,13 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         if (node is CfgInstruction { HasDiscoveryDependents: true } anchor) {
             CfgNodeFeeder.InstructionsFeeder.EvaluateAnchorDependents(anchor);
         }
+        CfgInstruction? transfer = node as CfgInstruction;
+        if (transfer is not null && (transfer.Kind & CallOrReturn) == 0) {
+            transfer = null;
+        }
+        if (transfer is not null) {
+            _callPreservation?.BeforeTransfer(transfer);
+        }
 
         bool faulted = false;
         try {
@@ -149,6 +159,9 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
             }
             faulted = true;
+        }
+        if (transfer is not null) {
+            _callPreservation?.AfterTransfer(transfer, faulted);
         }
 
         ICfgNode? nextToExecute = node.GetNextSuccessor(_instructionExecutionHelper);
