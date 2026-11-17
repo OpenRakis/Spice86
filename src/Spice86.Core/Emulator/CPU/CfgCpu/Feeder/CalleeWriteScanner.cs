@@ -14,6 +14,8 @@ using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Linq;
+
 /// <summary>
 /// Answers "which registers may this call change": scans the already-decoded static subgraph of
 /// a callee entry (observed and speculative nodes alike) and unions the
@@ -35,6 +37,11 @@ using Spice86.Shared.Emulator.Memory;
 /// that used such evidence is cached with <see cref="ObservedCallPreservation.Version"/> and
 /// recomputed once a recorded mask has shrunk or an entry was forgotten since, so a stale mask
 /// is never used. Discovery-only, like the rest of the scan: no generator code may use it.</para>
+///
+/// <para>A node from which none of the callee's returns can be reached (for example an error path
+/// that jumps into a restart loop) contributes nothing, as long as the scan can follow every
+/// transfer on the way: an undecoded successor, an indirect transfer without usable observed
+/// targets, a far jump or a call whose callee is not known to return counts as reaching a return.</para>
 ///
 /// <para>Returns add SP to the raw mask; <see cref="MayWrite"/> removes SP and the registers
 /// the callee saves and restores from the answer only when
@@ -171,93 +178,162 @@ internal sealed class CalleeWriteScanner {
         public static ScanOutcome Unknown { get; } = new(false, false, false, 0, 0, false, []);
     }
 
+    /// <summary>What the scan learned about one node of the callee's region: the registers it may
+    /// write (unknown when the scan cannot tell), whether control may reach one of the callee's
+    /// returns from it without going through another region node (a return, or anything the scan
+    /// cannot follow), the region nodes it continues at, the across result of a call, and whether
+    /// a return pops an immediate.</summary>
+    private sealed record RegionNode(ushort Mask, bool MayReturn, IReadOnlyList<CfgInstruction> Successors,
+        NestedResult? Across, bool PopsImmediate) {
+        public static RegionNode Escape { get; } = new(Unknown, true, [], null, false);
+    }
+
+    /// <summary>Explores the callee's decoded region, then unions the writes of the nodes from
+    /// which one of its returns may be reached. A node that cannot reach a return contributes
+    /// nothing: control never comes back to the continuation through it. Anything the scan cannot
+    /// follow (an undecoded successor, an indirect transfer without usable observed targets, a far
+    /// jump, a call whose callee is not known to return) counts as reaching a return, so the
+    /// rule only applies to regions the scan fully understands.</summary>
     private ScanOutcome Scan(SegmentedAddress calleeEntry, ScanContext context) {
         Queue<CfgInstruction> work = new(_nodeIndex.GetAtAddress(calleeEntry));
         if (work.Count == 0) {
             return ScanOutcome.Unknown;
         }
-        HashSet<CfgInstruction> visited = [];
+        Dictionary<CfgInstruction, RegionNode> region = [];
         HashSet<SegmentedAddress> addresses = [calleeEntry];
+        while (work.Count > 0) {
+            CfgInstruction node = work.Dequeue();
+            if (region.ContainsKey(node)) {
+                continue;
+            }
+            if (region.Count >= CalleeReturnScanner.MaxNodes) {
+                return ScanOutcome.Unknown;
+            }
+            addresses.Add(node.Address);
+            RegionNode facts = Describe(node, context);
+            region[node] = facts;
+            if (facts.Across is { } nested) {
+                addresses.UnionWith(nested.Addresses);
+            }
+            foreach (CfgInstruction successor in facts.Successors) {
+                work.Enqueue(successor);
+            }
+        }
+        HashSet<CfgInstruction> reachingReturn = NodesReachingReturn(region);
         Dictionary<CfgInstruction, ushort> acrossMasks = [];
         ushort mask = 0;
         bool popsImmediate = false;
         bool cacheable = true;
         bool observed = false;
-        while (work.Count > 0) {
-            CfgInstruction node = work.Dequeue();
-            if (!visited.Add(node)) {
-                continue;
-            }
-            if (visited.Count > CalleeReturnScanner.MaxNodes) {
+        foreach (CfgInstruction node in reachingReturn) {
+            RegionNode facts = region[node];
+            if (facts.Mask == Unknown) {
                 return ScanOutcome.Unknown;
             }
-            addresses.Add(node.Address);
-            if (node.IsInvalid || node.ExecutionAst is null) {
-                return ScanOutcome.Unknown;
-            }
-            IVisitableAstNode last = node.ExecutionAst is BlockNode block && block.Statements.Count > 0
-                ? block.Statements[^1]
-                : node.ExecutionAst;
-            if (node.IsReturn) {
-                if (last is not (ReturnNearNode or ReturnFarNode or ReturnInterruptNode)) {
-                    return ScanOutcome.Unknown;
-                }
-                mask |= (ushort)RegisterBits.Sp;
-                popsImmediate |= last switch {
-                    ReturnNearNode ret => PopsImmediate(ret.BytesToPop),
-                    ReturnFarNode ret => PopsImmediate(ret.BytesToPop),
-                    _ => false
-                };
-                continue;
-            }
-            if (node.IsCall) {
-                NestedResult across = AcrossInScan(node, context);
-                if (across.Mask == Unknown) {
-                    return ScanOutcome.Unknown;
-                }
+            mask |= facts.Mask;
+            popsImmediate |= facts.PopsImmediate;
+            if (facts.Across is { } across) {
                 acrossMasks[node] = across.Mask;
-                mask |= across.Mask;
                 cacheable &= across.Cacheable;
                 observed |= across.Observed;
-                addresses.UnionWith(across.Addresses);
-                // The call's own frame is balanced by construction; execution continues at the
-                // instruction after it, which must be decoded as well.
-                if (!EnqueueAll(work, node.NextInMemoryAddress32.ToSegmentedAddress())) {
-                    return ScanOutcome.Unknown;
-                }
-                continue;
-            }
-            if (node.IsJump) {
-                if (last is JumpFarNode) {
-                    return ScanOutcome.Unknown;
-                }
-                if (node.StaticSuccessorAddresses.Count == 0) {
-                    // An indirect jump stays inside the callee: the observed targets' own
-                    // returns count as this callee's returns.
-                    if (!EnqueueObservedTargets(work, node)) {
-                        return ScanOutcome.Unknown;
-                    }
-                    continue;
-                }
-                if (!EnqueueSuccessors(work, node)) {
-                    return ScanOutcome.Unknown;
-                }
-                continue;
-            }
-            if (node.StaticSuccessorAddresses.Count == 0) {
-                return ScanOutcome.Unknown;
-            }
-            ushort nodeMask = RegisterWriteSet.MayWrite(node);
-            if (nodeMask == Unknown) {
-                return ScanOutcome.Unknown;
-            }
-            mask |= nodeMask;
-            if (!EnqueueSuccessors(work, node)) {
-                return ScanOutcome.Unknown;
             }
         }
-        ushort saved = CalleeSavedRegisters.Compute(calleeEntry, _nodeIndex, visited, acrossMasks);
+        ushort saved = CalleeSavedRegisters.Compute(calleeEntry, _nodeIndex, reachingReturn, acrossMasks);
         return new ScanOutcome(true, cacheable, observed, mask, saved, popsImmediate, addresses);
+    }
+
+    private RegionNode Describe(CfgInstruction node, ScanContext context) {
+        if (node.IsInvalid || node.ExecutionAst is null) {
+            return RegionNode.Escape;
+        }
+        IVisitableAstNode last = node.ExecutionAst is BlockNode block && block.Statements.Count > 0
+            ? block.Statements[^1]
+            : node.ExecutionAst;
+        if (node.IsReturn) {
+            if (last is not (ReturnNearNode or ReturnFarNode or ReturnInterruptNode)) {
+                return RegionNode.Escape;
+            }
+            bool pops = last switch {
+                ReturnNearNode ret => PopsImmediate(ret.BytesToPop),
+                ReturnFarNode ret => PopsImmediate(ret.BytesToPop),
+                _ => false
+            };
+            return new RegionNode((ushort)RegisterBits.Sp, true, [], null, pops);
+        }
+        if (node.IsCall) {
+            return DescribeCall(node, context);
+        }
+        if (node.IsJump) {
+            if (last is JumpFarNode) {
+                return RegionNode.Escape;
+            }
+            // An indirect jump stays inside the callee: the observed targets' own returns count
+            // as this callee's returns.
+            List<CfgInstruction>? targets = node.StaticSuccessorAddresses.Count == 0
+                ? ObservedTargetNodes(node)
+                : NodesAt(node.StaticSuccessorAddresses);
+            return targets is null ? RegionNode.Escape : new RegionNode(0, false, targets, null, false);
+        }
+        List<CfgInstruction>? successors = NodesAt(node.StaticSuccessorAddresses);
+        if (node.StaticSuccessorAddresses.Count == 0 || successors is null) {
+            return RegionNode.Escape;
+        }
+        return new RegionNode(RegisterWriteSet.MayWrite(node), false, successors, null, false);
+    }
+
+    /// <summary>A call continues at the instruction after it, which must be decoded. It reaches a
+    /// return through that continuation only when its callee is known to return; otherwise it
+    /// counts as reaching one itself.</summary>
+    private RegionNode DescribeCall(CfgInstruction node, ScanContext context) {
+        NestedResult across = AcrossInScan(node, context);
+        List<CfgInstruction> continuation = _nodeIndex.GetAtAddress(node.NextInMemoryAddress32.ToSegmentedAddress()).ToList();
+        if (continuation.Count == 0) {
+            return new RegionNode(Unknown, true, [], across, false);
+        }
+        return new RegionNode(across.Mask, !CalleeReturns(node, across), continuation, across, false);
+    }
+
+    /// <summary>An <c>int</c> to an emulator handler the scan understands, a direct call to a callee
+    /// known to return balanced, or an indirect call whose observed targets all are.</summary>
+    private bool CalleeReturns(CfgInstruction callNode, NestedResult across) {
+        if (InterruptCallFacts.TryGetInterruptVector(callNode, out _)) {
+            return across.Mask != Unknown;
+        }
+        if (callNode.StaticSuccessorAddresses.Count == 1) {
+            return _returnsBalanced(callNode.StaticSuccessorAddresses[0]);
+        }
+        HashSet<SegmentedAddress> targets = ObservedTargets(callNode);
+        return targets.Count > 0 && targets.All(_returnsBalanced);
+    }
+
+    /// <summary>The region nodes from which a node that may reach a return is reachable (that
+    /// node included), by a backward walk over the region's successor edges.</summary>
+    private static HashSet<CfgInstruction> NodesReachingReturn(Dictionary<CfgInstruction, RegionNode> region) {
+        Dictionary<CfgInstruction, List<CfgInstruction>> predecessors = [];
+        HashSet<CfgInstruction> reaching = [];
+        Queue<CfgInstruction> work = new();
+        foreach ((CfgInstruction node, RegionNode facts) in region) {
+            foreach (CfgInstruction successor in facts.Successors) {
+                if (!predecessors.TryGetValue(successor, out List<CfgInstruction>? list)) {
+                    list = predecessors[successor] = [];
+                }
+                list.Add(node);
+            }
+            if (facts.MayReturn && reaching.Add(node)) {
+                work.Enqueue(node);
+            }
+        }
+        while (work.Count > 0) {
+            if (!predecessors.TryGetValue(work.Dequeue(), out List<CfgInstruction>? list)) {
+                continue;
+            }
+            foreach (CfgInstruction predecessor in list) {
+                if (reaching.Add(predecessor)) {
+                    work.Enqueue(predecessor);
+                }
+            }
+        }
+        return reaching;
     }
 
     /// <summary>The distinct observed targets of an indirect site: its Normal-type successors
@@ -309,35 +385,27 @@ internal sealed class CalleeWriteScanner {
         return new NestedResult(mask, cacheable, observed, addresses);
     }
 
-    private bool EnqueueObservedTargets(Queue<CfgInstruction> work, CfgInstruction node) {
+    /// <summary>The decoded nodes at the observed targets of an indirect site, or null when it has
+    /// none, more than the per-site cap, or a target with no decoded node.</summary>
+    private List<CfgInstruction>? ObservedTargetNodes(CfgInstruction node) {
         HashSet<SegmentedAddress> targets = ObservedTargets(node);
         if (targets.Count == 0 || targets.Count > SpeculativeExplorer.MaxCandidatesPerSite) {
-            return false;
+            return null;
         }
-        foreach (SegmentedAddress target in targets) {
-            if (!EnqueueAll(work, target)) {
-                return false;
-            }
-        }
-        return true;
+        return NodesAt(targets);
     }
 
-    private bool EnqueueSuccessors(Queue<CfgInstruction> work, CfgInstruction node) {
-        foreach (SegmentedAddress successor in node.StaticSuccessorAddresses) {
-            if (!EnqueueAll(work, successor)) {
-                return false;
+    /// <summary>The decoded nodes at every address, or null when one address has none.</summary>
+    private List<CfgInstruction>? NodesAt(IEnumerable<SegmentedAddress> addresses) {
+        List<CfgInstruction> nodes = [];
+        foreach (SegmentedAddress address in addresses) {
+            int before = nodes.Count;
+            nodes.AddRange(_nodeIndex.GetAtAddress(address));
+            if (nodes.Count == before) {
+                return null;
             }
         }
-        return true;
-    }
-
-    private bool EnqueueAll(Queue<CfgInstruction> work, SegmentedAddress address) {
-        bool found = false;
-        foreach (CfgInstruction target in _nodeIndex.GetAtAddress(address)) {
-            found = true;
-            work.Enqueue(target);
-        }
-        return found;
+        return nodes;
     }
 
     private static bool PopsImmediate(IVisitableAstNode bytesToPop) => bytesToPop switch {

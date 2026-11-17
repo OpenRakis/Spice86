@@ -41,11 +41,11 @@ internal static class CalleeSavedRegisters {
     /// <summary>
     /// The <see cref="RegisterBits"/> mask of registers <paramref name="entry"/> saves and
     /// restores, or 0. <paramref name="visited"/> is the node set the write scan already
-    /// accepted and <paramref name="acrossMasks"/> the across-mask it computed for every call
+    /// accepted (the nodes from which one of the callee's returns may be reached) and <paramref name="acrossMasks"/> the across-mask it computed for every call
     /// or int node in that set; both are reused as-is.
     /// </summary>
     public static ushort Compute(SegmentedAddress entry, CfgNodeIndex nodeIndex,
-        IReadOnlyCollection<CfgInstruction> visited, IReadOnlyDictionary<CfgInstruction, ushort> acrossMasks) {
+        IReadOnlySet<CfgInstruction> visited, IReadOnlyDictionary<CfgInstruction, ushort> acrossMasks) {
         List<Slot>? slots = EntryRun(entry, nodeIndex, out List<CfgInstruction> run, out int lastSaving);
         if (slots is null) {
             return 0;
@@ -160,7 +160,7 @@ internal static class CalleeSavedRegisters {
     /// <summary>Back-edge guard: no visited node may land on an entry-run node up to and
     /// including the last saving push, except the run's own fall-through.</summary>
     private static bool ReenteredEntryRun(List<CfgInstruction> run, int lastSaving,
-        IReadOnlyCollection<CfgInstruction> visited, CfgNodeIndex nodeIndex) {
+        IReadOnlySet<CfgInstruction> visited, CfgNodeIndex nodeIndex) {
         Dictionary<CfgInstruction, int> position = new();
         for (int i = 0; i <= lastSaving; i++) {
             position[run[i]] = i;
@@ -179,7 +179,7 @@ internal static class CalleeSavedRegisters {
 
     /// <summary>Node-level predecessor map over the visited set, by scan successor.</summary>
     private static Dictionary<CfgInstruction, List<CfgInstruction>> Predecessors(
-        IReadOnlyCollection<CfgInstruction> visited, CfgNodeIndex nodeIndex) {
+        IReadOnlySet<CfgInstruction> visited, CfgNodeIndex nodeIndex) {
         Dictionary<CfgInstruction, List<CfgInstruction>> predecessors = new();
         foreach (CfgInstruction node in visited) {
             foreach (SegmentedAddress successor in ScanSuccessors(node)) {
@@ -325,7 +325,7 @@ internal static class CalleeSavedRegisters {
     /// <summary>Rule 4: replays every path over the visited nodes tracking stack depth, and
     /// returns the register bits whose pops did not provably read their slot: a pop of a
     /// matched slot must find the depth the slot was pushed at (<c>leave</c>: the frame).</summary>
-    private static ushort VerifyDepths(SegmentedAddress entry, IReadOnlyCollection<CfgInstruction> visited,
+    private static ushort VerifyDepths(SegmentedAddress entry, IReadOnlySet<CfgInstruction> visited,
         IReadOnlyDictionary<CfgInstruction, ushort> acrossMasks, List<Slot> slots,
         Dictionary<CfgInstruction, List<PopBinding>> bindings, CfgNodeIndex nodeIndex) {
         ushort failed = 0;
@@ -336,7 +336,8 @@ internal static class CalleeSavedRegisters {
         }
         while (work.Count > 0) {
             PathState state = work.Pop();
-            if (!seen.Add(state)) {
+            if (!visited.Contains(state.Node) || !seen.Add(state)) {
+                // A node outside the visited set never reaches a return.
                 continue;
             }
             if (seen.Count > 4 * CalleeReturnScanner.MaxNodes) {

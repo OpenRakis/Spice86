@@ -70,6 +70,22 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
     }
 
     [Fact]
+    public void PathThatCannotReachAReturnWritesNothing() {
+        // cmp ax,0; je err; mov bx,1; ret; err: mov di,0; spin: jmp spin
+        DecodeRoutine(0x100, 0x83, 0xF8, 0x00, 0x74, 0x04, 0xBB, 0x01, 0x00, 0xC3,
+            0xBF, 0x00, 0x00, 0xEB, 0xFE);
+        Assert.Equal(Regs(RegisterBits.Bx), CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void PathEndingInAnIndirectJumpMayReachAReturn() {
+        // cmp ax,0; je err; mov bx,1; ret; err: mov di,0; jmp si - the indirect jump may come back
+        DecodeRoutine(0x100, 0x83, 0xF8, 0x00, 0x74, 0x04, 0xBB, 0x01, 0x00, 0xC3,
+            0xBF, 0x00, 0x00, 0xFF, 0xE6);
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
     public void KnownStaticResultWinsOverObservedEvidence() {
         // mov ax,1; mov bx,2; ret
         DecodeRoutine(0x100, 0xB8, 0x01, 0x00, 0xBB, 0x02, 0x00, 0xC3);
