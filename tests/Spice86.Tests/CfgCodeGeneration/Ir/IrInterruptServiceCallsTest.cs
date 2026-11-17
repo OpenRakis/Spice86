@@ -167,7 +167,7 @@ public sealed class IrInterruptServiceCallsTest {
     private static IReadOnlyList<IrMethod> ServiceCallMethods(CfgPartitionedProgram program) {
         AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
         GeneratorAnalysis analysis = GeneratorAnalysis.Build(program,
-            new InstructionMnemonic(renderer), hltWaitsForInterrupt: false);
+            new InstructionMnemonic(renderer));
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transfer = new(context);

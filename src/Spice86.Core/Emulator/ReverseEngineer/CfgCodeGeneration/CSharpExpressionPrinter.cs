@@ -336,6 +336,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             // FpuControlWord is a property, not a method.
             return Atomic($"{controlWord.CallNode.PropertyPath}.{controlWord.CallNode.MethodName}", node.DataType);
         }
+        if (node is HaltedValueNode halted) {
+            // IsHalted is a property, not a method.
+            return Atomic($"{halted.CallNode.PropertyPath}.{halted.CallNode.MethodName}", node.DataType);
+        }
         if (node is PortReadCallNode port) {
             return PortRead(port);
         }
@@ -1077,7 +1081,6 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitFailAsUntestedNode(FailAsUntestedNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCommentNode(CommentNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCheckExternalEventsNode(CheckExternalEventsNode node) => throw NotAnExpression(node);
-    public CSharpFragment VisitHltWaitNode(HltWaitNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSpeculativeGuardNode(SpeculativeGuardNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionBoundaryNode(InstructionBoundaryNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitDivisionNode(DivisionNode node) => throw NotAnExpression(node);

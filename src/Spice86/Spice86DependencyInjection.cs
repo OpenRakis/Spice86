@@ -498,7 +498,7 @@ public class Spice86DependencyInjection : IDisposable {
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(collectCensuses: false, verify: false,
-            maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile, hltWaitsForInterrupt: !configuration.HltStopsEmulation), loggerService);
+            maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile), loggerService);
         DumpProgressReporter dumpProgressReporter = new(loggerService, new SystemTimeProvider());
         DumpProgressReporter = dumpProgressReporter;
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,

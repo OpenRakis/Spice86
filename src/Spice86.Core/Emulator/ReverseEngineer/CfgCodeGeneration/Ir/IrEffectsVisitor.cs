@@ -32,6 +32,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(CpuValues.FpuControlWord, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects WriteFpuControlWord =
         new(CpuValues.None, CpuValues.FpuControlWord, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+    private static readonly IrEffects ReadHalted =
+        new(CpuValues.Halted, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+    private static readonly IrEffects WriteHalted =
+        new(CpuValues.None, CpuValues.Halted, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects InterruptReturnUse =
         new(CpuValues.Registers, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
     private const CpuValues PopAllRegisters16 = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
@@ -176,6 +180,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         BitScanCallNode => IrEffects.None,
         SignatureMatchesHelperNode => ReadMemory,
         FpuControlWordNode => ReadFpuControlWord,
+        HaltedValueNode => ReadHalted,
         _ => IrEffects.Unknown
     };
 
@@ -207,18 +212,11 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
 
     /// <summary>A hardware interrupt handler can run at the check: it reads the effect's
     /// <see cref="CallEffect.Reads"/> and may write its
-    /// <see cref="CallEffect.Writes"/>, and no status flag or DF (the iret restores
-    /// FLAGS). It touches both tokens.</summary>
+    /// <see cref="CallEffect.Writes"/> and the halted state (a delivered interrupt clears it), and no
+    /// status flag or DF (the iret restores FLAGS). It touches both tokens.</summary>
     public IrEffects VisitCheckExternalEventsNode(CheckExternalEventsNode node) =>
-        new(node.HardwareInterruptEffect.Reads, CpuValues.None, node.HardwareInterruptEffect.Writes,
-            IrTokens.All, IrTokens.All, false, true);
-
-    /// <summary>The wait delivers the same hardware interrupt as the check: the handler reads the
-    /// effect's <see cref="CallEffect.Reads"/>, may write its <see cref="CallEffect.Writes"/> and the
-    /// iret restores FLAGS, so the same tokens and the same flag behavior apply.</summary>
-    public IrEffects VisitHltWaitNode(HltWaitNode node) =>
-        new(node.HardwareInterruptEffect.Reads, CpuValues.None, node.HardwareInterruptEffect.Writes,
-            IrTokens.All, IrTokens.All, false, true);
+        new(node.HardwareInterruptEffect.Reads, CpuValues.None,
+            node.HardwareInterruptEffect.Writes | CpuValues.Halted, IrTokens.All, IrTokens.All, false, true);
 
     public IrEffects VisitReturnNode(ReturnNode node) => node.Value.Accept(this).Then(IrEffects.ExitUse);
 
@@ -261,6 +259,9 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         }
         if (left is FpuControlWordNode) {
             return right.Accept(this).Then(WriteFpuControlWord);
+        }
+        if (left is HaltedValueNode) {
+            return right.Accept(this).Then(WriteHalted);
         }
         if (left is VariableReferenceNode or RegisterLocalNode) {
             return right.Accept(this);

@@ -15,7 +15,6 @@ internal interface ICodeGenerationAstVisitor<T> : IAstVisitor<T> {
     T VisitFailAsUntestedNode(FailAsUntestedNode node);
     T VisitCommentNode(CommentNode node);
     T VisitCheckExternalEventsNode(CheckExternalEventsNode node);
-    T VisitHltWaitNode(HltWaitNode node);
     T VisitSpeculativeGuardNode(SpeculativeGuardNode node);
     T VisitInstructionBoundaryNode(InstructionBoundaryNode node);
     T VisitDivisionNode(DivisionNode node);

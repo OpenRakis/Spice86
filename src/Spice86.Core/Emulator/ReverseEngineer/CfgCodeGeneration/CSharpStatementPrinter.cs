@@ -131,9 +131,6 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case CheckExternalEventsNode checkExternalEvents:
                 PrintCheckExternalEvents(checkExternalEvents);
                 return;
-            case HltWaitNode hltWait:
-                PrintHltWait(hltWait);
-                return;
             case SpeculativeGuardNode speculativeGuard:
                 PrintSpeculativeGuard(speculativeGuard);
                 return;
@@ -751,11 +748,6 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PrintCheckExternalEvents(CheckExternalEventsNode node) {
         string resumeSegment = expressions.SegmentVariable(node.ResumeAddress.Segment);
         writer.Line($"CheckExternalEvents({resumeSegment}, 0x{node.ResumeAddress.Offset:X4});");
-    }
-
-    private void PrintHltWait(HltWaitNode node) {
-        string resumeSegment = expressions.SegmentVariable(node.ResumeAddress.Segment);
-        writer.Line($"HltWait({resumeSegment}, 0x{node.ResumeAddress.Offset:X4});");
     }
 
     private void PrintSpeculativeGuard(SpeculativeGuardNode node) {

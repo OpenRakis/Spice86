@@ -41,7 +41,6 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _collectCensuses;
     private readonly bool _verify;
     private readonly int _maxLinesPerFile;
-    private readonly bool _hltWaitsForInterrupt;
 
     /// <summary>The production generator: no census collection, no IR verification.</summary>
     public CfgCSharpGenerator() : this(false, false) {
@@ -57,22 +56,10 @@ internal sealed class CfgCSharpGenerator {
     }
 
     /// <summary>Creates a generator with a per-file line limit; tests use a small limit.</summary>
-    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile)
-        : this(collectCensuses, verify, maxLinesPerFile, hltWaitsForInterrupt: false) {
-    }
-
-    /// <summary>Creates a generator that knows how the run treats HLT with interrupts enabled.</summary>
-    /// <param name="collectCensuses">Whether each emitted method runs the census classifiers the
-    /// generated-program diagnostics read; production skips them.</param>
-    /// <param name="verify">Whether the IR invariants are checked after the passes; tests enable it.</param>
-    /// <param name="maxLinesPerFile">The maximum printed lines of one generated file.</param>
-    /// <param name="hltWaitsForInterrupt">Whether HLT with interrupts enabled is generated as a wait for
-    /// the hardware interrupt that resumes the CPU, instead of exiting the program.</param>
-    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile, bool hltWaitsForInterrupt) {
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile) {
         _collectCensuses = collectCensuses;
         _verify = verify;
         _maxLinesPerFile = maxLinesPerFile;
-        _hltWaitsForInterrupt = hltWaitsForInterrupt;
     }
 
     /// <summary>Generates without progress reporting; the overload used by tests and tools.</summary>
@@ -90,7 +77,7 @@ internal sealed class CfgCSharpGenerator {
 
         progress.BeginPhase(DumpPhase.CodeAnalysis);
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic, _hltWaitsForInterrupt);
+        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic);
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePlan);
@@ -295,7 +282,7 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     internal IReadOnlyList<LiftedMethod> LiftMethods(CfgPartitionedProgram program) {
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic, _hltWaitsForInterrupt);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);

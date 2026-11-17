@@ -386,8 +386,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram =
-            new CfgCSharpGenerator(collectCensuses: true, verify: true, maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile,
-                hltWaitsForInterrupt: !scope.Fixture.Settings.HltStopsEmulation).Generate(program);
+            new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
         IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);

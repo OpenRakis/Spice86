@@ -113,8 +113,6 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitCheckExternalEventsNode(CheckExternalEventsNode node) => GotoTargets.None;
 
-    public GotoTargets VisitHltWaitNode(HltWaitNode node) => GotoTargets.None;
-
     public GotoTargets VisitSpeculativeGuardNode(SpeculativeGuardNode node) => GotoTargets.None;
 
     public GotoTargets VisitDivisionNode(DivisionNode node) => GotoTargets.None;
