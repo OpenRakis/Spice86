@@ -37,6 +37,14 @@ internal static class ServiceContractEffects {
         } else if (node.RunsEntryHook) {
             reads = CpuValues.Ss | CpuValues.Sp;
         }
+        if (node.Contract.Transfer is ServiceTransferKind.RunsChild) {
+            // An EXEC call loads and runs a whole child program: it can write anything, but it
+            // reads only the contract's inputs and the frame at the site itself - the observed
+            // child entries' own inputs are charged through the call-site targets. Only the
+            // result targets are must-written by the call itself.
+            return new IrEffects(reads | node.Contract.Registers.Reads, resultMask, CpuValues.All,
+                IrTokens.All, IrTokens.All, false, false);
+        }
         CpuValues mayWrite = node.Contract.Registers.Writes;
         IrTokens tokens = node.Contract.Io ? IrTokens.All : IrTokens.Memory;
         return new IrEffects(reads, resultMask, mayWrite, tokens, tokens, false, false);

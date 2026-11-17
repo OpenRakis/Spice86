@@ -265,6 +265,14 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// promotion can turn an output target into a local (<c>ax = call</c>), which the existing
     /// writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
+        if (call.Contract.Transfer is ServiceTransferKind.RunsChild) {
+            // A typed EXEC call: (AX, flag1, DS, ES) = ExecChild(cs1, 0x0193, 0x21).
+            string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
+                $"{expressions.Print(call.ReturnOffset).Text}";
+            writer.Line($"{ResultTargets(call)} = {HelperCallNames.ExecChildMethodName}(" +
+                $"{returnAddress}, 0x{call.Vector:X2});");
+            return;
+        }
         string invocation = expressions.Print(call).Text;
         if (!call.WritesFrame && !call.RunsEntryHook) {
             if (call.Results.Count == 0) {

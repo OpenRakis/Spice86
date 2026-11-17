@@ -1233,10 +1233,12 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     private static void EmitEntryFields(CSharpSourceWriter writer, GenerationPlan plan,
         TypedSignatures typedSignatures) {
-        List<string> fields = plan.OverrideRegistrations
-            .Where(registration => registration.SingleEntry)
-            .Select(registration => GeneratedOverrideNames.EntryFieldNameOf(
-                typedSignatures.DelegateNameOf(registration.MethodName)))
+        // One field per single-entry method, whether or not its address registration survived
+        // deduplication: helper call sites reference the field of any single-entry method.
+        List<string> fields = plan.Methods
+            .Where(method => method.Entries.Count == 1)
+            .Select(method => GeneratedOverrideNames.EntryFieldNameOf(
+                typedSignatures.DelegateNameOf(method.MethodName)))
             .ToList();
         if (fields.Count == 0) {
             return;
@@ -1655,9 +1657,9 @@ internal sealed class CfgCSharpGenerator {
             }
         }
         writer.Line();
-        foreach (string delegateName in plan.OverrideRegistrations
-            .Where(registration => registration.SingleEntry)
-            .Select(registration => typedSignatures.DelegateNameOf(registration.MethodName))) {
+        foreach (string delegateName in plan.Methods
+            .Where(method => method.Entries.Count == 1)
+            .Select(method => typedSignatures.DelegateNameOf(method.MethodName))) {
             writer.Line($"{GeneratedOverrideNames.EntryFieldNameOf(delegateName)} = _ => {delegateName}();");
         }
         foreach (OverrideRegistration registration in plan.OverrideRegistrations) {

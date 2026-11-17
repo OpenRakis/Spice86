@@ -159,15 +159,14 @@ internal sealed class TypedSignatures {
             IrEntry irEntry = source.IrMethod.Entries
                 .Single(methodEntry => methodEntry.Node.Equals(entry.Node));
             CpuValues inputs = conventions.EffectOf(entry).Reads;
-            CpuValues outputs = conventions.OutputsOf(entry);
+            CpuValues demanded = conventions.OutputsOf(entry);
+            CpuValues outputs = demanded & ~MachineOutputs(source, demanded);
             Dictionary<string, int> nameCounters = new(StringComparer.Ordinal);
             _byMethodName[source.Method.MethodName] = new TypedSignature {
                 Parameters = GenericNames(CpuValueParameters.Decompose(
                     inputs & ~MachineInputs(source, irEntry, inputs, IsTypedCall)),
                     nameCounters),
-                Outputs = GenericNames(CpuValueParameters.Decompose(
-                    outputs & ~MachineOutputs(source, outputs)),
-                    nameCounters),
+                Outputs = GenericNames(CpuValueParameters.Decompose(outputs), nameCounters),
                 Distance = signature.Distance,
                 Width = signature.Width,
                 PoppedBytes = signature.PoppedBytes,

@@ -163,7 +163,10 @@ internal static class ServiceContractHarness {
         RunResult second = RunCase(testCase, 1, mode);
         InterruptServiceEntry entry = first.Entry;
         ServiceContract contract = entry.Contract;
-        if (mode == ServiceRunMode.Callback && entry.Implementation is not null) {
+        // A RunsChild service executes a real EXEC that moves CS:IP to the child: the typed
+        // invocation is internal to the generated ExecChild path and is never scrambled-run here.
+        if (mode == ServiceRunMode.Callback && entry.Implementation is not null
+            && entry.Contract.Transfer is not ServiceTransferKind.RunsChild) {
             AssertTypedImplementation(testCase, first);
         }
 

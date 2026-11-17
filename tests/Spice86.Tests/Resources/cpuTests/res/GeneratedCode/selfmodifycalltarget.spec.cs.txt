@@ -181,6 +181,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
     private readonly Func<int, Action> unknown_23_F000_0028_F0028_AsmEntry;
+    private readonly Func<int, Action> unknown_40_F000_0028_F0028_AsmEntry;
+    private readonly Func<int, Action> unknown_57_F000_0028_F0028_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0040_F0040_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0048_F0048_AsmEntry;
     private readonly Func<int, Action> unknown_F000_0050_F0050_AsmEntry;
@@ -195,6 +197,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
 
         unknown_23_F000_0028_F0028_AsmEntry = _ => unknown_23_F000_0028_F0028_Asm();
+        unknown_40_F000_0028_F0028_AsmEntry = _ => unknown_40_F000_0028_F0028_Asm();
+        unknown_57_F000_0028_F0028_AsmEntry = _ => unknown_57_F000_0028_F0028_Asm();
         unknown_F000_0040_F0040_AsmEntry = _ => unknown_F000_0040_F0040_Asm();
         unknown_F000_0048_F0048_AsmEntry = _ => unknown_F000_0048_F0048_Asm();
         unknown_F000_0050_F0050_AsmEntry = _ => unknown_F000_0050_F0050_Asm();

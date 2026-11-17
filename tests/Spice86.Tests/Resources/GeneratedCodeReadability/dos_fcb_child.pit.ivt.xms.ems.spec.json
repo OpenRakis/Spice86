@@ -80,15 +80,15 @@
       "Casts": 2,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 1,
-      "LocalReads": 0,
-      "LocalVariables": 0,
-      "LocalWrites": 0,
+      "LocalReads": 2,
+      "LocalVariables": 1,
+      "LocalWrites": 2,
       "PlainRegisterAssignments": 3,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 3,
+      "RegisterReads": 13,
       "RegisterWrites": 3,
-      "Statements": 117,
+      "Statements": 156,
       "WriteBacks": 0
     }
   }

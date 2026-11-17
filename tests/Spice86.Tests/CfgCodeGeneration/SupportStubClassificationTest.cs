@@ -46,12 +46,15 @@ public class SupportStubClassificationTest {
     }
 
     [Fact]
-    public void EmulatorStubHoldingInlineProgramCodeStaysAProgramMethod() {
-        // child_exec_terminate_releases_handles: the DOS INT 21h dispatch stub at F000:0096
-        // contains the child program's own instructions inline, so it is not a pure stub.
+    public void ExecChildEntryMovesProgramCodeOutOfTheDispatchStub() {
+        // child_exec_terminate_releases_handles: the EXEC child's program entry is an
+        // execChildEntry partition of its own, so the DOS INT 21h dispatch stub at F000:0096
+        // holds only stub code and lands in the support file while the child method stays a
+        // program method.
         GeneratedCSharpProgram program = Generate("child_exec_terminate_releases_handles.a20.ivt.spec");
 
-        FileNameHolding(program, "unknown_F000_0096_").Should().Be("CfgGeneratedOverrides.F000.cs");
+        FileNameHolding(program, "unknown_F000_0096_").Should().Be("CfgGeneratedOverrides.Support.Stubs.cs");
+        FileNameHolding(program, "unknown_117D_0100_").Should().Be("CfgGeneratedOverrides.117D.cs");
         FileNameHolding(program, "unknown_016E_0100_").Should().Be("CfgGeneratedOverrides.016E.cs");
     }
 }

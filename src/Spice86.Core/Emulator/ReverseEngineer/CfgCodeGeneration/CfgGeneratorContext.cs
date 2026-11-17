@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -60,6 +62,34 @@ internal sealed class CfgGeneratorContext {
     }
 
     public CfgPartitionedProgram Program { get; }
+
+    private IReadOnlyList<SegmentedAddress>? _execChildEntries;
+
+    /// <summary>The child program entry addresses discovery observed the DOS dispatch callback
+    /// (#0x21) move CS:IP to: the resolver list a typed EXEC call prints.</summary>
+    internal IReadOnlyList<SegmentedAddress> ExecChildEntries =>
+        _execChildEntries ??= CollectExecChildEntries();
+
+    private IReadOnlyList<SegmentedAddress> CollectExecChildEntries() {
+        List<SegmentedAddress> entries = [];
+        foreach (CfgBlock block in Program.Partitions.SelectMany(partition => partition.Blocks)) {
+            foreach (ICfgNode node in block.Instructions) {
+                if (node is not CfgInstruction instruction
+                    || instruction.ExecutionAst is not CallbackNode callback
+                    || !ConstantEvaluation.TryEvaluateReplacing(callback.CallbackNumber,
+                        _ => null, out ulong number) || number != 0x21
+                    || !instruction.SuccessorsPerType.TryGetValue(
+                        InstructionSuccessorType.Normal, out ISet<ICfgNode>? successors)) {
+                    continue;
+                }
+                entries.AddRange(successors
+                    .Where(successor =>
+                        successor.Address != instruction.NextInMemoryAddress32.ToSegmentedAddress())
+                    .Select(successor => successor.Address));
+            }
+        }
+        return [.. entries.Distinct()];
+    }
 
     /// <summary>The relaxations the whole generation run shares: effects, SSA, summaries, passes
     /// and emission read this one object.</summary>

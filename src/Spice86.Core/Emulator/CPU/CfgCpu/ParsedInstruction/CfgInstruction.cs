@@ -320,6 +320,9 @@ public sealed class CfgInstruction : CfgNode {
         }
     }
 
+    /// <summary>The execution AST <see cref="AttachAsts"/> attached, or null before that.</summary>
+    internal IVisitableAstNode? ExecutionAstOrNull => _executionAst;
+
     /// <summary>
     /// Statically-known successor addresses derived from the instruction's decode-time operands.
     /// Populated by parsers for instructions with immediate branch

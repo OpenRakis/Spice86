@@ -24,6 +24,21 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        156
+      ],
+      "entries": [
+        {
+          "block": 156,
+          "address": "016E:0100",
+          "kind": "execChildEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
         2,
         3,
         8,
@@ -38,7 +53,7 @@
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -54,7 +69,7 @@
       ]
     },
     {
-      "id": 4,
+      "id": 5,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -78,7 +93,7 @@
       ]
     },
     {
-      "id": 5,
+      "id": 6,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -94,7 +109,7 @@
       ]
     },
     {
-      "id": 6,
+      "id": 7,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -111,7 +126,7 @@
       ]
     },
     {
-      "id": 7,
+      "id": 8,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -127,7 +142,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 9,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -143,7 +158,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 10,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -159,7 +174,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 11,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -175,7 +190,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 12,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -191,7 +206,7 @@
       ]
     },
     {
-      "id": 12,
+      "id": 13,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -207,11 +222,10 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        156,
         122,
         126,
         134,
@@ -233,7 +247,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 15,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -248,7 +262,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 16,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -270,7 +284,7 @@
     {
       "kind": "callOut",
       "fromPartition": 1,
-      "toPartition": 4,
+      "toPartition": 5,
       "fromBlock": 64,
       "toBlock": 68,
       "from": "016E:0102",
@@ -281,15 +295,24 @@
     {
       "kind": "callOut",
       "fromPartition": 1,
-      "toPartition": 13,
+      "toPartition": 14,
       "fromBlock": 102,
       "toBlock": 122,
       "from": "016E:0117",
       "target": "F000:0096"
     },
     {
+      "kind": "callOut",
+      "fromPartition": 2,
+      "toPartition": 14,
+      "fromBlock": 156,
+      "toBlock": 122,
+      "from": "016E:0110",
+      "target": "F000:0096"
+    },
+    {
       "kind": "alignedReturn",
-      "fromPartition": 4,
+      "fromPartition": 5,
       "toPartition": 1,
       "fromBlock": 87,
       "toBlock": 99,
@@ -298,8 +321,8 @@
     },
     {
       "kind": "callOut",
-      "fromPartition": 6,
-      "toPartition": 15,
+      "fromPartition": 7,
+      "toPartition": 16,
       "fromBlock": 24,
       "toBlock": 25,
       "from": "F000:0063",
@@ -308,9 +331,18 @@
       "callContinuationAddress": "F000:0068"
     },
     {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 14,
+      "toPartition": 2,
+      "fromBlock": 143,
+      "toBlock": 156,
+      "from": "F000:00A5",
+      "target": "016E:0100"
+    },
+    {
       "kind": "callOut",
-      "fromPartition": 15,
-      "toPartition": 14,
+      "fromPartition": 16,
+      "toPartition": 15,
       "fromBlock": 29,
       "toBlock": 33,
       "from": "F000:00ED",

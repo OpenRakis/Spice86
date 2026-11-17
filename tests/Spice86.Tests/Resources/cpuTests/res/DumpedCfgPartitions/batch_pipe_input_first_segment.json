@@ -16,6 +16,11 @@
           "block": 64,
           "address": "016E:0100",
           "kind": "executionContextEntry"
+        },
+        {
+          "block": 64,
+          "address": "016E:0100",
+          "kind": "execChildEntry"
         }
       ]
     },

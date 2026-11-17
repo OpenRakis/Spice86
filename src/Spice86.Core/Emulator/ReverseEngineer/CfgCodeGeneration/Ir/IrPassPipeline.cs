@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>The IR passes of <see cref="IrMethodEmitter"/>, in the order they run.</summary>
 internal enum IrPass {
@@ -84,7 +85,7 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        RunAll(method, verify, buildWebs, ioPorts, _ => false, false, false, GenerationPolicy.Strict, timer);
+        RunAll(method, verify, buildWebs, ioPorts, _ => false, false, false, [], GenerationPolicy.Strict, timer);
 
     /// <summary>Runs the whole pipeline on <paramref name="method"/> with
     /// <paramref name="ioPorts"/> and <paramref name="hasOnlyBuiltInTargets"/> the
@@ -95,10 +96,11 @@ internal static class IrPassPipeline {
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
-        bool terminateResumedBatchLaunch, GenerationPolicy policy, GenerationStepTimer timer) {
+        bool terminateResumedBatchLaunch, IReadOnlyList<SegmentedAddress> execChildEntries,
+        GenerationPolicy policy, GenerationStepTimer timer) {
         IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs,
             ioPorts, hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch,
-            policy, timer);
+            execChildEntries, policy, timer);
         if (result.Ssa is not { } ssa || (buildWebs && result.Webs is null)) {
             throw new InvalidOperationException(
                 $"A full IR pipeline run of {method.Name} must produce an SSA and webs.");
@@ -122,7 +124,7 @@ internal static class IrPassPipeline {
     /// becomes a direct service call.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        Run(method, last, verify, buildWebs, ioPorts, _ => false, false, false, GenerationPolicy.Strict, timer);
+        Run(method, last, verify, buildWebs, ioPorts, _ => false, false, false, [], GenerationPolicy.Strict, timer);
 
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/> with <paramref name="ioPorts"/> and
@@ -137,12 +139,13 @@ internal static class IrPassPipeline {
         IReadOnlyDictionary<ushort, Type> ioPorts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) =>
         Run(method, last, verify, buildWebs, ioPorts, hasOnlyBuiltInTargets, false, false,
-            GenerationPolicy.Strict, timer);
+            [], GenerationPolicy.Strict, timer);
 
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
-        bool terminateResumedBatchLaunch, GenerationPolicy policy, GenerationStepTimer timer) {
+        bool terminateResumedBatchLaunch, IReadOnlyList<SegmentedAddress> execChildEntries,
+        GenerationPolicy policy, GenerationStepTimer timer) {
         IrSsa? ssa = null;
         IrSsaWebs? webs = null;
         IReadOnlyDictionary<ICfgNode, DosCallRecord> dosCalls = new Dictionary<ICfgNode, DosCallRecord>();
@@ -219,7 +222,7 @@ internal static class IrPassPipeline {
         }
         MakeCurrent();
         int typedCalls = PassResult(IrPass.InterruptServiceCalls.ToString(),
-            () => IrInterruptServiceCalls.Apply(method, editor, facts, hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch));
+            () => IrInterruptServiceCalls.Apply(method, editor, facts, hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch, execChildEntries));
         if (typedCalls != 0) {
             MakeCurrentTimed("ssa build typed calls");
             MakeCurrent();

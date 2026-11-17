@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Intermediate;
@@ -37,7 +38,7 @@ internal sealed class CfgPartitionEdgeCollector {
                 if (targetBlock == null || !blocksById.ContainsKey(targetBlock.Id)) {
                     continue;
                 }
-                ClassifiedEdgeKind kind = ClassifyInstructionEdge(instruction, entry.Key);
+                ClassifiedEdgeKind kind = ClassifyInstructionEdge(instruction, entry.Key, target);
                 AddEdgeRecord(edgeRecords, seen, sourceBlock, targetBlock, instruction, target, entry.Key, kind);
             }
         }
@@ -59,8 +60,16 @@ internal sealed class CfgPartitionEdgeCollector {
         }
     }
 
-    private static ClassifiedEdgeKind ClassifyInstructionEdge(CfgInstruction instruction, InstructionSuccessorType successorType) =>
-        (instruction.IsCall, instruction.IsReturn, instruction.IsJump, successorType) switch {
+    private static ClassifiedEdgeKind ClassifyInstructionEdge(CfgInstruction instruction,
+        InstructionSuccessorType successorType, ICfgNode target) {
+        if (successorType == InstructionSuccessorType.Normal
+            && instruction.ExecutionAstOrNull is CallbackNode
+            && target.Address != instruction.NextInMemoryAddress32.ToSegmentedAddress()) {
+            // A callback that moved CS:IP resumes a fresh execution context (an EXEC child's
+            // entry, a terminate's resume landing): the target is not this activation's code.
+            return ClassifiedEdgeKind.CallbackMovedTarget;
+        }
+        return (instruction.IsCall, instruction.IsReturn, instruction.IsJump, successorType) switch {
             (_, _, _, InstructionSuccessorType.CpuFault) => ClassifiedEdgeKind.CpuFault,
             (true, _, _, InstructionSuccessorType.Normal) => ClassifiedEdgeKind.Call,
             (true, _, _, InstructionSuccessorType.CallToReturn) => ClassifiedEdgeKind.CallContinuation,
@@ -70,6 +79,7 @@ internal sealed class CfgPartitionEdgeCollector {
             (_, _, true, InstructionSuccessorType.Normal) => ClassifiedEdgeKind.Jump,
             _ => ClassifiedEdgeKind.FallthroughOrInternal,
         };
+    }
 
     private static void AddEdgeRecord(
         List<CfgPartitionEdgeRecord> edgeRecords,

@@ -36,12 +36,12 @@
       "InterruptCalls": 3,
       "LocalReads": 5,
       "LocalVariables": 3,
-      "LocalWrites": 7,
+      "LocalWrites": 8,
       "PlainRegisterAssignments": 14,
       "PortWrapperCalls": 0,
       "RawIoCalls": 1,
       "RegisterReads": 21,
-      "RegisterWrites": 16,
+      "RegisterWrites": 18,
       "Statements": 93,
       "WriteBacks": 0
     }
@@ -80,15 +80,15 @@
       "Casts": 2,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 1,
-      "LocalReads": 0,
-      "LocalVariables": 0,
-      "LocalWrites": 0,
+      "LocalReads": 2,
+      "LocalVariables": 1,
+      "LocalWrites": 2,
       "PlainRegisterAssignments": 3,
       "PortWrapperCalls": 0,
       "RawIoCalls": 0,
-      "RegisterReads": 3,
+      "RegisterReads": 13,
       "RegisterWrites": 3,
-      "Statements": 113,
+      "Statements": 142,
       "WriteBacks": 0
     }
   }

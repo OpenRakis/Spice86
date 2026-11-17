@@ -29,6 +29,21 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        147
+      ],
+      "entries": [
+        {
+          "block": 147,
+          "address": "016E:0100",
+          "kind": "execChildEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
         2,
         3,
         8,
@@ -43,7 +58,7 @@
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -59,7 +74,7 @@
       ]
     },
     {
-      "id": 4,
+      "id": 5,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -75,7 +90,7 @@
       ]
     },
     {
-      "id": 5,
+      "id": 6,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -92,7 +107,7 @@
       ]
     },
     {
-      "id": 6,
+      "id": 7,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -108,7 +123,7 @@
       ]
     },
     {
-      "id": 7,
+      "id": 8,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -124,7 +139,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 9,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -140,7 +155,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 10,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -156,7 +171,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 11,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -172,7 +187,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 12,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -188,11 +203,10 @@
       ]
     },
     {
-      "id": 12,
+      "id": 13,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        147,
         70,
         74,
         82,
@@ -214,7 +228,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -229,7 +243,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 15,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -251,7 +265,7 @@
     {
       "kind": "callOut",
       "fromPartition": 1,
-      "toPartition": 12,
+      "toPartition": 13,
       "fromBlock": 64,
       "toBlock": 70,
       "from": "0160:0105",
@@ -262,7 +276,7 @@
     {
       "kind": "callOut",
       "fromPartition": 1,
-      "toPartition": 12,
+      "toPartition": 13,
       "fromBlock": 105,
       "toBlock": 70,
       "from": "0160:0109",
@@ -273,7 +287,7 @@
     {
       "kind": "callOut",
       "fromPartition": 1,
-      "toPartition": 12,
+      "toPartition": 13,
       "fromBlock": 133,
       "toBlock": 70,
       "from": "0160:0127",
@@ -281,8 +295,17 @@
     },
     {
       "kind": "callOut",
-      "fromPartition": 5,
-      "toPartition": 14,
+      "fromPartition": 2,
+      "toPartition": 13,
+      "fromBlock": 147,
+      "toBlock": 70,
+      "from": "016E:0110",
+      "target": "F000:0096"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 6,
+      "toPartition": 15,
       "fromBlock": 24,
       "toBlock": 25,
       "from": "F000:0063",
@@ -292,7 +315,7 @@
     },
     {
       "kind": "alignedReturn",
-      "fromPartition": 12,
+      "fromPartition": 13,
       "toPartition": 1,
       "fromBlock": 93,
       "toBlock": 115,
@@ -301,7 +324,7 @@
     },
     {
       "kind": "alignedReturn",
-      "fromPartition": 12,
+      "fromPartition": 13,
       "toPartition": 1,
       "fromBlock": 95,
       "toBlock": 105,
@@ -309,9 +332,18 @@
       "target": "0160:0107"
     },
     {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 13,
+      "toPartition": 2,
+      "fromBlock": 91,
+      "toBlock": 147,
+      "from": "F000:00A5",
+      "target": "016E:0100"
+    },
+    {
       "kind": "callOut",
-      "fromPartition": 14,
-      "toPartition": 13,
+      "fromPartition": 15,
+      "toPartition": 14,
       "fromBlock": 29,
       "toBlock": 33,
       "from": "F000:00ED",

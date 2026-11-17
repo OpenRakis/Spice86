@@ -439,7 +439,11 @@ internal sealed class HardwareInterruptEffectBuilder {
             anySite = true;
             List<SegmentedAddress> targets = TransferTargets(instruction)
                 .Select(target => target.Address).ToList();
-            if (targets.Count == 0 || targets.Any(target => target != service.StubAddress)) {
+            // A target the stub's own dispatch callback moved CS:IP to - an EXEC child's entry
+            // or a terminate's resume landing - is not a hooked target: the site still invokes
+            // only the installed stub.
+            if (targets.Count == 0 || targets.Any(target => target != service.StubAddress
+                    && !_context.ExecChildEntries.Contains(target))) {
                 return false;
             }
         }

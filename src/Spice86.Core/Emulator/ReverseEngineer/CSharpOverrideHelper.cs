@@ -28,6 +28,7 @@ using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.StateSerialization;
@@ -1515,6 +1516,64 @@ public class CSharpOverrideHelper {
         State.CS = expectedReturnCs;
         State.IP = expectedReturnIp;
         return invocation.Invoke();
+    }
+
+    /// <summary>
+    /// A typed DOS EXEC-and-run call
+    /// (<c>(AX, flag1, DS, ES) = ExecChild(cs1, 0x0193, 0x21)</c>): the helper pushes the
+    /// <c>int</c> frame the interpreted call pushed, clears IF like interrupt entry, then invokes
+    /// the generated interrupt stub of the call's vector. The stub runs its dispatch, the DOS
+    /// callback loads and launches the child and the callback-moved CS:IP check jumps to the
+    /// observed child entry, which runs to its terminate; the termination restores this parent
+    /// and unwinds here through the pushed frame. A failed EXEC ran no child: the stub's own
+    /// <c>iret</c> pops the frame back and the service's carry/AX outputs are returned.
+    /// </summary>
+    /// <param name="expectedReturnCs">The segment the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="expectedReturnIp">The offset the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="vectorNumber">The interrupt vector whose generated stub the call runs.</param>
+    /// <returns>AX, the carry flag and DS/ES as the resumed parent leaves them.</returns>
+    /// <exception cref="UnrecoverableException">The EXEC vector had no generated stub or a
+    /// termination resumed at an address discovery did not observe.</exception>
+    public (ushort ax, bool carryFlag, ushort ds, ushort es) ExecChild(
+        ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
+        ushort parentPsp = Dos.ReadPspAddress();
+        SegmentedAddress isrEntry = _interruptVectorTable[vectorNumber];
+        Func<int, Action>? stub = SearchFunctionOverride(isrEntry);
+        if (stub is null) {
+            throw FailAsUntested(
+                $"The EXEC call's interrupt 0x{vectorNumber:X2} stub {isrEntry} was not generated");
+        }
+        Stack.Push16(State.Flags.FlagRegister16);
+        Stack.PushSegmentedAddress(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
+        State.InterruptFlag = false;
+        try {
+            stub.Invoke(0).Invoke();
+        } catch (ProcessTerminatedException exception) when (IsChildTerminate(exception, parentPsp)) {
+            // The child's own terminate restored this parent: resume exactly like the
+            // interpreted iret landing on the frame this call pushed.
+        } catch (CallStackUnwindException exception)
+            when (exception.Target == new SegmentedAddress(expectedReturnCs, expectedReturnIp)) {
+            // A resume landing a call chain inside the child could not route: the child's
+            // terminate already restored this parent, so the unwind is this call's return.
+        }
+        SegmentedAddress resumed = State.IpSegmentedAddress;
+        if (resumed == new SegmentedAddress(expectedReturnCs, expectedReturnIp)) {
+            return (State.AX, State.CarryFlag, State.DS, State.ES);
+        }
+        if (SearchFunctionOverride(resumed) is not null) {
+            throw FailAsUntested(
+                $"The EXEC call expecting to return to {expectedReturnCs:X4}:{expectedReturnIp:X4} landed at {resumed}, which discovery did not observe it landing on");
+        }
+        throw new CallStackUnwindException(resumed,
+            $"DOS EXEC child terminated; control resumes at {resumed}.");
+    }
+
+    /// <summary>Whether a process termination is this EXEC's own child: the terminated
+    /// process's parent PSP is the PSP that was current when the call entered.</summary>
+    private bool IsChildTerminate(ProcessTerminatedException exception, ushort parentPsp) {
+        DosProgramSegmentPrefix psp = new(Memory,
+            MemoryUtils.ToPhysicalAddress(exception.TerminatedPsp, 0));
+        return psp.ParentProgramSegmentPrefix == parentPsp;
     }
 
     /// <summary>Writes a carry result into the stacked FLAGS of a

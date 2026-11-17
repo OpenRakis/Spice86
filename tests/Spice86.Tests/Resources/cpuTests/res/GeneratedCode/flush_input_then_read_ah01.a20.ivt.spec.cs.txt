@@ -84,6 +84,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private readonly Func<int, Action> unknown_F000_0081_F0081Entry;
     private readonly Func<int, Action> unknown_F000_0086_F0086Entry;
     private readonly Func<int, Action> unknown_F000_0096_F0096Entry;
+    private readonly Func<int, Action> unknown_F000_00AA_F00AAEntry;
     private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
     private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
 
@@ -106,6 +107,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_0081_F0081Entry = _ => unknown_F000_0081_F0081();
         unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
         unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
+        unknown_F000_00AA_F00AAEntry = _ => unknown_F000_00AA_F00AA();
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
@@ -120,8 +122,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0081, unknown_F000_0081_F0081Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00AA, unknown_F000_00AA_F00AAEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
+        DefineCallLandings(new(cs1, 0x0105), new CallLanding(new(biosSegment, 0x00AA), unknown_F000_00AA_F00AAEntry));
     }
 
     protected override bool ObservedTransfersOnly => true;
@@ -306,25 +310,36 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_F000_0096_F0096() {
-        byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);
         Alu8.Sub(AH, 7);
-        if (AH != 7) {
-            Alu8.Sub(AH, 8);
-            if (AH != 8) {
-                Alu8.Sub(AH, 0x0A);
-                if (AH != 0x0A) {
-                    // INT 21h: Dos services selected by AH
-                    if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
-                        VerifySpeculativeEntryOrFail(biosSegment, 0x00A9, Signature_00A9_iret);
-                        return InterruptRet();
-                    }
-                    if (CS != biosSegment || IP != 0x00AA) {
-                        throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
-                    }
-                }
-            }
+        if (AH == 7) {
+            return unknown_F000_00AA_F00AA();
         }
+        Alu8.Sub(AH, 8);
+        if (AH == 8) {
+            return unknown_F000_00AA_F00AA();
+        }
+        Alu8.Sub(AH, 0x0A);
+        if (AH == 0x0A) {
+            return unknown_F000_00AA_F00AA();
+        }
+        // INT 21h: Dos services selected by AH
+        if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00A9, Signature_00A9_iret);
+            return InterruptRet();
+        }
+        if (CS == biosSegment && IP == 0x00AA) {
+            return unknown_F000_00AA_F00AA();
+        }
+        else {
+            throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
+        }
+    }
+
+    /// <summary>Inputs: all. Outputs: AL. Changes: all.</summary>
+    public virtual Action unknown_F000_00AA_F00AA() {
+        byte flagOperand_00AF = 0;
+        CheckExternalEvents(biosSegment, 0x00AA);
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x00AB);
         // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady

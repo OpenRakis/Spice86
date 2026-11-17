@@ -87,6 +87,7 @@ internal sealed class IrCallingConventions {
 
     private readonly CfgGeneratorContext _context;
     private readonly Dictionary<ICfgNode, CfgCodePartitionEntry> _entryByNode = new();
+    private readonly Dictionary<SegmentedAddress, CfgCodePartitionEntry> _entryByAddress = new();
     private readonly Dictionary<CfgCodePartitionEntry, EntryState> _states = new();
     private readonly Dictionary<string, MethodData> _methodByName = new();
     private readonly Dictionary<CfgCodePartitionEntry, List<(MethodData Caller, CallSite Site)>> _callersOf = new();
@@ -107,6 +108,7 @@ internal sealed class IrCallingConventions {
         foreach (CfgCodePartition partition in context.Program.Partitions) {
             foreach (CfgCodePartitionEntry entry in partition.Entries) {
                 _entryByNode[entry.Node] = entry;
+                _entryByAddress[entry.Address] = entry;
                 _states[entry] = new EntryState();
             }
         }
@@ -711,6 +713,10 @@ internal sealed class IrCallingConventions {
         /// <summary>Whether the site is an <c>int</c> that pushes the FLAGS image before its
         /// target runs: it needs the six status flags and DF on top of the targets' inputs.</summary>
         public required bool WritesInterruptFrame { get; init; }
+        /// <summary>Whether the site's own statement effects carry declared reads the targets'
+        /// inputs do not cover - an EXEC child's call, whose contract inputs and frame reads add
+        /// to the child entries' inputs (<see cref="ExecChildTargets"/>).</summary>
+        public bool IncludeStatementReads { get; init; }
         /// <summary>The bytes still needed right after the call, over the versions
         /// <see cref="VersionsAfter"/> - fixed-point state: starts at <see cref="CpuValues.None"/>
         /// and only grows.</summary>
@@ -827,21 +833,35 @@ internal sealed class IrCallingConventions {
         foreach (IrBlock block in irMethod.Blocks) {
             for (int statementIndex = 0; statementIndex < block.Statements.Count; statementIndex++) {
                 IrStatement statement = block.Statements[statementIndex];
+                IReadOnlyList<SegmentedAddress>? execChildren = ExecChildTargets(statement.Node);
                 if (statement.Node is CheckExternalEventsNode
-                    || statement.Origin is not CfgInstruction { IsCall: true } instruction
-                    || ServiceContractEffects.DescribesSite(statement.Node)) {
+                    || statement.Origin is not CfgInstruction instruction
+                    || (execChildren is null
+                        && (!instruction.IsCall
+                            || ServiceContractEffects.DescribesSite(statement.Node)))) {
                     continue;
                 }
                 List<CfgCodePartitionEntry> targets = [];
                 bool resolved = true;
-                foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
-                    if (_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
-                        targets.Add(mapped);
-                    } else {
-                        resolved = false;
+                if (execChildren is { } childAddresses) {
+                    foreach (SegmentedAddress address in childAddresses) {
+                        if (_entryByAddress.TryGetValue(address,
+                                out CfgCodePartitionEntry? mapped)) {
+                            targets.Add(mapped);
+                        } else {
+                            resolved = false;
+                        }
                     }
+                } else {
+                    foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
+                        if (_entryByNode.TryGetValue(target, out CfgCodePartitionEntry? mapped)) {
+                            targets.Add(mapped);
+                        } else {
+                            resolved = false;
+                        }
+                    }
+                    targets = SectionCallTargets(IrAstChildren.Descendants(statement.Node), targets);
                 }
-                targets = SectionCallTargets(IrAstChildren.Descendants(statement.Node), targets);
                 resolved &= targets.Count > 0;
                 int[] defined = new int[ValueCount];
                 Array.Fill(defined, -1);
@@ -859,8 +879,10 @@ internal sealed class IrCallingConventions {
                     Targets = targets, Resolved = resolved,
                     ObservedContinuation = continuation.ObservedContinuationEdge is not null,
                     RedirectedReturn = continuation.RedirectedContinuationEdges.Count > 0,
-                    WritesInterruptFrame = IrAstChildren.Descendants(statement.Node)
-                        .Any(IsInterruptCallSite)
+                    WritesInterruptFrame = execChildren is not null
+                        || IrAstChildren.Descendants(statement.Node)
+                            .Any(IsInterruptCallSite),
+                    IncludeStatementReads = execChildren is not null
                 };
                 method.Calls.Add(site);
                 method.CallByStatement[statement] = site;
@@ -1544,6 +1566,9 @@ internal sealed class IrCallingConventions {
                 return mask;
             }
             CpuValues result = TargetsInputs(call) & mask;
+            if (call.IncludeStatementReads) {
+                result |= statement.Effects.Reads & mask;
+            }
             int defined = call.DefinedVersions[(int)value];
             if (defined >= 0) {
                 result |= Needed(method, value, defined, visiting) & ~TargetsChanges(call);
@@ -1712,6 +1737,15 @@ internal sealed class IrCallingConventions {
     /// generic <see cref="InterruptCallHelperNode"/> or a <see cref="ProgramInterruptCallHelperNode"/>.</summary>
     private static bool IsInterruptCallSite(IVisitableAstNode node) =>
         node is InterruptCallHelperNode or ProgramInterruptCallHelperNode;
+
+    /// <summary>The observed child entries of a <c>RunsChild</c> service call in
+    /// <paramref name="node"/>, or <see langword="null"/> when it holds none: such a site is a
+    /// call site whose targets are the child program entries the DOS dispatch callback moved
+    /// CS:IP to.</summary>
+    private static IReadOnlyList<SegmentedAddress>? ExecChildTargets(IVisitableAstNode node) =>
+        IrAstChildren.Descendants(node).OfType<InterruptServiceCallNode>()
+            .FirstOrDefault(call => call.Contract.Transfer is ServiceTransferKind.RunsChild)
+            ?.ChildEntries;
 
     /// <summary>The machine values the site reads at call time: its resolved targets' inputs,
     /// plus the six status flags and DF when it is an <c>int</c> pushing the FLAGS image.</summary>

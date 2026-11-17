@@ -4,6 +4,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Shared.Emulator.Memory;
+
+using CSharpOverrideHelper = Spice86.Core.Emulator.ReverseEngineer.CSharpOverrideHelper;
 
 /// <summary>
 /// A generated typed interrupt service call
@@ -27,8 +30,10 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
         InterruptServiceEntry service, string receiverPropertyName,
         params IVisitableAstNode[] arguments)
         : base(receiverPropertyName, service.Implementation?.Name
-            ?? throw new InvalidOperationException(
-                $"{service.Name} has no implementation to call"), arguments) {
+            ?? (service.Contract.Transfer is ServiceTransferKind.RunsChild
+                ? nameof(CSharpOverrideHelper.ExecChild)
+                : throw new InvalidOperationException(
+                    $"{service.Name} has no implementation to call")), arguments) {
         Vector = vector;
         Selector = selector;
         Service = service;
@@ -71,6 +76,11 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
     /// are never read as part of the invocation.</summary>
     public IReadOnlyList<ValueNode> Results { get; init; } = [];
 
+    /// <summary>The child program entry addresses discovery observed an EXEC land on: the site's
+    /// convention demand unions their entry inputs (<see cref="ServiceTransferKind.RunsChild"/>);
+    /// empty for a call that runs no child.</summary>
+    public IReadOnlyList<SegmentedAddress> ChildEntries { get; init; } = [];
+
     /// <summary>The segment the pushed frame must return to, printed as the first
     /// <c>ServiceCall</c> argument.</summary>
     public required IVisitableAstNode ReturnSegment { get; init; }
@@ -87,6 +97,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
             WritesFrame = WritesFrame,
             StringLiteral = StringLiteral,
             Results = Results,
+            ChildEntries = ChildEntries,
             ReturnSegment = ReturnSegment,
             ReturnOffset = ReturnOffset
         };
@@ -101,6 +112,7 @@ internal sealed record InterruptServiceCallNode : MethodCallNode {
             WritesFrame = WritesFrame,
             StringLiteral = StringLiteral,
             Results = Results,
+            ChildEntries = ChildEntries,
             ReturnSegment = returnSegment,
             ReturnOffset = returnOffset
         };

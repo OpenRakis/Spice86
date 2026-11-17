@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 using System.Reflection;
@@ -76,9 +77,12 @@ internal static class IrInterruptServiceCalls {
     /// <param name="terminateResumedBatchLaunch">Whether a terminate during the run resumed by
     /// the batch engine launching the next program: that resume only exists as the interrupt
     /// stub's callback-moved-CS:IP path, so terminate calls keep the untyped call.</param>
+    /// <param name="execChildEntries">The child program entries discovery observed the DOS
+    /// dispatch callback move CS:IP to: the resolver list a typed EXEC call prints.</param>
     public static int Apply(IrMethod method, IrEditor editor, IrConstantFacts facts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
-        bool terminateResumedBatchLaunch) {
+        bool terminateResumedBatchLaunch,
+        IReadOnlyList<SegmentedAddress> execChildEntries) {
         List<(IrBlock Block, int Index, IrStatement Replacement)> typed = [];
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
@@ -89,7 +93,8 @@ internal static class IrInterruptServiceCalls {
                     continue;
                 }
                 IVisitableAstNode replacement = Classify(call, service, block, index, facts,
-                    hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch);
+                    hasOnlyBuiltInTargets, programSetCurrentPsp, terminateResumedBatchLaunch,
+                    execChildEntries);
                 if (ReferenceEquals(replacement, call)) {
                     continue;
                 }
@@ -115,7 +120,8 @@ internal static class IrInterruptServiceCalls {
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,
         InterruptServiceVector service, IrBlock block, int index, IrConstantFacts facts,
         Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
-        bool terminateResumedBatchLaunch) {
+        bool terminateResumedBatchLaunch,
+        IReadOnlyList<SegmentedAddress> execChildEntries) {
         InterruptServiceEntry? entry;
         ServiceSelector? selector = null;
         int? selectorValue = null;
@@ -147,12 +153,6 @@ internal static class IrInterruptServiceCalls {
             return new InterruptCallHelperNode(InterruptSiteKind.NoContract, service,
                 selectorValue, [.. call.Arguments]);
         }
-        if (entry.Contract.Transfer is ServiceTransferKind.RunsChild) {
-            // A child EXEC is not an ordinary typed call: the parent/child transfer is modelled
-            // separately, so the site keeps the untyped call until then.
-            return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
-                selectorValue, [.. call.Arguments]);
-        }
         if (entry.Contract.Transfer is ServiceTransferKind.Terminates
             && (terminateResumedBatchLaunch || programSetCurrentPsp
                 || index != block.Statements.Count - 1
@@ -167,18 +167,29 @@ internal static class IrInterruptServiceCalls {
             return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
                 selectorValue, [.. call.Arguments]);
         }
-        if (entry.Implementation is null
+        // A child-running service prints ExecChild and never invokes an implementation.
+        if ((entry.Implementation is null
+                && entry.Contract.Transfer is not ServiceTransferKind.RunsChild)
             || !BindingSupported(entry, block, index, facts)
             || ReceiverName(service.HandlerType) is not { } receiverName) {
             return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
                 selectorValue, [.. call.Arguments]);
         }
+        bool runsChild = entry.Contract.Transfer is ServiceTransferKind.RunsChild;
+        List<ValueNode> results = [.. ServiceCallSignature.Outputs(entry.Contract)
+            .Select(output => IrValueSets.NodeOf(output.Mask))];
+        if (runsChild) {
+            // A returned child restores the parent's DS/ES to its own PSP: the call reports them
+            // as outputs even though the contract only names AX and the carry flag.
+            results.Add(IrValueSets.NodeOf(CpuValues.Ds));
+            results.Add(IrValueSets.NodeOf(CpuValues.Es));
+        }
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
             RunsEntryHook = RunsEntryHook(entry),
-            WritesFrame = programSetCurrentPsp || entry.ReadsFrame,
-            Results = [.. ServiceCallSignature.Outputs(entry.Contract)
-                .Select(output => IrValueSets.NodeOf(output.Mask))],
+            WritesFrame = programSetCurrentPsp || entry.ReadsFrame || runsChild,
+            Results = results,
+            ChildEntries = runsChild ? execChildEntries : [],
             ReturnSegment = call.Arguments[0],
             ReturnOffset = call.Arguments[1]
         };

@@ -124,6 +124,7 @@ internal static class Int21ScenarioCatalog {
         GetTrueName(),
         PspSwitchFrameReuse(),
         ExecCtrlCChildFrame(),
+        ExecNestedTerminate(),
         DosEntryHookFunction(),
         WithHandleTestFiles("set_handle_count_relocates_jft.com"),
         ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
@@ -255,6 +256,48 @@ internal static class Int21ScenarioCatalog {
                     "the resume restores the parent's SP at the EXEC call");
             });
         }, [$"{ResourceSubDirectory}/{programFileName}", $"{ResourceSubDirectory}/{childFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs exec_nested_parent.com: the parent EXECs CHILD.COM, which EXECs GRAND.COM.
+    /// The grandchild's terminate must land back in the child and the child's terminate back in
+    /// the parent: each level stores a marker to 5000:0030/34/38 so a terminate caught by the
+    /// wrong EXEC call skips the markers below it.</summary>
+    private static AsmScenario ExecNestedTerminate() {
+        const string identity = "exec_nested_terminate";
+        const string programFileName = "exec_nested_parent.com";
+        const string childFileName = "exec_nested_child.com";
+        const string grandFileName = "exec_nested_grand.com";
+        const uint resultBase = 0x50000;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            CopyResourceFile(childFileName, directory, "CHILD.COM");
+            CopyResourceFile(grandFileName, directory, "GRAND.COM");
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+                result.Memory.UInt16[resultBase + 0x30].Should().Be((ushort)0xABCD,
+                    "the grandchild ran and stored its marker before terminating");
+                result.Memory.UInt16[resultBase + 0x34].Should().Be((ushort)0xCAFE,
+                    "the grandchild's terminate resumed the child, which stored its marker");
+                result.Memory.UInt16[resultBase + 0x38].Should().Be((ushort)0x1234,
+                    "the child's terminate resumed the parent, which stored its marker");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}",
+            $"{ResourceSubDirectory}/{childFileName}",
+            $"{ResourceSubDirectory}/{grandFileName}"]) {
             PrimaryResourceFileName = programFileName
         };
     }

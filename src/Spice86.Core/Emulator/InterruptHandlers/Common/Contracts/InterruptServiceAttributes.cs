@@ -156,7 +156,10 @@ public static class InterruptServiceAttributes {
         Type returnType = implementation.ReturnType;
         Type[] outputTypes = ServiceCallSignature.Outputs(entry.Contract)
             .Select(output => ClrTypeOf(entry, output.Type)).ToArray();
-        bool returnMatches = outputTypes.Length switch {
+        // A child-running service's implementation reports whether the child ran and its PSP:
+        // its return shape is internal to the ExecChild helper, not the contract's outputs.
+        bool returnMatches = entry.Contract.Transfer is ServiceTransferKind.RunsChild
+            || outputTypes.Length switch {
             // A terminating service's implementation returns Action nominally so generated code
             // can print it as the method's returned action; it never produces the value.
             0 => returnType == typeof(void)
