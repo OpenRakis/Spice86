@@ -121,7 +121,7 @@ internal static partial class RegisterLocalPromotion {
         HashSet<IVisitableAstNode> dropped = new(ReferenceEqualityComparer.Instance);
         List<Candidate> candidates = [.. WebsOf(ssa, Find).Values
             .Select(members => CandidateOf(method, graph, ssa, members, preservedByCall,
-                nonSubstitutable, occurrences, unprinted, dropped, signature))
+                nonSubstitutable, occurrences, unprinted, dropped, signature, typedSignatures))
             .OfType<Candidate>()];
         Dictionary<string, int> counters = new(StringComparer.Ordinal);
         List<(Candidate Candidate, string LegacyName)> promotable = [];
@@ -180,8 +180,11 @@ internal static partial class RegisterLocalPromotion {
             }
         }
         HashSet<string> unsignedNames = accepted
-            .Where(item => item.Candidate.DefTargets.Any(unsignedTupleResults.Contains))
+            .Where(item => item.Candidate.DefTargets.OfType<ValueNode>()
+                    .Any(unsignedTupleResults.Contains)
+                || item.Candidate.DefTargets.OfType<CallOutputTarget>().Any())
             .Select(item => item.Name).ToHashSet(StringComparer.Ordinal);
+        List<(ProcedureCallHelperNode Call, int Element, string Name)> promotedCallOutputs = [];
         Dictionary<string, (int Signed, int Unsigned)> votes = new(StringComparer.Ordinal);
         foreach ((Candidate candidate, string name) in accepted) {
             (int signed, int unsigned) = (0, 0);
@@ -201,8 +204,12 @@ internal static partial class RegisterLocalPromotion {
                 declarations.Add(new LocalDeclarationNode(localType, name,
                     candidate.SingleBlock ? null : new ConstantNode(localType, 0)));
             }
-            foreach (ValueNode target in candidate.DefTargets) {
-                reads[target] = new SubstitutedRead(name, signed ? localType : null);
+            foreach (object target in candidate.DefTargets) {
+                if (target is ValueNode valueNode) {
+                    reads[valueNode] = new SubstitutedRead(name, signed ? localType : null);
+                } else if (target is CallOutputTarget callOutput) {
+                    promotedCallOutputs.Add((callOutput.Call, callOutput.Element, name));
+                }
             }
             foreach ((IVisitableAstNode node, IVisitableAstNode? readParent) in candidate.Reads) {
                 if (reads.ContainsKey(node)) {
@@ -245,7 +252,7 @@ internal static partial class RegisterLocalPromotion {
         }
         return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
             accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet(),
-            PlanCallOutputs(method, ssa, typedSignatures),
+            PlanCallOutputs(method, ssa, typedSignatures, promotedCallOutputs),
             returnOutputs.ToDictionary<KeyValuePair<ProcedureReturnHelperNode, string?[]>,
                 ProcedureReturnHelperNode, IReadOnlyList<string?>>(
                 pair => pair.Key, pair => pair.Value, ReferenceEqualityComparer.Instance));
@@ -267,11 +274,13 @@ internal static partial class RegisterLocalPromotion {
             ? $"({CSharpExpressionPrinter.ToCSharpType(candidate.Register.DataType)}){name}" : name;
     }
 
-    /// <summary>The printed left side of each typed call site in <paramref name="method"/>: an
-    /// output version with no live use prints <c>_</c> and any other output keeps its register
-    /// name. Calls whose outputs all keep the register take no entry.</summary>
+    /// <summary>The printed left side of each typed call site in <paramref name="method"/>: a
+    /// promoted call-defined web's output prints the local's name, an output version with no live
+    /// use prints <c>_</c> and any other output keeps its register name. Calls whose outputs all
+    /// keep the register take no entry.</summary>
     private static Dictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> PlanCallOutputs(
-        IrMethod method, IrSsa ssa, TypedSignatures? typedSignatures) {
+        IrMethod method, IrSsa ssa, TypedSignatures? typedSignatures,
+        List<(ProcedureCallHelperNode Call, int Element, string Name)> promotedCallOutputs) {
         Dictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> callOutputs =
             new(ReferenceEqualityComparer.Instance);
         if (typedSignatures is null) {
@@ -308,6 +317,14 @@ internal static partial class RegisterLocalPromotion {
                     callOutputs[call] = names;
                 }
             }
+        }
+        foreach ((ProcedureCallHelperNode call, int element, string name) in promotedCallOutputs) {
+            if (!callOutputs.TryGetValue(call, out IReadOnlyList<string?>? texts)
+                || texts is not string?[] names) {
+                names = new string?[typedSignatures!.TypedCallOf(call)!.Outputs.Count];
+                callOutputs[call] = names;
+            }
+            names[element] = name;
         }
         return callOutputs;
     }
@@ -511,16 +528,17 @@ internal static partial class RegisterLocalPromotion {
         HashSet<IVisitableAstNode> nonSubstitutable,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
         IReadOnlySet<IVisitableAstNode> unprinted, HashSet<IVisitableAstNode> dropped,
-        TypedSignature? signature) {
+        TypedSignature? signature, TypedSignatures? typedSignatures) {
         IrSsaValue value = ssa.Info(members[0]).Value;
         HashSet<int> memberVersions = [.. members];
         WebDefinitions? collected = CollectWebDefinitions(method, ssa, members, memberVersions,
-            value, preservedByCall, occurrences, signature);
+            value, preservedByCall, occurrences, signature, typedSignatures);
         if (collected is null || collected.DefTargets.Count == 0
-            || collected.DefTargets.Any(target => !target.Equals(collected.DefTargets[0]))) {
+            || collected.DefTargets.Any(target => TargetMask(target)
+                != TargetMask(collected.DefTargets[0]))) {
             return null;
         }
-        ValueNode webRegister = collected.DefTargets[0];
+        ValueNode webRegister = TargetNode(collected.DefTargets[0]);
         CpuValues registerBytes = MaskOf(webRegister);
         // A method-entry member promotes only as a typed parameter: the signature must reach it
         // from its own entry block and a parameter must cover the register's exact bytes. The
@@ -540,7 +558,7 @@ internal static partial class RegisterLocalPromotion {
             return null;
         }
         WebUses? classification = ClassifyWebUses(webRegister, baseName, value, uses,
-            nonSubstitutable, collected.DefTargets, signature);
+            nonSubstitutable, [.. collected.DefTargets.OfType<ValueNode>()], signature);
         if (classification is null) {
             return null;
         }
@@ -552,6 +570,12 @@ internal static partial class RegisterLocalPromotion {
         if (!PlanWriteBacks(method, graph, value, registerBytes, collected.Sites,
                 classification.ImplicitUses, classification.KillingUses, uses, preservedByCall,
                 writeBackUses)) {
+            return null;
+        }
+
+        // A call-defined web that needs any write-back keeps the register form: the call writes
+        // the register and a promoted local would only add a copy the reader sees as noise.
+        if (collected.HasCallOutput && writeBackUses.Count > 0) {
             return null;
         }
 
@@ -617,10 +641,11 @@ internal static partial class RegisterLocalPromotion {
         List<int> members, HashSet<int> memberVersions,
         IrSsaValue value, Dictionary<IrStatement, HashSet<IrSsaValue>> preservedByCall,
         Dictionary<IVisitableAstNode, List<IVisitableAstNode>> occurrences,
-        TypedSignature? signature) {
-        List<ValueNode> defTargets = [];
+        TypedSignature? signature, TypedSignatures? typedSignatures) {
+        List<object> defTargets = [];
         List<Definition> definitions = [];
         bool hasCall = false;
+        bool hasCallOutput = false;
         IrBlock? entryBlock = null;
         foreach (int version in members) {
             IrSsaVersionInfo info = ssa.Info(version);
@@ -652,6 +677,29 @@ internal static partial class RegisterLocalPromotion {
             if (definition.Effects.MayFault) {
                 return null;
             }
+            // A typed call's statement defines one version per signature output: the target is the
+            // (call, output index) pair, printed through CallOutputs rather than a register lvalue.
+            ProcedureCallHelperNode? call = definition.Node switch {
+                ProcedureCallHelperNode helper => helper,
+                StackArgumentCallNode stackCall => stackCall.Call,
+                _ => null
+            };
+            if (call is not null && typedSignatures?.TypedCallOf(call) is { } callSignature) {
+                int element = callSignature.Outputs.TakeWhile(output
+                    => TypedSignatures.ValueOf(output.Mask) != value).Count();
+                if (element == callSignature.Outputs.Count
+                    || defTargets.OfType<CallOutputTarget>()
+                        .Any(target => ReferenceEquals(target.Call, call)
+                            && target.Element == element)) {
+                    return null;
+                }
+                defTargets.Add(new CallOutputTarget(call, element,
+                    callSignature.Outputs[element].Mask));
+                hasCall = true;
+                hasCallOutput = true;
+                definitions.Add(new Definition(info.Block, definitionIndex, definition));
+                continue;
+            }
             // The def target is the statement's register output that covers the web's value: an
             // assignment's left, one half of a multiplication or division tuple, or the service
             // call's result lvalue. A byte division can put two halves (AL and AH) on the same SSA
@@ -670,7 +718,7 @@ internal static partial class RegisterLocalPromotion {
             defTargets.Add(targets[0]);
             definitions.Add(new Definition(info.Block, definitionIndex, definition));
         }
-        return new WebDefinitions(defTargets, definitions, hasCall, entryBlock);
+        return new WebDefinitions(defTargets, definitions, hasCall, hasCallOutput, entryBlock);
     }
 
     /// <summary>The use sites of the web's versions, resolved in each block's current statement
@@ -789,7 +837,7 @@ internal static partial class RegisterLocalPromotion {
         int saved = classification.WebReads.Count + definitions.DefTargets.Count
             + (entryParameter is null ? 0 : 1);
         int cost = writeBackUses.Count + 1;
-        if (definitions.DefTargets[0] is SegmentRegisterNode segment) {
+        if (TargetNode(definitions.DefTargets[0]) is SegmentRegisterNode segment) {
             cost += uses
                 .Where(use => UseRoots(use).SelectMany(IrAstChildren.Descendants)
                     .OfType<SegmentedPointerNode>()
@@ -1376,6 +1424,18 @@ internal static partial class RegisterLocalPromotion {
         _ => CpuValues.None
     };
 
+    /// <summary>The register bytes a web definition target stands for: a register target's own
+    /// bytes or a call output element's mask.</summary>
+    private static CpuValues TargetMask(object target) => target is CallOutputTarget output
+        ? output.Mask
+        : MaskOf((ValueNode)target);
+
+    /// <summary>A register node for a web definition target: the target itself, or a fresh node
+    /// standing for the call output's register bytes.</summary>
+    private static ValueNode TargetNode(object target) => target is ValueNode node
+        ? node
+        : IrValueSets.NodeOf(((CallOutputTarget)target).Mask);
+
     /// <summary>The node inside the write-back's boundary the insertion searches for: the implicit
     /// use's statement node, or the transfer of the exit terminator.</summary>
     private static IVisitableAstNode AnchorOf(Use implicitUse) {
@@ -1460,11 +1520,19 @@ internal static partial class RegisterLocalPromotion {
     /// block start) and its defining statement when it has one.</summary>
     private sealed record Definition(IrBlock Block, int Index, IrStatement? Statement);
 
-    /// <summary>The definitions <see cref="CollectWebDefinitions"/> collected: the register
-    /// targets of the web's plain definitions, every definition site (a phi counts with index -1)
-    /// and whether a call's preserved value counts as a definition.</summary>
-    private sealed record WebDefinitions(List<ValueNode> DefTargets, List<Definition> Sites,
-        bool HasCall, IrBlock? EntryBlock);
+    /// <summary>A typed call output element a web was defined by: the (call, output index) pair
+    /// the printed left side substitutes with the local's name through
+    /// <see cref="RegisterLocalPlan.CallOutputs"/>, and the output's register bytes.</summary>
+    private sealed record CallOutputTarget(ProcedureCallHelperNode Call, int Element,
+        CpuValues Mask);
+
+    /// <summary>The definitions <see cref="CollectWebDefinitions"/> collected: the targets of the
+    /// web's definitions (a <see cref="ValueNode"/> register target or a
+    /// <see cref="CallOutputTarget"/>), every definition site (a phi counts with index -1),
+    /// whether a call counts as a definition, and whether a typed call output defines the web.
+    /// </summary>
+    private sealed record WebDefinitions(List<object> DefTargets, List<Definition> Sites,
+        bool HasCall, bool HasCallOutput, IrBlock? EntryBlock);
 
     /// <summary>The uses <see cref="ClassifyWebUses"/> split: the explicit reads and their roots,
     /// the implicit uses that take a write-back, the killing uses that end the live range, and the
@@ -1483,7 +1551,7 @@ internal static partial class RegisterLocalPromotion {
     /// </summary>
     private sealed record Candidate(IrBlock Block, bool SingleBlock, int FirstBlockOrder,
         int FirstIndex, int DefIndex, int End, ValueNode Register, string BaseName,
-        IReadOnlyList<ValueNode> DefTargets, IReadOnlyList<Definition> Sites,
+        IReadOnlyList<object> DefTargets, IReadOnlyList<Definition> Sites,
         IReadOnlyList<(IVisitableAstNode Node, IVisitableAstNode? Parent)> Reads,
         IReadOnlyList<Use> WriteBackUses, int SignedVotes, int UnsignedVotes,
         SegmentedAddress FirstAddress, WebUses Uses, TypedParameter? Parameter);

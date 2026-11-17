@@ -49,6 +49,7 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
+        bool result8 = false;
         ushort index = 0;
         ushort index2 = 0;
         ushort count = 0;
@@ -258,8 +259,8 @@ public partial class CfgGeneratedOverrides {
             }
             InterruptFlag = false;
             UInt8[DS, BX + 0x26] = 1;
-            (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = NearCall(biosSegment, 0x022A, () => unknown_F000_02F5_F02F5());
-            if (!CarryFlag) {
+            (AX, CX, BX, BP, SI, ES, DS, result8) = NearCall(biosSegment, 0x022A, () => unknown_F000_02F5_F02F5());
+            if (!result8) {
                 UInt8[DS, BX + 0x26] = 2;
             }
             UInt8[DS, BX + 0x27] = 1;

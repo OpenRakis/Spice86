@@ -55,6 +55,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        uint result = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -64,8 +65,8 @@ public partial class CfgGeneratedOverrides {
         EAX = NearCall32(biosSegment, 0x001D, () => unknown_F000_0044_F0044(0x11112222, 0x00003333));
         Segment2000Globals.Dword0040 = EAX;
         Stack.Push32(0xABCD1234u);
-        EAX = FarCall32(biosSegment, 0x0035, biosSegment, () => unknown_F000_004C_F004C(7));
-        Segment2000Globals.Dword0044 = EAX;
+        result = FarCall32(biosSegment, 0x0035, biosSegment, () => unknown_F000_004C_F004C(7));
+        Segment2000Globals.Dword0044 = result;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }

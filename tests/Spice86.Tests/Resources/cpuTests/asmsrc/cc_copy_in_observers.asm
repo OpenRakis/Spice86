@@ -5,8 +5,9 @@
 ; S1 the callee reads the parameter register only through a loop phi; S2 it also feeds an
 ; indirect (untyped) call that reads it; S3 it returns the register unchanged on both paths;
 ; S4 a partial write (al) carries the untouched AH to a second store; S5 a DsGlobals store
-; hides the read of the DS parameter.
-; DS = SS = 2000h, SP = 1000h. Results go to offsets 40h-44h, 48h, 50h, 70h-74h and 80h.
+; hides the read of the DS parameter; S6 a typed call's AX output feeds an indirect (untyped)
+; call's sink - the output's web needs the register back, so its element keeps the register.
+; DS = SS = 2000h, SP = 1000h. Results go to offsets 40h-44h, 48h, 50h, 58h-5Ch, 70h-74h and 80h.
 use16
 start:
     mov ax, 2000h
@@ -55,6 +56,15 @@ start:
     mov ax, 7777h
     call s5_store
 
+; S6: s6_leaf returns its AX argument incremented; the caller stores the typed result and
+; passes it through the machine register to the indirect call s6_sink reads.
+    mov ax, 10h
+    call s6_leaf
+    mov [5Ah], ax
+    mov bx, s6_sink
+    call bx
+    mov [5Ch], ax
+
     mov word [ss:600h], sp
     mov word [ss:602h], ss
     hlt
@@ -96,6 +106,14 @@ s4_high:
 
 s5_store:
     mov [80h], ax
+    ret
+
+s6_leaf:
+    inc ax
+    ret
+
+s6_sink:
+    mov [58h], ax
     ret
 
 rb 65520-$

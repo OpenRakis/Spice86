@@ -103,6 +103,13 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: BX. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
+        ushort result2 = 0;
+        ushort result22 = 0;
+        ushort result3 = 0;
+        ushort result4 = 0;
+        ushort result23 = 0;
+        ushort result32 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -111,8 +118,8 @@ public partial class CfgGeneratedOverrides {
         DirectionFlag = false;
         SI = 0x0A0A;
         DI = 0x0B0B;
-        (SI, DI) = NearCall(biosSegment, 0x0014, () => unknown_F000_0072_F0072());
-        Segment2000Globals.Dword0040 = (uint)SI | (uint)DI << 16;
+        (result, result2) = NearCall(biosSegment, 0x0014, () => unknown_F000_0072_F0072());
+        Segment2000Globals.Dword0040 = (uint)result | (uint)result2 << 16;
         SI = 0x0C0C;
         DI = 0x0D0D;
         NearCall(biosSegment, 0x0025, () => unknown_F000_0080_F0080());
@@ -121,14 +128,14 @@ public partial class CfgGeneratedOverrides {
         AX = 0xFFFF;
         SI = 0xA1A1;
         DI = 0xB1B1;
-        (AX, SI, DI) = NearCall(biosSegment, 0x0045, () => unknown_F000_0099_F0099(0xFFFF, 0));
-        Segment2000Globals.Dword004A = (uint)AX | (uint)SI << 16;
-        Segment2000Globals.Word004E = DI;
+        (AX, result22, result3) = NearCall(biosSegment, 0x0045, () => unknown_F000_0099_F0099(0xFFFF, 0));
+        Segment2000Globals.Dword004A = (uint)AX | (uint)result22 << 16;
+        Segment2000Globals.Word004E = result3;
         SI = 0xA2A2;
         DI = 0xB2B2;
-        (AX, SI, DI) = NearCall(biosSegment, 0x005C, () => unknown_F000_0099_F0099(AX, 1));
-        Segment2000Globals.Dword0050 = (uint)AX | (uint)SI << 16;
-        Segment2000Globals.Word0054 = DI;
+        (result4, result23, result32) = NearCall(biosSegment, 0x005C, () => unknown_F000_0099_F0099(AX, 1));
+        Segment2000Globals.Dword0050 = (uint)result4 | (uint)result23 << 16;
+        Segment2000Globals.Word0054 = result32;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }

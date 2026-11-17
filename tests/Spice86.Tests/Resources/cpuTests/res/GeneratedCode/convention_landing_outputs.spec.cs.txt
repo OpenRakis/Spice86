@@ -110,6 +110,8 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
+        ushort result2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -129,11 +131,11 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0208 = AX;
         NearCall(biosSegment, 0x0038, unknown_F000_0062_F0062Entry);
         Segment2000Globals.Word020A = BX;
-        (AX, BX) = NearCall(biosSegment, 0x003F, () => unknown_F000_0067_F0067());
-        Segment2000Globals.Word020C = AX;
+        (result, BX) = NearCall(biosSegment, 0x003F, () => unknown_F000_0067_F0067());
+        Segment2000Globals.Word020C = result;
         BX = 0;
-        BX = NearCall(biosSegment, 0x0048, () => unknown_F000_006E_F006E());
-        Segment2000Globals.Word020E = BX;
+        result2 = NearCall(biosSegment, 0x0048, () => unknown_F000_006E_F006E());
+        Segment2000Globals.Word020E = result2;
         return Hlt();
     }
 

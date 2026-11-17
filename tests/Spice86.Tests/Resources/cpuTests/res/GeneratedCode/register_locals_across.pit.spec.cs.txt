@@ -180,10 +180,13 @@ public partial class CfgGeneratedOverrides {
         ushort index = 0;
         ushort word2 = 0;
         ushort word3 = 0;
+        ushort result = 0;
         ushort word4 = 0;
         ushort word5 = 0;
+        ushort result2 = 0;
         ushort word6 = 0;
         byte byte1;
+        ushort result3 = 0;
         ushort word7 = 0;
         ushort word8 = 0;
         ushort word9 = 0;
@@ -220,8 +223,8 @@ public partial class CfgGeneratedOverrides {
         word3 = SegmentF000Globals.Word0240;
         NearCall(biosSegment, 0x0051, () => unknown_F000_01F6_F01F6(word3, 0x0040, DS));
         BX = SegmentF000Globals.Word0242;
-        BX = NearCall(biosSegment, 0x0058, () => unknown_F000_0204_F0204());
-        Segment2000Globals.Word004A = BX;
+        result = NearCall(biosSegment, 0x0058, () => unknown_F000_0204_F0204());
+        Segment2000Globals.Word004A = result;
         word4 = SegmentF000Globals.Word0244;
         if (!NearCallReturnedElsewhere(biosSegment, 0x0062, unknown_F000_0208_F0208Entry, [new(biosSegment, 0x0063)])) {
             throw FailAsUntested("Untested return from call at F000:005F");
@@ -252,8 +255,8 @@ public partial class CfgGeneratedOverrides {
             word5--;
         } while (word5 != 0);
         DX = SegmentF000Globals.Word023E;
-        DX = NearCall(biosSegment, 0x00AC, () => unknown_F000_01A1_F01A1());
-        Segment2000Globals.Word0054 = DX;
+        result2 = NearCall(biosSegment, 0x00AC, () => unknown_F000_01A1_F01A1());
+        Segment2000Globals.Word0054 = result2;
         InterruptFlag = false;
         DX = 0;
         word6 = 0x0040;
@@ -286,8 +289,8 @@ public partial class CfgGeneratedOverrides {
         AX = Stack.Pop16();
         Segment2000Globals.Word0094 = AX;
         NearCall(biosSegment, 0x00F5, unknown_F000_01A0_F01A0Entry);
-        BX = NearCall(biosSegment, 0x00F8, () => unknown_F000_0204_F0204());
-        AX = BX;
+        result3 = NearCall(biosSegment, 0x00F8, () => unknown_F000_0204_F0204());
+        AX = result3;
         word7 = AX;
         Stack.Push16(word7);
         word8 = Stack.Pop16();

@@ -15,11 +15,11 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, SI, DS. Outputs: AX. Changes: AX, SI, PF, AF, ZF, SF, OF.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0066_F0066(ushort word1, ushort index, ushort word2) {
+    public virtual ushort unknown_F000_0077_F0077(ushort word1, ushort index, ushort word2) {
         SI = index;
         DS = word2;
         do {
-            CheckExternalEvents(biosSegment, 0x0066);
+            CheckExternalEvents(biosSegment, 0x0077);
             word1 += UInt16[word2, SI];
             SI += 2;
             Segment2000Globals.Word0210 = Alu16.Dec(Segment2000Globals.Word0210);
@@ -28,92 +28,92 @@ public partial class CfgGeneratedOverrides {
         return word1;
     }
 
-    public virtual Action unknown_F000_0066_F0066_Asm() {
-        AX = unknown_F000_0066_F0066(AX, SI, DS);
+    public virtual Action unknown_F000_0077_F0077_Asm() {
+        AX = unknown_F000_0077_F0077(AX, SI, DS);
         return Returned;
     }
 
     /// <summary>Inputs: AX, BX, DS. Outputs: AX. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_0072_F0072(ushort word1, ushort word2) {
+    public virtual ushort unknown_F000_0083_F0083(ushort word1, ushort word2) {
         AX = word1;
-        CheckExternalEvents(biosSegment, 0x0072);
-        if (word2 != 0x0078) {
-            throw FailAsUntested($"Untested near call target 0x{word2:X4} at F000:0072");
+        CheckExternalEvents(biosSegment, 0x0083);
+        if (word2 != 0x0089) {
+            throw FailAsUntested($"Untested near call target 0x{word2:X4} at F000:0083");
         }
-        NearCall(biosSegment, 0x0074, unknown_F000_0078_F0078_AsmEntry);
+        NearCall(biosSegment, 0x0085, unknown_F000_0089_F0089_AsmEntry);
         AX += 8;
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_0072_F0072_Asm() {
-        AX = unknown_F000_0072_F0072(AX, BX);
+    public virtual Action unknown_F000_0083_F0083_Asm() {
+        AX = unknown_F000_0083_F0083(AX, BX);
         return Returned;
     }
 
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_0078_F0078(ushort word1, ushort word2) {
+    public virtual void unknown_F000_0089_F0089(ushort word1, ushort word2) {
         DS = word2;
-        CheckExternalEvents(biosSegment, 0x0078);
+        CheckExternalEvents(biosSegment, 0x0089);
         Segment2000Globals.Word0050 = word1;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_0078_F0078_Asm() {
-        unknown_F000_0078_F0078(AX, DS);
+    public virtual Action unknown_F000_0089_F0089_Asm() {
+        unknown_F000_0089_F0089(AX, DS);
         return Returned;
     }
 
     /// <summary>Inputs: AX. Outputs: AX. Changes: AX, flags.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual ushort unknown_F000_007C_F007C(ushort word1) {
+    public virtual ushort unknown_F000_008D_F008D(ushort word1) {
         AX = word1;
-        CheckExternalEvents(biosSegment, 0x007C);
+        CheckExternalEvents(biosSegment, 0x008D);
         Alu16.Sub(word1, 7);
         if (word1 > 7) {
             NearReturn();
             return AX;
         }
-        VerifySpeculativeRunOrFail(biosSegment, 0x0081, SpeculativeRun_0081);
+        VerifySpeculativeRunOrFail(biosSegment, 0x0092, SpeculativeRun_0092);
         AX = 9;
         NearReturn();
         return AX;
     }
 
-    public virtual Action unknown_F000_007C_F007C_Asm() {
-        AX = unknown_F000_007C_F007C(AX);
+    public virtual Action unknown_F000_008D_F008D_Asm() {
+        AX = unknown_F000_008D_F008D(AX);
         return Returned;
     }
 
     /// <summary>Inputs: DS. Outputs: none. Changes: AX.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_0086_F0086(ushort word1) {
-        CheckExternalEvents(biosSegment, 0x0086);
+    public virtual void unknown_F000_0097_F0097(ushort word1) {
+        CheckExternalEvents(biosSegment, 0x0097);
         AX = 0xAB00;
-        NearCall(biosSegment, 0x008C, () => unknown_F000_008D_F008D(0xAB00, word1));
+        NearCall(biosSegment, 0x009D, () => unknown_F000_009E_F009E(0xAB00, word1));
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_0086_F0086_Asm() {
-        unknown_F000_0086_F0086(DS);
+    public virtual Action unknown_F000_0097_F0097_Asm() {
+        unknown_F000_0097_F0097(DS);
         return Returned;
     }
 
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: AL.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_008D_F008D(ushort word1, ushort word2) {
+    public virtual void unknown_F000_009E_F009E(ushort word1, ushort word2) {
         AX = word1;
         DS = word2;
-        CheckExternalEvents(biosSegment, 0x008D);
+        CheckExternalEvents(biosSegment, 0x009E);
         Segment2000Globals.Word0070 = word1;
         AL = 5;
         Segment2000Globals.Word0074 = AX;
@@ -121,29 +121,62 @@ public partial class CfgGeneratedOverrides {
         return;
     }
 
-    public virtual Action unknown_F000_008D_F008D_Asm() {
-        unknown_F000_008D_F008D(AX, DS);
+    public virtual Action unknown_F000_009E_F009E_Asm() {
+        unknown_F000_009E_F009E(AX, DS);
         return Returned;
     }
 
     /// <summary>Inputs: AX, DS. Outputs: none. Changes: none.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
     /// Direction flag at entry, from every call site: clear.
-    public virtual void unknown_F000_0096_F0096(ushort word1, ushort word2) {
+    public virtual void unknown_F000_00A7_F00A7(ushort word1, ushort word2) {
         DS = word2;
-        CheckExternalEvents(biosSegment, 0x0096);
+        CheckExternalEvents(biosSegment, 0x00A7);
         Segment2000Globals.Word0080 = word1;
         NearReturn();
         return;
     }
 
-    public virtual Action unknown_F000_0096_F0096_Asm() {
-        unknown_F000_0096_F0096(AX, DS);
+    public virtual Action unknown_F000_00A7_F00A7_Asm() {
+        unknown_F000_00A7_F00A7(AX, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX. Outputs: AX. Changes: AX.</summary>
+    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_00AB_F00AB(ushort word1) {
+        AX = word1;
+        CheckExternalEvents(biosSegment, 0x00AB);
+        AX++;
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_00AB_F00AB_Asm() {
+        AX = unknown_F000_00AB_F00AB(AX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_00AD_F00AD(ushort word1, ushort word2) {
+        DS = word2;
+        CheckExternalEvents(biosSegment, 0x00AD);
+        Segment2000Globals.Word0058 = word1;
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_00AD_F00AD_Asm() {
+        unknown_F000_00AD_F00AD(AX, DS);
         return Returned;
     }
 
     /// <summary>Inputs: SI. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
         ushort word1;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
@@ -154,19 +187,28 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Dword0200 = 0x00020001;
         Segment2000Globals.Word0204 = 4;
         AX = 7;
-        AX = NearCall(biosSegment, 0x002C, () => unknown_F000_0066_F0066(7, 0x0200, DS));
-        Segment2000Globals.Word0040 = AX;
+        result = NearCall(biosSegment, 0x002C, () => unknown_F000_0077_F0077(7, 0x0200, DS));
+        Segment2000Globals.Word0040 = result;
         AX = 3;
-        AX = NearCall(biosSegment, 0x0038, () => unknown_F000_0072_F0072(3, 0x0078));
+        AX = NearCall(biosSegment, 0x0038, () => unknown_F000_0083_F0083(3, 0x0089));
         Segment2000Globals.Word0042 = AX;
-        AX = NearCall(biosSegment, 0x003E, () => unknown_F000_007C_F007C(AX));
+        AX = NearCall(biosSegment, 0x003E, () => unknown_F000_008D_F008D(AX));
         Segment2000Globals.Word0044 = AX;
-        NearCall(biosSegment, 0x0044, () => unknown_F000_0086_F0086(DS));
+        NearCall(biosSegment, 0x0044, () => unknown_F000_0097_F0097(DS));
         word1 = 0x3000;
         ES = 0x2000;
         Segment2000Globals.Word0048 = word1;
-        word1 = 0x2000;
-        NearCall(biosSegment, 0x005B, () => unknown_F000_0096_F0096(0x7777, word1));
+        DS = 0x2000;
+        NearCall(biosSegment, 0x005B, () => unknown_F000_00A7_F00A7(0x7777, DS));
+        AX = 0x0010;
+        AX = NearCall(biosSegment, 0x0061, () => unknown_F000_00AB_F00AB(0x0010));
+        Segment2000Globals.Word005A = AX;
+        BX = 0x00AD;
+        if (BX != 0x00AD) {
+            throw FailAsUntested($"Untested near call target 0x{BX:X4} at F000:0067");
+        }
+        NearCall(biosSegment, 0x0069, unknown_F000_00AD_F00AD_AsmEntry);
+        Segment2000Globals.Word005C = AX;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
@@ -199,6 +241,12 @@ public sealed class Segment2000Globals : MemoryBasedDataStructure {
 
     public ushort Word0050 { get => _memory.UInt16[Segment, 0x0050]; set => _memory.UInt16[Segment, 0x0050] = value; }
 
+    public ushort Word0058 { get => _memory.UInt16[Segment, 0x0058]; set => _memory.UInt16[Segment, 0x0058] = value; }
+
+    public ushort Word005A { get => _memory.UInt16[Segment, 0x005A]; set => _memory.UInt16[Segment, 0x005A] = value; }
+
+    public ushort Word005C { get => _memory.UInt16[Segment, 0x005C]; set => _memory.UInt16[Segment, 0x005C] = value; }
+
     public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
 
     public ushort Word0074 { get => _memory.UInt16[Segment, 0x0074]; set => _memory.UInt16[Segment, 0x0074] = value; }
@@ -228,13 +276,15 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0066_F0066_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0072_F0072_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0078_F0078_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_007C_F007C_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0086_F0086_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0077_F0077_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0083_F0083_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0089_F0089_AsmEntry;
     private readonly Func<int, Action> unknown_F000_008D_F008D_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_0096_F0096_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0097_F0097_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_009E_F009E_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_00A7_F00A7_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_00AB_F00AB_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_00AD_F00AD_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment2000Globals Segment2000Globals;
@@ -243,21 +293,25 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         biosSegment = 0xF000;
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
 
-        unknown_F000_0066_F0066_AsmEntry = _ => unknown_F000_0066_F0066_Asm();
-        unknown_F000_0072_F0072_AsmEntry = _ => unknown_F000_0072_F0072_Asm();
-        unknown_F000_0078_F0078_AsmEntry = _ => unknown_F000_0078_F0078_Asm();
-        unknown_F000_007C_F007C_AsmEntry = _ => unknown_F000_007C_F007C_Asm();
-        unknown_F000_0086_F0086_AsmEntry = _ => unknown_F000_0086_F0086_Asm();
+        unknown_F000_0077_F0077_AsmEntry = _ => unknown_F000_0077_F0077_Asm();
+        unknown_F000_0083_F0083_AsmEntry = _ => unknown_F000_0083_F0083_Asm();
+        unknown_F000_0089_F0089_AsmEntry = _ => unknown_F000_0089_F0089_Asm();
         unknown_F000_008D_F008D_AsmEntry = _ => unknown_F000_008D_F008D_Asm();
-        unknown_F000_0096_F0096_AsmEntry = _ => unknown_F000_0096_F0096_Asm();
+        unknown_F000_0097_F0097_AsmEntry = _ => unknown_F000_0097_F0097_Asm();
+        unknown_F000_009E_F009E_AsmEntry = _ => unknown_F000_009E_F009E_Asm();
+        unknown_F000_00A7_F00A7_AsmEntry = _ => unknown_F000_00A7_F00A7_Asm();
+        unknown_F000_00AB_F00AB_AsmEntry = _ => unknown_F000_00AB_F00AB_Asm();
+        unknown_F000_00AD_F00AD_AsmEntry = _ => unknown_F000_00AD_F00AD_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0066, unknown_F000_0066_F0066_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0072, unknown_F000_0072_F0072_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0078, unknown_F000_0078_F0078_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007C, unknown_F000_007C_F007C_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0077, unknown_F000_0077_F0077_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0083, unknown_F000_0083_F0083_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0089, unknown_F000_0089_F0089_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x008D, unknown_F000_008D_F008D_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0097, unknown_F000_0097_F0097_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x009E, unknown_F000_009E_F009E_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00A7, unknown_F000_00A7_F00A7_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00AB, unknown_F000_00AB_F00AB_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00AD, unknown_F000_00AD_F00AD_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
@@ -278,10 +332,10 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    private static readonly byte?[] Signature_0081_mov = [0xB8, 0x09, 0x00];
-    private static readonly byte?[] Signature_0084_ret = [0xC3];
+    private static readonly byte?[] Signature_0092_mov = [0xB8, 0x09, 0x00];
+    private static readonly byte?[] Signature_0095_ret = [0xC3];
 
-    private static readonly byte?[][] SpeculativeRun_0081 = [Signature_0081_mov, Signature_0084_ret];
+    private static readonly byte?[][] SpeculativeRun_0092 = [Signature_0092_mov, Signature_0095_ret];
 
 }
 

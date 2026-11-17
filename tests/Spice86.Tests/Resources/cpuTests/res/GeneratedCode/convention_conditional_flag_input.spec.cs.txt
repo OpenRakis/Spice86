@@ -31,6 +31,7 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte result2 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -46,8 +47,8 @@ public partial class CfgGeneratedOverrides {
         (_, DL) = NearCall(biosSegment, 0x0027, () => unknown_F000_0039_F0039(0x8000, 1, CarryFlag));
         Segment2000Globals.Byte0202 = DL;
         CarryFlag = false;
-        (_, DL) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(1, 1, CarryFlag));
-        Segment2000Globals.Byte0203 = DL;
+        (_, result2) = NearCall(biosSegment, 0x0034, () => unknown_F000_0039_F0039(1, 1, CarryFlag));
+        Segment2000Globals.Byte0203 = result2;
         return Hlt();
     }
 

@@ -87,6 +87,7 @@ public partial class CfgGeneratedOverrides {
         ushort word4 = 0;
         ushort word5 = 0;
         ushort word6 = 0;
+        ushort result = 0;
         ushort word7;
         ushort index3;
         ushort word8;
@@ -117,9 +118,9 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, index + 2] = word5;
             UInt16[DS, index + 4] = word4;
             word6 = UInt16[CS, index2 + 4];
-            DX = CallWithStackArguments(biosSegment, 0x003E, () => unknown_F000_00C7_F00C7(word6), word6);
+            result = CallWithStackArguments(biosSegment, 0x003E, () => unknown_F000_00C7_F00C7(word6), word6);
             word7 = Stack.Pop16();
-            UInt16[DS, index + 6] = DX;
+            UInt16[DS, index + 6] = result;
             UInt16[DS, index + 8] = word7;
             word2 = UInt16[CS, index2 + 6];
             Stack.Push16(word2);

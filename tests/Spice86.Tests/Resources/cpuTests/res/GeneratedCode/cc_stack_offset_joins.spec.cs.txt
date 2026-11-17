@@ -131,12 +131,13 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: AX. Changes: AX, BP.</summary>
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_009D_F009D() {
+        ushort result = 0;
         CheckExternalEvents(biosSegment, 0x009D);
         Stack.Push16(BP);
         BP = SP;
-        BP = NearCall(biosSegment, 0x00A3, () => unknown_F000_00AE_F00AE());
+        result = NearCall(biosSegment, 0x00A3, () => unknown_F000_00AE_F00AE());
         Stack.Push16(0xBBBB);
-        SsUInt16[BP] = 0xDDDD;
+        SsUInt16[result] = 0xDDDD;
         (AX, _) = Stack.Restore2();
         NearReturn();
         return AX;
@@ -199,17 +200,21 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
+        ushort result2 = 0;
+        ushort result3 = 0;
+        ushort result4 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         InterruptFlag = false;
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         AX = 5;
-        AX = NearCall(biosSegment, 0x0011, () => unknown_F000_0052_F0052(5));
-        Segment2000Globals.Word0040 = AX;
+        result = NearCall(biosSegment, 0x0011, () => unknown_F000_0052_F0052(5));
+        Segment2000Globals.Word0040 = result;
         AX = 0xFF00;
-        AX = NearCall(biosSegment, 0x001A, () => unknown_F000_0052_F0052(0xFF00));
-        Segment2000Globals.Word0042 = AX;
+        result2 = NearCall(biosSegment, 0x001A, () => unknown_F000_0052_F0052(0xFF00));
+        Segment2000Globals.Word0042 = result2;
         AX = 3;
         AX = NearCall(biosSegment, 0x0023, () => unknown_F000_0062_F0062(3));
         Segment2000Globals.Word0044 = AX;
@@ -219,11 +224,11 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Word0046 = AX;
         NearCall(biosSegment, 0x0035, unknown_F000_007F_F007FEntry);
         Segment2000Globals.Word0048 = AX;
-        AX = NearCall(biosSegment, 0x003B, () => unknown_F000_009D_F009D());
-        Segment2000Globals.Word004A = AX;
+        result3 = NearCall(biosSegment, 0x003B, () => unknown_F000_009D_F009D());
+        Segment2000Globals.Word004A = result3;
         AX = 3;
-        AX = NearCall(biosSegment, 0x0044, () => unknown_F000_00B1_F00B1(3, DS));
-        Segment2000Globals.Word004C = AX;
+        result4 = NearCall(biosSegment, 0x0044, () => unknown_F000_00B1_F00B1(3, DS));
+        Segment2000Globals.Word004C = result4;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }

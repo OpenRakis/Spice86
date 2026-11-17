@@ -154,7 +154,14 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
+        ushort result2 = 0;
+        ushort result3 = 0;
+        ushort result22 = 0;
+        ushort result4 = 0;
         byte byte1 = 0;
+        ushort result5 = 0;
+        ushort result6 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -164,11 +171,11 @@ public partial class CfgGeneratedOverrides {
         ES = 0x1000;
         Segment1000Globals.Byte0100 = 0x66;
         AX = 3;
-        AX = NearCall(biosSegment, 0x0029, () => unknown_F000_00E1_F00E1(3, 4));
-        Segment2000Globals.Word0040 = AX;
+        result = NearCall(biosSegment, 0x0029, () => unknown_F000_00E1_F00E1(3, 4));
+        Segment2000Globals.Word0040 = result;
         AX = 0x0010;
-        AX = NearCall(biosSegment, 0x003B, () => unknown_F000_00E1_F00E1(0x0010, 0x0020));
-        Segment2000Globals.Word0042 = AX;
+        result2 = NearCall(biosSegment, 0x003B, () => unknown_F000_00E1_F00E1(0x0010, 0x0020));
+        Segment2000Globals.Word0042 = result2;
         CarryFlag = NearCall(biosSegment, 0x0044, () => unknown_F000_00E4_F00E4(5));
         if (CarryFlag) {
             Segment2000Globals.Byte0044 = 0x11;
@@ -187,12 +194,12 @@ public partial class CfgGeneratedOverrides {
         }
         AX = 0x8000;
         BX = 4;
-        (AX, DX) = NearCall(biosSegment, 0x006F, () => unknown_F000_00E8_F00E8(0x8000, 4));
-        Segment2000Globals.Dword0046 = (uint)AX | (uint)DX << 16;
+        (result3, result22) = NearCall(biosSegment, 0x006F, () => unknown_F000_00E8_F00E8(0x8000, 4));
+        Segment2000Globals.Dword0046 = (uint)result3 | (uint)result22 << 16;
         AX = 0x1000;
         ES = 0x1000;
-        (BX, ES) = NearCall(biosSegment, 0x007E, () => unknown_F000_00EB_F00EB());
-        byte1 = UInt8[ES, BX];
+        (result4, ES) = NearCall(biosSegment, 0x007E, () => unknown_F000_00EB_F00EB());
+        byte1 = UInt8[ES, result4];
         Segment2000Globals.Byte004A = byte1;
         SI = 0x1111;
         DI = 0x2222;
@@ -201,14 +208,14 @@ public partial class CfgGeneratedOverrides {
         NearCall(biosSegment, 0x00A3, unknown_F000_00FF_F00FFEntry);
         Segment2000Globals.Word0050 = 0x3333;
         AX = Segment2000Globals.Word0056;
-        AX = NearCall(biosSegment, 0x00B0, () => unknown_F000_0103_F0103(AX));
-        Segment2000Globals.Word0052 = AX;
+        result5 = NearCall(biosSegment, 0x00B0, () => unknown_F000_0103_F0103(AX));
+        Segment2000Globals.Word0052 = result5;
         Segment2000Globals.Dword0060 = 0x00020001;
         Segment2000Globals.Word0064 = 3;
         Segment2000Globals.Word0058 = 3;
         AX = 0;
-        AX = NearCall(biosSegment, 0x00D3, () => unknown_F000_0113_F0113(0, 0x0060, DS));
-        Segment2000Globals.Word0054 = AX;
+        result6 = NearCall(biosSegment, 0x00D3, () => unknown_F000_0113_F0113(0, 0x0060, DS));
+        Segment2000Globals.Word0054 = result6;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }

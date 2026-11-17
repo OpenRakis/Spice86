@@ -66,6 +66,7 @@ public partial class CfgGeneratedOverrides {
         ushort word4 = 0;
         ushort word5 = 0;
         ushort word6 = 0;
+        bool result = false;
         ushort segment;
         ushort word7 = 0;
         ushort word8 = 0;
@@ -140,8 +141,8 @@ public partial class CfgGeneratedOverrides {
             word6 = UInt16[CS, SI + 0x16];
             CarryFlag = AX < word6;
             AX -= word6;
-            CarryFlag = NearCall(biosSegment, 0x00CE, () => unknown_F000_0381_F0381());
-            if (!CarryFlag) {
+            result = NearCall(biosSegment, 0x00CE, () => unknown_F000_0381_F0381());
+            if (!result) {
                 VerifySpeculativeEntryOrFail(biosSegment, 0x00D7, Signature_00D7_mov);
                 UInt16[DS, index + 0x10] = 0;
             }

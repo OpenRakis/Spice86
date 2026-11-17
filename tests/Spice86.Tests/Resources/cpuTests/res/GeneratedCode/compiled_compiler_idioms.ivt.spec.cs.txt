@@ -88,9 +88,14 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_005E_0183E() {
         ushort word1 = 0;
+        ushort result = 0;
+        ushort result2 = 0;
+        ushort result22 = 0;
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
+        ushort result3 = 0;
+        ushort result4 = 0;
         CheckExternalEvents(cs1, 0x005E);
         Stack.Push16(AX);
         AX = 0x001A;
@@ -103,20 +108,20 @@ public partial class CfgGeneratedOverrides {
         BX = DX;
         if (word1 == 2) {
             AX = UInt16[DS, BX + 2];
-            (AX, SI) = NearCall(cs1, 0x007C, () => unknown_017E_0117_018F7(AX, CX, DS));
-            BX = AX;
-            CX = AX;
-            Alu16.Sub(AX, 0x0020);
-            if (AX > 0x0020) {
+            (result, SI) = NearCall(cs1, 0x007C, () => unknown_017E_0117_018F7(AX, CX, DS));
+            BX = result;
+            CX = result;
+            Alu16.Sub(result, 0x0020);
+            if (result > 0x0020) {
                 VerifySpeculativeRunOrFail(cs1, 0x0085, SpeculativeRun_0085);
                 AX = 3;
                 (DI, SI, CX, BX) = Stack.Restore4();
                 return NearRet();
             }
-            DX = AX;
+            DX = result;
             AX = 0x0084;
-            (AX, CX, DX, BX, BP) = NearCall(cs1, 0x0095, () => unknown_017E_0010_017F0(DS));
-            word2 = AX;
+            (result2, result22, DX, BX, BP) = NearCall(cs1, 0x0095, () => unknown_017E_0010_017F0(DS));
+            word2 = result2;
             SI = DX;
             if (BX != 0) {
                 if (BX > 9) {
@@ -130,7 +135,7 @@ public partial class CfgGeneratedOverrides {
             word3 = 0;
         L_00AA:
             Stack.Push16(word3);
-            if (CX != 0) {
+            if (result22 != 0) {
                 word4 = 0;
             }
             else {
@@ -138,16 +143,16 @@ public partial class CfgGeneratedOverrides {
                 word4 = 1;
             }
             Stack.Push16(word4);
-            AX = (ushort)-CX;
-            AX = NearCall(cs1, 0x00BE, () => unknown_017E_004E_0182E());
-            Stack.Push16(AX);
+            AX = (ushort)-result22;
+            result3 = NearCall(cs1, 0x00BE, () => unknown_017E_004E_0182E());
+            Stack.Push16(result3);
             AX = word2;
             DX = SI;
             BX = 0x000A;
             CX = 0;
-            (AX, CX, DX, BX, BP, SI) = NearCall(cs1, 0x00CB, () => unknown_017E_01B1_01991(AX, 0, DX, 0x000A, BP, SI));
+            (result4, CX, DX, BX, BP, SI) = NearCall(cs1, 0x00CB, () => unknown_017E_01B1_01991(AX, 0, DX, 0x000A, BP, SI));
             Stack.Push16(DX);
-            Stack.Push16(AX);
+            Stack.Push16(result4);
             Stack.Push16(SI);
             Stack.Push16(word2);
             AX = 0x0022;
@@ -1184,8 +1189,10 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual Action unknown_017E_0776_01F56() {
         ushort index;
+        ushort result = 0;
         ushort word1;
         ushort word3 = 0;
+        ushort result2 = 0;
         ushort index2;
         ushort word2;
         unknown_017E_0776_01F56Frame frame = new(Memory, State.SegmentRegisters, SP);
@@ -1203,11 +1210,11 @@ public partial class CfgGeneratedOverrides {
         DX = DI;
         BX = 0;
         BP = index;
-        (AX, DX, BP, SI, DI) = NearCall(cs1, 0x078F, () => unknown_017E_069B_01E7B(AX, CX, DX, 0, DS));
+        (result, DX, BP, SI, DI) = NearCall(cs1, 0x078F, () => unknown_017E_069B_01E7B(AX, CX, DX, 0, DS));
         CX = (ushort)(SsUInt16[BP - 0x0C] - DI);
         BX = CX;
         CX += 2;
-        word1 = (ushort)((AX + 1 << 1) + 2);
+        word1 = (ushort)((result + 1 << 1) + 2);
         CL &= 0xFE;
         AX = (ushort)(word1 + CX + 1);
         AL &= 0xFE;
@@ -1220,10 +1227,10 @@ public partial class CfgGeneratedOverrides {
         if (SI != 0) {
             word3 = DI;
             AX = SI;
-            (CX, SI, DI) = NearCall(cs1, 0x07D9, () => unknown_017E_173D_02F1D(AX, word3, BX, DS, DirectionFlag));
+            (result2, SI, DI) = NearCall(cs1, 0x07D9, () => unknown_017E_173D_02F1D(AX, word3, BX, DS, DirectionFlag));
             word1 = SsUInt16[BP - 0x10];
             DX = SI;
-            index2 = (ushort)(SI + CX);
+            index2 = (ushort)(SI + result2);
             CX = (ushort)(BP - 0x0C);
             SsUInt16[BP - 6] = index2;
             UInt16[DS, index2] = word1;
@@ -3830,6 +3837,7 @@ public partial class CfgGeneratedOverrides {
         ushort index = 0;
         ushort word5 = 0;
         ushort word6 = 0;
+        byte result = 0;
         ushort offset = 0;
         bool flag1 = false;
         ushort word7 = 0;
@@ -3842,8 +3850,8 @@ public partial class CfgGeneratedOverrides {
         word5 = word1;
         frame.Local10 = word2;
         word6 = word3;
-        AL = NearCall(cs1, 0x1C05, () => unknown_017E_2194_03974(word1, word4));
-        if ((AL & 0x80) == 0) {
+        result = NearCall(cs1, 0x1C05, () => unknown_017E_2194_03974(word1, word4));
+        if ((result & 0x80) == 0) {
             offset = frame.Local10;
             CX = word6;
             BX = word5;
@@ -4394,6 +4402,7 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2) unknown_017E_1F1D_036FD(ushort word1, ushort word2) {
         DS = word2;
         ushort word3 = 0;
+        ushort result = 0;
         CheckExternalEvents(cs1, 0x1F1D);
         Stack.Save(BX, DX);
         BX = word1;
@@ -4402,9 +4411,9 @@ public partial class CfgGeneratedOverrides {
         DL &= 0xFE;
         if (DX >= word3) {
             AX = word3;
-            AX = NearCall(cs1, 0x1F37, () => unknown_017E_1EFB_036DB(word2));
-            if (AX < DX) {
-                DX -= AX;
+            result = NearCall(cs1, 0x1F37, () => unknown_017E_1EFB_036DB(word2));
+            if (result < DX) {
+                DX -= result;
             }
             else {
                 VerifySpeculativeEntryOrFail(cs1, 0x1F3B, Signature_1F3B_xor);

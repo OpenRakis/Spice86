@@ -24,14 +24,15 @@ public partial class CfgGeneratedOverrides {
 
     /// <summary>Inputs: BP, DS. Outputs: AL, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
     public virtual (byte result, ushort result2) unknown_F000_02AD_F02AD() {
+        ushort result = 0;
         unknown_F000_02AD_F02ADFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x02AD);
         Stack.Push16(BP);
         BP = SP;
         SP -= 2;
         frame.Local4 = 0xD4D4;
-        (BP, DS) = NearCall(biosSegment, 0x02BB, () => unknown_F000_02C3_F02C3());
-        AL = SsUInt8[BP - 2];
+        (result, DS) = NearCall(biosSegment, 0x02BB, () => unknown_F000_02C3_F02C3());
+        AL = SsUInt8[result - 2];
         SP += 2;
         BP = Stack.Pop16();
         NearReturn();
@@ -219,6 +220,10 @@ public partial class CfgGeneratedOverrides {
         ushort word1;
         byte byte1;
         byte byte2 = 0;
+        byte result = 0;
+        byte result2 = 0;
+        byte result3 = 0;
+        byte result4 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
@@ -310,8 +315,8 @@ public partial class CfgGeneratedOverrides {
         ES = 0x2000;
         Segment2000Globals.Byte004B = AL;
         DS = 0x2000;
-        (AL, BP, DS) = NearCall(biosSegment, 0x0143, () => unknown_F000_02F1_F02F1());
-        DsGlobals.Byte004C = AL;
+        (result, BP, DS) = NearCall(biosSegment, 0x0143, () => unknown_F000_02F1_F02F1());
+        DsGlobals.Byte004C = result;
         AX = 0x2001;
         DS = 0x2001;
         (AL, BP, _) = NearCall(biosSegment, 0x014E, () => unknown_F000_02F1_F02F1());
@@ -383,15 +388,15 @@ public partial class CfgGeneratedOverrides {
         Stack.Push16(DS);
         BX = DsGlobals.Word0094;
         DS = DsGlobals.Word0096;
-        (AL, BP) = NearCall(biosSegment, 0x01F0, () => unknown_F000_030E_F030E());
+        (result2, BP) = NearCall(biosSegment, 0x01F0, () => unknown_F000_030E_F030E());
         DS = Stack.Pop16();
         BX = 0x0057;
-        DsGlobals.Byte0057 = AL;
+        DsGlobals.Byte0057 = result2;
         AX = 0x2000;
         DS = 0x2000;
         ES = 0x2000;
-        (AL, BP, DS) = NearCall(biosSegment, 0x0200, () => unknown_F000_0316_F0316());
-        DsGlobals.Byte0058 = AL;
+        (result3, BP, DS) = NearCall(biosSegment, 0x0200, () => unknown_F000_0316_F0316());
+        DsGlobals.Byte0058 = result3;
         byte1 = DsGlobals.Byte0062;
         BX = 0x0059;
         DsGlobals.Byte0059 = byte1;
@@ -426,8 +431,8 @@ public partial class CfgGeneratedOverrides {
             CheckExternalEvents(biosSegment, 0x026D);
             CX--;
         } while (CX != 0);
-        (AL, DS) = NearCall(biosSegment, 0x0273, () => unknown_F000_02AD_F02AD());
-        DsGlobals.Byte0083 = AL;
+        (result4, DS) = NearCall(biosSegment, 0x0273, () => unknown_F000_02AD_F02AD());
+        DsGlobals.Byte0083 = result4;
         InterruptFlag = false;
         AX = 0;
         SetStatusFlags(carry: false, parity: true, auxiliary: false, zero: true, sign: false, overflow: false);

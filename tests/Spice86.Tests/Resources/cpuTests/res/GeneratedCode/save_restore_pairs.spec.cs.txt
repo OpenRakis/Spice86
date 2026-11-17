@@ -45,6 +45,7 @@ public partial class CfgGeneratedOverrides {
         ushort word2 = 0;
         ushort word3 = 0;
         ushort word4 = 0;
+        ushort result = 0;
         ushort word5;
         ushort word6 = 0;
         ushort index;
@@ -90,7 +91,7 @@ public partial class CfgGeneratedOverrides {
         }
         word4 = Stack.Pop16();
         Segment2000Globals.Dword0044 = (uint)word4 | (uint)word3 << 16;
-        CX = CallWithStackArguments(biosSegment, 0x004B, () => unknown_F000_01B1_F01B1(0x0040, DS, 0x4444), 0x4444);
+        result = CallWithStackArguments(biosSegment, 0x004B, () => unknown_F000_01B1_F01B1(0x0040, DS, 0x4444), 0x4444);
         Stack.Release(1);
         Stack.Push16(0x5555);
         word5 = SP;

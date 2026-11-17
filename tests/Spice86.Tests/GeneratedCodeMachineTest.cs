@@ -163,7 +163,7 @@ public sealed class GeneratedCodeMachineTest {
         machine.Memory.UInt16[0x2000, 0x0200] = 1;
         machine.Memory.UInt16[0x2000, 0x0202] = 2;
         machine.Memory.UInt16[0x2000, 0x0204] = 4;
-        MethodInfo method = overridesType.GetMethod("unknown_F000_0066_F0066")
+        MethodInfo method = overridesType.GetMethod("unknown_F000_0077_F0077")
             ?? throw new InvalidOperationException("s1 method missing");
 
         // Act + assert S1: phi carried into a loop summing ds:[si] while ds:[210h] decrements.
@@ -176,9 +176,9 @@ public sealed class GeneratedCodeMachineTest {
         // Act + assert S2: the untyped call target reads machine AX and DS, and AX after it.
         Scramble();
         machine.CpuState.DS = 0x2000;
-        method = overridesType.GetMethod("unknown_F000_0072_F0072")
+        method = overridesType.GetMethod("unknown_F000_0083_F0083")
             ?? throw new InvalidOperationException("s2 method missing");
-        result = method.Invoke(overrides, [(ushort)3, (ushort)0x0078]);
+        result = method.Invoke(overrides, [(ushort)3, (ushort)0x0089]);
         result.Should().Be((ushort)11, "s2 adds 8 after the untyped call");
         machine.Memory.UInt16[0x2000, 0x0050].Should().Be(3,
             "the untyped callee stores the machine AX the copy-in leaves");
@@ -186,7 +186,7 @@ public sealed class GeneratedCodeMachineTest {
 
         // Act + assert S3: a typed return preserves the argument on the above-7 path.
         Scramble();
-        method = overridesType.GetMethod("unknown_F000_007C_F007C")
+        method = overridesType.GetMethod("unknown_F000_008D_F008D")
             ?? throw new InvalidOperationException("s3 method missing");
         result = method.Invoke(overrides, [(ushort)11]);
         result.Should().Be((ushort)11, "s3 returns its argument when it exceeds 7");
@@ -194,7 +194,7 @@ public sealed class GeneratedCodeMachineTest {
 
         // Act + assert S4: a partial write keeps the untouched high byte of the argument.
         Scramble();
-        method = overridesType.GetMethod("unknown_F000_008D_F008D")
+        method = overridesType.GetMethod("unknown_F000_009E_F009E")
             ?? throw new InvalidOperationException("s4 method missing");
         method.Invoke(overrides, [(ushort)0xAB00, (ushort)0x2000]);
         machine.Memory.UInt16[0x2000, 0x0070].Should().Be(0xAB00,
@@ -206,7 +206,7 @@ public sealed class GeneratedCodeMachineTest {
         // Act + assert S5: the hidden ds read must reach the argument segment's ds:[80h].
         Scramble();
         machine.CpuState.DS = 0x4000;
-        method = overridesType.GetMethod("unknown_F000_0096_F0096")
+        method = overridesType.GetMethod("unknown_F000_00A7_F00A7")
             ?? throw new InvalidOperationException("s5 method missing");
         method.Invoke(overrides, [(ushort)0x7777, (ushort)0x2000]);
         machine.Memory.UInt16[0x2000, 0x0080].Should().Be(0x7777,

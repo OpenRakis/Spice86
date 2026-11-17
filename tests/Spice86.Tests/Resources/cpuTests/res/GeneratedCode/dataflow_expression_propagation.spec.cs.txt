@@ -46,6 +46,7 @@ public partial class CfgGeneratedOverrides {
         ushort word4;
         ushort word5 = 0;
         ushort word6 = 0;
+        ushort result = 0;
         ushort word7 = 0;
         ushort word8 = 0;
         ushort word9 = 0;
@@ -102,8 +103,8 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, index + 0x14] = word5;
             UInt16[DS, index + 0x16] = word6;
             AX = (ushort)(UInt16[CS, index2] + 3);
-            AX = NearCall(biosSegment, 0x00AE, () => unknown_F000_0164_F0164());
-            word7 = AX;
+            result = NearCall(biosSegment, 0x00AE, () => unknown_F000_0164_F0164());
+            word7 = result;
             UInt16[DS, index + 0x18] = word7;
             AX = UInt16[CS, index2];
             AX = Alu16.Add(AX, 3);

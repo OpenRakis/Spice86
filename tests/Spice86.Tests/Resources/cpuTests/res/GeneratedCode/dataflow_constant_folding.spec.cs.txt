@@ -105,6 +105,7 @@ public partial class CfgGeneratedOverrides {
         ushort offset = 0;
         ushort segment;
         byte byte1;
+        ushort result = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         AX = 0x2000;
         DS = 0x2000;
@@ -173,9 +174,9 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte00D2 = byte1;
         AX = 0x7777;
         Stack.Push16(0x7777);
-        AX = NearCall(biosSegment, 0x00F2, () => unknown_F000_0186_F0186());
+        result = NearCall(biosSegment, 0x00F2, () => unknown_F000_0186_F0186());
         SP += 2;
-        Segment2000Globals.Word00D4 = AX;
+        Segment2000Globals.Word00D4 = result;
         Segment2000Globals.Byte00D6 = 2;
         Segment2000Globals.Byte00D6 = 1;
         Segment2000Globals.Word0200 = 0xABCD;
