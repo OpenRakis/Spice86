@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -334,6 +335,60 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
         Assert.Equal(expected, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
         Assert.Equal((ushort)(expected | (ushort)RegisterBits.Sp),
             CreateScanner(returnsBalanced: false).MayWrite(At(0x100)));
+    }
+
+    /// <summary>Installs a stub int 33h handler whose services are the real
+    /// <see cref="MouseInt33Handler"/> declarations (selected by AX). Returns the reset service.</summary>
+    private InterruptServiceEntry InstallMouse33() {
+        InterruptServiceDeclarations declarations =
+            InterruptServiceAttributes.Of(typeof(MouseInt33Handler), ServiceSelector.Ax);
+        IInterruptHandler handler = Substitute.For<IInterruptHandler>();
+        handler.VectorNumber.Returns((byte)0x33);
+        handler.Services.Returns(new HandlerServices.SelectedServices(ServiceSelector.Ax,
+            declarations.Services.ToDictionary(pair => pair.Entry.SelectorValue, pair => pair.Entry)));
+        SegmentedAddress stubAddress = new(Seg, 0x900);
+        InstalledInterrupts.Register(handler, stubAddress);
+        InterruptVectors[0x33] = stubAddress;
+        return declarations.Services.Single(pair => pair.Entry.SelectorValue == 0x00).Entry;
+    }
+
+    /// <summary>Puts <paramref name="nodes"/> in one block, each the predecessor of the next.</summary>
+    private static void ChainInOneBlock(IReadOnlyList<CfgInstruction> nodes) {
+        CfgBlock block = new(1, nodes[0]);
+        for (int i = 0; i < nodes.Count; i++) {
+            nodes[i].ContainingBlock = block;
+            if (i > 0) {
+                nodes[i].Predecessors.Add(nodes[i - 1]);
+            }
+        }
+    }
+
+    [Fact]
+    public void IntSelectedByAxConstantGivesContractWrites() {
+        // xor ax,ax; int 33h; ret - the mouse reset service (AX = 0) applies
+        InterruptServiceEntry reset = InstallMouse33();
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x31, 0xC0, 0xCD, 0x33, 0xC3);
+        ChainInOneBlock(routine.Take(2).ToList());
+        ushort expected = (ushort)(ContractMask(reset.Contract.Registers.Writes) | (ushort)RegisterBits.Ax);
+        Assert.Equal(expected, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IntSelectedByAxFromRegisterIsUnknown() {
+        // mov ax,bx; int 33h; ret - AX is not a constant
+        InstallMouse33();
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0x89, 0xD8, 0xCD, 0x33, 0xC3);
+        ChainInOneBlock(routine.Take(2).ToList());
+        Assert.Equal(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
+    }
+
+    [Fact]
+    public void IntSelectedByAxSeesConstantsAcrossTheStraightLineRun() {
+        // mov al,3; mov dx,1; mov ah,0; int 33h; ret - AX = 0003 from two byte loads around an unrelated mov
+        InstallMouse33();
+        List<CfgInstruction> routine = DecodeRoutine(0x100, 0xB0, 0x03, 0xBA, 0x01, 0x00, 0xB4, 0x00, 0xCD, 0x33, 0xC3);
+        ChainInOneBlock(routine.Take(4).ToList());
+        Assert.NotEqual(Unknown, CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
     }
 
     [Fact]

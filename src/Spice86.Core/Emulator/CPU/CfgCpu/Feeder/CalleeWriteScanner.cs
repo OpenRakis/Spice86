@@ -19,8 +19,8 @@ using Spice86.Shared.Emulator.Memory;
 /// a callee entry (observed and speculative nodes alike) and unions the
 /// <see cref="RegisterWriteSet"/> of every instruction on every path. Nested calls contribute the
 /// callee's own mask when it resolves; an <c>int</c> contributes the writes of the installed
-/// emulator handler's service contract when the vector still belongs to the emulator and AH
-/// selects a known service. An indirect call inside the callee unions the scans of its observed
+/// emulator handler's service contract when the vector still belongs to the emulator and AH,
+/// AL or AX selects a known service. An indirect call inside the callee unions the scans of its observed
 /// (non-speculative) targets; an indirect jump is followed into its observed targets, whose
 /// returns count as the callee's own. Anything the scan cannot account for - an undecoded
 /// address, an invalid node, a far jump, an indirect site with no observed or unscannable
@@ -349,8 +349,9 @@ internal sealed class CalleeWriteScanner {
     /// <summary>
     /// The writes the service behind <paramref name="vector"/> declares, when the IVT entry still
     /// belongs to the emulator and the service resolves to a known contract: a single-service
-    /// handler, or an AH-selected service whose value the in-block predecessor loads. Unknown
-    /// otherwise (a program handler, an undescribed service, an AH the dispatch cannot read).
+    /// handler, or a service selected by a constant AH, AL or AX loaded right before the <c>int</c>.
+    /// Unknown otherwise (a program handler, an undescribed service, a selector the scan cannot
+    /// read).
     /// </summary>
     private ushort InterruptWrites(CfgInstruction intNode, byte vector) {
         if (!_installedHandlers.TryGetInstalledAddress(vector, out SegmentedAddress installed)
@@ -360,9 +361,7 @@ internal sealed class CalleeWriteScanner {
         }
         InterruptServiceEntry? entry = handler.Services switch {
             HandlerServices.SingleService single => single.Service,
-            HandlerServices.SelectedServices { Selector: ServiceSelector.Ah } selected
-                when InterruptCallFacts.AhLoadedBefore(intNode) is { } ah =>
-                    selected.Services.GetValueOrDefault(ah),
+            HandlerServices.SelectedServices selected => SelectedService(selected, intNode),
             _ => null
         };
         if (entry is null || ReferenceEquals(entry.Contract, ServiceContract.Unknown)) {
@@ -373,6 +372,27 @@ internal sealed class CalleeWriteScanner {
             writes |= variant.Contract.Registers.Writes;
         }
         return ToRegisterBits(writes);
+    }
+
+    /// <summary>The service the selector register picks: AH from the instruction right before the
+    /// <c>int</c>, AL or AX from constants the straight-line run before it loads. Null when the
+    /// selector value is not a known constant or names no declared service.</summary>
+    private static InterruptServiceEntry? SelectedService(HandlerServices.SelectedServices selected,
+        CfgInstruction intNode) {
+        int? selector = selected.Selector switch {
+            ServiceSelector.Ah => InterruptCallFacts.AhLoadedBefore(intNode),
+            ServiceSelector.Al => InterruptCallFacts.AxBytesLoadedBefore(intNode).Al,
+            _ => AxLoadedBefore(intNode)
+        };
+        return selector is { } value ? selected.Services.GetValueOrDefault(value) : null;
+    }
+
+    private static int? AxLoadedBefore(CfgInstruction intNode) {
+        (byte? al, byte? ah) = InterruptCallFacts.AxBytesLoadedBefore(intNode);
+        if (al is null || ah is null) {
+            return null;
+        }
+        return ah.Value << 8 | al.Value;
     }
 
     /// <summary>Converts contract <see cref="CpuValues"/> writes to <see cref="RegisterBits"/>:
