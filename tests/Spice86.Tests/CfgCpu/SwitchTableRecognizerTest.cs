@@ -10,10 +10,7 @@ using Xunit;
 /// Direct tests of <see cref="SwitchTableRecognizer"/> on hand-assembled guard->transfer chains.
 /// </summary>
 public class SwitchTableRecognizerTest : SpeculativeTestBase {
-    private const ushort Seg = 0xF000;
     private const ushort Table = 0x0E24;
-
-    private static SegmentedAddress At(ushort offset) => new(Seg, offset);
 
     /// <summary>Writes the byte sequence and links every adjacent pair so the recognizer can walk
     /// back through the chain. Returns the last (transfer) instruction.</summary>

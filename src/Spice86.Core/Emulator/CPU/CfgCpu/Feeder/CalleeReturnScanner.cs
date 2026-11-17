@@ -30,7 +30,8 @@ internal enum CallDistance {
 /// subgraph: every path must end in a return of one uniform <see cref="CallDistance"/> with the
 /// callee's own stack balanced (pushes undone). Stack deltas are tracked through pushes and
 /// pops of registers, segment registers and immediates, <c>sub/add sp,imm</c>, the
-/// <c>push bp; mov bp,sp ... mov sp,bp; pop bp</c> frame and <c>leave</c>. The scan refuses on
+/// <c>push bp; mov bp,sp ... mov sp,bp; pop bp</c> frame and <c>leave</c>; any other write to BP
+/// closes the tracked frame. The scan refuses on
 /// any other SP write (detected through <see cref="RegisterWriteSet"/>), any indirect transfer,
 /// any call or int the caller does not already know to return, any write through
 /// <c>SS:[BP+n]</c>/<c>SS:[SP+n]</c> that may hit the return address, any statement shape it
@@ -217,6 +218,7 @@ internal sealed class CalleeReturnScanner {
     /// </summary>
     internal static bool ApplyStackEffect(CfgInstruction node, ref int pushed, ref int? frame) {
         bool spAccounted = false;
+        bool opensFrame = false;
         IVisitableAstNode ast = node.ExecutionAst!;
         IEnumerable<IVisitableAstNode> statements = ast is BlockNode block ? block.Statements : [ast];
         foreach (IVisitableAstNode statement in statements) {
@@ -228,7 +230,7 @@ internal sealed class CalleeReturnScanner {
                     spAccounted = true;
                     break;
                 case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assign:
-                    if (!ApplyAssign(assign, ref pushed, ref frame, ref spAccounted)) {
+                    if (!ApplyAssign(assign, ref pushed, ref frame, ref spAccounted, ref opensFrame)) {
                         return false;
                     }
                     break;
@@ -253,7 +255,12 @@ internal sealed class CalleeReturnScanner {
                 return false;
             }
         }
-        return spAccounted || (RegisterWriteSet.MayWrite(node) & (ushort)RegisterBits.Sp) == 0;
+        ushort writes = RegisterWriteSet.MayWrite(node);
+        if (!opensFrame && (writes & (ushort)RegisterBits.Bp) != 0) {
+            // Any BP write but mov bp,sp (pop bp, popa, mov bp,ax, ...) leaves the frame unknown.
+            frame = null;
+        }
+        return spAccounted || (writes & (ushort)RegisterBits.Sp) == 0;
     }
 
     private static bool ApplyStackOperation(StackOperation operation, BitWidth width, ref int pushed, ref int? frame) {
@@ -286,7 +293,8 @@ internal sealed class CalleeReturnScanner {
         }
     }
 
-    private static bool ApplyAssign(BinaryOperationNode assign, ref int pushed, ref int? frame, ref bool spAccounted) {
+    private static bool ApplyAssign(BinaryOperationNode assign, ref int pushed, ref int? frame, ref bool spAccounted,
+        ref bool opensFrame) {
         // Pops and peeks on the right side move SP like their void counterparts.
         foreach (StackCallValueNode stack in StackValues(assign.Right)) {
             if (!ApplyStackOperation(stack.Operation, stack.Width, ref pushed, ref frame)) {
@@ -323,10 +331,11 @@ internal sealed class CalleeReturnScanner {
                 }
                 // Any other SP write (mov sp,imm, xchg, pop sp, ...).
                 return false;
-            case RegisterNode { RegisterIndex: (int)RegisterIndex.BpIndex }
+            case RegisterNode { RegisterIndex: (int)RegisterIndex.BpIndex, DataType.BitWidth: not BitWidth.BYTE_8 }
                 when assign.Right is RegisterNode { RegisterIndex: (int)RegisterIndex.SpIndex }:
                 // mov bp,sp: opens or refreshes the tracked frame.
                 frame = pushed;
+                opensFrame = true;
                 return true;
             case SegmentedPointerNode pointer:
                 return CheckStackWrite(pointer, pushed, frame);

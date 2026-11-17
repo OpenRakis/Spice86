@@ -12,7 +12,6 @@ using Xunit;
 /// all-but-CS mask anywhere it is not.
 /// </summary>
 public class RegisterWriteSetTest : SpeculativeTestBase {
-    private const ushort Seg = 0xF000;
 
     private CfgInstruction Parse(params byte[] opcodes) {
         uint physical = (uint)(Seg * 16 + 0x100);

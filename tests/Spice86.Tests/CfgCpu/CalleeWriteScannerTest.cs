@@ -21,7 +21,6 @@ using Xunit;
 /// are written as bytes and decoded into the node index like the other speculative tests.
 /// </summary>
 public class CalleeWriteScannerTest : SpeculativeTestBase {
-    private const ushort Seg = 0xF000;
     private const ushort Unknown = (ushort)RegisterBits.AllExceptCs;
 
     private readonly ObservedCallPreservation _observedPreservation;
@@ -79,28 +78,6 @@ public class CalleeWriteScannerTest : SpeculativeTestBase {
         Assert.Equal(Regs(RegisterBits.Ax, RegisterBits.Bx),
             CreateScanner(returnsBalanced: true).MayWrite(At(0x100)));
     }
-
-    /// <summary>Writes <paramref name="bytes"/> at <paramref name="offset"/> in segment
-    /// <see cref="Seg"/>, decodes each instruction in order and inserts it into the node index.
-    /// Returns the decoded nodes in address order.</summary>
-    private List<CfgInstruction> DecodeRoutine(ushort offset, params byte[] bytes) {
-        uint physical = MemoryUtils.ToPhysicalAddress(Seg, offset);
-        for (int i = 0; i < bytes.Length; i++) {
-            Memory.UInt8[physical + (uint)i] = bytes[i];
-        }
-        List<CfgInstruction> nodes = [];
-        ushort cursor = offset;
-        ushort end = (ushort)(offset + bytes.Length);
-        while (cursor < end) {
-            CfgInstruction node = Parser.ParseInstructionAt(new SegmentedAddress(Seg, cursor));
-            NodeIndex.Insert(node);
-            nodes.Add(node);
-            cursor += (ushort)node.Length;
-        }
-        return nodes;
-    }
-
-    private static SegmentedAddress At(ushort offset) => new(Seg, offset);
 
     private static ushort Regs(params RegisterBits[] bits) {
         ushort mask = 0;

@@ -85,6 +85,31 @@ public abstract class SpeculativeTestBase : IDisposable {
         return node;
     }
 
+    /// <summary>Segment of the routines <see cref="DecodeRoutine"/> writes.</summary>
+    protected const ushort Seg = 0xF000;
+
+    /// <summary>Writes <paramref name="bytes"/> at <paramref name="offset"/> in segment
+    /// <see cref="Seg"/>, decodes each instruction in order and inserts it into the node index.
+    /// Returns the decoded nodes in address order.</summary>
+    protected List<CfgInstruction> DecodeRoutine(ushort offset, params byte[] bytes) {
+        uint physical = MemoryUtils.ToPhysicalAddress(Seg, offset);
+        for (int i = 0; i < bytes.Length; i++) {
+            Memory.UInt8[physical + (uint)i] = bytes[i];
+        }
+        List<CfgInstruction> nodes = [];
+        ushort cursor = offset;
+        ushort end = (ushort)(offset + bytes.Length);
+        while (cursor < end) {
+            CfgInstruction node = Parser.ParseInstructionAt(new SegmentedAddress(Seg, cursor));
+            NodeIndex.Insert(node);
+            nodes.Add(node);
+            cursor += (ushort)node.Length;
+        }
+        return nodes;
+    }
+
+    protected static SegmentedAddress At(ushort offset) => new(Seg, offset);
+
     /// <summary>Plays the CPU side of an observed near <c>call</c> at <paramref name="callOffset"/>
     /// (segment F000) to <paramref name="calleeOffset"/>: writes and decodes the call, reports it
     /// to <paramref name="preservation"/> as executed, and leaves SP and IP as the call does.
