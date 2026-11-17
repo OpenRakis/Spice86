@@ -1621,6 +1621,9 @@ internal static class AsmFixtureCatalog {
                 (at + 0x18, 2, (0xA55A + x) & 0xFFFF), (at + 0x1A, 2, (0xCAFE + y + carryB) & 0xFFFF),
                 (at + 0x1C, 2, 0xCDEF), (at + 0x1E, 2, 0x89AB), (at + 0x22, 2, 0x1234)]);
         }
+        // J1 stores the loaded dword at the bounded index (di = bx & 0Fh = 0 -> 60h); J2's
+        // second word store wraps to offset 0 last and overwrites pass 0's first result word.
+        values.AddRange([(0x60, 2, 0xCDEF), (0x62, 2, 0x89AB), (0x00, 2, 0x2222)]);
         return ResultRegion(0x200, [.. values]);
     }
 

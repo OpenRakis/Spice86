@@ -122,7 +122,7 @@ public partial class CfgGeneratedOverrides {
             word5 = (ushort)(Segment2000Globals.Word0F00 & 3);
             word4 = UInt16[CS, index2 + 4];
             word9 = UInt16[CS, index2 + 6];
-            uint dxAx_0127 = (uint)(((uint)UInt16[DS, word5 + 0x0400] | (uint)UInt16[DS, word5 + 0x0402] << 16) + ((uint)word4 | (uint)word9 << 16));
+            uint dxAx_0127 = (uint)(UInt32[DS, word5 + 0x0400] + ((uint)word4 | (uint)word9 << 16));
             word2 = (ushort)dxAx_0127;
             word3 = (ushort)(dxAx_0127 >> 16);
             UInt16[DS, index + 0x28] = word2;

@@ -25,11 +25,13 @@ using System.Linq;
 /// change refuses the merge.</para>
 /// <para>An address pair is proven only by the alias analysis: both pointers are
 /// <see cref="SegmentedPointerNode"/>s with 16-bit unsigned segment and offset expressions, each
-/// offset resolves to a constant word with <c>high == low + 2</c> and no wrap, the segments are
-/// the same known RAM value read at the same version, and the widened four-byte range stays
-/// under the device mappings (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>). Anything dynamic,
-/// wrapped, signed or mapped refuses: a merge would then read or write bytes the original code
-/// never touched.</para>
+/// offsets are adjacent constants or the same single register term at the same version with
+/// displacements <c>d</c> and <c>d + 2</c> whose proven index interval keeps the widened
+/// four-byte range inside the segment, the segments are the same known RAM value read at the
+/// same version, and the widened range stays under the device mappings
+/// (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>). Anything dynamic and unbounded, wrapped,
+/// signed or mapped refuses: a merge would then read or write bytes the original code never
+/// touched.</para>
 /// </summary>
 internal static class IrJoinedMemory {
     /// <summary>Applies both forms over <paramref name="method"/>; returns the number of joined
@@ -98,14 +100,11 @@ internal static class IrJoinedMemory {
             || low.Offset.DataType != DataType.UINT16 || high.Offset.DataType != DataType.UINT16) {
             return false;
         }
-        if (ConstantEvaluation.Resolved(low.Offset) is not { } lowOffset
-            || ConstantEvaluation.Resolved(high.Offset) is not { } highOffset
-            || lowOffset.Value > 0xFFFC || highOffset.Value != lowOffset.Value + 2) {
-            // Adjacency without wrap: the widened range must not cross the 64 KiB boundary.
-            return false;
-        }
         IrMemoryAccess lowAccess = alias.OfPointer(low, statement, block, index);
         IrMemoryAccess highAccess = alias.OfPointer(high, statement, block, index);
+        if (!AdjacentOffsets(low, high, lowAccess, highAccess)) {
+            return false;
+        }
         // Same segment: the same known value through the same register identity and version.
         if (lowAccess.SegmentValue is not { } segment
             || highAccess.SegmentValue is not { } otherSegment || segment != otherSegment
@@ -117,6 +116,23 @@ internal static class IrJoinedMemory {
         // a device read can observe, a device store can be ignored.
         return alias.AllowsRam(lowAccess) && alias.AllowsRam(highAccess)
             && alias.AllowsRam(lowAccess with { Width = 4 });
+    }
+
+    /// <summary>Adjacency without wrap: <paramref name="high"/> starts exactly two bytes above
+    /// <paramref name="low"/> and the widened four-byte range stays inside the segment. A
+    /// constant pair needs <c>high == low + 2</c>; an indexed pair needs the same single
+    /// register term at the same version with displacements <c>d</c> and <c>d + 2</c> and a
+    /// proven index interval whose widened top byte still fits the 16-bit offset.</summary>
+    private static bool AdjacentOffsets(SegmentedPointerNode low, SegmentedPointerNode high,
+            IrMemoryAccess lowAccess, IrMemoryAccess highAccess) {
+        if (ConstantEvaluation.Resolved(low.Offset) is { } lowOffset
+            && ConstantEvaluation.Resolved(high.Offset) is { } highOffset) {
+            return lowOffset.Value <= 0xFFFC && highOffset.Value == lowOffset.Value + 2;
+        }
+        return lowAccess.OffsetTerms is [OffsetTerm lowTerm]
+            && highAccess.OffsetTerms is [OffsetTerm highTerm] && lowTerm.Equals(highTerm)
+            && highAccess.OffsetDisplacement == lowAccess.OffsetDisplacement + 2
+            && lowAccess.OffsetRange is { } range && range.Hi + 3 <= 0xFFFF;
     }
 
     /// <summary>Whether the statement may be folded around at all: never faulting, never

@@ -14,9 +14,9 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BX, DS, flags, DF. Outputs: DF. Changes: DX, flags, DF.</summary>
     /// Segment values at entry, from every call site: ES = 0x2100, DS = 0x2000.
-    public virtual Action unknown_F000_0107_F0107() {
+    public virtual Action unknown_F000_0133_F0133() {
         ushort word1;
-        CheckExternalEvents(biosSegment, 0x0107);
+        CheckExternalEvents(biosSegment, 0x0133);
         UInt16[DS, BX + 0x1C] = AX;
         word1 = UInt16[DS, BX + 0x12];
         UInt16[DS, BX + 0x1E] = word1;
@@ -36,17 +36,18 @@ public partial class CfgGeneratedOverrides {
         ushort word5;
         ushort word6;
         ushort word7 = 0;
+        ushort word8 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
         DS = 0x2000;
         SS = 0x2000;
         SP = 0x1000;
         ES = 0;
-        Segment0000Globals.Dword0190 = 0x00000107 | (uint)CS << 16;
+        Segment0000Globals.Dword0190 = 0x00000133 | (uint)CS << 16;
         word1 = 0x2100;
         ES = 0x2100;
         DirectionFlag = false;
         index = 0;
-        index2 = 0x0118;
+        index2 = 0x0148;
         word2 = 4;
         do {
             CheckExternalEvents(biosSegment, 0x002A);
@@ -77,20 +78,20 @@ public partial class CfgGeneratedOverrides {
             DX = (ushort)(DX + word7 + (CarryFlag ? 1 : 0));
             UInt16[DS, index + 0x0C] = AX;
             UInt16[DS, index + 0x0E] = DX;
-            DI = Stack.Pop16();
-            Alu16.Sub(DI, DI);
+            word8 = Stack.Pop16();
+            Alu16.Sub(word8, word8);
             UInt16[DS, index + 0x12] = 0x1234;
             AX = Segment2000Globals.Word0800;
             UInt16[DS, index + 0x10] = AX;
             BX = index;
-            InterruptCall(biosSegment, 0x009C, 0x64, biosSegment, 0x0107, unknown_F000_0107_F0107Entry);
+            InterruptCall(biosSegment, 0x009C, 0x64, biosSegment, 0x0133, unknown_F000_0133_F0133Entry);
             DX = Segment2000Globals.Word0802;
             UInt16[DS, index + 0x12] = DX;
-            Alu16.Sub(DI, DI);
+            Alu16.Sub(word8, word8);
             Segment2000Globals.Word004A = 0x1234;
             AX = Segment2000Globals.Word0800;
             Segment2000Globals.Word0048 = AX;
-            InterruptCall(biosSegment, 0x00B3, 0x64, biosSegment, 0x0107, unknown_F000_0107_F0107Entry);
+            InterruptCall(biosSegment, 0x00B3, 0x64, biosSegment, 0x0133, unknown_F000_0133_F0133Entry);
             word6 = Segment2000Globals.Word0802;
             Segment2000Globals.Word004A = word6;
             word5 = Segment2000Globals.Word0800;
@@ -98,15 +99,23 @@ public partial class CfgGeneratedOverrides {
             UInt16[DS, index + 0x16] = 0xBEEF;
             Segment2000Globals.Word0802 = 0x89AB;
             CX = UInt16[CS, index2];
-            uint dxAx_00E4 = (uint)(((uint)Segment2100Globals.WordFFFE | (uint)Segment2100Globals.Word0000 << 16) + ((uint)CX | (uint)DI << 16));
-            word1 = (ushort)dxAx_00E4;
+            uint dxAx_00E4 = (uint)(((uint)Segment2100Globals.WordFFFE | (uint)Segment2100Globals.Word0000 << 16) + ((uint)CX | (uint)word8 << 16));
+            AX = (ushort)dxAx_00E4;
             DX = (ushort)(dxAx_00E4 >> 16);
-            UInt16[DS, index + 0x18] = word1;
+            UInt16[DS, index + 0x18] = AX;
             UInt16[DS, index + 0x1A] = DX;
+            word1 = Segment2000Globals.Word0800;
+            DX = Segment2000Globals.Word0802;
+            DI = (ushort)(index & 0x000F);
+            UInt32[DS, DI + 0x60] = (uint)word1 | (uint)DX << 16;
             index += 0x0080;
             index2 += 4;
             word2--;
         } while (word2 != 0);
+        DI = (ushort)~(index & 0x000F);
+        DI &= 0xFFF0;
+        UInt16[DS, DI + 0x0E] = 0x1111;
+        UInt16[DS, DI + 0x10] = 0x2222;
         SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;
         return Hlt();
     }
@@ -200,7 +209,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0107_F0107Entry;
+    private readonly Func<int, Action> unknown_F000_0133_F0133Entry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     protected readonly Segment0000Globals Segment0000Globals;
@@ -213,9 +222,9 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
         Segment2100Globals = new Segment2100Globals(Memory, programStartSegment);
 
-        unknown_F000_0107_F0107Entry = _ => unknown_F000_0107_F0107();
+        unknown_F000_0133_F0133Entry = _ => unknown_F000_0133_F0133();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0107, unknown_F000_0107_F0107Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0133, unknown_F000_0133_F0133Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
