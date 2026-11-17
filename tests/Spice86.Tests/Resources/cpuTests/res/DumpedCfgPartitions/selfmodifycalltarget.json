@@ -8,10 +8,10 @@
         17,
         103,
         110,
-        124,
+        122,
         20,
         104,
-        127
+        125
       ],
       "entries": [
         {
@@ -112,7 +112,7 @@
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 5,
-      "fromBlock": 127,
+      "fromBlock": 125,
       "toBlock": 93,
       "from": "F000:003F",
       "target": "F000:0027"

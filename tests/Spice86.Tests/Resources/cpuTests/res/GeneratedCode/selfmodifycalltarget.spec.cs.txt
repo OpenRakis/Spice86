@@ -27,7 +27,7 @@ public partial class CfgGeneratedOverrides {
             FarReturn();
             return;
         }
-        if (!SelectorSignatureMatches(biosSegment, 0x0028, Signature_0028_jmp_123)) {
+        if (!SelectorSignatureMatches(biosSegment, 0x0028, Signature_0028_jmp_121)) {
             throw FailAsUntested("Untested code variant at F000:0028");
         }
         Segment0000Globals.Byte0012 = 0xCC;
@@ -208,7 +208,7 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0028_jmp_16 = [0xEA, 0x2E, 0x00, 0x00, 0xF0];
     private static readonly byte?[] Signature_0028_jmp_100 = [0xEA, 0x34, 0x00, 0x00, 0xF0];
-    private static readonly byte?[] Signature_0028_jmp_123 = [0xEA, 0x3A, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_0028_jmp_121 = [0xEA, 0x3A, 0x00, 0x00, 0xF0];
 
 }
 

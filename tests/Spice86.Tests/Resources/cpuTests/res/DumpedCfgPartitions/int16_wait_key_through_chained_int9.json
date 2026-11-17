@@ -224,22 +224,22 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
+        294,
+        298,
+        306,
+        315,
+        321,
         296,
         300,
-        308,
-        317,
-        323,
-        298,
-        302,
-        305,
-        314,
-        321,
+        303,
         312,
-        319
+        319,
+        310,
+        317
       ],
       "entries": [
         {
-          "block": 296,
+          "block": 294,
           "address": "F000:0096",
           "kind": "functionEntry"
         }
@@ -296,7 +296,7 @@
       "fromPartition": 1,
       "toPartition": 14,
       "fromBlock": 81,
-      "toBlock": 296,
+      "toBlock": 294,
       "from": "016E:0157",
       "target": "F000:0096"
     },

@@ -221,30 +221,42 @@ public partial class CfgGeneratedOverrides {
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
-    public virtual void unknown_F000_017C_F017C(ushort word1) {
-        DS = word1;
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: flags.</summary>
+    public virtual void unknown_F000_017C_F017C(ushort word1, ushort word2) {
+        DS = word2;
+        byte flagOperand_017C = 0;
         CheckExternalEvents(biosSegment, 0x017C);
-        if (DsGlobals.Byte0500 == 0xFF) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0184, Signature_0184_call);
-            NearCall(biosSegment, 0x0187, () => unknown_F000_018A_F018A(word1));
-            VerifySpeculativeEntryOrFail(biosSegment, 0x0187, Signature_0187_call);
-            throw FailAsUntested("Untested indirect call at F000:0187");
+        flagOperand_017C = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_017C, 0xFF);
+        if (flagOperand_017C != 0xFF) {
+            NearReturn();
+            return;
         }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0184, Signature_0184_call);
+        NearCall(biosSegment, 0x0187, () => unknown_F000_018A_F018A(word2));
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0187, Signature_0187_call);
+        if (word1 != 0x01B3) {
+            throw FailAsUntested($"Untested near call target 0x{word1:X4} at F000:0187");
+        }
+        NearCall(biosSegment, 0x0189, unknown_F000_01B3_F01B3_AsmEntry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0189, Signature_0189_ret);
         NearReturn();
         return;
     }
 
     public virtual Action unknown_F000_017C_F017C_Asm() {
-        unknown_F000_017C_F017C(DS);
+        unknown_F000_017C_F017C(DI, DS);
         return Returned;
     }
 
-    /// <summary>Inputs: DS. Outputs: none. Changes: none.</summary>
+    /// <summary>Inputs: DS. Outputs: none. Changes: flags.</summary>
     public virtual void unknown_F000_018A_F018A(ushort word1) {
         DS = word1;
+        byte flagOperand_018A = 0;
         CheckExternalEvents(biosSegment, 0x018A);
-        if (DsGlobals.Byte0500 == 0xFF) {
+        flagOperand_018A = DsGlobals.Byte0500;
+        Alu8.Sub(flagOperand_018A, 0xFF);
+        if (flagOperand_018A == 0xFF) {
             VerifySpeculativeEntryOrFail(biosSegment, 0x0192, Signature_0192_call);
             throw FailAsUntested("Untested indirect call at F000:0192");
         }
@@ -708,8 +720,8 @@ public partial class CfgGeneratedOverrides {
         AX = NearCall(biosSegment, 0x00BA, () => unknown_F000_0158_F0158(AX, 0x01B3, DS));
         NearCall(biosSegment, 0x00C0, () => unknown_F000_016A_F016A(DS));
         NearCall(biosSegment, 0x00C3, () => unknown_F000_016A_F016A(DS));
-        NearCall(biosSegment, 0x00C9, () => unknown_F000_017C_F017C(DS));
-        NearCall(biosSegment, 0x00CC, () => unknown_F000_017C_F017C(DS));
+        NearCall(biosSegment, 0x00C9, () => unknown_F000_017C_F017C(0x01B3, DS));
+        NearCall(biosSegment, 0x00CC, () => unknown_F000_017C_F017C(0x01B3, DS));
         DI = 0x01E4;
         (AX, DI) = NearCall(biosSegment, 0x00D2, () => unknown_F000_01B8_F01B8(AX, 0x01E4, DS));
         (AX, _) = NearCall(biosSegment, 0x00D5, () => unknown_F000_01B8_F01B8(AX, DI, DS));
@@ -985,6 +997,7 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0175_call = [0xFF, 0xD7];
     private static readonly byte?[] Signature_0184_call = [0xE8, 0x03, 0x00];
     private static readonly byte?[] Signature_0187_call = [0xFF, 0xD7];
+    private static readonly byte?[] Signature_0189_ret = [0xC3];
     private static readonly byte?[] Signature_0192_call = [0xFF, 0xD6];
     private static readonly byte?[] Signature_01C0_call = [0xE8, 0x03, 0x00];
     private static readonly byte?[] Signature_01C3_call = [0xFF, 0xD7];

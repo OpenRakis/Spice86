@@ -416,7 +416,7 @@ public partial class CfgGeneratedOverrides {
                     }
                     CS = cs2;
                     if (SelectorSignatureMatches(cs2, 0x0100, Signature_0100_push)) {
-                        goto L_0100_1272;
+                        goto L_0100_1298;
                     }
                     if (!SelectorSignatureMatches(cs2, 0x0100, Signature_0100_mov)) {
                         throw FailAsUntested("Untested code variant at 01D9:0100");
@@ -426,7 +426,7 @@ public partial class CfgGeneratedOverrides {
                     ServiceCall(Video, () => Video.WriteTextInTeletypeMode(0x4A, 7));
                     AX = 0x4C42;
                     return TerminateCall(cs2, 0x010F, () => Dos.Terminate(AL));
-                L_0100_1272:
+                L_0100_1298:
                     Stack.Push16(CS);
                     DS = Stack.Pop16();
                     ServiceCall(Dos, () => Dos.SetInterruptVector(0x60, DS, 0x0118));

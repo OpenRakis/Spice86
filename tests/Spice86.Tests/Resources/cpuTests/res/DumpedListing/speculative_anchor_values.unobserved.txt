@@ -124,6 +124,7 @@ F000:0181 je short 0x0184
 F000:0183 ret near
 F000:0184 call near 0x018A
 F000:0187 call near DI
+F000:0189 ret near
 F000:018A cmp byte ptr DS:[0x0500],0xFF
 F000:018F je short 0x0192
 F000:0191 ret near
