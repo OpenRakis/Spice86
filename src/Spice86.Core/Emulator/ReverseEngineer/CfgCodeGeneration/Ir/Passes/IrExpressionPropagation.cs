@@ -82,11 +82,73 @@ internal static class IrExpressionPropagation {
         }
     }
 
-    /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
-    /// its register when every condition holds; returns the reader's index.</summary>
-    private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
+    /// <summary>A register version produced by a plain assignment whose only live use is a typed
+    /// method's return exit merges into the return element: <c>AX = e; NearReturn(); return AX;</c>
+    /// prints <c>NearReturn(); return e;</c> and the assignment goes. The legality is the merge's
+    /// own: the writer shape is <see cref="SingleRegisterWriter"/>'s, the moved expression's
+    /// register and IO-token reads keep their versions up to the exit (EP-1), memory order holds
+    /// (EP-5), and no faulting or guard statement lies between the writer and the exit - which
+    /// itself cannot fault. Whether the read is really an output element of a typed signature is
+    /// the caller's check: this returns the writer, the register and the merged expression.</summary>
+    internal static (IrStatement Writer, RegisterNode Register, ValueNode Expression,
+            ProcedureReturnHelperNode Helper)? MergedIntoReturn(IrBlock block, int i,
+            HashSet<ICfgNode> entryNodes, IrSsa ssa, IrMemoryAliasAnalysis alias) {
         IrStatement writer = block.Statements[i];
+        if (SingleRegisterWriter(writer, entryNodes, ssa) is not
+                (RegisterNode r1, ValueNode e1, _, int writerVersion)
+            || ssa.LiveUses(writerVersion) is not [IrSsaUse {
+                    Phi: null, Statement: null, Block: var useBlock,
+                    Terminator: IrExit {
+                        Transfer: ReturnNode { Value: ProcedureReturnHelperNode helper } } exit }]
+            || useBlock != block
+            || !ReferenceEquals(exit, block.Terminator)
+            || exit.Effects.MayFault) {
+            return null;
+        }
+        int end = block.Statements.Count;
+        for (int k = i; k < end; k++) {
+            IrStatement between = block.Statements[k];
+            if (between.Effects.MayFault
+                || between.Node is SpeculativeGuardNode or PatchedCallGuardNode) {
+                return null;
+            }
+        }
+        IrEffects moved = IrEffectsVisitor.Of(e1, false);
+        // A self-read (AX = AX + 1) cannot merge: the version check anchors after the writer, where
+        // the merged register already holds its new version, so the moved expression would evaluate
+        // the change a second time at the exit.
+        if ((moved.Reads & IrValueSets.Of(r1)) != CpuValues.None) {
+            return null;
+        }
+        // The printed return expression evaluates after the return helper statement ran: a near or
+        // far `ret` already popped the return address (and CS for a far one), so a moved read of SP -
+        // directly or through a stack-addressed operand like a frame argument - would see the
+        // post-return value.
+        if ((moved.Reads & (helper.Distance == CallDistance.Far
+                    ? CpuValues.Sp | CpuValues.Cs : CpuValues.Sp)) != CpuValues.None) {
+            return null;
+        }
+        IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
+        if (moved.TouchesMemory) {
+            tokens |= IrTokens.Io;
+        }
+        if (!ssa.SameVersions(moved.Reads, tokens, (block, i + 1), (block, end))
+            || !MemoryCrossable(block, i, end, moved, ssa, alias)) {
+            return null;
+        }
+        ValueNode merged = (ValueNode)IrConstantFolder.FoldConstantTerms(e1);
+        if (CountNodes(merged) > MaxMergedNodes) {
+            return null;
+        }
+        return (writer, r1, merged, helper);
+    }
+
+    /// <summary>The shared writer shape of <see cref="TryMerge"/> and
+    /// <see cref="MergedIntoReturn"/>: a plain <c>R = e</c> assignment of a mergeable expression
+    /// to a general register (not a segment, not SP) at a non-entry origin, defining exactly one
+    /// version of one register value and nothing else still live.</summary>
+    private static (RegisterNode Register, ValueNode Expression, IrSsaValue Value, int Version)?
+        SingleRegisterWriter(IrStatement writer, HashSet<ICfgNode> entryNodes, IrSsa ssa) {
         if (entryNodes.Contains(writer.Origin)
             || writer.Node is not BinaryOperationNode {
                 BinaryOperation: BinaryOperation.ASSIGN,
@@ -116,9 +178,19 @@ internal static class IrExpressionPropagation {
                 return null;
             }
         }
-        if (writerVersion < 0 || definedRegisters != 0) {
+        return writerVersion < 0 || definedRegisters != 0 ? null : (r1, e1, r1Value, writerVersion);
+    }
+
+    /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
+    /// its register when every condition holds; returns the reader's index.</summary>
+    private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
+        IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
+        IrStatement writer = block.Statements[i];
+        if (SingleRegisterWriter(writer, entryNodes, ssa) is not
+                (RegisterNode r1, ValueNode e1, IrSsaValue r1Value, int writerVersion)) {
             return null;
         }
+        uint r1Bits = IrSsaValues.ValueBits(IrValueSets.Of(r1));
         if (ssa.LiveUses(writerVersion) is not [IrSsaUse { Phi: null, Statement: not null }]) {
             return null;
         }

@@ -20,9 +20,8 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2) unknown_F000_00D3_F00D3() {
         CheckExternalEvents(biosSegment, 0x00D3);
         AX = 0x1111;
-        DX = 0x2222;
         NearReturn();
-        return (AX, DX);
+        return (AX, 0x2222);
     }
 
     public virtual Action unknown_F000_00D3_F00D3_Asm() {
@@ -38,13 +37,11 @@ public partial class CfgGeneratedOverrides {
         BX = word3;
         CheckExternalEvents(biosSegment, 0x00DA);
         if (word2 == 0) {
-            AX = 0xAAAA;
             NearReturn();
-            return (AX, BX);
+            return (0xAAAA, BX);
         }
-        BX = 0xBBBB;
         NearReturn();
-        return (AX, BX);
+        return (AX, 0xBBBB);
     }
 
     public virtual Action unknown_F000_00DA_F00DA_Asm() {
@@ -76,9 +73,8 @@ public partial class CfgGeneratedOverrides {
     /// Direction flag at entry, from every call site: clear.
     public virtual ushort unknown_F000_00F6_F00F6() {
         CheckExternalEvents(biosSegment, 0x00F6);
-        AX = 0x3456;
         NearReturn();
-        return AX;
+        return 0x3456;
     }
 
     public virtual Action unknown_F000_00F6_F00F6_Asm() {

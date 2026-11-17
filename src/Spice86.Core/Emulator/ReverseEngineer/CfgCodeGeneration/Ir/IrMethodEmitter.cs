@@ -174,7 +174,8 @@ internal sealed class IrMethodEmitter(
                 UnprintedNodes(prepared.FramePlan), signature, analysis.TypedSignatures,
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
                     statement, mask),
-                new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan));
+                new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan),
+                context.Policy);
             BlockNode body = analysis.StackArguments.Apply(prepared.Body);
             if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0
                 || registerLocals.Replacements.Count > 0) {

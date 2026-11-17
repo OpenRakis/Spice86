@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 
@@ -22,6 +23,13 @@ using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 /// <see cref="ProcedureReturnHelperNode"/> reference): one text per output element in
 /// signature order - the local that serves the exit's read of the output, or <c>null</c>
 /// to keep the register name.</param>
+/// <param name="ReturnExpressions">The expression each typed <c>return</c> prints for an output
+/// element (by <see cref="ProcedureReturnHelperNode"/> reference): the merged expression of a
+/// register assignment whose only live use was the exit's read of that output
+/// (<see cref="Passes.IrExpressionPropagation.MergedIntoReturn"/>), or <c>null</c> to keep the
+/// element's register name or local. <see cref="ReturnExpression.Type"/> casts the printed
+/// expression to the output element's type, the same way an assignment right side casts to its
+/// target.</param>
 internal sealed record RegisterLocalPlan(
     IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead> Reads,
     IReadOnlyList<LocalDeclarationNode> Declarations,
@@ -30,4 +38,9 @@ internal sealed record RegisterLocalPlan(
     IReadOnlyDictionary<IVisitableAstNode, IVisitableAstNode> Replacements,
     IReadOnlySet<TypedParameter> EntryParameters,
     IReadOnlyDictionary<ProcedureCallHelperNode, IReadOnlyList<string?>> CallOutputs,
-    IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<string?>> ReturnOutputs);
+    IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<string?>> ReturnOutputs,
+    IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<ReturnExpression?>> ReturnExpressions);
+
+/// <summary>One merged <c>return</c> element: the expression and the output element's type to
+/// print it as.</summary>
+internal sealed record ReturnExpression(ValueNode Expression, DataType Type);

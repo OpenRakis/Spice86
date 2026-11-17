@@ -142,9 +142,8 @@ public partial class CfgGeneratedOverrides {
     public virtual ushort unknown_F000_01CB_F01CB(ushort arg0) {
         unknown_F000_01CB_F01CBFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01CB);
-        AX = arg0;
         NearReturn();
-        return AX;
+        return arg0;
     }
 
     public virtual Action unknown_F000_01CB_F01CB_Asm() {
@@ -236,9 +235,8 @@ public partial class CfgGeneratedOverrides {
     public virtual ushort unknown_F000_01FD_F01FD(ushort arg0) {
         unknown_F000_01FD_F01FDFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x01FD);
-        AX = arg0;
         NearReturn();
-        return AX;
+        return arg0;
     }
 
     public virtual Action unknown_F000_01FD_F01FD_Asm() {

@@ -759,13 +759,20 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <summary>The <c>return</c> text of a typed <c>ret</c>: the outputs' register names, or the
     /// local the register-local plan serves an output's exit read from.</summary>
     private string ReturnText(ProcedureReturnHelperNode helper, TypedSignature typed) {
-        if (expressions.ReturnOutputs is not { } returnOutputs
-            || !returnOutputs.TryGetValue(helper, out IReadOnlyList<string?>? outputs)) {
+        IReadOnlyList<string?>? outputs = null;
+        expressions.ReturnOutputs?.TryGetValue(helper, out outputs);
+        IReadOnlyList<ReturnExpression?>? merged = null;
+        expressions.ReturnExpressions?.TryGetValue(helper, out merged);
+        if (outputs is null && merged is null) {
             return typed.ReturnStatement;
         }
         string[] elements = new string[typed.Outputs.Count];
         for (int index = 0; index < elements.Length; index++) {
-            elements[index] = index < outputs.Count && outputs[index] is { } text
+            elements[index] = merged is not null && index < merged.Count
+                    && merged[index] is { } mergedElement
+                ? CSharpExpressionPrinter.Cast(mergedElement.Type,
+                    expressions.Print(mergedElement.Expression))
+                : outputs is not null && index < outputs.Count && outputs[index] is { } text
                 ? text : typed.Outputs[index].Register;
         }
         return TypedSignature.ReturnStatementText(elements);

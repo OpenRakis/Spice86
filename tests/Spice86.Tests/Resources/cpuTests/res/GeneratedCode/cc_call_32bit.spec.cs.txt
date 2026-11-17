@@ -36,9 +36,8 @@ public partial class CfgGeneratedOverrides {
     public virtual uint unknown_F000_004C_F004C(uint dword1) {
         unknown_F000_004C_F004CFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x004C);
-        EAX = (uint)(frame.Arg4Dword + dword1);
         FarReturn32(4);
-        return EAX;
+        return (uint)(frame.Arg4Dword + dword1);
     }
 
     public virtual Action unknown_F000_004C_F004C_Asm() {

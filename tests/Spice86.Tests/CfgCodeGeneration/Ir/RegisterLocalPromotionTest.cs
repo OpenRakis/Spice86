@@ -239,7 +239,7 @@ public sealed class RegisterLocalPromotionTest {
         // Act
         RegisterLocalPlan plan = RegisterLocalPromotion.Plan(method, ssa,
             new HashSet<string> { "ax" }, new HashSet<IVisitableAstNode>(), null, null, (_, _) => false,
-            RoleNames.RoleNameContext.Empty);
+            RoleNames.RoleNameContext.Empty, GenerationPolicy.Strict);
 
         // Assert
         plan.Declarations.Should().NotContain(declaration => declaration.VariableName == "ax");

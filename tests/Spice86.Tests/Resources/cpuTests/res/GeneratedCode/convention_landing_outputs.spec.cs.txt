@@ -41,9 +41,8 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2) unknown_F000_0059_F0059() {
         CheckExternalEvents(biosSegment, 0x0059);
         AX = 0xAAA0;
-        BX = 0xBBB0;
         NearReturn();
-        return (AX, BX);
+        return (AX, 0xBBB0);
     }
 
     public virtual Action unknown_F000_0059_F0059_Asm() {
@@ -70,9 +69,8 @@ public partial class CfgGeneratedOverrides {
     public virtual (ushort result, ushort result2) unknown_F000_0067_F0067() {
         CheckExternalEvents(biosSegment, 0x0067);
         AX = 0xCCC0;
-        BX = 0xDDD0;
         NearReturn();
-        return (AX, BX);
+        return (AX, 0xDDD0);
     }
 
     public virtual Action unknown_F000_0067_F0067_Asm() {
@@ -98,9 +96,8 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: DS = 0x2000.
     public virtual ushort unknown_F000_0072_F0072() {
         CheckExternalEvents(biosSegment, 0x0072);
-        BX = 0xEEE0;
         NearReturn();
-        return BX;
+        return 0xEEE0;
     }
 
     public virtual Action unknown_F000_0072_F0072_Asm() {

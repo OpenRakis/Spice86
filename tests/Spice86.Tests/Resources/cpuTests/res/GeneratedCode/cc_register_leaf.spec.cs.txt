@@ -65,9 +65,8 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00EB);
         BX = 0x2000;
         ES = 0x2000;
-        BX = 0x0100;
         NearReturn();
-        return (BX, ES);
+        return (0x0100, ES);
     }
 
     public virtual Action unknown_F000_00EB_F00EB_Asm() {

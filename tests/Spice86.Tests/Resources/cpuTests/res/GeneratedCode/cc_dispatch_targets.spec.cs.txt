@@ -17,9 +17,8 @@ public partial class CfgGeneratedOverrides {
         ushort word2;
         CheckExternalEvents(biosSegment, 0x0045);
         word2 = word1;
-        AX = (ushort)(word2 + 5);
         NearReturn();
-        return AX;
+        return (ushort)(word2 + 5);
     }
 
     public virtual Action unknown_F000_0045_F0045_Asm() {
@@ -32,9 +31,8 @@ public partial class CfgGeneratedOverrides {
         ushort word2;
         CheckExternalEvents(biosSegment, 0x004D);
         word2 = word1;
-        CX = (ushort)(word2 + 7);
         NearReturn();
-        return CX;
+        return (ushort)(word2 + 7);
     }
 
     public virtual Action unknown_F000_004D_F004D_Asm() {

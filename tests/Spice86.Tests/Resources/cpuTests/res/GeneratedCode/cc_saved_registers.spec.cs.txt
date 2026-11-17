@@ -79,11 +79,9 @@ public partial class CfgGeneratedOverrides {
         Stack.Save(SI, DI);
         NearCall(biosSegment, 0x00B9, unknown_F000_00E1_F00E1Entry);
         if (word2 != 0) {
-            DI = Stack.Pop16();
-            AX = 7;
-            SI = Stack.Pop16();
+            (DI, SI) = Stack.Restore2();
             NearReturn();
-            return (AX, SI, DI);
+            return (7, SI, DI);
         }
         (DI, SI) = Stack.Restore2();
         NearReturn();

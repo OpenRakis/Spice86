@@ -187,10 +187,9 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0x00C4);
         Stack.Push16(BX);
         word2 = word1;
-        AX = (ushort)(word2 + word2);
         Stack.Release(1);
         NearReturn();
-        return AX;
+        return (ushort)(word2 + word2);
     }
 
     public virtual Action unknown_F000_00C4_F00C4_Asm() {

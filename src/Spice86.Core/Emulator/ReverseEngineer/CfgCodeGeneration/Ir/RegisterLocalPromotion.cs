@@ -12,6 +12,8 @@ using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
@@ -68,7 +70,8 @@ internal static partial class RegisterLocalPromotion {
     public static RegisterLocalPlan Plan(IrMethod method, IrSsa ssa, IReadOnlySet<string> reservedNames,
         IReadOnlySet<IVisitableAstNode> unprinted, TypedSignature? signature,
         TypedSignatures? typedSignatures,
-        Func<IrStatement, CpuValues, bool> callPreserves, RoleNames.RoleNameContext roles) {
+        Func<IrStatement, CpuValues, bool> callPreserves, RoleNames.RoleNameContext roles,
+        GenerationPolicy policy) {
         Dictionary<IVisitableAstNode, SubstitutedRead> reads = new(ReferenceEqualityComparer.Instance);
         List<LocalDeclarationNode> declarations = [];
         HashSet<string> declared = new(StringComparer.Ordinal);
@@ -240,6 +243,8 @@ internal static partial class RegisterLocalPromotion {
             && item.Candidate.Register is RegisterNode)],
             reservedNames, declared, reads, declarations, writeBacks,
             dropped, replacements);
+        Dictionary<ProcedureReturnHelperNode, IReadOnlyList<ReturnExpression?>> returnExpressions =
+            new(ReferenceEqualityComparer.Instance);
         if (signature is { } returnSignature) {
             foreach ((Candidate candidate, string name, bool signed,
                     ProcedureReturnHelperNode helper, int element) in returnServed) {
@@ -249,13 +254,60 @@ internal static partial class RegisterLocalPromotion {
                 }
                 texts[element] = ReturnText(candidate, name, signed, reads);
             }
+            PlanReturnExpressions(method, ssa, returnSignature, returnOutputs, dropped,
+                returnExpressions, policy);
         }
         return new RegisterLocalPlan(reads, declarations, writeBacks, dropped, replacements,
             accepted.Select(item => item.Candidate.Parameter).OfType<TypedParameter>().ToHashSet(),
             PlanCallOutputs(method, ssa, typedSignatures, promotedCallOutputs),
             returnOutputs.ToDictionary<KeyValuePair<ProcedureReturnHelperNode, string?[]>,
                 ProcedureReturnHelperNode, IReadOnlyList<string?>>(
-                pair => pair.Key, pair => pair.Value, ReferenceEqualityComparer.Instance));
+                pair => pair.Key, pair => pair.Value, ReferenceEqualityComparer.Instance),
+            returnExpressions);
+    }
+
+    /// <summary>The output elements a typed <c>return</c> serves from a merged assignment: a
+    /// plain <c>R = e</c> whose version's only live use is the exit's read of the output prints
+    /// <c>return e;</c> and the assignment goes (<see cref="IrExpressionPropagation.MergedIntoReturn"/>
+    /// proves the merge legal). The writer's statement node joins <paramref name="dropped"/> so the
+    /// printed body removes it. An element a promoted local already serves keeps the local.</summary>
+    private static void PlanReturnExpressions(IrMethod method, IrSsa ssa, TypedSignature signature,
+        Dictionary<ProcedureReturnHelperNode, string?[]> returnOutputs,
+        HashSet<IVisitableAstNode> dropped,
+        Dictionary<ProcedureReturnHelperNode, IReadOnlyList<ReturnExpression?>> returnExpressions,
+        GenerationPolicy policy) {
+        HashSet<ICfgNode> entryNodes = [.. method.Entries.Select(entry => entry.Node)];
+        IrMemoryAliasAnalysis alias = new(method, ssa, policy);
+        Dictionary<ProcedureReturnHelperNode, ReturnExpression?[]> merged = new(ReferenceEqualityComparer.Instance);
+        foreach (IrBlock block in method.Blocks) {
+            for (int i = 0; i < block.Statements.Count; i++) {
+                if (IrExpressionPropagation.MergedIntoReturn(block, i, entryNodes, ssa, alias)
+                        is not ({ } writer, { } register, { } expression, { } helper)
+                    || dropped.Contains(writer.Node)) {
+                    continue;
+                }
+                int element = -1;
+                for (int index = 0; index < signature.Outputs.Count; index++) {
+                    if (signature.Outputs[index].Mask == IrValueSets.Of(register)) {
+                        element = index;
+                    }
+                }
+                if (element < 0
+                    || (returnOutputs.TryGetValue(helper, out string?[]? texts)
+                        && texts[element] is not null)) {
+                    continue;
+                }
+                dropped.Add(writer.Node);
+                if (!merged.TryGetValue(helper, out ReturnExpression?[]? expressions)) {
+                    expressions = new ReturnExpression?[signature.Outputs.Count];
+                    merged[helper] = expressions;
+                }
+                expressions[element] = new ReturnExpression(expression, register.DataType);
+            }
+        }
+        foreach ((ProcedureReturnHelperNode helper, ReturnExpression?[] expressions) in merged) {
+            returnExpressions[helper] = expressions;
+        }
     }
 
     /// <summary>The unsigned text <paramref name="candidate"/>'s promoted web prints as a read:

@@ -379,12 +379,10 @@ public partial class CfgGeneratedOverrides {
                     VerifySpeculativeRunOrFail(cs1, 0x01D9, SpeculativeRun_01D9);
                     AX -= word4;
                     BX = AX;
-                    CX = 0;
                     DX = word3;
                     DX = Alu16.Sub(DX, DX);
-                    AX = 1;
                     NearReturn();
-                    return (AX, CX, DX, BX);
+                    return (1, 0, DX, BX);
                 }
             }
             VerifySpeculativeRunOrFail(cs1, 0x01E5, SpeculativeRun_01E5);
@@ -1159,12 +1157,11 @@ public partial class CfgGeneratedOverrides {
         VerifySpeculativeEntryOrFail(cs1, 0x0707, Signature_0707_jmp);
     L_0760:
         BX = frame.Local8;
-        AX = word7;
         UInt16[word5, BX] = index2;
         SP = index;
         (BP, DI, SI) = Stack.Restore3();
         NearReturn();
-        return (AX, word6, BP, SI, DI);
+        return (word7, word6, BP, SI, DI);
     }
 
     public virtual Action unknown_017E_069B_01E7B_Asm() {
@@ -1664,10 +1661,9 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeRunOrFail(cs1, 0x0A69, SpeculativeRun_0A69);
             index++;
         }
-        AX = index;
         (_, BX) = Stack.Restore2();
         NearReturn();
-        return (AX, BX);
+        return (index, BX);
     }
 
     public virtual Action unknown_017E_0A50_02230_Asm() {
@@ -3772,10 +3768,9 @@ public partial class CfgGeneratedOverrides {
             Alu16.And(DX, DX);
             if (DX != 0) {
                 VerifySpeculativeRunOrFail(cs1, 0x211C, SpeculativeRun_211C);
-                AX = 1;
                 (DX, BX) = Stack.Restore2();
                 NearReturn();
-                return (AX, CX, SI, DI);
+                return (1, CX, SI, DI);
             }
         }
         (AX, DX) = NearCall(cs1, 0x2125, () => unknown_017E_2257_03A37());
@@ -3791,10 +3786,9 @@ public partial class CfgGeneratedOverrides {
         AX = NearCall(cs1, 0x2133, () => unknown_017E_2280_03A60());
         DsGlobals.Word030A = AX;
     L_2136:
-        AX = 0;
         Stack.Release(2);
         NearReturn();
-        return (AX, CX, SI, DI);
+        return (0, CX, SI, DI);
     }
 
     public virtual Action unknown_017E_1BB5_03395_Asm() {
@@ -3871,11 +3865,10 @@ public partial class CfgGeneratedOverrides {
                 VerifySpeculativeEntryOrFail(cs1, 0x1C34, Signature_1C34_mov);
                 DsGlobals.Word038E = 0x000C;
             }
-            AX = DX;
             SP = index;
             (BP, DI, SI, CX) = Stack.Restore4();
             NearReturn();
-            return (AX, CX, BP, SI, DI);
+            return (DX, CX, BP, SI, DI);
         }
         VerifySpeculativeRunOrFail(cs1, 0x1C09, SpeculativeRun_1C09);
         AL = 2;
@@ -4033,14 +4026,13 @@ public partial class CfgGeneratedOverrides {
     L_1CD4:
         local12 = frame.Local12;
     L_1CD7:
-        AX = local12;
         SP = index;
         BP = Stack.Pop16();
         DS = Stack.Pop16();
         (DI, SI, CX) = Stack.Restore3();
         DX = local12;
         NearReturn();
-        return (AX, CX, word3, BP, SI, DS);
+        return (local12, CX, word3, BP, SI, DS);
     }
 
     public virtual Action unknown_017E_1C50_03430_Asm() {
@@ -4427,10 +4419,9 @@ public partial class CfgGeneratedOverrides {
                 }
                 UInt16[word2, BX] = DX;
                 if (DX != 0) {
-                    AX = 1;
                     (DX, _) = Stack.Restore2();
                     NearReturn();
-                    return (AX, DX);
+                    return (1, DX);
                 }
             }
         }
@@ -4615,10 +4606,9 @@ public partial class CfgGeneratedOverrides {
             goto L_207F;
         }
         if ((AL & 0x80) != 0) {
-            AX = 1;
             (DX, BX) = Stack.Restore2();
             NearReturn();
-            return AX;
+            return 1;
         }
     L_207F:
         VerifySpeculativeRunOrFail(cs1, 0x207F, SpeculativeRun_207F);
@@ -4948,10 +4938,9 @@ public partial class CfgGeneratedOverrides {
             VerifySpeculativeEntryOrFail(cs1, 0x2289, Signature_2289_xor);
             BX = 0;
         }
-        AX = BX;
         Stack.Release(2);
         NearReturn();
-        return AX;
+        return BX;
     }
 
     public virtual Action unknown_017E_2280_03A60_Asm() {

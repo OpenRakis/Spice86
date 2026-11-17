@@ -81,9 +81,8 @@ public partial class CfgGeneratedOverrides {
             return AX;
         }
         VerifySpeculativeRunOrFail(biosSegment, 0x0092, SpeculativeRun_0092);
-        AX = 9;
         NearReturn();
-        return AX;
+        return 9;
     }
 
     public virtual Action unknown_F000_008D_F008D_Asm() {

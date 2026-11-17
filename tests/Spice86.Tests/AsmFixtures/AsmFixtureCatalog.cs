@@ -1323,6 +1323,12 @@ internal static class AsmFixtureCatalog {
             result.Memory.UInt16[0x2000, 0x020A].Should().Be(0x1234, "jump way in: CX survives too (non-call way keeps all outputs)");
             result.Memory.UInt16[0x2000, 0x0214].Should().Be(0x55AA,
                 "the redirected ret lands on an entry that reads BX, so the callee's BX write survives");
+            result.Memory.UInt16[0x2000, 0x0216].Should().Be(0x0101,
+                "AX = DX is read by the return but DX is redefined before the ret: the merge is refused and AX keeps the popped value");
+            result.Memory.UInt16[0x2000, 0x021E].Should().Be(9,
+                "the caller reads DX, so the callee's DX redefinition stays live and still re-versions the operand");
+            result.Memory.UInt16[0x2000, 0x0218].Should().Be(0x0100,
+                "AX = [si] is read by the return but a store to [si] lies between: the merge is refused and AX keeps the loaded value");
         });
     }
 
