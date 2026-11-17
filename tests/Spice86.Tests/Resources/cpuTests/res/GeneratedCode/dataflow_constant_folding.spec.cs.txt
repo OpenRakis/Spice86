@@ -177,7 +177,6 @@ public partial class CfgGeneratedOverrides {
         result = NearCall(biosSegment, 0x00F2, () => unknown_F000_0186_F0186());
         SP += 2;
         Segment2000Globals.Word00D4 = result;
-        Segment2000Globals.Byte00D6 = 2;
         Segment2000Globals.Byte00D6 = 1;
         Segment2000Globals.Word0200 = 0xABCD;
         Segment2000Globals.Word00D8 = 0xABCD;

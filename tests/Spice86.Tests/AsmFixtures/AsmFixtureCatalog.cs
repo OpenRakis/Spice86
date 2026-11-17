@@ -996,13 +996,18 @@ internal static class AsmFixtureCatalog {
                 // the aliased read (46h), the callee (48h), the int 0 handler (4Ah). A removal
                 // that misses its condition shows as 0x2222 or 0x0000 there instead.
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
-                    ResultRegion(0x52,
+                    ResultRegion(0x66,
                         (0x20, 2, 0x2222), (0x22, 2, 0x3333), (0x24, 2, 0x1155),
                         (0x26, 2, 0x2222), (0x28, 2, 0x2222), (0x2A, 2, 0x2222),
                         (0x32, 2, 0x2222),
+                        (0x34, 2, 0x2222), (0x36, 2, 0x2222), (0x38, 2, 0x2222),
+                        (0x3A, 2, 0x1111), (0x3C, 2, 0x2222), (0x3E, 2, 0x2222),
                         (0x40, 2, 0x2222), (0x42, 2, 0x3333), (0x44, 2, 0x1155),
                         (0x46, 2, 0x1111), (0x48, 2, 0x1111), (0x4A, 2, 0x1111),
-                        (0x4C, 2, 0x2222), (0x4E, 2, 0x2222), (0x50, 2, 0x2222)));
+                        (0x4C, 2, 0x2222), (0x4E, 2, 0x2222), (0x50, 2, 0x2222),
+                        (0x52, 2, 0x2222), (0x54, 2, 0x2222), (0x56, 2, 0x1111),
+                        (0x58, 2, 0x2222), (0x5A, 2, 0x1111), (0x5C, 2, 0x1111),
+                        (0x60, 2, 0x2222), (0x62, 2, 0x2222), (0x64, 2, 0x1111)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());
