@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 
 using System.Linq;
 
@@ -67,9 +68,13 @@ internal static class IrExpressionPropagation {
                 ssa = editor.Rebind(method, "ssa rebind expression propagation");
                 alias = new IrMemoryAliasAnalysis(ssa, policy);
             }
-            if (covered[i] > 0
-                && TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {
-                removed.Add(i);
+            if (covered[i] > 0) {
+                if (TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {
+                    removed.Add(i);
+                } else if (TryComposeHalves(block, i, entryNodes, ssa, editor, covered, alias)
+                    is { } composedWriters) {
+                    removed.AddRange(composedWriters);
+                }
             }
         }
         foreach (int index in removed.OrderByDescending(index => index)) {
@@ -187,6 +192,178 @@ internal static class IrExpressionPropagation {
         covered[j] += covered[i];
         covered[i] = 0;
         return j;
+    }
+
+    /// <summary>A read of a multi-byte register whose reaching version is a chain of partial
+    /// definitions - byte halves written by plain assignments since the last full definition, in
+    /// either order - prints as the composed value: <c>AL = UInt8[word3, i]; AH = 0; SI = AX;</c>
+    /// becomes <c>SI = (ushort)(UInt8[word3, i] | 0 &lt;&lt; 8);</c>, which constant folding reduces
+    /// to the zero-extension. Every partial writer's version must be used only by the chain or the
+    /// reader, so the writers go away with the read; any other use - the wide register or one byte
+    /// read elsewhere - refuses. The legality is the merge's own: SameVersions and MemoryCrossable
+    /// for every moved expression, no fault, guard or entry point between the earliest writer and
+    /// the reader.</summary>
+    private static List<int>? TryComposeHalves(IrBlock block, int j, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa, IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
+        IrStatement reader = block.Statements[j];
+        if (entryNodes.Contains(reader.Origin)
+            || reader.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: ValueNode,
+                Right: RegisterNode readRegister
+            } assign) {
+            return null;
+        }
+        if (readRegister is SegmentRegisterNode) {
+            return null;
+        }
+        CpuValues readMask = IrValueSets.Of(readRegister);
+        if ((readMask & CpuValues.Sp) != CpuValues.None
+            || (IrEffectsVisitor.Of(assign.Left, false).Reads & readMask) != CpuValues.None
+            || (IrEffectsVisitor.Of(assign.Left, false).MayWrite & readMask) != CpuValues.None) {
+            return null;
+        }
+        uint readBits = IrSsaValues.ValueBits(readMask);
+        if (readBits == 0 || (readBits & (readBits - 1)) != 0
+            || (readMask & (readMask - 1)) == 0) {
+            // A single-byte read has nothing to compose.
+            return null;
+        }
+        IrSsaValue value = (IrSsaValue)System.Numerics.BitOperations.TrailingZeroCount(readBits);
+        int version = ssa.VersionUsed(reader, value);
+        if (version < 0 || ssa.Info(version).Kind != IrSsaDefinitionKind.PartialDefinition) {
+            return null;
+        }
+        // Walk the partial-definition chain back until every read byte is written.
+        List<(int Index, IrStatement Statement, CpuValues Mask, ValueNode Expression, int Version)>
+            writers = [];
+        CpuValues collected = CpuValues.None;
+        int cursor = version;
+        while ((readMask & ~collected) != CpuValues.None) {
+            IrSsaVersionInfo info = ssa.Info(cursor);
+            if (info.Kind != IrSsaDefinitionKind.PartialDefinition
+                || ssa.DefiningStatement(cursor) is not { } writer
+                || !block.Statements.Contains(writer)
+                || entryNodes.Contains(writer.Origin)
+                || writer.Node is not BinaryOperationNode {
+                    BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: RegisterNode writtenRegister,
+                    Right: ValueNode writtenExpression
+                }
+                || !Mergeable(writtenExpression)) {
+                return null;
+            }
+            CpuValues writtenMask = IrValueSets.Of(writtenRegister);
+            if ((writtenMask & readMask) == CpuValues.None
+                || (writtenMask & collected) != CpuValues.None) {
+                return null;
+            }
+            // The writer must define only the byte chain of this register's value.
+            if (ssa.Definitions(writer).Any(definition =>
+                    definition.Value != value || definition.Version != cursor)) {
+                return null;
+            }
+            writers.Add((IrSsa.PositionIn(block, writer), writer, writtenMask & readMask,
+                writtenExpression, cursor));
+            collected |= writtenMask & readMask;
+            cursor = info.Previous;
+        }
+        HashSet<IrStatement> chainSites = [.. writers.Select(writer => writer.Statement), reader];
+        foreach ((_, IrStatement writer, _, _, int writerVersion) in writers) {
+            if (ssa.LiveUses(writerVersion).Any(use => use.Statement is null
+                    || !chainSites.Contains(use.Statement))) {
+                return null;
+            }
+        }
+        int first = writers.Min(writer => writer.Index);
+        for (int k = first; k <= j; k++) {
+            IrStatement between = block.Statements[k];
+            if (between.Effects.MayFault
+                || between.Node is SpeculativeGuardNode or PatchedCallGuardNode) {
+                return null;
+            }
+        }
+        foreach ((int index, _, _, ValueNode expression, _) in writers) {
+            IrEffects moved = IrEffectsVisitor.Of(expression, false);
+            IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
+            if (moved.TouchesMemory) {
+                tokens |= IrTokens.Io;
+            }
+            if (!ssa.SameVersions(moved.Reads, tokens, (block, index + 1), (block, j))
+                || !MemoryCrossable(block, index, j, moved, ssa, alias)) {
+                return null;
+            }
+        }
+        ValueNode composed = Compose(writers, readRegister.DataType);
+        ValueNode folded = (ValueNode)IrConstantFolder.FoldConstantTerms(composed);
+        folded = Unwiden(folded);
+        if (CountNodes(folded) > MaxMergedNodes
+            || (writers.Sum(writer => covered[writer.Index]) + covered[j] > MaxChainLength
+                && CountNodes(folded) >= CountNodes(composed))) {
+            return null;
+        }
+        editor.Replace(block, j,
+            IrStatement.Create(assign with { Right = folded }, reader.Origin));
+        foreach ((int index, _, _, _, _) in writers) {
+            covered[j] += covered[index];
+            covered[index] = 0;
+        }
+        if (!ssa.IsStale) {
+            ssa.RecomputeLiveness();
+        }
+        return [.. writers.Select(writer => writer.Index)];
+    }
+
+    /// <summary><c>(ushort)(lo | hi &lt;&lt; 8)</c> over the partial definitions' expressions,
+    /// each shifted to its byte offset inside the read register.</summary>
+    private static ValueNode Compose(
+        List<(int Index, IrStatement Statement, CpuValues Mask, ValueNode Expression, int Version)>
+            writers, DataType dataType) {
+        ValueNode? result = null;
+        foreach ((_, _, CpuValues mask, ValueNode expression, _) in writers
+                 .OrderBy(writer => System.Numerics.BitOperations.TrailingZeroCount((ulong)writer.Mask))) {
+            int shift = (int)(System.Numerics.BitOperations.TrailingZeroCount((ulong)mask) % 4) * 8;
+            if (ConstantEvaluation.Resolved(Unwiden(expression)) is { Value: 0 }) {
+                continue;
+            }
+            int width = System.Numerics.BitOperations.PopCount(
+                (ulong)mask >> System.Numerics.BitOperations.TrailingZeroCount((ulong)mask)) / 8;
+            // Convert to the width the writer covers, not the read's: a (ushort) around a byte
+            // arithmetic right side would lose the byte truncation its value semantics require.
+            DataType termType = width switch { 1 => DataType.UINT8, 2 => DataType.UINT16,
+                _ => DataType.UINT32 };
+            ValueNode operand = expression;
+            while (operand is TypeConversionNode { Value: { } inner }
+                   && inner.DataType.BitWidth <= operand.DataType.BitWidth) {
+                operand = inner;
+            }
+            ValueNode term = operand.DataType == termType
+                ? operand
+                : new TypeConversionNode(termType, operand);
+            if (shift != 0) {
+                term = new BinaryOperationNode(dataType, term, BinaryOperation.LEFT_SHIFT,
+                    new ConstantNode(DataType.INT32, (ulong)shift));
+            }
+            result = result is null
+                ? term
+                : new BinaryOperationNode(dataType, result, BinaryOperation.BITWISE_OR, term);
+        }
+        result ??= new ConstantNode(dataType, 0);
+        return result.DataType.BitWidth <= dataType.BitWidth
+            ? result
+            : new TypeConversionNode(dataType, result);
+    }
+
+    /// <summary><paramref name="node"/> without outer conversions that only widen an already
+    /// narrower value: the byte writers' expressions arrive already extended
+    /// (<c>(uint)read</c>), which would print as nested casts under the composed conversion.</summary>
+    private static ValueNode Unwiden(ValueNode node) {
+        while (node is TypeConversionNode { Value: { } inner }
+               && Unwiden(inner) is { } candidate
+               && candidate.DataType.BitWidth <= node.DataType.BitWidth) {
+            node = candidate;
+        }
+        return node;
     }
 
     /// <summary>Whether the moved expression's memory reads can cross the statements between the

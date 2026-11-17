@@ -1031,7 +1031,7 @@ internal static class AsmFixtureCatalog {
                         machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286
                 }, WideOperationsRegion());
             case "dataflow_legality_traps":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x96,
                     (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
                     (0x0A, 1, 0x97), (0x0C, 2, 0x0001), (0x0E, 2, 0x0002), (0x10, 2, 0x0001),
                     (0x12, 2, 0xBEEF), (0x14, 2, 0x0000), (0x16, 1, 0x11), (0x18, 2, 0x0012),
@@ -1052,7 +1052,11 @@ internal static class AsmFixtureCatalog {
                     (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077),
                     (0x49, 1, 0x55), (0x4B, 1, 0x66), (0x57, 1, 0x77), (0x5C, 1, 0xAA),
                     (0x4D, 1, 0x11),
-                    (0x60, 2, 0x0000), (0x64, 2, 0x0000)));
+                    (0x60, 2, 0x0000), (0x64, 2, 0x0000),
+                    (0x80, 2, 0x1234), (0x82, 2, 0x7856), (0x84, 2, 0x009E),
+                    (0x86, 2, 0x0107), (0x88, 2, 0x0407), (0x8A, 2, 0x0000),
+                    (0x8C, 2, 0x0007), (0x8E, 2, 0x009A), (0x90, 2, 0x009A),
+                    (0x92, 2, 0x0077), (0x94, 1, 0x77)));
             case "data_globals":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x53,
                     (0x10, 1, 0x11), (0x11, 1, 0x22), (0x12, 1, 0x33),

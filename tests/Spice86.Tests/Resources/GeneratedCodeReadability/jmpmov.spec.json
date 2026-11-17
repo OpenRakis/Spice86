@@ -31,7 +31,7 @@
     },
     "maximum": {
       "BookkeepingCalls": 0,
-      "Casts": 0,
+      "Casts": 1,
       "InterruptCallReturnedElsewhere": 0,
       "InterruptCalls": 0,
       "LocalReads": 5,

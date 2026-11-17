@@ -5,13 +5,13 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        74
+        760
       ],
       "entries": [
         {
-          "block": 74,
-          "address": "F000:0381",
-          "kind": "functionEntry"
+          "block": 760,
+          "address": "F000:03DB",
+          "kind": "returnTargetEntry"
         }
       ]
     },
@@ -20,12 +20,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        299
+        74
       ],
       "entries": [
         {
-          "block": 299,
-          "address": "F000:0383",
+          "block": 74,
+          "address": "F000:0411",
           "kind": "functionEntry"
         }
       ]
@@ -35,12 +35,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        494
+        754
       ],
       "entries": [
         {
-          "block": 494,
-          "address": "F000:0387",
+          "block": 754,
+          "address": "F000:0413",
           "kind": "executionContextEntry"
         }
       ]
@@ -50,18 +50,48 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        534
+        299
       ],
       "entries": [
         {
-          "block": 534,
-          "address": "F000:0394",
-          "kind": "executionContextEntry"
+          "block": 299,
+          "address": "F000:0424",
+          "kind": "functionEntry"
         }
       ]
     },
     {
       "id": 5,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        543
+      ],
+      "entries": [
+        {
+          "block": 543,
+          "address": "F000:0428",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        583
+      ],
+      "entries": [
+        {
+          "block": 583,
+          "address": "F000:0435",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -120,41 +150,68 @@
   "transfers": [
     {
       "kind": "alignedReturn",
-      "fromPartition": 1,
-      "toPartition": 5,
+      "fromPartition": 2,
+      "toPartition": 7,
       "fromBlock": 74,
       "toBlock": 139,
-      "from": "F000:0382",
+      "from": "F000:0412",
       "target": "F000:00CE"
     },
     {
+      "kind": "dynamicReturn",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 754,
+      "toBlock": 760,
+      "from": "F000:0423",
+      "target": "F000:03DB"
+    },
+    {
       "kind": "alignedReturn",
-      "fromPartition": 2,
-      "toPartition": 5,
+      "fromPartition": 4,
+      "toPartition": 7,
       "fromBlock": 299,
       "toBlock": 303,
-      "from": "F000:0386",
+      "from": "F000:0427",
       "target": "F000:01AF"
     },
     {
-      "kind": "callOut",
-      "fromPartition": 5,
+      "kind": "crossPartitionFlow",
+      "fromPartition": 7,
       "toPartition": 1,
+      "fromBlock": 475,
+      "toBlock": 760,
+      "from": "F000:03D7",
+      "target": "F000:03DB"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 7,
+      "toPartition": 2,
       "fromBlock": 69,
       "toBlock": 74,
       "from": "F000:00CB",
-      "target": "F000:0381",
+      "target": "F000:0411",
       "callContinuationBlock": 139,
       "callContinuationAddress": "F000:00CE"
     },
     {
+      "kind": "cpuFault",
+      "fromPartition": 7,
+      "toPartition": 3,
+      "fromBlock": 475,
+      "toBlock": 754,
+      "from": "F000:03D7",
+      "target": "F000:0413"
+    },
+    {
       "kind": "callOut",
-      "fromPartition": 5,
-      "toPartition": 2,
+      "fromPartition": 7,
+      "toPartition": 4,
       "fromBlock": 232,
       "toBlock": 299,
       "from": "F000:01AD",
-      "target": "F000:0383",
+      "target": "F000:0424",
       "callContinuationBlock": 303,
       "callContinuationAddress": "F000:01AF"
     }

@@ -28,9 +28,7 @@ public partial class CfgGeneratedOverrides {
         Segment1000Globals.Word2600 = 0x1001;
         SS = 0x1001;
         Segment1000Globals.Word2601 = SS;
-        DL = Segment1000Globals.Byte2601;
-        DH = 0;
-        DI = DX;
+        DI = (ushort)Segment1000Globals.Byte2601;
         BP = 0x2506;
         if (SsUInt16[0x2506 + DI - 0x16] != 0xFBE1) {
             throw FailAsUntested($"Untested near jump target 0x{SsUInt16[BP + DI - 0x16]:X4} at E342:EC05");
