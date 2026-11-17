@@ -14,7 +14,10 @@ internal enum GenerationRelaxation {
     UnknownMemoryIsRam = 1,
     /// <summary>An indexed access whose offset range is unproved is assumed not to wrap the
     /// segment end; a constant or proved range that crosses stays a fact.</summary>
-    AccessesStayInSegment = 2
+    AccessesStayInSegment = 2,
+    /// <summary>Bytes a private typed stack argument occupied are not observed after the call
+    /// returns: the site reserves the same stack space without writing the argument bytes.</summary>
+    AbandonedStackSlotsUnobserved = 4
 }
 
 /// <summary>The immutable set of relaxations the whole generation run shares: effects, SSA,
@@ -33,6 +36,11 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
     public bool AssumeAccessesStayInSegment =>
         Relaxations.HasFlag(GenerationRelaxation.AccessesStayInSegment);
 
+    /// <summary>Whether private typed stack argument bytes are assumed unobserved after the
+    /// call returns, letting the call site reserve their stack space without writing them.</summary>
+    public bool AssumeAbandonedStackSlotsUnobserved =>
+        Relaxations.HasFlag(GenerationRelaxation.AbandonedStackSlotsUnobserved);
+
     /// <summary>The policy name the differential report and the golden key record: the relaxation
     /// names joined, or <c>strict</c> when none is enabled.</summary>
     public string Name => Relaxations == GenerationRelaxation.None
@@ -45,7 +53,8 @@ internal sealed record GenerationPolicy(GenerationRelaxation Relaxations) {
     /// <summary>The golden-key suffix part of each relaxation, in flag order.</summary>
     private static readonly (GenerationRelaxation Flag, string Suffix)[] GoldenSuffixParts = [
         (GenerationRelaxation.UnknownMemoryIsRam, ".ram"),
-        (GenerationRelaxation.AccessesStayInSegment, ".seg")];
+        (GenerationRelaxation.AccessesStayInSegment, ".seg"),
+        (GenerationRelaxation.AbandonedStackSlotsUnobserved, ".stk")];
 
     /// <summary>The golden-key suffix of the policy: each enabled relaxation's suffix part
     /// concatenated in flag order, empty in strict mode.</summary>

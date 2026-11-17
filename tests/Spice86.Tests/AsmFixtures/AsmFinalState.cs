@@ -19,6 +19,10 @@ internal sealed record AsmFinalState(byte[] Ram,
     /// interrupt the run executed, recorded by <see cref="SoftwareInterruptRecorder"/>.</summary>
     public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> SoftwareInterrupts { get; init; } = [];
 
+    /// <summary>The <c>call</c> instruction address and pre-call SS:SP of every call the run
+    /// executed, recorded by <see cref="StackCallRecorder"/>.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> Calls { get; init; } = [];
+
     /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
     /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
     /// <param name="run">The finished run.</param>
@@ -46,7 +50,9 @@ internal sealed record AsmFinalState(byte[] Ram,
         }
         return new AsmFinalState(ram, regions) {
             SoftwareInterrupts = run.Result.Observations
-                .Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation).Interrupts
+                .Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation).Interrupts,
+            Calls = run.Result.Observations
+                .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Calls
         };
     }
 }

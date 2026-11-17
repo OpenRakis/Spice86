@@ -183,7 +183,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (probeReportPath is null) {
             RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey,
                 discoveryFinalState, interpretedStates,
-                new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites));
+                new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites),
+                generatedProgram.StackSpaceCallSites);
             return generatedProgram;
         }
 
@@ -191,7 +192,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Sources);
         RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey,
             discoveryFinalState, interpretedStates,
-            new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites));
+            new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites),
+            generatedProgram.StackSpaceCallSites);
         GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
             GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
         return generatedProgram;
@@ -206,7 +208,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
         IOverrideSupplier supplier, AsmRunSettings discoverySettings, string goldenKey,
         AsmFinalState discoveryFinalState,
         IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
-        IReadOnlySet<SegmentedAddress> framelessServiceCallSites) {
+        IReadOnlySet<SegmentedAddress> framelessServiceCallSites,
+        IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> stackSpaceCallSites) {
         foreach ((Func<AsmRunScope>? prepare, string? skipReason) in executions) {
             if (skipReason is not null) {
                 GeneratedCodeDifferentialReport.AppendSkipped(goldenKey, skipReason);
@@ -227,7 +230,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
                 discoveryFinalState, interpretedStates);
             GeneratedCodeDifferentialReport.Check(goldenKey,
                 execution.Fixture.Settings.GenerationPolicy, baseline,
-                AsmFinalState.Capture(run, execution.Fixture.Settings), framelessServiceCallSites);
+                AsmFinalState.Capture(run, execution.Fixture.Settings), framelessServiceCallSites,
+                stackSpaceCallSites);
         }
     }
 

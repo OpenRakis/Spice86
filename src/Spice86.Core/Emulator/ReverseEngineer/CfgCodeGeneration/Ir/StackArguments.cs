@@ -51,6 +51,7 @@ internal sealed class StackArguments {
     private readonly Dictionary<string, IrFrames> _frames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _aboveFrame = new(StringComparer.Ordinal);
     private readonly HashSet<string> _deciding = new(StringComparer.Ordinal);
+    private readonly List<(SegmentedAddress Address, int ArgumentBytes)> _spaceCallSites = [];
     private List<CfgCodePartitionEntry>? _handlerRoots;
 
     private StackArguments(CfgGeneratorContext context, HardwareInterruptEffectBuilder effectBuilder,
@@ -87,7 +88,7 @@ internal sealed class StackArguments {
     /// helper performs.</summary>
     internal sealed record StackCallMerge(IReadOnlyList<ICfgNode> PushOrigins,
         IReadOnlyList<ValueNode> Arguments, ICfgNode? CleanupOrigin, int CleanupBytes,
-        TypedSignature Signature, string MethodName);
+        TypedSignature Signature, string MethodName, SegmentedAddress CallAddress);
 
     /// <summary>The parameter plan of <paramref name="methodName"/>, or null when the method keeps
     /// memory reads for its argument slots.</summary>
@@ -98,6 +99,15 @@ internal sealed class StackArguments {
     /// keeps the push / call / <c>add sp</c> form.</summary>
     internal StackCallMerge? MergeFor(ProcedureCallHelperNode call) =>
         _merges.TryGetValue(call, out StackCallMerge? merge) ? merge : null;
+
+    /// <summary>The generation policy this analysis planned under, shared by every consumer.</summary>
+    internal GenerationPolicy Policy => _context.Policy;
+
+    /// <summary>The call instruction address and reserved argument bytes of every merge that
+    /// folded while the abandoned-stack-slots relaxation was enabled: the sites whose printed
+    /// <c>CallWithStackSpace</c> skips the argument-byte writes. Empty under strict mode.</summary>
+    internal IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> SpaceCallSites =>
+        _spaceCallSites;
 
     /// <summary>Computes the plan of every method of the program, after the typed signatures.</summary>
     public static StackArguments Compute(IReadOnlyList<PreparedMethod> methods,
@@ -412,7 +422,7 @@ internal sealed class StackArguments {
         foreach (IrBlock block in prepared.IrMethod.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
                 IrStatement statement = block.Statements[index];
-                if (statement.Origin is not CfgInstruction { IsCall: true }) {
+                if (statement.Origin is not CfgInstruction { IsCall: true } callInstruction) {
                     continue;
                 }
                 ProcedureCallHelperNode? call = IrAstChildren.Descendants(statement.Node)
@@ -427,7 +437,7 @@ internal sealed class StackArguments {
                     continue;
                 }
                 StackCallMerge? merge = MatchPushes(prepared, block, index, plan, signature,
-                    group.MethodName);
+                    group.MethodName, callInstruction.Address);
                 if (merge is null) {
                     _plans.Remove(group.MethodName);
                     foreach (ProcedureCallHelperNode earlier in _merges
@@ -446,7 +456,8 @@ internal sealed class StackArguments {
     /// <c>Parameters.Count</c> pushes in the run ending at the call, over neutral statements only.
     /// Returns null when the run does not cover every slot.</summary>
     private StackCallMerge? MatchPushes(PreparedMethod prepared, IrBlock block, int callIndex,
-        StackArgumentPlan plan, TypedSignature signature, string methodName) {
+        StackArgumentPlan plan, TypedSignature signature, string methodName,
+        SegmentedAddress callAddress) {
         IReadOnlyList<IrStatement> statements = block.Statements;
         List<IrStatement> pushes = [];
         CpuValues blockedReads = CpuValues.None;
@@ -482,7 +493,7 @@ internal sealed class StackArguments {
             cleanupBytes = cleanup;
         }
         return new StackCallMerge([.. pushes.Select(push => push.Origin)], arguments,
-            cleanupOrigin, cleanupBytes, signature, methodName);
+            cleanupOrigin, cleanupBytes, signature, methodName, callAddress);
     }
 
     /// <summary>The bytes of a dead-flag <c>add sp,n</c>, or null when the statement is not such a
@@ -657,6 +668,10 @@ internal sealed class StackArguments {
                                 && ReferenceEquals(owner, candidate)));
                     if (allFolded) {
                         folded[call] = candidate;
+                        if (_context.Policy.AssumeAbandonedStackSlotsUnobserved) {
+                            _spaceCallSites.Add((candidate.CallAddress,
+                                candidate.Arguments.Count * 2));
+                        }
                         foreach (InstructionBoundaryNode foldedBoundary in boundaries.Where(
                                 boundary => byOrigin.TryGetValue(boundary.Node,
                                         out StackCallMerge? owner)

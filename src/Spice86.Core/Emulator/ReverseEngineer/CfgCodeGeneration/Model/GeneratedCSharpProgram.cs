@@ -84,5 +84,14 @@ internal sealed class GeneratedCSharpProgram {
     /// such a frame occupies below the recorded caller stack pointer.</summary>
     public IReadOnlyList<SegmentedAddress> FramelessServiceCallSites { get; init; } = [];
 
+    /// <summary>The <c>call</c> instruction address and reserved argument bytes of every
+    /// <c>CallWithStackSpace</c> site the program contains: the bytes the interpreted run's
+    /// argument pushes wrote and the relaxed run only reserves. The differential gate excludes
+    /// exactly that many bytes above the stack pointer the interpreted run had at the call, and
+    /// only under the abandoned-stack-slots relaxation. Empty otherwise.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> StackSpaceCallSites {
+        get; init;
+    } = [];
+
 
 }

@@ -1174,10 +1174,60 @@ public class CSharpOverrideHelper {
     /// <returns>The value the typed callee returned.</returns>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public T CallWithStackArguments<T>(ushort expectedReturnCs, ushort expectedReturnIp,
-        int cleanupBytes, Func<T> typedCall, params ushort[] arguments) {
+        int cleanupBytes, Func<T> typedCall, params ushort[] arguments) =>
+        CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            arguments, 0);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it: steps SP
+    /// by <paramref name="argumentBytes"/> exactly as the pushes of
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/> would, but
+    /// leaves the bytes untouched because the callee reads them as parameters and the slots are
+    /// proved private. Generated code calls this only under the
+    /// <c>AbandonedStackSlotsUnobserved</c> relaxation.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackSpace<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int argumentBytes, Func<T> typedCall) =>
+        CallWithStackSpace(expectedReturnCs, expectedReturnIp, 0, argumentBytes, typedCall);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it: same
+    /// stack contract as
+    /// <see cref="CallWithStackSpace{T}(ushort, ushort, int, Func{T})"/> plus the caller's
+    /// <paramref name="cleanupBytes"/> step afterwards.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackSpace<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, int argumentBytes, Func<T> typedCall) =>
+        CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            [], argumentBytes);
+
+    /// <summary>The shared body of <c>CallWithStackArguments</c> and <c>CallWithStackSpace</c>:
+    /// pushes <paramref name="arguments"/>, reserves <paramref name="reserveBytes"/> of unwritten
+    /// stack space, performs the typed call, then steps SP by <paramref name="cleanupBytes"/>.
+    /// </summary>
+    private T CallWithStackArgumentsCore<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Func<T> typedCall, ushort[] arguments, int reserveBytes) {
         for (int index = arguments.Length - 1; index >= 0; index--) {
             Stack.Push16(arguments[index]);
         }
+        State.SP = (ushort)(State.SP - reserveBytes);
         T result = ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
             BitWidth.WORD_16, typedCall);
         State.SP = (ushort)(State.SP + cleanupBytes);
@@ -1211,10 +1261,48 @@ public class CSharpOverrideHelper {
     /// <param name="arguments">The argument words in callee slot order.</param>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public void CallWithStackArguments(ushort expectedReturnCs, ushort expectedReturnIp,
-        int cleanupBytes, Action typedCall, params ushort[] arguments) {
+        int cleanupBytes, Action typedCall, params ushort[] arguments) =>
+        CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            arguments, 0);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it, for a
+    /// callee that returns no value: same stack contract as
+    /// <see cref="CallWithStackSpace{T}(ushort, ushort, int, int, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackSpace(ushort expectedReturnCs, ushort expectedReturnIp,
+        int argumentBytes, Action typedCall) =>
+        CallWithStackSpace(expectedReturnCs, expectedReturnIp, 0, argumentBytes, typedCall);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it, for a
+    /// callee that returns no value and whose caller pops <paramref name="cleanupBytes"/> after
+    /// the call.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackSpace(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, int argumentBytes, Action typedCall) =>
+        CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            [], argumentBytes);
+
+    /// <summary>The shared void body of <c>CallWithStackArguments</c> and
+    /// <c>CallWithStackSpace</c>.</summary>
+    private void CallWithStackArgumentsCore(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Action typedCall, ushort[] arguments, int reserveBytes) {
         for (int index = arguments.Length - 1; index >= 0; index--) {
             Stack.Push16(arguments[index]);
         }
+        State.SP = (ushort)(State.SP - reserveBytes);
         ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false,
             BitWidth.WORD_16, typedCall);
         State.SP = (ushort)(State.SP + cleanupBytes);

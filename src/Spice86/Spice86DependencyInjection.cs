@@ -506,6 +506,9 @@ public class Spice86DependencyInjection : IDisposable {
         if (configuration.GeneratedCodeAssumeAccessesStayInSegment) {
             relaxations |= GenerationRelaxation.AccessesStayInSegment;
         }
+        if (configuration.GeneratedCodeAssumeAbandonedStackSlotsUnobserved) {
+            relaxations |= GenerationRelaxation.AbandonedStackSlotsUnobserved;
+        }
         GenerationPolicy generationPolicy = new(relaxations);
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(false, false,
             configuration.GeneratedCodeAsmComments, generationPolicy), loggerService);

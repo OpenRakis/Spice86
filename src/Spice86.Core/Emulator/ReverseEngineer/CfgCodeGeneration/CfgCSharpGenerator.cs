@@ -365,7 +365,8 @@ internal sealed class CfgCSharpGenerator {
                     .Where(block => block.Terminator is IrExit {
                         Transfer: ReturnNode { Value: InterruptServiceCallNode {
                             Contract.Transfer: ServiceTransferKind.Terminates } } })
-                    .Select(block => block.Terminator.Origin.Address))]
+                    .Select(block => block.Terminator.Origin.Address))],
+            StackSpaceCallSites = [.. analysis.StackArguments.SpaceCallSites]
         };
     }
 

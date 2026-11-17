@@ -72,7 +72,7 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="generated">Final state of the generated run.</param>
     public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
         AsmFinalState generated) =>
-        Check(goldenKey, policy, emulated, generated, new HashSet<SegmentedAddress>());
+        Check(goldenKey, policy, emulated, generated, new HashSet<SegmentedAddress>(), []);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
     /// to the report and fails when their compared final states differ, excluding from the RAM
@@ -87,7 +87,30 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="framelessServiceCallSites">The generated program's
     /// <c>FramelessServiceCallSites</c>.</param>
     public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
-        AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites) {
+        AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites) =>
+        Check(goldenKey, policy, emulated, generated, framelessServiceCallSites, []);
+
+    /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
+    /// to the report and fails when their compared final states differ. Two exclusion shapes apply:
+    /// the six bytes below the recorded caller stack pointer of every software interrupt whose
+    /// address is a generated frameless service call site, and - only when
+    /// <paramref name="policy"/> enables the abandoned-stack-slots relaxation - the reserved
+    /// argument bytes of every executed call whose address is a generated
+    /// <c>CallWithStackSpace</c> site, starting at the stack pointer the interpreted run had when
+    /// it reached that call. Those are exactly the bytes the typed call's omitted frame or
+    /// argument writes would have occupied. Extended regions and every other RAM byte still
+    /// decide.</summary>
+    /// <param name="goldenKey">Key of the fixture that produced both states.</param>
+    /// <param name="policy">The generation policy the comparison ran under.</param>
+    /// <param name="emulated">Final state of the interpreted run.</param>
+    /// <param name="generated">Final state of the generated run.</param>
+    /// <param name="framelessServiceCallSites">The generated program's
+    /// <c>FramelessServiceCallSites</c>.</param>
+    /// <param name="stackSpaceCallSites">The generated program's <c>StackSpaceCallSites</c>: call
+    /// instruction addresses with the argument bytes each reserved.</param>
+    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
+        AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites,
+        IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> stackSpaceCallSites) {
         List<(int Start, int Length)> excluded = [];
         foreach ((SegmentedAddress address, SegmentedAddress stackPointer) in emulated.SoftwareInterrupts) {
             if (!framelessServiceCallSites.Contains(address) || stackPointer.Linear < 6
@@ -99,6 +122,20 @@ internal static class GeneratedCodeDifferentialReport {
                 excluded.Add(range);
             }
         }
+        if (policy.AssumeAbandonedStackSlotsUnobserved) {
+            foreach ((SegmentedAddress address, SegmentedAddress stackPointer) in emulated.Calls) {
+                foreach ((SegmentedAddress site, int argumentBytes) in stackSpaceCallSites) {
+                    if (!site.Equals(address) || argumentBytes <= 0
+                        || stackPointer.Linear + argumentBytes > emulated.Ram.Length) {
+                        continue;
+                    }
+                    (int Start, int Length) range = ((int)stackPointer.Linear, argumentBytes);
+                    if (!excluded.Contains(range)) {
+                        excluded.Add(range);
+                    }
+                }
+            }
+        }
         byte[] generatedRam = generated.Ram;
         if (excluded.Count > 0) {
             generatedRam = (byte[])generated.Ram.Clone();
@@ -108,7 +145,7 @@ internal static class GeneratedCodeDifferentialReport {
         }
         string excludedText = excluded.Count == 0
             ? string.Empty
-            : $" | excluded frame bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
+            : $" | excluded bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
         string ram = DescribeRam(emulated.Ram, generatedRam);
         string extended = DescribeExtended(emulated, generated);
         string line = ram == "none" && extended == "none"

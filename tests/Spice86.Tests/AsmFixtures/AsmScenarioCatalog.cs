@@ -613,9 +613,15 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("cc_dispatch_targets"),
             PartitionScenario("cc_call_32bit"),
             PartitionScenario("cc_stack_frames"),
+            AsmScenario.FromFixture("cc_stack_frames",
+                () => AsmFixtureCatalog.Partition("cc_stack_frames")
+                    .WithGenerationPolicy(RelaxedStackPolicy)),
             PartitionScenario("cc_saved_registers"),
             PartitionScenario("cc_call_shapes"),
             PartitionScenario("cc_calls_keep_stack_offset"),
+            AsmScenario.FromFixture("cc_calls_keep_stack_offset",
+                () => AsmFixtureCatalog.Partition("cc_calls_keep_stack_offset")
+                    .WithGenerationPolicy(RelaxedStackPolicy)),
             PartitionScenario("cc_stack_offset_joins"),
             PartitionScenario("cc_untyped_call_passthrough"),
             PartitionScenario("dataflow_stack_save_restore"),
@@ -707,4 +713,10 @@ internal static class AsmScenarioCatalog {
     /// range is assumed not to wrap the segment end.</summary>
     private static readonly GenerationPolicy RelaxedSegmentPolicy =
         new(GenerationRelaxation.AccessesStayInSegment);
+
+    /// <summary>The abandoned-stack-slots relaxation: a private typed stack argument's bytes are
+    /// assumed unobserved after the call, so the site reserves their space without writing
+    /// them.</summary>
+    private static readonly GenerationPolicy RelaxedStackPolicy =
+        new(GenerationRelaxation.AbandonedStackSlotsUnobserved);
 }

@@ -51,6 +51,13 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--GeneratedCodeAssumeAccessesStayInSegment")]
     public bool GeneratedCodeAssumeAccessesStayInSegment { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides assume the bytes of a private typed stack
+    /// argument are not observed after the call returns, so the call site reserves the stack
+    /// space without writing them; off by default - strict mode writes them like the pushes
+    /// did.</summary>
+    [CommandOption("--GeneratedCodeAssumeAbandonedStackSlotsUnobserved")]
+    public bool GeneratedCodeAssumeAbandonedStackSlotsUnobserved { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

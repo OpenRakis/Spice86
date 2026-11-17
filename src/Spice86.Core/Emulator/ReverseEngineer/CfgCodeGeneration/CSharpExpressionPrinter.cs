@@ -258,6 +258,12 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             argumentList = argumentList.Length == 0
                 ? stackList : $"{argumentList}, {stackList}";
         }
+        if (_analysis?.StackArguments.Policy.AssumeAbandonedStackSlotsUnobserved == true) {
+            arguments.Add($"0x{node.StackArguments.Count * 2:X}");
+            arguments.Add($"() => {methodName}({argumentList})");
+            string spaceInvocation = $"CallWithStackSpace({string.Join(", ", arguments)})";
+            return CallResult(node.Call, signature, spaceInvocation);
+        }
         arguments.Add($"() => {methodName}({argumentList})");
         if (stackList.Length > 0) {
             arguments.Add(stackList);
