@@ -1554,24 +1554,6 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
-    /// Halts the CPU and waits until a hardware interrupt resumes it, like HLT with interrupts enabled.
-    /// The CPU stays halted while the run is stopped, an interrupt flag is off, or no interrupt is
-    /// pending: each wait step advances the cycles, fires the cycle breakpoints, processes the pending
-    /// input, advances the scheduled device events and delivers a pending PIC interrupt.
-    /// </summary>
-    /// <param name="expectedReturnCs">The expected value of the CS register after the interruption is done.</param>
-    /// <param name="expectedReturnIp">The expected value of the IP register after the interruption is done.</param>
-    public void HltWait(ushort expectedReturnCs, ushort expectedReturnIp) {
-        if (Configuration.HltStopsEmulation || !InterruptFlag) {
-            Exit();
-        }
-        State.IsHalted = true;
-        while (State.IsHalted) {
-            CheckExternalEvents(expectedReturnCs, expectedReturnIp);
-        }
-    }
-
-    /// <summary>
     /// Call this to perform an interrupt request.
     /// </summary>
     /// <param name="vectorNumber">The vector number to call</param>

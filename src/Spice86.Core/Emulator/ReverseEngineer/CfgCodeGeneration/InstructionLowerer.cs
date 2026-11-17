@@ -558,18 +558,22 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         new WhileNode(node.Condition, Sequence(node.Body.Accept(this), new IfElseNode(node.ExitCondition, new BlockNode(new BreakNode()), Empty())));
 
     /// <summary>
-    /// HLT with an observed fallthrough successor in wait mode lowers to the <c>HltWait</c> wait loop, whose
-    /// delivered interrupt resumes the CPU at the successor; every other HLT exits the program. The fallthrough
+    /// An HLT whose fallthrough was observed halts the CPU until the hardware interrupt that resumes it:
+    /// the lowered code sets the halted state and loops on the regular external event check at the resume
+    /// address, so the generator sees a regular loop. Every other HLT exits the program. The fallthrough
     /// itself is the normal one, added by <see cref="LowerForIr"/>.
     /// </summary>
     public IVisitableAstNode VisitHltNode(HltNode node) {
         CfgInstruction instruction = node.Instruction;
-        if (Context.HltWaitsForInterrupt && HasFallthrough(instruction)) {
-            return new HltWaitNode(
-                new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset),
-                HardwareInterruptEffect);
+        if (!HasFallthrough(instruction)) {
+            return new ReturnNode(new HltHelperNode());
         }
-        return new ReturnNode(new HltHelperNode());
+        HaltedValueNode halted = new HaltedValueNode();
+        return Sequence(
+            new BinaryOperationNode(DataType.BOOL, halted, BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1)),
+            new WhileNode(halted, Sequence(new CheckExternalEventsNode(
+                new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset),
+                HardwareInterruptEffect))));
     }
 
     /// <summary>True when discovery observed the HLT falling through to the next address in memory.</summary>

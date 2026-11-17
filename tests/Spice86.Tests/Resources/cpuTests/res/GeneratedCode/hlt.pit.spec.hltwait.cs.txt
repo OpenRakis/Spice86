@@ -118,7 +118,13 @@ public partial class CfgGeneratedOverrides {
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x0031);
         // F000:0031 hlt
-        HltWait(biosSegment, 0x0032);
+        State.IsHalted = true;
+        while (true) {
+            if (!State.IsHalted) {
+                break;
+            }
+            CheckExternalEvents(biosSegment, 0x0032);
+        }
         // F000:0032 mov word ptr DS:[0],DX
         Segment0000Globals.Word0000 = DX;
         // F000:0036 cli

@@ -518,7 +518,8 @@ public sealed class IrEffectsVisitorTest {
         // Assert
         effects.Reads.Should().Be(handlerRegisters);
         effects.MustWrite.Should().Be(CpuValues.None);
-        effects.MayWrite.Should().Be(handlerRegisters);
+        // A delivered interrupt clears the halted state, so the check may write it too.
+        effects.MayWrite.Should().Be(handlerRegisters | CpuValues.Halted);
         effects.TokenReads.Should().Be(IrTokens.All);
         effects.TokenWrites.Should().Be(IrTokens.All);
         effects.DeliversInterrupts.Should().BeTrue();

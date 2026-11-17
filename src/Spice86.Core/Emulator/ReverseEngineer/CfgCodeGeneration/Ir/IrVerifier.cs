@@ -144,11 +144,15 @@ internal static class IrVerifier {
                 if (startIndex >= 0 && index < startIndex) {
                     continue;
                 }
+                // A check may also close a loop whose edges stay inside one instruction: the HLT wait loop
+                // re-enters at its own head, so the check sits at the loop latch and re-entry is clean.
                 if (index == block.Statements.Count - 1
-                    && (block.Terminator is IrExit || !block.Terminator.Edges.Any(edge => edge.InsideInstruction))) {
+                    && (block.Terminator is IrExit
+                        || !block.Terminator.Edges.Any(edge => edge.InsideInstruction)
+                        || block.Terminator.Edges.All(edge => edge.InsideInstruction))) {
                     continue;
                 }
-                Fail(method, block, origin, "event check is neither part of an instruction start nor the last statement before an exit (event checks)");
+                Fail(method, block, origin, "event check is neither part of an instruction start, the last statement before an exit, nor at an instruction-internal loop latch (event checks)");
             }
         }
     }
