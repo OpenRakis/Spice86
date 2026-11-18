@@ -600,6 +600,30 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
+    public void EgaRilWriteRegister(byte register, byte value, ushort portSelection) {
+        switch (portSelection) {
+            case 0x00:
+                WriteToCrtController(GetCrtControllerPort(), register, value);
+                return;
+            case 0x08:
+                WriteToSequencer(register, value);
+                return;
+            case 0x10:
+                WriteToGraphicsController(register, value);
+                return;
+            case 0x18:
+                WriteToAttributeController(register, value);
+                return;
+            case 0x20:
+            case 0x30:
+                WriteToMiscellaneousOutput(register);
+                return;
+        }
+        // Selections 0x28 and 0x38 address the write-protected feature control register,
+        // and unknown selections have no effect, as on the real EGA BIOS.
+    }
+
+    /// <inheritdoc />
     public void SetFontBlockSpecifier(byte fontBlock) {
         WriteToSequencer(0x03, fontBlock);
     }

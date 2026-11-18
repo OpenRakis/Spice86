@@ -43,6 +43,12 @@ public interface IVideoInt10Handler : IInterruptHandler {
     void SetPaletteRegisters();
 
     /// <summary>
+    ///     EGA Raster Image Library: writes the video controller register selected by DX,
+    ///     with the index in BL and the value in BH.
+    /// </summary>
+    void EgaRilWriteRegister();
+
+    /// <summary>
     ///     Gets the current video mode.
     /// </summary>
     void GetVideoState();
