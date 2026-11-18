@@ -146,40 +146,38 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        switch (port) {
-            case DataPort:
-                if (_logger.IsEnabled(LogLevel.Trace)) {
-                    _logger.LogTrace("MIDI: DataPort write value=0x{Value:X2}", value);
-                }
+        if (port is not (DataPort or StatusPort)) {
+            base.WriteByte(port, value);
+            return;
+        }
+
+        if (port == DataPort && _logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace("MIDI: DataPort write value=0x{Value:X2}", value);
+        }
+        if (port == StatusPort && _logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("MIDI: StatusPort write value=0x{Value:X2}", value);
+        }
+
+        switch (value) {
+            case ResetCommand:
+                State = GeneralMidiState.NormalMode;
+                _dataBytes.Clear();
+                break;
+
+            case EnterUartModeCommand:
+                State = GeneralMidiState.UartMode;
+                break;
+
+            default:
                 _midiMapper.SendByte(value);
                 break;
+        }
 
-            case StatusPort:
-                if (_logger.IsEnabled(LogLevel.Debug)) {
-                    _logger.LogDebug("MIDI: StatusPort write value=0x{Value:X2}", value);
-                }
-                switch (value) {
-                    case ResetCommand:
-                        State = GeneralMidiState.NormalMode;
-                        _dataBytes.Clear();
-                        _dataBytes.Enqueue(CommandAcknowledge);
-                        if (_logger.IsEnabled(LogLevel.Debug)) {
-                            _logger.LogDebug("MIDI: ResetCommand handled; state={State}", State);
-                        }
-                        break;
-
-                    case EnterUartModeCommand:
-                        State = GeneralMidiState.UartMode;
-                        _dataBytes.Enqueue(CommandAcknowledge);
-                        if (_logger.IsEnabled(LogLevel.Debug)) {
-                            _logger.LogDebug("MIDI: EnterUartMode handled; state={State}", State);
-                        }
-                        break;
-                }
-                break;
-            default:
-                base.WriteByte(port, value);
-                break;
+        // This game's MPU-401 driver expects a 0xFE acknowledgement after every byte it
+        // transmits on the command port, including MIDI data bytes, and reads it from the
+        // data port before sending the next byte.
+        if (port == StatusPort) {
+            _dataBytes.Enqueue(CommandAcknowledge);
         }
     }
 
