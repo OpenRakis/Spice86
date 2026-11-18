@@ -1117,7 +1117,7 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private void ReadByteOperationPlanar(GraphicsOperation operation, ushort offset) {
-        operation.Pixels = new byte[8];
+        Array.Clear(operation.Pixels);
         for (int plane = 0; plane < 4; plane++) {
             Planar4Plane(plane);
             byte data = _memory.UInt8[VgaConstants.GraphicsSegment, offset];
