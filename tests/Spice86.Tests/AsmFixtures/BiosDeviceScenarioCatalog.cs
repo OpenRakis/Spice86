@@ -47,12 +47,16 @@ internal static class BiosDeviceScenarioCatalog {
     ];
 
     /// <summary>VGA BIOS programs: the scroll-up that must clear every column of the vacated row,
-    /// and the graphics-mode scroll-up that must actually move the rows it scrolls.</summary>
-    public static IReadOnlyList<AsmScenario> VgaScenarios => [VgaScrollClearsFullRow(), VgaGraphicsScrollMovesRows()];
+    /// the graphics-mode scroll-up that must actually move the rows it scrolls, and the INT 10h
+    /// AH=F1h EGA RIL register write verified by a read-back of the selected register.</summary>
+    public static IReadOnlyList<AsmScenario> VgaScenarios =>
+        [VgaScrollClearsFullRow(), VgaGraphicsScrollMovesRows(), EgaRilWriteRegister()];
 
-    /// <summary>Sound programs: the two OPL timer/write-delay programs and the Sound Blaster DSP reset
-    /// delay, each run with the sound model the original test exposed to the machine.</summary>
-    public static IReadOnlyList<AsmScenario> SoundScenarios => [.. OplScenarios, SoundBlasterResetDelay()];
+    /// <summary>Sound programs: the two OPL timer/write-delay programs, the Sound Blaster DSP reset
+    /// delay and the MPU-401 command-port acknowledgement handshake, each run with the sound model the
+    /// original test exposed to the machine.</summary>
+    public static IReadOnlyList<AsmScenario> SoundScenarios =>
+        [.. OplScenarios, SoundBlasterResetDelay(), MidiAcknowledge()];
 
     /// <summary>The OPL timer/write-delay programs, run with OPL3 synthesis.</summary>
     public static IReadOnlyList<AsmScenario> OplScenarios => [OplWriteDelay(), OplReadDelay()];
@@ -125,6 +129,38 @@ internal static class BiosDeviceScenarioCatalog {
             "a zero-width move blanks the rows instead of shifting them");
     }
 
+    /// <summary>The INT 10h AH=F1h EGA RIL program: it writes one register of each controller (CRT,
+    /// sequencer, graphics, attribute), reads each register back through the controller's index/data
+    /// ports and expects the written value, and an unknown port selection must not trap.</summary>
+    /// <returns>The scenario for ega_ril_write_register.com.</returns>
+    public static AsmScenario EgaRilWriteRegister() {
+        const string fileName = "ega_ril_write_register.com";
+        const string identity = "ega_ril_write_register";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(VgaSubDirectory, fileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                EnablePit = true,
+                MaxCycles = VgaMaxCycles,
+                InstallInterruptVectors = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler =
+                    result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    "INT 10h AH=F1h should write the selected EGA RIL register");
+                testHandler.Results.Should().NotContain(TestPortFailure,
+                    "INT 10h AH=F1h should not leave the register unreadable or unwritten");
+                testHandler.Details.Should().Contain(5,
+                    "all five register checks should have completed");
+            });
+        }, [$"{VgaSubDirectory}/{fileName}"]);
+    }
+
     /// <summary>The OPL write-delay program: the classic Adlib detection sequence must overflow Timer 1    /// before the first poll iteration completes, so the iteration count the program reports is exactly 1.</summary>
     /// <returns>The scenario for opl_write_delay.com.</returns>
     public static AsmScenario OplWriteDelay() {
@@ -166,6 +202,38 @@ internal static class BiosDeviceScenarioCatalog {
             ReportedWord(testHandler).Should().BeGreaterThan(0,
                 "reset delay should require multiple poll iterations (20us hardware delay)");
         });
+    }
+
+    /// <summary>The MPU-401 handshake program: every byte written to the command port 0x331 (reset,
+    /// UART mode and MIDI data alike) must be acknowledged with 0xFE on the data port 0x330, or the host
+    /// (A-TRAIN) blocks on the first note of its startup jingle, and each acknowledgement is consumed by
+    /// one data-port read, so a second read on an empty queue returns 0.</summary>
+    /// <returns>The scenario for midi_ack.com.</returns>
+    public static AsmScenario MidiAcknowledge() {
+        const string fileName = "midi_ack.com";
+        const string identity = "midi_ack";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(SoundSubDirectory, fileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = SoundMaxCycles,
+                InstallInterruptVectors = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler =
+                    result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    "every command-port byte should be acknowledged with 0xFE on the data port");
+                testHandler.Results.Should().NotContain(TestPortFailure,
+                    "a missing acknowledgement would block the host on its first note");
+                testHandler.Details.Should().Contain(4,
+                    "all four handshake checks should have completed");
+            });
+        }, [$"{SoundSubDirectory}/{fileName}"]);
     }
 
     /// <summary>Runs an RTC program that reports every checked call through the shared test result ports
