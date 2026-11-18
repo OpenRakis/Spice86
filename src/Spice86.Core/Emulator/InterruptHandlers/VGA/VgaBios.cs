@@ -605,6 +605,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0xF1, Reads = CpuValues.Ah | CpuValues.Bl | CpuValues.Bh | CpuValues.Dx, Memory = ServiceMemoryEffect.None, Io = true)]
+    public void EgaRilWriteRegister() {
+        _vgaFunctions.EgaRilWriteRegister(State.BL, State.BH, State.DX);
+    }
+
+    /// <inheritdoc />
     [InterruptService(0x0F, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Bh, Memory = ServiceMemoryEffect.Read)]
     public void GetVideoState() {
         (ushort ax, byte bh) = ReadVideoState();

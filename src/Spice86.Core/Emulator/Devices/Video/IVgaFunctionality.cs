@@ -35,6 +35,16 @@ public interface IVgaFunctionality {
     void SetEgaPaletteRegister(byte register, byte value);
 
     /// <summary>
+    ///     EGA Raster Image Library (RIL): writes a video controller register.
+    ///     <paramref name="portSelection"/> selects the controller, <paramref name="register"/> is
+    ///     the index and <paramref name="value"/> the value to write.
+    /// </summary>
+    /// <param name="register">The register index to write</param>
+    /// <param name="value">The value to write</param>
+    /// <param name="portSelection">The controller selection (DX on INT 10h AH=F1h)</param>
+    void EgaRilWriteRegister(byte register, byte value, ushort portSelection);
+
+    /// <summary>
     ///     Set the overscan / border color.
     /// </summary>
     /// <param name="colorIndex">Which palette entry to use for overscan / border</param>
