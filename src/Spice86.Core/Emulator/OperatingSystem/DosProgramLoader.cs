@@ -112,8 +112,9 @@ internal class DosProgramLoader : DosFileLoader {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
 
+        // Root batch context: the pump resumes execution after the child terminates, so its return address is unused.
         return _processManager.LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
-            programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
+            programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment, 0, 0);
     }
 
     protected virtual string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {

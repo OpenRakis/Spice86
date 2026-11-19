@@ -532,7 +532,7 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
-            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager,
+            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, callbackHandler, emsManager,
             loadedImageRegistry, emulatedClock);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
