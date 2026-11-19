@@ -288,7 +288,10 @@ internal static class DosBatchScenarioCatalog {
         ChoiceWithoutColonParsesChoiceKeys(),
         ChoiceNFlagAfterTextSuppressesPrompt(),
         ChoiceWithPreloadedKeySetsErrorlevel(),
-        PauseWithPreloadedKeyContinues()
+        PauseWithPreloadedKeyContinues(),
+        ShellRunsEchoCommand(),
+        ShellLaunchesExternalProgram(),
+        ShellMissingCommandDoesNotBreakBatch()
     ];
 
     /// <summary>The AUTOEXEC bootstrap scenarios: every host-requested program is routed through the
@@ -2127,6 +2130,31 @@ internal static class DosBatchScenarioCatalog {
             .Text("CHECK.BAT", "CALL EXIT3.COM\r\nIF ERRORLEVEL 3 CALL W_OK.COM\r\n")
             .Run("CHECK.BAT",
                 result => Cell(result, 0).Should().Be('K')));
+    }
+
+    /// <summary>The managed shell on the Z drive runs its /C command line through the batch engine.</summary>
+    /// <returns>The scenario.</returns>
+    private static AsmScenario ShellRunsEchoCommand() {
+        return Scenario("shell_runs_echo_command", run => run
+            .StartBatch("Z:\\COMMAND.COM /C ECHO HELLO\r\n",
+                result => ScreenText(result).Should().Contain("HELLO")));
+    }
+
+    /// <summary>The managed shell launches an external COM program as a child of the shell process.</summary>
+    /// <returns>The scenario.</returns>
+    private static AsmScenario ShellLaunchesExternalProgram() {
+        return Scenario("shell_launches_external_program", run => run
+            .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "WRITER.COM")
+            .StartBatch("Z:\\COMMAND.COM /C WRITER.COM\r\n",
+                result => Cell(result, 0).Should().Be('C')));
+    }
+
+    /// <summary>A command the managed shell cannot resolve does not stop the surrounding batch.</summary>
+    /// <returns>The scenario.</returns>
+    private static AsmScenario ShellMissingCommandDoesNotBreakBatch() {
+        return Scenario("shell_missing_command_continues", run => run
+            .StartBatch("Z:\\COMMAND.COM /C NOSUCH.COM\r\nECHO MARKER\r\n",
+                result => ScreenText(result).Should().Contain("MARKER")));
     }
 
     private static AsmScenario Scenario(string identity, Func<DosProgramRun, AsmFixture> build) {

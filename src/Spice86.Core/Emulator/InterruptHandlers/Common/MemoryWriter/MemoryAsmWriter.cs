@@ -59,7 +59,6 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt16(callbackNumber);
     }
 
-
     /// <summary>
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
     /// </summary>
