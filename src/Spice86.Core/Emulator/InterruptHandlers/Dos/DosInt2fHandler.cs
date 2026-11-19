@@ -161,10 +161,21 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// A service that does nothing.
+    /// DOS virtual machine multiplex services.
     /// </summary>
-    [InterruptService(0x16, Reads = CpuValues.Ax, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None)]
+    /// <remarks>
+    /// <c>AX=1687h</c> is the DPMI installation check. There is no DPMI host here,
+    /// so <c>AL</c> must be cleared to report "not present". Leaving it untouched
+    /// makes DOS extenders (DOS4GW among them) believe a DPMI host exists, after
+    /// which their <c>INT 31h</c> calls fail and the program aborts during startup.
+    /// </remarks>
+    [InterruptService(0x16, Reads = CpuValues.Ax, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None)]
     public void DosVirtualMachineServices() {
+        const ushort dpmiInstallationCheck = 0x1687;
+        if (State.AX == dpmiInstallationCheck) {
+            State.AL = 0x0;
+            return;
+        }
         ReportDosVirtualMachineService(State.AX);
     }
 
