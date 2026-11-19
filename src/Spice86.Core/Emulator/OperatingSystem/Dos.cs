@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -200,6 +201,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI.</param>
     /// <param name="a20Gate">The A20 gate used by XMS.</param>
     /// <param name="memoryAsmWriter">Writes the XMS callback into emulated memory.</param>
+    /// <param name="callbackHandler">Registers the shared internal program callback.</param>
     /// <param name="emsManager">The EMS manager shared with emulator services.</param>
     /// <param name="loadedImageRegistry">Records every program image the process manager loads.</param>
     /// <param name="emulatedClock">The emulated clock backing the DOS date/time services and FCB timestamps.</param>
@@ -213,6 +215,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IDriveActivityNotifier activityNotifier,
         A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter,
+        CallbackHandler callbackHandler,
         ExpandedMemoryManager? emsManager,
         LoadedImageRegistry loadedImageRegistry,
         IEmulatedClock emulatedClock) {
@@ -291,6 +294,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             stack, state, _loggerService);
 
         DosDriveManager.InitializeBootstrapZDrive();
+        SetupManagedShell(callbackHandler);
 
         if (options.DosRuntimeState.InstallDosServices is false) {
             return;
@@ -307,6 +311,17 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         if (options.Ems is not false && Ems is not null) {
             AddDevice(Ems.AsCharacterDevice(), ExpandedMemoryManager.DosDeviceSegment, 0);
         }
+    }
+
+    /// <summary>
+    /// Registers the managed shell (COMMAND.COM) as an internal program: a generated FE38 trampoline stored
+    /// on the Z drive that dispatches to <see cref="DosShell"/>. The interactive shell loop is out of scope;
+    /// the non-interactive entry executes the command tail carried in the child PSP.
+    /// </summary>
+    private void SetupManagedShell(CallbackHandler callbackHandler) {
+        InternalPrograms internalPrograms = new(callbackHandler, DosDriveManager, _memory,
+            DosSwappableDataArea, _loggerService);
+        internalPrograms.Register("COMMAND.COM", () => new DosShell(ProcessManager, _loggerService));
     }
 
     private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {

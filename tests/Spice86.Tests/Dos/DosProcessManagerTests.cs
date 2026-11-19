@@ -75,7 +75,7 @@ public class DosProcessManagerTests {
         rootPsp.NNFlags = 0xABCD;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "load_child.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "load_child.com", "nop_sled_ret_1.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -103,7 +103,7 @@ public class DosProcessManagerTests {
         context.State.SP = 0x00FE;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -123,7 +123,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
         DosExecResult parentExec = context.ProcessManager.LoadOrLoadAndExecute(
             comFilePath,
@@ -176,7 +176,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -217,7 +217,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -266,9 +266,9 @@ public class DosProcessManagerTests {
         rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
-        string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
+        string expectedDosFileName = comFilePath.Substring(comFilePath.LastIndexOf('\\') + 1).ToUpperInvariant();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
             comFilePath,
@@ -299,7 +299,7 @@ public class DosProcessManagerTests {
         context.State.DI = 0xFFFF;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin");
+        string exeFilePath = AddFileToZDrive(context, CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin"));
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -358,8 +358,9 @@ public class DosProcessManagerTests {
         const ushort requiredMinAlloc = (ushort)(desiredMinimumParagraphs - (DosProgramSegmentPrefix.PspSizeInParagraphs + programParagraphsFromHeader));
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_9fd4_9fd4.bin");
-        byte[] exeImage = File.ReadAllBytes(exeFilePath);
+        string exeHostPath = CreateFileFromResource(tempFile, "program.exe", "exe_image_9fd4_9fd4.bin");
+        byte[] exeImage = File.ReadAllBytes(exeHostPath);
+        string exeFilePath = AddFileToZDrive(context, exeHostPath);
         BinaryPrimitives.ReadUInt16LittleEndian(exeImage.AsSpan(0x0A)).Should().Be(requiredMinAlloc,
             "the min extra paragraphs of exe_image_9fd4_9fd4.bin must match the 640 KB requirement");
         BinaryPrimitives.ReadUInt16LittleEndian(exeImage.AsSpan(0x0C)).Should().Be(requiredMinAlloc,
@@ -383,7 +384,8 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+        string comHostPath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, comHostPath);
 
         // Act
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -398,7 +400,7 @@ public class DosProcessManagerTests {
         image.FirstSegment.Should().Be(result.InitialCS);
         image.StartAddress.Should().Be(
             MemoryUtils.ToPhysicalAddress(result.InitialCS, DosProgramSegmentPrefix.PspSize));
-        image.SizeInBytes.Should().Be((uint)new FileInfo(comFilePath).Length);
+        image.SizeInBytes.Should().Be((uint)new FileInfo(comHostPath).Length);
     }
 
     [Fact]
@@ -408,7 +410,8 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+        string comHostPath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+        string comFilePath = AddFileToZDrive(context, comHostPath);
 
         // Act
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -423,7 +426,7 @@ public class DosProcessManagerTests {
         image.FirstSegment.Should().Be(result.InitialCS);
         image.StartAddress.Should().Be(
             MemoryUtils.ToPhysicalAddress(result.InitialCS, DosProgramSegmentPrefix.PspSize));
-        image.SizeInBytes.Should().Be((uint)new FileInfo(comFilePath).Length);
+        image.SizeInBytes.Should().Be((uint)new FileInfo(comHostPath).Length);
     }
 
     [Fact]
@@ -433,7 +436,8 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin");
+        string exeHostPath = CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin");
+        string exeFilePath = AddFileToZDrive(context, exeHostPath);
 
         // Act
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -442,7 +446,7 @@ public class DosProcessManagerTests {
 
         // Assert
         result.Success.Should().BeTrue();
-        DosExeFile exeFile = new(new ByteArrayReaderWriter(File.ReadAllBytes(exeFilePath)));
+        DosExeFile exeFile = new(new ByteArrayReaderWriter(File.ReadAllBytes(exeHostPath)));
         LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
         image.Kind.Should().Be(LoadedImageKind.DosProgram);
         image.Name.Should().Be(exeFilePath);
@@ -564,6 +568,8 @@ public class DosProcessManagerTests {
         VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, new VideoState(), true);
 
         DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
+        MemoryDrive zDrive = new MemoryDrive { DriveLetter = 'Z', Label = "MEMORY" };
+        driveManager.MountMemoryDrive(zDrive);
         DosSysVars dosSysVars = DosTestHelpers.CreateDosSysVars(memory, loggerService,
             configuration.ProgramEntryPointSegment);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService, dosSysVars, false, false);
@@ -605,7 +611,7 @@ public class DosProcessManagerTests {
             new Dictionary<string, string>(),
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager, registry);
+        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager, registry, zDrive);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -620,6 +626,12 @@ public class DosProcessManagerTests {
     private static string CreateFileFromResource(TempFile tempFile, string targetFileName, string resourceFileName) {
         byte[] content = File.ReadAllBytes(Path.Join(AppContext.BaseDirectory, "Resources", ResourceDirectory, resourceFileName));
         return tempFile.CreateFile(targetFileName, content);
+    }
+
+    private static string AddFileToZDrive(DosProcessManagerTestContext context, string hostPath) {
+        string dosName = Path.GetFileName(hostPath).ToUpperInvariant();
+        context.ZDrive.AddFile(dosName, File.ReadAllBytes(hostPath));
+        return $@"Z:\{dosName}";
     }
 
     private static byte[] BuildLargeEnvironmentBytes(int totalLength) {
@@ -698,12 +710,13 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            State state, DosMemoryManager memoryManager, LoadedImageRegistry registry) {
+            State state, DosMemoryManager memoryManager, LoadedImageRegistry registry, MemoryDrive zDrive) {
             Memory = memory;
             ProcessManager = processManager;
             State = state;
             MemoryManager = memoryManager;
             Registry = registry;
+            ZDrive = zDrive;
         }
 
         public Memory Memory { get; }
@@ -711,6 +724,7 @@ public class DosProcessManagerTests {
         public State State { get; }
         public DosMemoryManager MemoryManager { get; }
         public LoadedImageRegistry Registry { get; }
+        public MemoryDrive ZDrive { get; }
 
         /// <summary>
         /// Gets the current PSP segment directly from the DOS SDA.

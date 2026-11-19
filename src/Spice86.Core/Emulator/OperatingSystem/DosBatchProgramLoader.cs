@@ -27,8 +27,9 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
+            // Root batch context: the pump resumes execution after the child terminates, so its return address is unused.
             return _processManager.LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
-                programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
+                programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment, 0, 0);
         }
 
         return base.LoadLaunchRequest(launchRequest, paramBlock);
