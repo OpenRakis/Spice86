@@ -364,17 +364,19 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     /// <summary>
-    /// Loads the initial DOS program before emulation starts. Uses explicit return address since there's no valid stack frame.
+    /// Loads the initial DOS program before emulation starts. Uses an explicit return address since there's no valid
+    /// stack frame to read the caller's return address from.
     /// </summary>
     /// <param name="programName">DOS path to the program to load.</param>
     /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
     /// <param name="commandTail">The command tail passed to the child process.</param>
     /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
+    /// <param name="callerCS">Segment of the address the child resumes at on termination (0:0 for the root batch context, whose pump takes over).</param>
+    /// <param name="callerIP">Offset of the address the child resumes at on termination.</param>
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     internal DosExecResult LoadInitialProgram(string programName, DosExecParameterBlock paramBlock,
-        string commandTail, ushort environmentSegment) {
-        // Initial program has no caller - use 0:0 as placeholder. Parent is root COMMAND.COM so we halt on terminate anyway.
-        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, 0, 0);
+        string commandTail, ushort environmentSegment, ushort callerCS, ushort callerIP) {
+        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, callerCS, callerIP);
     }
 
     /// <summary>
@@ -385,8 +387,19 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <returns>EXEC result metadata indicating success or failure.</returns>
     internal DosExecResult LoadInitialProgramFromBytes(byte[] comBytes) {
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
+        // A child of the root batch context is resumed by the pump on termination; a child of a managed
+        // internal program (the shell) resumes that program's stub just after the FE38 callback.
+        ushort callerCS;
+        ushort callerIP;
+        if (_sda.CurrentProgramSegmentPrefix == CommandComSegment) {
+            callerCS = 0;
+            callerIP = 0;
+        } else {
+            callerCS = _sda.CurrentProgramSegmentPrefix;
+            callerIP = InternalPrograms.StubReturnOffset;
+        }
         return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
-            0, 0, 0, _sda.CurrentProgramSegmentPrefix,
+            0, callerIP, callerCS, _sda.CurrentProgramSegmentPrefix,
             "BATCH$$$.COM", LoadedImageKind.InternalBatchProgram,
             comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
@@ -421,12 +434,11 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 parentPspSegment);
         }
 
-        string? hostPath = _fileManager.GetFullHostExecutablePathFromDos(programName) ?? programName;
-        if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+        byte[] fileBytes;
+        string programPath;
+        if (!TryReadProgramFile(programName, out fileBytes, out programPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
-
-        byte[] fileBytes = File.ReadAllBytes(hostPath);
 
         ushort parentSS = _state.SS;
         ushort parentSP = _state.SP;
@@ -436,7 +448,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
-        if (environmentSegment == 0 && !TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
+        if (environmentSegment == 0 && !TryAllocateEnvironmentBlock(parentPspSegment, programPath, out envBlock)) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
 
@@ -447,7 +459,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
             if (exeFile.IsValid) {
                 result = HandleExeFileLoading(paramBlock, commandTail, loadType,
-                    environmentSegment, callerIP, callerCS, parentPspSegment, hostPath,
+                    environmentSegment, callerIP, callerCS, parentPspSegment, programPath,
                     envBlock, exeFile, parentSS, parentReservedSP);
             }
         }
@@ -457,10 +469,33 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             // This matches FreeDOS behavior
             result = HandleComFileLoading(paramBlock, commandTail, loadType,
                 environmentSegment, callerIP, callerCS, parentPspSegment,
-                hostPath, LoadedImageKind.DosProgram, fileBytes, envBlock, parentSS, parentReservedSP);
+                programPath, LoadedImageKind.DosProgram, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Reads the program image through the DOS VM, so folder, image and memory drives all resolve the same way.
+    /// </summary>
+    /// <param name="programName">DOS path of the program to read.</param>
+    /// <param name="fileBytes">The program bytes on success.</param>
+    /// <param name="programPath">The fully qualified DOS path of the program on success.</param>
+    /// <returns><see langword="true"/> when the program was opened on a DOS drive.</returns>
+    private bool TryReadProgramFile(string programName, out byte[] fileBytes, out string programPath) {
+        fileBytes = [];
+        programPath = programName;
+        if (!_driveManager.TryOpenRead(programName, out string? fullDosPath, out Stream? fileStream)
+            || fileStream is null) {
+            return false;
+        }
+        programPath = fullDosPath ?? programName;
+        using (Stream stream = fileStream) {
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            fileBytes = buffer.ToArray();
+        }
+        return true;
     }
 
     private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
@@ -779,7 +814,12 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return false;
     }
 
-    private DosExecResult LoadBatchLaunchRequest(LaunchRequest launchRequest) {
+    /// <summary>
+    /// Loads the program described by a launch request produced by the batch engine.
+    /// </summary>
+    /// <param name="launchRequest">The launch request to load.</param>
+    /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
+    internal DosExecResult LoadBatchLaunchRequest(LaunchRequest launchRequest) {
         if (launchRequest is BootLaunchRequest bootLaunchRequest) {
             return LoadInitialBootProgram(bootLaunchRequest.DriveLetter);
         }
@@ -790,12 +830,29 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
             DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
+            // A child of the root batch context is resumed by the pump on termination, so its return address is
+            // unused. A child of a managed internal program (the shell) resumes that program's stub just after the
+            // FE38 callback.
+            ushort callerCS;
+            ushort callerIP;
+            if (_sda.CurrentProgramSegmentPrefix == CommandComSegment) {
+                callerCS = 0;
+                callerIP = 0;
+            } else {
+                callerCS = _sda.CurrentProgramSegmentPrefix;
+                callerIP = InternalPrograms.StubReturnOffset;
+            }
             return LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
-                programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
+                programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment, callerCS, callerIP);
         }
 
         return DosExecResult.Fail(DosErrorCode.FormatInvalid);
     }
+
+    /// <summary>
+    /// Gets the command tail carried in the current PSP.
+    /// </summary>
+    public string CurrentCommandTail => GetCurrentPsp().DosCommandTail.Command;
 
     /// <summary>
     /// Implements INT 21h, AH=26h by cloning the current PSP to a new segment and patching the parent pointer, DOS version fields, and INT 22h/23h/24h vectors so the child inherits the caller’s termination context.
