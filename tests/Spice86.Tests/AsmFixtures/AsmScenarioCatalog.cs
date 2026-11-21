@@ -507,6 +507,18 @@ internal static class AsmScenarioCatalog {
             // jump at resetVector should align with the CPU reset address 0xfffffff0, which will
             // transfer control to f000:0045. All memory accesses remain within the first 1MB.
             AsmScenario.FromFixture("test386", AsmFixtureCatalog.Test386),
+            AsmScenario.FromFixture("protectedmode_entry", AsmFixtureCatalog.ProtectedModeEntry),
+            AsmScenario.FromFixture("protectedmode_unified_pool", AsmFixtureCatalog.ProtectedModeUnifiedPool),
+            AsmScenario.FromFixture("protectedmode_instructions", AsmFixtureCatalog.ProtectedModeInstructions),
+            AsmScenario.FromFixture("protectedmode_privilege", AsmFixtureCatalog.ProtectedModePrivilege),
+            AsmScenario.FromFixture("protectedmode_idt", AsmFixtureCatalog.ProtectedModeIdt),
+            AsmScenario.FromFixture("protectedmode_far_privilege", AsmFixtureCatalog.ProtectedModeFarPrivilege),
+            AsmScenario.FromFixture("protectedmode_callgate", AsmFixtureCatalog.ProtectedModeCallGate),
+            AsmScenario.FromFixture("protectedmode_paging", AsmFixtureCatalog.ProtectedModePaging),
+            AsmScenario.FromFixture("protectedmode_taskswitch", AsmFixtureCatalog.ProtectedModeTaskSwitch),
+            AsmScenario.FromFixture("protectedmode_v86", AsmFixtureCatalog.ProtectedModeV86),
+            AsmScenario.FromFixture("protectedmode_taskgate", AsmFixtureCatalog.ProtectedModeTaskGate),
+            AsmScenario.FromFixture("test386_pmode", AsmFixtureCatalog.Test386ProtectedMode),
             // jump1 contains conditional jumps that were always taken during discovery (e.g. `clc; ja j01`),
             // so their fallthrough (next-in-memory) edge was never observed. With speculation off, each such
             // jump must lower to an `if` that guards the unobserved fallthrough with FailAsUntested, not

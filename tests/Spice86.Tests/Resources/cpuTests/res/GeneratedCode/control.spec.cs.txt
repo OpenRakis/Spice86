@@ -2,6 +2,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -68,7 +69,7 @@ public partial class CfgGeneratedOverrides {
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
         // F000:0003 mov SS,AX
-        SS = 0x1000;
+        LoadSegmentRegister(2, AX);
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov CX,0xFEFF
@@ -82,6 +83,7 @@ public partial class CfgGeneratedOverrides {
         // F000:000E cld
         DirectionFlag = false;
         // F000:000F cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:0010 nop
         // F000:0011 pushf
@@ -100,6 +102,7 @@ public partial class CfgGeneratedOverrides {
         // F000:001A std
         DirectionFlag = true;
         // F000:001B sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(biosSegment, 0x001C);
         // F000:001C pushf
@@ -109,7 +112,7 @@ public partial class CfgGeneratedOverrides {
         // F000:001E mov CX,0
         CX = 0;
         // F000:0021 mov DS,CX
-        DS = 0;
+        LoadSegmentRegister(3, CX);
         // F000:0023 mov word ptr DS:[0],AX
         // F000:0026 mov word ptr DS:[2],BX
         Segment0000Globals.Dword0000 = (uint)AX | (uint)BX << 16;

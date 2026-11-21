@@ -91,7 +91,7 @@ public class CfgGraphReloadTest {
         "externalint" => (0xFFFFFFF, true, false),
         "data_segment_values" => (300000L, true, false),
         "linearsamesegmenteddifferent" => (100000L, false, true),
-        "test386" => (long.MaxValue, false, false),
+        "test386" => (Spice86Creator.LongRunningMaxCycles, false, false),
         _ => (100000L, false, false),
     };
 

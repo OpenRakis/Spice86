@@ -128,6 +128,7 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     public GotoTargets VisitLoadOffsetParameterNode(LoadOffsetParameterNode node) => GotoTargets.None;
 
     public GotoTargets VisitMethodGroupNode(MethodGroupNode node) => GotoTargets.None;
+    public GotoTargets VisitUntestedFarCallTargetNode(UntestedFarCallTargetNode node) => GotoTargets.None;
 
     public GotoTargets VisitSegmentedAddressListNode(SegmentedAddressListNode node) => GotoTargets.None;
 

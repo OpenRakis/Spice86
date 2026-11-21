@@ -818,6 +818,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         if (ConstantEvaluation.Resolved(right) is { } shiftCount) {
             return CSharpExpressionPrinter.ShiftCountText(shiftCount);
         }
+        if (right.DataType == DataType.UINT32) {
+            return CSharpExpressionPrinter.Cast(DataType.INT32, fragment);
+        }
         return ParenthesizedOperand(fragment);
     }
 

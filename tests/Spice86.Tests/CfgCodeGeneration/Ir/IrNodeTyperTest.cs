@@ -186,6 +186,40 @@ public class IrNodeTyperTest {
     }
 
     [Fact]
+    public void ProtectedModeHelperInConditionRetainsItsTypeAndRenamesItsArguments() {
+        // Arrange
+        InstructionExecutionHelperCallValueNode condition = new(DataType.BOOL,
+            InstructionExecutionHelperOperation.IsSelectorValidForLar,
+            new VariableReferenceNode(DataType.UINT16, "selector"));
+
+        // Act
+        InstructionExecutionHelperCallValueNode typed = IrNodeTyper.TypeValue(condition, "0006")
+            .Should().BeOfType<InstructionExecutionHelperCallValueNode>().Subject;
+
+        // Assert
+        typed.CallNode.Arguments[0].Should().BeOfType<VariableReferenceNode>()
+            .Which.VariableName.Should().Be("selector_0006");
+        IrEffectsVisitor.Of(typed, false).Should().Be(IrEffects.Unknown);
+    }
+
+    [Fact]
+    public void SegmentLoadWithSelectorPopKeepsBothTypedCalls() {
+        // Arrange
+        InstructionExecutionHelperCallNode call = new(InstructionExecutionHelperOperation.LoadSegmentRegister,
+            new ConstantNode(DataType.UINT32, 2),
+            new InstructionExecutionHelperCallValueNode(DataType.UINT16,
+                InstructionExecutionHelperOperation.PopSegmentSelector, new ConstantNode(DataType.UINT32, 4)));
+
+        // Act
+        InstructionExecutionHelperCallNode typed = IrNodeTyper.TypeStatement(call)
+            .Should().BeOfType<InstructionExecutionHelperCallNode>().Subject;
+
+        // Assert
+        typed.Arguments[1].Should().BeOfType<InstructionExecutionHelperCallValueNode>();
+        IrEffectsVisitor.Of(typed, false).Should().Be(IrEffects.Unknown);
+    }
+
+    [Fact]
     public void AluOperationValueBecomesAluOperationNodeWithFlagEffect() {
         IVisitableAstNode typed = IrNodeTyper.TypeValue(
             new AluCallValueNode(DataType.UINT16, AluOperation.Add, BitWidth.WORD_16, Ax, Ax));
