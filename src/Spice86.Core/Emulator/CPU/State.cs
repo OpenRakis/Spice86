@@ -384,6 +384,11 @@ public class State(CpuModel cpuModel) {
     public ControlRegisters ControlRegisters { get; } = new();
 
     /// <summary>
+    /// The 386 debug registers (DR0-DR7).
+    /// </summary>
+    public DebugRegisters DebugRegisters { get; } = new();
+
+    /// <summary>
     /// The Global Descriptor Table register, loaded by LGDT and read back by SGDT.
     /// </summary>
     public DescriptorTableRegister Gdtr { get; } = new();

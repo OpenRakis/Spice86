@@ -12,6 +12,8 @@ public enum InstructionExecutionHelperOperation {
     ReadControlRegister,
     /// <summary>Writes a control register.</summary>
     WriteControlRegister,
+    /// <summary>Writes a debug register.</summary>
+    WriteDebugRegister,
     /// <summary>Reads the machine status word.</summary>
     ReadMachineStatusWord,
     /// <summary>Loads the machine status word.</summary>

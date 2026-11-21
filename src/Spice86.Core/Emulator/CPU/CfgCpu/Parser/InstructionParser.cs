@@ -41,6 +41,7 @@ public class InstructionParser {
     private readonly CbwParser _cbwParser;
     private readonly CmpxchgRmParser _cmpxchgRmParser;
     private readonly ControlRegisterParser _controlRegisterParser;
+    private readonly DebugRegisterParser _debugRegisterParser;
     private readonly CwdParser _cwdParser;
     private readonly DescriptorTableParser _descriptorTableParser;
     private readonly EnterParser _enterParser;
@@ -111,6 +112,7 @@ public class InstructionParser {
         _cbwParser = new(_parsingTools);
         _cmpxchgRmParser = new CmpxchgRmParser(_parsingTools);
         _controlRegisterParser = new(_parsingTools);
+        _debugRegisterParser = new(_parsingTools);
         _cwdParser = new(_parsingTools);
         _descriptorTableParser = new(_parsingTools);
         _enterParser = new(_parsingTools);
@@ -517,6 +519,7 @@ public class InstructionParser {
         _handlers0F[0x06] = _simpleInstructionParser.ParseClts;
         _handlers0F[0x20] = _controlRegisterParser.ParseMovRegFromCr;
         _handlers0F[0x22] = _controlRegisterParser.ParseMovCrFromReg;
+        _handlers0F[0x23] = _debugRegisterParser.Parse;
 
         // Jcc near: 16 condition codes (same encoding as Jcc short)
         for (int cc = 0; cc < 16; cc++) {

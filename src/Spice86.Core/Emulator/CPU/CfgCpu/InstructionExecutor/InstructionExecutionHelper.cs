@@ -123,6 +123,11 @@ public class InstructionExecutionHelper {
         SegmentAndControlRegisterOperations.WriteControlRegister(State, crNumber, value);
     }
 
+    /// <summary>MOV DRn, r/m32 (0F 23): writes a debug register.</summary>
+    public void WriteDebugRegister(uint drNumber, uint value) {
+        DebugRegisterOperations.WriteDebugRegister(State, drNumber, value);
+    }
+
     /// <summary>SMSW: reads the low 16 bits of CR0.</summary>
     public ushort ReadMachineStatusWord() {
         return SegmentAndControlRegisterOperations.ReadMachineStatusWord(State);
