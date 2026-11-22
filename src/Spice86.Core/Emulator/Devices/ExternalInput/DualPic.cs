@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
@@ -25,7 +26,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 ///     Coordinates the paired PIC controllers and handles bus registration.
 /// </summary>
-public sealed partial class DualPic : DefaultIOPortHandler {
+public sealed partial class DualPic : DefaultIOPortHandler, IStatefulDevice<DualPicState> {
     /// <summary>
     ///     Identifies which controller to observe or configure.
     /// </summary>
@@ -261,6 +262,42 @@ public sealed partial class DualPic : DefaultIOPortHandler {
             pic.ShouldRotateOnAutoEoi,
             pic.IsSingleModeConfigured,
             pic.InterruptVectorBase);
+    }
+
+    /// <summary>
+    ///     Captures the complete state of both controllers and of the request signal to the CPU.
+    /// </summary>
+    /// <remarks>
+    ///     Unlike <see cref="GetPicSnapshot" />, the result holds everything <see cref="RestoreState" /> needs.
+    /// </remarks>
+    /// <returns>The state of both controllers.</returns>
+    public DualPicState CaptureState() {
+        return new DualPicState(_primaryPic.CaptureState(), _secondaryPic.CaptureState(), IrqCheck);
+    }
+
+    /// <summary>
+    ///     Puts both controllers and the request signal to the CPU back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     Lines latched since the capture are forgotten and lines latched at capture are latched again,
+    ///     whatever the devices behind them do now. <see cref="IrqMaskChanged" /> is raised for each line whose
+    ///     mask bit differs from the one before the call.
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(DualPicState state) {
+        int previousMasks = _primaryPic.InterruptMaskRegister | (_secondaryPic.InterruptMaskRegister << 8);
+        _primaryPic.RestoreState(state.Primary);
+        _secondaryPic.RestoreState(state.Secondary);
+        IrqCheck = state.IrqCheck;
+
+        int restoredMasks = _primaryPic.InterruptMaskRegister | (_secondaryPic.InterruptMaskRegister << 8);
+        int changedMasks = previousMasks ^ restoredMasks;
+        for (int irq = 0; changedMasks != 0 && irq <= MaxIrq; irq++) {
+            int lineBit = 1 << irq;
+            if ((changedMasks & lineBit) != 0) {
+                IrqMaskChanged?.Invoke((byte)irq, (restoredMasks & lineBit) != 0);
+            }
+        }
     }
 
     /// <summary>
