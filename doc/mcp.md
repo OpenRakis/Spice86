@@ -144,6 +144,7 @@ Spice86 ships with **65+ MCP tools** organized into these capability scopes:
 ### Functions & CFG
 - `list_functions`: List discovered functions sorted by call count
 - `read_cfg_cpu_graph`: Dump the Control Flow Graph (CFG) built by `CfgCpu`
+- `dump_all`: Write the same files as the GDB command `monitor dumpall` (CPU registers, memory dump, ASM listing, CFG files, execution flow, generated C# project, Ghidra symbols, breakpoints) to the dump folder (based on `--RecordedDataDirectory`). Returns the folder it wrote to. The emulator is paused while the files are written.
 
 ### Video
 - `read_video_state`: Current video mode, resolution, text/graphics flag, cursor position

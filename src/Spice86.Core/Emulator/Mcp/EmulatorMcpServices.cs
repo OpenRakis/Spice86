@@ -42,10 +42,13 @@ public sealed class EmulatorMcpServices(
     ExtendedMemoryManager? xmsManager,
     EmulatorBreakpointsManager breakpointsManager,
     CfgBlocksJsonExporter cfgBlocksExporter,
+    EmulatorStateSerializer emulatorStateSerializer,
     ILogger loggerService) {
     public IMemory Memory { get; } = memory;
 
     public CfgBlocksJsonExporter CfgBlocksExporter { get; } = cfgBlocksExporter;
+
+    public EmulatorStateSerializer EmulatorStateSerializer { get; } = emulatorStateSerializer;
 
     public State State { get; } = state;
 

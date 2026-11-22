@@ -126,6 +126,10 @@ internal sealed class EmulatorMcpTools {
             return Error(ex.Message);
         } catch (OverflowException ex) {
             return Error(ex.Message);
+        } catch (IOException ex) {
+            return Error(ex.Message);
+        } catch (UnauthorizedAccessException ex) {
+            return Error(ex.Message);
         } finally {
             if (shouldResumeOnCommandEnd) {
                 _services.PauseHandler.Resume();
@@ -489,7 +493,19 @@ internal sealed class EmulatorMcpTools {
         return null;
     }
 
-    [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
+    [McpServerTool(Name = "dump_all", UseStructuredContent = true), Description("Write the recorded data to the dump folder, like the GDB command 'monitor dumpall': CPU registers, memory dump, ASM listing, CFG blocks, CFG partitions, CFG reload file, execution flow, generated C# overrides and project, Ghidra symbols and breakpoints. When code overrides are active, the CFG files, execution flow and generated C# are skipped. The emulator is paused while the files are written and resumes afterwards if it was running. No parameters. Returns the folder the files were written to.")]
+    public CallToolResult DumpAll() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                _services.EmulatorStateSerializer.EmulationStateDataWriter.Write();
+                return new DumpAllResponse {
+                    Folder = _services.EmulatorStateSerializer.EmulatorStateSerializationFolder.Folder
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_io_port",UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
     public CallToolResult ReadIoPort(int port) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
