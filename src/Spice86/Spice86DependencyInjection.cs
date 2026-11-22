@@ -497,7 +497,10 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner,
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
-        CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(collectCensuses: false, verify: false,
+        GeneratorOptions generatorOptions = configuration.GeneratedCodeCheckBuild
+            ? GeneratorOptions.CheckBuild
+            : GeneratorOptions.Default;
+        CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(generatorOptions,
             maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile), loggerService);
         DumpProgressReporter dumpProgressReporter = new(loggerService, new SystemTimeProvider());
         DumpProgressReporter = dumpProgressReporter;

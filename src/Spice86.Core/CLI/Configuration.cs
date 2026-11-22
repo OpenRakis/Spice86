@@ -141,6 +141,16 @@ public sealed class Configuration : CommandSettings {
     public int? ClockJitterSeed { get; init; }
 
     /// <summary>
+    /// Generates the C# override project as a check build: generated code made to be compared with the
+    /// emulated original, not to be shipped. A check build prints a <c>ServiceCalled</c> statement before
+    /// each direct call of a DOS or BIOS service implementation, so an
+    /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
+    /// call. Off by default.
+    /// </summary>
+    [CommandOption("--GeneratedCodeCheckBuild")]
+    public bool GeneratedCodeCheckBuild { get; init; }
+
+    /// <summary>
     /// Optional fixed start date/time for the emulated clock. Accepts any value parseable by
     /// <see cref="DateTimeOffset.Parse(string)"/> (e.g. an ISO 8601 string like
     /// <c>1993-06-01T00:00:00Z</c>). When <c>null</c> (the default), the emulated clock starts

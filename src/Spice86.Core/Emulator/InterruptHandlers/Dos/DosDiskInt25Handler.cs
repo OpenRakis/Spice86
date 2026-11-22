@@ -59,7 +59,7 @@ public class DosDiskInt25Handler : InterruptHandler {
     /// </remarks>
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, RunServiceFromStub);
         memoryAsmWriter.WriteFarRet();
         return handlerAddress;
     }

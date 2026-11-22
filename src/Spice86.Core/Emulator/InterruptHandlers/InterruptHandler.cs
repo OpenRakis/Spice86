@@ -90,6 +90,12 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <inheritdoc />
     public abstract byte VectorNumber { get; }
 
+    /// <summary>
+    /// The observer told about the service calls this handler dispatches, or <see langword="null"/> for none.
+    /// <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> sets it on every installed handler.
+    /// </summary>
+    internal IServiceCallObserver? ServiceCallObserver { get; set; }
+
     /// <summary>Register the handler reads to select the service to run. Used only when the
     /// type declares its services with the selector form of
     /// <see cref="InterruptServiceAttribute"/>.</summary>
@@ -119,10 +125,39 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
 
         // Write ASM
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, RunServiceFromStub);
         memoryAsmWriter.WriteIret();
 
         return interruptHandlerAddress;
+    }
+
+    /// <summary>
+    /// The callback of a stub whose only C# step is <see cref="Run()"/>. Tells the service call observer
+    /// about the call when the handler has a single service, then runs it. A handler that selects between
+    /// services tells the observer from <see cref="Run(int)"/>, once it knows the selector value.
+    /// A handler that writes its own stub registers this method where it would register <see cref="Run()"/>.
+    /// </summary>
+    protected void RunServiceFromStub() {
+        if (ServiceCallObserver is { } observer && _declarations.SingleService is { } single) {
+            observer.OnServiceCall(new ServiceCall(VectorNumber, null, single.Entry, false,
+                ServiceCallInputs.ReadAll(State, single.Entry)));
+        }
+        Run();
+    }
+
+    /// <summary>
+    /// Tells the service call observer, when there is one, that the service selected by
+    /// <paramref name="index"/> is about to run. <see cref="Run(int)"/> calls it. A stub callback that runs
+    /// a service without going through <see cref="Run(int)"/> calls it itself.
+    /// </summary>
+    /// <param name="index">The selector value of the service.</param>
+    protected void NotifyServiceCall(int index) {
+        if (ServiceCallObserver is not { } observer) {
+            return;
+        }
+        InterruptServiceEntry entry = _serviceEntries.GetValueOrDefault(index) ?? InterruptServiceEntry.Unknown;
+        observer.OnServiceCall(new ServiceCall(VectorNumber, index, entry, false,
+            ServiceCallInputs.ReadAll(State, entry)));
     }
 
     /// <summary>
@@ -151,6 +186,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         // By default Log the CS:IP of the caller which is more useful in most situations
         SegmentedAddress? csIp = FunctionHandlerProvider.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
         _loggerState.CsIp = csIp ?? _loggerState.CsIp;
+        NotifyServiceCall(index);
         base.Run(index);
     }
 

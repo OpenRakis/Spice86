@@ -1175,6 +1175,49 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Tells the service call observer that the statement after this one calls the implementation of an
+    /// interrupt service directly. Generated code produced with the check build option calls it before each
+    /// such call, because a direct call passes no handler code that could raise the event. The event equals
+    /// the one the same service raises when it is reached through its stub, except for
+    /// <see cref="ServiceCall.Direct"/>.
+    /// Does nothing when <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> is not set, and for a
+    /// vector whose installed handler raises no event through its stub either (see
+    /// <see cref="IServiceCallObserver"/>).
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector of the service.</param>
+    /// <param name="selector">The selector value of the service, or <c>null</c> for a handler with a single
+    /// service.</param>
+    /// <param name="inputs">The value of each input the service entry binds to its implementation, in the
+    /// entry's order, encoded as <see cref="ServiceCallInputs.Read"/> encodes the registers.</param>
+    /// <exception cref="InvalidOperationException">The number of inputs differs from the number the service
+    /// entry binds.</exception>
+    public void ServiceCalled(byte vectorNumber, int? selector, params uint[] inputs) {
+        InstalledInterruptHandlers installed = Machine.InstalledInterruptHandlers;
+        if (installed.ServiceCallObserver is not { } observer) {
+            return;
+        }
+        if (!installed.TryGetHandler(vectorNumber, out IInterruptHandler? handler)
+            || handler is not InterruptHandler) {
+            return;
+        }
+        InterruptServiceEntry entry = handler.Services switch {
+            HandlerServices.SingleService single => single.Service,
+            HandlerServices.SelectedServices selected when selector is { } selectorValue =>
+                selected.Services.GetValueOrDefault(selectorValue) ?? InterruptServiceEntry.Unknown,
+            _ => InterruptServiceEntry.Unknown
+        };
+        if (entry.Inputs.Count != inputs.Length) {
+            throw new InvalidOperationException(
+                $"Service {entry.Name} of interrupt 0x{vectorNumber:X2} binds {entry.Inputs.Count} inputs, but {inputs.Length} were given.");
+        }
+        ServiceCallInput[] callInputs = new ServiceCallInput[inputs.Length];
+        for (int i = 0; i < inputs.Length; i++) {
+            callInputs[i] = new ServiceCallInput(entry.Inputs[i], inputs[i]);
+        }
+        observer.OnServiceCall(new ServiceCall(vectorNumber, selector, entry, true, callInputs));
+    }
+
+    /// <summary>
     /// Returns the installed interrupt handler of type <typeparamref name="THandler"/>.
     /// </summary>
     /// <typeparam name="THandler">The handler type.</typeparam>

@@ -217,6 +217,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     private void CallbackDequeueAndSetAx() {
+        // AH=00h and AH=10h never reach Run(int): the stub waits for a key itself and ends here.
+        NotifyServiceCall(State.AH);
         if (!TryGetPendingKeyCode(out ushort? keyCode)) {
             return;
         }
