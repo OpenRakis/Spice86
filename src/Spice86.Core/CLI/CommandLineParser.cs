@@ -30,6 +30,7 @@ public class CommandLineParser {
 
         SpectreConfigurationCommand.LastParsedConfiguration = null;
         CommandApp<SpectreConfigurationCommand> commandApp = new();
+        commandApp.Configure(config => config.UseStrictParsing());
 
         int exitCode = commandApp.Run(reducedArgs);
         Configuration? initialConfig = SpectreConfigurationCommand.LastParsedConfiguration;
