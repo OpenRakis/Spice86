@@ -20,6 +20,9 @@ public sealed class InterruptDeliveryHold : IDisposable {
     private readonly List<HeldInterruptDelivery> _heldDeliveries = new();
     private bool _released;
 
+    // One bit per IRQ line (0 to 15) this hold has listed and whose request has stayed latched since.
+    private ushort _listedLines;
+
     /// <summary>
     ///     Initializes a hold on the given controller pair.
     /// </summary>
@@ -47,10 +50,26 @@ public sealed class InterruptDeliveryHold : IDisposable {
     public bool IsReleased => _released;
 
     /// <summary>
-    ///     Adds a held request to the list, or counts it when the list is full.
+    ///     Forgets the listed lines outside <paramref name="linesToKeep" />, so they are listed again the next time
+    ///     the CPU asks for them. Called when their request went away.
+    /// </summary>
+    /// <param name="linesToKeep">One bit per IRQ line (0 to 15) that stays listed.</param>
+    internal void KeepListedLines(ushort linesToKeep) {
+        _listedLines &= linesToKeep;
+    }
+
+    /// <summary>
+    ///     Adds a held request to the list, or counts it when the list is full. Does nothing when this hold already
+    ///     listed the request's line and the request has stayed latched since.
     /// </summary>
     /// <param name="delivery">Request the controller held back.</param>
     internal void Record(HeldInterruptDelivery delivery) {
+        ushort lineBit = (ushort)(1 << delivery.Irq);
+        if ((_listedLines & lineBit) != 0) {
+            return;
+        }
+
+        _listedLines |= lineBit;
         if (_heldDeliveries.Count >= MaxRecordedDeliveries) {
             DroppedDeliveryCount++;
             return;

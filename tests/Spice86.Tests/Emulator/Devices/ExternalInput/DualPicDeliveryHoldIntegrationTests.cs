@@ -33,7 +33,7 @@ public sealed class DualPicDeliveryHoldIntegrationTests {
         int timerInterrupts = 0;
         machine.EmulatorBreakpointsManager.ToggleBreakPoint(
             new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, TimerVector, (_, _) => timerInterrupts++, false), true);
-        InterruptDeliveryHold hold = machine.DualPic.HoldDelivery();
+        using InterruptDeliveryHold hold = machine.DualPic.HoldDelivery();
 
         // Act
         dependencyInjection.ProgramExecutor.Run();
@@ -90,7 +90,7 @@ public sealed class DualPicDeliveryHoldIntegrationTests {
         machine.DualPic.ActivateIrq(0);
         int deviceEvents = 0;
         machine.EmulationLoopScheduler.AddEvent(_ => deviceEvents++, 0);
-        InterruptDeliveryHold hold = machine.DualPic.HoldDelivery();
+        using InterruptDeliveryHold hold = machine.DualPic.HoldDelivery();
 
         // Act
         helper.CheckExternalEvents(0x1000, 0x0010);

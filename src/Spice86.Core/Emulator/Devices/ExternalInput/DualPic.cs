@@ -61,9 +61,6 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     private readonly List<InterruptDeliveryHold> _deliveryHolds = new();
     private bool _isDeliveryHeld;
 
-    // One bit per IRQ line (0 to 15) already listed in the active holds while its request stays latched.
-    private ushort _heldLinesRecorded;
-
     /// <summary>
     ///     Initializes controller state and registers I/O handlers.
     /// </summary>
@@ -267,18 +264,20 @@ public sealed partial class DualPic : DefaultIOPortHandler {
         }
 
         _isDeliveryHeld = false;
-        _heldLinesRecorded = 0;
     }
 
     /// <summary>
-    ///     Lists the request the CPU would receive now in every active hold, unless that line is already listed
-    ///     and its request has stayed latched since. Reads controller state and changes none of it.
+    ///     Lists the request the CPU would receive now in every active hold that has not listed that line since its
+    ///     request was latched. Each hold keeps its own record, so a hold created while a request is already latched
+    ///     and listed by an outer hold still lists it. Reads controller state and changes none of it.
     /// </summary>
     private void RecordHeldDelivery() {
         // A line whose request went away is listed again the next time it is the one to deliver.
         ushort latchedLines = (ushort)(_primaryPic.InterruptRequestRegister
             | (_secondaryPic.InterruptRequestRegister << 8));
-        _heldLinesRecorded &= latchedLines;
+        foreach (InterruptDeliveryHold hold in _deliveryHolds) {
+            hold.KeepListedLines(latchedLines);
+        }
 
         byte irq = _primaryPic.GetNextPendingIrq();
         if (irq == NoPendingIrq) {
@@ -298,12 +297,6 @@ public sealed partial class DualPic : DefaultIOPortHandler {
             vectorNumber = (byte)(_primaryPic.InterruptVectorBase + irq);
         }
 
-        ushort lineBit = (ushort)(1 << irq);
-        if ((_heldLinesRecorded & lineBit) != 0) {
-            return;
-        }
-
-        _heldLinesRecorded |= lineBit;
         HeldInterruptDelivery delivery = new(irq, vectorNumber, _state.Cycles, _state.IpSegmentedAddress);
         foreach (InterruptDeliveryHold hold in _deliveryHolds) {
             hold.Record(delivery);
@@ -675,8 +668,13 @@ public sealed partial class DualPic : DefaultIOPortHandler {
             return;
         }
 
-        // A delivery hold lists this line again if it is raised again.
-        _heldLinesRecorded &= (ushort)~(1 << irq);
+        if (_isDeliveryHeld) {
+            // Each active hold lists this line again if it is raised again.
+            ushort otherLines = (ushort)~(1 << irq);
+            foreach (InterruptDeliveryHold hold in _deliveryHolds) {
+                hold.KeepListedLines(otherLines);
+            }
+        }
 
         byte controllerIrq = GetEffectiveControllerIrq(irq);
         GetPicByIrq(irq).LowerIrq(controllerIrq);

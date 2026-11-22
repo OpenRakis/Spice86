@@ -171,7 +171,7 @@ public sealed class DualPicDeliveryHoldTests {
     [Fact]
     public void HeldRequestIsDeliveredAfterRelease() {
         // Arrange
-        InterruptDeliveryHold hold = _pic.HoldDelivery();
+        using InterruptDeliveryHold hold = _pic.HoldDelivery();
         _pic.ActivateIrq(0);
         _pic.ComputeVectorNumber();
 
@@ -189,8 +189,8 @@ public sealed class DualPicDeliveryHoldTests {
     [Fact]
     public void DeliveryStaysHeldUntilTheLastHoldIsReleased() {
         // Arrange
-        InterruptDeliveryHold outer = _pic.HoldDelivery();
-        InterruptDeliveryHold inner = _pic.HoldDelivery();
+        using InterruptDeliveryHold outer = _pic.HoldDelivery();
+        using InterruptDeliveryHold inner = _pic.HoldDelivery();
         _pic.ActivateIrq(0);
 
         // Act
@@ -205,6 +205,24 @@ public sealed class DualPicDeliveryHoldTests {
         deliveredVector.Should().Be(TimerVector);
         outer.HeldDeliveries.Should().ContainSingle();
         inner.HeldDeliveries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void HoldCreatedWhileAnOuterHoldListedTheRequestListsItToo() {
+        // Arrange: the outer hold has listed a request that stays latched
+        using InterruptDeliveryHold outer = _pic.HoldDelivery();
+        _pic.ActivateIrq(0);
+        _state.Cycles = 10;
+        _pic.ComputeVectorNumber();
+
+        // Act
+        using InterruptDeliveryHold inner = _pic.HoldDelivery();
+        _state.Cycles = 20;
+        _pic.ComputeVectorNumber();
+
+        // Assert: each hold lists the request once, from the first time the CPU asked under it
+        outer.HeldDeliveries.Should().ContainSingle().Which.Cycles.Should().Be(10);
+        inner.HeldDeliveries.Should().ContainSingle().Which.Cycles.Should().Be(20);
     }
 
     [Fact]
