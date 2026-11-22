@@ -1541,8 +1541,12 @@ public class CSharpOverrideHelper {
         // events (e.g. the PIT raising IRQ0), then deliver a pending PIC interrupt. Without this, queued
         // UI/headless input and external hardware interrupts would never reach generated code.
         Machine.EmulatorBreakpointsManager.CheckCpuCycleBreakPoints();
-        Machine.InputEventHub.ProcessAllPendingInputEvents();
-        Machine.EmulationLoopScheduler.ProcessEvents();
+        if (!_dualPic.IsDeliveryHeld) {
+            // Under a delivery hold (DualPic.HoldDelivery) input and device events are left pending as well,
+            // so this code sees the same absence of events as a caller that runs CfgCpu.ExecuteNext itself.
+            Machine.InputEventHub.ProcessAllPendingInputEvents();
+            Machine.EmulationLoopScheduler.ProcessEvents();
+        }
         if (!InterruptFlag) {
             return;
         }
