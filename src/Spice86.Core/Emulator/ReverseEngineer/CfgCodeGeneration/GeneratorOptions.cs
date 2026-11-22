@@ -11,7 +11,10 @@ public sealed record GeneratorOptions {
     /// <summary>The options of a check build, generated code made to be compared with the emulated original:
     /// every instrumentation option on.</summary>
     public static GeneratorOptions CheckBuild { get; } = new() {
-        ServiceCallNotifications = true
+        ServiceCallNotifications = true,
+        BranchProbes = true,
+        DeviceOperations = false,
+        Manifest = true
     };
 
     /// <summary>Whether each emitted method runs the census classifiers the generated-program diagnostics
@@ -27,4 +30,22 @@ public sealed record GeneratorOptions {
     /// call through the handler's stub. Off by default: the statement costs a call per service call, and the
     /// default output has none.</summary>
     public bool ServiceCallNotifications { get; init; }
+
+    /// <summary>Whether the condition of each <c>if</c>, loop and conditional expression of a method body is
+    /// printed as <c>Branch(site, condition)</c> and the value of each <c>switch</c> as
+    /// <c>Selector(site, value)</c>. Both helpers report to the
+    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/> of the machine and return
+    /// their argument. A condition joined with <c>&amp;&amp;</c> or <c>||</c> gets one probe per operand.
+    /// The entry dispatch of a method with several entries gets none. Off by default.</summary>
+    public bool BranchProbes { get; init; }
+
+    /// <summary>Whether a sequence of port accesses that forms one device operation is printed as one call
+    /// of the device. On by default. When off, every port access prints on its own, so a tool that
+    /// intercepts ports sees the same accesses from generated code as from the emulated original.</summary>
+    public bool DeviceOperations { get; init; } = true;
+
+    /// <summary>Whether the generated program carries a
+    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.GeneratedCodeManifest"/>,
+    /// which the dumper writes next to the sources. Off by default.</summary>
+    public bool Manifest { get; init; }
 }

@@ -127,7 +127,8 @@ public sealed class ServiceCallEventsTests {
         AsmRunSettings settings = discovery.Fixture.Settings;
         CfgPartitionedProgram program = GeneratedCodeMachineTestRunner.GenerateProgram(discovery).Program;
         GeneratedCSharpProgram defaultBuild = Generate(program, GeneratorOptions.Default);
-        GeneratedCSharpProgram checkBuild = Generate(program, GeneratorOptions.CheckBuild);
+        GeneratedCSharpProgram checkBuild =
+            Generate(program, GeneratorOptions.Default with { ServiceCallNotifications = true });
         using CompiledGeneratedOverride compiled = new GeneratedOverrideCompiler().CompileSupplier(defaultBuild);
         Recorder generated = new();
 
@@ -135,7 +136,7 @@ public sealed class ServiceCallEventsTests {
         using AsmFixtureRun generatedRun =
             AsmFixtureRunner.RunSettingsWithOverride(Observed(settings, generated), compiled.Supplier);
 
-        // Assert: the check build is the default build plus one ServiceCalled line per direct call
+        // Assert: with the option on, the source is the default source plus one ServiceCalled line per direct call
         string notification = nameof(CSharpOverrideHelper.ServiceCalled) + "(";
         defaultBuild.SourceText.Should().NotContain(notification);
         List<string> checkLines = checkBuild.SourceText.Split('\n').ToList();

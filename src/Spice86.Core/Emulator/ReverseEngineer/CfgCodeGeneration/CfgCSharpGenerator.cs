@@ -18,6 +18,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
+using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Emulator.Memory;
@@ -41,6 +42,9 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _collectCensuses;
     private readonly bool _verify;
     private readonly bool _serviceCallNotifications;
+    private readonly bool _branchProbes;
+    private readonly bool _deviceOperations;
+    private readonly bool _manifest;
     private readonly int _maxLinesPerFile;
 
     /// <summary>The production generator: no census collection, no IR verification.</summary>
@@ -71,6 +75,9 @@ internal sealed class CfgCSharpGenerator {
         _collectCensuses = options.CollectCensuses;
         _verify = options.Verify;
         _serviceCallNotifications = options.ServiceCallNotifications;
+        _branchProbes = options.BranchProbes;
+        _deviceOperations = options.DeviceOperations;
+        _manifest = options.Manifest;
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -101,8 +108,10 @@ internal sealed class CfgCSharpGenerator {
         InstructionLowerer lowerer = new(context, transferEmitter, effectBuilder,
             effectBuilder.Compute());
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
+        BranchProbeSites? branchProbes = _branchProbes ? new BranchProbeSites() : null;
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications);
+            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, branchProbes,
+            _deviceOperations);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 
@@ -143,6 +152,7 @@ internal sealed class CfgCSharpGenerator {
 
         progress.BeginPhase(DumpPhase.CodePrinting);
         List<(ushort Segment, string Text, bool HasFrame)> methodTexts = new(plan.Methods.Count);
+        List<(MethodPlan Method, TypedSignature? Signature)> manifestMethods = new(plan.Methods.Count);
         for (int i = 0; i < prepared.Count; i++) {
             PreparedMethod preparedMethod = prepared[i];
             progress.Step(i + 1, prepared.Count, preparedMethod.Method.MethodName);
@@ -151,6 +161,7 @@ internal sealed class CfgCSharpGenerator {
             methodWriter.Indent();
             AnalyzedMethod analyzed = methodEmitter.Analyze(preparedMethod, analysis, timer);
             methodEmitter.Print(methodWriter, analyzed, analysis, timer);
+            manifestMethods.Add((preparedMethod.Method, analyzed.Signature));
             methodTexts.Add((preparedMethod.Method.PrimaryEntry.Address.Segment, methodWriter.ToString(),
                 preparedMethod.FramePlan is not null));
             MethodCensus methodCensus = preparedMethod.Emission.Census;
@@ -187,9 +198,36 @@ internal sealed class CfgCSharpGenerator {
             FlagReadCensus = flagReadCensus,
             WebCensus = webCensus,
             ConstantMemoryAccesses = constantMemoryAccesses,
-            DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses)
+            DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
+            Manifest = _manifest
+                ? BuildManifest(manifestMethods, branchProbes, methodTexts.Select(method => method.Text))
+                : null
         };
     }
+
+    /// <summary>The manifest of the printed program: every method with its entries and typed signature, and
+    /// the probe sites present in <paramref name="methodTexts"/>.</summary>
+    private static GeneratedCodeManifest BuildManifest(
+        List<(MethodPlan Method, TypedSignature? Signature)> methods, BranchProbeSites? branchProbes,
+        IEnumerable<string> methodTexts) {
+        ILookup<string, BranchProbeSite> sitesByMethod =
+            (branchProbes?.SitesIn(methodTexts) ?? []).ToLookup(site => site.Method);
+        List<GeneratedMethodManifest> manifestMethods = new(methods.Count);
+        foreach ((MethodPlan method, TypedSignature? signature) in methods) {
+            manifestMethods.Add(new GeneratedMethodManifest(
+                method.MethodName,
+                method.Entries.Select(entry =>
+                    new MethodEntryManifest(entry.Address.Segment, entry.Address.Offset)).ToList(),
+                ManifestValues(signature?.Parameters),
+                ManifestValues(signature?.Outputs),
+                sitesByMethod[method.MethodName].Select(site => new ProbeSiteManifest(site.Id, site.Kind,
+                    site.Address?.Segment, site.Address?.Offset, site.Text)).ToList()));
+        }
+        return new GeneratedCodeManifest(manifestMethods);
+    }
+
+    private static List<MethodValueManifest> ManifestValues(IReadOnlyList<TypedParameter>? values) =>
+        (values ?? []).Select(value => new MethodValueManifest(value.Name, value.Type, value.Register)).ToList();
 
     /// <summary>Applies DOS call comments, single-case switch simplification and direction-flag
     /// step folding to the prepared bodies.</summary>

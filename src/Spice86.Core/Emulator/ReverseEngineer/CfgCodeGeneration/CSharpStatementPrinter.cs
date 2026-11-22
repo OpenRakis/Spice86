@@ -64,13 +64,13 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 PushIfElse(pending, ifElse);
                 return;
             case WhileNode whileNode:
-                PushBraced(pending, $"while ({expressions.Print(whileNode.Condition)})", whileNode.Body);
+                PushBraced(pending, $"while ({Condition(BranchProbeKind.While, whileNode.Condition)})", whileNode.Body);
                 return;
             case DoWhileNode doWhile:
                 PushDoWhile(pending, doWhile);
                 return;
             case PreTestLoopNode preTestLoop:
-                PushBraced(pending, $"while ({expressions.Print(preTestLoop.Condition)})", preTestLoop.Body);
+                PushBraced(pending, $"while ({Condition(BranchProbeKind.While, preTestLoop.Condition)})", preTestLoop.Body);
                 return;
             case InfiniteLoopNode loop:
                 PushBraced(pending, "while (true)", loop.Body);
@@ -254,16 +254,54 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         };
     }
 
+    /// <summary>The text of a statement condition. Without branch probes it is the printed condition. With
+    /// them, every operand of a condition joined with <c>&amp;&amp;</c> or <c>||</c> prints inside its own
+    /// <c>Branch</c> probe, so each instruction-level test of a combined condition reports its outcome. The
+    /// operators keep their order and their short circuit.</summary>
+    private string Condition(BranchProbeKind kind, ValueNode condition) {
+        if (expressions.BranchProbes is not { } probes) {
+            return expressions.Print(condition).Text;
+        }
+        return ProbedCondition(probes, kind, condition, false);
+    }
+
+    private string ProbedCondition(BranchProbeSites probes, BranchProbeKind kind, ValueNode condition,
+        bool nested) {
+        if (condition is BinaryOperationNode {
+                BinaryOperation: BinaryOperation.LOGICAL_AND or BinaryOperation.LOGICAL_OR
+            } combined) {
+            string left = ProbedCondition(probes, kind, combined.Left, true);
+            string right = ProbedCondition(probes, kind, combined.Right, true);
+            string op = combined.BinaryOperation == BinaryOperation.LOGICAL_AND ? "&&" : "||";
+            return nested ? $"({left} {op} {right})" : $"{left} {op} {right}";
+        }
+        return probes.Branch(kind, expressions.Print(condition).Text);
+    }
+
+    /// <summary>The text of a <c>switch</c> value, inside a <c>Selector</c> probe when branch probes are
+    /// on.</summary>
+    private string SwitchValue(ValueNode value) {
+        string text = expressions.Print(value).Text;
+        return expressions.BranchProbes is { } probes ? probes.Selector(text) : text;
+    }
+
+    /// <summary>Tells the probe sites which instruction's statements start printing.</summary>
+    private void NoteInstruction(InstructionBoundaryNode boundary) {
+        if (expressions.BranchProbes is { } probes) {
+            probes.Address = boundary.Node.Address;
+        }
+    }
+
     private void PushIfElse(Stack<object> pending, IfElseNode node) {
         List<object> items = [
-            (Action)(() => writer.OpenBlock($"if ({expressions.Print(node.Condition)})"))
+            (Action)(() => writer.OpenBlock($"if ({Condition(BranchProbeKind.If, node.Condition)})"))
         ];
         AppendBody(items, node.TrueCase);
         items.Add((Action)(() => writer.CloseBlock()));
         IVisitableAstNode falseCase = node.FalseCase;
         while (OnlyIfElse(falseCase) is IfElseNode elseIf) {
             IfElseNode arm = elseIf;
-            items.Add((Action)(() => writer.OpenBlock($"else if ({expressions.Print(arm.Condition)})")));
+            items.Add((Action)(() => writer.OpenBlock($"else if ({Condition(BranchProbeKind.If, arm.Condition)})")));
             AppendBody(items, arm.TrueCase);
             items.Add((Action)(() => writer.CloseBlock()));
             falseCase = arm.FalseCase;
@@ -290,7 +328,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             (Action)(() => writer.OpenBlock("do"))
         ];
         AppendBody(items, node.Body);
-        items.Add((Action)(() => writer.CloseBlock($" while ({expressions.Print(node.Condition)});")));
+        items.Add((Action)(() => writer.CloseBlock($" while ({Condition(BranchProbeKind.DoWhile, node.Condition)});")));
         PushItems(pending, items);
     }
 
@@ -583,7 +621,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PushCountedLoop(Stack<object> pending, CountedLoop loop) {
         List<object> items = [
             (Action)(() => writer.OpenBlock(
-                $"for ({StatementText(loop.Init)}; {expressions.Print(loop.Condition)}; {StatementText(loop.Step)})"))
+                $"for ({StatementText(loop.Init)}; {Condition(BranchProbeKind.For, loop.Condition)}; {StatementText(loop.Step)})"))
         ];
         AppendBody(items, loop.Body);
         items.Add((Action)(() => writer.CloseBlock()));
@@ -593,7 +631,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PushBoundaryPrint(Stack<object> pending, BoundaryPrint boundaryPrint) {
         string savedSuffix = expressions.LocalVariableSuffix;
         List<object> items = [
-            (Action)(() => expressions.LocalVariableSuffix = boundaryPrint.Boundary.LocalVariableSuffix)
+            (Action)(() => {
+                expressions.LocalVariableSuffix = boundaryPrint.Boundary.LocalVariableSuffix;
+                NoteInstruction(boundaryPrint.Boundary);
+            })
         ];
         items.AddRange(boundaryPrint.Items);
         items.Add((Action)(() => expressions.LocalVariableSuffix = savedSuffix));
@@ -611,7 +652,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private void PushSwitch(Stack<object> pending, SwitchNode node) {
         List<object> items = [
-            (Action)(() => writer.OpenBlock($"switch ({expressions.Print(node.Value)})"))
+            (Action)(() => writer.OpenBlock($"switch ({SwitchValue(node.Value)})"))
         ];
         foreach (SwitchSection arm in node.Sections) {
             items.Add((Action)(() => writer.Line($"case {CaseLabel(node, arm.Label)}:")));
@@ -744,7 +785,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PushInstructionBoundary(Stack<object> pending, InstructionBoundaryNode node) {
         string savedSuffix = expressions.LocalVariableSuffix;
         List<object> items = [
-            (Action)(() => expressions.LocalVariableSuffix = node.LocalVariableSuffix),
+            (Action)(() => {
+                expressions.LocalVariableSuffix = node.LocalVariableSuffix;
+                NoteInstruction(node);
+            }),
             node.Body,
             (Action)(() => expressions.LocalVariableSuffix = savedSuffix)
         ];

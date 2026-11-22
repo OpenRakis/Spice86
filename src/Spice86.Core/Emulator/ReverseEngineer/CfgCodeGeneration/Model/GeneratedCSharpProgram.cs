@@ -17,6 +17,12 @@ internal sealed class GeneratedCSharpProgram {
     public required IReadOnlyList<GeneratedSourceFile> Files { get; init; }
 
     /// <summary>
+    /// The manifest of the program, or <c>null</c> when the generator's manifest option is off. It is no
+    /// part of <see cref="SourceText"/>.
+    /// </summary>
+    public GeneratedCodeManifest? Manifest { get; init; }
+
+    /// <summary>
     /// Golden form of the program: every file preceded by a <c>// ==== file: &lt;name&gt; ====</c>
     /// marker line, files separated by one empty line. A single comment line when no CFG partitions
     /// were observed.

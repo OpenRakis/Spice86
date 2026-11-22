@@ -107,6 +107,13 @@ public sealed class Machine : IDisposable {
     public InstalledInterruptHandlers InstalledInterruptHandlers { get; }
 
     /// <summary>
+    /// The observer told about the outcome of every branch probe generated code runs, or
+    /// <see langword="null"/> (the default) for none. Only generated code produced as a check build contains
+    /// probes. Set it on the emulation thread, or while the emulation is paused.
+    /// </summary>
+    public Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver? BranchProbeObserver { get; set; }
+
+    /// <summary>
     /// INT16H handler.
     /// </summary>
     public KeyboardInt16Handler KeyboardInt16Handler { get; }

@@ -95,6 +95,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// <summary>The suffix appended to local variable names of the instruction being printed; empty for none.</summary>
     public string LocalVariableSuffix { get; set; } = string.Empty;
 
+    /// <summary>The probe sites of the program while a method body is printed with branch probes, otherwise
+    /// <c>null</c>. When set, the condition of a conditional expression prints inside a probe, and
+    /// <see cref="CSharpStatementPrinter"/> does the same for statement conditions and switch values.</summary>
+    internal BranchProbeSites? BranchProbes { get; set; }
+
     /// <summary>The ports the machine the program was dumped from had a registered device handler
     /// for, keyed by port to the handler's type; <see langword="null"/> when the program was built
     /// without a machine, which suppresses the <c>no device</c> comment.</summary>
@@ -421,7 +426,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         CSharpFragment whenTrue = Expr(node.WhenTrue);
         CSharpFragment whenFalse = Expr(node.WhenFalse);
-        string text = $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)} ? "
+        string condition = BranchProbes is { } probes
+            ? probes.Branch(BranchProbeKind.ConditionalValue, Expr(node.Condition).Text)
+            : $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)}";
+        string text = $"{condition} ? "
             + $"{whenTrue} : {whenFalse}";
         return new CSharpFragment(text, SelectType(node, whenTrue, whenFalse), ConditionalPrecedence);
     }
