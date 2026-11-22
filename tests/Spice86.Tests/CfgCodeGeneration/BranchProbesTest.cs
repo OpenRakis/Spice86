@@ -359,10 +359,12 @@ public sealed class BranchProbesTest {
         // Assert: every reported site is in the manifest, with the kind its helper stands for
         Dictionary<int, ProbeSiteManifest> sites = checkBuild.Manifest!.Sites.ToDictionary(site => site.Id);
         (recorder.Branches.Count + recorder.Selectors.Count).Should().BeGreaterThan(0);
-        recorder.Branches.Should().OnlyContain(branch =>
-            sites.TryGetValue(branch.Site, out ProbeSiteManifest? site) && site.Kind != BranchProbeKind.Switch);
-        recorder.Selectors.Should().OnlyContain(selector =>
-            sites.TryGetValue(selector.Site, out ProbeSiteManifest? site) && site.Kind == BranchProbeKind.Switch);
+        foreach ((int site, bool _) in recorder.Branches) {
+            sites.Should().ContainKey(site).WhoseValue.Kind.Should().NotBe(BranchProbeKind.Switch);
+        }
+        foreach ((int site, uint _) in recorder.Selectors) {
+            sites.Should().ContainKey(site).WhoseValue.Kind.Should().Be(BranchProbeKind.Switch);
+        }
     }
 
     [Fact]
