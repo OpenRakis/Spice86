@@ -54,8 +54,7 @@ internal static class IrBranchOrigins {
     /// the terminator's instruction: the branch condition, the switch value, and the conditions inside the
     /// transfer of an exit.</summary>
     public static void StampTerminators(IrMethod method) {
-        foreach (IrBlock block in method.Blocks) {
-            IrTerminator terminator = block.Terminator;
+        foreach (IrTerminator terminator in method.Blocks.Select(block => block.Terminator)) {
             switch (terminator) {
                 case IrBranch branch:
                     Stamp(branch.Condition, branch.Origin);
