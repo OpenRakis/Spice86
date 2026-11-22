@@ -7,7 +7,6 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -23,8 +22,8 @@ public class CommandLineParser {
     /// Parses the command line into a <see cref="Configuration"/> object.
     /// </summary>
     /// <param name="args">The application command line arguments</param>
-    /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
-    /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
+    /// <returns>A <see cref="Configuration"/> object representing the command line arguments, or null when an
+    /// option is unknown, a value is invalid or the executable is missing. Spectre.Console.Cli prints the error.</returns>
     public Configuration? ParseCommandLine(string[] args) {
         string[] reducedArgs = ProcessArgs(args, out string exeArgs);
 

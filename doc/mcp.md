@@ -399,7 +399,8 @@ A web dashboard can:
 
 | Problem | Solution |
 |---------|----------|
-| Client gets 404 on `/mcp` | Check that `--McpHttpPort` is not 0 and the server started successfully |
+| Client gets 404 on `/mcp` | Another server answered on that port. Check that the client URL uses the `--McpHttpPort` port (default 8081), not the HTTP API port, and that the log shows `MCP HTTP transport started on port ...` |
+| Connection refused on the MCP port | The MCP server is not running. Check that `--McpHttpPort` is not 0 and that the log has no `Failed to configure MCP HTTP transport` warning |
 | Tools return "Tool disabled" error | Some tools may be disabled if the emulator is not in the expected state (e.g., video tools when no VGA card is initialized) |
 | Tools time out | If emulator is not responding to pause requests, ensure the emulation loop is running and not deadlocked |
 | Client skips session ID and gets 404 | Ensure stateless mode is enabled (default); if using stateful mode, ensure client sends `Mcp-Session-Id` header |
