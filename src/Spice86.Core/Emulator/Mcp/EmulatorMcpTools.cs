@@ -505,7 +505,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_io_port",UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
+    [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
     public CallToolResult ReadIoPort(int port) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
