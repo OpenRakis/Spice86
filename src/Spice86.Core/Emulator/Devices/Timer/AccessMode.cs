@@ -10,7 +10,7 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 ///     <para>10 = high byte only</para>
 ///     <para>11 = low byte followed by high byte</para>
 /// </remarks>
-internal enum AccessMode : byte {
+public enum AccessMode : byte {
     Latch = 0x0,
     Low = 0x1,
     High = 0x2,

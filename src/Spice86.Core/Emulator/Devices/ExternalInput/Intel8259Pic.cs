@@ -356,6 +356,50 @@ internal abstract class Intel8259Pic(ILogger logger) {
     }
 
     /// <summary>
+    ///     Captures every register and flag of the controller.
+    /// </summary>
+    /// <returns>The controller's state.</returns>
+    internal PicControllerState CaptureState() {
+        return new PicControllerState(
+            InterruptRequestRegister,
+            InterruptMaskRegister,
+            InServiceRegister,
+            ActiveIrqLine,
+            _lowestPriorityIrq,
+            InterruptVectorBase,
+            IsSpecialMaskModeEnabled,
+            IsAutoEndOfInterruptEnabled,
+            ShouldRotateOnAutoEoi,
+            IsSingleModeConfigured,
+            IsIssrRequested,
+            (int)CurrentIcwIndex,
+            (int)RemainingInitializationWords);
+    }
+
+    /// <summary>
+    ///     Sets every register and flag of the controller from a captured state. Signals nothing to the CPU or
+    ///     to the upstream controller: the caller restores those signals from its own state.
+    /// </summary>
+    /// <param name="state">State to restore.</param>
+    internal void RestoreState(PicControllerState state) {
+        InterruptRequestRegister = state.InterruptRequestRegister;
+        InterruptMaskRegister = state.InterruptMaskRegister;
+        InterruptMaskRegisterInverted = (byte)~state.InterruptMaskRegister;
+        InServiceRegister = state.InServiceRegister;
+        InServiceRegisterInverted = (byte)~state.InServiceRegister;
+        ActiveIrqLine = state.ActiveIrqLine;
+        _lowestPriorityIrq = state.LowestPriorityIrq;
+        InterruptVectorBase = state.InterruptVectorBase;
+        IsSpecialMaskModeEnabled = state.IsSpecialMaskModeEnabled;
+        IsAutoEndOfInterruptEnabled = state.IsAutoEndOfInterruptEnabled;
+        ShouldRotateOnAutoEoi = state.ShouldRotateOnAutoEoi;
+        IsSingleModeConfigured = state.IsSingleModeConfigured;
+        IsIssrRequested = state.IsIssrRequested;
+        CurrentIcwIndex = (nuint)state.CurrentIcwIndex;
+        RemainingInitializationWords = (nuint)state.RemainingInitializationWords;
+    }
+
+    /// <summary>
     ///     Resets controller registers to their defaults prior to initialization.
     /// </summary>
     public virtual void Initialize() {
