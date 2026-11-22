@@ -541,7 +541,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
             ioPortDispatcher, vgaRenderer, pauseHandler, emsManager, dos.Xms,
-            emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
+            emulatorBreakpointsManager, cfgBlocksJsonExporter, emulatorStateSerializer, loggerService);
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");

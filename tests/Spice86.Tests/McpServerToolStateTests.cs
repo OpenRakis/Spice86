@@ -1712,4 +1712,47 @@ public class McpServerToolStateTests {
         isError.GetBoolean().Should().BeTrue();
         McpJsonRpcAssertions.GetToolErrorMessage(result).Should().Contain("ascii must be 0-255");
     }
+
+    [Fact]
+    public async Task DumpAll_ShouldWriteDumpFilesToTheDumpFolderAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        string dumpFolder = context.Spice86.EmulatorStateSerializer.EmulatorStateSerializationFolder.Folder;
+        context.Spice86.ProgramExecutor.Run();
+        Directory.Delete(dumpFolder, recursive: true);
+        Directory.CreateDirectory(dumpFolder);
+
+        // Act
+        using JsonDocument response = await context.CallToolAsync("dump_all", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "folder", out JsonElement folder).Should().BeTrue();
+        folder.GetString().Should().Be(dumpFolder);
+        File.Exists(Path.Join(dumpFolder, "spice86dumpMemoryDump.bin")).Should().BeTrue();
+        File.Exists(Path.Join(dumpFolder, "spice86dumpCpuRegisters.json")).Should().BeTrue();
+        File.Exists(Path.Join(dumpFolder, "spice86dumpExecutionFlow.json")).Should().BeTrue();
+        File.Exists(Path.Join(dumpFolder, "spice86dumpCfgBlocks.json")).Should().BeTrue();
+        Directory.Exists(Path.Join(dumpFolder, "GeneratedProject")).Should().BeTrue();
+        context.Services.PauseHandler.IsPaused.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DumpAll_ShouldReturnToolErrorWhenTheDumpFolderIsMissingAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        string dumpFolder = context.Spice86.EmulatorStateSerializer.EmulatorStateSerializationFolder.Folder;
+        Directory.Delete(dumpFolder, recursive: true);
+
+        // Act
+        using JsonDocument response = await context.CallToolAsync("dump_all", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
+        result.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
+        isError.GetBoolean().Should().BeTrue();
+        McpJsonRpcAssertions.GetToolErrorMessage(result).Should().Contain(dumpFolder);
+    }
 }
