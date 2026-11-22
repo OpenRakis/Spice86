@@ -85,6 +85,8 @@ public sealed class DualPicDeliveryHoldIntegrationTests {
         machine.CpuState.CS = 0x1000;
         machine.CpuState.IP = 0x0010;
         machine.CpuState.InterruptFlag = true;
+        // A masked request is never listed, so unmask IRQ 0 whatever mask the machine starts with.
+        machine.DualPic.SetIrqMask(0, false);
         machine.DualPic.ActivateIrq(0);
         int deviceEvents = 0;
         machine.EmulationLoopScheduler.AddEvent(_ => deviceEvents++, 0);
