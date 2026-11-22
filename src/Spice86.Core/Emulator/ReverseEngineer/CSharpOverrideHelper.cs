@@ -1224,8 +1224,10 @@ public class CSharpOverrideHelper {
         if (installed.ServiceCallObserver is not { } observer) {
             return;
         }
+        // A handler raises events through its stub only when it holds the observer, which a handler on a
+        // hardware interrupt vector never does.
         if (!installed.TryGetHandler(vectorNumber, out IInterruptHandler? handler)
-            || handler is not InterruptHandler) {
+            || handler is not InterruptHandler { ServiceCallObserver: not null }) {
             return;
         }
         InterruptServiceEntry entry = handler.Services switch {

@@ -202,12 +202,14 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// or <c>(AX, CarryFlag) = call</c> for several. Register-local promotion can turn an output
     /// target into a local (<c>ax = call</c>), which the existing writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
-        if (serviceCallNotifications) {
-            writer.Line(ServiceCallNotification(call));
-        }
         if (call.Vector == 0x21 && DosInt21Handler.SavesCallerStack((byte)call.SelectorValue)) {
             // The saved pointer addresses the frame top, six bytes below this caller SP.
             writer.Line($"{call.PropertyPath}.{nameof(DosInt21Handler.RecordCallerStack)}(SS, SP);");
+        }
+        if (serviceCallNotifications) {
+            // After the caller stack save: through the stub, DosInt21Handler.Run() saves it before Run(int)
+            // raises the event, so in both forms the PSP write comes before the event.
+            writer.Line(ServiceCallNotification(call));
         }
         string invocation = expressions.Print(call).Text;
         if (call.Results.Count == 0) {

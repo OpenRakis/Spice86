@@ -16,8 +16,11 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 /// option calls <c>CSharpOverrideHelper.ServiceCalled</c> right before it. Generated code produced without
 /// the option raises no event for a direct call.</item>
 /// </list>
-/// <para>The event is raised by handlers that derive from <c>InterruptHandler</c>. The hardware interrupt
-/// handlers and the INT 1Ch stub, which is a bare <c>iret</c>, raise none in any of the three forms.</para>
+/// <para>The event is raised by handlers that derive from <c>InterruptHandler</c> and are installed on a
+/// vector the PICs do not deliver hardware interrupts on. The handlers on the hardware interrupt vectors
+/// (INT 08h to 0Fh and 70h to 77h with the default PIC bases, INT 09h and INT 70h included although they
+/// derive from <c>InterruptHandler</c>) and the INT 1Ch stub, which is a bare <c>iret</c>, raise none in any
+/// of the three forms.</para>
 /// <para>A service that dispatches a second service by its number raises a second event, in all three forms:
 /// INT 21h AH=0Ch (flush the input buffer, then run the input function in AL) raises one event for 0Ch and one
 /// for the function in AL. A service method that calls another method of its handler raises nothing more.
