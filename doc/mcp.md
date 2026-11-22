@@ -57,7 +57,7 @@ remaining deadlines for subsequent pumps.
 
 **Default port:** `8081`
 
-**CLI option:** `--mcp-http-port <port>`
+**CLI option:** `--McpHttpPort <port>` (0 disables the MCP server)
 
 ---
 
@@ -66,7 +66,7 @@ remaining deadlines for subsequent pumps.
 ### 1. Start Spice86 with MCP enabled (enabled by default)
 
 ```bash
-Spice86 -e program.exe --mcp-http-port 8081
+Spice86 -e program.exe --McpHttpPort 8081
 ```
 
 ### 2. Connect your MCP client
@@ -399,7 +399,7 @@ A web dashboard can:
 
 | Problem | Solution |
 |---------|----------|
-| Client gets 404 on `/mcp` | Check that `--mcp-http-port` is set and the server started successfully |
+| Client gets 404 on `/mcp` | Check that `--McpHttpPort` is not 0 and the server started successfully |
 | Tools return "Tool disabled" error | Some tools may be disabled if the emulator is not in the expected state (e.g., video tools when no VGA card is initialized) |
 | Tools time out | If emulator is not responding to pause requests, ensure the emulation loop is running and not deadlocked |
 | Client skips session ID and gets 404 | Ensure stateless mode is enabled (default); if using stateful mode, ensure client sends `Mcp-Session-Id` header |
