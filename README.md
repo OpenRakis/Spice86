@@ -132,6 +132,7 @@ Spice86 -e program.exe --CpuHeavyLog \
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
   -i, --InstructionTimeScale        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   --ClockJitterSeed <CLOCKJITTERSEED> Optional integer seed enabling small deterministic clock jitter (±0.01 ms). Omit to disable.
+  --GeneratedCodeCheckBuild          Generates the C# override project as a check build: a ServiceCalled statement is printed before each direct call of a DOS or BIOS service, so a service call observer sees it. Off by default.
   --ClockStartTime <CLOCKSTARTTIME> Optional UTC start date/time for the emulated clock (parseable by DateTime.Parse, e.g. 1993-06-01T00:00:00Z). When omitted defaults to the current UTC time.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
   -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.

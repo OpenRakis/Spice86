@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
@@ -20,9 +21,11 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 
 /// <summary>
 /// Writes a tree of runtime and code-generation AST nodes as C# statements. Expressions are printed by
-/// <see cref="CSharpExpressionPrinter"/>; labels come from <paramref name="labelOf"/>.
+/// <see cref="CSharpExpressionPrinter"/>; labels come from <paramref name="labelOf"/>. With
+/// <paramref name="serviceCallNotifications"/> a <c>ServiceCalled</c> statement is printed before each direct
+/// interrupt service call (see <see cref="GeneratorOptions.ServiceCallNotifications"/>).
 /// </summary>
-internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf) {
+internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf, bool serviceCallNotifications = false) {
     /// <summary>The goto targets of the whole method being printed. A
     /// <c>for</c> rewrite refuses a loop when any statement of the method - not only of the block
     /// being dispatched - jumps to its header or its step.</summary>
@@ -199,6 +202,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// or <c>(AX, CarryFlag) = call</c> for several. Register-local promotion can turn an output
     /// target into a local (<c>ax = call</c>), which the existing writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
+        if (serviceCallNotifications) {
+            writer.Line(ServiceCallNotification(call));
+        }
         if (call.Vector == 0x21 && DosInt21Handler.SavesCallerStack((byte)call.SelectorValue)) {
             // The saved pointer addresses the frame top, six bytes below this caller SP.
             writer.Line($"{call.PropertyPath}.{nameof(DosInt21Handler.RecordCallerStack)}(SS, SP);");
@@ -212,6 +218,40 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             call.Results.Select(result => expressions.Print(result).Text));
         string left = call.Results.Count == 1 ? targets : $"({targets})";
         writer.Line($"{left} = {invocation};");
+    }
+
+    /// <summary>The <c>ServiceCalled(vector, selector, inputs);</c> statement of a direct service call. The
+    /// inputs are the call's own argument expressions, each encoded the way
+    /// <see cref="ServiceCallInputs.Read"/> encodes the register its parameter is bound to, so the event the
+    /// statement raises equals the one the service raises when it is reached through its stub. The
+    /// expressions are register reads, locals, constants and flags: evaluating them a second time has no
+    /// effect.</summary>
+    private string ServiceCallNotification(InterruptServiceCallNode call) {
+        List<string> arguments = [
+            $"0x{call.Vector:X2}",
+            call.Selector is null ? "null" : $"0x{call.SelectorValue:X2}"
+        ];
+        for (int index = 0; index < call.Arguments.Count; index++) {
+            arguments.Add(ServiceCallInput(call.Service.Inputs[index], call.Arguments[index]));
+        }
+        return $"{nameof(CSharpOverrideHelper.ServiceCalled)}({string.Join(", ", arguments)});";
+    }
+
+    private string ServiceCallInput(CpuValues binding, IVisitableAstNode argument) {
+        if (argument is SegmentedAddressNode address) {
+            string segment = $"unchecked((ushort)({expressions.Print(address.Segment).Text}))";
+            string offset = $"unchecked((ushort)({expressions.Print(address.Offset).Text}))";
+            return $"((uint){segment} << 16) | {offset}";
+        }
+        string value = expressions.Print(argument).Text;
+        return ServiceCallInputs.EncodingOf(binding) switch {
+            ServiceCallInputs.Encoding.Byte => $"unchecked((byte)({value}))",
+            ServiceCallInputs.Encoding.Word => $"unchecked((ushort)({value}))",
+            ServiceCallInputs.Encoding.DoubleWord => $"unchecked((uint)({value}))",
+            ServiceCallInputs.Encoding.Flag => $"({value}) ? 1u : 0u",
+            _ => throw new InvalidOperationException(
+                $"{binding}: only a DS:DX string argument is bound to a segmented address")
+        };
     }
 
     private void PushIfElse(Stack<object> pending, IfElseNode node) {

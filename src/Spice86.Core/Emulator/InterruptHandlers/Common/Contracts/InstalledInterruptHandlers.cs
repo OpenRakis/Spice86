@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -16,6 +17,7 @@ public sealed class InstalledInterruptHandlers {
     private readonly HashSet<byte> _hardwareVectorNumbers;
     private readonly List<(IInterruptHandler Handler, SegmentedAddress Address)> _installed = new();
     private readonly Dictionary<byte, int> _installedIndexByVector = new();
+    private IServiceCallObserver? _serviceCallObserver;
 
     /// <summary>
     /// Initializes a new instance.
@@ -24,6 +26,23 @@ public sealed class InstalledInterruptHandlers {
     /// (external events).</param>
     public InstalledInterruptHandlers(IEnumerable<byte> hardwareVectorNumbers) {
         _hardwareVectorNumbers = new HashSet<byte>(hardwareVectorNumbers);
+    }
+
+    /// <summary>
+    /// The observer told about every service call the installed handlers dispatch, or
+    /// <see langword="null"/> (the default) for none. See <see cref="IServiceCallObserver"/> for what
+    /// raises an event. Set it on the emulation thread, or while the emulation is paused.
+    /// </summary>
+    public IServiceCallObserver? ServiceCallObserver {
+        get => _serviceCallObserver;
+        set {
+            _serviceCallObserver = value;
+            foreach ((IInterruptHandler handler, SegmentedAddress _) in _installed) {
+                if (handler is InterruptHandler interruptHandler) {
+                    interruptHandler.ServiceCallObserver = value;
+                }
+            }
+        }
     }
 
     /// <summary>The installed handlers, indexed by interrupt vector.</summary>
@@ -66,6 +85,24 @@ public sealed class InstalledInterruptHandlers {
                 $"A handler is already installed on interrupt vector 0x{vector:X2}");
         }
         _installed.Add((handler, address));
+        if (handler is InterruptHandler interruptHandler) {
+            interruptHandler.ServiceCallObserver = _serviceCallObserver;
+        }
+    }
+
+    /// <summary>
+    /// Returns the handler installed on <paramref name="vector"/>.
+    /// </summary>
+    /// <param name="vector">The interrupt vector number.</param>
+    /// <param name="handler">The installed handler when found.</param>
+    /// <returns><c>false</c> when the vector has no installed handler.</returns>
+    public bool TryGetHandler(byte vector, [NotNullWhen(true)] out IInterruptHandler? handler) {
+        if (_installedIndexByVector.TryGetValue(vector, out int index)) {
+            handler = _installed[index].Handler;
+            return true;
+        }
+        handler = null;
+        return false;
     }
 
     /// <summary>

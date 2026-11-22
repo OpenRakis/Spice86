@@ -40,6 +40,7 @@ internal sealed class CfgCSharpGenerator {
     private readonly AstInstructionRenderer _assemblyRenderer = new(AsmRenderingConfig.CreateSpice86Style());
     private readonly bool _collectCensuses;
     private readonly bool _verify;
+    private readonly bool _serviceCallNotifications;
     private readonly int _maxLinesPerFile;
 
     /// <summary>The production generator: no census collection, no IR verification.</summary>
@@ -56,9 +57,20 @@ internal sealed class CfgCSharpGenerator {
     }
 
     /// <summary>Creates a generator with a per-file line limit; tests use a small limit.</summary>
-    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile) {
-        _collectCensuses = collectCensuses;
-        _verify = verify;
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile)
+        : this(new GeneratorOptions { CollectCensuses = collectCensuses, Verify = verify }, maxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator from its options.</summary>
+    /// <param name="options">What the generator does besides generating the default source.</param>
+    public CfgCSharpGenerator(GeneratorOptions options) : this(options, MaxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator from its options, with a per-file line limit.</summary>
+    internal CfgCSharpGenerator(GeneratorOptions options, int maxLinesPerFile) {
+        _collectCensuses = options.CollectCensuses;
+        _verify = options.Verify;
+        _serviceCallNotifications = options.ServiceCallNotifications;
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -90,7 +102,7 @@ internal sealed class CfgCSharpGenerator {
             effectBuilder.Compute());
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify);
+            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 

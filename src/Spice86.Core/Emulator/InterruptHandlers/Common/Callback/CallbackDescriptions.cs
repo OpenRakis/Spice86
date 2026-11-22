@@ -12,6 +12,10 @@ using System.Linq;
 /// and service selector, any other callback by the declaring type and method of its delegate.
 /// </summary>
 public static class CallbackDescriptions {
+    // InterruptHandler.RunServiceFromStub is protected, so nameof cannot name it from here. It runs Run() after
+    // telling the service call observer, and is described like Run().
+    private const string RunServiceFromStubName = "RunServiceFromStub";
+
     /// <summary>One description per callback of <paramref name="callbackHandler"/>, keyed by
     /// callback number.</summary>
     public static IReadOnlyDictionary<ushort, string> Describe(CallbackHandler callbackHandler) {
@@ -24,7 +28,8 @@ public static class CallbackDescriptions {
 
     private static string Describe(Callback callback) {
         Action runnable = callback.Runnable;
-        if (runnable.Target is IInterruptHandler handler && runnable.Method.Name == nameof(InterruptHandler.Run)) {
+        if (runnable.Target is IInterruptHandler handler
+            && runnable.Method.Name is nameof(InterruptHandler.Run) or RunServiceFromStubName) {
             return DescribeHandler(handler);
         }
         string declaringType = runnable.Method.DeclaringType?.Name ?? runnable.Method.Name;

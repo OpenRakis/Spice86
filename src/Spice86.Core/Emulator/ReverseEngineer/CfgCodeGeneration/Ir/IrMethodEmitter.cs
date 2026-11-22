@@ -38,7 +38,8 @@ internal sealed class IrMethodEmitter(
     AstInstructionRenderer assemblyRenderer,
     HardwareInterruptEffectBuilder effectBuilder,
     bool collectCensuses,
-    bool verify) {
+    bool verify,
+    bool serviceCallNotifications) {
 
     private readonly IrLifter _lifter = new(context, lowerer, assemblyRenderer);
 
@@ -208,7 +209,7 @@ internal sealed class IrMethodEmitter(
         }
         CSharpExpressionPrinter expressions = new(context.SegmentVariables,
             context.Program.Inputs.IoPorts, analyzed, analysis);
-        CSharpStatementPrinter printer = new(writer, expressions, LabelOf);
+        CSharpStatementPrinter printer = new(writer, expressions, LabelOf, serviceCallNotifications);
         // Every read the body makes of a register the signature declares must see the argument:
         // the assignment sits before the entrydispatcher label so a cyclic jump to an entry
         // does not reassign stale arguments.
