@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -146,6 +147,13 @@ public sealed class ServiceCallEventsTests {
         checkLines.Where(line => !line.TrimStart().StartsWith(notification)).Should()
             .Equal(defaultBuild.SourceText.Split('\n'));
 
+        // Assert: each notification follows the caller stack save, as the event follows it through the stub
+        for (int index = 0; index < checkLines.Count; index++) {
+            if (checkLines[index].TrimStart().StartsWith(notification)) {
+                checkLines[index - 1].Should().Contain(nameof(DosInt21Handler.RecordCallerStack) + "(");
+            }
+        }
+
         // Assert: only the calls that go through the stub are reported
         generated.Calls.Should().NotBeEmpty();
         generated.Calls.Should().OnlyContain(call => !call.Direct);
@@ -215,6 +223,31 @@ public sealed class ServiceCallEventsTests {
         helper.ServiceCalled(0x1C, null);
 
         // Assert
+        recorder.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void HandlersOnHardwareInterruptVectorsRaiseNoEvent() {
+        // Arrange
+        const byte keyboardIrqVector = 0x09;
+        using Spice86Creator creator = new(binName: "jump2", installInterruptVectors: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        InstalledInterruptHandlers installed = machine.InstalledInterruptHandlers;
+        CSharpOverrideHelper helper = new(new Dictionary<SegmentedAddress, FunctionInformation>(), machine,
+            Substitute.For<ILogger>(), new Configuration { HttpApiPort = 0 });
+        Recorder recorder = new();
+
+        // Act
+        installed.ServiceCallObserver = recorder;
+        helper.ServiceCalled(keyboardIrqVector, null);
+
+        // Assert: the INT 09h handler derives from InterruptHandler, but IRQ 1 delivers it
+        installed.HardwareVectorNumbers.Should().Contain(keyboardIrqVector);
+        installed.TryGetHandler(keyboardIrqVector, out IInterruptHandler? keyboard).Should().BeTrue();
+        keyboard.Should().BeAssignableTo<InterruptHandler>().Which.ServiceCallObserver.Should().BeNull();
+        installed.TryGetHandler(DosVector, out IInterruptHandler? dos).Should().BeTrue();
+        dos.Should().BeAssignableTo<InterruptHandler>().Which.ServiceCallObserver.Should().BeSameAs(recorder);
         recorder.Calls.Should().BeEmpty();
     }
 

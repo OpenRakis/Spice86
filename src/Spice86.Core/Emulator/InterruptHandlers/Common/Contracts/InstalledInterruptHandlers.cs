@@ -31,17 +31,24 @@ public sealed class InstalledInterruptHandlers {
     /// <summary>
     /// The observer told about every service call the installed handlers dispatch, or
     /// <see langword="null"/> (the default) for none. See <see cref="IServiceCallObserver"/> for what
-    /// raises an event. Set it on the emulation thread, or while the emulation is paused.
+    /// raises an event. A handler installed on a hardware interrupt vector never gets the observer: it runs
+    /// on an external event and dispatches no service. Set it on the emulation thread, or while the emulation
+    /// is paused.
     /// </summary>
     public IServiceCallObserver? ServiceCallObserver {
         get => _serviceCallObserver;
         set {
             _serviceCallObserver = value;
             foreach ((IInterruptHandler handler, SegmentedAddress _) in _installed) {
-                if (handler is InterruptHandler interruptHandler) {
-                    interruptHandler.ServiceCallObserver = value;
-                }
+                AttachServiceCallObserver(handler);
             }
+        }
+    }
+
+    private void AttachServiceCallObserver(IInterruptHandler handler) {
+        if (handler is InterruptHandler interruptHandler
+            && !_hardwareVectorNumbers.Contains(interruptHandler.VectorNumber)) {
+            interruptHandler.ServiceCallObserver = _serviceCallObserver;
         }
     }
 
@@ -85,9 +92,7 @@ public sealed class InstalledInterruptHandlers {
                 $"A handler is already installed on interrupt vector 0x{vector:X2}");
         }
         _installed.Add((handler, address));
-        if (handler is InterruptHandler interruptHandler) {
-            interruptHandler.ServiceCallObserver = _serviceCallObserver;
-        }
+        AttachServiceCallObserver(handler);
     }
 
     /// <summary>

@@ -92,7 +92,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
 
     /// <summary>
     /// The observer told about the service calls this handler dispatches, or <see langword="null"/> for none.
-    /// <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> sets it on every installed handler.
+    /// <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> sets it on every installed handler that is
+    /// not on a hardware interrupt vector.
     /// </summary>
     internal IServiceCallObserver? ServiceCallObserver { get; set; }
 
