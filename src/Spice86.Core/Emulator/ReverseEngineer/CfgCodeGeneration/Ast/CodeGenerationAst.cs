@@ -196,8 +196,13 @@ internal static class CodeGenerationAst {
         return new SwitchSection(label, Sequence(statements, new BreakNode()));
     }
 
-    /// <summary>The negation of a condition: the operand of a <c>!</c>, the opposite comparison, or <c>!</c> around the condition.</summary>
-    public static ValueNode NegatedCondition(ValueNode condition) {
+    /// <summary>The negation of a condition: the operand of a <c>!</c>, the opposite comparison, or <c>!</c> around the condition.
+    /// The negation keeps the branch origin of the condition, and each operand of a negated <c>&amp;&amp;</c> or
+    /// <c>||</c> keeps the origin of its operand.</summary>
+    public static ValueNode NegatedCondition(ValueNode condition) =>
+        IrBranchOrigins.Carry(Negation(condition), condition);
+
+    private static ValueNode Negation(ValueNode condition) {
         if (condition is UnaryOperationNode { UnaryOperation: UnaryOperation.NOT } notNode) {
             return notNode.Value;
         }

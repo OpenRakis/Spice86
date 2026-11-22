@@ -17,10 +17,6 @@ internal sealed partial class BranchProbeSites {
     /// <summary>Name of the method whose body is being printed.</summary>
     public string Method { get; set; } = string.Empty;
 
-    /// <summary>Address of the last instruction whose statements started printing, or <c>null</c> before
-    /// the first one of the method.</summary>
-    public SegmentedAddress? Address { get; set; }
-
     /// <summary>Every site a printer asked for, in number order. A printer may print an expression and drop
     /// the text, so some of these sites are absent from the source: see <see cref="SitesIn"/>.</summary>
     public IReadOnlyList<BranchProbeSite> Sites => _sites;
@@ -28,15 +24,19 @@ internal sealed partial class BranchProbeSites {
     /// <summary>The text of a probe around a condition: <c>Branch(site, condition)</c>.</summary>
     /// <param name="kind">The statement or expression the condition belongs to.</param>
     /// <param name="condition">The printed condition.</param>
-    public string Branch(BranchProbeKind kind, string condition) {
-        int site = Add(kind, condition);
+    /// <param name="address">Address of the instruction that decides the condition, or <c>null</c> for a
+    /// synthetic condition.</param>
+    public string Branch(BranchProbeKind kind, string condition, SegmentedAddress? address) {
+        int site = Add(kind, condition, address);
         return $"{nameof(CSharpOverrideHelper.Branch)}({site}, {condition})";
     }
 
     /// <summary>The text of a probe around the value of a <c>switch</c>: <c>Selector(site, value)</c>.</summary>
     /// <param name="value">The printed value.</param>
-    public string Selector(string value) {
-        int site = Add(BranchProbeKind.Switch, value);
+    /// <param name="address">Address of the instruction that dispatches on the value, or <c>null</c> for a
+    /// synthetic value.</param>
+    public string Selector(string value, SegmentedAddress? address) {
+        int site = Add(BranchProbeKind.Switch, value, address);
         return $"{nameof(CSharpOverrideHelper.Selector)}({site}, {value})";
     }
 
@@ -52,9 +52,9 @@ internal sealed partial class BranchProbeSites {
         return _sites.Where(site => printed.Contains(site.Id)).ToList();
     }
 
-    private int Add(BranchProbeKind kind, string text) {
+    private int Add(BranchProbeKind kind, string text, SegmentedAddress? address) {
         int site = _sites.Count;
-        _sites.Add(new BranchProbeSite(site, kind, Method, Address, text));
+        _sites.Add(new BranchProbeSite(site, kind, Method, address, text));
         return site;
     }
 

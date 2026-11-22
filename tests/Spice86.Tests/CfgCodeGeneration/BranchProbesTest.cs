@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
@@ -21,7 +22,6 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.AsmFixtures;
-using Spice86.Tests.CfgCpu.Blocks;
 
 using System.Text.RegularExpressions;
 
@@ -199,31 +199,33 @@ public sealed class BranchProbesTest {
     }
 
     [Fact]
-    public void SiteRecordsTheInstructionPrintedBeforeIt() {
-        // Arrange
+    public void ProbeRecordsTheOriginOfItsOperandOrOfTheConditionAroundIt() {
+        // Arrange: the test of one instruction, or-ed with the test of another jump and with a condition of
+        // no known origin
         BranchProbeSites probes = new();
-        SegmentedAddress address = new(0x1000, 0x0010);
-        ICfgNode instruction = CfgTestHelpers.CreateInstruction(address);
-        BlockNode node = new(
-            new IfElseNode(Zero, new BlockNode(Call("Work")), new BlockNode()),
-            new InstructionBoundaryNode(instruction, "", new BlockNode(
-                new IfElseNode(Carry, new BlockNode(Call("Work")), new BlockNode()))));
+        SegmentedAddress loop = new(0x1000, 0x0010);
+        SegmentedAddress jump = new(0x1000, 0x0020);
+        BinaryOperationNode ownTest = And(new CpuFlagNode(Flags.Zero), new CpuFlagNode(Flags.Carry));
+        ownTest.BranchOrigin = new BranchOrigin(loop);
+        CpuFlagNode otherJump = new(Flags.Sign) { BranchOrigin = new BranchOrigin(jump) };
+        CpuFlagNode unknown = new(Flags.Overflow);
+        IfElseNode node = new(Or(Or(ownTest, otherJump), unknown), new BlockNode(Call("Work")),
+            new BlockNode());
 
         // Act
         Print(node, probes);
 
-        // Assert
-        probes.Sites[0].Address.Should().BeNull();
-        probes.Sites[1].Address.Should().Be(address);
+        // Assert: the operands of the instruction's own test share its address, the unknown one has none
+        probes.Sites.Select(site => site.Address).Should().Equal(loop, loop, jump, null);
     }
 
     [Fact]
     public void SitesInKeepsOnlyTheProbesPresentInTheSource() {
         // Arrange
         BranchProbeSites probes = new();
-        string first = probes.Branch(BranchProbeKind.If, "ZeroFlag");
-        probes.Branch(BranchProbeKind.If, "CarryFlag");
-        string third = probes.Selector("AX");
+        string first = probes.Branch(BranchProbeKind.If, "ZeroFlag", null);
+        probes.Branch(BranchProbeKind.If, "CarryFlag", null);
+        string third = probes.Selector("AX", null);
 
         // Act
         IReadOnlyList<BranchProbeSite> printed = probes.SitesIn([$"if ({first}) {{", $"switch ({third}) {{"]);
@@ -276,6 +278,8 @@ public sealed class BranchProbesTest {
 
         // Assert
         json.Should().Contain("\"kind\": \"Switch\"");
+        json.Should().Contain("\"synthetic\": true");
+        read.Sites.Select(site => site.Synthetic).Should().Equal(false, true);
         read.Methods.Should().ContainSingle();
         GeneratedMethodManifest method = read.Methods[0];
         method.Name.Should().Be("Sample");
@@ -386,6 +390,125 @@ public sealed class BranchProbesTest {
         // Assert
         checkBuild.Manifest!.Sites.Should().Contain(site => site.Kind == BranchProbeKind.Switch);
         recorder.Selectors.Should().NotBeEmpty();
+    }
+
+    /// <summary>The manifest of the check build of a fixture, and the instructions of the program it was
+    /// generated from, one per address.</summary>
+    private static (GeneratedCodeManifest Manifest, Dictionary<SegmentedAddress, CfgInstruction> Instructions)
+        CheckBuildOf(string fixtureName) {
+        using AsmRunScope discovery = new(AsmFixtureCatalog.Partition(fixtureName));
+        CfgPartitionedProgram program = GeneratedCodeMachineTestRunner.GenerateProgram(discovery).Program;
+        GeneratedCodeManifest manifest = Generate(program, GeneratorOptions.CheckBuild).Manifest
+            ?? throw new InvalidOperationException($"The check build of {fixtureName} has no manifest.");
+        Dictionary<SegmentedAddress, CfgInstruction> instructions = program.Partitions
+            .SelectMany(partition => partition.Blocks)
+            .SelectMany(block => block.Instructions)
+            .OfType<CfgInstruction>()
+            .DistinctBy(instruction => instruction.Address)
+            .ToDictionary(instruction => instruction.Address);
+        return (manifest, instructions);
+    }
+
+    private static SegmentedAddress? AddressOf(ProbeSiteManifest site) =>
+        site is { Segment: { } segment, Offset: { } offset } ? new SegmentedAddress(segment, offset) : null;
+
+    private static CfgInstruction? InstructionOf(ProbeSiteManifest site,
+        Dictionary<SegmentedAddress, CfgInstruction> instructions) =>
+        AddressOf(site) is { } address ? instructions.GetValueOrDefault(address) : null;
+
+    /// <summary>A jump with a taken and a fall-through successor: a Jcc, JCXZ or LOOP.</summary>
+    private static bool IsConditionalJump(CfgInstruction? instruction) =>
+        instruction is { IsJump: true, StaticSuccessorAddresses.Count: 2 };
+
+    /// <summary>A jump whose target is read at run time.</summary>
+    private static bool IsIndirectJump(CfgInstruction? instruction) =>
+        instruction is { IsJump: true, StaticSuccessorAddresses.Count: 0 };
+
+    [Theory]
+    [InlineData("if_conversion")]
+    [InlineData("partition_jump_table")]
+    [InlineData("dataflow_rewrite_traps")]
+    public void EachSiteRecordsTheInstructionThatDecidesIt(string fixtureName) {
+        // Arrange
+        (GeneratedCodeManifest manifest, Dictionary<SegmentedAddress, CfgInstruction> instructions) =
+            CheckBuildOf(fixtureName);
+
+        // Act
+        List<(ProbeSiteManifest Site, CfgInstruction? Instruction)> sites = manifest.Sites
+            .Select(site => (Site: site, Instruction: InstructionOf(site, instructions)))
+            .ToList();
+
+        // Assert: every site has the address of an instruction of the program
+        sites.Should().NotBeEmpty();
+        sites.Should().OnlyContain(pair => !pair.Site.Synthetic && pair.Instruction != null);
+        // Assert: a switch dispatches at an indirect jump, and no branch site is at an unconditional jump
+        sites.Where(pair => pair.Site.Kind == BranchProbeKind.Switch && !IsIndirectJump(pair.Instruction))
+            .Should().BeEmpty();
+        sites.Where(pair => pair.Site.Kind != BranchProbeKind.Switch && pair.Instruction is { IsJump: true }
+                && !IsConditionalJump(pair.Instruction))
+            .Should().BeEmpty();
+        // Assert: each conditional jump has its own site, also when the structurer joins the tests of several
+        // jumps into one condition with && and ||
+        foreach (CfgInstruction jump in instructions.Values.Where(IsConditionalJump)) {
+            sites.Count(pair => ReferenceEquals(pair.Instruction, jump))
+                .Should().Be(1, $"the jump at {jump.Address} decides one printed condition");
+        }
+    }
+
+    [Theory]
+    [InlineData("partition_jump_table")]
+    [InlineData("dataflow_rewrite_traps")]
+    public void BranchSitesOfAProgramOfJumpsAreItsConditionalJumps(string fixtureName) {
+        // Arrange
+        (GeneratedCodeManifest manifest, Dictionary<SegmentedAddress, CfgInstruction> instructions) =
+            CheckBuildOf(fixtureName);
+
+        // Act
+        List<CfgInstruction?> deciding = manifest.Sites
+            .Where(site => site.Kind != BranchProbeKind.Switch)
+            .Select(site => InstructionOf(site, instructions))
+            .ToList();
+
+        // Assert: never the compare before the jump, or the last instruction printed before the condition
+        deciding.Should().NotBeEmpty();
+        deciding.Should().OnlyContain(instruction => IsConditionalJump(instruction));
+    }
+
+    [Fact]
+    public void ConvertedValueChoiceRecordsTheInstructionItCameFrom() {
+        // Arrange
+        (GeneratedCodeManifest manifest, Dictionary<SegmentedAddress, CfgInstruction> instructions) =
+            CheckBuildOf("if_conversion");
+
+        // Act
+        List<InstructionOperation?> operations = manifest.Sites
+            .Where(site => site.Kind == BranchProbeKind.ConditionalValue)
+            .Select(site => InstructionOf(site, instructions)?.DisplayAst.Operation)
+            .ToList();
+
+        // Assert: each conditional value comes from the setcc or salc whose internal branch was converted
+        operations.Should().NotBeEmpty();
+        operations.Should().OnlyContain(operation => operation == InstructionOperation.SALC
+            || (operation != null && operation.Value.ToString().StartsWith("SET", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void ComparisonPackedFromSeveralJumpsIsSynthetic() {
+        // Arrange
+        (GeneratedCodeManifest manifest, Dictionary<SegmentedAddress, CfgInstruction> instructions) =
+            CheckBuildOf("dataflow_wide_conditions");
+
+        // Act
+        ILookup<bool, ProbeSiteManifest> bySynthetic = manifest.Sites.ToLookup(site => site.Synthetic);
+
+        // Assert: a 32-bit comparison packed from the high and low word tests has no address
+        bySynthetic[true].Should().NotBeEmpty();
+        bySynthetic[true].Should().OnlyContain(site => site.Segment == null && site.Offset == null
+            && site.Text.Contains("<< 16", StringComparison.Ordinal));
+        // Assert: every other site has the address of its jump, each operand of a merged range test included
+        bySynthetic[false].Should().NotBeEmpty();
+        bySynthetic[false].Should().NotContain(site => site.Text.Contains("<< 16", StringComparison.Ordinal));
+        bySynthetic[false].Should().OnlyContain(site => IsConditionalJump(InstructionOf(site, instructions)));
     }
 
     [Fact]

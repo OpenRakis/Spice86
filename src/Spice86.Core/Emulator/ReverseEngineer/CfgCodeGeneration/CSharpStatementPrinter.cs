@@ -263,21 +263,17 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         if (expressions.BranchProbes is not { } probes) {
             return expressions.Print(condition).Text;
         }
-        return expressions.ProbedCondition(probes, kind, condition, false);
+        return expressions.ProbedCondition(probes, kind, condition, false, null);
     }
 
     /// <summary>The text of a <c>switch</c> value, inside a <c>Selector</c> probe when branch probes are
-    /// on.</summary>
+    /// on. The probe records the address in the value's <see cref="ValueNode.BranchOrigin"/>.</summary>
     private string SwitchValue(ValueNode value) {
         string text = expressions.Print(value).Text;
-        return expressions.BranchProbes is { } probes ? probes.Selector(text) : text;
-    }
-
-    /// <summary>Tells the probe sites which instruction's statements start printing.</summary>
-    private void NoteInstruction(InstructionBoundaryNode boundary) {
-        if (expressions.BranchProbes is { } probes) {
-            probes.Address = boundary.Node.Address;
+        if (expressions.BranchProbes is not { } probes) {
+            return text;
         }
+        return probes.Selector(text, value.BranchOrigin?.Address);
     }
 
     private void PushIfElse(Stack<object> pending, IfElseNode node) {
@@ -619,10 +615,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PushBoundaryPrint(Stack<object> pending, BoundaryPrint boundaryPrint) {
         string savedSuffix = expressions.LocalVariableSuffix;
         List<object> items = [
-            (Action)(() => {
-                expressions.LocalVariableSuffix = boundaryPrint.Boundary.LocalVariableSuffix;
-                NoteInstruction(boundaryPrint.Boundary);
-            })
+            (Action)(() => expressions.LocalVariableSuffix = boundaryPrint.Boundary.LocalVariableSuffix)
         ];
         items.AddRange(boundaryPrint.Items);
         items.Add((Action)(() => expressions.LocalVariableSuffix = savedSuffix));
@@ -773,10 +766,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void PushInstructionBoundary(Stack<object> pending, InstructionBoundaryNode node) {
         string savedSuffix = expressions.LocalVariableSuffix;
         List<object> items = [
-            (Action)(() => {
-                expressions.LocalVariableSuffix = node.LocalVariableSuffix;
-                NoteInstruction(node);
-            }),
+            (Action)(() => expressions.LocalVariableSuffix = node.LocalVariableSuffix),
             node.Body,
             (Action)(() => expressions.LocalVariableSuffix = savedSuffix)
         ];

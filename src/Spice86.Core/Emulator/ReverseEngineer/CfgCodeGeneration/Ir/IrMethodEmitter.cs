@@ -54,6 +54,9 @@ internal sealed class IrMethodEmitter(
         IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
+        if (branchProbes is not null) {
+            IrBranchOrigins.StampConditionalValues(irMethod);
+        }
         // The device operations pass only combines accesses of ports the map gives a device for, so an
         // empty map leaves every port access as its own statement.
         IReadOnlyDictionary<ushort, Type> deviceOperationPorts = deviceOperations
@@ -61,6 +64,9 @@ internal sealed class IrMethodEmitter(
             : new Dictionary<ushort, Type>();
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
             deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+        if (branchProbes is not null) {
+            IrBranchOrigins.StampTerminators(irMethod);
+        }
         ConstantMemoryAccessTable constantMemoryAccesses = IrConstantMemoryAccesses.Collect(irMethod);
         (BlockNode EntryDispatch, BlockNode Body, GotoCensus Census, GotoTargets Targets) structured =
             timer.Measure("lowering and structuring", () => {
@@ -253,7 +259,6 @@ internal sealed class IrMethodEmitter(
             // Only the body is probed: the entry dispatch above selects an entry, which is no branch of
             // the program.
             branchProbes.Method = method.MethodName;
-            branchProbes.Address = null;
             expressions.BranchProbes = branchProbes;
         }
         printer.Print(analyzed.Body);

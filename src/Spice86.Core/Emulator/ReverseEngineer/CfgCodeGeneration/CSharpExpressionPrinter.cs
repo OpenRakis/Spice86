@@ -426,7 +426,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         // The condition prints first, so its probes are numbered before those of the arms, in source order.
         string condition = BranchProbes is { } probes
-            ? ProbedCondition(probes, BranchProbeKind.ConditionalValue, node.Condition, true)
+            ? ProbedCondition(probes, BranchProbeKind.ConditionalValue, node.Condition, true, null)
             : $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)}";
         CSharpFragment whenTrue = Expr(node.WhenTrue);
         CSharpFragment whenFalse = Expr(node.WhenFalse);
@@ -439,23 +439,30 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// <c>&amp;&amp;</c> or <c>||</c> prints inside its own <c>Branch</c> probe, so each instruction-level
     /// test of a combined condition reports its outcome. The operators keep their order and their short
     /// circuit. An operand that prints as the constant <c>true</c> or <c>false</c> gets no probe: it has one
-    /// outcome, and a wrapped constant would change what the C# compiler sees as reachable.</summary>
+    /// outcome, and a wrapped constant would change what the C# compiler sees as reachable.
+    /// Each probe records the address in the operand's <see cref="ValueNode.BranchOrigin"/>. An operand
+    /// without one takes the origin of the nearest combined condition around it that has one, which is the
+    /// case for the operands of one instruction's own test. A probe with no origin at all, or a synthetic one,
+    /// records no address.</summary>
     /// <param name="probes">The probe sites of the program.</param>
     /// <param name="kind">The statement or expression the condition belongs to.</param>
     /// <param name="condition">The condition.</param>
     /// <param name="parenthesize">Whether a combined condition prints inside parentheses.</param>
+    /// <param name="enclosing">The origin of the combined condition around <paramref name="condition"/>,
+    /// or <c>null</c> for none.</param>
     internal string ProbedCondition(BranchProbeSites probes, BranchProbeKind kind, ValueNode condition,
-        bool parenthesize) {
+        bool parenthesize, BranchOrigin? enclosing) {
+        BranchOrigin? origin = condition.BranchOrigin ?? enclosing;
         if (condition is BinaryOperationNode {
                 BinaryOperation: BinaryOperation.LOGICAL_AND or BinaryOperation.LOGICAL_OR
             } combined) {
-            string left = ProbedCondition(probes, kind, combined.Left, true);
-            string right = ProbedCondition(probes, kind, combined.Right, true);
+            string left = ProbedCondition(probes, kind, combined.Left, true, origin);
+            string right = ProbedCondition(probes, kind, combined.Right, true, origin);
             string op = combined.BinaryOperation == BinaryOperation.LOGICAL_AND ? "&&" : "||";
             return parenthesize ? $"({left} {op} {right})" : $"{left} {op} {right}";
         }
         string text = Expr(condition).Text;
-        return text is "true" or "false" ? text : probes.Branch(kind, text);
+        return text is "true" or "false" ? text : probes.Branch(kind, text, origin?.Address);
     }
 
     /// <summary>The C# type a printed select may claim: <see cref="ValueNode.DataType"/> when the

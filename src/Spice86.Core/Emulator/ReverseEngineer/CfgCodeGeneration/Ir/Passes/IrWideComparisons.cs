@@ -274,8 +274,8 @@ internal static class IrWideComparisons {
             return null;
         }
         inner.Add(continueTarget);
-        return (lowBranch.Origin, new BinaryOperationNode(DataType.BOOL,
-            Pack(low.Left, compare.Left), low.Operation, Pack(low.Right, compare.Right)),
+        return (lowBranch.Origin, Synthetic(new BinaryOperationNode(DataType.BOOL,
+            Pack(low.Left, compare.Left), low.Operation, Pack(low.Right, compare.Right))),
             whenTrue, whenFalse);
     }
 
@@ -363,8 +363,8 @@ internal static class IrWideComparisons {
                 left = new TypeConversionNode(DataType.INT32, left);
                 right = new TypeConversionNode(DataType.INT32, right);
             }
-            return (lowBranch.Origin, new BinaryOperationNode(DataType.BOOL, left, lowWanted,
-                right), leafA, leafB);
+            return (lowBranch.Origin, Synthetic(new BinaryOperationNode(DataType.BOOL, left, lowWanted,
+                right)), leafA, leafB);
         }
         return null;
     }
@@ -428,7 +428,8 @@ internal static class IrWideComparisons {
                     return null;
                 }
                 inner.Add(innerBlock);
-                return (lowBranch.Origin, candidate, lowBranch.WhenTrue.Target, other);
+                return (lowBranch.Origin, Merged(candidate, branch.Origin, lowBranch.Origin),
+                    lowBranch.WhenTrue.Target, other);
             }
             if (lowBranch.WhenTrue.Target == other && lowBranch.WhenFalse.Target != other) {
                 // `a ? (b ? leafT : leafF) : leafT` is `!a || b`; `a ? leafT : (b ? leafT :
@@ -442,11 +443,30 @@ internal static class IrWideComparisons {
                     return null;
                 }
                 inner.Add(innerBlock);
-                return (lowBranch.Origin, candidate, other, lowBranch.WhenFalse.Target);
+                return (lowBranch.Origin, Merged(candidate, branch.Origin, lowBranch.Origin),
+                    other, lowBranch.WhenFalse.Target);
             }
             return null;
         }
         return null;
+    }
+
+    /// <summary><paramref name="condition"/>, a comparison packed from the tests of several jumps, marked as
+    /// synthetic: no single jump decides it.</summary>
+    private static ValueNode Synthetic(ValueNode condition) {
+        IrBranchOrigins.MarkSynthetic(condition);
+        return condition;
+    }
+
+    /// <summary><paramref name="candidate"/>, the <c>&amp;&amp;</c> or <c>||</c> of the tests of two jumps,
+    /// with each operand stamped with the jump it came from. The whole condition is synthetic, so an operand
+    /// that loses its origin in a later rewrite does not take the other jump's.</summary>
+    private static BinaryOperationNode Merged(BinaryOperationNode candidate, ICfgNode first,
+            ICfgNode second) {
+        IrBranchOrigins.Stamp(candidate.Left, first);
+        IrBranchOrigins.Stamp(candidate.Right, second);
+        IrBranchOrigins.MarkSynthetic(candidate);
+        return candidate;
     }
 
     private static BinaryOperation Opposite(BinaryOperation operation) => operation switch {

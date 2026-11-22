@@ -7,8 +7,9 @@ namespace Spice86.Core.Emulator.ReverseEngineer;
 /// <remarks>
 /// Only generated code produced with the branch probe option of the generator (the check build) contains
 /// probes. Each probe has a site number, and the manifest written next to the generated sources tells the
-/// method, the kind of statement and the printed condition of each site. The observer runs on the emulation
-/// thread and must not change the machine.
+/// method, the kind of statement, the printed condition and the address of the instruction that decides each
+/// site, or that the site is synthetic. The observer runs on the emulation thread and must not change the
+/// machine.
 /// </remarks>
 public interface IBranchProbeObserver {
     /// <summary>

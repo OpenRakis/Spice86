@@ -32,10 +32,11 @@ public enum BranchProbeKind {
 /// <param name="Id">The site number, the first argument of the probe call in the source.</param>
 /// <param name="Kind">The statement or expression the probe belongs to.</param>
 /// <param name="Method">Name of the generated method that contains the probe.</param>
-/// <param name="Address">Address of the last instruction whose statements started printing before the probe,
-/// or <c>null</c> when the probe is printed before any instruction of its method. For a structured statement
-/// this is usually the instruction that computes or tests the condition, but the structurer does not
-/// guarantee it.</param>
+/// <param name="Address">Address of the instruction that decides the condition or dispatches on the value:
+/// the conditional jump, loop, indirect jump or call, or the instruction with a condition of its own that the
+/// condition was lifted from. Each operand of an <c>&amp;&amp;</c> or <c>||</c> that the generator merged from
+/// several jumps has the address of its own jump. <c>null</c> for a synthetic condition that no single
+/// instruction decides, such as a 32-bit comparison folded from the tests of several jumps.</param>
 /// <param name="Text">The printed condition or switch value the probe wraps.</param>
 internal sealed record BranchProbeSite(int Id, BranchProbeKind Kind, string Method, SegmentedAddress? Address,
     string Text);
@@ -100,9 +101,13 @@ public sealed record MethodValueManifest(string Name, string Type, string Regist
 /// <param name="Id">The site number, the first argument of the <c>Branch</c> or <c>Selector</c> call.</param>
 /// <param name="Kind">The statement or expression the probe belongs to. <see cref="BranchProbeKind.Switch"/>
 /// sites report through <c>Selector</c>, the others through <c>Branch</c>.</param>
-/// <param name="Segment">Segment of the last instruction whose statements started printing before the probe,
-/// or <c>null</c> when there is none in the method.</param>
-/// <param name="Offset">Offset of that instruction, or <c>null</c>.</param>
+/// <param name="Segment">Segment of the instruction that decides the condition or dispatches on the value, or
+/// <c>null</c> for a synthetic site.</param>
+/// <param name="Offset">Offset of that instruction, or <c>null</c> for a synthetic site.</param>
 /// <param name="Text">The printed condition or switch value the probe wraps.</param>
 public sealed record ProbeSiteManifest(int Id, BranchProbeKind Kind, ushort? Segment, ushort? Offset,
-    string Text);
+    string Text) {
+    /// <summary>Whether no single instruction decides the site, so it has no address. The generator built the
+    /// condition from the tests of several instructions, or from none.</summary>
+    public bool Synthetic => Segment is null;
+}
