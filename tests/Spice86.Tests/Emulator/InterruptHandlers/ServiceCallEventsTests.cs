@@ -119,6 +119,16 @@ public sealed class ServiceCallEventsTests {
         ServiceCall open = generated.Calls.Single(call => call.Selector == 0x3D);
         open.Inputs.Select(input => input.Binding).Should().Equal(CpuValues.Al, CpuValues.Ds | CpuValues.Dx);
         (open.Inputs[1].Value >> 16).Should().Be(write.Inputs[2].Value, "the name is addressed through DS");
+
+        // Assert: with the branch probes of a check build too, each notification follows the caller stack save
+        string notification = nameof(CSharpOverrideHelper.ServiceCalled) + "(";
+        List<string> checkLines = checkBuild.SourceText.Split('\n').ToList();
+        checkLines.Should().Contain(line => line.TrimStart().StartsWith(notification));
+        for (int index = 0; index < checkLines.Count; index++) {
+            if (checkLines[index].TrimStart().StartsWith(notification)) {
+                checkLines[index - 1].Should().Contain(nameof(DosInt21Handler.RecordCallerStack) + "(");
+            }
+        }
     }
 
     [Fact]

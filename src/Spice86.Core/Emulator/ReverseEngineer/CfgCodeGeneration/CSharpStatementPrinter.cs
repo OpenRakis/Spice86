@@ -257,27 +257,13 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     }
 
     /// <summary>The text of a statement condition. Without branch probes it is the printed condition. With
-    /// them, every operand of a condition joined with <c>&amp;&amp;</c> or <c>||</c> prints inside its own
-    /// <c>Branch</c> probe, so each instruction-level test of a combined condition reports its outcome. The
-    /// operators keep their order and their short circuit.</summary>
+    /// them, it is <see cref="CSharpExpressionPrinter.ProbedCondition"/>: one probe per operand of a
+    /// combined condition, none around a constant.</summary>
     private string Condition(BranchProbeKind kind, ValueNode condition) {
         if (expressions.BranchProbes is not { } probes) {
             return expressions.Print(condition).Text;
         }
-        return ProbedCondition(probes, kind, condition, false);
-    }
-
-    private string ProbedCondition(BranchProbeSites probes, BranchProbeKind kind, ValueNode condition,
-        bool nested) {
-        if (condition is BinaryOperationNode {
-                BinaryOperation: BinaryOperation.LOGICAL_AND or BinaryOperation.LOGICAL_OR
-            } combined) {
-            string left = ProbedCondition(probes, kind, combined.Left, true);
-            string right = ProbedCondition(probes, kind, combined.Right, true);
-            string op = combined.BinaryOperation == BinaryOperation.LOGICAL_AND ? "&&" : "||";
-            return nested ? $"({left} {op} {right})" : $"{left} {op} {right}";
-        }
-        return probes.Branch(kind, expressions.Print(condition).Text);
+        return expressions.ProbedCondition(probes, kind, condition, false);
     }
 
     /// <summary>The text of a <c>switch</c> value, inside a <c>Selector</c> probe when branch probes are

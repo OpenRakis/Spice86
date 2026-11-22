@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
@@ -159,6 +160,42 @@ public sealed class BranchProbesTest {
         // Assert
         printed.Should().StartWith("Branch(0, ZeroFlag) ? ");
         probes.Sites.Should().ContainSingle().Which.Kind.Should().Be(BranchProbeKind.ConditionalValue);
+    }
+
+    [Fact]
+    public void ConditionalExpressionProbesEachOperandBeforeItsArms() {
+        // Arrange
+        BranchProbeSites probes = new();
+        ConditionalValueNode node = new(DataType.BOOL, And(Zero, Carry),
+            new ConditionalValueNode(DataType.BOOL, Carry, Zero, Carry), Zero);
+        CSharpExpressionPrinter expressions = new(new Dictionary<ushort, string>()) { BranchProbes = probes };
+
+        // Act
+        string printed = expressions.Print(node).Text;
+
+        // Assert: the outer condition is numbered first, as it comes first in the source
+        printed.Should().StartWith("(Branch(0, ZeroFlag) && Branch(1, CarryFlag)) ? Branch(2, CarryFlag) ? ");
+        probes.Sites.Select(site => (site.Id, site.Kind, site.Text)).Should().Equal(
+            (0, BranchProbeKind.ConditionalValue, "ZeroFlag"), (1, BranchProbeKind.ConditionalValue, "CarryFlag"),
+            (2, BranchProbeKind.ConditionalValue, "CarryFlag"));
+    }
+
+    [Fact]
+    public void ConstantConditionGetsNoProbe() {
+        // Arrange
+        BranchProbeSites probes = new();
+        ConstantNode alwaysTrue = new(DataType.BOOL, 1);
+        BlockNode node = new(
+            new DoWhileNode(new BlockNode(Call("Work")), alwaysTrue),
+            new IfElseNode(And(alwaysTrue, Carry), new BlockNode(Call("Work")), new BlockNode()));
+
+        // Act
+        string printed = Print(node, probes);
+
+        // Assert: only the operand that can take both outcomes is probed
+        printed.Should().Contain("} while (true);");
+        printed.Should().Contain("if (true && Branch(0, CarryFlag)) {");
+        probes.Sites.Should().ContainSingle().Which.Text.Should().Be("CarryFlag");
     }
 
     [Fact]
@@ -323,9 +360,9 @@ public sealed class BranchProbesTest {
         Dictionary<int, ProbeSiteManifest> sites = checkBuild.Manifest!.Sites.ToDictionary(site => site.Id);
         (recorder.Branches.Count + recorder.Selectors.Count).Should().BeGreaterThan(0);
         recorder.Branches.Should().OnlyContain(branch =>
-            sites.ContainsKey(branch.Site) && sites[branch.Site].Kind != BranchProbeKind.Switch);
+            sites.TryGetValue(branch.Site, out ProbeSiteManifest? site) && site.Kind != BranchProbeKind.Switch);
         recorder.Selectors.Should().OnlyContain(selector =>
-            sites.ContainsKey(selector.Site) && sites[selector.Site].Kind == BranchProbeKind.Switch);
+            sites.TryGetValue(selector.Site, out ProbeSiteManifest? site) && site.Kind == BranchProbeKind.Switch);
     }
 
     [Fact]

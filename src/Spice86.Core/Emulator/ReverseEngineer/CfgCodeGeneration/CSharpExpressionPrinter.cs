@@ -424,14 +424,38 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (node.Condition is ConditionalValueNode) {
             throw Unsupported(node);
         }
+        // The condition prints first, so its probes are numbered before those of the arms, in source order.
+        string condition = BranchProbes is { } probes
+            ? ProbedCondition(probes, BranchProbeKind.ConditionalValue, node.Condition, true)
+            : $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)}";
         CSharpFragment whenTrue = Expr(node.WhenTrue);
         CSharpFragment whenFalse = Expr(node.WhenFalse);
-        string condition = BranchProbes is { } probes
-            ? probes.Branch(BranchProbeKind.ConditionalValue, Expr(node.Condition).Text)
-            : $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)}";
         string text = $"{condition} ? "
             + $"{whenTrue} : {whenFalse}";
         return new CSharpFragment(text, SelectType(node, whenTrue, whenFalse), ConditionalPrecedence);
+    }
+
+    /// <summary>The text of a condition with its branch probes. Every operand of a condition joined with
+    /// <c>&amp;&amp;</c> or <c>||</c> prints inside its own <c>Branch</c> probe, so each instruction-level
+    /// test of a combined condition reports its outcome. The operators keep their order and their short
+    /// circuit. An operand that prints as the constant <c>true</c> or <c>false</c> gets no probe: it has one
+    /// outcome, and a wrapped constant would change what the C# compiler sees as reachable.</summary>
+    /// <param name="probes">The probe sites of the program.</param>
+    /// <param name="kind">The statement or expression the condition belongs to.</param>
+    /// <param name="condition">The condition.</param>
+    /// <param name="parenthesize">Whether a combined condition prints inside parentheses.</param>
+    internal string ProbedCondition(BranchProbeSites probes, BranchProbeKind kind, ValueNode condition,
+        bool parenthesize) {
+        if (condition is BinaryOperationNode {
+                BinaryOperation: BinaryOperation.LOGICAL_AND or BinaryOperation.LOGICAL_OR
+            } combined) {
+            string left = ProbedCondition(probes, kind, combined.Left, true);
+            string right = ProbedCondition(probes, kind, combined.Right, true);
+            string op = combined.BinaryOperation == BinaryOperation.LOGICAL_AND ? "&&" : "||";
+            return parenthesize ? $"({left} {op} {right})" : $"{left} {op} {right}";
+        }
+        string text = Expr(condition).Text;
+        return text is "true" or "false" ? text : probes.Branch(kind, text);
     }
 
     /// <summary>The C# type a printed select may claim: <see cref="ValueNode.DataType"/> when the

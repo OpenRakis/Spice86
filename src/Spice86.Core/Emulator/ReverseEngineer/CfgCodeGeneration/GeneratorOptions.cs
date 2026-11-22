@@ -35,8 +35,8 @@ public sealed record GeneratorOptions {
     /// printed as <c>Branch(site, condition)</c> and the value of each <c>switch</c> as
     /// <c>Selector(site, value)</c>. Both helpers report to the
     /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/> of the machine and return
-    /// their argument. A condition joined with <c>&amp;&amp;</c> or <c>||</c> gets one probe per operand.
-    /// The entry dispatch of a method with several entries gets none. Off by default.</summary>
+    /// their argument. A condition joined with <c>&amp;&amp;</c> or <c>||</c> gets one probe per operand, and an
+    /// operand that prints as the constant <c>true</c> or <c>false</c> gets none. The entry dispatch of a method with several entries gets none. Off by default.</summary>
     public bool BranchProbes { get; init; }
 
     /// <summary>Whether a sequence of port accesses that forms one device operation is printed as one call
