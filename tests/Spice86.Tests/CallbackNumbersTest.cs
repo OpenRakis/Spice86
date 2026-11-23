@@ -3,6 +3,7 @@ namespace Spice86.Tests;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Shared.Emulator.Memory;
 
 using System;
@@ -69,7 +70,8 @@ public class CallbackNumbersTest {
             [CallbackNumbers.DosInt21CheckStdinReady] = new SegmentedAddress(0xF000, 0x00AB),
             [CallbackNumbers.DosInt21StdinInputDispatch] = new SegmentedAddress(0xF000, 0x00BB),
             [CallbackNumbers.MouseBeforeUserHandler] = new SegmentedAddress(0xF000, 0x00E9),
-            [CallbackNumbers.MouseAfterUserHandler] = new SegmentedAddress(0xF000, 0x00F2)
+            [CallbackNumbers.MouseAfterUserHandler] = new SegmentedAddress(0xF000, 0x00F2),
+            [CallbackNumbers.InternalProgram] = new SegmentedAddress(DosProcessManager.CommandComSegment, 0x100)
         };
     }
 }
