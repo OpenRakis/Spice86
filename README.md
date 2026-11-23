@@ -146,7 +146,7 @@ Spice86 -e program.exe --CpuHeavyLog \
   --ReloadCfgGraph                   (Default: true) Reload the previously dumped CFG instruction graph (spice86dumpCfgReload.json) at startup so explored program structure is preserved across runs. No-op if the file is absent.
   --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
-  --mcp-http-port                    (Default: 8081) Port for the MCP HTTP server
+  --McpHttpPort                      (Default: 8081) Port for the MCP HTTP server. If 0, the MCP server is disabled.
   --RenderingMode                    (Default: Async) Selects the VGA rendering mode. Sync fires VGA events on the emulation thread for determinism; The default mode is for performance.
    --JitMode                         (Default: InterpretedThenCompiled) Controls how the JIT compiler handles instruction execution delegates.
    --AllowIvtAddress0                (Default: false) Controls whether an INT instruction whose IVT entry is 0:0 is treated as valid.

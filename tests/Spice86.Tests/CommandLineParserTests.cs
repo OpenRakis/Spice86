@@ -133,6 +133,23 @@ public class CommandLineParserTests {
     }
 
     [Fact]
+    public void ParseCommandLine_ShouldReturnNullWhenOptionIsUnknown() {
+        // Arrange
+        string executablePath = CreateTemporaryExecutablePath();
+        try {
+            string[] args = ["-e", executablePath, "--mcp-http-port", "18081"];
+
+            // Act
+            Configuration? configuration = Parse(args);
+
+            // Assert
+            configuration.Should().BeNull();
+        } finally {
+            File.Delete(executablePath);
+        }
+    }
+
+    [Fact]
     public void ParseCommandLine_ClockStartTime_IsoUtcString_ParsedAsUtcOffset() {
         // Arrange
         string executablePath = CreateTemporaryExecutablePath();
