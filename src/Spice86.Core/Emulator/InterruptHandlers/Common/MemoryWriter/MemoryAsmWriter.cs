@@ -53,12 +53,16 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteCallback(callback.Index);
     }
 
-    private void WriteCallback(ushort callbackNumber) {
+    /// <summary>
+    /// Writes the FE 38 callback instruction with the given callback number.
+    /// Does not register a callback; use <see cref="RegisterAndWriteCallback"/> when one must be registered.
+    /// </summary>
+    /// <param name="callbackNumber">Callback index, from <see cref="CallbackNumbers"/>.</param>
+    public void WriteCallback(ushort callbackNumber) {
         WriteUInt8(0xFE);
         WriteUInt8(0x38);
         WriteUInt16(callbackNumber);
     }
-
 
     /// <summary>
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
@@ -198,6 +202,15 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="value">Value to move into BX.</param>
     public void WriteMovBx(ushort value) {
         WriteUInt8(0xBB);
+        WriteUInt16(value);
+    }
+
+    /// <summary>
+    /// Writes MOV SP, imm16 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into SP.</param>
+    public void WriteMovSp(ushort value) {
+        WriteUInt8(0xBC);
         WriteUInt16(value);
     }
 

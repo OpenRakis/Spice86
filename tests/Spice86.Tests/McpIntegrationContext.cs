@@ -131,6 +131,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
             services.XmsManager,
             services.BreakpointsManager,
             services.CfgBlocksExporter,
+            services.EmulatorStateSerializer,
             services.LoggerService);
 
         // Always assign optional devices, regardless of EMS/XMS enablement
