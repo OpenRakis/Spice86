@@ -89,6 +89,10 @@ The graph grows at runtime:
 
 The `SpeculativeExplorer` also decodes statically-reachable successors ahead of execution so unobserved arms exist in the graph; it stops at poisoned addresses, at instructions with no static successors, at call continuations (unless seeded known-safe), and at a `00 00` instruction whose two following bytes are also zero - a zero-filled buffer is not decoded and nothing is remembered, so memory a program later fills with code still is.
 
+Return tracking reads the active stack through the MMU, using the cached SS base and the descriptor's SP/ESP width. Interrupt returns additionally use the instruction's operand width: a 32-bit IRET frame stores EIP and CS in separate dword slots.
+
+Generated overrides preserve these semantics, including stack-access fault classification for SS operands. A return to an active ancestor caller unwinds the abandoned generated calls before resuming that caller; it does not execute their post-call continuations. Unobserved return targets still fail explicitly.
+
 ## Instruction Caching
 
 `InstructionsFeeder` maintains a two-tier cache:

@@ -36,6 +36,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(CpuValues.Halted, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects WriteHalted =
         new(CpuValues.None, CpuValues.Halted, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+    // SS's runtime address width determines whether ENTER also replaces ESP/EBP's upper halves.
+    private static readonly IrEffects EnterFrame =
+        new(CpuValues.Esp | CpuValues.Ebp | CpuValues.Ss, CpuValues.Sp | CpuValues.Bp,
+            CpuValues.Esp | CpuValues.Ebp, IrTokens.Memory, IrTokens.Memory, false, false);
     private static readonly IrEffects InterruptReturnUse =
         new(CpuValues.Registers, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
     private const CpuValues PopAllRegisters16 = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
@@ -111,6 +115,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     public IrEffects VisitLoadOffsetParameterNode(LoadOffsetParameterNode node) => IrEffects.None;
 
     public IrEffects VisitMethodGroupNode(MethodGroupNode node) => IrEffects.None;
+    public IrEffects VisitUntestedFarCallTargetNode(UntestedFarCallTargetNode node) => IrEffects.None;
 
     public IrEffects VisitSegmentedAddressListNode(SegmentedAddressListNode node) => IrEffects.None;
 
@@ -154,7 +159,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         ArgumentsOf(node.CallNode).Then(_typedCalls ? ValueCallEffect(node) : IrEffects.Unknown);
 
     private static IrEffects StatementCallEffect(MethodCallNode node) => node switch {
+        // Descriptor caches, control registers and CPU mode are not represented by individual IR values.
+        InstructionExecutionHelperCallNode => IrEffects.Unknown,
         ProgramInterruptCallHelperNode call => ProgramInterruptCall(call),
+        StackEnterHelperNode => EnterFrame,
         StackCallNode { Operation: StackOperation.Push or StackOperation.PushAll } stack
             => Pushing(stack.Width),
         StackCallNode { Operation: StackOperation.PopAll } stack => PopAll(stack.Width),
@@ -169,6 +177,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     };
 
     private static IrEffects ValueCallEffect(MethodCallValueNode node) => node switch {
+        InstructionExecutionHelperCallValueNode => IrEffects.Unknown,
         StackCallValueNode { Operation: StackOperation.Pop } stack
             => StackAccess(StackPointerOf(stack.Width) | CpuValues.Ss, StackPointerOf(stack.Width),
                 IrTokens.Memory, IrTokens.None),

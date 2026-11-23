@@ -170,14 +170,30 @@ public class GeneratorIrRoundTripTest {
         rebuilt.Should().BeOfType<BlockNode>();
     }
 
-    [Fact]
-    public void Enter_RoundTrips() {
-        // enter 0x28, 0x03: a frame-nesting loop the IR pipeline structures as while (true) { ... if (e) break; }
-        CfgInstruction instruction = Parse(new SegmentedAddress(0x1000, 0x0068), 0xC8, 0x28, 0x00, 0x03);
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Enter_RoundTrips(bool operandSize32) {
+        // Arrange
+        byte[] bytes = [0xC8, 0x28, 0x00, 0x03];
+        if (operandSize32) {
+            bytes = [0x66, .. bytes];
+        }
+        CfgInstruction instruction = Parse(new SegmentedAddress(0x1000, 0x0068), bytes);
+        MethodCallNode originalCall = Collect(instruction.ExecutionAst).OfType<MethodCallNode>().Single();
 
+        // Act
         IVisitableAstNode rebuilt = RoundTrip(instruction);
 
-        Collect(rebuilt).OfType<WhileNode>().Should().HaveCount(1);
+        // Assert
+        BlockNode body = rebuilt.Should().BeOfType<BlockNode>().Subject;
+        MethodCallNode enterCall = body.Statements.OfType<MethodCallNode>().Should().ContainSingle().Subject;
+        enterCall.PropertyPath.Should().Be(nameof(Stack));
+        enterCall.MethodName.Should().Be(nameof(Stack.Enter));
+        enterCall.Arguments.Should().Equal(originalCall.Arguments);
+        enterCall.Arguments[0].Should().BeOfType<InstructionFieldNode>().Which.ConstantValue.Should().Be(0x28);
+        enterCall.Arguments[1].Should().BeOfType<InstructionFieldNode>().Which.ConstantValue.Should().Be(3);
+        enterCall.Arguments[2].Should().Be(new ConstantNode(DataType.BOOL, operandSize32 ? 1UL : 0UL));
     }
 
     [Fact]

@@ -37,6 +37,12 @@ internal sealed record AsmRunSettings {
     /// <summary>Cycle failsafe: reaching it fails the test. Not a bound on a healthy run.</summary>
     public long MaxCycles { get; init; } = 100000;
 
+    /// <summary>Whether detailed CPU logging is enabled.</summary>
+    public bool CpuHeavyLog { get; init; }
+
+    /// <summary>Size of the unified physical RAM pool in KiB.</summary>
+    public int RamSizeKb { get; init; } = Configuration.RamSizeDefaultKb;
+
     /// <summary>Whether the PIT runs during the program.</summary>
     public bool EnablePit { get; init; }
 
