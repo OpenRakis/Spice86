@@ -535,7 +535,7 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
-            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager,
+            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, callbackHandler, emsManager,
             loadedImageRegistry, emulatedClock);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
@@ -544,7 +544,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
             ioPortDispatcher, vgaRenderer, pauseHandler, emsManager, dos.Xms,
-            emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
+            emulatorBreakpointsManager, cfgBlocksJsonExporter, emulatorStateSerializer, loggerService);
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");

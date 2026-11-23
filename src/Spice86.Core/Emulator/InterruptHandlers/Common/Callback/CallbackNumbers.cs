@@ -49,6 +49,9 @@ public static class CallbackNumbers {
     /// <summary>Callback of <c>MouseDriver.AfterUserHandlerExecution</c>.</summary>
     public const ushort MouseAfterUserHandler = 0x10D;
 
+    /// <summary>Shared callback of the internal (managed) programs, dispatched by the program index stored in the stub.</summary>
+    public const ushort InternalProgram = 0x110;
+
     /// <summary>Returns the callback number of the default handler of <paramref name="irq"/>.</summary>
     /// <param name="irq">IRQ line serviced by a default handler.</param>
     /// <returns>The callback number of that default handler.</returns>

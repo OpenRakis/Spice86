@@ -200,8 +200,8 @@ public sealed class AsmScenarioPipelineTest {
         AsmScenario scenario = AsmScenarioCatalog.FcbChild();
         SegmentedAddress parentEntry = InterpretedEntryPointOf(scenario);
         using AsmRunScope scope = scenario.Prepare();
-        string childProgram = ChildHaltProgramIn(scope);
-        ExecChildFallbackOverrideSupplier supplier = new(parentEntry, childProgram);
+        string childDosPath = ChildHaltProgramIn(scope);
+        ExecChildFallbackOverrideSupplier supplier = new(parentEntry, childDosPath);
         InvocationTrackingOverrideSupplier tracking = new(supplier);
 
         // Act
@@ -687,9 +687,8 @@ public sealed class AsmScenarioPipelineTest {
     private static string ChildHaltProgramIn(AsmRunScope scope) {
         string workingDirectory = scope.Fixture.Settings.CDrive
             ?? throw new InvalidOperationException("the EXEC scenario must mount its working directory as C:");
-        string childProgram = Path.Join(workingDirectory, ChildProgramFileName);
-        File.WriteAllBytes(childProgram, [0xF4]);
-        return childProgram;
+        File.WriteAllBytes(Path.Join(workingDirectory, ChildProgramFileName), [0xF4]);
+        return $"C:\\{ChildProgramFileName}";
     }
 
     /// <summary>Runs the scenario in the interpreter with its own oracle and requires that oracle to fail.</summary>

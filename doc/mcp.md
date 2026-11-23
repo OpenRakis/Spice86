@@ -57,7 +57,7 @@ remaining deadlines for subsequent pumps.
 
 **Default port:** `8081`
 
-**CLI option:** `--mcp-http-port <port>`
+**CLI option:** `--McpHttpPort <port>` (0 disables the MCP server)
 
 ---
 
@@ -66,7 +66,7 @@ remaining deadlines for subsequent pumps.
 ### 1. Start Spice86 with MCP enabled (enabled by default)
 
 ```bash
-Spice86 -e program.exe --mcp-http-port 8081
+Spice86 -e program.exe --McpHttpPort 8081
 ```
 
 ### 2. Connect your MCP client
@@ -144,6 +144,7 @@ Spice86 ships with **65+ MCP tools** organized into these capability scopes:
 ### Functions & CFG
 - `list_functions`: List discovered functions sorted by call count
 - `read_cfg_cpu_graph`: Dump the Control Flow Graph (CFG) built by `CfgCpu`
+- `dump_all`: Write the same files as the GDB command `monitor dumpall` (CPU registers, memory dump, ASM listing, CFG files, execution flow, generated C# project, Ghidra symbols, breakpoints) to the dump folder (based on `--RecordedDataDirectory`). Returns the folder it wrote to. The emulator is paused while the files are written.
 
 ### Video
 - `read_video_state`: Current video mode, resolution, text/graphics flag, cursor position
@@ -399,7 +400,8 @@ A web dashboard can:
 
 | Problem | Solution |
 |---------|----------|
-| Client gets 404 on `/mcp` | Check that `--mcp-http-port` is set and the server started successfully |
+| Client gets 404 on `/mcp` | Another server answered on that port. Check that the client URL uses the `--McpHttpPort` port (default 8081), not the HTTP API port, and that the log shows `MCP HTTP transport started on port ...` |
+| Connection refused on the MCP port | The MCP server is not running. Check that `--McpHttpPort` is not 0 and that the log has no `Failed to configure MCP HTTP transport` warning |
 | Tools return "Tool disabled" error | Some tools may be disabled if the emulator is not in the expected state (e.g., video tools when no VGA card is initialized) |
 | Tools time out | If emulator is not responding to pause requests, ensure the emulation loop is running and not deadlocked |
 | Client skips session ID and gets 404 | Ensure stateless mode is enabled (default); if using stateful mode, ensure client sends `Mcp-Session-Id` header |
