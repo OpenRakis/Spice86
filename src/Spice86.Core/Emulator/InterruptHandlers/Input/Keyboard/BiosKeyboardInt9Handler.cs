@@ -44,6 +44,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="biosDataArea">The BIOS data area is used to update global keyboard status information.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="dualPic">The interrupt controller, used to eventually acknowledge IRQ1 hardware interrupt.</param>
     /// <param name="systemBiosInt15Handler">INT15H BIOS handler used for the keyboard intercept function.</param>
@@ -51,11 +52,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, BiosDataArea biosDataArea,
-        Stack stack, State state, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, ServiceCallEvents serviceCallEvents, IFunctionHandlerProvider functionHandlerProvider,
         DualPic dualPic, SystemBiosInt15Handler systemBiosInt15Handler,
         Intel8042Controller ps2Controller, BiosKeyboardBuffer biosKeyboardBuffer,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         BiosKeyboardBuffer = biosKeyboardBuffer;
         _systemBiosInt15Handler = systemBiosInt15Handler;

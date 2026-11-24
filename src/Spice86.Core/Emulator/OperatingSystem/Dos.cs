@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -205,6 +206,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="emsManager">The EMS manager shared with emulator services.</param>
     /// <param name="loadedImageRegistry">Records every program image the process manager loads.</param>
     /// <param name="emulatedClock">The emulated clock backing the DOS date/time services and FCB timestamps.</param>
+    /// <param name="serviceCallEvents">The service call events the DOS interrupt handlers report their service calls to.</param>
     public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
@@ -218,7 +220,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         CallbackHandler callbackHandler,
         ExpandedMemoryManager? emsManager,
         LoadedImageRegistry loadedImageRegistry,
-        IEmulatedClock emulatedClock) {
+        IEmulatedClock emulatedClock,
+        ServiceCallEvents serviceCallEvents) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -275,23 +278,23 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
         ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, loadedImageRegistry, envVars, _loggerService);
-        DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
+        DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
             ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock);
-        DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
-        DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
-        DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
+        DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, DosInt21Handler, _loggerService);
+        DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, _mscdex, Xms);
+            functionHandlerProvider, stack, state, serviceCallEvents, _loggerService, _mscdex, Xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
+            functionHandlerProvider, stack, state, serviceCallEvents, floppyDiskTimingService, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
+            functionHandlerProvider, stack, state, serviceCallEvents, floppyDiskTimingService, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
-            stack, state, _loggerService);
+            stack, state, serviceCallEvents, _loggerService);
 
         DosDriveManager.InitializeBootstrapZDrive();
         SetupManagedShell(callbackHandler);

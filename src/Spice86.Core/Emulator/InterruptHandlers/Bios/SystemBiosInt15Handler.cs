@@ -33,6 +33,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="biosDataArea">The BIOS data area for accessing system flags and variables.</param>
     /// <param name="emulationLoopScheduler">Used for registering a timed callback named 'OnWaitComplete' when emulated programs call the BIOS WAIT function.</param>
@@ -41,9 +42,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
+        State state, ServiceCallEvents serviceCallEvents, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
         IOPortDispatcher ioPortDispatcher, ILogger loggerService, bool initializeResetVector)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _a20Gate = a20Gate;
         _emulationLoopScheduler = emulationLoopScheduler;
         _configuration = configuration;

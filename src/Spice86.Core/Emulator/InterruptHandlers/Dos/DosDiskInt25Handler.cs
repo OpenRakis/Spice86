@@ -39,13 +39,14 @@ public class DosDiskInt25Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="timingService">Floppy I/O timing service applied before floppy image reads.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public DosDiskInt25Handler(IMemory memory, DosDriveManager dosDriveManager,
-        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents,
         FloppyDiskTimingService timingService,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _dosDriveManager = dosDriveManager;
         _timingService = timingService;
     }
