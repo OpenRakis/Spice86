@@ -25,8 +25,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// </summary>
     public SystemClockInt1AHandler(IMemory memory, BiosDataArea biosDataArea,
         RealTimeClock realTimeClock, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        Stack stack, State state, ServiceCallEvents serviceCallEvents, ILogger loggerService)
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         _realTimeClock = realTimeClock;
     }

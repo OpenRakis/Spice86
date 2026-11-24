@@ -8,6 +8,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -54,7 +55,8 @@ public class EmsUnitTests {
         _functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
 
         // Create EMS manager
-        _ems = new ExpandedMemoryManager(_memory, _functionHandlerProvider, _stack, _state, _loggerService);
+        _ems = new ExpandedMemoryManager(_memory, _functionHandlerProvider, _stack, _state,
+            new ServiceCallEvents(new HashSet<byte>()), _loggerService);
     }
 
     /// <summary>

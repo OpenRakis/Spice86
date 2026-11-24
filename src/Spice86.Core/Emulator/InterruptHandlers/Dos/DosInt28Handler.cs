@@ -21,9 +21,10 @@ public class DosInt28Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt28Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state
-        , ILogger loggerService) : base(memory, functionHandlerProvider, stack, state, loggerService) {
+    public DosInt28Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents
+        , ILogger loggerService) : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
     }
 
     /// <inheritdoc />

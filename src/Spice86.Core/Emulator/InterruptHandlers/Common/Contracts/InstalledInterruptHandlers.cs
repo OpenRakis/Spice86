@@ -17,7 +17,6 @@ public sealed class InstalledInterruptHandlers {
     private readonly HashSet<byte> _hardwareVectorNumbers;
     private readonly List<(IInterruptHandler Handler, SegmentedAddress Address)> _installed = new();
     private readonly Dictionary<byte, int> _installedIndexByVector = new();
-    private IServiceCallObserver? _serviceCallObserver;
 
     /// <summary>
     /// Initializes a new instance.
@@ -26,31 +25,14 @@ public sealed class InstalledInterruptHandlers {
     /// (external events).</param>
     public InstalledInterruptHandlers(IEnumerable<byte> hardwareVectorNumbers) {
         _hardwareVectorNumbers = new HashSet<byte>(hardwareVectorNumbers);
+        ServiceCallEvents = new ServiceCallEvents(_hardwareVectorNumbers);
     }
 
     /// <summary>
-    /// The observer told about every service call the installed handlers dispatch, or
-    /// <see langword="null"/> (the default) for none. See <see cref="IServiceCallObserver"/> for what
-    /// raises an event. A handler installed on a hardware interrupt vector never gets the observer: it runs
-    /// on an external event and dispatches no service. Set it on the emulation thread, or while the emulation
-    /// is paused.
+    /// The service call events of the emulator. Pass it to the constructor of every interrupt handler, and
+    /// set <see cref="ServiceCallEvents.Observer"/> on it to observe the service calls.
     /// </summary>
-    public IServiceCallObserver? ServiceCallObserver {
-        get => _serviceCallObserver;
-        set {
-            _serviceCallObserver = value;
-            foreach ((IInterruptHandler handler, SegmentedAddress _) in _installed) {
-                AttachServiceCallObserver(handler);
-            }
-        }
-    }
-
-    private void AttachServiceCallObserver(IInterruptHandler handler) {
-        if (handler is InterruptHandler interruptHandler
-            && !_hardwareVectorNumbers.Contains(interruptHandler.VectorNumber)) {
-            interruptHandler.ServiceCallObserver = _serviceCallObserver;
-        }
-    }
+    public ServiceCallEvents ServiceCallEvents { get; }
 
     /// <summary>The installed handlers, indexed by interrupt vector.</summary>
     public IReadOnlyDictionary<byte, IInterruptHandler> Handlers =>
@@ -92,7 +74,6 @@ public sealed class InstalledInterruptHandlers {
                 $"A handler is already installed on interrupt vector 0x{vector:X2}");
         }
         _installed.Add((handler, address));
-        AttachServiceCallObserver(handler);
     }
 
     /// <summary>

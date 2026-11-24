@@ -13,9 +13,9 @@ using Spice86.Shared.Interfaces;
 /// Returns "Fail" (AL=3) to propagate the error back to DOS callers.
 /// </summary>
 public class DosInt24Handler : InterruptHandler {
-    public DosInt24Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+    public DosInt24Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
     }
 
     public override byte VectorNumber => 0x24;

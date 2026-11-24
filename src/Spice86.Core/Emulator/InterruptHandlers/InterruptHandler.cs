@@ -41,6 +41,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     private IEmulatorLoggerState _loggerState = new Spice86LoggerState();
     private readonly InterruptServiceDeclarations _declarations;
     private HandlerServices? _services;
+    private readonly ServiceCallEvents _serviceCallEvents;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,9 +50,11 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService)
-        : this(memory, functionHandlerProvider, stack, state, loggerService, ServiceSelector.Ah) {
+    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ServiceCallEvents serviceCallEvents, ILogger loggerService)
+        : this(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService, ServiceSelector.Ah) {
     }
 
     /// <summary>
@@ -61,11 +64,13 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="serviceSelector">The register used to select a service.</param>
     protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILogger loggerService, ServiceSelector serviceSelector) : base(state, loggerService) {
+        ServiceCallEvents serviceCallEvents, ILogger loggerService, ServiceSelector serviceSelector) : base(state, loggerService) {
         Memory = memory;
+        _serviceCallEvents = serviceCallEvents;
         FunctionHandlerProvider = functionHandlerProvider;
         Stack = stack;
         ServiceSelector = serviceSelector;
@@ -89,13 +94,6 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
 
     /// <inheritdoc />
     public abstract byte VectorNumber { get; }
-
-    /// <summary>
-    /// The observer told about the service calls this handler dispatches, or <see langword="null"/> for none.
-    /// <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> sets it on every installed handler that is
-    /// not on a hardware interrupt vector.
-    /// </summary>
-    internal IServiceCallObserver? ServiceCallObserver { get; set; }
 
     /// <summary>Register the handler reads to select the service to run. Used only when the
     /// type declares its services with the selector form of
@@ -139,7 +137,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// A handler that writes its own stub registers this method where it would register <see cref="Run()"/>.
     /// </summary>
     protected void RunServiceFromStub() {
-        if (ServiceCallObserver is { } observer && _declarations.SingleService is { } single) {
+        if (_serviceCallEvents.ObserverFor(VectorNumber) is { } observer && _declarations.SingleService is { } single) {
             observer.OnServiceCall(new ServiceCall(VectorNumber, null, single.Entry, false,
                 ServiceCallInputs.ReadAll(State, single.Entry)));
         }
@@ -153,7 +151,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     /// <param name="index">The selector value of the service.</param>
     protected void NotifyServiceCall(int index) {
-        if (ServiceCallObserver is not { } observer) {
+        if (_serviceCallEvents.ObserverFor(VectorNumber) is not { } observer) {
             return;
         }
         InterruptServiceEntry entry = _serviceEntries.GetValueOrDefault(index) ?? InterruptServiceEntry.Unknown;

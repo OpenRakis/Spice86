@@ -294,11 +294,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILogger loggerService)
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;

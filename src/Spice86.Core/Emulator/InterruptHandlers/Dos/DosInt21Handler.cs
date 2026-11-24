@@ -71,6 +71,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
     /// <param name="dosCodePageState">The DOS kernel's shared code page state.</param>
@@ -85,14 +86,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosFcbManager">FCB manager shared with the process manager for cleanup.</param>
     /// <param name="emulatedClock">The emulated clock read by the DOS time service.</param>
     public DosInt21Handler(IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosCodePageState dosCodePageState, DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILogger loggerService, DosFcbManager dosFcbManager,
         IEmulatedClock emulatedClock)
-            : base(memory, functionHandlerProvider, stack, state, loggerService) {
+            : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
         _dosCodePageState = dosCodePageState;

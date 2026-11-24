@@ -25,10 +25,10 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
     public SystemBiosInt17Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
         Stack stack,
-        State state,
+        State state, ServiceCallEvents serviceCallEvents,
         BiosDataArea biosDataArea,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         InitializeBiosDataArea();
     }

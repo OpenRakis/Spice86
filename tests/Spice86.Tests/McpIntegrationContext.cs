@@ -115,6 +115,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
                 services.CfgCpu,
                 spice86.Machine.Stack,
                 services.State,
+                spice86.Machine.InstalledInterruptHandlers.ServiceCallEvents,
                 services.LoggerService);
         }
 

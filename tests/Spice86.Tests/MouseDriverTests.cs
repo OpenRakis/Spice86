@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
@@ -55,7 +56,7 @@ public sealed class MouseDriverTests {
         _driver.WriteAssemblyInRam(new MemoryAsmWriter(memory, new(DriverStubSegment, 0),
             new CallbackHandler(_state, NullLogger.Instance)));
         _handler = new MouseInt33Handler(memory, Substitute.For<IFunctionHandlerProvider>(),
-            new Stack(memory, _state), _state, NullLogger.Instance, _driver);
+            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>()), NullLogger.Instance, _driver);
     }
 
     [Theory]
@@ -135,7 +136,7 @@ public sealed class MouseDriverTests {
             new RealModeMmu386(), false);
         MouseDriver driver = new(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance);
         MouseInt33Handler handler = new(memory, Substitute.For<IFunctionHandlerProvider>(),
-            new Stack(memory, _state), _state, NullLogger.Instance, driver);
+            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>()), NullLogger.Instance, driver);
         MemoryAsmWriter asmWriter = new(memory, new SegmentedAddress(0xC000, 0),
             new CallbackHandler(_state, NullLogger.Instance));
         SegmentedAddress driverAddress = driver.WriteAssemblyInRam(asmWriter);

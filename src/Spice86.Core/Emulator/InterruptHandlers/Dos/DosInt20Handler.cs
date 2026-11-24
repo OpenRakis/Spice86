@@ -20,11 +20,12 @@ public class DosInt20Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="dosInt21Handler">The INT21H is used to exit normally without a process exit code.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, DosInt21Handler dosInt21Handler, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        Stack stack, State state, ServiceCallEvents serviceCallEvents, DosInt21Handler dosInt21Handler, ILogger loggerService)
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _dosInt21Handler = dosInt21Handler;
     }
 

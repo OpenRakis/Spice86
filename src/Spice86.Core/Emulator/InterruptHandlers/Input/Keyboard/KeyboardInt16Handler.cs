@@ -32,12 +32,13 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, IOPortDispatcher ioPortDispatcher, BiosDataArea biosDataArea,
-        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents,
         ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
         _biosKeyboardBuffer = biosKeyboardBuffer;

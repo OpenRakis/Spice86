@@ -22,13 +22,14 @@ public class SystemBiosInt12Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="biosDataArea"></param>
     /// <param name="loggerService"></param>
     public SystemBiosInt12Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, BiosDataArea biosDataArea,
+        Stack stack, State state, ServiceCallEvents serviceCallEvents, BiosDataArea biosDataArea,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
     }
 

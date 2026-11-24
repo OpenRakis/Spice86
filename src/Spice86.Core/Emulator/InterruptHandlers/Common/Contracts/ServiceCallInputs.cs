@@ -2,12 +2,28 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 
+using System.Numerics;
+
 /// <summary>
 /// Encodes the inputs of a service call as numbers, the same way for a call through a handler's stub (read
 /// from the registers) and for a direct call from generated code (computed from the call's arguments).
+/// The register or flag a binding names is found from the bit layout of <see cref="CpuValues"/>, so a register
+/// that fits that layout needs no change here.
 /// </summary>
 public static class ServiceCallInputs {
     private const CpuValues DsDx = CpuValues.Ds | CpuValues.Dx;
+    private const int BitsPerGeneralRegister = 4;
+    private const int FirstSegmentRegisterBit = 32;
+    private const int FirstFlagBit = 38;
+    private const ulong LowByteBits = 0x1;
+    private const ulong HighByteBits = 0x2;
+    private const ulong WordBits = 0x3;
+    private const ulong DoubleWordBits = 0xF;
+
+    /// <summary>The <see cref="Flags"/> mask of each flag bit of <see cref="CpuValues"/>, from
+    /// <see cref="CpuValues.Carry"/> to <see cref="CpuValues.Direction"/>.</summary>
+    private static readonly ushort[] FlagMasks = [
+        Flags.Carry, Flags.Parity, Flags.Auxiliary, Flags.Zero, Flags.Sign, Flags.Overflow, Flags.Direction];
 
     /// <summary>
     /// How the value of an input binding is encoded.
@@ -37,21 +53,17 @@ public static class ServiceCallInputs {
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="binding"/> is not a single register, a
     /// single flag or DS:DX.</exception>
     public static Encoding EncodingOf(CpuValues binding) {
-        return binding switch {
-            CpuValues.Al or CpuValues.Ah or CpuValues.Bl or CpuValues.Bh
-                or CpuValues.Cl or CpuValues.Ch or CpuValues.Dl or CpuValues.Dh => Encoding.Byte,
-            CpuValues.Ax or CpuValues.Bx or CpuValues.Cx or CpuValues.Dx
-                or CpuValues.Sp or CpuValues.Bp or CpuValues.Si or CpuValues.Di
-                or CpuValues.Es or CpuValues.Cs or CpuValues.Ss or CpuValues.Ds
-                or CpuValues.Fs or CpuValues.Gs => Encoding.Word,
-            CpuValues.Eax or CpuValues.Ebx or CpuValues.Ecx or CpuValues.Edx
-                or CpuValues.Esp or CpuValues.Ebp or CpuValues.Esi or CpuValues.Edi => Encoding.DoubleWord,
-            CpuValues.Carry or CpuValues.Parity or CpuValues.Auxiliary or CpuValues.Zero
-                or CpuValues.Sign or CpuValues.Overflow or CpuValues.Direction => Encoding.Flag,
-            DsDx => Encoding.SegmentedAddress,
-            _ => throw new ArgumentOutOfRangeException(nameof(binding), binding,
-                "A service input binding is a single register, a single flag or DS:DX.")
-        };
+        if (binding == DsDx) {
+            return Encoding.SegmentedAddress;
+        }
+        int bit = LowestBit(binding);
+        if (bit < FirstSegmentRegisterBit) {
+            return GeneralRegisterEncoding(binding, bit);
+        }
+        if (!BitOperations.IsPow2((ulong)binding) || bit >= FirstFlagBit + FlagMasks.Length) {
+            throw NotAnInputBinding(binding);
+        }
+        return bit < FirstFlagBit ? Encoding.Word : Encoding.Flag;
     }
 
     /// <summary>
@@ -64,47 +76,18 @@ public static class ServiceCallInputs {
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="binding"/> is not a single register, a
     /// single flag or DS:DX.</exception>
     public static uint Read(State state, CpuValues binding) {
-        return binding switch {
-            CpuValues.Al => state.AL,
-            CpuValues.Ah => state.AH,
-            CpuValues.Ax => state.AX,
-            CpuValues.Eax => state.EAX,
-            CpuValues.Bl => state.BL,
-            CpuValues.Bh => state.BH,
-            CpuValues.Bx => state.BX,
-            CpuValues.Ebx => state.EBX,
-            CpuValues.Cl => state.CL,
-            CpuValues.Ch => state.CH,
-            CpuValues.Cx => state.CX,
-            CpuValues.Ecx => state.ECX,
-            CpuValues.Dl => state.DL,
-            CpuValues.Dh => state.DH,
-            CpuValues.Dx => state.DX,
-            CpuValues.Edx => state.EDX,
-            CpuValues.Sp => state.SP,
-            CpuValues.Esp => state.ESP,
-            CpuValues.Bp => state.BP,
-            CpuValues.Ebp => state.EBP,
-            CpuValues.Si => state.SI,
-            CpuValues.Esi => state.ESI,
-            CpuValues.Di => state.DI,
-            CpuValues.Edi => state.EDI,
-            CpuValues.Es => state.ES,
-            CpuValues.Cs => state.CS,
-            CpuValues.Ss => state.SS,
-            CpuValues.Ds => state.DS,
-            CpuValues.Fs => state.FS,
-            CpuValues.Gs => state.GS,
-            CpuValues.Carry => FlagValue(state.CarryFlag),
-            CpuValues.Parity => FlagValue(state.ParityFlag),
-            CpuValues.Auxiliary => FlagValue(state.AuxiliaryFlag),
-            CpuValues.Zero => FlagValue(state.ZeroFlag),
-            CpuValues.Sign => FlagValue(state.SignFlag),
-            CpuValues.Overflow => FlagValue(state.OverflowFlag),
-            CpuValues.Direction => FlagValue(state.DirectionFlag),
-            DsDx => ((uint)state.DS << 16) | state.DX,
-            _ => throw new ArgumentOutOfRangeException(nameof(binding), binding,
-                "A service input binding is a single register, a single flag or DS:DX.")
+        Encoding encoding = EncodingOf(binding);
+        int bit = LowestBit(binding);
+        uint register = (uint)(bit / BitsPerGeneralRegister);
+        return encoding switch {
+            Encoding.SegmentedAddress => ((uint)state.DS << 16) | state.DX,
+            Encoding.Flag => state.Flags.GetFlag(FlagMasks[bit - FirstFlagBit]) ? 1u : 0u,
+            Encoding.Word when bit >= FirstSegmentRegisterBit =>
+                state.SegmentRegisters.UInt16[(uint)(bit - FirstSegmentRegisterBit)],
+            Encoding.Word => state.GeneralRegisters.UInt16[register],
+            Encoding.DoubleWord => state.GeneralRegisters.UInt32[register],
+            _ when bit % BitsPerGeneralRegister == 0 => state.GeneralRegisters.UInt8Low[register],
+            _ => state.GeneralRegisters.UInt8High[register]
         };
     }
 
@@ -127,5 +110,20 @@ public static class ServiceCallInputs {
         return inputs;
     }
 
-    private static uint FlagValue(bool flag) => flag ? 1u : 0u;
+    private static int LowestBit(CpuValues binding) => BitOperations.TrailingZeroCount((ulong)binding);
+
+    private static Encoding GeneralRegisterEncoding(CpuValues binding, int bit) {
+        int shift = bit / BitsPerGeneralRegister * BitsPerGeneralRegister;
+        return ((ulong)binding >> shift) switch {
+            LowByteBits or HighByteBits => Encoding.Byte,
+            WordBits => Encoding.Word,
+            DoubleWordBits => Encoding.DoubleWord,
+            _ => throw NotAnInputBinding(binding)
+        };
+    }
+
+    private static ArgumentOutOfRangeException NotAnInputBinding(CpuValues binding) {
+        return new ArgumentOutOfRangeException(nameof(binding), binding,
+            "A service input binding is a single register, a single flag or DS:DX.");
+    }
 }
