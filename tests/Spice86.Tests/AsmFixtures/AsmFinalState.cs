@@ -35,6 +35,10 @@ internal sealed record AsmFinalState(byte[] Ram,
     /// changed on its C: drive, recorded by <see cref="DriveFileRecorder"/>.</summary>
     public IReadOnlyList<(string Path, byte[] Content)> DriveFiles { get; init; } = [];
 
+    /// <summary>The device, register name and value of every device register the run left behind,
+    /// captured by <see cref="DeviceRegisterSnapshot"/>.</summary>
+    public IReadOnlyList<(string Device, string Register, uint Value)> DeviceRegisters { get; init; } = [];
+
     /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
     /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
     /// <param name="run">The finished run.</param>
@@ -70,7 +74,8 @@ internal sealed record AsmFinalState(byte[] Ram,
             ConsoleOutput = run.Result.Observations
                 .Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text,
             DriveFiles = run.Result.Observations
-                .Get<DriveFileRecorder>(AsmRunScope.DriveFilesObservation).WrittenFiles
+                .Get<DriveFileRecorder>(AsmRunScope.DriveFilesObservation).WrittenFiles,
+            DeviceRegisters = DeviceRegisterSnapshot.Capture(run.Machine)
         };
     }
 }

@@ -56,6 +56,29 @@ internal sealed class AsmScenario {
         return this;
     }
 
+    /// <summary>Final-state parts the interpreted-vs-generated comparison leaves out for this
+    /// scenario, or <see cref="FinalStateParts.None"/> when every part is compared.</summary>
+    public FinalStateParts UncomparedParts { get; private set; } = FinalStateParts.None;
+
+    /// <summary>Why <see cref="UncomparedParts"/> are not compared, or empty when none are
+    /// left out.</summary>
+    public string UncomparedPartsReason { get; private set; } = "";
+
+    /// <summary>Returns the same scenario with the given final-state parts left out of the
+    /// interpreted-vs-generated comparison.</summary>
+    /// <param name="parts">The parts not to compare.</param>
+    /// <param name="reason">Why those parts cannot be compared between the two runs.</param>
+    /// <returns>The scenario, with the uncompared parts recorded.</returns>
+    public AsmScenario WithUncomparedParts(FinalStateParts parts, string reason) {
+        if (parts == FinalStateParts.None) {
+            throw new ArgumentException("Uncompared parts cannot be None.", nameof(parts));
+        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        UncomparedParts = parts;
+        UncomparedPartsReason = reason;
+        return this;
+    }
+
     /// <summary>Creates a scenario with the same identity, resources and preparation, but another oracle.
     /// Used by discrimination tests that prove a wrong expectation fails in both execution modes.</summary>
     /// <param name="rewriteOracle">Rewrites the fixture the preparation produced.</param>
@@ -63,7 +86,9 @@ internal sealed class AsmScenario {
     public AsmScenario WithOracle(Func<AsmFixture, AsmFixture> rewriteOracle) {
         return new AsmScenario(Identity, scope => rewriteOracle(_prepareFixture(scope)), ResourceDependencies) {
             PrimaryResourceFileName = PrimaryResourceFileName,
-            TimingDependentReason = TimingDependentReason
+            TimingDependentReason = TimingDependentReason,
+            UncomparedParts = UncomparedParts,
+            UncomparedPartsReason = UncomparedPartsReason
         };
     }
 
