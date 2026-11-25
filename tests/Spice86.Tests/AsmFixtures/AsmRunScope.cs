@@ -27,9 +27,6 @@ internal sealed class AsmRunScope : IDisposable {
     /// <summary>Name of the <see cref="StackCallRecorder"/> observation every run installs.</summary>
     public const string StackCallsObservation = "stackCalls";
 
-    /// <summary>Name of the <see cref="PortWriteRecorder"/> observation every run installs.</summary>
-    public const string PortWritesObservation = "portWrites";
-
     /// <summary>Name of the <see cref="ConsoleOutputRecorder"/> observation every run installs.</summary>
     public const string ConsoleOutputObservation = "consoleOutput";
 

@@ -27,10 +27,6 @@ internal sealed record AsmFinalState(byte[] Ram,
     /// executed, recorded by <see cref="StackCallRecorder"/>.</summary>
     public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> Pushes { get; init; } = [];
 
-    /// <summary>The port, value and width of every I/O port write the run performed, recorded by
-    /// <see cref="PortWriteRecorder"/>.</summary>
-    public IReadOnlyList<(ushort Port, uint Value, int Width)> PortWrites { get; init; } = [];
-
     /// <summary>Every character written to the console during the run, recorded by
     /// <see cref="ConsoleOutputRecorder"/>.</summary>
     public string ConsoleOutput { get; init; } = "";
@@ -71,8 +67,6 @@ internal sealed record AsmFinalState(byte[] Ram,
                 .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Calls,
             Pushes = run.Result.Observations
                 .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Pushes,
-            PortWrites = run.Result.Observations
-                .Get<PortWriteRecorder>(AsmRunScope.PortWritesObservation).Writes,
             ConsoleOutput = run.Result.Observations
                 .Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text,
             DriveFiles = run.Result.Observations
