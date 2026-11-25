@@ -27,9 +27,9 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     public RtcInt70Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, DualPic dualPic, BiosDataArea biosDataArea,
+        Stack stack, State state, ServiceCallEvents serviceCallEvents, DualPic dualPic, BiosDataArea biosDataArea,
         IOPortDispatcher ioPortDispatcher, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _dualPic = dualPic;
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;

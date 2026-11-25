@@ -17,9 +17,9 @@ using Spice86.Shared.Interfaces;
 public class DosInt22Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
 
-    public DosInt22Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+    public DosInt22Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents,
         DosProcessManager dosProcessManager, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _dosProcessManager = dosProcessManager;
     }
 

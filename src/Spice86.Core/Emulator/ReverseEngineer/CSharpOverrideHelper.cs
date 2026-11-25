@@ -1208,9 +1208,8 @@ public class CSharpOverrideHelper {
     /// such call, because a direct call passes no handler code that could raise the event. The event equals
     /// the one the same service raises when it is reached through its stub, except for
     /// <see cref="ServiceCall.Direct"/>.
-    /// Does nothing when <see cref="InstalledInterruptHandlers.ServiceCallObserver"/> is not set, and for a
-    /// vector whose installed handler raises no event through its stub either (see
-    /// <see cref="IServiceCallObserver"/>).
+    /// Does nothing when <see cref="ServiceCallEvents.Observer"/> is not set, and for a vector whose installed
+    /// handler raises no event through its stub either (see <see cref="IServiceCallObserver"/>).
     /// </summary>
     /// <param name="vectorNumber">The interrupt vector of the service.</param>
     /// <param name="selector">The selector value of the service, or <c>null</c> for a handler with a single
@@ -1221,13 +1220,9 @@ public class CSharpOverrideHelper {
     /// entry binds.</exception>
     public void ServiceCalled(byte vectorNumber, int? selector, params uint[] inputs) {
         InstalledInterruptHandlers installed = Machine.InstalledInterruptHandlers;
-        if (installed.ServiceCallObserver is not { } observer) {
-            return;
-        }
-        // A handler raises events through its stub only when it holds the observer, which a handler on a
-        // hardware interrupt vector never does.
-        if (!installed.TryGetHandler(vectorNumber, out IInterruptHandler? handler)
-            || handler is not InterruptHandler { ServiceCallObserver: not null }) {
+        if (installed.ServiceCallEvents.ObserverFor(vectorNumber) is not { } observer
+            || !installed.TryGetHandler(vectorNumber, out IInterruptHandler? handler)
+            || handler is not InterruptHandler) {
             return;
         }
         InterruptServiceEntry entry = handler.Services switch {
@@ -1614,8 +1609,12 @@ public class CSharpOverrideHelper {
         // events (e.g. the PIT raising IRQ0), then deliver a pending PIC interrupt. Without this, queued
         // UI/headless input and external hardware interrupts would never reach generated code.
         Machine.EmulatorBreakpointsManager.CheckCpuCycleBreakPoints();
-        Machine.InputEventHub.ProcessAllPendingInputEvents();
-        Machine.EmulationLoopScheduler.ProcessEvents();
+        if (!_dualPic.IsDeliveryHeld) {
+            // Under a delivery hold (DualPic.HoldDelivery) input and device events are left pending as well,
+            // so this code sees the same absence of events as a caller that runs CfgCpu.ExecuteNext itself.
+            Machine.InputEventHub.ProcessAllPendingInputEvents();
+            Machine.EmulationLoopScheduler.ProcessEvents();
+        }
         if (!InterruptFlag) {
             return;
         }

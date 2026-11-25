@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
@@ -15,7 +16,7 @@ using System.Diagnostics;
 ///     Simulates the three-channel programmable interval timer, wiring channel 0 to the PIC scheduler and channel 2 to
 ///     the PC speaker shim while maintaining deterministic behavior.
 /// </summary>
-public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplier {
+public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplier, IStatefulDevice<PitTimerState> {
     /// <summary>Underlying clock rate in hertz used by the PIT.</summary>
     public const int PitTickRate = 1193182;
 
@@ -891,6 +892,99 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             channel.Counting,
             channel.ModeChanged,
             channel.GoReadLatch);
+    }
+
+    /// <summary>
+    ///     Captures the complete state of the three channels, the latched status byte, the channel 2 gate and
+    ///     the channel 0 event queued in the scheduler.
+    /// </summary>
+    /// <remarks>
+    ///     Unlike <see cref="GetChannelSnapshot" />, the result holds everything <see cref="RestoreState" />
+    ///     needs.
+    /// </remarks>
+    /// <returns>The state of the timer.</returns>
+    public PitTimerState CaptureState() {
+        double now = PicFullIndex;
+        double? channel0EventTime = _scheduler.GetNextEventTime(PitChannel0Event);
+        double? channel0EventDelay = channel0EventTime is null ? null : channel0EventTime.Value - now;
+        return new PitTimerState(
+            CaptureChannelState(Channel0),
+            CaptureChannelState(Channel1),
+            CaptureChannelState(Channel2),
+            _isChannel2GateHigh,
+            _latchedTimerStatus,
+            _latchedTimerStatusLocked,
+            now,
+            channel0EventDelay);
+    }
+
+    /// <summary>
+    ///     Puts the timer back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         Each channel's period start is moved by the time that passed on the emulated clock since the
+    ///         capture, so a counter read right after the restore returns what it returned right after the
+    ///         capture. The channel 0 event is removed from the scheduler and queued again as far ahead as it
+    ///         was at capture.
+    ///     </para>
+    ///     <para>
+    ///         The IRQ 0 line is not touched: restore the interrupt controller's state for that. The PC speaker
+    ///         is not told about channel 2's restored divisor and mode, so the speaker keeps the sound it had.
+    ///         The time multiplier is a setting and is left as it is.
+    ///     </para>
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(PitTimerState state) {
+        double now = PicFullIndex;
+        double elapsedSinceCapture = now - state.CapturedAtMs;
+        RestoreChannelState(ref Channel0, state.Channel0, elapsedSinceCapture);
+        RestoreChannelState(ref Channel1, state.Channel1, elapsedSinceCapture);
+        RestoreChannelState(ref Channel2, state.Channel2, elapsedSinceCapture);
+        _isChannel2GateHigh = state.IsChannel2GateHigh;
+        _latchedTimerStatus = state.LatchedTimerStatus;
+        _latchedTimerStatusLocked = state.LatchedTimerStatusLocked;
+
+        _scheduler.RemoveEvents(PitChannel0Event);
+        if (state.Channel0EventDelayMs is { } channel0EventDelay) {
+            _scheduler.AddEvent(PitChannel0Event, channel0EventDelay);
+        }
+    }
+
+    private static PitChannelState CaptureChannelState(in PitChannel channel) {
+        return new PitChannelState(
+            channel.Count,
+            channel.Delay,
+            channel.Start,
+            channel.ReadLatch,
+            channel.WriteLatch,
+            channel.Mode,
+            channel.ReadMode,
+            channel.WriteMode,
+            channel.Bcd,
+            channel.GoReadLatch,
+            channel.ModeChanged,
+            channel.CounterStatusSet,
+            channel.Counting,
+            channel.UpdateCount);
+    }
+
+    private static void RestoreChannelState(ref PitChannel channel, PitChannelState state,
+        double elapsedSinceCapture) {
+        channel.Count = state.Count;
+        channel.Delay = state.Delay;
+        channel.Start = state.Start + elapsedSinceCapture;
+        channel.ReadLatch = state.ReadLatch;
+        channel.WriteLatch = state.WriteLatch;
+        channel.Mode = state.Mode;
+        channel.ReadMode = state.ReadMode;
+        channel.WriteMode = state.WriteMode;
+        channel.Bcd = state.Bcd;
+        channel.GoReadLatch = state.GoReadLatch;
+        channel.ModeChanged = state.ModeChanged;
+        channel.CounterStatusSet = state.CounterStatusSet;
+        channel.Counting = state.Counting;
+        channel.UpdateCount = state.UpdateCount;
     }
 
     /// <summary>

@@ -48,14 +48,15 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="mscdexService">The MSCDEX handler owned by the <c>Dos</c> class.</param>
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILogger loggerService, Mscdex mscdexService,
+        State state, ServiceCallEvents serviceCallEvents, ILogger loggerService, Mscdex mscdexService,
         ExtendedMemoryManager? xms = null)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _xms = xms;
         _mscdexService = mscdexService;
     }

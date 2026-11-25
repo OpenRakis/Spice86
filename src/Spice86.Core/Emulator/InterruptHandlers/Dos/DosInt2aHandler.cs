@@ -28,8 +28,8 @@ public class DosInt2aHandler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    public DosInt2aHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+    public DosInt2aHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ServiceCallEvents serviceCallEvents, ILogger loggerService)
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
     }
 
     /// <inheritdoc />

@@ -410,18 +410,19 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="serviceCallEvents">The service call events the handler reports its service calls to.</param>
     /// <param name="floppyAccess">Low-level floppy read/write/geometry provider.</param>
     /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI.</param>
     /// <param name="timingService">Floppy I/O timing service applied before media transfers.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public SystemBiosInt13Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state,
+        Stack stack, State state, ServiceCallEvents serviceCallEvents,
         IFloppyDriveAccess floppyAccess,
         IDriveActivityNotifier activityNotifier,
         FloppyDiskTimingService timingService,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _floppyAccess = floppyAccess;
         _activityNotifier = activityNotifier;
         _timingService = timingService;

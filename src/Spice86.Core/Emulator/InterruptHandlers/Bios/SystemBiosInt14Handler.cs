@@ -32,11 +32,11 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     public SystemBiosInt14Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
         Stack stack,
-        State state,
+        State state, ServiceCallEvents serviceCallEvents,
         BiosDataArea biosDataArea,
         IOPortDispatcher ioPortDispatcher,
         ILogger loggerService)
-        : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        : base(memory, functionHandlerProvider, stack, state, serviceCallEvents, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
         InitializeBiosDataArea();

@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
@@ -25,7 +26,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 ///     Coordinates the paired PIC controllers and handles bus registration.
 /// </summary>
-public sealed partial class DualPic : DefaultIOPortHandler {
+public sealed partial class DualPic : DefaultIOPortHandler, IStatefulDevice<DualPicState> {
     /// <summary>
     ///     Identifies which controller to observe or configure.
     /// </summary>
@@ -58,6 +59,8 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly Intel8259Pic _primaryPic;
     private readonly Intel8259Pic _secondaryPic;
+    private readonly List<InterruptDeliveryHold> _deliveryHolds = new();
+    private bool _isDeliveryHeld;
 
     /// <summary>
     ///     Initializes controller state and registers I/O handlers.
@@ -80,6 +83,11 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     ///     Gets a value indicating whether any pending IRQ requires CPU attention.
     /// </summary>
     public bool IrqCheck { get; private set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether at least one hold created by <see cref="HoldDelivery" /> is active.
+    /// </summary>
+    public bool IsDeliveryHeld => _isDeliveryHeld;
 
     /// <summary>
     ///     Raised when the mask state of an IRQ changes.
@@ -183,9 +191,18 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     /// <summary>
     ///     Computes the next interrupt vector if one is pending.
     /// </summary>
-    /// <returns>The vector number, or <see langword="null" /> if none is pending.</returns>
+    /// <remarks>
+    ///     While a hold created by <see cref="HoldDelivery" /> is active, this returns <see langword="null" /> and
+    ///     changes no controller state, so the request stays latched and <see cref="IrqCheck" /> stays set.
+    /// </remarks>
+    /// <returns>The vector number, or <see langword="null" /> if none is pending or delivery is held.</returns>
     public byte? ComputeVectorNumber() {
         if (!IrqCheck) {
+            return null;
+        }
+
+        if (_isDeliveryHeld) {
+            RecordHeldDelivery();
             return null;
         }
 
@@ -206,6 +223,85 @@ public sealed partial class DualPic : DefaultIOPortHandler {
         // Disable check variable.
         IrqCheck = false;
         return vectorNumber;
+    }
+
+    /// <summary>
+    ///     Holds hardware interrupt delivery until the returned hold is disposed.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         While a hold is active, <see cref="ComputeVectorNumber" /> returns <see langword="null" /> to both of
+    ///         its callers, the interpreter and <c>CSharpOverrideHelper.CheckExternalEvents</c>. Devices can still
+    ///         raise and lower lines and the program can still program the controllers through their ports. The
+    ///         hold lists each request the CPU asked for and did not get, with the cycle count and CS:IP of the
+    ///         first time it asked. The CPU asks only when its interrupt flag is set, so an entry marks a point
+    ///         where the program could have been interrupted.
+    ///     </para>
+    ///     <para>
+    ///         Holds nest: delivery resumes when the last one is disposed, and the requests still latched are
+    ///         delivered then. A halted CPU stays halted while delivery is held, since only a delivered
+    ///         interrupt ends HLT.
+    ///     </para>
+    ///     <para>
+    ///         Call this on the emulation thread, or while the emulation is paused.
+    ///     </para>
+    /// </remarks>
+    /// <returns>The hold. Dispose it to resume delivery.</returns>
+    public InterruptDeliveryHold HoldDelivery() {
+        InterruptDeliveryHold hold = new(this);
+        _deliveryHolds.Add(hold);
+        _isDeliveryHeld = true;
+        return hold;
+    }
+
+    /// <summary>
+    ///     Removes a hold. Called by <see cref="InterruptDeliveryHold.Dispose" />.
+    /// </summary>
+    /// <param name="hold">Hold to remove.</param>
+    internal void ReleaseDeliveryHold(InterruptDeliveryHold hold) {
+        _deliveryHolds.Remove(hold);
+        if (_deliveryHolds.Count != 0) {
+            return;
+        }
+
+        _isDeliveryHeld = false;
+    }
+
+    /// <summary>
+    ///     Lists the request the CPU would receive now in every active hold that has not listed that line since its
+    ///     request was latched. Each hold keeps its own record, so a hold created while a request is already latched
+    ///     and listed by an outer hold still lists it. Reads controller state and changes none of it.
+    /// </summary>
+    private void RecordHeldDelivery() {
+        // A line whose request went away is listed again the next time it is the one to deliver.
+        ushort latchedLines = (ushort)(_primaryPic.InterruptRequestRegister
+            | (_secondaryPic.InterruptRequestRegister << 8));
+        foreach (InterruptDeliveryHold hold in _deliveryHolds) {
+            hold.KeepListedLines(latchedLines);
+        }
+
+        byte irq = _primaryPic.GetNextPendingIrq();
+        if (irq == NoPendingIrq) {
+            return;
+        }
+
+        byte vectorNumber;
+        if (irq == 2) {
+            byte secondaryIrq = _secondaryPic.GetNextPendingIrq();
+            if (secondaryIrq == NoPendingIrq) {
+                return;
+            }
+
+            irq = (byte)(secondaryIrq + 8);
+            vectorNumber = (byte)(_secondaryPic.InterruptVectorBase + secondaryIrq);
+        } else {
+            vectorNumber = (byte)(_primaryPic.InterruptVectorBase + irq);
+        }
+
+        HeldInterruptDelivery delivery = new(irq, vectorNumber, _state.Cycles, _state.IpSegmentedAddress);
+        foreach (InterruptDeliveryHold hold in _deliveryHolds) {
+            hold.Record(delivery);
+        }
     }
 
     /// <summary>
@@ -261,6 +357,42 @@ public sealed partial class DualPic : DefaultIOPortHandler {
             pic.ShouldRotateOnAutoEoi,
             pic.IsSingleModeConfigured,
             pic.InterruptVectorBase);
+    }
+
+    /// <summary>
+    ///     Captures the complete state of both controllers and of the request signal to the CPU.
+    /// </summary>
+    /// <remarks>
+    ///     Unlike <see cref="GetPicSnapshot" />, the result holds everything <see cref="RestoreState" /> needs.
+    /// </remarks>
+    /// <returns>The state of both controllers.</returns>
+    public DualPicState CaptureState() {
+        return new DualPicState(_primaryPic.CaptureState(), _secondaryPic.CaptureState(), IrqCheck);
+    }
+
+    /// <summary>
+    ///     Puts both controllers and the request signal to the CPU back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     Lines latched since the capture are forgotten and lines latched at capture are latched again,
+    ///     whatever the devices behind them do now. <see cref="IrqMaskChanged" /> is raised for each line whose
+    ///     mask bit differs from the one before the call.
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(DualPicState state) {
+        int previousMasks = _primaryPic.InterruptMaskRegister | (_secondaryPic.InterruptMaskRegister << 8);
+        _primaryPic.RestoreState(state.Primary);
+        _secondaryPic.RestoreState(state.Secondary);
+        IrqCheck = state.IrqCheck;
+
+        int restoredMasks = _primaryPic.InterruptMaskRegister | (_secondaryPic.InterruptMaskRegister << 8);
+        int changedMasks = previousMasks ^ restoredMasks;
+        for (int irq = 0; changedMasks != 0 && irq <= MaxIrq; irq++) {
+            int lineBit = 1 << irq;
+            if ((changedMasks & lineBit) != 0) {
+                IrqMaskChanged?.Invoke((byte)irq, (restoredMasks & lineBit) != 0);
+            }
+        }
     }
 
     /// <summary>
@@ -571,6 +703,14 @@ public sealed partial class DualPic : DefaultIOPortHandler {
         if (irq > MaxIrq) {
             _loggerService.LogError("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
             return;
+        }
+
+        if (_isDeliveryHeld) {
+            // Each active hold lists this line again if it is raised again.
+            ushort otherLines = (ushort)~(1 << irq);
+            foreach (InterruptDeliveryHold hold in _deliveryHolds) {
+                hold.KeepListedLines(otherLines);
+            }
         }
 
         byte controllerIrq = GetEffectiveControllerIrq(irq);

@@ -271,6 +271,9 @@ public class Spice86DependencyInjection : IDisposable {
         FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        InstalledInterruptHandlers installedInterruptHandlers =
+            new(dualPic.EnumerateHardwareInterruptVectorNumbers());
+        ServiceCallEvents serviceCallEvents = installedInterruptHandlers.ServiceCallEvents;
 
         if (configuration.InitializeDOS is false) {
             loggerService.LogInformation("Masking all PIC IRQs...");
@@ -400,16 +403,16 @@ public class Spice86DependencyInjection : IDisposable {
             biosDataArea, vgaRom, videoState,
             bootUpInTextMode: configuration.InitializeDOS is not false);
         VgaBios vgaBios = new VgaBios(memory, cfgCpu, stack,
-            state, vgaFunctionality, biosDataArea, loggerService);
+            state, serviceCallEvents, vgaFunctionality, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("Video card support classes created...");
         }
 
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
-            cfgCpu, stack, state, loggerService);
+            cfgCpu, stack, state, serviceCallEvents, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, cfgCpu, stack,
-            state, biosDataArea, loggerService);
+            state, serviceCallEvents, biosDataArea, loggerService);
 
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
@@ -423,16 +426,16 @@ public class Spice86DependencyInjection : IDisposable {
         SharedMouseData = sharedMouseData;
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
+            cfgCpu, stack, state, serviceCallEvents, a20Gate, biosDataArea, emulationLoopScheduler,
             ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
         SystemBiosInt14Handler systemBiosInt14Handler = new(memory,
-            cfgCpu, stack, state, biosDataArea, ioPortDispatcher, loggerService);
+            cfgCpu, stack, state, serviceCallEvents, biosDataArea, ioPortDispatcher, loggerService);
         SystemBiosInt17Handler systemBiosInt17Handler = new(memory,
-            cfgCpu, stack, state, biosDataArea, loggerService);
+            cfgCpu, stack, state, serviceCallEvents, biosDataArea, loggerService);
 
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
-            realTimeClock, cfgCpu, stack, state, loggerService);
-        RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
+            realTimeClock, cfgCpu, stack, state, serviceCallEvents, loggerService);
+        RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state, serviceCallEvents,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
@@ -478,8 +481,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         ListingExporter listingExporter = new(cfgCpu, nodeToString);
 
-        InstalledInterruptHandlers installedInterruptHandlers =
-            new(dualPic.EnumerateHardwareInterruptVectorNumbers());
         LoadedImageRegistry loadedImageRegistry = new();
         ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
@@ -520,12 +521,12 @@ public class Spice86DependencyInjection : IDisposable {
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
+            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, serviceCallEvents, loggerService,
             biosKeyboardBuffer);
 
         ExpandedMemoryManager? emsManager = null;
         if (configuration.Ems is not false || configuration.Xms is not false) {
-            emsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
+            emsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, serviceCallEvents, loggerService);
         }
 
         DosOptions dosOptions = RuntimeOptionsMapper.ToDosOptions(configuration, dosRuntimeState);
@@ -536,7 +537,7 @@ public class Spice86DependencyInjection : IDisposable {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
             mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, callbackHandler, emsManager,
-            loadedImageRegistry, emulatedClock);
+            loadedImageRegistry, emulatedClock, serviceCallEvents);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("DOS XMS driver created...");
@@ -552,7 +553,7 @@ public class Spice86DependencyInjection : IDisposable {
         _ = new FloppyDiskController(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService, dualPic, floppyDiskTransferService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, dos.DosDriveManager, driveActivityNotifier, floppyDiskTimingService, loggerService);
+            cfgCpu, stack, state, serviceCallEvents, dos.DosDriveManager, driveActivityNotifier, floppyDiskTimingService, loggerService);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("Floppy controller and BIOS disk handler created...");
@@ -614,7 +615,7 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.BiosKeyboardBuffer = biosKeyboardBuffer;
         inputEventHub.KeyboardDevice = intel8042Controller.KeyboardDevice;
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
-            stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
+            stack, state, serviceCallEvents, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, sharedMouseData, dualPic,
             configuration.Mouse, loggerService, configuration.FailOnUnhandledPort, _emulatedClock, emulationLoopScheduler,
@@ -695,7 +696,7 @@ public class Spice86DependencyInjection : IDisposable {
             }
 
             var mouseInt33Handler = new MouseInt33Handler(memory,
-                cfgCpu, stack, state, loggerService, mouseDriver);
+                cfgCpu, stack, state, serviceCallEvents, loggerService, mouseDriver);
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             SegmentedAddress mouseDriverAddress =

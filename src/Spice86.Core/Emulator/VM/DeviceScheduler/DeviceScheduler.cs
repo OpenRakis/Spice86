@@ -88,6 +88,26 @@ public class DeviceScheduler {
     }
 
     /// <summary>
+    ///     Gets the scheduled time of the earliest queued event of a handler.
+    /// </summary>
+    /// <param name="handler">Callback whose events are looked up.</param>
+    /// <returns>
+    ///     The time in milliseconds on the emulated clock, or <see langword="null" /> when no event of the
+    ///     handler is queued.
+    /// </returns>
+    public double? GetNextEventTime(EventHandler handler) {
+        double? earliest = null;
+        for (int i = 1; i <= _queue.Count; i++) {
+            ScheduledEntry entry = _queue.NodeAt(i);
+            if (entry.Handler == handler && (earliest is null || entry.Priority < earliest.Value)) {
+                earliest = entry.Priority;
+            }
+        }
+
+        return earliest;
+    }
+
+    /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     public void RemoveEvents(EventHandler handler) {

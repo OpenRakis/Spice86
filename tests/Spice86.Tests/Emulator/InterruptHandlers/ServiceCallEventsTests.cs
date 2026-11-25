@@ -44,7 +44,7 @@ public sealed class ServiceCallEventsTests {
 
     private static AsmRunSettings Observed(AsmRunSettings settings, Recorder recorder) {
         return settings with {
-            ConfigureMachine = machine => machine.InstalledInterruptHandlers.ServiceCallObserver = recorder
+            ConfigureMachine = machine => machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder
         };
     }
 
@@ -75,8 +75,8 @@ public sealed class ServiceCallEventsTests {
         Recorder recorder = new();
         AsmRunSettings unobserved = settings with {
             ConfigureMachine = machine => {
-                machine.InstalledInterruptHandlers.ServiceCallObserver = recorder;
-                machine.InstalledInterruptHandlers.ServiceCallObserver = null;
+                machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder;
+                machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = null;
             }
         };
 
@@ -180,7 +180,7 @@ public sealed class ServiceCallEventsTests {
         CSharpOverrideHelper helper = new(new Dictionary<SegmentedAddress, FunctionInformation>(), machine,
             Substitute.For<ILogger>(), new Configuration { HttpApiPort = 0 });
         Recorder recorder = new();
-        machine.InstalledInterruptHandlers.ServiceCallObserver = recorder;
+        machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder;
         machine.InstalledInterruptHandlers.TryGetHandler(DosVector, out IInterruptHandler? dos).Should().BeTrue();
         InterruptServiceEntry write = ((HandlerServices.SelectedServices)dos!.Services).Services[0x40];
 
@@ -207,7 +207,7 @@ public sealed class ServiceCallEventsTests {
         Machine machine = dependencyInjection.Machine;
         CSharpOverrideHelper helper = new(new Dictionary<SegmentedAddress, FunctionInformation>(), machine,
             Substitute.For<ILogger>(), new Configuration { HttpApiPort = 0 });
-        machine.InstalledInterruptHandlers.ServiceCallObserver = new Recorder();
+        machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = new Recorder();
 
         // Act
         Action act = () => helper.ServiceCalled(DosVector, 0x40, 1);
@@ -230,7 +230,7 @@ public sealed class ServiceCallEventsTests {
         helper.ServiceCalled(DosVector, 0x40, 1);
 
         // Act: the INT 1Ch stub is a bare iret and raises no event through the stub either
-        machine.InstalledInterruptHandlers.ServiceCallObserver = recorder;
+        machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder;
         helper.ServiceCalled(0x1C, null);
 
         // Assert
@@ -250,15 +250,13 @@ public sealed class ServiceCallEventsTests {
         Recorder recorder = new();
 
         // Act
-        installed.ServiceCallObserver = recorder;
+        installed.ServiceCallEvents.Observer = recorder;
         helper.ServiceCalled(keyboardIrqVector, null);
 
         // Assert: the INT 09h handler derives from InterruptHandler, but IRQ 1 delivers it
         installed.HardwareVectorNumbers.Should().Contain(keyboardIrqVector);
-        installed.TryGetHandler(keyboardIrqVector, out IInterruptHandler? keyboard).Should().BeTrue();
-        keyboard.Should().BeAssignableTo<InterruptHandler>().Which.ServiceCallObserver.Should().BeNull();
-        installed.TryGetHandler(DosVector, out IInterruptHandler? dos).Should().BeTrue();
-        dos.Should().BeAssignableTo<InterruptHandler>().Which.ServiceCallObserver.Should().BeSameAs(recorder);
+        installed.ServiceCallEvents.ObserverFor(keyboardIrqVector).Should().BeNull();
+        installed.ServiceCallEvents.ObserverFor(DosVector).Should().BeSameAs(recorder);
         recorder.Calls.Should().BeEmpty();
     }
 
@@ -315,5 +313,68 @@ public sealed class ServiceCallEventsTests {
         ServiceCallInputs.Read(state, CpuValues.Ds | CpuValues.Dx).Should().Be(0xABCD00EF);
         ServiceCallInputs.EncodingOf(CpuValues.Ds | CpuValues.Dx).Should()
             .Be(ServiceCallInputs.Encoding.SegmentedAddress);
+    }
+
+    [Fact]
+    public void EveryRegisterAndFlagBindingReadsTheRegisterOrFlagItNames() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        State state = dependencyInjection.Machine.CpuState;
+        state.EAX = 0x11223344;
+        state.ECX = 0x55667788;
+        state.EDX = 0x99AABBCC;
+        state.EBX = 0xDDEEF001;
+        state.ESP = 0x02030405;
+        state.EBP = 0x06070809;
+        state.ESI = 0x0A0B0C0D;
+        state.EDI = 0x0E0F1011;
+        state.ES = 0x1213;
+        state.CS = 0x1415;
+        state.SS = 0x1617;
+        state.DS = 0x1819;
+        state.FS = 0x1A1B;
+        state.GS = 0x1C1D;
+        state.CarryFlag = true;
+        state.ParityFlag = false;
+        state.AuxiliaryFlag = true;
+        state.ZeroFlag = false;
+        state.SignFlag = true;
+        state.OverflowFlag = false;
+        state.DirectionFlag = true;
+        (CpuValues Binding, uint Expected)[] cases = [
+            (CpuValues.Al, state.AL), (CpuValues.Ah, state.AH), (CpuValues.Ax, state.AX), (CpuValues.Eax, state.EAX),
+            (CpuValues.Cl, state.CL), (CpuValues.Ch, state.CH), (CpuValues.Cx, state.CX), (CpuValues.Ecx, state.ECX),
+            (CpuValues.Dl, state.DL), (CpuValues.Dh, state.DH), (CpuValues.Dx, state.DX), (CpuValues.Edx, state.EDX),
+            (CpuValues.Bl, state.BL), (CpuValues.Bh, state.BH), (CpuValues.Bx, state.BX), (CpuValues.Ebx, state.EBX),
+            (CpuValues.Sp, state.SP), (CpuValues.Esp, state.ESP), (CpuValues.Bp, state.BP), (CpuValues.Ebp, state.EBP),
+            (CpuValues.Si, state.SI), (CpuValues.Esi, state.ESI), (CpuValues.Di, state.DI), (CpuValues.Edi, state.EDI),
+            (CpuValues.Es, state.ES), (CpuValues.Cs, state.CS), (CpuValues.Ss, state.SS),
+            (CpuValues.Ds, state.DS), (CpuValues.Fs, state.FS), (CpuValues.Gs, state.GS),
+            (CpuValues.Carry, 1), (CpuValues.Parity, 0), (CpuValues.Auxiliary, 1), (CpuValues.Zero, 0),
+            (CpuValues.Sign, 1), (CpuValues.Overflow, 0), (CpuValues.Direction, 1)];
+
+        // Act
+        (CpuValues Binding, uint Value)[] read = cases
+            .Select(testCase => (testCase.Binding, ServiceCallInputs.Read(state, testCase.Binding))).ToArray();
+
+        // Assert
+        read.Should().Equal(cases.Select(testCase => (testCase.Binding, testCase.Expected)));
+    }
+
+    [Theory]
+    [InlineData(CpuValues.None)]
+    [InlineData(CpuValues.EaxHigh)]
+    [InlineData(CpuValues.Al | CpuValues.Ch)]
+    [InlineData(CpuValues.Ax | CpuValues.Es)]
+    [InlineData(CpuValues.Es | CpuValues.Ds)]
+    [InlineData(CpuValues.Carry | CpuValues.Zero)]
+    [InlineData(CpuValues.FpuControlWord)]
+    public void ABindingThatIsNotASingleRegisterFlagOrDsDxIsRejected(CpuValues binding) {
+        // Act
+        Action act = () => ServiceCallInputs.EncodingOf(binding);
+
+        // Assert
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 }
