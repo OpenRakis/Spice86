@@ -2278,6 +2278,7 @@ public class CSharpOverrideHelper {
         if (vectorNumber != null) {
             State.IsHalted = false;
             SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber.Value];
+            Machine.CfgCpu.ExecutionContextManager.HardwareInterruptDeliveries.Add((vectorNumber.Value, target));
             Func<int, Action> function = HardwareInterruptFunction(vectorNumber.Value, target);
             ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, NoRedirectedReturns);
         }
