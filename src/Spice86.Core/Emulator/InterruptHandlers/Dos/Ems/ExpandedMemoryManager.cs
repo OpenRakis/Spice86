@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -14,6 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
@@ -42,7 +44,7 @@ using System.Linq;
 /// This is a LIM standard implementation where EMM pages and raw pages are identical (both 16 KB).
 /// The page frame is located at segment 0xE000, which is above 640K in the Upper Memory Area.
 /// </remarks>
-public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
+public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IStatefulDevice<EmsState> {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
     /// DOS programs can detect the presence of an EMS handler by looking for it <br/>
@@ -164,6 +166,58 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         // A character device wrapper so EMS can be opened via DOSINT21H OpenFile function
         // fixes Wolf3D not finding Expanded Memory.
         _emmCharacterDevice = new EMMCharacterDevice(memory, DosDeviceSegment, Header, this);
+    }
+
+    /// <inheritdoc />
+    public EmsState CaptureState() {
+        List<EmmPage> pages = new();
+        Dictionary<EmmPage, int> pageIndexes = new();
+        ImmutableArray<EmmHandleState> handles = [.. EmmHandles.Values.Select(handle => new EmmHandleState(
+            handle.HandleNumber, handle.Name, handle.SavedPageMap,
+            [.. handle.LogicalPages.Select(page => IndexOf(page, pages, pageIndexes))]))];
+        ImmutableArray<int> pageFrame = [.. EmmPageFrame.Values.Select(register => IndexOf(register.PhysicalPage, pages, pageIndexes))];
+        ImmutableArray<int> savedPageMap = [.. _savedPageMappings.Values.Select(page => IndexOf(page, pages, pageIndexes))];
+        ImmutableArray<EmmPageState> pageStates = [.. pages.Select(static page => new EmmPageState(page.PageNumber, page.CopyContent()))];
+        return new EmsState(pageStates, handles, pageFrame, savedPageMap);
+    }
+
+    /// <inheritdoc />
+    public void RestoreState(EmsState state) {
+        EmmPage[] pages = state.Pages.Select(static pageState => {
+            EmmPage page = new(EmmPageSize) {
+                PageNumber = pageState.PageNumber
+            };
+            page.LoadContent(pageState.Content.Span);
+            return page;
+        }).ToArray();
+        EmmHandles.Clear();
+        foreach (EmmHandleState handleState in state.Handles) {
+            EmmHandle handle = new() {
+                HandleNumber = handleState.HandleNumber,
+                Name = handleState.Name,
+                SavedPageMap = handleState.SavedPageMap
+            };
+            foreach (int pageIndex in handleState.LogicalPages) {
+                handle.LogicalPages.Add(pages[pageIndex]);
+            }
+            EmmHandles.Add(handle.HandleNumber, handle);
+        }
+        for (int physicalPage = 0; physicalPage < state.PageFrame.Length; physicalPage++) {
+            EmmPageFrame[(ushort)physicalPage].PhysicalPage = pages[state.PageFrame[physicalPage]];
+        }
+        _savedPageMappings.Clear();
+        for (int physicalPage = 0; physicalPage < state.SavedPageMap.Length; physicalPage++) {
+            _savedPageMappings.Add((ushort)physicalPage, pages[state.SavedPageMap[physicalPage]]);
+        }
+    }
+
+    private static int IndexOf(EmmPage page, List<EmmPage> pages, Dictionary<EmmPage, int> pageIndexes) {
+        if (!pageIndexes.TryGetValue(page, out int index)) {
+            index = pages.Count;
+            pages.Add(page);
+            pageIndexes.Add(page, index);
+        }
+        return index;
     }
 
     private sealed class EMMCharacterDevice : CharacterDevice {
