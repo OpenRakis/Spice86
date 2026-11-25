@@ -21,7 +21,12 @@ public enum MachineDevices {
     Pit = 2,
 
     /// <summary>
+    ///     The two DMA controllers and their eight channels (<see cref="Machine.DmaSystem" />).
+    /// </summary>
+    Dma = 256,
+
+    /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit
+    All = Pic | Pit | Dma
 }

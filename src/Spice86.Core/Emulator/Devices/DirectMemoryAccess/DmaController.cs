@@ -231,6 +231,25 @@ internal sealed class DmaController {
     }
 
     /// <summary>
+    ///     Captures the four channels and the byte pointer flip-flop.
+    /// </summary>
+    public DmaControllerState CaptureState() {
+        return new DmaControllerState(_channels[0].CaptureState(), _channels[1].CaptureState(),
+            _channels[2].CaptureState(), _channels[3].CaptureState(), _flipFlop);
+    }
+
+    /// <summary>
+    ///     Puts the four channels and the byte pointer flip-flop back.
+    /// </summary>
+    public void RestoreState(DmaControllerState state) {
+        _channels[0].RestoreState(state.Channel0);
+        _channels[1].RestoreState(state.Channel1);
+        _channels[2].RestoreState(state.Channel2);
+        _channels[3].RestoreState(state.Channel3);
+        _flipFlop = state.FlipFlop;
+    }
+
+    /// <summary>
     ///     Reads the requested controller register and returns the corresponding state byte.
     /// </summary>
     public byte ReadRegister(byte reg) {
