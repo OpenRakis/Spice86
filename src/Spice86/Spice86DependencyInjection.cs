@@ -601,7 +601,7 @@ public class Spice86DependencyInjection : IDisposable {
         _vgaTimingThread = isSyncRendering
             ? null
             : new DeviceSchedulerThread(vgaScheduler, _emulatedClock, pauseHandler, "VGA Timing");
-        VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
+        VgaCard vgaCard = new(_gui, vgaRenderer, vgaIoPortHandler, vgaRenderer.VideoMemory, loggerService);
         vgaCard.SubscribeToEvents();
 
         if (loggerService.IsEnabled(LogLevel.Information)) {

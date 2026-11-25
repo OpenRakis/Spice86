@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     I/O port handler for the VGA card.
 /// </summary>
-public class VgaIoPortHandler : DefaultIOPortHandler {
+public class VgaIoPortHandler : DefaultIOPortHandler, IStatefulDevice<VgaRegistersState> {
     private readonly AttributeControllerRegisters _attributeRegisters;
     private readonly CrtControllerRegisters _crtRegisters;
     private readonly DacRegisters _dacRegisters;
@@ -23,6 +23,10 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly IVideoState _videoState;
     private readonly IEmulatedClock _clock;
     private bool _attributeDataMode;
+    private const int SequencerRegisterCount = (int)SequencerRegister.MemoryMode + 1;
+    private const int CrtControllerRegisterCount = (int)CrtControllerRegister.LineCompare + 1;
+    private const int GraphicsControllerRegisterCount = (int)GraphicsControllerRegister.BitMask + 1;
+    private const int AttributeControllerRegisterCount = (int)AttributeControllerRegister.ColorSelect + 1;
 
     /// <summary>
     ///     Create a new VGA I/O port handler.
@@ -417,6 +421,87 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 base.WriteByte(port, value);
                 break;
         }
+    }
+
+    /// <summary>
+    ///     Captures the registers of every VGA register file, the DAC, the selected index of each file and the
+    ///     attribute controller's address and data toggle.
+    /// </summary>
+    /// <returns>The state of the registers.</returns>
+    public VgaRegistersState CaptureState() {
+        byte[] sequencer = new byte[SequencerRegisterCount];
+        for (int i = 0; i < sequencer.Length; i++) {
+            sequencer[i] = _sequencerRegisters.ReadRegister((SequencerRegister)i);
+        }
+        byte[] crtController = new byte[CrtControllerRegisterCount];
+        for (int i = 0; i < crtController.Length; i++) {
+            crtController[i] = _crtRegisters.ReadRegister((CrtControllerRegister)i);
+        }
+        byte[] graphicsController = new byte[GraphicsControllerRegisterCount];
+        for (int i = 0; i < graphicsController.Length; i++) {
+            graphicsController[i] = _graphicsRegisters.ReadRegister((GraphicsControllerRegister)i);
+        }
+        byte[] attributeController = new byte[AttributeControllerRegisterCount];
+        for (int i = 0; i < attributeController.Length; i++) {
+            attributeController[i] = _attributeRegisters.ReadRegister((AttributeControllerRegister)i);
+        }
+        return new VgaRegistersState(
+            (byte)_sequencerRegisters.Address, sequencer,
+            (byte)_crtRegisters.AddressRegister, crtController,
+            (byte)_graphicsRegisters.AddressRegister, graphicsController,
+            (byte)_attributeRegisters.AddressRegister, attributeController,
+            _attributeDataMode,
+            _generalRegisters.MiscellaneousOutput.Value,
+            _generalRegisters.InputStatusRegister0.Value,
+            _generalRegisters.InputStatusRegister1.Value,
+            _generalRegisters.CgaBitsPerPixel,
+            _generalRegisters.CgaModeControl,
+            _generalRegisters.CgaColorSelect,
+            _dacRegisters.CaptureState());
+    }
+
+    /// <summary>
+    ///     Puts the registers back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     The CRT controller registers 0 to 7 are written whatever the write protect bit was before the call.
+    ///     The colour maps the renderer reads are rebuilt, the next frame is drawn again, and the beam timing is
+    ///     computed again from the restored registers at the clock's current time.
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(VgaRegistersState state) {
+        ReadOnlySpan<byte> sequencer = state.Sequencer.Span;
+        for (int i = 0; i < sequencer.Length; i++) {
+            _sequencerRegisters.WriteRegister((SequencerRegister)i, sequencer[i]);
+        }
+        _sequencerRegisters.Address = (SequencerRegister)state.SequencerAddress;
+        _crtRegisters.VerticalSyncEndRegister.Value = 0;
+        ReadOnlySpan<byte> crtController = state.CrtController.Span;
+        for (int i = 0; i < crtController.Length; i++) {
+            _crtRegisters.WriteRegister((CrtControllerRegister)i, crtController[i]);
+        }
+        _crtRegisters.AddressRegister = (CrtControllerRegister)state.CrtControllerAddress;
+        ReadOnlySpan<byte> graphicsController = state.GraphicsController.Span;
+        for (int i = 0; i < graphicsController.Length; i++) {
+            _graphicsRegisters.Write((GraphicsControllerRegister)i, graphicsController[i]);
+        }
+        _graphicsRegisters.AddressRegister = (GraphicsControllerRegister)state.GraphicsControllerAddress;
+        ReadOnlySpan<byte> attributeController = state.AttributeController.Span;
+        for (int i = 0; i < attributeController.Length; i++) {
+            _attributeRegisters.WriteRegister((AttributeControllerRegister)i, attributeController[i]);
+        }
+        _attributeRegisters.AddressRegister = (AttributeControllerRegister)state.AttributeControllerAddress;
+        _attributeDataMode = state.IsAttributeDataNext;
+        _generalRegisters.MiscellaneousOutput.Value = state.MiscellaneousOutput;
+        _generalRegisters.InputStatusRegister0.Value = state.InputStatus0;
+        _generalRegisters.InputStatusRegister1.Value = state.InputStatus1;
+        _generalRegisters.CgaBitsPerPixel = state.CgaBitsPerPixel;
+        _generalRegisters.CgaModeControl = state.CgaModeControl;
+        _generalRegisters.CgaColorSelect = state.CgaColorSelect;
+        _dacRegisters.RestoreState(state.Dac);
+        _dacRegisters.RebuildAttributeMap(_attributeRegisters);
+        _videoState.IsRenderingDirty = true;
+        _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
     }
 
     private void UpdateCgaPalette() {

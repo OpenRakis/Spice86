@@ -21,7 +21,12 @@ public enum MachineDevices {
     Pit = 2,
 
     /// <summary>
+    ///     The VGA card (<see cref="Machine.VgaCard" />): registers, DAC, video memory planes and latches.
+    /// </summary>
+    Vga = 32,
+
+    /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit
+    All = Pic | Pit | Vga
 }

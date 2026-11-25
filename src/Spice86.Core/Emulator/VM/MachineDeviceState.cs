@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Devices.Video;
 
 /// <summary>
 ///     State of the devices of a <see cref="Machine" /> that implement
@@ -15,4 +16,5 @@ using Spice86.Core.Emulator.Devices.Timer;
 /// </remarks>
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
-public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit);
+/// <param name="Vga">State of the VGA card, or <see langword="null" />.</param>
+public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, VgaState? Vga);
