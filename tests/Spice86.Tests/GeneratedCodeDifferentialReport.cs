@@ -60,7 +60,7 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="goldenKey">Key of the fixture that produced both states.</param>
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
-    public static void Check(string goldenKey, AsmFinalState emulated, AsmFinalState generated) =>
+    public static string Check(string goldenKey, AsmFinalState emulated, AsmFinalState generated) =>
         Check(goldenKey, GenerationPolicy.Strict, emulated, generated);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
@@ -70,9 +70,10 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="policy">The generation policy the comparison ran under.</param>
     /// <param name="emulated">Final state of the interpreted run.</param>
     /// <param name="generated">Final state of the generated run.</param>
-    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
+    public static string Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
         AsmFinalState generated) =>
-        Check(goldenKey, policy, emulated, generated, new HashSet<SegmentedAddress>(), [], []);
+        Check(goldenKey, policy, emulated, generated, new HashSet<SegmentedAddress>(), [], [],
+            FinalStateComparison.Strict);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
     /// to the report and fails when their compared final states differ, excluding from the RAM
@@ -86,9 +87,10 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="generated">Final state of the generated run.</param>
     /// <param name="framelessServiceCallSites">The generated program's
     /// <c>FramelessServiceCallSites</c>.</param>
-    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
+    public static string Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
         AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites) =>
-        Check(goldenKey, policy, emulated, generated, framelessServiceCallSites, [], []);
+        Check(goldenKey, policy, emulated, generated, framelessServiceCallSites, [], [],
+            FinalStateComparison.Strict);
 
     /// <summary>Appends the comparison of <paramref name="emulated"/> and <paramref name="generated"/>
     /// to the report and fails when their compared final states differ. Two exclusion shapes apply:
@@ -110,10 +112,14 @@ internal static class GeneratedCodeDifferentialReport {
     /// instruction addresses with the argument bytes each reserved.</param>
     /// <param name="droppedStackSlotSites">The generated program's <c>DroppedStackSlotSites</c>:
     /// push instruction addresses with the byte count each dropped save pair omitted.</param>
-    public static void Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
+    /// <param name="comparison">How the comparison applies: a timing reason that leaves RAM and the
+    /// extended regions out, and the final-state parts left out with their reason.</param>
+    /// <returns>The report line describing the comparison.</returns>
+    public static string Check(string goldenKey, GenerationPolicy policy, AsmFinalState emulated,
         AsmFinalState generated, IReadOnlySet<SegmentedAddress> framelessServiceCallSites,
         IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> stackSpaceCallSites,
-        IReadOnlyList<(SegmentedAddress Address, int Bytes)> droppedStackSlotSites) {
+        IReadOnlyList<(SegmentedAddress Address, int Bytes)> droppedStackSlotSites,
+        FinalStateComparison comparison) {
         List<(int Start, int Length)> excluded = [];
         foreach ((SegmentedAddress address, SegmentedAddress stackPointer) in emulated.SoftwareInterrupts) {
             if (!framelessServiceCallSites.Contains(address) || stackPointer.Linear < 6
@@ -161,24 +167,125 @@ internal static class GeneratedCodeDifferentialReport {
         string excludedText = excluded.Count == 0
             ? string.Empty
             : $" | excluded bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
-        string ram = DescribeRam(emulated.Ram, generatedRam);
-        string extended = DescribeExtended(emulated, generated);
-        string line = ram == "none" && extended == "none"
-            ? $"{goldenKey} | {policy.Name}{excludedText} | identical"
-            : $"{goldenKey} | {policy.Name}{excludedText} | ram: {ram} | extended: {extended}";
+        List<string> differences = [];
+        if (comparison.TimingDependentReason is null) {
+            string ram = DescribeRam(emulated.Ram, generatedRam);
+            string extended = DescribeExtended(emulated, generated);
+            if (ram != "none" || extended != "none") {
+                differences.Add($"ram: {ram}");
+                differences.Add($"extended: {extended}");
+            }
+        }
+        if (!comparison.UncomparedParts.HasFlag(FinalStateParts.Console)
+            && emulated.ConsoleOutput != generated.ConsoleOutput) {
+            differences.Add($"console: {DescribeConsole(emulated.ConsoleOutput, generated.ConsoleOutput)}");
+        }
+        if (!comparison.UncomparedParts.HasFlag(FinalStateParts.DriveFiles)) {
+            string files = DescribeFiles(emulated, generated);
+            if (files != "none") {
+                differences.Add($"files: {files}");
+            }
+        }
+        if (!comparison.UncomparedParts.HasFlag(FinalStateParts.DeviceRegisters)) {
+            string devices = DescribeDeviceRegisters(emulated, generated);
+            if (devices != "none") {
+                differences.Add($"devices: {devices}");
+            }
+        }
+        string uncompared = comparison.UncomparedParts == FinalStateParts.None
+            ? string.Empty
+            : $" | uncompared: {DescribeUncomparedParts(comparison.UncomparedParts)} ({comparison.UncomparedPartsReason})";
+        string policyField = comparison.TimingDependentReason is null
+            ? $"{policy.Name}{excludedText}"
+            : "timing-dependent";
+        string result;
+        if (differences.Count == 0) {
+            result = comparison.TimingDependentReason ?? "identical";
+        } else if (comparison.TimingDependentReason is null) {
+            result = string.Join(" | ", differences);
+        } else {
+            result = $"{comparison.TimingDependentReason} | {string.Join(" | ", differences)}";
+        }
+        string line = $"{goldenKey} | {policyField}{uncompared} | {result}";
         AppendLine(line);
-        line.Should().EndWith("| identical", "the generated run must end in the interpreted run's " +
+        differences.Should().BeEmpty("the generated run must end in the interpreted run's " +
             "final state: {0}", line);
+        return line;
     }
 
-    /// <summary>Appends a line for a scenario whose observable state is timing-dependent: the
-    /// generated run executed and checked its oracle, but the strict final-state differential does
-    /// not apply.</summary>
-    /// <param name="goldenKey">Key of the fixture.</param>
-    /// <param name="reason">Why the scenario's observable state depends on timing.</param>
-    public static void AppendTimingDependent(string goldenKey, string reason) {
-        reason.Should().NotBeNullOrEmpty("a timing-dependent scenario needs a reason");
-        AppendLine($"{goldenKey} | timing-dependent | {reason}");
+    private static string DescribeUncomparedParts(FinalStateParts parts) {
+        List<string> names = [];
+        if (parts.HasFlag(FinalStateParts.Console)) {
+            names.Add("console");
+        }
+        if (parts.HasFlag(FinalStateParts.DriveFiles)) {
+            names.Add("files");
+        }
+        if (parts.HasFlag(FinalStateParts.DeviceRegisters)) {
+            names.Add("devices");
+        }
+        return string.Join(", ", names);
+    }
+
+    private static string DescribeConsole(string emulated, string generated) {
+        int index = 0;
+        while (index < emulated.Length && index < generated.Length
+               && emulated[index] == generated[index]) {
+            index++;
+        }
+        string emulatedChar = index < emulated.Length ? $"'{emulated[index]}'" : "<end>";
+        string generatedChar = index < generated.Length ? $"'{generated[index]}'" : "<end>";
+        return $"index {index} interpreted={emulatedChar} generated={generatedChar} " +
+            $"(length {emulated.Length}->{generated.Length})";
+    }
+
+    private static string DescribeFiles(AsmFinalState emulated, AsmFinalState generated) {
+        List<string> differences = [];
+        Dictionary<string, byte[]> generatedFiles =
+            generated.DriveFiles.ToDictionary(file => file.Path, file => file.Content);
+        HashSet<string> seen = [];
+        foreach ((string path, byte[] content) in emulated.DriveFiles) {
+            seen.Add(path);
+            if (!generatedFiles.TryGetValue(path, out byte[]? other)) {
+                differences.Add($"{path} missing in generated");
+                continue;
+            }
+            int offset = 0;
+            while (offset < content.Length && offset < other.Length
+                   && content[offset] == other[offset]) {
+                offset++;
+            }
+            if (offset < content.Length || offset < other.Length) {
+                differences.Add($"{path} first differing byte 0x{offset:X}");
+            }
+        }
+        foreach ((string path, _) in generated.DriveFiles) {
+            if (!seen.Contains(path)) {
+                differences.Add($"{path} extra in generated");
+            }
+        }
+        return differences.Count == 0 ? "none" : $"{differences.Count} files differ, first: {differences[0]}";
+    }
+
+    private static string DescribeDeviceRegisters(AsmFinalState emulated, AsmFinalState generated) {
+        List<string> differences = [];
+        Dictionary<(string Device, string Register), uint> generatedRegisters =
+            generated.DeviceRegisters.ToDictionary(r => (r.Device, r.Register), r => r.Value);
+        HashSet<(string Device, string Register)> seen = [];
+        foreach ((string device, string register, uint value) in emulated.DeviceRegisters) {
+            seen.Add((device, register));
+            if (!generatedRegisters.TryGetValue((device, register), out uint other)) {
+                differences.Add($"{device} {register} missing in generated");
+            } else if (other != value) {
+                differences.Add($"{device} {register} interpreted=0x{value:X} generated=0x{other:X}");
+            }
+        }
+        foreach ((string device, string register, _) in generated.DeviceRegisters) {
+            if (!seen.Contains((device, register))) {
+                differences.Add($"{device} {register} extra in generated");
+            }
+        }
+        return differences.Count == 0 ? "none" : $"{differences.Count} registers differ, first: {differences[0]}";
     }
 
     private static void AppendLine(string line) {

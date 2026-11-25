@@ -58,8 +58,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
             executionScopes.Add(new AsmRunScope(execution));
         }
         return TestGeneratedCodeCore(discoveryScope,
-            executionScopes.Scopes.Select<AsmRunScope, (Func<AsmRunScope> Prepare, string? TimingReason)>(
-                scope => (() => scope, null)).ToList(), interpretedStates);
+            executionScopes.Scopes.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates);
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using AsmRunScope discoveryScope = discovery.Prepare();
         AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
         List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
-        List<(Func<AsmRunScope> Prepare, string? TimingReason)> executionEntries = new();
+        List<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executionEntries = new();
         foreach (AsmScenario execution in executions) {
             string baselineKey = discoveryScope.RunKey;
             if (!IsSameVariantAsDiscovery(execution, discoverySettings)) {
@@ -103,8 +103,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
             if (TestJitSettings.CompiledRun) {
                 RunEmulatedAndCheckMachineGoldens(execution, JitMode.CompiledOnly);
             }
-            executionEntries.Add((() => execution.Prepare(baselineKey),
-                execution.TimingDependentReason));
+            executionEntries.Add((() => execution.Prepare(baselineKey), FinalStateComparison.Of(execution)));
         }
         return TestGeneratedCodeCore(discoveryScope, executionEntries, interpretedStates);
     }
@@ -150,12 +149,12 @@ internal sealed class GeneratedCodeMachineTestRunner {
                 AsmFinalState.Capture(run, execution.Fixture.Settings)));
         }
         return TestGeneratedCodeCore(discovery,
-            executions.Select<AsmRunScope, (Func<AsmRunScope> Prepare, string? TimingReason)>(
-                scope => (() => scope, null)).ToList(), interpretedStates);
+            executions.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates);
     }
 
     private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery,
-        IReadOnlyList<(Func<AsmRunScope> Prepare, string? TimingReason)> executions,
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
         IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
         string goldenKey = GoldenKey(discovery.Fixture.Settings);
         GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions, interpretedStates);
@@ -168,7 +167,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     }
 
     private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery,
-        IReadOnlyList<(Func<AsmRunScope> Prepare, string? TimingReason)> executions,
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
         IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
         AsmRunSettings discoverySettings = discovery.Fixture.Settings;
         string goldenKey = GoldenKey(discoverySettings);
@@ -201,17 +200,18 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <summary>Runs every execution with <paramref name="supplier"/> - oracle, engine assertions
     /// and generated-execution assertions - and gates its final state on the interpreted final
     /// state of its own scenario variant: the discovery variant uses the discovery run's state,
-    /// every other variant the state its interpreted run captured. A scenario marked
-    /// timing-dependent still runs; it only records its reason in the report.</summary>
+    /// every other variant the state its interpreted run captured. Executions marked
+    /// timing-dependent still run and check their oracle; their RAM and extended differential is
+    /// recorded as timing-dependent while every compared part is still checked.</summary>
     private static void RunExecutions(
-        IReadOnlyList<(Func<AsmRunScope> Prepare, string? TimingReason)> executions,
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
         IOverrideSupplier supplier, AsmRunSettings discoverySettings, string goldenKey,
         AsmFinalState discoveryFinalState,
         IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
         IReadOnlySet<SegmentedAddress> framelessServiceCallSites,
         IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> stackSpaceCallSites,
         IReadOnlyList<(SegmentedAddress Address, int Bytes)> droppedStackSlotSites) {
-        foreach ((Func<AsmRunScope> prepare, string? timingReason) in executions) {
+        foreach ((Func<AsmRunScope> prepare, FinalStateComparison comparison) in executions) {
             using AsmRunScope execution = prepare();
             string executionKey = GoldenKey(execution.Fixture.Settings);
             if (executionKey != goldenKey) {
@@ -219,16 +219,12 @@ internal sealed class GeneratedCodeMachineTestRunner {
                     $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
             }
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
-            if (timingReason is not null) {
-                GeneratedCodeDifferentialReport.AppendTimingDependent(goldenKey, timingReason);
-                continue;
-            }
             AsmFinalState baseline = InterpretedBaseline(execution.Fixture.Settings, discoverySettings,
                 discoveryFinalState, interpretedStates);
             GeneratedCodeDifferentialReport.Check(goldenKey,
                 execution.Fixture.Settings.GenerationPolicy, baseline,
                 AsmFinalState.Capture(run, execution.Fixture.Settings), framelessServiceCallSites,
-                stackSpaceCallSites, droppedStackSlotSites);
+                stackSpaceCallSites, droppedStackSlotSites, comparison);
         }
     }
 

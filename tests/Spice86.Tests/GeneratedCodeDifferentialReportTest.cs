@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Shared.Emulator.Memory;
 
 using Spice86.Tests.AsmFixtures;
 
@@ -107,6 +108,73 @@ public sealed class GeneratedCodeDifferentialReportTest {
             BuildState(wrongRam));
         wrongByte.Should().Throw<Exception>()
             .WithMessage("*check-ram*ram: 1 bytes*");
+    }
+
+    /// <summary>A differing console output fails the gate, naming the key and the console part.</summary>
+    [Fact]
+    public void DifferentConsoleOutputFails() {
+        AsmFinalState emulated = BuildState(new byte[16]) with { ConsoleOutput = "ok\n" };
+        AsmFinalState generated = BuildState(new byte[16]) with { ConsoleOutput = "oK\n" };
+
+        Action check = () => CheckFull("check-console", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-console*console*");
+    }
+
+    /// <summary>A differing drive file fails the gate, naming the key and the files part.</summary>
+    [Fact]
+    public void DifferentDriveFileFails() {
+        AsmFinalState emulated = BuildState(new byte[16])
+            with { DriveFiles = [("out.txt", new byte[] { 1, 2 })] };
+        AsmFinalState generated = BuildState(new byte[16])
+            with { DriveFiles = [("out.txt", new byte[] { 1, 3 })] };
+
+        Action check = () => CheckFull("check-files", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-files*files*");
+    }
+
+    /// <summary>A differing device register fails the gate, naming the key, the device and the
+    /// register.</summary>
+    [Fact]
+    public void DifferentDeviceRegisterFails() {
+        AsmFinalState emulated = BuildState(new byte[16])
+            with { DeviceRegisters = [("vga", "sequencer[02]", 0x0Fu)] };
+        AsmFinalState generated = BuildState(new byte[16])
+            with { DeviceRegisters = [("vga", "sequencer[02]", 0x03u)] };
+
+        Action check = () => CheckFull("check-devices", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-devices*devices*");
+    }
+
+    /// <summary>A timing-dependent execution still compares device registers: a differing register
+    /// fails the gate even though RAM is left out.</summary>
+    [Fact]
+    public void TimingDependentScenarioStillComparesDeviceRegisters() {
+        AsmFinalState emulated = BuildState(new byte[16])
+            with { DeviceRegisters = [("pit", "channel0.reload", 0u)] };
+        AsmFinalState generated = BuildState(new byte[16])
+            with { DeviceRegisters = [("pit", "channel0.reload", 0xFFFFu)] };
+
+        Action check = () => CheckFull("check-timing-devices", emulated, generated,
+            new FinalStateComparison("time dependent", FinalStateParts.None, ""));
+
+        check.Should().Throw<Exception>().WithMessage("*check-timing-devices*devices*");
+    }
+
+    /// <summary>A part the scenario leaves out of the comparison is not compared: a differing
+    /// console does not throw, and the report line names the part and the reason.</summary>
+    [Fact]
+    public void UncomparedConsoleIsNotCompared() {
+        AsmFinalState emulated = BuildState(new byte[16]) with { ConsoleOutput = "1\n" };
+        AsmFinalState generated = BuildState(new byte[16]) with { ConsoleOutput = "2\n" };
+
+        string line = CheckFull("check-uncompared", emulated, generated,
+            new FinalStateComparison(null, FinalStateParts.Console,
+                "the poll count depends on timing"));
+
+        line.Should().Contain("console").And.Contain("the poll count depends on timing");
     }
 
     /// <summary>A timing-dependent scenario needs a reason.</summary>
@@ -221,6 +289,11 @@ public sealed class GeneratedCodeDifferentialReportTest {
         report.Should().Contain(
             $"externalint.pit.spec | timing-dependent | {timingDependent.TimingDependentReason}");
     }
+
+    private static string CheckFull(string key, AsmFinalState emulated, AsmFinalState generated,
+        FinalStateComparison? comparison = null) =>
+        GeneratedCodeDifferentialReport.Check(key, GenerationPolicy.Strict, emulated, generated,
+            new HashSet<SegmentedAddress>(), [], [], comparison ?? FinalStateComparison.Strict);
 
     private static AsmFinalState BuildState(byte[] ram) {
         return new AsmFinalState(ram, []);
