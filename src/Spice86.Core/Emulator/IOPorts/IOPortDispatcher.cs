@@ -27,6 +27,12 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     }
 
     /// <summary>
+    /// Observer notified of every port write, with its value and width. Defaults to a
+    /// <see cref="NullIoPortAccessObserver"/> that records nothing.
+    /// </summary>
+    public IIoPortAccessObserver AccessObserver { get; set; } = new NullIoPortAccessObserver();
+
+    /// <summary>
     /// The port / handler pairs registered through <see cref="AddIOPortHandler"/> or
     /// <see cref="ReplaceIOPortHandler"/>.
     /// </summary>
@@ -102,6 +108,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteByte(ushort port, byte value) {
         UpdateLastPortWrite(port, value);
+        AccessObserver.OnWrite(port, value, 8);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
             if (_loggerService.IsEnabled(LogLevel.Trace)) {
@@ -118,6 +125,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteWord(ushort port, ushort value) {
         UpdateLastPortWrite(port, value);
+        AccessObserver.OnWrite(port, value, 16);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
             if (_loggerService.IsEnabled(LogLevel.Trace)) {
@@ -134,6 +142,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteDWord(ushort port, uint value) {
         UpdateLastPortWrite(port, value);
+        AccessObserver.OnWrite(port, value, 32);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
             if (_loggerService.IsEnabled(LogLevel.Trace)) {
