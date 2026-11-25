@@ -109,15 +109,15 @@ public sealed class GeneratedCodeDifferentialReportTest {
             .WithMessage("*check-ram*ram: 1 bytes*");
     }
 
-    /// <summary>A scenario that skips the final-state gate needs a reason.</summary>
+    /// <summary>A timing-dependent scenario needs a reason.</summary>
     [Fact]
-    public void GateSkippedScenarioNeedsAReason() {
-        AsmScenario scenario = AsmScenario.FromFixture("never-generated",
+    public void TimingDependentScenarioNeedsAReason() {
+        AsmScenario scenario = AsmScenario.FromFixture("time-dependent",
             () => AsmFixtureCatalog.Mul());
-        AsmScenario marked = scenario.WithoutGeneratedFinalStateGate("time dependent");
+        AsmScenario marked = scenario.WithTimingDependentState("time dependent");
 
-        marked.GeneratedFinalStateGateSkipReason.Should().Be("time dependent");
-        Action empty = () => scenario.WithoutGeneratedFinalStateGate(" ");
+        marked.TimingDependentReason.Should().Be("time dependent");
+        Action empty = () => scenario.WithTimingDependentState(" ");
         empty.Should().Throw<ArgumentException>();
     }
 
@@ -185,23 +185,41 @@ public sealed class GeneratedCodeDifferentialReportTest {
         GeneratedCodeDifferentialReport.Check("mul-registers-ignored", interpreted, generated);
     }
 
-    /// <summary>Every catalogue scenario that skips the final-state gate has a non-empty reason, and
-    /// a run of such a scenario records that reason in the report while still generating source.</summary>
+    /// <summary>A scenario marked timing-dependent still runs its oracle in generated mode: the oracle
+    /// runs once for the interpreted discovery and once for the generated run.</summary>
     [Fact]
-    public void EveryGateSkippedScenarioHasAReasonAndAppearsInTheReport() {
+    public void TimingDependentScenarioStillRunsTheOracle() {
+        int oracleCalls = 0;
+        AsmScenario scenario = AsmScenarioCatalog.All
+            .First(candidate => candidate.Identity == "check_stdin_status_ctrl_c")
+            .WithOracle(fixture => new AsmFixture(fixture.Settings, fixture.ExpectedMemory, result => {
+                oracleCalls++;
+                fixture.AssertResult(result);
+            }));
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(scenario);
+
+        oracleCalls.Should().Be(2, "the oracle runs for the interpreted discovery and for the generated run");
+    }
+
+    /// <summary>Every catalogue scenario marked timing-dependent has a non-empty reason, and a run of
+    /// one records that reason in the report while still generating source and running the
+    /// generated code.</summary>
+    [Fact]
+    public void EveryTimingDependentScenarioHasAReasonAndAppearsInTheReport() {
         foreach (AsmScenario scenario in AsmScenarioCatalog.All
-                .Where(scenario => scenario.GeneratedFinalStateGateSkipReason is not null)) {
-            scenario.GeneratedFinalStateGateSkipReason.Should().NotBeNullOrWhiteSpace(
-                $"{scenario.Identity} skips the final-state gate without a reason");
+                .Where(scenario => scenario.TimingDependentReason is not null)) {
+            scenario.TimingDependentReason.Should().NotBeNullOrWhiteSpace(
+                $"{scenario.Identity} is timing-dependent without a reason");
         }
 
-        AsmScenario skipped = AsmScenarioCatalog.All.First(
+        AsmScenario timingDependent = AsmScenarioCatalog.All.First(
             scenario => scenario.Identity == "externalint");
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode(skipped);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(timingDependent);
         string report = File.ReadAllText(Path.Join(AppContext.BaseDirectory,
             "generated-code", "differential.txt"));
         report.Should().Contain(
-            $"externalint.pit.spec | final-state gate skipped | {skipped.GeneratedFinalStateGateSkipReason}");
+            $"externalint.pit.spec | timing-dependent | {timingDependent.TimingDependentReason}");
     }
 
     private static AsmFinalState BuildState(byte[] ram) {

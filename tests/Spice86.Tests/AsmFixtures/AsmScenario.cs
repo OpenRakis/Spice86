@@ -42,18 +42,17 @@ internal sealed class AsmScenario {
     /// that program to another file name. Empty when the started program is the resource itself.</summary>
     public string PrimaryResourceFileName { get; init; } = "";
 
-    /// <summary>Why this scenario skips the interpreted-vs-generated final-state comparison, or
-    /// <see langword="null"/> when it does not. Generation, compilation, the generated-source
-    /// golden and the generated execution with its oracle and engine assertions still run; only
-    /// the final-state comparison is skipped.</summary>
-    public string? GeneratedFinalStateGateSkipReason { get; private set; }
+    /// <summary>Why this scenario's observable state depends on timing, or <see langword="null"/> when
+    /// it does not. The generated run still executes and checks the fixture oracle; only the
+    /// interpreted-vs-generated final-state differential is relaxed, with this reason.</summary>
+    public string? TimingDependentReason { get; private set; }
 
-    /// <summary>Returns the same scenario marked as skipping the final-state gate.</summary>
-    /// <param name="reason">Why the final-state comparison is skipped.</param>
-    /// <returns>The scenario, with the skip reason recorded.</returns>
-    public AsmScenario WithoutGeneratedFinalStateGate(string reason) {
+    /// <summary>Returns the same scenario marked as timing-dependent.</summary>
+    /// <param name="reason">Why the scenario's observable state depends on timing.</param>
+    /// <returns>The scenario, with the timing-dependent reason recorded.</returns>
+    public AsmScenario WithTimingDependentState(string reason) {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
-        GeneratedFinalStateGateSkipReason = reason;
+        TimingDependentReason = reason;
         return this;
     }
 
@@ -64,7 +63,7 @@ internal sealed class AsmScenario {
     public AsmScenario WithOracle(Func<AsmFixture, AsmFixture> rewriteOracle) {
         return new AsmScenario(Identity, scope => rewriteOracle(_prepareFixture(scope)), ResourceDependencies) {
             PrimaryResourceFileName = PrimaryResourceFileName,
-            GeneratedFinalStateGateSkipReason = GeneratedFinalStateGateSkipReason
+            TimingDependentReason = TimingDependentReason
         };
     }
 

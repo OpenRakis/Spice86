@@ -171,14 +171,14 @@ internal static class GeneratedCodeDifferentialReport {
             "final state: {0}", line);
     }
 
-    /// <summary>Appends a line for a scenario whose final-state gate is skipped: the generated
-    /// execution ran with its oracle and engine assertions; only the interpreted-vs-generated
-    /// final-state comparison is skipped.</summary>
+    /// <summary>Appends a line for a scenario whose observable state is timing-dependent: the
+    /// generated run executed and checked its oracle, but the strict final-state differential does
+    /// not apply.</summary>
     /// <param name="goldenKey">Key of the fixture.</param>
-    /// <param name="reason">Why the final-state comparison is not performed.</param>
-    public static void AppendGateSkipped(string goldenKey, string reason) {
-        reason.Should().NotBeNullOrEmpty("a scenario that skips the final-state gate needs a reason");
-        AppendLine($"{goldenKey} | final-state gate skipped | {reason}");
+    /// <param name="reason">Why the scenario's observable state depends on timing.</param>
+    public static void AppendTimingDependent(string goldenKey, string reason) {
+        reason.Should().NotBeNullOrEmpty("a timing-dependent scenario needs a reason");
+        AppendLine($"{goldenKey} | timing-dependent | {reason}");
     }
 
     private static void AppendLine(string line) {

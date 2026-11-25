@@ -416,7 +416,7 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario StdinStatusDetectsCtrlC() {
         return ProgramScenario("check_stdin_status_ctrl_c", "check_stdin_status_ctrl_break.com",
             KeyboardSetup(SimulateCtrlC), NoDetailAssertions)
-            .WithoutGeneratedFinalStateGate("Ctrl-C is injected while the program polls standard input, so the delivery point is timing-dependent");
+            .WithTimingDependentState("Ctrl-C is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>Same program as <see cref="StdinStatusDetectsCtrlC"/>, but the run presses Ctrl-Break, so it
@@ -424,7 +424,7 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario StdinStatusDetectsCtrlBreak() {
         return ProgramScenario("check_stdin_status_ctrl_break", "check_stdin_status_ctrl_break.com",
             KeyboardSetup(SimulateCtrlBreak), NoDetailAssertions)
-            .WithoutGeneratedFinalStateGate("Ctrl-Break is injected while the program polls standard input, so the delivery point is timing-dependent");
+            .WithTimingDependentState("Ctrl-Break is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program reads a single character through its standard input handle, which the run
@@ -482,7 +482,7 @@ internal static class Int21ScenarioCatalog {
         return ProgramScenario("flush_input_then_wait_key_ah01", "flush_input_then_wait_key_ah01.com",
             KeyboardSetup(SimulateKeyA), testHandler => testHandler.Details.Should().Equal(new byte[] { (byte)'a' },
                 "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"))
-            .WithoutGeneratedFinalStateGate("the key is injected asynchronously while the program waits, so the delivery point is timing-dependent");
+            .WithTimingDependentState("the key is injected asynchronously while the program waits, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program positions the cursor and reads the Device Status Report bytes back through
