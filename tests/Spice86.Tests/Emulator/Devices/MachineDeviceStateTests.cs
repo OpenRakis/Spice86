@@ -56,6 +56,7 @@ public sealed class MachineDeviceStateTests {
 
         // Assert: the controllers are back, the timer keeps the change
         picOnly.Pit.Should().BeNull();
+        picOnly.Dos.Should().BeNull();
         picOnly.Pic.Should().NotBeNull();
         machine.DualPic.CaptureState().Should().Be(picBefore);
         machine.Timer.CaptureState().Channel0.Should().Be(pitAfterChange.Channel0);
@@ -73,6 +74,7 @@ public sealed class MachineDeviceStateTests {
         // Assert
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
+        none.Dos.Should().BeNull();
     }
 
     private static void ChangePicAndPitThroughPorts(Machine machine) {

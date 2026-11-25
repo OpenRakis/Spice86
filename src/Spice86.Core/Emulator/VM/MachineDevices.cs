@@ -21,7 +21,12 @@ public enum MachineDevices {
     Pit = 2,
 
     /// <summary>
+    ///     The state the DOS kernel (<see cref="Machine.Dos" />) keeps outside emulated memory.
+    /// </summary>
+    Dos = 64,
+
+    /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit
+    All = Pic | Pit | Dos
 }

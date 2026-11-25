@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
@@ -31,13 +32,14 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider, IDriveFileListProvider {
+public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider, IDriveFileListProvider {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -46,6 +48,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly DosDriveStatusProvider _driveStatusProvider;
     private readonly Mscdex _mscdex;
     private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly DosCodePageState _codePageState;
+    private readonly ConsoleDevice _consoleDevice;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -238,6 +242,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosDriveManager = new(_mscdex, channelCreator, activityNotifier, options.CDrive, options.Exe, mediaIdTable, _loggerService);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(keyboardInt16Handler);
+        _consoleDevice = (ConsoleDevice)dosDevices[1];
         DosSysVars = new DosSysVars(options, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
@@ -251,8 +256,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
         CountryInfo = new();
-        DosCodePageState dosCodePageState = DosCodePageState.CreateForCurrentCulture();
-        DosStringDecoder dosStringDecoder = new(memory, state, dosCodePageState);
+        _codePageState = DosCodePageState.CreateForCurrentCulture();
+        DosStringDecoder dosStringDecoder = new(memory, state, _codePageState);
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
 
@@ -280,7 +285,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, loadedImageRegistry, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents,
-            keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
+            keyboardInt16Handler, CountryInfo, _codePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
             ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
@@ -368,6 +373,39 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             }
             FileManager.OpenDevice(fileDevice);
         }
+    }
+
+    /// <inheritdoc />
+    public DosState CaptureState() {
+        ImmutableArray<DosDriveDirectoryState> currentDirectories = DosDriveManager.Values
+            .Select(static drive => new DosDriveDirectoryState(drive.DriveLetter, drive.CurrentDosDirectory))
+            .ToImmutableArray();
+        return new DosState(FileManager.DiskTransferAreaAddressSegment, FileManager.DiskTransferAreaAddressOffset,
+            DosDriveManager.CurrentDrive.DriveLetter, currentDirectories, MemoryManager.AllocationStrategyValue,
+            ProcessManager.LastChildReturnCode, DosInt21Handler.IsCtrlCCheckEnabled, _codePageState.ActiveCodePage,
+            FileManager.CaptureFileSearches(), _consoleDevice.CaptureState());
+    }
+
+    /// <inheritdoc />
+    /// <exception cref="KeyNotFoundException">When a drive of the state is not mounted.</exception>
+    /// <exception cref="InvalidOperationException">When the state's code page or allocation strategy is refused.</exception>
+    public void RestoreState(DosState state) {
+        FileManager.SetDiskTransferAreaAddress(state.DiskTransferAreaSegment, state.DiskTransferAreaOffset);
+        foreach (DosDriveDirectoryState directory in state.CurrentDirectories) {
+            DosDriveManager.GetDrive(directory.DriveLetter).CurrentDosDirectory = directory.Directory;
+        }
+        DosDriveManager.CurrentDrive = DosDriveManager.GetDrive(state.CurrentDrive);
+        if (!MemoryManager.TrySetAllocationStrategy(state.AllocationStrategy)) {
+            throw new InvalidOperationException($"Allocation strategy {state.AllocationStrategy:X4} is not valid.");
+        }
+        ProcessManager.LastChildReturnCode = state.LastChildReturnCode;
+        DosInt21Handler.IsCtrlCCheckEnabled = state.IsCtrlCCheckEnabled;
+        if (!_codePageState.TrySetActiveCodePage(state.ActiveCodePage, DosCodePageState.UseCurrentSystemCodePage,
+                out DosErrorCode errorCode)) {
+            throw new InvalidOperationException($"Code page {state.ActiveCodePage} is not supported: {errorCode}.");
+        }
+        FileManager.RestoreFileSearches(state.FileSearches);
+        _consoleDevice.RestoreState(state.Console);
     }
 
     private uint GetDefaultNewDeviceBaseAddress()

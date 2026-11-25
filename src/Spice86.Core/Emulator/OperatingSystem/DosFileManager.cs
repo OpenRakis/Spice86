@@ -12,6 +12,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -407,6 +408,28 @@ public class DosFileManager {
             }
         }
         return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
+    }
+
+    /// <summary>
+    /// Lists the find first / find next searches that have not ended, in search ID order.
+    /// </summary>
+    internal ImmutableArray<DosFileSearchState> CaptureFileSearches() {
+        return _activeFileSearches
+            .OrderBy(static pair => pair.Key)
+            .Select(static pair => new DosFileSearchState(pair.Key, pair.Value.FileSpec, pair.Value.Index,
+                pair.Value.SearchAttributes, pair.Value.IsFcbSearch))
+            .ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Replaces the searches that have not ended with the given ones.
+    /// </summary>
+    internal void RestoreFileSearches(ImmutableArray<DosFileSearchState> searches) {
+        _activeFileSearches.Clear();
+        foreach (DosFileSearchState search in searches) {
+            _activeFileSearches.Add(search.SearchId, new FileSearchPrivateData(search.FileSpec, search.Index,
+                search.SearchAttributes, search.IsFcbSearch));
+        }
     }
 
     private uint GenerateNewKey() {
