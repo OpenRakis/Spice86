@@ -174,6 +174,12 @@ internal static class AsmFixtureRunner {
             scope.Register(AsmRunScope.SoftwareInterruptsObservation, softwareInterrupts);
             using StackCallRecorder stackCalls = new(run.Machine);
             scope.Register(AsmRunScope.StackCallsObservation, stackCalls);
+            using PortWriteRecorder portWrites = new(run.Machine);
+            scope.Register(AsmRunScope.PortWritesObservation, portWrites);
+            using ConsoleOutputRecorder consoleOutput = new(run.Machine);
+            scope.Register(AsmRunScope.ConsoleOutputObservation, consoleOutput);
+            DriveFileRecorder driveFiles = new(settings.CDrive);
+            scope.Register(AsmRunScope.DriveFilesObservation, driveFiles);
             beforeProgram(run);
             run.DependencyInjection.ProgramExecutor.Run();
             scope.CollectObservations(run.Machine);

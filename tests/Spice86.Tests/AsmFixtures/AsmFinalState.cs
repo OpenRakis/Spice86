@@ -27,6 +27,18 @@ internal sealed record AsmFinalState(byte[] Ram,
     /// executed, recorded by <see cref="StackCallRecorder"/>.</summary>
     public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> Pushes { get; init; } = [];
 
+    /// <summary>The port, value and width of every I/O port write the run performed, recorded by
+    /// <see cref="PortWriteRecorder"/>.</summary>
+    public IReadOnlyList<(ushort Port, uint Value, int Width)> PortWrites { get; init; } = [];
+
+    /// <summary>Every character written to the console during the run, recorded by
+    /// <see cref="ConsoleOutputRecorder"/>.</summary>
+    public string ConsoleOutput { get; init; } = "";
+
+    /// <summary>The '/'-separated relative path and content of every file the run created or
+    /// changed on its C: drive, recorded by <see cref="DriveFileRecorder"/>.</summary>
+    public IReadOnlyList<(string Path, byte[] Content)> DriveFiles { get; init; } = [];
+
     /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
     /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
     /// <param name="run">The finished run.</param>
@@ -58,7 +70,13 @@ internal sealed record AsmFinalState(byte[] Ram,
             Calls = run.Result.Observations
                 .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Calls,
             Pushes = run.Result.Observations
-                .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Pushes
+                .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Pushes,
+            PortWrites = run.Result.Observations
+                .Get<PortWriteRecorder>(AsmRunScope.PortWritesObservation).Writes,
+            ConsoleOutput = run.Result.Observations
+                .Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text,
+            DriveFiles = run.Result.Observations
+                .Get<DriveFileRecorder>(AsmRunScope.DriveFilesObservation).WrittenFiles
         };
     }
 }

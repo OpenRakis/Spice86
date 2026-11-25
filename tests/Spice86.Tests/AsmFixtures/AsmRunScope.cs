@@ -27,6 +27,15 @@ internal sealed class AsmRunScope : IDisposable {
     /// <summary>Name of the <see cref="StackCallRecorder"/> observation every run installs.</summary>
     public const string StackCallsObservation = "stackCalls";
 
+    /// <summary>Name of the <see cref="PortWriteRecorder"/> observation every run installs.</summary>
+    public const string PortWritesObservation = "portWrites";
+
+    /// <summary>Name of the <see cref="ConsoleOutputRecorder"/> observation every run installs.</summary>
+    public const string ConsoleOutputObservation = "consoleOutput";
+
+    /// <summary>Name of the <see cref="DriveFileRecorder"/> observation every run installs.</summary>
+    public const string DriveFilesObservation = "driveFiles";
+
     private readonly List<string> _ownedDirectories = new();
     private readonly List<ObservationProvider> _observationProviders = new();
     private AsmFixture? _fixture;
