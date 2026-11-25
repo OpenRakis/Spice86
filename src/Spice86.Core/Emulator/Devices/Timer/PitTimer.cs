@@ -891,7 +891,9 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             channel.Bcd,
             channel.Counting,
             channel.ModeChanged,
-            channel.GoReadLatch);
+            channel.GoReadLatch,
+            channel.ReadMode,
+            channel.WriteMode);
     }
 
     /// <summary>

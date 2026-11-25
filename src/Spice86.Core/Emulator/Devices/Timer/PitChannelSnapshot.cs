@@ -34,6 +34,12 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 /// <param name="GoReadLatch">
 ///     Signals that the next read should invoke the latch path to refresh <paramref name="ReadLatch" />.
 /// </param>
+/// <param name="ReadMode">
+///     Access mode used when servicing reads.
+/// </param>
+/// <param name="WriteMode">
+///     Access mode used when servicing writes.
+/// </param>
 public readonly record struct PitChannelSnapshot(
     int Count,
     double Delay,
@@ -44,4 +50,6 @@ public readonly record struct PitChannelSnapshot(
     bool Bcd,
     bool Counting,
     bool ModeChanged,
-    bool GoReadLatch);
+    bool GoReadLatch,
+    AccessMode ReadMode,
+    AccessMode WriteMode);
