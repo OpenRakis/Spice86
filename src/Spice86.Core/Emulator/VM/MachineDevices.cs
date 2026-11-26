@@ -21,6 +21,23 @@ public enum MachineDevices {
     Pit = 2,
 
     /// <summary>
+    ///     The A20 line (<see cref="Spice86.Core.Emulator.Memory.IMemory.A20Gate" />).
+    /// </summary>
+    A20Gate = 4,
+
+    /// <summary>
+    ///     The XMS driver (<see cref="Spice86.Core.Emulator.OperatingSystem.Dos.Xms" />), with the content of
+    ///     extended memory.
+    /// </summary>
+    Xms = 8,
+
+    /// <summary>
+    ///     The EMS driver (<see cref="Spice86.Core.Emulator.OperatingSystem.Dos.Ems" />), with the content of its
+    ///     pages.
+    /// </summary>
+    Ems = 16,
+
+    /// <summary>
     ///     The mouse device (<see cref="Machine.MouseDevice" />) with its sample event, and the INT 33h mouse driver
     ///     (<see cref="Machine.MouseDriver" />).
     /// </summary>
@@ -40,5 +57,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | Mouse | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Mouse | Dma | SoundBlaster
 }

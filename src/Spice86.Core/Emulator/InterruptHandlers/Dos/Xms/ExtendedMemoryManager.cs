@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
@@ -16,6 +17,7 @@ using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
@@ -74,7 +76,7 @@ using System.Linq;
 /// services and A20 line control for DOS applications running in the emulator.
 /// </para>
 /// </remarks>
-public sealed class ExtendedMemoryManager : IVirtualDevice {
+public sealed class ExtendedMemoryManager : IVirtualDevice, IStatefulDevice<XmsState> {
 
     /// <summary>
     /// The XMS version number in BCD format (0x0300 = version 3.00).
@@ -267,7 +269,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         // Initialize XMS memory as a single free block
         if (TryGetFreeHandle(out ushort? handle)) {
             _xmsBlocksLinkedList.AddLast(new XmsBlock(handle.Value, offset: 0,
-                XmsRam.Size, free: true));
+                XmsRam.Size, isFree: true));
         }
         _canChangeA20Line = !a20Gate.IsEnabled;
     }
@@ -327,6 +329,32 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// Gets the local A20 enable count.
     /// </summary>
     public uint A20LocalEnableCount => _a20State.NumTimesEnabled;
+
+    /// <inheritdoc />
+    public XmsState CaptureState() {
+        return new XmsState([.. _xmsBlocksLinkedList], _xmsHandles.ToImmutableDictionary(),
+            _hmaClaimedByDosApp, _a20State.IsGloballyEnabled, _a20State.NumTimesEnabled,
+            XmsRam.CopyContent());
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The A20 line is left as it is: it belongs to <see cref="A20Gate" />.
+    /// </remarks>
+    public void RestoreState(XmsState state) {
+        _xmsBlocksLinkedList.Clear();
+        foreach (XmsBlock block in state.Blocks) {
+            _xmsBlocksLinkedList.AddLast(block);
+        }
+        _xmsHandles.Clear();
+        foreach (KeyValuePair<int, byte> handle in state.HandleLockCounts) {
+            _xmsHandles.Add(handle.Key, handle.Value);
+        }
+        _hmaClaimedByDosApp = state.IsHighMemoryAreaClaimed;
+        _a20State.IsGloballyEnabled = state.IsA20GloballyEnabled;
+        _a20State.NumTimesEnabled = state.A20LocalEnableCount;
+        XmsRam.LoadContent(state.Memory.Span);
+    }
 
     /// <summary>
     /// Dispatches XMS subfunctions based on the value in AH register.
@@ -1786,7 +1814,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Zero-length allocations are allowed.
         if (length == 0) {
-            _xmsBlocksLinkedList.AddLast(new XmsBlock(handle, 0, 0, free: false));
+            _xmsBlocksLinkedList.AddLast(new XmsBlock(handle, 0, 0, isFree: false));
             _xmsHandles.Add(handle, 0);
 
             if (_loggerService.IsEnabled(LogLevel.Trace)) {

@@ -33,4 +33,22 @@ public class Ram : IMemoryDevice {
     public IList<byte> GetSlice(int address, int length) {
         return _memory.GetSlice(address, length);
     }
+
+    /// <summary>
+    /// The bytes of the RAM, up to and including its last non-zero byte. Empty when every byte is zero.
+    /// </summary>
+    /// <returns>A copy of the bytes.</returns>
+    public byte[] CopyContent() {
+        int length = _memory.AsSpan().LastIndexOfAnyExcept((byte)0) + 1;
+        return _memory.AsSpan(0, length).ToArray();
+    }
+
+    /// <summary>
+    /// Replaces the content of the RAM with the bytes given. The bytes after them become zero.
+    /// </summary>
+    /// <param name="content">The new first bytes, at most <see cref="Size"/> of them.</param>
+    public void LoadContent(ReadOnlySpan<byte> content) {
+        content.CopyTo(_memory);
+        _memory.AsSpan(content.Length).Clear();
+    }
 }
