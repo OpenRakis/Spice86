@@ -412,6 +412,12 @@ internal sealed class GeneratedCodeMachineTestRunner {
                 + " | part=support " + parts.Support.ToLine(), methodLines);
             File.WriteAllLines(Path.Join(outputDirectory, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
             File.WriteAllLines(Path.Join(outputDirectory, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
+            string? dumpsFolder = Environment.GetEnvironmentVariable(Spice86Creator.DumpsFolderEnvironmentVariable);
+            if (dumpsFolder != null) {
+                Directory.CreateDirectory(dumpsFolder);
+                File.WriteAllLines(Path.Join(dumpsFolder, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
+                File.WriteAllLines(Path.Join(dumpsFolder, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
+            }
         }
     }
 

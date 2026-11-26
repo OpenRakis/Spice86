@@ -27,19 +27,26 @@ internal static class MachineGoldens {
     /// </summary>
     /// <param name="fixture">Fixture to build the key for.</param>
     /// <returns>The golden-file key.</returns>
-    public static string GoldenKey(AsmFixture fixture) {
-        string key = fixture.Settings.ScenarioIdentity;
-        if (!fixture.Settings.EnableSpeculativeCfgExploration) {
+    public static string GoldenKey(AsmFixture fixture) => GoldenKey(fixture.Settings);
+
+    /// <summary>
+    /// Builds the golden-file key of a run from its settings.
+    /// </summary>
+    /// <param name="settings">Run settings to build the key for.</param>
+    /// <returns>The golden-file key.</returns>
+    public static string GoldenKey(AsmRunSettings settings) {
+        string key = settings.ScenarioIdentity;
+        if (!settings.EnableSpeculativeCfgExploration) {
             key += ".nospec";
         }
-        if (fixture.Settings.VariantName.Length > 0) {
-            key += "." + fixture.Settings.VariantName;
+        if (settings.VariantName.Length > 0) {
+            key += "." + settings.VariantName;
         }
-        if (!fixture.Settings.HltStopsEmulation) {
+        if (!settings.HltStopsEmulation) {
             key += ".hltwait";
         }
-        key += fixture.Settings.GenerationPolicy.GoldenSuffix;
-        return key + fixture.Settings.HandlerSegmentGoldenSuffix;
+        key += settings.GenerationPolicy.GoldenSuffix;
+        return key + settings.HandlerSegmentGoldenSuffix;
     }
 
     /// <summary>Compares the finished machine's assembly listing with the committed golden.</summary>

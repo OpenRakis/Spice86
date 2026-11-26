@@ -67,7 +67,9 @@ internal static class GeneratedCodeChecks {
         return builder.ToString();
     }
 
-    private static bool IsProgramFile(string name) =>
+    /// <summary>Whether a generated C# file name belongs to the program itself (not the support
+    /// wiring or a segment globals class). Shared with the dump copy of <c>SPICE86_DUMPS_FOLDER</c>.</summary>
+    internal static bool IsProgramFile(string name) =>
         !name.StartsWith("CfgGeneratedOverrides.Support.", StringComparison.Ordinal)
         && !name.EndsWith("Globals.cs", StringComparison.Ordinal);
 }
