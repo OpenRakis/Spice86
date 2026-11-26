@@ -73,6 +73,7 @@ public sealed class MachineDeviceStateTests {
         // Assert
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
+        none.SoundBlaster.Should().BeNull();
     }
 
     private static void ChangePicAndPitThroughPorts(Machine machine) {
