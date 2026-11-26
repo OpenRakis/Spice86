@@ -38,6 +38,11 @@ public enum MachineDevices {
     Ems = 16,
 
     /// <summary>
+    ///     The VGA card (<see cref="Machine.VgaCard" />): registers, DAC, video memory planes and latches.
+    /// </summary>
+    Vga = 32,
+
+    /// <summary>
     ///     The mouse device (<see cref="Machine.MouseDevice" />) with its sample event, and the INT 33h mouse driver
     ///     (<see cref="Machine.MouseDriver" />).
     /// </summary>
@@ -57,5 +62,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems | Mouse | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Mouse | Dma | SoundBlaster
 }

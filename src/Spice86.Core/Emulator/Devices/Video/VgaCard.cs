@@ -8,12 +8,14 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
 /// <summary>
-///     Thin interface between renderer and gui.
+///     Thin interface between renderer and gui. Also captures and restores the state of the whole card.
 /// </summary>
-public class VgaCard {
+public class VgaCard : IStatefulDevice<VgaState> {
     private readonly IGuiVideoPresentation? _gui;
     private readonly ILogger _logger;
     private readonly IVgaRenderer _renderer;
+    private readonly VgaIoPortHandler _ioPortHandler;
+    private readonly VideoMemory _videoMemory;
     private VideoFrameInfo? _requestedFrameInfo;
 
     /// <summary>
@@ -21,11 +23,33 @@ public class VgaCard {
     /// </summary>
     /// <param name="gui">The GUI to render to.</param>
     /// <param name="renderer">The VGA renderer to use.</param>
+    /// <param name="ioPortHandler">The port handler that holds the registers.</param>
+    /// <param name="videoMemory">The video memory planes.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, ILogger loggerService) {
+    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, VgaIoPortHandler ioPortHandler,
+        VideoMemory videoMemory, ILogger loggerService) {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;
+        _ioPortHandler = ioPortHandler;
+        _videoMemory = videoMemory;
+    }
+
+    /// <summary>
+    ///     Captures the registers, the DAC, the video memory planes and the latches.
+    /// </summary>
+    /// <returns>The state of the card.</returns>
+    public VgaState CaptureState() {
+        return new VgaState(_ioPortHandler.CaptureState(), _videoMemory.CaptureState());
+    }
+
+    /// <summary>
+    ///     Puts the registers, the DAC, the video memory planes and the latches back in a captured state.
+    /// </summary>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(VgaState state) {
+        _ioPortHandler.RestoreState(state.Registers);
+        _videoMemory.RestoreState(state.Memory);
     }
 
     /// <summary>

@@ -255,7 +255,8 @@ public sealed class VideoFramePublicationTests {
         // Arrange
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
         IGuiVideoPresentation gui = Substitute.For<IGuiVideoPresentation>();
-        VgaCard card = new(gui, run.Result.VideoRenderer, Substitute.For<ILogger>());
+        VgaCard card = new(gui, run.Result.VideoRenderer, (VgaIoPortHandler)run.Machine.VgaIoPortHandler,
+            run.Result.VideoRenderer.VideoMemory, Substitute.For<ILogger>());
 
         // Act
         card.SubscribeToEvents();
