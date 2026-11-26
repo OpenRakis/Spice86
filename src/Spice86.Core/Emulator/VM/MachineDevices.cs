@@ -21,7 +21,13 @@ public enum MachineDevices {
     Pit = 2,
 
     /// <summary>
+    ///     The mouse device (<see cref="Machine.MouseDevice" />) with its sample event, and the INT 33h mouse driver
+    ///     (<see cref="Machine.MouseDriver" />).
+    /// </summary>
+    Mouse = 128,
+
+    /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit
+    All = Pic | Pit | Mouse
 }

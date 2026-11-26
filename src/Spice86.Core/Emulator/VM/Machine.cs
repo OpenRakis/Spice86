@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -349,8 +350,8 @@ public sealed class Machine : IDisposable {
     /// later. Registers and memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers and the programmable interval timer. DMA, VGA, Sound Blaster
-    /// and the other devices are not covered. Call this on the emulation thread between two instructions, or
+    /// Covered devices: the interrupt controllers, the programmable interval timer, and the mouse device with the
+    /// INT 33h mouse driver. DMA, VGA, Sound Blaster and the other devices are not covered. Call this on the emulation thread between two instructions, or
     /// while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
@@ -364,7 +365,13 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Pit) != 0) {
             pit = Timer.CaptureState();
         }
-        return new MachineDeviceState(pic, pit);
+        MouseDeviceState? mouseDevice = null;
+        MouseDriverState? mouseDriver = null;
+        if ((devices & MachineDevices.Mouse) != 0) {
+            mouseDevice = MouseDevice.CaptureState();
+            mouseDriver = MouseDriver.CaptureState();
+        }
+        return new MachineDeviceState(pic, pit, mouseDevice, mouseDriver);
     }
 
     /// <summary>
@@ -380,6 +387,12 @@ public sealed class Machine : IDisposable {
         }
         if (state.Pit is { } pit) {
             Timer.RestoreState(pit);
+        }
+        if (state.MouseDevice is { } mouseDevice) {
+            MouseDevice.RestoreState(mouseDevice);
+        }
+        if (state.MouseDriver is { } mouseDriver) {
+            MouseDriver.RestoreState(mouseDriver);
         }
     }
 

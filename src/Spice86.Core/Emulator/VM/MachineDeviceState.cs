@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 /// <summary>
 ///     State of the devices of a <see cref="Machine" /> that implement
@@ -15,4 +17,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 /// </remarks>
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
-public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit);
+/// <param name="MouseDevice">State of the mouse device, or <see langword="null" />.</param>
+/// <param name="MouseDriver">State of the INT 33h mouse driver, or <see langword="null" />.</param>
+public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, MouseDeviceState? MouseDevice,
+    MouseDriverState? MouseDriver);
