@@ -687,7 +687,30 @@ internal static class AsmScenarioEngineAssertions {
     private static void AssertLiveBlockAt(CfgCpuGraph graph, string key, SegmentedAddress address) {
         CfgBlockInfo? block = BlockAt(graph, address);
         block.Should().NotBeNull($"{key}: a block must be entered at {EntryOf(address)}");
-        block!.Dead.Should().NotBe(true, $"{key}: the block at {EntryOf(address)} ran in this run");
+        if (block is not { } liveBlock) {
+            return;
+        }
+        liveBlock.Dead.Should().NotBe(true, $"{key}: the block at {EntryOf(address)} ran in this run");
+    }
+
+    private static void AssertDeadBlockNoSuccessors(CfgCpuGraph graph, string key, SegmentedAddress address) {
+        CfgBlockInfo[] deadBlocks = graph.Blocks
+            .Where(block => block.Entry == EntryOf(address) && block.Dead == true).ToArray();
+        deadBlocks.Should().NotBeEmpty($"{key}: a dead version must be entered at {EntryOf(address)}");
+        deadBlocks.Should().OnlyContain(block => block.Succ.Length == 0,
+            $"{key}: the transfer into data at {EntryOf(address)} ends with no successor");
+    }
+
+    private static void AssertDeadBlockSoleSuccessor(CfgCpuGraph graph, string key,
+        SegmentedAddress address, SegmentedAddress successor) {
+        CfgBlockInfo[] deadBlocks = graph.Blocks
+            .Where(block => block.Entry == EntryOf(address) && block.Dead == true).ToArray();
+        deadBlocks.Should().NotBeEmpty($"{key}: a dead version must be entered at {EntryOf(address)}");
+        foreach (CfgBlockInfo deadBlock in deadBlocks) {
+            deadBlock.Succ.Select(id => graph.Blocks.First(block => block.Id == id).Entry)
+                .Should().BeEquivalentTo([EntryOf(successor)],
+                    $"{key}: the speculated arm at {EntryOf(address)} reconverges on {EntryOf(successor)} only");
+        }
     }
 
     private static void AssertNoBlockAt(CfgCpuGraph graph, string key, SegmentedAddress address) =>
@@ -699,21 +722,30 @@ internal static class AsmScenarioEngineAssertions {
 
     private static void AssertPartitionEntryAt(CfgCpuGraph graph, string key, SegmentedAddress address) {
         graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
-        graph.Partitions!.SelectMany(partition => partition.Entries)
+        if (graph.Partitions is not { } partitions) {
+            return;
+        }
+        partitions.SelectMany(partition => partition.Entries)
             .Should().Contain(entry => entry.Address == EntryOf(address),
                 $"{key}: a partition must be entered at {EntryOf(address)}");
     }
 
     private static void AssertPartitionEntryCountAt(CfgCpuGraph graph, string key, SegmentedAddress address, int count) {
         graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
-        graph.Partitions!.Count(partition => partition.Entries.Any(entry => entry.Address == EntryOf(address)))
+        if (graph.Partitions is not { } partitions) {
+            return;
+        }
+        partitions.Count(partition => partition.Entries.Any(entry => entry.Address == EntryOf(address)))
             .Should().Be(count, $"{key}: {EntryOf(address)} must be an entry of exactly {count} partitions");
     }
 
     private static void AssertSamePartitionHasEntries(CfgCpuGraph graph, string key, params SegmentedAddress[] addresses) {
         graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
+        if (graph.Partitions is not { } partitions) {
+            return;
+        }
         string[] entries = addresses.Select(EntryOf).ToArray();
-        graph.Partitions!.Should().Contain(partition => entries.All(
+        partitions.Should().Contain(partition => entries.All(
                 entry => partition.Entries.Any(candidate => candidate.Address == entry)),
             $"{key}: one partition must hold the entries {string.Join(", ", entries)}");
     }
@@ -724,20 +756,29 @@ internal static class AsmScenarioEngineAssertions {
 
     private static void AssertTransferKind(CfgCpuGraph graph, string key, string kind) {
         graph.Transfers.Should().NotBeNull($"{key}: transfers must be exported");
-        graph.Transfers!.Should().Contain(transfer => transfer.Kind == kind,
+        if (graph.Transfers is not { } transfers) {
+            return;
+        }
+        transfers.Should().Contain(transfer => transfer.Kind == kind,
             $"{key}: a {kind} transfer must exist");
     }
 
     private static void AssertTransferKindCount(CfgCpuGraph graph, string key, string kind, int count) {
         graph.Transfers.Should().NotBeNull($"{key}: transfers must be exported");
-        graph.Transfers!.Count(transfer => transfer.Kind == kind)
+        if (graph.Transfers is not { } transfers) {
+            return;
+        }
+        transfers.Count(transfer => transfer.Kind == kind)
             .Should().Be(count, $"{key}: exactly {count} {kind} transfers must exist");
     }
 
     private static void AssertSinglePartitionOfLiveBlocks(CfgCpuGraph graph, string key) {
         graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
         int[] liveBlocks = graph.Blocks.Where(block => block.Dead != true).Select(block => block.Id).ToArray();
-        graph.Partitions!.Should().ContainSingle($"{key}: all live blocks belong to a single partition")
+        if (graph.Partitions is not { } partitions) {
+            return;
+        }
+        partitions.Should().ContainSingle($"{key}: all live blocks belong to a single partition")
             .Which.Blocks.Should().BeEquivalentTo(liveBlocks,
                 $"{key}: the single partition covers every live block");
     }
@@ -777,13 +818,23 @@ internal static class AsmScenarioEngineAssertions {
     public static void SpeculativeClosureUnobserved(AsmRunScope scope, Machine machine) =>
         AssertDeadBlockAt(GraphOf(machine), "speculative_closure", new SegmentedAddress(0xF000, 0x000C));
 
-    /// <summary>speculative_convergence observed arm: the speculated arm is dead.</summary>
-    public static void SpeculativeConvergenceObserved(AsmRunScope scope, Machine machine) =>
-        AssertDeadBlockAt(GraphOf(machine), "speculative_convergence", new SegmentedAddress(0xF000, 0x0013));
+    /// <summary>speculative_convergence observed arm: the speculated arm is dead and its only
+    /// successor is the merge block the live arm also reaches.</summary>
+    public static void SpeculativeConvergenceObserved(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "speculative_convergence", new SegmentedAddress(0xF000, 0x0013));
+        AssertDeadBlockSoleSuccessor(graph, "speculative_convergence",
+            new SegmentedAddress(0xF000, 0x0013), new SegmentedAddress(0xF000, 0x001A));
+    }
 
-    /// <summary>speculative_convergence unobserved arm: the other arm's entry block is dead.</summary>
-    public static void SpeculativeConvergenceUnobserved(AsmRunScope scope, Machine machine) =>
-        AssertDeadBlockAt(GraphOf(machine), "speculative_convergence", new SegmentedAddress(0xF000, 0x000C));
+    /// <summary>speculative_convergence unobserved arm: the other arm's entry block is dead and
+    /// reconverges on the same merge block.</summary>
+    public static void SpeculativeConvergenceUnobserved(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "speculative_convergence", new SegmentedAddress(0xF000, 0x000C));
+        AssertDeadBlockSoleSuccessor(graph, "speculative_convergence",
+            new SegmentedAddress(0xF000, 0x000C), new SegmentedAddress(0xF000, 0x001A));
+    }
 
     /// <summary>speculative_mixed_block observed arm: the unobserved arm block is dead.</summary>
     public static void SpeculativeMixedBlockObserved(AsmRunScope scope, Machine machine) =>
@@ -810,11 +861,15 @@ internal static class AsmScenarioEngineAssertions {
         AssertLiveBlockAt(graph, "speculative_zero_memory", new SegmentedAddress(0xF000, 0x0043));
     }
 
-    /// <summary>speculative_transfer_into_data: all four transfers into data produced dead blocks.</summary>
-    public static void SpeculativeTransferIntoData(AsmRunScope scope, Machine machine) =>
-        AssertDeadBlocksAt(GraphOf(machine), "speculative_transfer_into_data",
-            new SegmentedAddress(0xF000, 0x001F), new SegmentedAddress(0xF000, 0x0021),
-            new SegmentedAddress(0xF000, 0x0026), new SegmentedAddress(0xF000, 0x002B));
+    /// <summary>speculative_transfer_into_data: all four transfers into data produced dead blocks
+    /// whose successor list is empty.</summary>
+    public static void SpeculativeTransferIntoData(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockNoSuccessors(graph, "speculative_transfer_into_data", new SegmentedAddress(0xF000, 0x001F));
+        AssertDeadBlockNoSuccessors(graph, "speculative_transfer_into_data", new SegmentedAddress(0xF000, 0x0021));
+        AssertDeadBlockNoSuccessors(graph, "speculative_transfer_into_data", new SegmentedAddress(0xF000, 0x0026));
+        AssertDeadBlockNoSuccessors(graph, "speculative_transfer_into_data", new SegmentedAddress(0xF000, 0x002B));
+    }
 
     /// <summary>speculative_smc_guard: the self-modifying arm speculation found is dead.</summary>
     public static void SpeculativeSmcGuard(AsmRunScope scope, Machine machine) =>
