@@ -58,15 +58,46 @@ public partial class SoundBlaster {
     // soundblaster.cpp enums
     // -----------------------------------------------------------------------
 
-    private enum DspState { Reset, ResetWait, Normal, HighSpeed }
+    /// <summary>
+    ///     Position of the DSP in its reset sequence.
+    /// </summary>
+    public enum DspState {
+        /// <summary>The reset port bit is set.</summary>
+        Reset,
 
-    private enum DmaMode {
+        /// <summary>The reset port bit was cleared and the DSP has not answered yet.</summary>
+        ResetWait,
+
+        /// <summary>The DSP accepts commands.</summary>
+        Normal,
+
+        /// <summary>High-speed DMA mode.</summary>
+        HighSpeed
+    }
+
+    /// <summary>
+    ///     Sample format of the DSP's DMA transfer.
+    /// </summary>
+    public enum DmaMode {
+        /// <summary>No transfer is set up.</summary>
         None,
+
+        /// <summary>2-bit ADPCM.</summary>
         Adpcm2Bit,
+
+        /// <summary>3-bit ADPCM.</summary>
         Adpcm3Bit,
+
+        /// <summary>4-bit ADPCM.</summary>
         Adpcm4Bit,
+
+        /// <summary>8-bit PCM.</summary>
         Pcm8Bit,
+
+        /// <summary>16-bit PCM on a 16-bit DMA channel.</summary>
         Pcm16Bit,
+
+        /// <summary>16-bit PCM on an 8-bit DMA channel.</summary>
         Pcm16BitAliased
     }
 
@@ -75,7 +106,25 @@ public partial class SoundBlaster {
         Stereo
     }
 
-    private enum DspMode { None, Dac, Dma, DmaPause, DmaMasked }
+    /// <summary>
+    ///     What the DSP outputs.
+    /// </summary>
+    public enum DspMode {
+        /// <summary>Nothing.</summary>
+        None,
+
+        /// <summary>Samples written directly to the DAC.</summary>
+        Dac,
+
+        /// <summary>A running DMA transfer.</summary>
+        Dma,
+
+        /// <summary>A DMA transfer halted by a DSP command.</summary>
+        DmaPause,
+
+        /// <summary>A DMA transfer that waits for its DMA channel to be unmasked.</summary>
+        DmaMasked
+    }
 
     private enum EssType { None, Es1688 }
 
@@ -83,7 +132,19 @@ public partial class SoundBlaster {
 
     private enum BlasterState : byte { WaitingForCommand, ReadingCommand }
 
-    private enum TimingType { None, PerTick, PerFrame }
+    /// <summary>
+    ///     Which scheduler callback generates the DSP's output frames.
+    /// </summary>
+    public enum TimingType {
+        /// <summary>No callback.</summary>
+        None,
+
+        /// <summary>A callback every millisecond.</summary>
+        PerTick,
+
+        /// <summary>A callback every output frame.</summary>
+        PerFrame
+    }
 
     /// <summary>
     /// Sound Blaster port offsets relative to the base address.

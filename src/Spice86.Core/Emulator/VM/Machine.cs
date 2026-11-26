@@ -349,8 +349,8 @@ public sealed class Machine : IDisposable {
     /// later. The CPU registers and the main memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers, the programmable interval timer and the VGA card (registers,
-    /// DAC, video memory planes and latches). DMA, Sound Blaster and the other devices are not covered. Call this
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the VGA card (registers, DAC,
+    /// video memory planes and latches) and the Sound Blaster. DMA and the other devices are not covered. Call this
     /// on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
@@ -368,7 +368,11 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Vga) != 0) {
             vga = VgaCard.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, vga);
+        SoundBlasterState? soundBlaster = null;
+        if ((devices & MachineDevices.SoundBlaster) != 0) {
+            soundBlaster = SoundBlaster.CaptureState();
+        }
+        return new MachineDeviceState(pic, pit, vga, soundBlaster);
     }
 
     /// <summary>
@@ -387,6 +391,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.Vga is { } vga) {
             VgaCard.RestoreState(vga);
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            SoundBlaster.RestoreState(soundBlaster);
         }
     }
 
