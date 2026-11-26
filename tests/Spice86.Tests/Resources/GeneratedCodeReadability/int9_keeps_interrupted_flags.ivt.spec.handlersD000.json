@@ -1,5 +1,4 @@
 {
-  "sourceSha256": "0708aa54963ad2b0414f0843085c130db8167ecb75e111f851ad562bdc69af50",
   "program": {
     "minimum": {
       "GlobalAccesses": 3,

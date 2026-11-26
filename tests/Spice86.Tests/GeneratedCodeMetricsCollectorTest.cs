@@ -571,7 +571,6 @@ public class GeneratedCodeMetricsCollectorTest {
     [InlineData("unknownMetric")]
     [InlineData("negative")]
     [InlineData("schema")]
-    [InlineData("hash")]
     [InlineData("missingField")]
     [InlineData("direction")]
     [InlineData("referenceRevision")]
@@ -588,7 +587,6 @@ public class GeneratedCodeMetricsCollectorTest {
             case "schema": metadata["schemaVersion"] = 1; break;
             case "referenceRevision": metadata["referenceRevision"] = "invalid"; break;
             case "missingMetadataField": metadata.Remove("referenceRevision"); break;
-            case "hash": fixture["sourceSha256"] = "invalid"; break;
             case "missingField": fixture.Remove("program"); break;
             case "direction": maximum["serviceCalls.Dos"] = 0; break;
         }
@@ -772,7 +770,6 @@ public class GeneratedCodeMetricsCollectorTest {
     });
 
     private static string ValidBaselineJson() => JsonSerializer.Serialize(new {
-        sourceSha256 = new string('b', 64),
         program = new {
             minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
             maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)

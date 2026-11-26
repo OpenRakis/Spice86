@@ -22,8 +22,7 @@ internal static class GeneratedCodeMetricsAssertions {
         IReadOnlyDictionary<string, int> Maximum);
 
     /// <summary>Bounds of one fixture, split into the program part and the support part.</summary>
-    internal sealed record ReadabilityBaseline(string SourceSha256,
-        PartBounds Program, PartBounds Support);
+    internal sealed record ReadabilityBaseline(PartBounds Program, PartBounds Support);
 
     internal static string BaselineDirectory =>
         Path.Join(MachineGoldens.SourceResourcesDirectory(), "GeneratedCodeReadability");
@@ -92,11 +91,10 @@ internal static class GeneratedCodeMetricsAssertions {
             }
             using JsonDocument fixtureDocument = JsonDocument.Parse(source);
             JsonElement entry = fixtureDocument.RootElement;
-            RequireFields(entry, "sourceSha256", "program", "support");
-            string hash = RequireHash(entry.GetProperty("sourceSha256"), 64, fixture);
+            RequireFields(entry, "program", "support");
             PartBounds program = ReadPartBounds(entry.GetProperty("program"), fixture);
             PartBounds support = ReadPartBounds(entry.GetProperty("support"), fixture);
-            baselines.Add(fixture, new(hash, program, support));
+            baselines.Add(fixture, new(program, support));
         }
         return baselines;
     }
@@ -224,7 +222,6 @@ internal static class GeneratedCodeMetricsAssertions {
         using MemoryStream stream = new();
         using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true })) {
             writer.WriteStartObject();
-            writer.WriteString("sourceSha256", baseline.SourceSha256);
             WritePart(writer, "program", baseline.Program, fixture);
             WritePart(writer, "support", baseline.Support, fixture);
             writer.WriteEndObject();

@@ -1,5 +1,4 @@
 {
-  "sourceSha256": "6123b428ac3f2e7c56b75e428b1d72e1eee53faf2f3d2078827a5e5f0682ecda",
   "program": {
     "minimum": {
       "StringServiceCalls": 0,
