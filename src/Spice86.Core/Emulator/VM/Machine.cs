@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -352,8 +353,8 @@ public sealed class Machine : IDisposable {
     /// </summary>
     /// <remarks>
     /// Covered devices: the interrupt controllers, the programmable interval timer, the VGA card (registers, DAC,
-    /// video memory planes and latches), the DMA controllers, the Sound Blaster, the A20 line, and the XMS and EMS
-    /// drivers when DOS loaded them. The other devices are not
+    /// video memory planes and latches), the mouse device with the INT 33h mouse driver, the DMA controllers, the
+    /// Sound Blaster, the A20 line, and the XMS and EMS drivers when DOS loaded them. The other devices are not
     /// covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
@@ -372,6 +373,12 @@ public sealed class Machine : IDisposable {
         VgaState? vga = null;
         if ((devices & MachineDevices.Vga) != 0) {
             vga = VgaCard.CaptureState();
+        }
+        MouseDeviceState? mouseDevice = null;
+        MouseDriverState? mouseDriver = null;
+        if ((devices & MachineDevices.Mouse) != 0) {
+            mouseDevice = MouseDevice.CaptureState();
+            mouseDriver = MouseDriver.CaptureState();
         }
         DmaBusState? dma = null;
         if ((devices & MachineDevices.Dma) != 0) {
@@ -393,7 +400,8 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Ems) != 0) {
             ems = Dos.Ems?.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, vga, dma, soundBlaster, a20Gate, xms, ems);
+        return new MachineDeviceState(pic, pit, vga, mouseDevice, mouseDriver, dma, soundBlaster, a20Gate, xms,
+            ems);
     }
 
     /// <summary>
@@ -415,6 +423,12 @@ public sealed class Machine : IDisposable {
         }
         if (state.Vga is { } vga) {
             VgaCard.RestoreState(vga);
+        }
+        if (state.MouseDevice is { } mouseDevice) {
+            MouseDevice.RestoreState(mouseDevice);
+        }
+        if (state.MouseDriver is { } mouseDriver) {
+            MouseDriver.RestoreState(mouseDriver);
         }
         if (state.Dma is { } dma) {
             DmaSystem.RestoreState(dma);
