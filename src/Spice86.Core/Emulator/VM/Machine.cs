@@ -350,8 +350,8 @@ public sealed class Machine : IDisposable {
     /// </summary>
     /// <remarks>
     /// Covered devices: the interrupt controllers, the programmable interval timer and the DMA controllers. VGA,
-    /// Sound Blaster and the other devices are not covered. Call this on the emulation thread between two instructions, or
-    /// while the emulation is paused.
+    /// Sound Blaster and the other devices are not covered. Call this on the emulation thread between two
+    /// instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>The captured state, with a <c>null</c> member for each device left out.</returns>
