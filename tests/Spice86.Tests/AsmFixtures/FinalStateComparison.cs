@@ -6,11 +6,13 @@ namespace Spice86.Tests.AsmFixtures;
 /// comparison with their reason.
 /// </summary>
 internal sealed record FinalStateComparison(string? TimingDependentReason,
-    FinalStateParts UncomparedParts, string UncomparedPartsReason) {
+    FinalStateParts UncomparedParts, string UncomparedPartsReason,
+    IReadOnlyList<(uint Address, int Length, string Reason)> UncomparedRamRanges) {
     /// <summary>Every part compared, nothing timing-dependent.</summary>
-    public static FinalStateComparison Strict { get; } = new(null, FinalStateParts.None, "");
+    public static FinalStateComparison Strict { get; } = new(null, FinalStateParts.None, "", []);
 
     /// <summary>The comparison a scenario's marks describe.</summary>
     public static FinalStateComparison Of(AsmScenario scenario) =>
-        new(scenario.TimingDependentReason, scenario.UncomparedParts, scenario.UncomparedPartsReason);
+        new(scenario.TimingDependentReason, scenario.UncomparedParts, scenario.UncomparedPartsReason,
+            scenario.UncomparedRamRanges);
 }

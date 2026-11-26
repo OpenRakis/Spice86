@@ -64,6 +64,25 @@ internal sealed class AsmScenario {
     /// left out.</summary>
     public string UncomparedPartsReason { get; private set; } = "";
 
+    /// <summary>RAM ranges the interpreted-vs-generated comparison leaves out for this scenario,
+    /// each with the reason it cannot be compared.</summary>
+    public IReadOnlyList<(uint Address, int Length, string Reason)> UncomparedRamRanges { get; private set; } = [];
+
+    /// <summary>Returns the same scenario with the given RAM range left out of the
+    /// interpreted-vs-generated comparison.</summary>
+    /// <param name="linearAddress">Start of the range, as a linear address.</param>
+    /// <param name="length">Length of the range in bytes.</param>
+    /// <param name="reason">Why the range cannot be compared between the two runs.</param>
+    /// <returns>The scenario, with the uncompared range appended.</returns>
+    public AsmScenario WithUncomparedRam(uint linearAddress, int length, string reason) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        if (length <= 0) {
+            throw new ArgumentException("An uncompared RAM range needs a positive length.", nameof(length));
+        }
+        UncomparedRamRanges = [.. UncomparedRamRanges, (linearAddress, length, reason)];
+        return this;
+    }
+
     /// <summary>Returns the same scenario with the given final-state parts left out of the
     /// interpreted-vs-generated comparison.</summary>
     /// <param name="parts">The parts not to compare.</param>
@@ -88,7 +107,8 @@ internal sealed class AsmScenario {
             PrimaryResourceFileName = PrimaryResourceFileName,
             TimingDependentReason = TimingDependentReason,
             UncomparedParts = UncomparedParts,
-            UncomparedPartsReason = UncomparedPartsReason
+            UncomparedPartsReason = UncomparedPartsReason,
+            UncomparedRamRanges = UncomparedRamRanges
         };
     }
 

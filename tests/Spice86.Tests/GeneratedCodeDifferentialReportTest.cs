@@ -158,7 +158,7 @@ public sealed class GeneratedCodeDifferentialReportTest {
             with { DeviceRegisters = [("pit", "channel0.reload", 0xFFFFu)] };
 
         Action check = () => CheckFull("check-timing-devices", emulated, generated,
-            new FinalStateComparison("time dependent", FinalStateParts.None, ""));
+            new FinalStateComparison("time dependent", FinalStateParts.None, "", []));
 
         check.Should().Throw<Exception>().WithMessage("*check-timing-devices*devices*");
     }
@@ -172,9 +172,45 @@ public sealed class GeneratedCodeDifferentialReportTest {
 
         string line = CheckFull("check-uncompared", emulated, generated,
             new FinalStateComparison(null, FinalStateParts.Console,
-                "the poll count depends on timing"));
+                "the poll count depends on timing", []));
 
         line.Should().Contain("console").And.Contain("the poll count depends on timing");
+    }
+
+    /// <summary>A RAM range the scenario leaves out of the comparison is not compared: bytes that
+    /// differ only inside the range do not throw, and the report line names the reason.</summary>
+    [Fact]
+    public void UncomparedRamRangeIsNotCompared() {
+        byte[] emulatedRam = new byte[0x21010];
+        byte[] generatedRam = new byte[0x21010];
+        generatedRam[0x20FFE] = 0x02;
+        generatedRam[0x20FFF] = 0x02;
+        AsmFinalState emulated = BuildState(emulatedRam);
+        AsmFinalState generated = BuildState(generatedRam);
+
+        string line = CheckFull("check-uncompared-ram", emulated, generated,
+            new FinalStateComparison(null, FinalStateParts.None, "",
+                [(0x20FFEu, 2, "the pushed FLAGS word is not computed")]));
+
+        line.Should().Contain("the pushed FLAGS word is not computed");
+    }
+
+    /// <summary>A byte differing outside the uncompared RAM range still fails the gate, naming the
+    /// key and the ram part.</summary>
+    [Fact]
+    public void ByteOutsideUncomparedRamRangeFails() {
+        byte[] emulatedRam = new byte[0x21010];
+        byte[] generatedRam = new byte[0x21010];
+        generatedRam[0x20FFE] = 0x02;
+        generatedRam[0x21000] = 0xFF;
+        AsmFinalState emulated = BuildState(emulatedRam);
+        AsmFinalState generated = BuildState(generatedRam);
+
+        Action check = () => CheckFull("check-outside-ram", emulated, generated,
+            new FinalStateComparison(null, FinalStateParts.None, "",
+                [(0x20FFEu, 2, "the pushed FLAGS word is not computed")]));
+
+        check.Should().Throw<Exception>().WithMessage("*check-outside-ram*ram*");
     }
 
     /// <summary>A timing-dependent scenario needs a reason.</summary>

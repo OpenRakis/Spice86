@@ -157,6 +157,19 @@ internal static class GeneratedCodeDifferentialReport {
                 }
             }
         }
+        List<string> uncomparedRamReasons = [];
+        foreach ((uint address, int length, string reason) in comparison.UncomparedRamRanges) {
+            if (address + length > emulated.Ram.Length) {
+                continue;
+            }
+            (int Start, int Length) range = ((int)address, length);
+            if (!excluded.Contains(range)) {
+                excluded.Add(range);
+            }
+            if (!uncomparedRamReasons.Contains(reason)) {
+                uncomparedRamReasons.Add(reason);
+            }
+        }
         byte[] generatedRam = generated.Ram;
         if (excluded.Count > 0) {
             generatedRam = (byte[])generated.Ram.Clone();
@@ -167,6 +180,9 @@ internal static class GeneratedCodeDifferentialReport {
         string excludedText = excluded.Count == 0
             ? string.Empty
             : $" | excluded bytes: {DescribeRanges([.. excluded.Select(range => FormatRange(range.Start, range.Start + range.Length - 1))])}";
+        if (uncomparedRamReasons.Count > 0) {
+            excludedText += $" ({string.Join(", ", uncomparedRamReasons)})";
+        }
         List<string> differences = [];
         if (comparison.TimingDependentReason is null) {
             string ram = DescribeRam(emulated.Ram, generatedRam);

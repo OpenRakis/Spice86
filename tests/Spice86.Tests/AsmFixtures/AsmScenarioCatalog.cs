@@ -524,8 +524,8 @@ internal static class AsmScenarioCatalog {
                     (result.Memory.UInt16[0x20FFE] & 0x0200).Should().NotBe(0,
                         "the IRQ 12 delivery pushes FLAGS with the interrupt flag set");
                 });
-            }).WithTimingDependentState(
-                "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
+            }).WithUncomparedRam(0x20FFE, 2,
+                "the IRQ 12 delivery pushes the interrupted code's FLAGS here; generated code does not compute status flags, and the oracle checks the frame each run pushed"),
             // The registered variant registers the routine through INT 33h AX=000Ch before the wait
             // loop; the discovery snapshot keeps both callback contracts Unknown then, and the
             // routine's 0xCAFE store is the oracle.
@@ -535,16 +535,16 @@ internal static class AsmScenarioCatalog {
             // the interrupted code's flag work live.
             AsmScenario.FromFixture("cc_irq_delivered_flags", AsmFixtureCatalog.IrqDeliveredFlags),
             AsmScenario.FromFixture("cc_irq_delivered_flags.branch", AsmFixtureCatalog.IrqDeliveredFlagsBranch)
-                .WithTimingDependentState(
-                    "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
+                .WithUncomparedRam(0x20FFE, 2,
+                    "the IRQ 12 delivery pushes the interrupted code's FLAGS here; generated code does not compute status flags no handler reads from the image, and the oracle checks what the handler observed"),
             AsmScenario.FromFixture("cc_irq_delivered_flags.patch", AsmFixtureCatalog.IrqDeliveredFlagsPatch),
             // The hlt variant does sti right before the wait hlt: the sti emits no check of its
             // own (a fallthrough hlt checks events in its wait loop), so generated code delivers
             // while halted with the return address after the hlt, like the interpreter's shadow.
             // The oracle counts the deliveries.
             AsmScenario.FromFixture("cc_irq_delivered_flags.hlt", AsmFixtureCatalog.IrqDeliveredFlagsHlt)
-                .WithTimingDependentState(
-                    "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
+                .WithUncomparedRam(0x20FFE, 2,
+                    "the IRQ 12 delivery pushes the interrupted code's FLAGS here; generated code does not compute status flags nothing reads, and the handler only counts deliveries"),
             AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
                 .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
             AsmScenario.FromFixture("flagconditions", AsmFixtureCatalog.FlagConditions),
