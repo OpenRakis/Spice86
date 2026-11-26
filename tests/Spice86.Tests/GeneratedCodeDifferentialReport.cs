@@ -315,17 +315,21 @@ internal static class GeneratedCodeDifferentialReport {
         return differences.Count == 0 ? "none" : $"{differences.Count} registers differ, first: {differences[0]}";
     }
 
-    /// <summary>The device states compared by their record equality. The other members of
-    /// <see cref="MachineDeviceState"/> hold byte arrays or immutable collections, whose equality is
-    /// by reference: VGA registers and DAC stay in <see cref="AsmFinalState.DeviceRegisters"/>, XMS
-    /// and EMS memory stays in the extended regions, and the rest is left out.</summary>
+    /// <summary>Every member of <see cref="MachineDeviceState"/>, compared by content through
+    /// <see cref="FirstContentDifference"/>: record equality cannot do it, because the byte arrays and
+    /// immutable collections the states hold compare by reference.</summary>
     private static readonly (string Name, Func<MachineDeviceState, object?> Get)[] ComparedDeviceStates = [
         ("pic", state => state.Pic),
         ("pit", state => state.Pit),
+        ("vga", state => state.Vga),
+        ("dos", state => state.Dos),
         ("mouse", state => state.MouseDevice),
         ("mouse-driver", state => state.MouseDriver),
         ("dma", state => state.Dma),
-        ("a20", state => state.A20Gate)
+        ("sound-blaster", state => state.SoundBlaster),
+        ("a20", state => state.A20Gate),
+        ("xms", state => state.Xms),
+        ("ems", state => state.Ems)
     ];
 
     private static string DescribeDeviceStates(AsmFinalState emulated, AsmFinalState generated) {
@@ -346,24 +350,84 @@ internal static class GeneratedCodeDifferentialReport {
                 differences.Add($"{name} present in {(emulatedDevice is null ? "generated" : "interpreted")} only");
                 continue;
             }
-            if (!emulatedDevice.Equals(generatedDevice)) {
-                differences.Add($"{name} {FirstDifferingProperty(emulatedDevice, generatedDevice)}");
+            if (FirstContentDifference(emulatedDevice, generatedDevice, name) is { } difference) {
+                differences.Add(difference);
             }
         }
         return differences.Count == 0 ? "none" : $"{differences.Count} devices differ, first: {differences[0]}";
     }
 
-    /// <summary>Names the first property of the device state record that differs, for the report
-    /// message only; the comparison itself is the record's own equality.</summary>
-    private static string FirstDifferingProperty(object emulated, object generated) {
-        foreach (PropertyInfo property in emulated.GetType().GetProperties()) {
-            object? emulatedValue = property.GetValue(emulated);
-            object? generatedValue = property.GetValue(generated);
-            if (!Equals(emulatedValue, generatedValue)) {
-                return $"{property.Name} interpreted={emulatedValue} generated={generatedValue}";
+    /// <summary>Walks two device state objects property by property and names the first content
+    /// difference, or returns <see langword="null"/> when they match. Byte memory
+    /// (<see cref="ReadOnlyMemory{T}"/> of bytes, byte arrays) compares by content, enumerables element
+    /// by element, records and structs recurse into their properties, and primitives, enums and strings
+    /// compare by <see cref="object.Equals(object, object)"/>.</summary>
+    /// <param name="emulated">Value of the interpreted run.</param>
+    /// <param name="generated">Value of the generated run.</param>
+    /// <param name="path">Path of the compared value, extended with property names and indexes.</param>
+    /// <returns>The first differing path with both values, or <see langword="null"/>.</returns>
+    internal static string? FirstContentDifference(object? emulated, object? generated, string path) {
+        if (ReferenceEquals(emulated, generated)) {
+            return null;
+        }
+        if (emulated is null || generated is null) {
+            return $"{path} interpreted={emulated?.ToString() ?? "<null>"} generated={generated?.ToString() ?? "<null>"}";
+        }
+        Type type = emulated.GetType();
+        if (type != generated.GetType()) {
+            return $"{path} interpreted type {type.Name} generated type {generated.GetType().Name}";
+        }
+        if (type.IsPrimitive || type.IsEnum || emulated is string or decimal) {
+            return Equals(emulated, generated)
+                ? null
+                : $"{path} interpreted={emulated} generated={generated}";
+        }
+        if (emulated is ReadOnlyMemory<byte> readOnlyMemory) {
+            return FirstByteDifference(readOnlyMemory.Span, ((ReadOnlyMemory<byte>)generated).Span, path);
+        }
+        if (emulated is Memory<byte> memory) {
+            return FirstByteDifference(memory.Span, ((Memory<byte>)generated).Span, path);
+        }
+        if (emulated is byte[] bytes) {
+            return FirstByteDifference(bytes, (byte[])generated, path);
+        }
+        if (emulated is System.Collections.IEnumerable enumerable) {
+            List<object?> emulatedElements = enumerable.Cast<object?>().ToList();
+            List<object?> generatedElements = ((System.Collections.IEnumerable)generated).Cast<object?>().ToList();
+            int commonLength = Math.Min(emulatedElements.Count, generatedElements.Count);
+            for (int i = 0; i < commonLength; i++) {
+                if (FirstContentDifference(emulatedElements[i], generatedElements[i], $"{path}[{i}]") is { } elementDifference) {
+                    return elementDifference;
+                }
+            }
+            if (emulatedElements.Count != generatedElements.Count) {
+                return $"{path} length interpreted={emulatedElements.Count} generated={generatedElements.Count}";
+            }
+            return null;
+        }
+        foreach (PropertyInfo property in type.GetProperties()) {
+            if (property.GetIndexParameters().Length > 0) {
+                continue;
+            }
+            if (FirstContentDifference(property.GetValue(emulated), property.GetValue(generated),
+                    $"{path}.{property.Name}") is { } propertyDifference) {
+                return propertyDifference;
             }
         }
-        return "differ";
+        return null;
+    }
+
+    private static string? FirstByteDifference(ReadOnlySpan<byte> emulated, ReadOnlySpan<byte> generated, string path) {
+        int commonLength = Math.Min(emulated.Length, generated.Length);
+        for (int i = 0; i < commonLength; i++) {
+            if (emulated[i] != generated[i]) {
+                return $"{path}[0x{i:X}] interpreted=0x{emulated[i]:X2} generated=0x{generated[i]:X2}";
+            }
+        }
+        if (emulated.Length != generated.Length) {
+            return $"{path} length interpreted=0x{emulated.Length:X} generated=0x{generated.Length:X}";
+        }
+        return null;
     }
 
     private static void AppendLine(string line) {

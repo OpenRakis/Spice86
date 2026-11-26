@@ -4,12 +4,17 @@ using FluentAssertions;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
 using Spice86.Tests.AsmFixtures;
+
+using System.Collections.Immutable;
 
 using Xunit;
 
@@ -164,6 +169,59 @@ public sealed class GeneratedCodeDifferentialReportTest {
         Action check = () => CheckFull("check-devstate", emulated, generated);
 
         check.Should().Throw<Exception>().WithMessage("*check-devstate*pic*");
+    }
+
+    /// <summary>One differing byte of VGA video memory fails the gate, naming the key, the device and
+    /// the video-memory path: the screen lives in VGA memory, not in the compared RAM.</summary>
+    [Fact]
+    public void VgaVideoMemoryDifferenceFails() {
+        byte[] emulatedVRam = new byte[0x40000];
+        byte[] generatedVRam = new byte[0x40000];
+        generatedVRam[0x1234] = 0x41;
+        MachineDeviceState emulatedState = EmptyDeviceState() with { Vga = BuildVgaState(emulatedVRam) };
+        MachineDeviceState generatedState = EmptyDeviceState() with { Vga = BuildVgaState(generatedVRam) };
+        AsmFinalState emulated = BuildState(new byte[16]) with { DeviceState = emulatedState };
+        AsmFinalState generated = BuildState(new byte[16]) with { DeviceState = generatedState };
+
+        Action check = () => CheckFull("check-vga", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-vga*vga*VRam*0x1234*");
+    }
+
+    /// <summary>A differing element of an immutable-array member fails the gate, naming the key, the
+    /// device and the element path.</summary>
+    [Fact]
+    public void ImmutableArrayMemberDifferenceFails() {
+        EmsState emulatedEms = BuildEmsState(0x00);
+        EmsState generatedEms = BuildEmsState(0xFF);
+        MachineDeviceState emulatedState = EmptyDeviceState() with { Ems = emulatedEms };
+        MachineDeviceState generatedState = EmptyDeviceState() with { Ems = generatedEms };
+        AsmFinalState emulated = BuildState(new byte[16]) with { DeviceState = emulatedState };
+        AsmFinalState generated = BuildState(new byte[16]) with { DeviceState = generatedState };
+
+        Action check = () => CheckFull("check-ems", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-ems*ems*");
+    }
+
+    private static MachineDeviceState EmptyDeviceState() => new(null, null, null, null, null, null,
+        null, null, null, null, null);
+
+    private static VgaState BuildVgaState(byte[] vram) {
+        DacState dac = new(new byte[768], 0, 0, 0, 0, 0, false, 0);
+        VgaRegistersState registers = new(0, new byte[5], 0, new byte[0x19], 0, new byte[9], 0,
+            new byte[0x15], false, 0, 0, 0, 0, 0, 0, dac);
+        return new VgaState(registers, new VideoMemoryState(vram, new byte[4]));
+    }
+
+    private static EmsState BuildEmsState(byte contentByte) {
+        byte[] content = new byte[4];
+        content[2] = contentByte;
+        return new EmsState(
+            ImmutableArray.Create(new EmmPageState(0, content)),
+            ImmutableArray<EmmHandleState>.Empty,
+            ImmutableArray<int>.Empty,
+            ImmutableArray<int>.Empty);
     }
 
     /// <summary>A timing-dependent execution still compares device registers: a differing register

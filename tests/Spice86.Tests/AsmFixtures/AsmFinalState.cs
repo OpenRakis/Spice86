@@ -8,8 +8,8 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
 /// <param name="Ram">The first megabyte of RAM when the run ended.</param>
 /// <param name="ExtendedRegions">Named byte regions beyond the first megabyte the settings enable:
-/// the high memory area and <c>XmsRam</c> with A20 or XMS, every allocated EMS logical page with
-/// EMS.</param>
+/// the high memory area with A20 or XMS. XMS memory and EMS logical pages are compared through the
+/// device state instead.</param>
 internal sealed record AsmFinalState(byte[] Ram,
     IReadOnlyList<(string Name, byte[] Bytes)> ExtendedRegions) {
     /// <summary>Number of captured RAM bytes: the first megabyte.</summary>
@@ -56,18 +56,6 @@ internal sealed record AsmFinalState(byte[] Ram,
             regions.Add(("himem",
                 run.Result.Memory.ReadRam((uint)(run.Machine.Memory.Length - (int)ComparedRamLength),
                     ComparedRamLength)));
-            if (run.Machine.Dos.Xms is { } xms) {
-                regions.Add(("xms", xms.XmsRam.GetSlice(0, (int)xms.XmsRam.Size).ToArray()));
-            }
-        }
-        if (settings.EnableEms && run.Machine.Dos.Ems is { } ems) {
-            foreach ((int handleId, EmmHandle handle) in ems.EmmHandles.OrderBy(pair => pair.Key)) {
-                for (int pageIndex = 0; pageIndex < handle.LogicalPages.Count; pageIndex++) {
-                    EmmPage page = handle.LogicalPages[pageIndex];
-                    regions.Add(($"ems handle={handleId} page={pageIndex}",
-                        page.GetSlice(0, (int)page.Size).ToArray()));
-                }
-            }
         }
         return new AsmFinalState(ram, regions) {
             SoftwareInterrupts = run.Result.Observations
@@ -86,11 +74,12 @@ internal sealed record AsmFinalState(byte[] Ram,
     }
 
     /// <summary>Clears the fields that follow the emulated clock, which differs between the
-    /// interpreted and the generated run like it does in a timing-dependent execution. The PIC
-    /// interrupt request bits go as well: the program cannot write them, they are raised by device
-    /// events (PIT tick, keyboard, mouse) whose landing before the run ends depends on when the
-    /// scheduler pump last ran, and a delivered interrupt still shows in the in-service register
-    /// and in RAM.</summary>
+    /// interpreted and the generated run like it does in a timing-dependent execution: the capture
+    /// timestamps, the beam status the timing engine recomputes from the clock at every scheduler
+    /// pump. The PIC interrupt request bits go as well: the program cannot write them, they are
+    /// raised by device events (PIT tick, keyboard, mouse) whose landing before the run ends depends
+    /// on when the scheduler pump last ran, and a delivered interrupt still shows in the in-service
+    /// register and in RAM.</summary>
     private static MachineDeviceState Normalize(MachineDeviceState state) {
         if (state.Pic is { } pic) {
             state = state with {
@@ -117,6 +106,18 @@ internal sealed record AsmFinalState(byte[] Ram,
                     CapturedAtMs = 0,
                     LastSampleTimeMs = null,
                     PendingSampleDelayMs = null
+                }
+            };
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            state = state with {
+                SoundBlaster = soundBlaster with { CapturedAtMs = 0 }
+            };
+        }
+        if (state.Vga is { } vga) {
+            state = state with {
+                Vga = vga with {
+                    Registers = vga.Registers with { InputStatus1 = 0 }
                 }
             };
         }
