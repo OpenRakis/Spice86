@@ -30,8 +30,8 @@ using System.Text.Json.Serialization;
 /// </summary>
 internal static class CfgBlocksTestJson {
     /// <summary>
-    /// Serializer options matching the on-disk DumpedCfgBlocks fixtures. The goldens use LF line endings on every
-    /// OS, so the new line is fixed instead of taken from the host.
+    /// Serializer options of the CFG blocks test JSON. The new line is fixed to LF instead of taken from the
+    /// host, so a serialization is identical on every OS.
     /// </summary>
     public static readonly JsonSerializerOptions Options = new() {
         WriteIndented = true,

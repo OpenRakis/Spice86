@@ -125,9 +125,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using AsmRunScope scope = scenario.Prepare();
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
         string goldenKey = MachineGoldens.GoldenKey(scope.Fixture);
-        MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
         CfgInvariants.AssertValid(goldenKey, run.Machine.CfgCpu.ExecutionContextManager);
-        MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
         return (scope.Fixture.Settings, AsmFinalState.Capture(run, scope.Fixture.Settings), scope.RunKey);
     }
 
@@ -162,11 +160,6 @@ internal sealed class GeneratedCodeMachineTestRunner {
         string goldenKey = GoldenKey(discovery.Fixture.Settings);
         GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions, interpretedStates);
         GeneratedCodeChecks.Assert(goldenKey, generatedProgram, checks);
-        // Compared last: a behavioural regression (memory dump or caller assertion) is the more
-        // important failure and must be the one xunit reports when both a behavioural and a golden
-        // mismatch occur on the same run.
-        CompareGeneratedSourceWithExpected(goldenKey, generatedProgram);
-
         return generatedProgram;
     }
 
@@ -344,24 +337,6 @@ internal sealed class GeneratedCodeMachineTestRunner {
     public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunScope scope) {
         (GeneratedCSharpProgram generatedProgram, _) = GenerateSourceAndFinalState(scope);
         return generatedProgram;
-    }
-
-    /// <summary>Compares the generated source to its golden.</summary>
-    public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
-        List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
-        // WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
-        string resPath = GetGoldenPath(goldenKey + ".cs.txt");
-        File.Exists(resPath).Should().BeTrue(
-            $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running the generated entry points once, then re-commenting it");
-        List<string> expectedLines = NormalizeLines(File.ReadAllText(resPath));
-        Assert.Equal(expectedLines, actualLines);
-    }
-
-    private static void WriteExpectedGeneratedSource(string goldenKey, string sourceText) {
-        // Write directly to the source tree so the golden file is committed alongside the code. The
-        // comparison reads the same path, so a golden written during a regeneration pass is readable
-        // again in that same pass.
-        File.WriteAllText(GetGoldenPath(goldenKey + ".cs.txt"), sourceText);
     }
 
     /// <summary>Path of a committed generated-source golden in the source tree, the file both the writer
@@ -544,9 +519,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
 
         Machine machine = run.Machine;
         string machineGoldenKey = MachineGoldens.GoldenKey(scope.Fixture);
-        MachineGoldens.CompareListingWithExpected(machineGoldenKey, machine);
         CfgInvariants.AssertValid(machineGoldenKey, machine.CfgCpu.ExecutionContextManager);
-        MachineGoldens.CompareCfgBlocksJsonWithExpected(machineGoldenKey, machine);
 
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();

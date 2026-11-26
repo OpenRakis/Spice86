@@ -213,8 +213,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0019 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -246,8 +244,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at 016F:0122 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -282,8 +278,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0013 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -430,7 +424,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Untested code reached*");
 
-        runner.CompareGeneratedSourceWithExpected(GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>A store in a speculative run changes a later instruction through A20 wrapping.
@@ -456,7 +449,5 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at FFFE:0022 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 }

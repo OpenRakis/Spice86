@@ -51,8 +51,8 @@ public class CfgGraphReloadTest {
     ];
 
     /// <summary>
-    /// Every bin that has a deterministic, golden-validated CFG graph (i.e. a fixture under
-    /// res/DumpedCfgBlocks). Running the round-trip over all of them ensures reload does not break on
+    /// Every bin that has a deterministic CFG graph. Running the round-trip over all of them ensures
+    /// reload does not break on
     /// weird-but-tested cases (faults, interrupts, selectors, prefixes, partitioning, 386 features).
     /// <c>intchain.com</c> is excluded: it is a DOS COM file with no deterministic graph fixture.
     /// </summary>
