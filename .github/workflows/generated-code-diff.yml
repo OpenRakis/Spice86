@@ -1,0 +1,142 @@
+name: Generated code diff
+
+on:
+  pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Check out the PR base
+        run: git worktree add ../base ${{ github.event.pull_request.base.sha }}
+
+      - name: Build head
+        run: dotnet build src/Spice86.sln -c Release
+
+      - name: Dump head generated code
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/head"
+          SPICE86_DUMPS_FOLDER="$RUNNER_TEMP/head" dotnet test --project tests/Spice86.Tests -c Release --no-build -- --filter-class '*AsmScenarioTest*'
+
+      - name: Build base
+        working-directory: ../base
+        run: dotnet build src/Spice86.sln -c Release
+
+      - name: Dump base generated code
+        continue-on-error: true
+        working-directory: ../base
+        run: |
+          mkdir -p "$RUNNER_TEMP/base"
+          SPICE86_DUMPS_FOLDER="$RUNNER_TEMP/base" dotnet test --project tests/Spice86.Tests -c Release --no-build -- --filter-class '*AsmScenarioTest*'
+
+      - name: Diff the dumps
+        run: |
+          mkdir -p "$RUNNER_TEMP/base" "$RUNNER_TEMP/head"
+          git diff --no-index --stat "$RUNNER_TEMP/base" "$RUNNER_TEMP/head" > "$RUNNER_TEMP/generated-code.stat" || [ $? -eq 1 ]
+          git diff --no-index "$RUNNER_TEMP/base" "$RUNNER_TEMP/head" > "$RUNNER_TEMP/generated-code.diff" || [ $? -eq 1 ]
+
+      - name: Write the step summary
+        run: |
+          {
+            if [ -z "$(ls -A "$RUNNER_TEMP/base")" ]; then
+              echo "base has no dump support"
+              (cd "$RUNNER_TEMP/head" && find . -type f | sort)
+            fi
+            cat "$RUNNER_TEMP/generated-code.stat"
+            echo '```diff'
+            base_metrics="$RUNNER_TEMP/base/metrics.txt"
+            head_metrics="$RUNNER_TEMP/head/metrics.txt"
+            [ -f "$base_metrics" ] || base_metrics=/dev/null
+            [ -f "$head_metrics" ] || head_metrics=/dev/null
+            git diff --no-index "$base_metrics" "$head_metrics" || [ $? -eq 1 ]
+            echo '```'
+            echo '```diff'
+            head -n 300 "$RUNNER_TEMP/generated-code.diff"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write the comment body
+        run: |
+          set -e
+          comment="$RUNNER_TEMP/comment.md"
+          echo '<!-- generated-code-diff -->' > "$comment"
+          if [ -s "$RUNNER_TEMP/generated-code.diff" ]; then
+            changed_keys="$(git diff --no-index --name-only "$RUNNER_TEMP/base" "$RUNNER_TEMP/head" \
+              | sed -E 's#.*/(base|head)/##' | cut -d/ -f1 | sort -u \
+              | grep -v '^metrics' | wc -l)"
+            shortstat="$(git diff --no-index --shortstat "$RUNNER_TEMP/base" "$RUNNER_TEMP/head" || true)"
+            added="$(echo "$shortstat" | sed -nE 's/.* ([0-9]+) insertion.*/\1/p')"
+            removed="$(echo "$shortstat" | sed -nE 's/.* ([0-9]+) deletion.*/\1/p')"
+            added="${added:-0}"
+            removed="${removed:-0}"
+            base_sha="$(git rev-parse --short ${{ github.event.pull_request.base.sha }})"
+            head_sha="$(git rev-parse --short ${{ github.event.pull_request.head.sha }})"
+            if [ -z "$(ls -A "$RUNNER_TEMP/base")" ]; then
+              echo "base has no dump support ($base_sha); head $head_sha produced the dumps below." >> "$comment"
+            else
+              echo "$changed_keys scenario keys changed, $added lines added, $removed lines removed, base $base_sha, head $head_sha." >> "$comment"
+            fi
+            echo '```diff' >> "$comment"
+            base_metrics="$RUNNER_TEMP/base/metrics.txt"
+            head_metrics="$RUNNER_TEMP/head/metrics.txt"
+            [ -f "$base_metrics" ] || base_metrics=/dev/null
+            [ -f "$head_metrics" ] || head_metrics=/dev/null
+            git diff --no-index "$base_metrics" "$head_metrics" | head -c 5000 >> "$comment" || true
+            echo >> "$comment"
+            echo '```' >> "$comment"
+            echo '<details><summary>Diff stat</summary>' >> "$comment"
+            echo >> "$comment"
+            echo '```' >> "$comment"
+            head -c 5000 "$RUNNER_TEMP/generated-code.stat" >> "$comment"
+            echo >> "$comment"
+            echo '```' >> "$comment"
+            echo '</details>' >> "$comment"
+            echo '<details><summary>Full diff</summary>' >> "$comment"
+            echo >> "$comment"
+            echo '```diff' >> "$comment"
+            awk '{ if (len + length($0) + 1 > 45000) { cut = 1; exit } print; len += length($0) + 1 }' \
+              "$RUNNER_TEMP/generated-code.diff" >> "$comment"
+            echo '```' >> "$comment"
+            if [ "$(wc -c < "$RUNNER_TEMP/generated-code.diff")" -gt 45000 ]; then
+              echo 'truncated, see the artifact' >> "$comment"
+            fi
+            echo '</details>' >> "$comment"
+          else
+            echo 'No change in generated code or listings.' >> "$comment"
+          fi
+          echo >> "$comment"
+          echo "[Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> "$comment"
+          head -c 60000 "$comment" > "$comment.tmp" && mv "$comment.tmp" "$comment"
+          echo "${{ github.event.pull_request.number }}" > "$RUNNER_TEMP/pr-number.txt"
+
+      - name: Upload the diff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-code-diff
+          path: |
+            ${{ runner.temp }}/base
+            ${{ runner.temp }}/head
+            ${{ runner.temp }}/generated-code.diff
+          retention-days: 14
+
+      - name: Upload the comment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-code-comment
+          path: |
+            ${{ runner.temp }}/comment.md
+            ${{ runner.temp }}/pr-number.txt
+          retention-days: 14

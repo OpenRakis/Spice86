@@ -1,0 +1,39 @@
+name: Generated code diff comment
+
+on:
+  workflow_run:
+    workflows: ["Generated code diff"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: generated-code-comment
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr="$(cat pr-number.txt)"
+          [[ "$pr" =~ ^[0-9]+$ ]] || { echo "invalid PR number"; exit 1; }
+          pr_head_sha="$(gh api "repos/$REPO/pulls/$pr" --jq .head.sha)"
+          [ "$pr_head_sha" = "$RUN_HEAD_SHA" ] || { echo "PR $pr does not belong to this run"; exit 1; }
+          head -c 60000 comment.md > body.md
+          id="$(gh api "repos/$REPO/issues/$pr/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- generated-code-diff -->"))) | .id' | head -n1)"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@body.md
+          else
+            gh api -X POST "repos/$REPO/issues/$pr/comments" -F body=@body.md
+          fi
