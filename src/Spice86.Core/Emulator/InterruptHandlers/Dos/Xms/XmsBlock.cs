@@ -1,14 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 [DebuggerDisplay("Handle={Handle}, Length={Length}, IsFree={IsFree}")]
 public readonly struct XmsBlock : IEquatable<XmsBlock> {
-    public XmsBlock(int handle, uint offset, uint length, bool free) {
+    [JsonConstructor]
+    public XmsBlock(int handle, uint offset, uint length, bool isFree) {
         Handle = handle;
         Offset = offset;
         Length = length;
-        IsFree = free;
+        IsFree = isFree;
     }
     /// <summary>
     /// Gets the handle which owns the block.
@@ -75,7 +77,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// Frees a used block of memory.
     /// </summary>
     /// <returns>Freed block to replace this block.</returns>
-    public XmsBlock Free() => new(0, Offset, Length, free: true);
+    public XmsBlock Free() => new(0, Offset, Length, isFree: true);
 
     /// <summary>
     /// Merges two contiguous unused blocks of memory.
