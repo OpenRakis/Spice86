@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 
 /// <summary>
 ///     State of the devices of a <see cref="Machine" /> that implement
@@ -25,6 +26,7 @@ using Spice86.Core.Emulator.Memory;
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
 /// <param name="Vga">State of the VGA card, or <see langword="null" />.</param>
+/// <param name="Dos">State of the DOS kernel kept outside emulated memory, or <see langword="null" />.</param>
 /// <param name="MouseDevice">State of the mouse device, or <see langword="null" />.</param>
 /// <param name="MouseDriver">State of the INT 33h mouse driver, or <see langword="null" />.</param>
 /// <param name="Dma">State of the DMA controllers, or <see langword="null" />.</param>
@@ -36,6 +38,7 @@ public sealed record MachineDeviceState(
     DualPicState? Pic,
     PitTimerState? Pit,
     VgaState? Vga,
+    DosState? Dos,
     MouseDeviceState? MouseDevice,
     MouseDriverState? MouseDriver,
     DmaBusState? Dma,

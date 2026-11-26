@@ -43,6 +43,11 @@ public enum MachineDevices {
     Vga = 32,
 
     /// <summary>
+    ///     The state the DOS kernel (<see cref="Machine.Dos" />) keeps outside emulated memory.
+    /// </summary>
+    Dos = 64,
+
+    /// <summary>
     ///     The mouse device (<see cref="Machine.MouseDevice" />) with its sample event, and the INT 33h mouse driver
     ///     (<see cref="Machine.MouseDriver" />).
     /// </summary>
@@ -62,5 +67,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Mouse | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Dos | Mouse | Dma | SoundBlaster
 }

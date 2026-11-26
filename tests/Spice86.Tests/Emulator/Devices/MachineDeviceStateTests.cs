@@ -69,6 +69,7 @@ public sealed class MachineDeviceStateTests {
         // Assert: the controllers are back, the timer keeps the change
         picOnly.Pit.Should().BeNull();
         picOnly.Vga.Should().BeNull();
+        picOnly.Dos.Should().BeNull();
         picOnly.Pic.Should().NotBeNull();
         machine.DualPic.CaptureState().Should().Be(picBefore);
         machine.Timer.CaptureState().Channel0.Should().Be(pitAfterChange.Channel0);
@@ -87,6 +88,7 @@ public sealed class MachineDeviceStateTests {
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
         none.Vga.Should().BeNull();
+        none.Dos.Should().BeNull();
         none.MouseDevice.Should().BeNull();
         none.MouseDriver.Should().BeNull();
         none.Dma.Should().BeNull();
@@ -148,6 +150,27 @@ public sealed class MachineDeviceStateTests {
         xms.RunMultiplex();
         machine.CpuState.AX.Should().Be(1);
         return machine.CpuState.DX;
+    }
+
+    [Fact]
+    public void RestoreOfTheDosMemberGivesBackTheDosState() {
+        // Arrange
+        using Spice86Creator creator = new("externalint", enablePit: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        MachineDeviceState dosOnly = machine.CaptureDeviceState(MachineDevices.Dos);
+        ushort dtaSegment = machine.Dos.FileManager.DiskTransferAreaAddressSegment;
+        ushort dtaOffset = machine.Dos.FileManager.DiskTransferAreaAddressOffset;
+
+        // Act
+        machine.Dos.FileManager.SetDiskTransferAreaAddress((ushort)(dtaSegment + 1), (ushort)(dtaOffset + 2));
+        machine.RestoreDeviceState(dosOnly);
+
+        // Assert
+        dosOnly.Dos.Should().NotBeNull();
+        dosOnly.Pic.Should().BeNull();
+        machine.Dos.FileManager.DiskTransferAreaAddressSegment.Should().Be(dtaSegment);
+        machine.Dos.FileManager.DiskTransferAreaAddressOffset.Should().Be(dtaOffset);
     }
 
     [Fact]

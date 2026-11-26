@@ -354,8 +354,8 @@ public sealed class Machine : IDisposable {
     /// <remarks>
     /// Covered devices: the interrupt controllers, the programmable interval timer, the VGA card (registers, DAC,
     /// video memory planes and latches), the mouse device with the INT 33h mouse driver, the DMA controllers, the
-    /// Sound Blaster, the A20 line, and the XMS and EMS drivers when DOS loaded them. The other devices are not
-    /// covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
+    /// Sound Blaster, the A20 line, the XMS and EMS drivers when DOS loaded them, and the state the DOS kernel keeps
+    /// outside emulated memory. The other devices are not covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>
@@ -373,6 +373,10 @@ public sealed class Machine : IDisposable {
         VgaState? vga = null;
         if ((devices & MachineDevices.Vga) != 0) {
             vga = VgaCard.CaptureState();
+        }
+        DosState? dos = null;
+        if ((devices & MachineDevices.Dos) != 0) {
+            dos = Dos.CaptureState();
         }
         MouseDeviceState? mouseDevice = null;
         MouseDriverState? mouseDriver = null;
@@ -400,8 +404,8 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Ems) != 0) {
             ems = Dos.Ems?.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, vga, mouseDevice, mouseDriver, dma, soundBlaster, a20Gate, xms,
-            ems);
+        return new MachineDeviceState(pic, pit, vga, dos, mouseDevice, mouseDriver, dma, soundBlaster, a20Gate,
+            xms, ems);
     }
 
     /// <summary>
@@ -423,6 +427,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.Vga is { } vga) {
             VgaCard.RestoreState(vga);
+        }
+        if (state.Dos is { } dos) {
+            Dos.RestoreState(dos);
         }
         if (state.MouseDevice is { } mouseDevice) {
             MouseDevice.RestoreState(mouseDevice);

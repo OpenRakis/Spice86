@@ -113,6 +113,14 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// The Ctrl-C check flag of INT 21h AH=33h.
+    /// </summary>
+    internal bool IsCtrlCCheckEnabled {
+        get => _isCtrlCFlag;
+        set => _isCtrlCFlag = value;
+    }
+
+    /// <summary>
     /// Gets the DOS process manager for the <see cref="DosProgramLoader"/>
     /// </summary>
     internal DosProcessManager ProcessManager => _dosProcessManager;
