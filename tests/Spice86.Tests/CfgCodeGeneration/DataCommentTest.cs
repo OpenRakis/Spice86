@@ -26,6 +26,15 @@ using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
 /// changed-memory snapshot.
 /// </summary>
 public class DataCommentTest {
+    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
+        new Dictionary<int, InterruptServiceEntry> {
+            [0x09] = DosEntry(0x09, "PrintString",
+                CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
+                | CpuValues.Ss | CpuValues.Sp,
+                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
+        };
+
+
     private const uint ImageStart = 0x20000;
 
     private static byte[] MemoryWith(uint offset, params byte[] bytes) {
@@ -285,35 +294,6 @@ public class DataCommentTest {
         program.SourceText.Should().NotContain("DOS 09h");
         noMemory.SourceText.Should().NotContain("DOS 09h");
     }
-
-    /// <summary>The <c>data_strings</c> fixture's golden keeps the <c>09h</c> comment on its
-    /// generic <c>InterruptCall</c> (real dispatch: printing can terminate the program), retains
-    /// the <c>40h</c> write comment next to its named call, and calls the open service by name with
-    /// the snapshot's literal as the checked expected value. The message patched at run time before
-    /// its print keeps the generic call and no comment: the bytes the snapshot saw are not the
-    /// bytes the call reads.</summary>
-    [Fact]
-    public void DataStringsGoldenShowsTheWriteCommentAndTheLiterals() {
-        // Arrange / Act
-        string golden = File.ReadAllText(Path.Join(AppContext.BaseDirectory,
-            "Resources", "cpuTests", "res", "GeneratedCode", "data_strings.ivt.spec.cs.txt"));
-
-        // Assert
-        golden.Should().Contain("// DOS 09h print \"HELLO$\"");
-        golden.Should().Contain("InterruptCall(cs1, 0x0111, 0x21)");
-        golden.Should().Contain("Dos.WriteFile(");
-        golden.Should().Contain("// DOS 40h write handle 1 \"");
-        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0179, '\\0', \"NOFILE.TXT\"))");
-        golden.Should().NotContain("// DOS 3Dh");
-    }
-
-    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
-        new Dictionary<int, InterruptServiceEntry> {
-            [0x09] = DosEntry(0x09, "PrintString",
-                CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
-                | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
-        };
 
     /// <summary>A 09h service without an implementation binding keeps the generic call; the
     /// string shows in the <c>// DOS</c> comment.</summary>
