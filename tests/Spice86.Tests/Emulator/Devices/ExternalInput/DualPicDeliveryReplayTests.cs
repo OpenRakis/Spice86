@@ -127,8 +127,12 @@ public sealed class DualPicDeliveryReplayTests {
         InterruptDeliveryHold hold = _pic.HoldDelivery(pointObserver);
 
         // Act
-        byte? whileHeld = _pic.ComputeVectorNumber(new SegmentedAddress(0x1000, 0x0020));
-        hold.Dispose();
+        byte? whileHeld;
+        try {
+            whileHeld = _pic.ComputeVectorNumber(new SegmentedAddress(0x1000, 0x0020));
+        } finally {
+            hold.Dispose();
+        }
         byte? afterRelease = _pic.ComputeVectorNumber(new SegmentedAddress(0x1000, 0x0020));
 
         // Assert
@@ -143,8 +147,11 @@ public sealed class DualPicDeliveryReplayTests {
         // Arrange: IRQ 1 is let through while masked, and the hold ends before it is unmasked
         _pic.SetIrqMask(1, true);
         InterruptDeliveryHold hold = _pic.HoldDelivery();
-        hold.Deliver(1);
-        hold.Dispose();
+        try {
+            hold.Deliver(1);
+        } finally {
+            hold.Dispose();
+        }
         using InterruptDeliveryHold nextHold = _pic.HoldDelivery();
         _pic.SetIrqMask(1, false);
 
