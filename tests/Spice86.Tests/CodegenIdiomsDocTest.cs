@@ -82,18 +82,39 @@ public sealed class CodegenIdiomsDocTest {
                 writer.WriteLine();
                 writer.WriteLine("Strict build:");
                 writer.WriteLine();
-                writer.WriteLine("```csharp");
-                writer.WriteLine(ProgramOnly(strictKey).TrimEnd());
-                writer.WriteLine("```");
+                WriteCSharpBlock(writer, strictKey);
                 writer.WriteLine();
                 writer.WriteLine("Relaxed build:");
             }
             writer.WriteLine();
-            writer.WriteLine("```csharp");
-            writer.WriteLine(ProgramOnly(key).TrimEnd());
-            writer.WriteLine("```");
+            WriteCSharpBlock(writer, key);
         }
         return writer.ToString();
+    }
+
+    /// <summary>Removes the <c>// Relaxations: X</c> header line from the program text and returns
+    /// it as the prose <c>X</c> part, or null when the text holds no such line.</summary>
+    private static (string Text, string? Relaxations) ExtractRelaxations(string programText) {
+        const string prefix = "// Relaxations: ";
+        string[] lines = programText.Split('\n');
+        for (int i = 0; i < lines.Length; i++) {
+            if (lines[i].StartsWith(prefix, StringComparison.Ordinal)) {
+                string relaxations = lines[i][prefix.Length..].TrimEnd();
+                return (string.Join('\n', lines.Where((_, index) => index != i)), relaxations);
+            }
+        }
+        return (programText, null);
+    }
+
+    private static void WriteCSharpBlock(StringWriter writer, string key) {
+        (string text, string? relaxations) = ExtractRelaxations(ProgramOnly(key));
+        if (relaxations is not null) {
+            writer.WriteLine($"Relaxations: {relaxations}.");
+            writer.WriteLine();
+        }
+        writer.WriteLine("```csharp");
+        writer.WriteLine(text.TrimEnd());
+        writer.WriteLine("```");
     }
 
     private static string ProgramOnly(string key) {

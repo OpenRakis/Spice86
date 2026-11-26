@@ -33,6 +33,8 @@ never_taken:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -57,8 +59,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Typed method signatures
@@ -88,6 +88,8 @@ compute:
     rb 65535-$
     db 0ffh
 ```
+
+Relaxations: none.
 
 ```csharp
 public partial class CfgGeneratedOverrides {
@@ -119,8 +121,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Stack save, restore and release
@@ -153,6 +153,8 @@ start:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -171,8 +173,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Named Div16 arguments
@@ -198,6 +198,8 @@ start:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -210,8 +212,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Dead store elimination
@@ -240,6 +240,8 @@ start:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ES. Does not return.</summary>
@@ -253,8 +255,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Wide value merging
@@ -285,6 +285,8 @@ start:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -303,8 +305,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Flag idioms
@@ -345,6 +345,8 @@ input: dw 7
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -366,8 +368,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Call sites
@@ -409,6 +409,8 @@ wide32:
     rb 65535-$
     db 0ffh
 ```
+
+Relaxations: none.
 
 ```csharp
 public partial class CfgGeneratedOverrides {
@@ -469,8 +471,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Locals naming
@@ -499,6 +499,8 @@ loop_top:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -518,8 +520,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Interrupt handler contracts
@@ -550,6 +550,8 @@ handler:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL. Changes: AL, flags, DF.</summary>
@@ -574,8 +576,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Relaxation: abandoned stack slots
@@ -618,6 +618,8 @@ callee_q:
 ```
 
 Strict build:
+
+Relaxations: none.
 
 ```csharp
 public partial class CfgGeneratedOverrides {
@@ -673,11 +675,11 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 Relaxed build:
+
+Relaxations: AbandonedStackSlotsUnobserved.
 
 ```csharp
 public partial class CfgGeneratedOverrides {
@@ -731,8 +733,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: AbandonedStackSlotsUnobserved
 ```
 
 ## Jump table switch
@@ -775,6 +775,8 @@ table:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -805,8 +807,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Memory accessors
@@ -839,6 +839,8 @@ start:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -859,8 +861,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Stack frames
@@ -894,6 +894,8 @@ framed:
     rb 65535-$
     db 0ffh
 ```
+
+Relaxations: none.
 
 ```csharp
 public partial class CfgGeneratedOverrides {
@@ -937,8 +939,6 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
 
 ## Fault dispatch
@@ -971,6 +971,8 @@ fault_handler:
     db 0ffh
 ```
 
+Relaxations: none.
+
 ```csharp
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -1000,6 +1002,4 @@ public partial class CfgGeneratedOverrides {
     }
 
 }
-
-// Relaxations: none
 ```
