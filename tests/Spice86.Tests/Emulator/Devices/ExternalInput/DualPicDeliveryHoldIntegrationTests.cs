@@ -18,7 +18,7 @@ using Spice86.Tests.AsmFixtures;
 using Xunit;
 
 /// <summary>
-/// Checks <see cref="DualPic.HoldDelivery" /> on the <c>externalint</c> program, whose timer handler sets DX
+/// Checks <see cref="DualPic.HoldDelivery()" /> on the <c>externalint</c> program, whose timer handler sets DX
 /// to 1, and on <c>CSharpOverrideHelper.CheckExternalEvents</c>.
 /// </summary>
 public sealed class DualPicDeliveryHoldIntegrationTests {

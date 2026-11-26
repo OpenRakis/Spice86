@@ -260,6 +260,20 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs tickwait: the function waiting for a timer tick returned once the IRQ 0 handler counted
+    /// one.</summary>
+    public static AsmFixture TickWait() {
+        AsmRunSettings settings = new() {
+            BinName = "tickwait",
+            MaxCycles = 0xFFFFFFF,
+            EnablePit = true
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt8[0, 0x0000].Should().BeGreaterThan(0, "tickwait: the IRQ 0 handler counted a tick");
+            result.Memory.UInt8[0, 0x0001].Should().Be(1, "tickwait: the wait loop ended and the function returned");
+        });
+    }
+
     /// <summary>Runs stipending: both tick counters advanced while interrupts were pending.</summary>
     public static AsmFixture StiPending() {
         byte[] expectedMemory = new byte[2];
