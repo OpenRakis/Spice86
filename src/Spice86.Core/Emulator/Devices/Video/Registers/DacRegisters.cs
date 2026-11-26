@@ -116,7 +116,7 @@ public class DacRegisters : IStatefulDevice<DacState> {
                 Palette[_internalIndex, _tripletCounter++] = (byte)(value & 0x3F);
                 if (_tripletCounter == 3) {
                     LastWrittenPaletteIndex = _internalIndex;
-                    RebuildPaletteMapEntry(_internalIndex);
+                    RebuildPaletteMapEntriesShowing(_internalIndex);
                     _indexRegister++;
                     _internalIndex++;
                     _tripletCounter = 0;
@@ -153,6 +153,18 @@ public class DacRegisters : IStatefulDevice<DacState> {
         byte g6 = Palette[maskedIndex, 1];
         byte b6 = Palette[maskedIndex, 2];
         PaletteMap[index] = ToArgb(r6, g6, b6);
+    }
+
+    /// <summary>
+    /// Rebuilds the <see cref="PaletteMap"/> entries that show palette entry <paramref name="paletteIndex"/>:
+    /// every index that <see cref="PixelMask"/> turns into <paramref name="paletteIndex"/>.
+    /// </summary>
+    private void RebuildPaletteMapEntriesShowing(int paletteIndex) {
+        for (int i = 0; i < PaletteMap.Length; i++) {
+            if ((i & _pixelMask) == paletteIndex) {
+                RebuildPaletteMapEntry(i);
+            }
+        }
     }
 
     /// <summary>

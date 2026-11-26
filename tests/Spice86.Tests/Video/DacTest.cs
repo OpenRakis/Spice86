@@ -42,6 +42,22 @@ public class DacTest {
     }
 
     [Fact]
+    public void DacWriteUnderPixelMaskUpdatesEveryIndexThatShowsTheEntry() {
+        // Arrange: with PixelMask=0xFE, indices 0 and 1 both show entry 0
+        DacRegisters dac = new() { PixelMask = 0xFE };
+
+        // Act: write red (63,0,0) at entry 0
+        dac.IndexRegisterWriteMode = 0;
+        dac.DataRegister = 63;
+        dac.DataRegister = 0;
+        dac.DataRegister = 0;
+
+        // Assert
+        Assert.Equal(0xFFFF0000, dac.PaletteMap[0]);
+        Assert.Equal(0xFFFF0000, dac.PaletteMap[1]);
+    }
+
+    [Fact]
     public void PaletteMapRespectsPixelMask() {
         // Arrange – write red (63,0,0) at index 1, black (0,0,0) at index 0
         var dac = new DacRegisters();

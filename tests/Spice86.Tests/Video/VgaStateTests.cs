@@ -74,6 +74,33 @@ public sealed class VgaStateTests {
     }
 
     [Fact]
+    public void RestoreRebuildsTheColoursTheRendererDrawsWithAndRedrawsTheFrame() {
+        // Arrange
+        using Spice86Creator creator = new("externalint");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        IOPortDispatcher ports = machine.IoPortDispatcher;
+        IVideoState video = machine.VgaRegisters;
+        VideoMemory videoMemory = ((Renderer)machine.VgaRenderer).VideoMemory;
+        ProgramRegisters(ports, 0x0A, 0x41, 0x17, 0x10);
+        VgaState captured = machine.VgaCard.CaptureState();
+        uint[] paletteMapBefore = video.DacRegisters.PaletteMap.ToArray();
+        uint[] attributeMapBefore = video.DacRegisters.AttributeMap.ToArray();
+
+        // Act
+        ProgramRegisters(ports, 0x05, 0x99, 0x03, 0x3F);
+        video.IsRenderingDirty = false;
+        videoMemory.ResetChanged();
+        machine.VgaCard.RestoreState(captured);
+
+        // Assert: attribute entry 5 selects DAC entry 10h, which both programs change
+        video.DacRegisters.PaletteMap.Should().Equal(paletteMapBefore);
+        video.DacRegisters.AttributeMap.Should().Equal(attributeMapBefore);
+        video.IsRenderingDirty.Should().BeTrue();
+        videoMemory.HasChanged.Should().BeTrue();
+    }
+
+    [Fact]
     public void RestoreGivesBackTheVideoMemoryPlanes() {
         // Arrange
         using Spice86Creator creator = new("externalint");
