@@ -39,6 +39,11 @@ internal sealed record AsmFinalState(byte[] Ram,
     /// captured by <see cref="DeviceRegisterSnapshot"/>.</summary>
     public IReadOnlyList<(string Device, string Register, uint Value)> DeviceRegisters { get; init; } = [];
 
+    /// <summary>The device states the run left behind, captured by
+    /// <see cref="Machine.CaptureDeviceState"/>, with the fields that follow the emulated clock
+    /// cleared.</summary>
+    public MachineDeviceState? DeviceState { get; init; }
+
     /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
     /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
     /// <param name="run">The finished run.</param>
@@ -75,7 +80,34 @@ internal sealed record AsmFinalState(byte[] Ram,
                 .Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text,
             DriveFiles = run.Result.Observations
                 .Get<DriveFileRecorder>(AsmRunScope.DriveFilesObservation).WrittenFiles,
-            DeviceRegisters = DeviceRegisterSnapshot.Capture(run.Machine)
+            DeviceRegisters = DeviceRegisterSnapshot.Capture(run.Machine),
+            DeviceState = Normalize(run.Machine.CaptureDeviceState(MachineDevices.All))
         };
+    }
+
+    /// <summary>Clears the fields that follow the emulated clock, which differs between the
+    /// interpreted and the generated run like it does in a timing-dependent execution.</summary>
+    private static MachineDeviceState Normalize(MachineDeviceState state) {
+        if (state.Pit is { } pit) {
+            state = state with {
+                Pit = pit with {
+                    CapturedAtMs = 0,
+                    Channel0EventDelayMs = null,
+                    Channel0 = pit.Channel0 with { Start = 0, Delay = 0, ReadLatch = 0 },
+                    Channel1 = pit.Channel1 with { Start = 0, Delay = 0, ReadLatch = 0 },
+                    Channel2 = pit.Channel2 with { Start = 0, Delay = 0, ReadLatch = 0 }
+                }
+            };
+        }
+        if (state.MouseDevice is { } mouse) {
+            state = state with {
+                MouseDevice = mouse with {
+                    CapturedAtMs = 0,
+                    LastSampleTimeMs = null,
+                    PendingSampleDelayMs = null
+                }
+            };
+        }
+        return state;
     }
 }

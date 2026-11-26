@@ -2,7 +2,10 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using System.Reflection;
+
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.AsmFixtures;
 
@@ -203,9 +206,17 @@ internal static class GeneratedCodeDifferentialReport {
             }
         }
         if (!comparison.UncomparedParts.HasFlag(FinalStateParts.DeviceRegisters)) {
-            string devices = DescribeDeviceRegisters(emulated, generated);
-            if (devices != "none") {
-                differences.Add($"devices: {devices}");
+            List<string> deviceDifferences = [];
+            string registers = DescribeDeviceRegisters(emulated, generated);
+            if (registers != "none") {
+                deviceDifferences.Add(registers);
+            }
+            string states = DescribeDeviceStates(emulated, generated);
+            if (states != "none") {
+                deviceDifferences.Add(states);
+            }
+            if (deviceDifferences.Count > 0) {
+                differences.Add($"devices: {string.Join("; ", deviceDifferences)}");
             }
         }
         string uncompared = comparison.UncomparedParts == FinalStateParts.None
@@ -302,6 +313,57 @@ internal static class GeneratedCodeDifferentialReport {
             }
         }
         return differences.Count == 0 ? "none" : $"{differences.Count} registers differ, first: {differences[0]}";
+    }
+
+    /// <summary>The device states compared by their record equality. The other members of
+    /// <see cref="MachineDeviceState"/> hold byte arrays or immutable collections, whose equality is
+    /// by reference: VGA registers and DAC stay in <see cref="AsmFinalState.DeviceRegisters"/>, XMS
+    /// and EMS memory stays in the extended regions, and the rest is left out.</summary>
+    private static readonly (string Name, Func<MachineDeviceState, object?> Get)[] ComparedDeviceStates = [
+        ("pic", state => state.Pic),
+        ("pit", state => state.Pit),
+        ("mouse", state => state.MouseDevice),
+        ("mouse-driver", state => state.MouseDriver),
+        ("dma", state => state.Dma),
+        ("a20", state => state.A20Gate)
+    ];
+
+    private static string DescribeDeviceStates(AsmFinalState emulated, AsmFinalState generated) {
+        List<string> differences = [];
+        if (emulated.DeviceState is not { } emulatedState || generated.DeviceState is not { } generatedState) {
+            if (emulated.DeviceState is not null || generated.DeviceState is not null) {
+                return "device state captured in only one run";
+            }
+            return "none";
+        }
+        foreach ((string name, Func<MachineDeviceState, object?> get) in ComparedDeviceStates) {
+            object? emulatedDevice = get(emulatedState);
+            object? generatedDevice = get(generatedState);
+            if (emulatedDevice is null && generatedDevice is null) {
+                continue;
+            }
+            if (emulatedDevice is null || generatedDevice is null) {
+                differences.Add($"{name} present in {(emulatedDevice is null ? "generated" : "interpreted")} only");
+                continue;
+            }
+            if (!emulatedDevice.Equals(generatedDevice)) {
+                differences.Add($"{name} {FirstDifferingProperty(emulatedDevice, generatedDevice)}");
+            }
+        }
+        return differences.Count == 0 ? "none" : $"{differences.Count} devices differ, first: {differences[0]}";
+    }
+
+    /// <summary>Names the first property of the device state record that differs, for the report
+    /// message only; the comparison itself is the record's own equality.</summary>
+    private static string FirstDifferingProperty(object emulated, object generated) {
+        foreach (PropertyInfo property in emulated.GetType().GetProperties()) {
+            object? emulatedValue = property.GetValue(emulated);
+            object? generatedValue = property.GetValue(generated);
+            if (!Equals(emulatedValue, generatedValue)) {
+                return $"{property.Name} interpreted={emulatedValue} generated={generatedValue}";
+            }
+        }
+        return "differ";
     }
 
     private static void AppendLine(string line) {

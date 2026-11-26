@@ -3,8 +3,10 @@ namespace Spice86.Tests;
 using FluentAssertions;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
 using Spice86.Tests.AsmFixtures;
@@ -148,6 +150,22 @@ public sealed class GeneratedCodeDifferentialReportTest {
         check.Should().Throw<Exception>().WithMessage("*check-devices*devices*");
     }
 
+    /// <summary>A differing device state fails the gate, naming the key and the device.</summary>
+    [Fact]
+    public void DifferentDeviceStateFails() {
+        MachineDeviceState emulatedState = new(new DualPicState(default, default, false), null, null,
+            null, null, null, null, null, null, null, null);
+        MachineDeviceState generatedState = emulatedState with {
+            Pic = emulatedState.Pic!.Value with { IrqCheck = !emulatedState.Pic.Value.IrqCheck }
+        };
+        AsmFinalState emulated = BuildState(new byte[16]) with { DeviceState = emulatedState };
+        AsmFinalState generated = BuildState(new byte[16]) with { DeviceState = generatedState };
+
+        Action check = () => CheckFull("check-devstate", emulated, generated);
+
+        check.Should().Throw<Exception>().WithMessage("*check-devstate*pic*");
+    }
+
     /// <summary>A timing-dependent execution still compares device registers: a differing register
     /// fails the gate even though RAM is left out.</summary>
     [Fact]
@@ -198,7 +216,7 @@ public sealed class GeneratedCodeDifferentialReportTest {
     /// <summary>A byte differing outside the uncompared RAM range still fails the gate, naming the
     /// key and the ram part.</summary>
     [Fact]
-    public void ByteOutsideUncomparedRamRangeFails() {
+    public void RamOutsideTheUncomparedRangeIsCompared() {
         byte[] emulatedRam = new byte[0x21010];
         byte[] generatedRam = new byte[0x21010];
         generatedRam[0x20FFE] = 0x02;

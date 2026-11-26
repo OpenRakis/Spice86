@@ -1,16 +1,15 @@
 namespace Spice86.Tests.AsmFixtures;
 
 using Spice86.Core.Emulator.Devices.Cmos;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>
 /// Captures the registers the devices hold when a run ends, in a fixed order, so an interpreted run
 /// and its generated run can be compared on what the program left behind rather than on the port
-/// writes that produced it. Values that follow the cycle counter are left out: the PIT current
-/// count, its latches and timing fields, and CMOS status register C whose interrupt flags the
-/// periodic tick sets and reads clear.
+/// writes that produced it. Values that follow the cycle counter are left out: CMOS status register C, whose interrupt
+/// flags the periodic tick sets and reads clear. The PIT is compared through its captured state
+/// instead (<see cref="AsmFinalState.DeviceState"/>).
 /// </summary>
 internal static class DeviceRegisterSnapshot {
     /// <summary>The device, register name and value of every captured register, in a fixed order.</summary>
@@ -18,7 +17,6 @@ internal static class DeviceRegisterSnapshot {
         List<(string Device, string Register, uint Value)> registers = [];
         CaptureVga(machine, registers);
         CaptureCmos(machine, registers);
-        CapturePit(machine, registers);
         CaptureOpl(machine, registers);
         return registers;
     }
@@ -58,20 +56,6 @@ internal static class DeviceRegisterSnapshot {
                 continue;
             }
             registers.Add(("cmos", $"cmos[{i:X2}]", cmos[i]));
-        }
-    }
-
-    private static void CapturePit(Machine machine,
-        List<(string Device, string Register, uint Value)> registers) {
-        PitTimerState timer = machine.Timer.CaptureState();
-        PitChannelState[] channels = [timer.Channel0, timer.Channel1, timer.Channel2];
-        for (int channel = 0; channel < 3; channel++) {
-            PitChannelState channelState = channels[channel];
-            registers.Add(("pit", $"channel{channel}.mode", (byte)channelState.Mode));
-            registers.Add(("pit", $"channel{channel}.bcd", channelState.Bcd ? 1u : 0u));
-            registers.Add(("pit", $"channel{channel}.readaccess", (byte)channelState.ReadMode));
-            registers.Add(("pit", $"channel{channel}.writeaccess", (byte)channelState.WriteMode));
-            registers.Add(("pit", $"channel{channel}.reload", channelState.WriteLatch));
         }
     }
 
