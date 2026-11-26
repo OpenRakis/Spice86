@@ -59,11 +59,22 @@ internal static class Int21ScenarioCatalog {
         Simple("environment_block_contains_program_path.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.EnvironmentBlockContainsProgramPath),
         Simple("child_return_code_initial.com"),
         Simple("child_return_code_subsequent_zero.com"),
-        Simple("int20_terminates.com"),
+        // The program writes success before int 20h, so a returning INT 20h would still pass:
+        // the engine assertion proves termination instead, through the instructions after int 20h
+        // never executing.
+        Simple("int20_terminates.com").WithOracle(fixture => fixture
+            .WithEngineAssertions(AsmScenarioEngineAssertions.Int20Terminates)),
         Simple("create_new_psp_valid_copy.com"),
         Simple("create_child_psp_valid.com"),
         Simple("program_arguments_access_argv.com"),
-        Simple("program_arguments_print_argv0.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ProgramArgumentsPrintArgv0),
+        Simple("program_arguments_print_argv0.com")
+            .WithOracle(fixture => new AsmFixture(fixture.Settings, fixture.ExpectedMemory, result => {
+                fixture.AssertResult(result);
+                result.Observations.Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation)
+                    .Text.Should().Be("C",
+                        "the harness runs the program as C:\\TEST.COM, so argv[0] starts with 'C' and AH=02h prints it");
+            }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ProgramArgumentsPrintArgv0),
         StandardFileHandlesInherited(),
         Simple("select_default_drive.com"),
         Simple("allocation_info_default_drive.com"),
@@ -398,7 +409,13 @@ internal static class Int21ScenarioCatalog {
                     DosTestFiles.SetFixedTimes(testFilePath);
                     File.SetAttributes(testFilePath, FileAttributes.Archive);
                 }
-            }, NoDetailAssertions);
+            }, testHandler => {
+                testHandler.Details.Should().NotBeEmpty("the program reports the read-back attributes CL as a detail byte");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    (testHandler.Details[0] & 0x20).Should().Be(0x20,
+                        "the program sets readonly|archive (ASM line 15) and AH=43h AL=00h returns the attributes in CL; Windows hosts persist the DOS archive bit. On Linux the archive bit is not persisted, so the detail is not asserted there");
+                }
+            });
     }
 
     /// <summary>The program reads back the switch and availdev characters with INT 21h AH=37h and sets

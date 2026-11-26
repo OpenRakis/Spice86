@@ -27,6 +27,12 @@ internal static class AsmScenarioEngineAssertions {
     /// <summary>jmpmov ends on the HLT that follows the stored far-jump target.</summary>
     /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
     /// <param name="machine">Machine of the finished run.</param>
+    /// <summary>int20_terminates: INT 20h terminated the program, so no block was entered at the
+    /// compare right after it (offset 0108h in the program image, after <c>out</c> at 0105h and
+    /// <c>int 20h</c> at 0106h, in the DOS load segment 016Eh of the run).</summary>
+    public static void Int20Terminates(AsmRunScope scope, Machine machine) =>
+        AssertNoBlockAt(GraphOf(machine), "int20_terminates", new SegmentedAddress(0x016E, 0x0108));
+
     public static void JmpMov(AsmRunScope scope, Machine machine) {
         State state = machine.CpuState;
         uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
