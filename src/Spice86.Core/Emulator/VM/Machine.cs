@@ -351,8 +351,8 @@ public sealed class Machine : IDisposable {
     /// </summary>
     /// <remarks>
     /// Covered devices: the interrupt controllers, the programmable interval timer, the mouse device with the
-    /// INT 33h mouse driver, and the Sound Blaster. DMA, VGA and the other devices are not covered. Call this on
-    /// the emulation thread between two instructions, or while the emulation is paused.
+    /// INT 33h mouse driver, the DMA controllers and the Sound Blaster. VGA and the other devices are not covered.
+    /// Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>The captured state, with a <c>null</c> member for each device left out.</returns>
@@ -371,11 +371,15 @@ public sealed class Machine : IDisposable {
             mouseDevice = MouseDevice.CaptureState();
             mouseDriver = MouseDriver.CaptureState();
         }
+        DmaBusState? dma = null;
+        if ((devices & MachineDevices.Dma) != 0) {
+            dma = DmaSystem.CaptureState();
+        }
         SoundBlasterState? soundBlaster = null;
         if ((devices & MachineDevices.SoundBlaster) != 0) {
             soundBlaster = SoundBlaster.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, mouseDevice, mouseDriver, soundBlaster);
+        return new MachineDeviceState(pic, pit, mouseDevice, mouseDriver, dma, soundBlaster);
     }
 
     /// <summary>
@@ -397,6 +401,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.MouseDriver is { } mouseDriver) {
             MouseDriver.RestoreState(mouseDriver);
+        }
+        if (state.Dma is { } dma) {
+            DmaSystem.RestoreState(dma);
         }
         if (state.SoundBlaster is { } soundBlaster) {
             SoundBlaster.RestoreState(soundBlaster);

@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -20,6 +21,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
 /// <param name="MouseDevice">State of the mouse device, or <see langword="null" />.</param>
 /// <param name="MouseDriver">State of the INT 33h mouse driver, or <see langword="null" />.</param>
+/// <param name="Dma">State of the DMA controllers, or <see langword="null" />.</param>
 /// <param name="SoundBlaster">State of the Sound Blaster, or <see langword="null" />.</param>
 public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, MouseDeviceState? MouseDevice,
-    MouseDriverState? MouseDriver, SoundBlasterState? SoundBlaster);
+    MouseDriverState? MouseDriver, DmaBusState? Dma, SoundBlasterState? SoundBlaster);
