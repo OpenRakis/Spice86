@@ -10,5 +10,6 @@ internal enum FinalStateParts {
     None = 0,
     Console = 1,
     DriveFiles = 2,
-    DeviceRegisters = 4
+    DeviceRegisters = 4,
+    VideoMemory = 8
 }

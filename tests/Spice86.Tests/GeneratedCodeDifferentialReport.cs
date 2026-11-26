@@ -211,7 +211,8 @@ internal static class GeneratedCodeDifferentialReport {
             if (registers != "none") {
                 deviceDifferences.Add(registers);
             }
-            string states = DescribeDeviceStates(emulated, generated);
+            string states = DescribeDeviceStates(emulated, generated,
+                comparison.UncomparedParts.HasFlag(FinalStateParts.VideoMemory));
             if (states != "none") {
                 deviceDifferences.Add(states);
             }
@@ -250,6 +251,9 @@ internal static class GeneratedCodeDifferentialReport {
         }
         if (parts.HasFlag(FinalStateParts.DeviceRegisters)) {
             names.Add("devices");
+        }
+        if (parts.HasFlag(FinalStateParts.VideoMemory)) {
+            names.Add("video memory");
         }
         return string.Join(", ", names);
     }
@@ -332,7 +336,7 @@ internal static class GeneratedCodeDifferentialReport {
         ("ems", state => state.Ems)
     ];
 
-    private static string DescribeDeviceStates(AsmFinalState emulated, AsmFinalState generated) {
+    private static string DescribeDeviceStates(AsmFinalState emulated, AsmFinalState generated, bool skipVideoMemory) {
         List<string> differences = [];
         if (emulated.DeviceState is not { } emulatedState || generated.DeviceState is not { } generatedState) {
             if (emulated.DeviceState is not null || generated.DeviceState is not null) {
@@ -350,7 +354,8 @@ internal static class GeneratedCodeDifferentialReport {
                 differences.Add($"{name} present in {(emulatedDevice is null ? "generated" : "interpreted")} only");
                 continue;
             }
-            if (FirstContentDifference(emulatedDevice, generatedDevice, name) is { } difference) {
+            string? skipPath = skipVideoMemory && name == "vga" ? "vga.Memory" : null;
+            if (FirstContentDifference(emulatedDevice, generatedDevice, name, skipPath) is { } difference) {
                 differences.Add(difference);
             }
         }
@@ -366,7 +371,11 @@ internal static class GeneratedCodeDifferentialReport {
     /// <param name="generated">Value of the generated run.</param>
     /// <param name="path">Path of the compared value, extended with property names and indexes.</param>
     /// <returns>The first differing path with both values, or <see langword="null"/>.</returns>
-    internal static string? FirstContentDifference(object? emulated, object? generated, string path) {
+    internal static string? FirstContentDifference(object? emulated, object? generated, string path,
+        string? skipSubtreePath) {
+        if (skipSubtreePath is not null && path == skipSubtreePath) {
+            return null;
+        }
         if (ReferenceEquals(emulated, generated)) {
             return null;
         }
@@ -396,7 +405,7 @@ internal static class GeneratedCodeDifferentialReport {
             List<object?> generatedElements = ((System.Collections.IEnumerable)generated).Cast<object?>().ToList();
             int commonLength = Math.Min(emulatedElements.Count, generatedElements.Count);
             for (int i = 0; i < commonLength; i++) {
-                if (FirstContentDifference(emulatedElements[i], generatedElements[i], $"{path}[{i}]") is { } elementDifference) {
+                if (FirstContentDifference(emulatedElements[i], generatedElements[i], $"{path}[{i}]", skipSubtreePath) is { } elementDifference) {
                     return elementDifference;
                 }
             }
@@ -410,7 +419,7 @@ internal static class GeneratedCodeDifferentialReport {
                 continue;
             }
             if (FirstContentDifference(property.GetValue(emulated), property.GetValue(generated),
-                    $"{path}.{property.Name}") is { } propertyDifference) {
+                    $"{path}.{property.Name}", skipSubtreePath) is { } propertyDifference) {
                 return propertyDifference;
             }
         }

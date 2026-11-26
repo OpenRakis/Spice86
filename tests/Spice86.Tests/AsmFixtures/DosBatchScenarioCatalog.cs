@@ -1772,7 +1772,9 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_time_host_sync", run => run
             .StartBatch("TIME /H\r\nTIME /T > OUT.TXT\r\n",
                 _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")))
-            .WithTimingDependentState("TIME /H synchronizes from the host clock, so the printed time differs between runs");
+            .WithTimingDependentState("TIME /H synchronizes from the host clock, so the printed time differs between runs")
+            .WithUncomparedParts(FinalStateParts.VideoMemory,
+                "the screen shows the time TIME /H read from the host clock");
     }
 
     /// <summary>VER prints a version string.</summary>

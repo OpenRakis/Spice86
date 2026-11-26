@@ -204,6 +204,35 @@ public sealed class GeneratedCodeDifferentialReportTest {
         check.Should().Throw<Exception>().WithMessage("*check-ems*ems*");
     }
 
+    /// <summary>A VRAM byte difference of an execution that leaves the video memory out does not
+    /// throw, and the report line names the part and the reason; a VGA register difference outside
+    /// the video memory still throws.</summary>
+    [Fact]
+    public void UncomparedVideoMemoryIsNotCompared() {
+        byte[] emulatedVRam = new byte[0x40000];
+        byte[] generatedVRam = new byte[0x40000];
+        generatedVRam[0x1234] = 0x41;
+        MachineDeviceState emulatedState = EmptyDeviceState() with { Vga = BuildVgaState(emulatedVRam) };
+        MachineDeviceState generatedState = EmptyDeviceState() with { Vga = BuildVgaState(generatedVRam) };
+        AsmFinalState emulated = BuildState(new byte[16]) with { DeviceState = emulatedState };
+        AsmFinalState generated = BuildState(new byte[16]) with { DeviceState = generatedState };
+        FinalStateComparison comparison = new(null, FinalStateParts.VideoMemory,
+            "the screen shows a count that depends on timing", []);
+
+        string line = CheckFull("check-video-memory", emulated, generated, comparison);
+
+        line.Should().Contain("video memory").And.Contain("the screen shows a count that depends on timing");
+
+        MachineDeviceState registerDifference = generatedState with {
+            Vga = generatedState.Vga! with {
+                Registers = generatedState.Vga.Registers with { MiscellaneousOutput = 0xFF }
+            }
+        };
+        Action check = () => CheckFull("check-video-register", emulated,
+            generated with { DeviceState = registerDifference }, comparison);
+        check.Should().Throw<Exception>().WithMessage("*check-video-register*vga*MiscellaneousOutput*");
+    }
+
     private static MachineDeviceState EmptyDeviceState() => new(null, null, null, null, null, null,
         null, null, null, null, null);
 
