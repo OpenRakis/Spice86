@@ -34,8 +34,6 @@ never_taken:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -60,15 +58,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Typed method signatures
@@ -100,8 +90,6 @@ compute:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: CX. Outputs: AL, DL. Changes: AX, DX.</summary>
     public virtual (byte result, byte result2) unknown_F000_0013_F0013(ushort word1) {
@@ -132,15 +120,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Stack save, restore and release
@@ -174,8 +154,6 @@ start:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -194,15 +172,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Named Div16 arguments
@@ -229,8 +199,6 @@ start:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -243,15 +211,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Dead store elimination
@@ -281,8 +241,6 @@ start:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ES. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -296,15 +254,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Wide value merging
@@ -336,8 +286,6 @@ start:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -356,15 +304,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Flag idioms
@@ -406,8 +346,6 @@ input: dw 7
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -429,15 +367,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Call sites
@@ -481,8 +411,6 @@ wide32:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: AL. Changes: AX, BP.</summary>
     public virtual byte unknown_F000_001D_F001D(ushort arg0) {
@@ -542,15 +470,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Locals naming
@@ -580,8 +500,6 @@ loop_top:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -601,15 +519,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Interrupt handler contracts
@@ -641,8 +551,6 @@ handler:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL. Changes: AL, flags, DF.</summary>
     /// Segment values at entry, from every call site: DS = 0x0000.
@@ -667,15 +575,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Relaxation: abandoned stack slots
@@ -720,8 +620,6 @@ callee_q:
 Strict build:
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL, DL. Changes: AX, DX.</summary>
     public virtual (byte result, byte result2) unknown_F000_001E_F001E() {
@@ -776,22 +674,12 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 Relaxed build:
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL, DL. Changes: AX, DX.</summary>
     public virtual (byte result, byte result2) unknown_F000_001E_F001E() {
@@ -844,15 +732,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: AbandonedStackSlotsUnobserved
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Jump table switch
@@ -896,8 +776,6 @@ table:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -928,15 +806,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Memory accessors
@@ -970,8 +840,6 @@ start:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
@@ -992,15 +860,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Stack frames
@@ -1036,8 +896,6 @@ framed:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BP. Outputs: AL. Changes: AX, BP.</summary>
     public virtual byte unknown_F000_000F_F000F(ushort word1) {
@@ -1080,15 +938,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```
 
 ## Fault dispatch
@@ -1122,8 +972,6 @@ fault_handler:
 ```
 
 ```csharp
-
-
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_0023_F0023() {
@@ -1153,13 +1001,5 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-
-
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
 ```

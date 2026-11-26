@@ -103,24 +103,32 @@ public sealed class CodegenIdiomsDocTest {
         return StripNoise(GeneratedCodeChecks.ProgramOnlyText(program));
     }
 
-    /// <summary>Drops the lines the document does not show: the supplier file section, the
-    /// <c>using</c> lines and the <c>namespace</c> line. The <c>// Relaxations:</c> header line stays.</summary>
+    /// <summary>Drops the lines the document does not show: the supplier class, the <c>using</c>
+    /// lines and the <c>namespace</c> line. The <c>// Relaxations:</c> line of the supplier file
+    /// stays.</summary>
     private static string StripNoise(string programText) {
-        const string marker = "// ==== file: ";
+        string supplierStart = $"public sealed class {GeneratedOverrideNames.SupplierClassName} ";
         StringBuilder builder = new();
-        bool keep = true;
+        bool inSupplier = false;
+        bool previousBlank = true;
         foreach (string line in programText.Split('\n')) {
-            if (line.StartsWith(marker, StringComparison.Ordinal)) {
-                keep = !line.Contains(GeneratedOverrideNames.SupplierFileName);
+            if (line.StartsWith(supplierStart, StringComparison.Ordinal)) {
+                inSupplier = true;
+            }
+            if (inSupplier) {
+                inSupplier = line.TrimEnd() != "}";
                 continue;
             }
-            if (!keep || line.StartsWith("using ", StringComparison.Ordinal)
-                || line.StartsWith("namespace ", StringComparison.Ordinal)) {
+            bool blank = string.IsNullOrWhiteSpace(line);
+            if (line.StartsWith("using ", StringComparison.Ordinal)
+                || line.StartsWith("namespace ", StringComparison.Ordinal)
+                || (blank && previousBlank)) {
                 continue;
             }
+            previousBlank = blank;
             builder.AppendLine(line);
         }
-        return builder.ToString();
+        return builder.ToString().Trim() + Environment.NewLine;
     }
 
     private static string ReadAsm(string asmFile) {
