@@ -1,12 +1,14 @@
 namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Core.Emulator.Devices;
+
 using System.Diagnostics.Contracts;
 
 /// <summary>
 /// Implements the optional silencing of the 20th address line. <br/>
 /// When disabled, it rollovers memory addresses beyond 1 MB for programs dependant on this legacy behavior of the 8086 CPU.
 /// </summary>
-public class A20Gate {
+public class A20Gate : IStatefulDevice<A20GateState> {
     /// <summary>
     /// Represents the segment address marking the start of the high memory area.
     /// </summary>
@@ -78,5 +80,15 @@ public class A20Gate {
     public bool IsEnabled {
         get => AddressMask == EnabledAddressMask;
         set => AddressMask = value ? EnabledAddressMask : DisabledAddressMask;
+    }
+
+    /// <inheritdoc />
+    public A20GateState CaptureState() {
+        return new A20GateState(IsEnabled);
+    }
+
+    /// <inheritdoc />
+    public void RestoreState(A20GateState state) {
+        IsEnabled = state.IsEnabled;
     }
 }

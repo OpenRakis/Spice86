@@ -4,6 +4,8 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.VM;
 
 using Xunit;
@@ -18,6 +20,11 @@ public sealed class MachineDeviceStateTests {
     private const ushort PitControlPort = 0x43;
     private const byte Channel0RateGenerator = 0x34;
     private const ushort DmaChannel1PagePort = 0x83;
+    private const ushort KeyboardControllerCommandPort = 0x64;
+    private const byte DisableA20 = 0xDD;
+    private const byte EnableA20 = 0xDF;
+    private const byte QueryA20Status = 2;
+    private const byte AllocateExtendedMemoryBlock = 0x09;
 
     [Fact]
     public void RestoreAfterChangesThroughPortsGivesTheCapturedDeviceState() {
@@ -78,6 +85,63 @@ public sealed class MachineDeviceStateTests {
         none.Pit.Should().BeNull();
         none.Dma.Should().BeNull();
         none.SoundBlaster.Should().BeNull();
+        none.A20Gate.Should().BeNull();
+        none.Xms.Should().BeNull();
+        none.Ems.Should().BeNull();
+    }
+
+    [Fact]
+    public void RestoreBringsBackTheA20LineAndTheXmsAndEmsAllocations() {
+        // Arrange
+        using Spice86Creator creator = new("externalint", enablePit: true, enableXms: true, enableEms: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        ExtendedMemoryManager xms = machine.Dos.Xms ?? throw new InvalidOperationException("XMS is off.");
+        ExpandedMemoryManager ems = machine.Dos.Ems ?? throw new InvalidOperationException("EMS is off.");
+        bool a20AtCapture = IsA20Enabled(machine);
+        MachineDeviceState captured = machine.CaptureDeviceState();
+
+        // Act
+        ushort xmsHandle = AllocateXms(machine, xms);
+        ushort emsHandle = ems.AllocatePageHandle(1, 0).dx;
+        machine.IoPortDispatcher.WriteByte(KeyboardControllerCommandPort, a20AtCapture ? DisableA20 : EnableA20);
+        bool a20AfterChange = IsA20Enabled(machine);
+        machine.RestoreDeviceState(captured);
+
+        // Assert
+        a20AfterChange.Should().NotBe(a20AtCapture);
+        IsA20Enabled(machine).Should().Be(a20AtCapture);
+        AllocateXms(machine, xms).Should().Be(xmsHandle);
+        ems.AllocatePageHandle(1, 0).dx.Should().Be(emsHandle);
+    }
+
+    [Fact]
+    public void RestoreOfAnXmsStateIntoAMachineWithoutXmsThrows() {
+        // Arrange
+        using Spice86Creator withXms = new("externalint", enableXms: true);
+        using Spice86DependencyInjection withXmsInjection = withXms.Create();
+        MachineDeviceState captured = withXmsInjection.Machine.CaptureDeviceState(MachineDevices.Xms);
+        using Spice86Creator withoutXms = new("externalint");
+        using Spice86DependencyInjection withoutXmsInjection = withoutXms.Create();
+
+        // Act
+        Action restore = () => withoutXmsInjection.Machine.RestoreDeviceState(captured);
+
+        // Assert
+        captured.Xms.Should().NotBeNull();
+        restore.Should().Throw<InvalidOperationException>();
+    }
+
+    private static bool IsA20Enabled(Machine machine) {
+        return machine.SystemBiosInt15Handler.ToggleA20GateOrGetStatus(QueryA20Status).al == 1;
+    }
+
+    private static ushort AllocateXms(Machine machine, ExtendedMemoryManager xms) {
+        machine.CpuState.AH = AllocateExtendedMemoryBlock;
+        machine.CpuState.DX = 1;
+        xms.RunMultiplex();
+        machine.CpuState.AX.Should().Be(1);
+        return machine.CpuState.DX;
     }
 
     private static void ChangeDevicesThroughPorts(Machine machine) {

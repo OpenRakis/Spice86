@@ -32,4 +32,10 @@ public class EmmPage : IMemoryDevice {
 
     /// <inheritdoc />
     public IList<byte> GetSlice(int address, int length) => _pageMemory.GetSlice(address, length);
+
+    /// <inheritdoc cref="Ram.CopyContent" />
+    public byte[] CopyContent() => _pageMemory.CopyContent();
+
+    /// <inheritdoc cref="Ram.LoadContent" />
+    public void LoadContent(ReadOnlySpan<byte> content) => _pageMemory.LoadContent(content);
 }
