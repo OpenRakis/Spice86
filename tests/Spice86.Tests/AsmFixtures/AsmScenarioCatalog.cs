@@ -473,6 +473,8 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
+            // tickwait calls a function that spins on a tick counter until the IRQ 0 handler increments it.
+            AsmScenario.FromFixture("tickwait", AsmFixtureCatalog.TickWait),
             // hlt runs with the real-hardware HLT (HLT with interrupts enabled waits for the timer tick
             // instead of ending the run): the discovered listing spans both HLTs, the generated code
             // waits for the IRQ0 handler at the first HLT and stores the handler's DX past it, and the

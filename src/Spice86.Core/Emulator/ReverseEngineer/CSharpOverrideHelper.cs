@@ -1590,7 +1590,7 @@ public class CSharpOverrideHelper {
         if (!InterruptFlag) {
             return;
         }
-        byte? vectorNumber = _dualPic.ComputeVectorNumber();
+        byte? vectorNumber = _dualPic.ComputeVectorNumber(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
         if (vectorNumber != null) {
             State.IsHalted = false;
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
