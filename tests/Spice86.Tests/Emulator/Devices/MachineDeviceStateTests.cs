@@ -76,6 +76,7 @@ public sealed class MachineDeviceStateTests {
         none.Pit.Should().BeNull();
         none.MouseDevice.Should().BeNull();
         none.MouseDriver.Should().BeNull();
+        none.SoundBlaster.Should().BeNull();
     }
 
     [Fact]

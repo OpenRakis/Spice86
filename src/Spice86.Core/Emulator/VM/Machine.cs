@@ -350,9 +350,9 @@ public sealed class Machine : IDisposable {
     /// later. Registers and memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers, the programmable interval timer, and the mouse device with the
-    /// INT 33h mouse driver. DMA, VGA, Sound Blaster and the other devices are not covered. Call this on the
-    /// emulation thread between two instructions, or while the emulation is paused.
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the mouse device with the
+    /// INT 33h mouse driver, and the Sound Blaster. DMA, VGA and the other devices are not covered. Call this on
+    /// the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>The captured state, with a <c>null</c> member for each device left out.</returns>
@@ -371,7 +371,11 @@ public sealed class Machine : IDisposable {
             mouseDevice = MouseDevice.CaptureState();
             mouseDriver = MouseDriver.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, mouseDevice, mouseDriver);
+        SoundBlasterState? soundBlaster = null;
+        if ((devices & MachineDevices.SoundBlaster) != 0) {
+            soundBlaster = SoundBlaster.CaptureState();
+        }
+        return new MachineDeviceState(pic, pit, mouseDevice, mouseDriver, soundBlaster);
     }
 
     /// <summary>
@@ -393,6 +397,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.MouseDriver is { } mouseDriver) {
             MouseDriver.RestoreState(mouseDriver);
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            SoundBlaster.RestoreState(soundBlaster);
         }
     }
 
