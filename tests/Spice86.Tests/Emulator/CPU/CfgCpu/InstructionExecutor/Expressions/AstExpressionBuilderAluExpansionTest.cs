@@ -28,7 +28,7 @@ public class AstExpressionBuilderAluExpansionTest {
     [Fact]
     public void AluCallIsAMethodCallWhenExpansionIsOff() {
         // Arrange
-        AstExpressionBuilder builder = new(false, false);
+        AstExpressionBuilder builder = new(false);
 
         // Act
         Expression expression = AluCall("Add", Ax, Bx).Accept(builder);
@@ -40,7 +40,7 @@ public class AstExpressionBuilderAluExpansionTest {
     [Fact]
     public void AluCallIsABlockWhenExpansionIsOn() {
         // Arrange
-        AstExpressionBuilder builder = new(true, false);
+        AstExpressionBuilder builder = new(true);
 
         // Act
         Expression expression = AluCall("Add", Ax, Bx).Accept(builder);
@@ -53,7 +53,7 @@ public class AstExpressionBuilderAluExpansionTest {
     [Fact]
     public void CallTheExpansionDoesNotCoverStaysAMethodCall() {
         // Arrange
-        AstExpressionBuilder builder = new(true, false);
+        AstExpressionBuilder builder = new(true);
 
         // Act
         Expression expression = AluCall("Shld", Ax, Bx, Cl).Accept(builder);
@@ -118,7 +118,7 @@ public class AstExpressionBuilderAluExpansionTest {
             arguments.Cast<IVisitableAstNode>().ToArray());
 
     private void Execute(IVisitableAstNode program, bool preferInterpretation) {
-        AstExpressionBuilder builder = new(true, false);
+        AstExpressionBuilder builder = new(true);
         Action<State, Memory> action = builder.ToAction(program.Accept(builder)).Compile(preferInterpretation);
         action(_state, _memory);
     }

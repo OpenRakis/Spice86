@@ -30,12 +30,12 @@ public class AstExpressionBuilderStackExpansionTest {
     private static readonly RegisterNode Sp = new(DataType.UINT16, (int)RegisterIndex.SpIndex);
 
     private void Execute(IVisitableAstNode node) {
-        AstExpressionBuilder builder = new(false, true);
+        AstExpressionBuilder builder = new(true);
         builder.ToAction(node.Accept(builder)).Compile()(_state, _memory);
     }
 
     private T Evaluate<T>(DataType type, IVisitableAstNode node) {
-        AstExpressionBuilder builder = new(false, true);
+        AstExpressionBuilder builder = new(true);
         Expression expression = node.Accept(builder);
         Delegate compiled = type == DataType.UINT32
             ? builder.ToFuncUInt32(expression).Compile()
@@ -48,7 +48,7 @@ public class AstExpressionBuilderStackExpansionTest {
     [Fact]
     public void StackCallIsAHelperCallWhenExpansionIsOff() {
         // Arrange
-        AstExpressionBuilder builder = new(false, false);
+        AstExpressionBuilder builder = new(false);
 
         // Act
         Expression expression = new StackCallNode(StackOperation.Push, BitWidth.WORD_16,
@@ -61,7 +61,7 @@ public class AstExpressionBuilderStackExpansionTest {
     [Fact]
     public void PushAllStaysAHelperCallWhenExpansionIsOn() {
         // Arrange: the pending-fault ordering cannot be lowered by a leading check node
-        AstExpressionBuilder builder = new(false, true);
+        AstExpressionBuilder builder = new(true);
         RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
         StackCallNode pushAll = new(StackOperation.PushAll, BitWidth.WORD_16,
             ax, ax, ax, ax, ax, ax, ax, ax);

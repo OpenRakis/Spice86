@@ -34,24 +34,21 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     // Each scope is a dictionary mapping variable names to their ParameterExpressions
     private readonly Stack<Dictionary<string, ParameterExpression>> _variableScopes = new();
 
-    private readonly bool _expandAluCalls;
-    private readonly bool _expandStackCalls;
+    private readonly bool _expandInlineCalls;
 
     /// <summary>Creates a builder that compiles ALU and stack calls as calls to the helpers.</summary>
-    public AstExpressionBuilder() : this(false, false) {
+    public AstExpressionBuilder() : this(false) {
     }
 
     /// <summary>Creates a builder.</summary>
-    /// <param name="expandAluCalls">When true, the ALU calls <see cref="AluExpansionBuilder"/> can expand are compiled
-    /// as that expansion instead of a call to the ALU.</param>
-    /// <param name="expandStackCalls">When true, the stack calls <see cref="StackExpansionBuilder"/>
-    /// expands are compiled as that expansion instead of a call to <c>Stack</c>. PushAll keeps its
-    /// helper: its pending-fault ordering cannot be lowered by a leading check node.</param>
-    public AstExpressionBuilder(bool expandAluCalls, bool expandStackCalls) {
+    /// <param name="expandInlineCalls">When true, the ALU calls <see cref="AluExpansionBuilder"/> can expand
+    /// and the stack calls <see cref="StackExpansionBuilder"/> expands are compiled as that expansion instead
+    /// of a call to the helper. PushAll keeps its helper: its pending-fault ordering cannot be lowered by a
+    /// leading check node.</param>
+    public AstExpressionBuilder(bool expandInlineCalls) {
         _registerRenderer = new RegisterRenderer(AsmRenderingConfig.CreateSpice86Style());
         _allParameters = [_stateParameter, _memoryParameter];
-        _expandAluCalls = expandAluCalls;
-        _expandStackCalls = expandStackCalls;
+        _expandInlineCalls = expandInlineCalls;
     }
 
     private static Type FromDataType(DataType dataType) {
@@ -382,10 +379,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitMethodCallValueNode(MethodCallValueNode node) {
-        if (_expandStackCalls && node is StackCallValueNode stackCall) {
+        if (_expandInlineCalls && node is StackCallValueNode stackCall) {
             return StackExpansionToExpression(StackExpansionBuilder.Expand(stackCall));
         }
-        AluExpansion? expansion = _expandAluCalls && node is AluCallValueNode aluCall
+        AluExpansion? expansion = _expandInlineCalls && node is AluCallValueNode aluCall
             ? AluExpansionBuilder.TryExpand(aluCall) : null;
         if (expansion is null) {
             // Delegate to the composed MethodCallNode
@@ -521,7 +518,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitMethodCallNode(MethodCallNode node) {
         // PushAll stays on the helper: the pre-check must record a pending fault the stores run
         // before, and a leading check node cannot defer its throw past them.
-        if (_expandStackCalls && node is StackCallNode stackCall
+        if (_expandInlineCalls && node is StackCallNode stackCall
             && stackCall.Operation != StackOperation.PushAll) {
             return StackExpansionToExpression(StackExpansionBuilder.Expand(stackCall));
         }

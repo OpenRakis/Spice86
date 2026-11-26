@@ -48,7 +48,7 @@ public abstract class SpeculativeTestBase : IDisposable {
         ReplacerRegistry = new InstructionReplacerRegistry();
         NodeIndex = new CfgNodeIndex(ReplacerRegistry);
         LoggerService = Substitute.For<ILogger>();
-        Compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(LoggerService), LoggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
+        Compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(LoggerService), LoggerService, JitMode.InterpretedOnly, TestJitSettings.GeneratorIr);
         NodeLinker = new NodeLinker(ReplacerRegistry, Compiler, IdAllocator);
     }
 

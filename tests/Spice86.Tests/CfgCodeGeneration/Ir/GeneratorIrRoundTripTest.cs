@@ -75,7 +75,7 @@ public class GeneratorIrRoundTripTest {
 
     /// <summary>Compiles the rebuilt AST exactly like the JIT path does.</summary>
     private static void Compile(IVisitableAstNode ast) {
-        AstExpressionBuilder builder = new(expandAluCalls: true, expandStackCalls: true);
+        AstExpressionBuilder builder = new(expandInlineCalls: true);
         Expression expression = ast.Accept(builder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> action =
             builder.ToActionWithHelper(expression);

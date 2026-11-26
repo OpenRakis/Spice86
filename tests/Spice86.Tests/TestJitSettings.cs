@@ -25,13 +25,4 @@ internal static class TestJitSettings {
     /// </summary>
     public static bool CompiledRun { get; } = Environment.GetEnvironmentVariable(CompiledRunVariable) == "1";
 
-    /// <summary>The execution AST rewriter the compiler applies: the IR round trip when enabled.</summary>
-    public static IExecutionAstRewriter Rewriter { get; } =
-        GeneratorIr ? new GeneratorIrRoundTrip() : new IdentityExecutionAstRewriter();
-
-    /// <summary>True when the compiler expands ALU calls inline: with the IR round trip.</summary>
-    public static bool ExpandAluCalls { get; } = GeneratorIr;
-
-    /// <summary>True when the compiler expands stack calls inline: with the IR round trip.</summary>
-    public static bool ExpandStackCalls { get; } = GeneratorIr;
 }

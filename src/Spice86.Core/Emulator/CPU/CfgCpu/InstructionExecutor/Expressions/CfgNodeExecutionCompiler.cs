@@ -8,6 +8,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
@@ -30,8 +31,7 @@ using System.Runtime.CompilerServices;
 public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
     private readonly IExecutionAstRewriter _rewriter;
-    private readonly bool _expandAluCalls;
-    private readonly bool _expandStackCalls;
+    private readonly bool _generatorIr;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
         ICfgNode Node, long Generation)> _compilationQueue = new();
@@ -45,25 +45,20 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// Initializes a new instance of <see cref="CfgNodeExecutionCompiler"/> and, when the
     /// <paramref name="jitMode"/> requires it, starts the background compiler threads.
     /// </summary>
-    /// <param name="rewriter">Rewrites each node's execution AST before it is compiled.</param>
-    /// <param name="expandAluCalls">When true, ALU calls are compiled as their inline expansion instead of a call to
-    /// the ALU (see <see cref="AstExpressionBuilder(bool, bool)"/>).</param>
-    /// <param name="expandStackCalls">When true, stack calls are compiled as their inline expansion
-    /// instead of a call to <c>Stack</c>; PushAll keeps the helper call.</param>
+    /// <param name="generatorIr">When true, each node's execution AST round trips through the code
+    /// generator's IR before compilation, and the ALU and stack calls are compiled as their inline
+    /// expansions instead of helper calls (see <see cref="AstExpressionBuilder(bool)"/>); PushAll keeps
+    /// its helper. When false, the AST compiles unchanged.</param>
     public CfgNodeExecutionCompiler(CfgNodeExecutionCompilerMonitor monitor, ILogger logger, JitMode jitMode,
-        IExecutionAstRewriter rewriter, bool expandAluCalls, bool expandStackCalls) {
+        bool generatorIr) {
         _monitor = monitor;
         _logger = logger;
         _jitMode = jitMode;
-        _rewriter = rewriter;
-        _expandAluCalls = expandAluCalls;
-        _expandStackCalls = expandStackCalls;
+        _generatorIr = generatorIr;
+        _rewriter = generatorIr ? new GeneratorIrRoundTrip() : new IdentityExecutionAstRewriter();
 
-        if (_expandAluCalls) {
-            _logger.LogInformation("CfgNodeExecutionCompiler: ALU calls are executed as inline expansions");
-        }
-        if (_expandStackCalls) {
-            _logger.LogInformation("CfgNodeExecutionCompiler: stack calls are executed as inline expansions");
+        if (_generatorIr) {
+            _logger.LogInformation("CfgNodeExecutionCompiler: ALU and stack calls are executed as inline expansions");
         }
 
         if (_jitMode == JitMode.InterpretedThenCompiled) {
@@ -130,7 +125,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// </summary>
     public void Compile(ICfgNode node) {
         IVisitableAstNode executionAst = _rewriter.Rewrite(node, node.ExecutionAst);
-        AstExpressionBuilder expressionBuilder = new(_expandAluCalls, _expandStackCalls);
+        AstExpressionBuilder expressionBuilder = new(_generatorIr);
         Expression expression = executionAst.Accept(expressionBuilder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper =
             expressionBuilder.ToActionWithHelper(expression);
