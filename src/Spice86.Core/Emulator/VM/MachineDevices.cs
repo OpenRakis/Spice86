@@ -26,6 +26,11 @@ public enum MachineDevices {
     Dos = 64,
 
     /// <summary>
+    ///     The two DMA controllers and their eight channels (<see cref="Machine.DmaSystem" />).
+    /// </summary>
+    Dma = 256,
+
+    /// <summary>
     ///     The Sound Blaster (<see cref="Machine.SoundBlaster" />): its DSP, mixer registers, DMA transfer and
     ///     scheduler events.
     /// </summary>
@@ -34,5 +39,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | Dos | SoundBlaster
+    All = Pic | Pit | Dos | Dma | SoundBlaster
 }

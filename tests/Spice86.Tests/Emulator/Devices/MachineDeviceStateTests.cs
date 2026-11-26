@@ -17,6 +17,7 @@ public sealed class MachineDeviceStateTests {
     private const ushort PitChannel0Port = 0x40;
     private const ushort PitControlPort = 0x43;
     private const byte Channel0RateGenerator = 0x34;
+    private const ushort DmaChannel1PagePort = 0x83;
 
     [Fact]
     public void RestoreAfterChangesThroughPortsGivesTheCapturedDeviceState() {
@@ -27,7 +28,7 @@ public sealed class MachineDeviceStateTests {
         MachineDeviceState captured = machine.CaptureDeviceState();
 
         // Act
-        ChangePicAndPitThroughPorts(machine);
+        ChangeDevicesThroughPorts(machine);
         MachineDeviceState changed = machine.CaptureDeviceState();
         machine.RestoreDeviceState(captured);
 
@@ -36,6 +37,8 @@ public sealed class MachineDeviceStateTests {
         MachineDeviceState restored = machine.CaptureDeviceState();
         changed.Pic.Should().NotBe(captured.Pic);
         restored.Pic.Should().Be(captured.Pic);
+        changed.Dma.Should().NotBe(captured.Dma);
+        restored.Dma.Should().Be(captured.Dma);
         WithoutTimes(changed.Pit).Should().NotBe(WithoutTimes(captured.Pit));
         WithoutTimes(restored.Pit).Should().Be(WithoutTimes(captured.Pit));
     }
@@ -50,7 +53,7 @@ public sealed class MachineDeviceStateTests {
         DualPicState picBefore = machine.DualPic.CaptureState();
 
         // Act
-        ChangePicAndPitThroughPorts(machine);
+        ChangeDevicesThroughPorts(machine);
         PitTimerState pitAfterChange = machine.Timer.CaptureState();
         machine.RestoreDeviceState(picOnly);
 
@@ -75,6 +78,7 @@ public sealed class MachineDeviceStateTests {
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
         none.Dos.Should().BeNull();
+        none.Dma.Should().BeNull();
         none.SoundBlaster.Should().BeNull();
     }
 
@@ -99,11 +103,12 @@ public sealed class MachineDeviceStateTests {
         machine.Dos.FileManager.DiskTransferAreaAddressOffset.Should().Be(dtaOffset);
     }
 
-    private static void ChangePicAndPitThroughPorts(Machine machine) {
+    private static void ChangeDevicesThroughPorts(Machine machine) {
         machine.IoPortDispatcher.WriteByte(PrimaryPicDataPort, 0xA5);
         machine.IoPortDispatcher.WriteByte(PitControlPort, Channel0RateGenerator);
         machine.IoPortDispatcher.WriteByte(PitChannel0Port, 0x34);
         machine.IoPortDispatcher.WriteByte(PitChannel0Port, 0x12);
+        machine.IoPortDispatcher.WriteByte(DmaChannel1PagePort, 0x42);
     }
 
     /// <summary>
