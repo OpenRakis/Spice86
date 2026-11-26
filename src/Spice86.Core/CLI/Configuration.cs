@@ -179,8 +179,8 @@ public sealed class Configuration : CommandSettings {
     /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
     /// call. It wraps every branch condition and switch value in a probe that reports to an
     /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/>, prints every port access
-    /// on its own instead of as device operations, and writes <c>manifest.json</c> next to the sources.
-    /// Off by default.
+    /// on its own instead of as device operations. Off by default. Every dump writes
+    /// <c>manifest.json</c> next to the sources, check build or not.
     /// </summary>
     [CommandOption("--GeneratedCodeCheckBuild")]
     public bool GeneratedCodeCheckBuild { get; init; }

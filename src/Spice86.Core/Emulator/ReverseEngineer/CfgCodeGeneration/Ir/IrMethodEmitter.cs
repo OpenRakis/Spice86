@@ -346,7 +346,7 @@ internal sealed class IrMethodEmitter(
                 serviceCallNotifications), expressions);
         }
         void PrintAfterCopyIns(CSharpSourceWriter target, CSharpStatementPrinter printer,
-            bool printFrame) {
+            CSharpExpressionPrinter expressions, bool printFrame) {
             if (analyzed.RegisterLocals is { } promoted) {
                 foreach (LocalDeclarationNode declaration in promoted.Declarations) {
                     printer.Print(declaration);
@@ -371,7 +371,14 @@ internal sealed class IrMethodEmitter(
             if (!IsEmpty(prepared.EntryDispatch)) {
                 target.Line();
             }
+            if (branchProbes is not null) {
+                // Only the body is probed: the entry dispatch above selects an entry, which is no
+                // branch of the program.
+                branchProbes.Method = method.MethodName;
+                expressions.BranchProbes = branchProbes;
+            }
             printer.Print(analyzed.Body);
+            expressions.BranchProbes = null;
         }
         bool printFrame = false;
         if (analyzed.Signature is not null || prepared.FramePlan is not null) {
@@ -382,7 +389,7 @@ internal sealed class IrMethodEmitter(
             // frame property at all: the frame variable is not declared when nothing reads it.
             CSharpSourceWriter scratch = new();
             (CSharpStatementPrinter dryPrinter, CSharpExpressionPrinter dryExpressions) = Printers(scratch);
-            PrintAfterCopyIns(scratch, dryPrinter, true);
+            PrintAfterCopyIns(scratch, dryPrinter, dryExpressions, true);
             printFrame = dryExpressions.PrintedFrameUse;
             if (analyzed.Signature is { } signature) {
                 foreach (TypedParameter parameter in TypedSignatures.CopyInParameters(irMethod,
@@ -395,14 +402,7 @@ internal sealed class IrMethodEmitter(
             }
         }
         (CSharpStatementPrinter printer, CSharpExpressionPrinter expressions) = Printers(writer);
-        if (branchProbes is not null) {
-            // Only the body is probed: the entry dispatch PrintAfterCopyIns prints first selects an
-            // entry, which is no branch of the program.
-            branchProbes.Method = method.MethodName;
-            expressions.BranchProbes = branchProbes;
-        }
-        PrintAfterCopyIns(writer, printer, printFrame);
-        expressions.BranchProbes = null;
+        PrintAfterCopyIns(writer, printer, expressions, printFrame);
         printer.FinishInstructions();
         writer.CloseBlock();
         return printer.InstructionLines;

@@ -301,7 +301,7 @@ public sealed class BranchProbesTest {
     [Theory]
     [InlineData("if_conversion")]
     [InlineData("partition_jump_table")]
-    public void DefaultBuildHasNoProbeAndNoManifest(string fixtureName) {
+    public void DefaultBuildHasNoProbeAndItsManifestNoSite(string fixtureName) {
         // Arrange
         using AsmRunScope discovery = new(AsmFixtureCatalog.Partition(fixtureName));
         CfgPartitionedProgram program = GeneratedCodeMachineTestRunner.GenerateProgram(discovery).Program;
@@ -309,9 +309,10 @@ public sealed class BranchProbesTest {
         // Act
         GeneratedCSharpProgram defaultBuild = Generate(program, GeneratorOptions.Default);
 
-        // Assert
+        // Assert: the manifest is written at every dump, but probe sites stay conditional on the probes
         ProbeIdsIn(defaultBuild.SourceText).Should().BeEmpty();
-        defaultBuild.Manifest.Should().BeNull();
+        defaultBuild.Manifest.Sites.Should().BeEmpty();
+        defaultBuild.Manifest.Methods.Should().NotBeEmpty();
     }
 
     [Theory]
@@ -326,8 +327,7 @@ public sealed class BranchProbesTest {
         GeneratedCSharpProgram checkBuild = Generate(program, GeneratorOptions.CheckBuild);
 
         // Assert: the ids in the source and in the manifest are the same set, each listed once
-        checkBuild.Manifest.Should().NotBeNull();
-        GeneratedCodeManifest manifest = checkBuild.Manifest!;
+        GeneratedCodeManifest manifest = checkBuild.Manifest;
         HashSet<int> printed = ProbeIdsIn(checkBuild.SourceText);
         printed.Should().NotBeEmpty();
         manifest.Sites.Select(site => site.Id).Should().OnlyHaveUniqueItems();

@@ -21,6 +21,7 @@ public class CfgCSharpDumperTest {
         new("CfgGeneratedOverrides.cs", "// main overrides\n");
     private static readonly GeneratedSourceFile SegmentFile =
         new("CfgGeneratedOverrides.F000.cs", "// segment methods\n");
+    private static readonly GeneratedCodeManifest EmptyManifest = new([]);
 
     private static CfgCSharpDumper NewDumper() => new(new CfgCSharpGenerator(), NullLogger.Instance);
 
@@ -40,7 +41,7 @@ public class CfgCSharpDumperTest {
     public void WriteWritesEveryFileIntoTheDirectoryUnderItsName() {
         // Arrange
         string directory = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        GeneratedCSharpProgram program = new() { Files = [SupplierFile, MainFile, SegmentFile] };
+        GeneratedCSharpProgram program = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile, SegmentFile] };
 
         try {
             // Act
@@ -59,7 +60,7 @@ public class CfgCSharpDumperTest {
     public void WriteOfAnEmptyProgramWritesTheSingleCommentText() {
         // Arrange
         string directory = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        GeneratedCSharpProgram program = new() { Files = [] };
+        GeneratedCSharpProgram program = new() { Manifest = EmptyManifest, Files = [] };
 
         try {
             // Act
@@ -80,7 +81,7 @@ public class CfgCSharpDumperTest {
         Directory.CreateDirectory(directory);
         string legacyPath = Path.Join(directory, "CfgGeneratedOverrides.cs");
         File.WriteAllText(legacyPath, "// whole program in one file, from an earlier scaffolder\n");
-        GeneratedCSharpProgram program = new() { Files = [SupplierFile, MainFile, SegmentFile] };
+        GeneratedCSharpProgram program = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile, SegmentFile] };
 
         try {
             // Act
@@ -101,8 +102,8 @@ public class CfgCSharpDumperTest {
     public void SecondWriteLeavesNoFileOfTheFirstProgram() {
         // Arrange
         string directory = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        GeneratedCSharpProgram first = new() { Files = [SupplierFile, MainFile, SegmentFile] };
-        GeneratedCSharpProgram second = new() { Files = [SupplierFile, MainFile] };
+        GeneratedCSharpProgram first = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile, SegmentFile] };
+        GeneratedCSharpProgram second = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile] };
         CfgCSharpDumper dumper = NewDumper();
 
         try {
@@ -123,8 +124,8 @@ public class CfgCSharpDumperTest {
     public void SecondWriteProjectLeavesNoFileOfTheFirstProgram() {
         // Arrange
         string directory = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        GeneratedCSharpProgram first = new() { Files = [SupplierFile, MainFile, SegmentFile] };
-        GeneratedCSharpProgram second = new() { Files = [SupplierFile, MainFile] };
+        GeneratedCSharpProgram first = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile, SegmentFile] };
+        GeneratedCSharpProgram second = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile] };
         CfgCSharpDumper dumper = NewDumper();
 
         try {
@@ -146,7 +147,7 @@ public class CfgCSharpDumperTest {
         // Arrange: after a first project write, the folder also holds a user file the generator
         // knows nothing of.
         string directory = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        GeneratedCSharpProgram program = new() { Files = [SupplierFile, MainFile] };
+        GeneratedCSharpProgram program = new() { Manifest = EmptyManifest, Files = [SupplierFile, MainFile] };
         CfgCSharpDumper dumper = NewDumper();
 
         try {

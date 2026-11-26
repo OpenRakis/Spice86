@@ -18,10 +18,10 @@ internal sealed class GeneratedCSharpProgram {
     public required IReadOnlyList<GeneratedSourceFile> Files { get; init; }
 
     /// <summary>
-    /// The manifest of the program, or <c>null</c> when the generator's manifest option is off. It is no
-    /// part of <see cref="SourceText"/>.
+    /// The manifest of the program: its methods, entries, typed values, the instruction address map, and
+    /// the probe sites of a probes build. It is no part of <see cref="SourceText"/>.
     /// </summary>
-    public GeneratedCodeManifest? Manifest { get; init; }
+    public required GeneratedCodeManifest Manifest { get; init; }
 
     /// <summary>
     /// Golden form of the program: every file preceded by a <c>// ==== file: &lt;name&gt; ====</c>
@@ -44,16 +44,6 @@ internal sealed class GeneratedCSharpProgram {
             return builder.ToString();
         }
     }
-    /// <summary>
-    /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
-    /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.
-    /// </summary>
-    /// <summary>
-    /// One entry per printed instruction - address, file, method and 1-based line range - the data
-    /// behind <c>GeneratedAddressMap.json</c>; empty for programs built without generation.
-    /// </summary>
-    public IReadOnlyList<GeneratedAddressMapEntry> AddressMap { get; init; } = [];
-
     /// <summary>
     /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
     /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.

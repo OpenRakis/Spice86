@@ -45,7 +45,7 @@ public sealed class IrMethodEmitterTest {
         AssertCompiles(program);
         program.SourceText.Should().NotContain("if (v2_0000 == 0)");
         program.SourceText.Should().Contain("AH = (byte)(v1_0000 / v2_0000);");
-        program.AddressMap.Should().Contain(entry => entry.Address == "F000:0002");
+        program.Manifest.AddressMap.Should().Contain(entry => entry.Address == "F000:0002");
     }
 
     [Fact]

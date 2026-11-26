@@ -752,6 +752,7 @@ public class GeneratedCodeMetricsCollectorTest {
             }
             """;
         GeneratedCSharpProgram program = new() {
+            Manifest = new GeneratedCodeManifest([]),
             Files = [
                 new GeneratedSourceFile("CfgGeneratedOverrides.016D.cs", programSource),
                 new GeneratedSourceFile("CfgGeneratedOverrides.Support.Wiring.cs", supportSource)

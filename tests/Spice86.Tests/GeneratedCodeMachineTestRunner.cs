@@ -481,14 +481,14 @@ internal sealed class GeneratedCodeMachineTestRunner {
             .SelectMany(block => block.Instructions.OfType<CfgInstruction>())
             .Select(instruction => instruction.Address.ToString())
             .ToHashSet();
-        HashSet<string> mapped = generated.AddressMap.Select(entry => entry.Address).ToHashSet();
+        HashSet<string> mapped = generated.Manifest.AddressMap.Select(entry => entry.Address).ToHashSet();
         mapped.Should().BeSubsetOf(expected,
             "every mapped instruction is an instruction of the partitioned program; coverage of "
             + "printed instructions is structural - the printer records one entry per "
             + "InstructionStartNode");
         Dictionary<string, string[]> fileLines = generated.Files
             .ToDictionary(file => file.Name, file => NormalizeLines(file.Text).ToArray());
-        foreach (GeneratedAddressMapEntry entry in generated.AddressMap) {
+        foreach (AddressMapEntryManifest entry in generated.Manifest.AddressMap) {
             fileLines.Should().ContainKey(entry.File, $"entry {entry.Address} names an existing file");
             string[] lines = fileLines[entry.File];
             entry.FirstLine.Should().BeGreaterThanOrEqualTo(1);

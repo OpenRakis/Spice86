@@ -49,7 +49,6 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _serviceCallNotifications;
     private readonly bool _branchProbes;
     private readonly bool _deviceOperations;
-    private readonly bool _manifest;
     private readonly int _maxLinesPerFile;
     private readonly bool _printAsmComments;
     private readonly GenerationPolicy _policy;
@@ -113,7 +112,6 @@ internal sealed class CfgCSharpGenerator {
         _serviceCallNotifications = options.ServiceCallNotifications;
         _branchProbes = options.BranchProbes;
         _deviceOperations = options.DeviceOperations;
-        _manifest = options.Manifest;
         _printAsmComments = options.PrintAsmComments;
         _policy = options.Policy;
         _maxLinesPerFile = maxLinesPerFile;
@@ -335,7 +333,7 @@ internal sealed class CfgCSharpGenerator {
                     methodCensus.LiftedBlocks, methodCensus.LiftedStatements, timer));
             }
         }
-        List<GeneratedAddressMapEntry> addressMap = new(plan.Methods
+        List<AddressMapEntryManifest> addressMap = new(plan.Methods
             .Sum(method => method.Nodes.OfType<CfgInstruction>().Count()));
         files.AddRange(BuildSegmentFiles(methodTexts
             .Where(method => !method.Support)
@@ -382,10 +380,8 @@ internal sealed class CfgCSharpGenerator {
             UntypedMethods = analysis.TypedSignatures.Untyped,
             ConstantMemoryAccesses = constantMemoryAccesses,
             DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
-            Manifest = _manifest
-                ? BuildManifest(manifestMethods, branchProbes, methodTexts.Select(method => method.Text))
-                : null,
-            AddressMap = addressMap,
+            Manifest = BuildManifest(manifestMethods, branchProbes,
+                methodTexts.Select(method => method.Text), addressMap),
             FramelessServiceCallSites = [.. prepared
                 .SelectMany(method => method.IrMethod.Blocks.SelectMany(block => block.Statements))
                 .Where(statement => statement.Node is InterruptServiceCallNode { WritesFrame: false })
@@ -405,7 +401,7 @@ internal sealed class CfgCSharpGenerator {
     /// the probe sites present in <paramref name="methodTexts"/>.</summary>
     private static GeneratedCodeManifest BuildManifest(
         List<(MethodPlan Method, TypedSignature? Signature)> methods, BranchProbeSites? branchProbes,
-        IEnumerable<string> methodTexts) {
+        IEnumerable<string> methodTexts, List<AddressMapEntryManifest> addressMap) {
         ILookup<string, BranchProbeSite> sitesByMethod =
             (branchProbes?.SitesIn(methodTexts) ?? []).ToLookup(site => site.Method);
         List<GeneratedMethodManifest> manifestMethods = new(methods.Count);
@@ -419,7 +415,7 @@ internal sealed class CfgCSharpGenerator {
                 sitesByMethod[method.MethodName].Select(site => new ProbeSiteManifest(site.Id, site.Kind,
                     site.Address?.Segment, site.Address?.Offset, site.Text)).ToList()));
         }
-        return new GeneratedCodeManifest(manifestMethods);
+        return new GeneratedCodeManifest(manifestMethods) { AddressMap = addressMap };
     }
 
     private static List<MethodValueManifest> ManifestValues(IReadOnlyList<TypedParameter>? values) =>
@@ -1043,7 +1039,7 @@ internal sealed class CfgCSharpGenerator {
     private List<GeneratedSourceFile> BuildSegmentFiles(
         List<(ushort Segment, string Text, bool HasFrame, string MethodName,
             IReadOnlyList<MethodInstructionLine> Instructions)> methodTexts,
-        List<GeneratedAddressMapEntry> addressMap) {
+        List<AddressMapEntryManifest> addressMap) {
         List<GeneratedSourceFile> files = [];
         foreach (var group in methodTexts
             .GroupBy(method => method.Segment)
@@ -1062,7 +1058,7 @@ internal sealed class CfgCSharpGenerator {
     private List<GeneratedSourceFile> BuildSupportStubFiles(
         List<(string Text, bool HasFrame, uint EntryLinear, string MethodName,
             IReadOnlyList<MethodInstructionLine> Instructions)> methodTexts,
-        List<GeneratedAddressMapEntry> addressMap) {
+        List<AddressMapEntryManifest> addressMap) {
         var chunks = methodTexts
             .OrderBy(method => method.EntryLinear)
             .Select(method => (method.Text, method.HasFrame, method.MethodName, method.Instructions))
@@ -1083,7 +1079,7 @@ internal sealed class CfgCSharpGenerator {
     private List<GeneratedSourceFile> BuildSegmentPartFiles(ushort segment,
         List<(string Text, bool HasFrame, string MethodName,
             IReadOnlyList<MethodInstructionLine> Instructions)> chunks,
-        List<GeneratedAddressMapEntry> addressMap) {
+        List<AddressMapEntryManifest> addressMap) {
         var parts = SplitChunks(chunks);
         List<GeneratedSourceFile> files = new(parts.Count);
         for (int i = 0; i < parts.Count; i++) {
@@ -1098,13 +1094,13 @@ internal sealed class CfgCSharpGenerator {
     private static string BuildPartFileText(
         List<(string Text, bool HasFrame, string MethodName,
             IReadOnlyList<MethodInstructionLine> Instructions)> part, string fileName,
-        List<GeneratedAddressMapEntry> addressMap) {
+        List<AddressMapEntryManifest> addressMap) {
         string prefix = SegmentFilePrefix(part.Any(chunk => chunk.HasFrame));
         int startIndex = CountLines(prefix);
         StringBuilder text = new(prefix);
         foreach (var chunk in part) {
             foreach (MethodInstructionLine instruction in chunk.Instructions) {
-                addressMap.Add(new GeneratedAddressMapEntry(instruction.Address.ToString(), fileName,
+                addressMap.Add(new AddressMapEntryManifest(instruction.Address.ToString(), fileName,
                     chunk.MethodName, startIndex + instruction.FirstLine + 1,
                     startIndex + instruction.LastLine + 1));
             }

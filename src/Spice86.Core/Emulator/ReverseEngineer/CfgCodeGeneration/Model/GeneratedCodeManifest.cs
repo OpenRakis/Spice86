@@ -57,6 +57,11 @@ public sealed record GeneratedCodeManifest(IReadOnlyList<GeneratedMethodManifest
         Converters = { new JsonStringEnumConverter() }
     };
 
+    /// <summary>Where each instruction of the program lives in the generated files, recorded while
+    /// the methods are printed. Present in every manifest; probe sites stay conditional on the probes
+    /// option.</summary>
+    public IReadOnlyList<AddressMapEntryManifest> AddressMap { get; init; } = [];
+
     /// <summary>Every probe site of the program, in site number order.</summary>
     [JsonIgnore]
     public IReadOnlyList<ProbeSiteManifest> Sites =>
@@ -111,3 +116,16 @@ public sealed record ProbeSiteManifest(int Id, BranchProbeKind Kind, ushort? Seg
     /// condition from the tests of several instructions, or from none.</summary>
     public bool Synthetic => Segment is null;
 }
+
+/// <summary>Where one instruction lives in the generated files: <see cref="FirstLine"/> and
+/// <see cref="LastLine"/> are 1-based lines of <see cref="File"/>; the instruction's first line is the
+/// one its ASM comment would have started at, so with comments off it is the line of the instruction's
+/// first printed statement. An instruction that prints nothing is an empty range: <see cref="LastLine"/>
+/// is <see cref="FirstLine"/> - 1.</summary>
+/// <param name="Address">The instruction address, <c>"SSSS:OOOO"</c> hex.</param>
+/// <param name="File">Name of the generated file the instruction printed into.</param>
+/// <param name="Method">Name of the generated method the instruction printed into.</param>
+/// <param name="FirstLine">First 1-based line of the instruction in <see cref="File"/>.</param>
+/// <param name="LastLine">Last 1-based line of the instruction in <see cref="File"/>.</param>
+public sealed record AddressMapEntryManifest(string Address, string File, string Method,
+    int FirstLine, int LastLine);

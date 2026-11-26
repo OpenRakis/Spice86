@@ -13,8 +13,7 @@ public sealed record GeneratorOptions {
     public static GeneratorOptions CheckBuild { get; } = new() {
         ServiceCallNotifications = true,
         BranchProbes = true,
-        DeviceOperations = false,
-        Manifest = true
+        DeviceOperations = false
     };
 
     /// <summary>Whether each emitted method runs the census classifiers the generated-program diagnostics
@@ -43,11 +42,6 @@ public sealed record GeneratorOptions {
     /// of the device. On by default. When off, every port access prints on its own, so a tool that
     /// intercepts ports sees the same accesses from generated code as from the emulated original.</summary>
     public bool DeviceOperations { get; init; } = true;
-
-    /// <summary>Whether the generated program carries a
-    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.GeneratedCodeManifest"/>,
-    /// which the dumper writes next to the sources. Off by default.</summary>
-    public bool Manifest { get; init; }
 
     /// <summary>Whether every instruction keeps its <c>// SSSS:OOOO asm</c> comment; the address map
     /// records the address either way.</summary>

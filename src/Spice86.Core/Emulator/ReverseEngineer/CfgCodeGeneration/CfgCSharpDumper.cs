@@ -30,7 +30,7 @@ internal sealed class CfgCSharpDumper {
     /// </summary>
     public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
-            return new GeneratedCSharpProgram { Files = [] };
+            return new GeneratedCSharpProgram { Files = [], Manifest = new GeneratedCodeManifest([]) };
         }
 
         return _generator.Generate(program, progress);
@@ -53,30 +53,13 @@ internal sealed class CfgCSharpDumper {
             File.WriteAllText(Path.Join(directory, file.Name), file.Text);
         }
         WriteManifest(generated, directory);
-        WriteAddressMap(generated, directory);
     }
 
-    /// <summary>Writes the program's manifest into <paramref name="directory"/>, or deletes the manifest a
-    /// previous dump left there when the program has none.</summary>
+    /// <summary>Writes the program's manifest into <paramref name="directory"/>.</summary>
     private static void WriteManifest(GeneratedCSharpProgram generated, string directory) {
-        string path = Path.Join(directory, GeneratedCodeManifest.FileName);
-        if (generated.Manifest is { } manifest) {
-            File.WriteAllText(path, manifest.ToJson());
-        } else if (File.Exists(path)) {
-            File.Delete(path);
-        }
+        File.WriteAllText(Path.Join(directory, GeneratedCodeManifest.FileName), generated.Manifest.ToJson());
     }
 
-    /// <summary>Writes the instruction address map as <c>GeneratedAddressMap.json</c>: a JSON array
-    /// of <c>{address, file, method, firstLine, lastLine}</c> entries, one per printed instruction.
-    /// An empty range (<c>lastLine &lt; firstLine</c>) marks an instruction that printed nothing.</summary>
-    private static void WriteAddressMap(GeneratedCSharpProgram generated, string directory) {
-        string json = JsonSerializer.Serialize(generated.AddressMap.Select(entry => new {
-            address = entry.Address, file = entry.File, method = entry.Method,
-            firstLine = entry.FirstLine, lastLine = entry.LastLine
-        }), JsonOptions);
-        File.WriteAllText(Path.Join(directory, GeneratedOverrideNames.AddressMapFileName), json);
-    }
 
     private static readonly JsonSerializerOptions JsonOptions = new() {
         WriteIndented = true
@@ -87,11 +70,9 @@ internal sealed class CfgCSharpDumper {
     /// with another segment set would otherwise leave a partial class that no longer compiles.</summary>
     private static void DeleteStaleGeneratedFiles(string directory, GeneratedCSharpProgram generated) {
         HashSet<string> kept = generated.Files.Select(file => file.Name).ToHashSet();
-        kept.Add(GeneratedOverrideNames.AddressMapFileName);
         foreach (string path in Directory.EnumerateFiles(directory)) {
             string name = Path.GetFileName(path);
             bool isGenerated = name == GeneratedOverrideNames.SupplierFileName
-                || name == GeneratedOverrideNames.AddressMapFileName
                 || (name.StartsWith(GeneratedOverrideNames.OverrideClassName, StringComparison.Ordinal)
                     && name.EndsWith(".cs", StringComparison.Ordinal));
             if (isGenerated && !kept.Contains(name)) {
@@ -127,7 +108,6 @@ internal sealed class CfgCSharpDumper {
             File.WriteAllText(Path.Join(projectDirectory, file.Name), file.Text);
         }
         WriteManifest(generated, projectDirectory);
-        WriteAddressMap(generated, projectDirectory);
     }
 
     /// <summary>

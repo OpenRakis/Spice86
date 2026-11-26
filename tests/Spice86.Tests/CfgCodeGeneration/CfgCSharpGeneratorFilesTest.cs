@@ -70,7 +70,7 @@ public class CfgCSharpGeneratorFilesTest {
         // Assert
         commented.SourceText.Should().Contain("// F000:0000 ret");
         silent.SourceText.Should().NotContain("// F000:0000 ret");
-        silent.AddressMap.Should().ContainSingle(entry => entry.Address == "F000:0000"
+        silent.Manifest.AddressMap.Should().ContainSingle(entry => entry.Address == "F000:0000"
             && entry.File == "CfgGeneratedOverrides.F000.cs" && entry.Method == "partition1_F000_0000_F0000",
             "the suppressed instruction still maps to its file and method");
     }
