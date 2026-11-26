@@ -758,7 +758,7 @@ public sealed class GeneratedCodeMachineTest {
         Action check = () => GeneratedCodeDifferentialReport.Check("abandoned_argument.stk",
             new GenerationPolicy(GenerationRelaxation.AbandonedStackSlotsUnobserved),
             emulated, generatedState, new HashSet<SegmentedAddress>(), generated.StackSpaceCallSites,
-            generated.DroppedStackSlotSites);
+            generated.DroppedStackSlotSites, FinalStateComparison.Strict);
         check.Should().Throw<Xunit.Sdk.XunitException>()
             .WithMessage("*ram:*0x20200-0x20200*",
                 "reading the abandoned argument bytes and storing them makes that RAM byte " +
@@ -799,7 +799,7 @@ public sealed class GeneratedCodeMachineTest {
         Action check = () => GeneratedCodeDifferentialReport.Check("dropped_saved_slot.stk",
             new GenerationPolicy(GenerationRelaxation.AbandonedStackSlotsUnobserved),
             emulated, generatedState, new HashSet<SegmentedAddress>(), generated.StackSpaceCallSites,
-            generated.DroppedStackSlotSites);
+            generated.DroppedStackSlotSites, FinalStateComparison.Strict);
         check.Should().Throw<Xunit.Sdk.XunitException>()
             .WithMessage("*ram:*0x20200-0x20200*",
                 "reading the slot the dropped save pair omitted makes that RAM byte differ " +
