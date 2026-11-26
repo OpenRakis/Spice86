@@ -2,7 +2,7 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     mov ax, 0x1111
     mov bx, 0x2222
     mov cx, 0x3333
@@ -10,11 +10,11 @@ start:
     push bx
     push cx
     mov ax, 0xDD
-    mov byte [0x0401], al
+    mov byte [0x0601], al
     pop cx
     pop bx
     pop ax
-    mov byte [0x0402], ah
+    mov byte [0x0602], ah
     pop dx
     hlt
 

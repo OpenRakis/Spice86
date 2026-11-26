@@ -20,6 +20,30 @@ internal static class GeneratedCodeFeatureChecks {
         new(DoesNotContain, "// DOS 3Dh")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomDeadStore = [
+        new(Contains, "Segment2000Globals.Word0020 = 0x2222;"),
+        new(DoesNotContain, "Word0020 = 0x1111")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomDiv16Named = [
+        new(Contains, "(AX, DX) = Div16(divisor: 3, dividend: 0x00020000);")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomWideValues = [
+        new(Contains, "AX = DsGlobals.Word0610;"),
+        new(Contains, "EAX = DsGlobals.Dword0612 >> 16;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomFlagIdioms = [
+        new(Contains, "DsGlobals.Byte0601 = 1;"),
+        new(Contains, "if (word1 > 5) {")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomLocalsNaming = [
+        new(Contains, "UInt8[DS, index + 0x0610] = 0xAA;"),
+        new(Contains, "index++;")
+    ];
+
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")
     ];

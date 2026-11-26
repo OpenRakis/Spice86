@@ -2,15 +2,15 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     push 0x0042
     call with_arg
     add sp, 2
-    mov byte [0x0401], al
+    mov byte [0x0601], al
     call discarded
     db 0x66
     call wide32
-    mov byte [0x0402], al
+    mov byte [0x0602], al
     hlt
 with_arg:
     push bp

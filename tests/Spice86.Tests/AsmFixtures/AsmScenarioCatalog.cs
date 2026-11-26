@@ -410,6 +410,22 @@ internal static class AsmScenarioCatalog {
 
     private static IReadOnlyList<AsmScenario> BuildCpuScenarios() {
         List<AsmScenario> scenarios = [
+            AsmScenario.FromFixture("idiom_dead_store", () => AsmFixtureCatalog.Idiom("idiom_dead_store",
+                (0x600, 0x01), (0x601, 0x22)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomDeadStore),
+            AsmScenario.FromFixture("idiom_div16_named", () => AsmFixtureCatalog.Idiom("idiom_div16_named",
+                (0x600, 0x01), (0x601, 0xAA)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomDiv16Named),
+            AsmScenario.FromFixture("idiom_wide_values", () => AsmFixtureCatalog.Idiom("idiom_wide_values",
+                (0x600, 0x01), (0x601, 0x12), (0x602, 0x34), (0x610, 0x34), (0x611, 0x12),
+                (0x612, 0x78), (0x613, 0x56), (0x614, 0x34), (0x615, 0x12)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomWideValues),
+            AsmScenario.FromFixture("idiom_flag_idioms", () => AsmFixtureCatalog.Idiom("idiom_flag_idioms",
+                (0x600, 0x01), (0x601, 0x01), (0x602, 0x01)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomFlagIdioms),
+            AsmScenario.FromFixture("idiom_locals_naming", () => AsmFixtureCatalog.Idiom("idiom_locals_naming",
+                (0x600, 0x01), (0x601, 0x04), (0x610, 0xAA), (0x611, 0xAA), (0x612, 0xAA), (0x613, 0xAA)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomLocalsNaming),
             AsmScenario.FromFixture("fpuinit", AsmFixtureCatalog.FpuInit),
             CpuBin("add"),
             CpuBin("bcdcnv"),

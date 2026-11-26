@@ -2,11 +2,11 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     mov cx, 5
     call compute
-    mov byte [0x0401], al
-    mov byte [0x0402], dl
+    mov byte [0x0601], al
+    mov byte [0x0602], dl
     hlt
 compute:
     mov ax, cx

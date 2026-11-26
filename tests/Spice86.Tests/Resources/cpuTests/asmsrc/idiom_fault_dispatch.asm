@@ -2,7 +2,7 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     mov ax, 0
     mov ds, ax
     mov word [0x0000], fault_handler
@@ -11,10 +11,10 @@ start:
     xor cx, cx
     mov ax, 5
     div cx
-    mov byte [0x0401], 0xFF
+    mov byte [0x0601], 0xFF
     hlt
 fault_handler:
-    mov byte [0x0401], 0x42
+    mov byte [0x0601], 0x42
     add sp, 0
     iret
 

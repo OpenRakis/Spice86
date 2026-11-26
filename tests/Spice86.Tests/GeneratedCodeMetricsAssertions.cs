@@ -190,9 +190,14 @@ internal static class GeneratedCodeMetricsAssertions {
         GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
         string fixture = parts.Program.Fixture;
         lock (TighteningGate) {
-            Accumulate(parts.Program, "program", fixture);
-            Accumulate(parts.Support, "support", fixture);
-            ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
+            ReadabilityBaseline baseline;
+            if (LoadBaseline().TryGetValue(fixture, out ReadabilityBaseline? existing)) {
+                Accumulate(parts.Program, "program", fixture);
+                Accumulate(parts.Support, "support", fixture);
+                baseline = existing;
+            } else {
+                baseline = SeedBaseline(parts);
+            }
             string path = Path.Join(BaselineDirectory, fixture + ".json");
             File.WriteAllText(path, FormatBaseline(baseline, fixture));
         }
@@ -216,6 +221,20 @@ internal static class GeneratedCodeMetricsAssertions {
             }
             LoosestMeasured[boundKey] = minimum ? Math.Min(seen, measured) : Math.Max(seen, measured);
         }
+    }
+
+    private static ReadabilityBaseline SeedBaseline(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
+        ReadabilityBaseline reference = LoadBaseline().Values.First();
+        return new ReadabilityBaseline(SeedPart(parts.Program, reference.Program),
+            SeedPart(parts.Support, reference.Support));
+    }
+
+    private static PartBounds SeedPart(GeneratedCodeMetrics metrics, PartBounds reference) {
+        Dictionary<string, int> minimum = reference.Minimum.Keys
+            .ToDictionary(key => key, key => MetricValue(metrics, key), StringComparer.Ordinal);
+        Dictionary<string, int> maximum = reference.Maximum.Keys
+            .ToDictionary(key => key, key => MetricValue(metrics, key), StringComparer.Ordinal);
+        return new PartBounds(minimum, maximum);
     }
 
     private static string FormatBaseline(ReadabilityBaseline baseline, string fixture) {

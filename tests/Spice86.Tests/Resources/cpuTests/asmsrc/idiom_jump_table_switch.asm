@@ -2,7 +2,7 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     mov bx, 0
     mov ax, bx
     shl bx, 1
@@ -11,10 +11,10 @@ table:
     dw target0
     dw target1
 target0:
-    mov byte [0x0401], 0xD0
+    mov byte [0x0601], 0xD0
     hlt
 target1:
-    mov byte [0x0401], 0xD1
+    mov byte [0x0601], 0xD1
     hlt
 
     rb 65520-$

@@ -2088,6 +2088,16 @@ internal static class AsmFixtureCatalog {
         return region;
     }
 
+    /// <summary>Runs an idiom showcase fixture, a small flat binary writing its result bytes in low
+    /// memory at 0x0400 and up.</summary>
+    public static AsmFixture Idiom(string binName, params (int Offset, byte Value)[] expectedBytes) {
+        return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+            foreach ((int offset, byte value) in expectedBytes) {
+                result.Memory.UInt8[0, offset].Should().Be(value, $"{binName}: result byte at {offset:X4}");
+            }
+        });
+    }
+
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {
         byte[] expectedMemory = new byte[0x403];
         expectedMemory[0x400] = b400;

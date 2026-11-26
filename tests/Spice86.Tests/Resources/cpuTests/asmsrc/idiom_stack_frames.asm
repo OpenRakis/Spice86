@@ -2,10 +2,10 @@
 use16
 
 start:
-    mov byte [0x0400], 0x01
+    mov byte [0x0600], 0x01
     mov ax, 3
     call framed
-    mov byte [0x0401], al
+    mov byte [0x0601], al
     hlt
 framed:
     push bp
