@@ -59,7 +59,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
         return TestGeneratedCodeCore(discoveryScope,
             executionScopes.Scopes.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
-                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates);
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates, []);
     }
 
     /// <summary>
@@ -105,7 +105,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
             }
             executionEntries.Add((() => execution.Prepare(baselineKey), FinalStateComparison.Of(execution)));
         }
-        return TestGeneratedCodeCore(discoveryScope, executionEntries, interpretedStates);
+        return TestGeneratedCodeCore(discoveryScope, executionEntries, interpretedStates,
+            discovery.GeneratedCodeChecks);
     }
 
     /// <summary>Whether an execution scenario is another run of the same scenario variant as the
@@ -151,14 +152,16 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
         return TestGeneratedCodeCore(discovery,
             executions.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
-                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates);
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates, []);
     }
 
     private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery,
         IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
-        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
+        IReadOnlyList<GeneratedCodeCheck> checks) {
         string goldenKey = GoldenKey(discovery.Fixture.Settings);
         GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions, interpretedStates);
+        GeneratedCodeChecks.Assert(goldenKey, generatedProgram, checks);
         // Compared last: a behavioural regression (memory dump or caller assertion) is the more
         // important failure and must be the one xunit reports when both a behavioural and a golden
         // mismatch occur on the same run.

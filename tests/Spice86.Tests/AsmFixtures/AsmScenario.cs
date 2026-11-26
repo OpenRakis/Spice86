@@ -68,6 +68,18 @@ internal sealed class AsmScenario {
     /// each with the reason it cannot be compared.</summary>
     public IReadOnlyList<(uint Address, int Length, string Reason)> UncomparedRamRanges { get; private set; } = [];
 
+    /// <summary>Check lines asserted on the program-only generated code of this scenario.</summary>
+    public IReadOnlyList<GeneratedCodeCheck> GeneratedCodeChecks { get; private set; } = [];
+
+    /// <summary>Returns the same scenario with generated-code check lines asserted after the
+    /// differential.</summary>
+    /// <param name="checks">The check lines.</param>
+    /// <returns>The scenario, with the check lines recorded.</returns>
+    public AsmScenario WithGeneratedCodeChecks(params GeneratedCodeCheck[] checks) {
+        GeneratedCodeChecks = checks;
+        return this;
+    }
+
     /// <summary>Returns the same scenario with the given RAM range left out of the
     /// interpreted-vs-generated comparison.</summary>
     /// <param name="linearAddress">Start of the range, as a linear address.</param>
@@ -108,7 +120,8 @@ internal sealed class AsmScenario {
             TimingDependentReason = TimingDependentReason,
             UncomparedParts = UncomparedParts,
             UncomparedPartsReason = UncomparedPartsReason,
-            UncomparedRamRanges = UncomparedRamRanges
+            UncomparedRamRanges = UncomparedRamRanges,
+            GeneratedCodeChecks = GeneratedCodeChecks
         };
     }
 
