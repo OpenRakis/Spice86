@@ -453,6 +453,9 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("idiom_fault_dispatch", () => AsmFixtureCatalog.Idiom("idiom_fault_dispatch",
                 (0x600, 0x01), (0x601, 0x42)))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomFaultDispatch),
+            AsmScenario.FromFixture("idiom_strict_abandoned_stack_slots",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_stack", "idiom_strict_abandoned_stack_slots", (0x600, 0x01), (0x601, 0x34), (0x602, 0x78)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStrictStack),
             AsmScenario.FromFixture("idiom_relaxation_unknown_memory_is_ram",
                 () => AsmFixtureCatalog.Idiom("idiom_relaxation_base", "idiom_relaxation_unknown_memory_is_ram", (0x600, 0x01), (0x601, 0x00))
                     .WithGenerationPolicy(RelaxedRamPolicy))

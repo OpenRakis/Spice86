@@ -89,6 +89,12 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "DispatchCpuFault(cpuException")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomStrictStack = [
+        new(Contains, "// Relaxations: none"),
+        new(Contains, "AL = CallWithStackArguments(biosSegment, 0x0024, () => unknown_F000_002D_F002D(0x1234), 0x1234);"),
+        new(DoesNotContain, "CallWithStackSpace")
+    ];
+
     public static readonly GeneratedCodeCheck[] IdiomRelaxationRam = [
         new(Contains, "// Relaxations: UnknownMemoryIsRam"),
         new(Contains, "SegmentA000Globals.Byte0010 = 0x42;")

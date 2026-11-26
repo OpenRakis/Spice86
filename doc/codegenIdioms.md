@@ -34,17 +34,7 @@ never_taken:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -70,17 +60,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -120,17 +100,7 @@ compute:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: CX. Outputs: AL, DL. Changes: AX, DX.</summary>
@@ -162,17 +132,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -214,17 +174,7 @@ start:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -244,17 +194,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -289,17 +229,7 @@ start:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -313,17 +243,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -361,17 +281,7 @@ start:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: ES. Does not return.</summary>
@@ -386,17 +296,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -436,17 +336,7 @@ start:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -466,17 +356,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -526,17 +406,7 @@ input: dw 7
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -559,17 +429,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -621,19 +481,7 @@ wide32:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: BP. Outputs: AL. Changes: AX, BP.</summary>
@@ -694,17 +542,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -742,17 +580,7 @@ loop_top:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -773,17 +601,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -823,17 +641,7 @@ handler:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL. Changes: AL, flags, DF.</summary>
@@ -859,166 +667,9 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-```
-
-## Relaxation: unknown memory is RAM
-
-With UnknownMemoryIsRam, an access to memory not known to be RAM is generated as a plain typed access.
-
-```asm
-; Build: fasm idiom_relaxation_base.asm ../idiom_relaxation_base.bin
-; unknown-memory-is-RAM: an access to the VGA framebuffer segment, memory that is not
-; known to be RAM. Strict mode treats it as device memory; the relaxation treats it as RAM.
-use16
-
-start:
-    mov byte [0x0600], 0x01
-    mov ax, 0xA000
-    mov es, ax
-    mov byte [es:0x0010], 0x42
-    mov al, [es:0x0010]
-    mov byte [0x0601], al
-    hlt
-
-    rb 65520-$
-    jmp start
-    rb 65535-$
-    db 0ffh
-```
-
-```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Does not return.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        DsGlobals.Byte0600 = 1;
-        AX = 0xA000;
-        ES = 0xA000;
-        SegmentA000Globals.Byte0010 = 0x42;
-        DsGlobals.Byte0601 = SegmentA000Globals.Byte0010;
-        return Hlt();
-    }
-
-}
-
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-// Relaxations: UnknownMemoryIsRam
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-```
-
-## Relaxation: accesses stay in segment
-
-With AccessesStayInSegment, an indexed access with an unproved range is generated without segment-wrap handling.
-
-```asm
-; Build: fasm idiom_relaxation_segment.asm ../idiom_relaxation_segment.bin
-; accesses-stay-in-segment: an indexed access whose index is read through CS, so its range
-; is not proved and strict mode must handle the segment-wrap case.
-use16
-
-start:
-    mov byte [0x0600], 0x01
-    mov si, input
-    mov bx, [cs:si]
-    mov byte [bx], 0x42
-    mov al, [bx]
-    mov byte [0x0601], al
-    hlt
-input: dw 0x0610
-
-    rb 65520-$
-    jmp start
-    rb 65535-$
-    db 0ffh
-```
-
-```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Does not return.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        ushort index;
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        DsGlobals.Byte0600 = 1;
-        index = SegmentF000Globals.Word0014;
-        UInt8[DS, index] = 0x42;
-        DsGlobals.Byte0601 = UInt8[DS, index];
-        return Hlt();
-    }
-
-}
-
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-// Relaxations: AccessesStayInSegment
 
 public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
@@ -1066,20 +717,80 @@ callee_q:
     db 0ffh
 ```
 
-```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
+Strict build:
 
-namespace Spice86.Generated;
+```csharp
+
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Outputs: AL, DL. Changes: AX, DX.</summary>
+    public virtual (byte result, byte result2) unknown_F000_001E_F001E() {
+        AL = CallWithStackArguments(biosSegment, 0x0024, () => unknown_F000_002D_F002D(0x1234), 0x1234);
+        DX = SsUInt16[SP + 2];
+        NearReturn(2);
+        return (AL, DL);
+    }
+
+    public virtual Action unknown_F000_001E_F001E_Asm() {
+        (AL, DL) = unknown_F000_001E_F001E();
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Outputs: AL. Changes: AX.</summary>
+    public virtual byte unknown_F000_002D_F002D(ushort arg0) {
+        CheckExternalEvents(biosSegment, 0x002D);
+        Stack.Push16(BP);
+        AX = arg0;
+        BP = Stack.Pop16();
+        NearReturn(2);
+        return AL;
+    }
+
+    public virtual Action unknown_F000_002D_F002D_Asm() {
+        AL = unknown_F000_002D_F002D(new GeneratedStackFrame(Memory, State.SegmentRegisters, SP).GetWord(2));
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_002D_F002DFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: ES. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte result = 0;
+        byte result2 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        AX = 0x2000;
+        SS = 0x2000;
+        SP = 0x1000;
+        EsGlobals.Byte0600 = 1;
+        Stack.Push16(0x5678);
+        (result, result2) = NearCall(biosSegment, 0x0014, () => unknown_F000_001E_F001E());
+        EsGlobals.Byte0601 = result;
+        EsGlobals.Byte0602 = result2;
+        return Hlt();
+    }
+
+}
+
+
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+```
+
+Relaxed build:
+
+```csharp
+
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Outputs: AL, DL. Changes: AX, DX.</summary>
@@ -1133,128 +844,9 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: AbandonedStackSlotsUnobserved
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-```
-
-## Relaxation: saved slots
-
-With SavedSlotsWrittenOnlyByPops, a slot written by a save push is treated as written only by its pop across call boundaries.
-
-```asm
-; Build: fasm idiom_relaxation_saved.asm ../idiom_relaxation_saved.bin
-; saved-slots: a method saves registers around a call and restores them after.
-use16
-
-start:
-    mov byte [0x0600], 0x01
-    mov bx, 0x11
-    mov cx, 0x22
-    call worker
-    mov byte [0x0601], bl
-    mov byte [0x0602], cl
-    hlt
-worker:
-    push bx
-    push cx
-    mov bx, 0x99
-    mov cx, 0x88
-    call leaf
-    pop cx
-    pop bx
-    ret
-leaf:
-    mov ax, 0x55
-    ret
-
-    rb 65520-$
-    jmp start
-    rb 65535-$
-    db 0ffh
-```
-
-```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: CX, BX. Outputs: CL, BL. Changes: AX, CX, BX.</summary>
-    public virtual (byte result, byte result2) unknown_F000_0017_F0017() {
-        CheckExternalEvents(biosSegment, 0x0017);
-        Stack.Save(BX, CX);
-        NearCall(biosSegment, 0x0022, unknown_F000_0025_F0025Entry);
-        (CX, BX) = Stack.Restore2();
-        NearReturn();
-        return (CL, BL);
-    }
-
-    public virtual Action unknown_F000_0017_F0017_Asm() {
-        (CL, BL) = unknown_F000_0017_F0017();
-        return Returned;
-    }
-
-    /// <summary>Inputs: none. Outputs: none. Changes: AX.</summary>
-    public virtual Action unknown_F000_0025_F0025() {
-        CheckExternalEvents(biosSegment, 0x0025);
-        AX = 0x0055;
-        return NearRet();
-    }
-
-    /// <summary>Inputs: DS. Does not return.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        byte result = 0;
-        byte result2 = 0;
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        DsGlobals.Byte0600 = 1;
-        BX = 0x0011;
-        CX = 0x0022;
-        (result, result2) = NearCall(biosSegment, 0x000E, () => unknown_F000_0017_F0017());
-        DsGlobals.Byte0601 = result2;
-        DsGlobals.Byte0602 = result;
-        return Hlt();
-    }
-
-}
-
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-// Relaxations: SavedSlotsWrittenOnlyByPops
 
 public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
@@ -1304,17 +896,7 @@ table:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -1346,17 +928,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -1398,17 +970,7 @@ start:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -1430,17 +992,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -1484,19 +1036,7 @@ framed:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: AX, BP. Outputs: AL. Changes: AX, BP.</summary>
@@ -1540,17 +1080,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 
@@ -1592,17 +1122,7 @@ fault_handler:
 ```
 
 ```csharp
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
@@ -1633,17 +1153,7 @@ public partial class CfgGeneratedOverrides {
 
 }
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
 
-namespace Spice86.Generated;
 
 // Relaxations: none
 

@@ -3,6 +3,8 @@ namespace Spice86.Tests;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Tests.AsmFixtures;
 
+using System.Text;
+
 using FluentAssertions;
 
 using Xunit;
@@ -14,42 +16,36 @@ using Xunit;
 /// SPICE86_WRITE_CODEGEN_IDIOMS=1 dotnet test --project tests/Spice86.Tests -- --filter-class '*CodegenIdiomsDocTest*'
 /// </summary>
 public sealed class CodegenIdiomsDocTest {
-    private static readonly (string Key, string AsmFile, string Title, string Description)[] Idioms = [
-        ("idiom_fail_as_untested.spec", "idiom_fail_as_untested.asm", "Fail-as-untested guards",
+    private static readonly (string Key, string StrictKey, string AsmFile, string Title, string Description)[] Idioms = [
+        ("idiom_fail_as_untested.spec", "", "idiom_fail_as_untested.asm", "Fail-as-untested guards",
             "Unobserved conditional edges and indirect targets become guards that throw FailAsUntested instead of executing unchecked code."),
-        ("idiom_typed_signature.spec", "idiom_typed_signature.asm", "Typed method signatures",
+        ("idiom_typed_signature.spec", "", "idiom_typed_signature.asm", "Typed method signatures",
             "A method with register parameters and results becomes a typed C# method returning a tuple."),
-        ("idiom_stack_save_restore.spec", "idiom_stack_save_restore.asm", "Stack save, restore and release",
+        ("idiom_stack_save_restore.spec", "", "idiom_stack_save_restore.asm", "Stack save, restore and release",
             "Pushes and pops lower to typed stack operations, with discarded slots released instead of popped."),
-        ("idiom_div16_named.spec", "idiom_div16_named.asm", "Named Div16 arguments",
+        ("idiom_div16_named.spec", "", "idiom_div16_named.asm", "Named Div16 arguments",
             "A 32/16 division becomes a Div16 call with named divisor and dividend arguments."),
-        ("idiom_dead_store.spec", "idiom_dead_store.asm", "Dead store elimination",
+        ("idiom_dead_store.spec", "", "idiom_dead_store.asm", "Dead store elimination",
             "A store overwritten before any read disappears from the generated code."),
-        ("idiom_wide_values.spec", "idiom_wide_values.asm", "Wide value merging",
+        ("idiom_wide_values.spec", "", "idiom_wide_values.asm", "Wide value merging",
             "Byte and word pieces written separately merge into one wide read when the program reads them as a single value."),
-        ("idiom_flag_idioms.spec", "idiom_flag_idioms.asm", "Flag idioms",
+        ("idiom_flag_idioms.spec", "", "idiom_flag_idioms.asm", "Flag idioms",
             "A known flag folds into its branch while a data-dependent comparison keeps its tested condition."),
-        ("idiom_call_sites.spec", "idiom_call_sites.asm", "Call sites",
+        ("idiom_call_sites.spec", "", "idiom_call_sites.asm", "Call sites",
             "Calls with stack arguments, discarded outputs and 32-bit operand width each get their own typed call helper."),
-        ("idiom_locals_naming.spec", "idiom_locals_naming.asm", "Locals naming",
+        ("idiom_locals_naming.spec", "", "idiom_locals_naming.asm", "Locals naming",
             "In-place index updates become role-named locals instead of register temporaries."),
-        ("idiom_contracts.spec", "idiom_contracts.asm", "Interrupt handler contracts",
+        ("idiom_contracts.spec", "", "idiom_contracts.asm", "Interrupt handler contracts",
             "An observed interrupt handler carries its Inputs/Outputs contract as a doc comment."),
-        ("idiom_relaxation_unknown_memory_is_ram.spec.ram", "idiom_relaxation_base.asm", "Relaxation: unknown memory is RAM",
-            "With UnknownMemoryIsRam, an access to memory not known to be RAM is generated as a plain typed access."),
-        ("idiom_relaxation_accesses_stay_in_segment.spec.seg", "idiom_relaxation_segment.asm", "Relaxation: accesses stay in segment",
-            "With AccessesStayInSegment, an indexed access with an unproved range is generated without segment-wrap handling."),
-        ("idiom_relaxation_abandoned_stack_slots.spec.stk", "idiom_relaxation_stack.asm", "Relaxation: abandoned stack slots",
+        ("idiom_relaxation_abandoned_stack_slots.spec.stk", "idiom_strict_abandoned_stack_slots.spec", "idiom_relaxation_stack.asm", "Relaxation: abandoned stack slots",
             "With AbandonedStackSlotsUnobserved, a private typed stack argument's bytes are treated as unobserved after the call."),
-        ("idiom_relaxation_saved_slots.spec.sav", "idiom_relaxation_saved.asm", "Relaxation: saved slots",
-            "With SavedSlotsWrittenOnlyByPops, a slot written by a save push is treated as written only by its pop across call boundaries."),
-        ("idiom_jump_table_switch.spec", "idiom_jump_table_switch.asm", "Jump table switch",
+        ("idiom_jump_table_switch.spec", "", "idiom_jump_table_switch.asm", "Jump table switch",
             "An indexed jump table with every target observed at one site lowers to a switch with one case per target."),
-        ("idiom_memory_accessors.spec", "idiom_memory_accessors.asm", "Memory accessors",
+        ("idiom_memory_accessors.spec", "", "idiom_memory_accessors.asm", "Memory accessors",
             "Absolute accesses become typed segment globals and indexed accesses become wrapping 16-bit indexers."),
-        ("idiom_stack_frames.spec", "idiom_stack_frames.asm", "Stack frames",
+        ("idiom_stack_frames.spec", "", "idiom_stack_frames.asm", "Stack frames",
             "A bp frame with a mov sp,bp epilogue becomes a typed frame struct with named slots."),
-        ("idiom_fault_dispatch.spec", "idiom_fault_dispatch.asm", "Fault dispatch",
+        ("idiom_fault_dispatch.spec", "", "idiom_fault_dispatch.asm", "Fault dispatch",
             "A CPU fault with an observed handler becomes a try/catch that dispatches the fault to the handler.")
     ];
 
@@ -73,7 +69,7 @@ public sealed class CodegenIdiomsDocTest {
         writer.WriteLine();
         writer.WriteLine("Each section shows one small ASM fixture and the program-only C# the code generator");
         writer.WriteLine("produces for it. Regenerate with `SPICE86_WRITE_CODEGEN_IDIOMS=1 dotnet test --project tests/Spice86.Tests -- --filter-class '*CodegenIdiomsDocTest*'`.");
-        foreach ((string key, string asmFile, string title, string description) in Idioms) {
+        foreach ((string key, string strictKey, string asmFile, string title, string description) in Idioms) {
             writer.WriteLine();
             writer.WriteLine($"## {title}");
             writer.WriteLine();
@@ -82,6 +78,16 @@ public sealed class CodegenIdiomsDocTest {
             writer.WriteLine("```asm");
             writer.WriteLine(ReadAsm(asmFile).TrimEnd());
             writer.WriteLine("```");
+            if (strictKey.Length > 0) {
+                writer.WriteLine();
+                writer.WriteLine("Strict build:");
+                writer.WriteLine();
+                writer.WriteLine("```csharp");
+                writer.WriteLine(ProgramOnly(strictKey).TrimEnd());
+                writer.WriteLine("```");
+                writer.WriteLine();
+                writer.WriteLine("Relaxed build:");
+            }
             writer.WriteLine();
             writer.WriteLine("```csharp");
             writer.WriteLine(ProgramOnly(key).TrimEnd());
@@ -94,7 +100,27 @@ public sealed class CodegenIdiomsDocTest {
         GeneratedScenarioCase scenarioCase = GeneratedScenarioCatalog.Case(key);
         GeneratedCSharpProgram program = new GeneratedCodeMachineTestRunner().TestGeneratedCode(
             scenarioCase.DiscoveryScenario, scenarioCase.ExecutionScenarios);
-        return GeneratedCodeChecks.ProgramOnlyText(program);
+        return StripNoise(GeneratedCodeChecks.ProgramOnlyText(program));
+    }
+
+    /// <summary>Drops the lines the document does not show: the supplier file section, the
+    /// <c>using</c> lines and the <c>namespace</c> line. The <c>// Relaxations:</c> header line stays.</summary>
+    private static string StripNoise(string programText) {
+        const string marker = "// ==== file: ";
+        StringBuilder builder = new();
+        bool keep = true;
+        foreach (string line in programText.Split('\n')) {
+            if (line.StartsWith(marker, StringComparison.Ordinal)) {
+                keep = !line.Contains(GeneratedOverrideNames.SupplierFileName);
+                continue;
+            }
+            if (!keep || line.StartsWith("using ", StringComparison.Ordinal)
+                || line.StartsWith("namespace ", StringComparison.Ordinal)) {
+                continue;
+            }
+            builder.AppendLine(line);
+        }
+        return builder.ToString();
     }
 
     private static string ReadAsm(string asmFile) {
