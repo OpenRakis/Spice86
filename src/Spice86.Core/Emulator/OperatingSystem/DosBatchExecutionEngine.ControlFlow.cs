@@ -216,7 +216,7 @@ internal sealed partial class DosBatchExecutionEngine {
                     threshold, _lastExitCode, condition, hasNot);
             }
             if (condition != hasNot) {
-                bool launched = TryExecuteCommandLine(commandPart, out launchRequest);
+                bool launched = TryExecuteCommandLine(AppendRedirection(commandPart, inheritedRedirection), out launchRequest);
                 return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
             }
 
@@ -234,7 +234,7 @@ internal sealed partial class DosBatchExecutionEngine {
                     fileToken, exists, hasNot);
             }
             if (exists != hasNot) {
-                bool launched = TryExecuteCommandLine(commandPart, out launchRequest);
+                bool launched = TryExecuteCommandLine(AppendRedirection(commandPart, inheritedRedirection), out launchRequest);
                 return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
             }
 
@@ -258,7 +258,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 left, rightToken, equals, hasNot);
         }
         if (equals != hasNot) {
-            bool launched = TryExecuteCommandLine(commandSegment, out launchRequest);
+            bool launched = TryExecuteCommandLine(AppendRedirection(commandSegment, inheritedRedirection), out launchRequest);
             return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
         }
 
