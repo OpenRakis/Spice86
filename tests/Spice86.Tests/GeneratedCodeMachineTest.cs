@@ -515,7 +515,7 @@ public sealed class GeneratedCodeMachineTest {
             runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // The observed resume runs: WRITER.COM's terminate launches the TSR at its recorded address.
-        using (AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier)) {
+        using (AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier)) {
         }
 
         // A batch launching an EXE after the TSR resumes at the image's own entry address, which is

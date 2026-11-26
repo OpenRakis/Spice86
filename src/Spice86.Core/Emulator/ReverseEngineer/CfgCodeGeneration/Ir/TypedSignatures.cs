@@ -730,11 +730,10 @@ internal sealed class TypedSignatures {
             foreach (IVisitableAstNode argument in arguments.Where(argument =>
                     argument is RegisterNode && targets.Contains(argument))) {
                 RegisterNode register = (RegisterNode)argument;
-                foreach (IVisitableAstNode other in arguments) {
-                    if (!ReferenceEquals(other, argument) && other is RegisterNode otherRegister
-                        && IrValueSets.Of(otherRegister) == IrValueSets.Of(register)) {
-                        kept.Add(other);
-                    }
+                foreach (IVisitableAstNode other in arguments.Where(other =>
+                        !ReferenceEquals(other, argument) && other is RegisterNode otherRegister
+                        && IrValueSets.Of(otherRegister) == IrValueSets.Of(register))) {
+                    kept.Add(other);
                 }
             }
         }

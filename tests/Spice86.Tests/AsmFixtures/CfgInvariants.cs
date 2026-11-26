@@ -81,10 +81,8 @@ internal static class CfgInvariants {
     private static void CheckReachability(string goldenKey, CfgCpuGraph graph,
         Dictionary<int, CfgBlockInfo> blocksById) {
         HashSet<int> roots = [];
-        foreach (CfgBlockInfo block in graph.Blocks) {
-            if (graph.EntryPointAddresses.Contains(block.Entry)) {
-                roots.Add(block.Id);
-            }
+        foreach (CfgBlockInfo block in graph.Blocks.Where(block => graph.EntryPointAddresses.Contains(block.Entry))) {
+            roots.Add(block.Id);
         }
         if (graph.Partitions is not null) {
             foreach (CfgPartitionInfo partition in graph.Partitions) {

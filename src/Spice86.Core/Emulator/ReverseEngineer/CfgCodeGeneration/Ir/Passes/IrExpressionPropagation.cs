@@ -317,10 +317,8 @@ internal static class IrExpressionPropagation {
         // so the substituted initializer must keep the version the declaration evaluated, not the
         // one the dead write left.
         HashSet<int> deadReaders = [];
-        foreach (int j in readers) {
-            if (DeadWriter(block.Statements[j], ssa)) {
-                deadReaders.Add(j);
-            }
+        foreach (int j in readers.Where(j => DeadWriter(block.Statements[j], ssa))) {
+            deadReaders.Add(j);
         }
         List<int> liveReaders = [.. readers.Where(j => !deadReaders.Contains(j))];
         int lastReader = liveReaders.Count == 0 ? readers[^1] : liveReaders[^1];

@@ -64,7 +64,7 @@ public sealed class CodegenIdiomsDocTest {
     }
 
     private static string Render() {
-        StringWriter writer = new();
+        using StringWriter writer = new();
         writer.WriteLine("# Generated code idioms");
         writer.WriteLine();
         writer.WriteLine("Each section shows one small ASM fixture and the program-only C# the code generator");

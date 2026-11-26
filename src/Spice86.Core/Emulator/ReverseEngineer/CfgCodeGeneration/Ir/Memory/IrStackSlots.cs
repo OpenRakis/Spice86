@@ -299,16 +299,16 @@ internal sealed class IrStackSlots {
             added = false;
             foreach (IrBlock block in method.Blocks) {
                 foreach (IrStatement statement in block.Statements) {
-                    foreach (IVisitableAstNode node in
+                    foreach (VariableDeclarationNode declaration in
                             DescendantsExcept(statement.Node, framePointers)
-                                .Prepend(statement.Node)) {
-                        if (node is VariableDeclarationNode { Reference: { } reference } declaration
-                                && !variables.Contains(reference)
-                                && ReadsStackValue(declaration.Initializer,
-                                    true, framePointers, variables)) {
-                            variables.Add(reference);
-                            added = true;
-                        }
+                                .Prepend(statement.Node)
+                                .OfType<VariableDeclarationNode>()
+                                .Where(declaration => declaration.Reference is { }
+                                    && !variables.Contains(declaration.Reference)
+                                    && ReadsStackValue(declaration.Initializer,
+                                        true, framePointers, variables))) {
+                        variables.Add(declaration.Reference!);
+                        added = true;
                     }
                 }
             }
@@ -657,14 +657,10 @@ internal sealed class IrStackSlots {
     /// <c>SS:[SP + delta - beforeDelta]</c> on the statement's SP version.</summary>
     private static IrMemoryAccess SlotAccessAt(IrBlock block, int index, IrStackState state,
         int delta, int width, IrMemoryAliasAnalysis alias) {
-        IrMemoryAccess access;
-        if (state.Offset.Base is { } baseStatement
-            && alias.StackPointerConstantAfter(baseStatement) is { } stackPointer) {
-            access = alias.ConstantStackAccess(block, index, stackPointer + delta, width);
-        } else {
-            access = alias.StackAccess(block, index, delta - state.Offset.Delta, width);
-        }
-        return access;
+        return state.Offset.Base is { } baseStatement
+            && alias.StackPointerConstantAfter(baseStatement) is { } stackPointer
+            ? alias.ConstantStackAccess(block, index, stackPointer + delta, width)
+            : alias.StackAccess(block, index, delta - state.Offset.Delta, width);
     }
 
     /// <summary>Records a read of <paramref name="width"/> bytes at <paramref name="delta"/>: only
