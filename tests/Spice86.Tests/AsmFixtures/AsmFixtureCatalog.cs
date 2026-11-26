@@ -2091,7 +2091,13 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs an idiom showcase fixture, a small flat binary writing its result bytes in low
     /// memory at 0x0400 and up.</summary>
     public static AsmFixture Idiom(string binName, params (int Offset, byte Value)[] expectedBytes) {
-        return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+        return Idiom(binName, "", expectedBytes);
+    }
+
+    /// <summary>Same, with an explicit scenario name when the scenario differs from the binary name
+    /// (the relaxation variants share one binary under their own names).</summary>
+    public static AsmFixture Idiom(string binName, string scenarioName, params (int Offset, byte Value)[] expectedBytes) {
+        return ResultFixture(new AsmRunSettings { BinName = binName, ScenarioName = scenarioName, MaxCycles = 1000 }, result => {
             foreach ((int offset, byte value) in expectedBytes) {
                 result.Memory.UInt8[0, offset].Should().Be(value, $"{binName}: result byte at {offset:X4}");
             }
