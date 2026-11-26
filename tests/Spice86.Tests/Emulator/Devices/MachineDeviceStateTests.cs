@@ -77,6 +77,7 @@ public sealed class MachineDeviceStateTests {
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
         none.Dma.Should().BeNull();
+        none.SoundBlaster.Should().BeNull();
     }
 
     private static void ChangeDevicesThroughPorts(Machine machine) {

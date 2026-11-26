@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 
 /// <summary>
@@ -17,4 +18,6 @@ using Spice86.Core.Emulator.Devices.Timer;
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
 /// <param name="Dma">State of the DMA controllers, or <see langword="null" />.</param>
-public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, DmaBusState? Dma);
+/// <param name="SoundBlaster">State of the Sound Blaster, or <see langword="null" />.</param>
+public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, DmaBusState? Dma,
+    SoundBlasterState? SoundBlaster);

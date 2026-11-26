@@ -349,8 +349,8 @@ public sealed class Machine : IDisposable {
     /// later. Registers and memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers, the programmable interval timer and the DMA controllers. VGA,
-    /// Sound Blaster and the other devices are not covered. Call this on the emulation thread between two
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the DMA controllers and the
+    /// Sound Blaster. VGA and the other devices are not covered. Call this on the emulation thread between two
     /// instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
@@ -368,7 +368,11 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Dma) != 0) {
             dma = DmaSystem.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, dma);
+        SoundBlasterState? soundBlaster = null;
+        if ((devices & MachineDevices.SoundBlaster) != 0) {
+            soundBlaster = SoundBlaster.CaptureState();
+        }
+        return new MachineDeviceState(pic, pit, dma, soundBlaster);
     }
 
     /// <summary>
@@ -387,6 +391,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.Dma is { } dma) {
             DmaSystem.RestoreState(dma);
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            SoundBlaster.RestoreState(soundBlaster);
         }
     }
 
