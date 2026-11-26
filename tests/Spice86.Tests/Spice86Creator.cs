@@ -182,6 +182,11 @@ public sealed class Spice86Creator : IDisposable {
     /// file and the new one deleted, and a difference means two runs of one key produced different
     /// dumps.
     /// </summary>
+    /// <summary>The machine golden keys of the catalogue scenarios, built once: only those keys
+    /// are copied, so ad-hoc runs never collide with another program's dump.</summary>
+    private static readonly Lazy<HashSet<string>> CatalogueKeys = new(() =>
+        AsmFixtures.AsmScenarioInventory.Catalogue().Select(entry => entry.MachineGoldenKey).ToHashSet());
+
     private void CopyDumpIfEnabled() {
         string? dumpsFolder = Environment.GetEnvironmentVariable(DumpsFolderEnvironmentVariable);
         if (dumpsFolder == null || _configuration.OverrideSupplier != null
@@ -190,18 +195,14 @@ public sealed class Spice86Creator : IDisposable {
             return;
         }
         string goldenKey = MachineGoldens.GoldenKey(settings);
-        // Ad-hoc programs can share a golden key (several machine tests write their own program
-        // under the same file name), so the target carries the program hash of the dump's
-        // subdirectory: two different programs never collide, while two runs of one program land
-        // in the same directory and the comparison below still catches nondeterminism.
-        string dumpRoot = Directory.GetDirectories(_exportFolder)
-            .FirstOrDefault(directory => Directory.GetFiles(directory, "spice86dump*").Length > 0)
-            ?? _exportFolder;
-        string targetName = dumpRoot == _exportFolder ? goldenKey
-            : goldenKey + "." + Path.GetFileName(dumpRoot)[..8];
-        string targetDirectory = Path.Join(dumpsFolder, targetName);
-        string stagingDirectory = Path.Join(dumpsFolder, "." + targetName + "." + Guid.NewGuid().ToString("N"));
-        StageDump(stagingDirectory, settings, dumpRoot);
+        if (!CatalogueKeys.Value.Contains(goldenKey)) {
+            // Ad-hoc runs (the machine tests' own programs) share keys across different programs,
+            // so a copy would collide with an unrelated dump under the same key.
+            return;
+        }
+        string targetDirectory = Path.Join(dumpsFolder, goldenKey);
+        string stagingDirectory = Path.Join(dumpsFolder, "." + goldenKey + "." + Guid.NewGuid().ToString("N"));
+        StageDump(stagingDirectory, settings);
         if (!Directory.Exists(targetDirectory)) {
             Directory.Move(stagingDirectory, targetDirectory);
             return;
@@ -214,7 +215,12 @@ public sealed class Spice86Creator : IDisposable {
         }
     }
 
-    private void StageDump(string stagingDirectory, AsmFixtures.AsmRunSettings settings, string dumpRoot) {
+    private void StageDump(string stagingDirectory, AsmFixtures.AsmRunSettings settings) {
+        // The dump lives in a program-hash subdirectory of the export folder
+        // (EmulatorStateSerializationFolderFactory).
+        string dumpRoot = Directory.GetDirectories(_exportFolder)
+            .FirstOrDefault(directory => Directory.GetFiles(directory, "spice86dump*").Length > 0)
+            ?? _exportFolder;
         Directory.CreateDirectory(stagingDirectory);
         string listingPath = Path.Join(dumpRoot, "spice86dumpListing.asm");
         if (File.Exists(listingPath)) {
