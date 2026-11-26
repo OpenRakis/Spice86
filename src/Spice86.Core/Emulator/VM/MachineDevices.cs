@@ -38,6 +38,11 @@ public enum MachineDevices {
     Ems = 16,
 
     /// <summary>
+    ///     The VGA card (<see cref="Machine.VgaCard" />): registers, DAC, video memory planes and latches.
+    /// </summary>
+    Vga = 32,
+
+    /// <summary>
     ///     The two DMA controllers and their eight channels (<see cref="Machine.DmaSystem" />).
     /// </summary>
     Dma = 256,
@@ -51,5 +56,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Dma | SoundBlaster
 }

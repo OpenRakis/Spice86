@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
@@ -21,6 +22,7 @@ using Spice86.Core.Emulator.Memory;
 /// </remarks>
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
+/// <param name="Vga">State of the VGA card, or <see langword="null" />.</param>
 /// <param name="Dma">State of the DMA controllers, or <see langword="null" />.</param>
 /// <param name="SoundBlaster">State of the Sound Blaster, or <see langword="null" />.</param>
 /// <param name="A20Gate">State of the A20 line, or <see langword="null" />.</param>
@@ -29,6 +31,7 @@ using Spice86.Core.Emulator.Memory;
 public sealed record MachineDeviceState(
     DualPicState? Pic,
     PitTimerState? Pit,
+    VgaState? Vga,
     DmaBusState? Dma,
     SoundBlasterState? SoundBlaster,
     A20GateState? A20Gate,

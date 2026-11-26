@@ -44,6 +44,7 @@ public sealed class MachineDeviceStateTests {
         MachineDeviceState restored = machine.CaptureDeviceState();
         changed.Pic.Should().NotBe(captured.Pic);
         restored.Pic.Should().Be(captured.Pic);
+        captured.Vga.Should().NotBeNull();
         changed.Dma.Should().NotBe(captured.Dma);
         restored.Dma.Should().Be(captured.Dma);
         WithoutTimes(changed.Pit).Should().NotBe(WithoutTimes(captured.Pit));
@@ -66,6 +67,7 @@ public sealed class MachineDeviceStateTests {
 
         // Assert: the controllers are back, the timer keeps the change
         picOnly.Pit.Should().BeNull();
+        picOnly.Vga.Should().BeNull();
         picOnly.Pic.Should().NotBeNull();
         machine.DualPic.CaptureState().Should().Be(picBefore);
         machine.Timer.CaptureState().Channel0.Should().Be(pitAfterChange.Channel0);
@@ -83,6 +85,7 @@ public sealed class MachineDeviceStateTests {
         // Assert
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
+        none.Vga.Should().BeNull();
         none.Dma.Should().BeNull();
         none.SoundBlaster.Should().BeNull();
         none.A20Gate.Should().BeNull();
