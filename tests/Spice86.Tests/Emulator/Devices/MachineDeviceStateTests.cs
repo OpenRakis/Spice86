@@ -80,6 +80,7 @@ public sealed class MachineDeviceStateTests {
         // Assert
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
+        none.SoundBlaster.Should().BeNull();
         none.A20Gate.Should().BeNull();
         none.Xms.Should().BeNull();
         none.Ems.Should().BeNull();

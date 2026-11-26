@@ -38,7 +38,13 @@ public enum MachineDevices {
     Ems = 16,
 
     /// <summary>
+    ///     The Sound Blaster (<see cref="Machine.SoundBlaster" />): its DSP, mixer registers, DMA transfer and
+    ///     scheduler events.
+    /// </summary>
+    SoundBlaster = 512,
+
+    /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems
+    All = Pic | Pit | A20Gate | Xms | Ems | SoundBlaster
 }

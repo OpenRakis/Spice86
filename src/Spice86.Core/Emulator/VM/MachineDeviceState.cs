@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
@@ -19,12 +20,14 @@ using Spice86.Core.Emulator.Memory;
 /// </remarks>
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
+/// <param name="SoundBlaster">State of the Sound Blaster, or <see langword="null" />.</param>
 /// <param name="A20Gate">State of the A20 line, or <see langword="null" />.</param>
 /// <param name="Xms">State of the XMS driver, or <see langword="null" />.</param>
 /// <param name="Ems">State of the EMS driver, or <see langword="null" />.</param>
 public sealed record MachineDeviceState(
     DualPicState? Pic,
     PitTimerState? Pit,
+    SoundBlasterState? SoundBlaster,
     A20GateState? A20Gate,
     XmsState? Xms,
     EmsState? Ems);

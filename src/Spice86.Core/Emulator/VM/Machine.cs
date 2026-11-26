@@ -351,9 +351,9 @@ public sealed class Machine : IDisposable {
     /// later. Registers and memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers, the programmable interval timer, the A20 line, and the XMS
-    /// and EMS drivers when DOS loaded them. DMA, VGA, Sound Blaster and the other devices are not covered. Call
-    /// this on the emulation thread between two instructions, or while the emulation is paused.
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the Sound Blaster, the A20
+    /// line, and the XMS and EMS drivers when DOS loaded them. DMA, VGA and the other devices are not covered.
+    /// Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>
@@ -368,6 +368,10 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Pit) != 0) {
             pit = Timer.CaptureState();
         }
+        SoundBlasterState? soundBlaster = null;
+        if ((devices & MachineDevices.SoundBlaster) != 0) {
+            soundBlaster = SoundBlaster.CaptureState();
+        }
         A20GateState? a20Gate = null;
         if ((devices & MachineDevices.A20Gate) != 0) {
             a20Gate = Memory.A20Gate.CaptureState();
@@ -380,7 +384,7 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Ems) != 0) {
             ems = Dos.Ems?.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, a20Gate, xms, ems);
+        return new MachineDeviceState(pic, pit, soundBlaster, a20Gate, xms, ems);
     }
 
     /// <summary>
@@ -399,6 +403,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.Pit is { } pit) {
             Timer.RestoreState(pit);
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            SoundBlaster.RestoreState(soundBlaster);
         }
         if (state.A20Gate is { } a20Gate) {
             Memory.A20Gate.RestoreState(a20Gate);
