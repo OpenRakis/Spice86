@@ -193,6 +193,21 @@ public sealed class DmaChannel {
     }
 
     /// <summary>
+    ///     Callback registered with <see cref="RegisterCallback" />, or <see langword="null" /> when none is.
+    /// </summary>
+    internal DmaCallback? Callback => _callback;
+
+    /// <summary>
+    ///     Puts back a callback captured with the owning device's state. Unlike <see cref="RegisterCallback" />,
+    ///     this does not call the callback with the channel's mask state and does not change the request line,
+    ///     which is part of the channel's registers.
+    /// </summary>
+    /// <param name="callback">Callback to register, or <see langword="null" /> to clear it.</param>
+    internal void RestoreCallback(DmaCallback? callback) {
+        _callback = callback;
+    }
+
+    /// <summary>
     ///     Sets the terminal-count flag and informs listeners that the programmed length was completed.
     /// </summary>
     private void ReachedTerminalCount() {

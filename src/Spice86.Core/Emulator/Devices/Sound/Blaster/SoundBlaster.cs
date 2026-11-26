@@ -25,7 +25,8 @@ using System.Runtime.InteropServices;
 /// <remarks>
 /// 2022-2025 The DOSBox Staging Team
 /// </remarks>
-public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
+public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier,
+    IStatefulDevice<SoundBlasterState> {
     /// <summary>
     /// Initializes a new instance of the Sound Blaster device.
     /// </summary>
