@@ -238,7 +238,7 @@ internal static class GenerationPlanBuilder {
     /// </summary>
     private static bool IsHaltInstruction(ICfgNode node) {
         return node is CfgInstruction { Kind: InstructionKind.None } instruction
-            && HltDetectorVisitor.ContainsHlt(instruction.ExecutionAst);
+            && CallReturnHaltDetectorVisitor.ContainsHlt(instruction.ExecutionAst);
     }
 
     private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks) {
