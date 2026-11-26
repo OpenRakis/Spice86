@@ -36,6 +36,7 @@ public sealed class DmaBusStateTests {
     private const byte UnmaskChannel1 = 0x01;
     private const byte MaskBit = 0x04;
     private const byte Channel1TerminalCountBit = 0x02;
+    private const byte Channel1RequestBit = 0x20;
 
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly Memory _memory;
@@ -134,6 +135,23 @@ public sealed class DmaBusStateTests {
         // Assert
         events.Should().BeEmpty();
         Channel(1).IsMasked.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RestoreGivesBackTheRequestLineShownInTheStatusRegister() {
+        // Arrange: a device on channel 1 asserts its request line, then drops it as a DSP reset does
+        Channel(1).RegisterCallback((_, _) => { });
+        DmaBusState captured = _dmaBus.CaptureState();
+        Channel(1).ClearRequest();
+        byte statusBeforeRestore = _ioPortDispatcher.ReadByte(PrimaryStatusPort);
+
+        // Act
+        _dmaBus.RestoreState(captured);
+        byte statusAfterRestore = _ioPortDispatcher.ReadByte(PrimaryStatusPort);
+
+        // Assert
+        (statusBeforeRestore & Channel1RequestBit).Should().Be(0);
+        (statusAfterRestore & Channel1RequestBit).Should().Be(Channel1RequestBit);
     }
 
     [Fact]

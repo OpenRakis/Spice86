@@ -462,12 +462,12 @@ public sealed class DmaChannel {
     /// </summary>
     internal DmaChannelState CaptureState() {
         return new DmaChannelState(BaseAddress, BaseCount, CurrentAddress, CurrentCount, PageRegisterValue,
-            IsAutoiniting, IsIncremented, IsMasked, HasReachedTerminalCount);
+            IsAutoiniting, IsIncremented, IsMasked, HasReachedTerminalCount, HasRaisedRequest);
     }
 
     /// <summary>
     ///     Puts the registers of the channel back. The registered callback is not called, and the reservation
-    ///     and request line stay as they are.
+    ///     stays as it is.
     /// </summary>
     internal void RestoreState(DmaChannelState state) {
         BaseAddress = state.BaseAddress;
@@ -479,6 +479,7 @@ public sealed class DmaChannel {
         IsIncremented = state.IsIncremented;
         IsMasked = state.IsMasked;
         HasReachedTerminalCount = state.HasReachedTerminalCount;
+        HasRaisedRequest = state.HasRaisedRequest;
     }
 
     public void SetMode(byte value) {
