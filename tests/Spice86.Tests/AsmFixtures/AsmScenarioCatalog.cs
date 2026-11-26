@@ -716,7 +716,9 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("data_segment_values").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataSegmentValues)
                 .WithTimingDependentState("the program installs an IRQ0 handler and its asynchronous landing point is timing-dependent"),
             PartitionScenario("data_tables"),
-            PartitionScenario("data_strings"),
+            // The write comment of a data-string service shows the literal bytes up to the terminator,
+            // and the open call decodes the zero-terminated file name inline.
+            PartitionScenario("data_strings").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataStrings),
             PartitionScenario("data_segments"),
             PartitionScenario("data_jump_tables").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataJumpTables),
             PartitionScenario("interrupt_handler_partial_inputs"),

@@ -11,6 +11,15 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "SsUInt32[0x0600] = (uint)SP | (uint)SS << 16;")
     ];
 
+    public static readonly GeneratedCodeCheck[] DataStrings = [
+        new(Contains, "// DOS 09h print \"HELLO$\""),
+        new(Contains, "InterruptCall(cs1, 0x0111, 0x21)"),
+        new(Contains, "Dos.WriteFile("),
+        new(Contains, "// DOS 40h write handle 1 \""),
+        new(Contains, "Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0179, '\\0', \"NOFILE.TXT\"))"),
+        new(DoesNotContain, "// DOS 3Dh")
+    ];
+
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")
     ];
