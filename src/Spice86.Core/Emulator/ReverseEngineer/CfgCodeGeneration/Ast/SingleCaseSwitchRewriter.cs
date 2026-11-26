@@ -3,7 +3,9 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -57,11 +59,13 @@ internal static class SingleCaseSwitchRewriter {
             return null;
         }
         ConstantNode label = new(node.Value.DataType, section.Label);
-        BinaryOperationNode notEqual = new(DataType.BOOL, node.Value, BinaryOperation.NOT_EQUAL, label);
         if (IsEmpty(caseBody) || !CompletesNormallyVisitor.CompletesNormally(defaultBody)) {
+            ValueNode notEqual = IrBranchOrigins.Carry(
+                new BinaryOperationNode(DataType.BOOL, node.Value, BinaryOperation.NOT_EQUAL, label), node.Value);
             return [.. Sequence(new IfElseNode(notEqual, defaultBody, Empty()), caseBody).Statements];
         }
-        BinaryOperationNode equal = new(DataType.BOOL, node.Value, BinaryOperation.EQUAL, label);
+        ValueNode equal = IrBranchOrigins.Carry(
+            new BinaryOperationNode(DataType.BOOL, node.Value, BinaryOperation.EQUAL, label), node.Value);
         return [new IfElseNode(equal, caseBody, defaultBody)];
     }
 

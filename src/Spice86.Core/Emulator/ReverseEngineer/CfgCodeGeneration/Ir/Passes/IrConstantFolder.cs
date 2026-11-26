@@ -126,9 +126,11 @@ internal static partial class IrConstantFolder {
             && IrVerifier.IsPureArm(foldedConditional.Condition)) {
             return foldedConditional.WhenTrue;
         }
+        IrBranchOrigins.Carry(foldedConditional.Condition, conditional.Condition);
         ConditionalValueNode candidate = foldedConditional;
         if (candidate.Condition is UnaryOperationNode { UnaryOperation: UnaryOperation.NOT } negation) {
-            candidate = new ConditionalValueNode(candidate.DataType, negation.Value,
+            candidate = new ConditionalValueNode(candidate.DataType,
+                IrBranchOrigins.Carry(negation.Value, negation),
                 candidate.WhenFalse, candidate.WhenTrue);
         }
         if (candidate.WhenTrue is ConstantNode { Value: 1 }

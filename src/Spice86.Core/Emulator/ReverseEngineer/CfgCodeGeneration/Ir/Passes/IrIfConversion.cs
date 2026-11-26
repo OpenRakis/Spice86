@@ -156,6 +156,8 @@ internal static class IrIfConversion {
         }
         ValueNode whenTrue = ArmValue(shape.TrueStatement, assignment.Left);
         ValueNode whenFalse = ArmValue(shape.FalseStatement, assignment.Left);
+        // The branch disappears, so its condition keeps the branch instruction as its origin from here on.
+        IrBranchOrigins.Stamp(branch.Condition, branch.Origin);
         return IrStatement.Create(new BinaryOperationNode(assignment.DataType, assignment.Left,
             BinaryOperation.ASSIGN, new ConditionalValueNode(assignment.Left.DataType,
                 branch.Condition, whenTrue, whenFalse)), branch.Origin);

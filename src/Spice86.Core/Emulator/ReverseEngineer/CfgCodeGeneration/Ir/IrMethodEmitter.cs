@@ -39,7 +39,9 @@ internal sealed class IrMethodEmitter(
     HardwareInterruptEffectBuilder effectBuilder,
     bool collectCensuses,
     bool verify,
-    bool serviceCallNotifications) {
+    bool serviceCallNotifications,
+    BranchProbeSites? branchProbes = null,
+    bool deviceOperations = true) {
 
     private readonly IrLifter _lifter = new(context, lowerer, assemblyRenderer);
 
@@ -52,8 +54,19 @@ internal sealed class IrMethodEmitter(
         IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
+        if (branchProbes is not null) {
+            IrBranchOrigins.StampConditionalValues(irMethod);
+        }
+        // The device operations pass only combines accesses of ports the map gives a device for, so an
+        // empty map leaves every port access as its own statement.
+        IReadOnlyDictionary<ushort, Type> deviceOperationPorts = deviceOperations
+            ? context.Program.Inputs.IoPorts
+            : new Dictionary<ushort, Type>();
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
-            context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+            deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+        if (branchProbes is not null) {
+            IrBranchOrigins.StampTerminators(irMethod);
+        }
         ConstantMemoryAccessTable constantMemoryAccesses = IrConstantMemoryAccesses.Collect(irMethod);
         (BlockNode EntryDispatch, BlockNode Body, GotoCensus Census, GotoTargets Targets) structured =
             timer.Measure("lowering and structuring", () => {
@@ -242,7 +255,14 @@ internal sealed class IrMethodEmitter(
         if (!IsEmpty(prepared.EntryDispatch)) {
             writer.Line();
         }
+        if (branchProbes is not null) {
+            // Only the body is probed: the entry dispatch above selects an entry, which is no branch of
+            // the program.
+            branchProbes.Method = method.MethodName;
+            expressions.BranchProbes = branchProbes;
+        }
         printer.Print(analyzed.Body);
+        expressions.BranchProbes = null;
         writer.CloseBlock();
     }
 
