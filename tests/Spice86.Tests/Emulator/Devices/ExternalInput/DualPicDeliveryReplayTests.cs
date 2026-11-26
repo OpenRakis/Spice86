@@ -124,21 +124,20 @@ public sealed class DualPicDeliveryReplayTests {
     public void PointObserverIsAskedWithNothingLatchedUntilItsHoldEnds() {
         // Arrange
         IInterruptDeliveryPointObserver pointObserver = Substitute.For<IInterruptDeliveryPointObserver>();
-        InterruptDeliveryHold hold = _pic.HoldDelivery(pointObserver);
 
         // Act
+        InterruptDeliveryHold releasedHold;
         byte? whileHeld;
-        try {
+        using (InterruptDeliveryHold hold = _pic.HoldDelivery(pointObserver)) {
+            releasedHold = hold;
             whileHeld = _pic.ComputeVectorNumber(new SegmentedAddress(0x1000, 0x0020));
-        } finally {
-            hold.Dispose();
         }
         byte? afterRelease = _pic.ComputeVectorNumber(new SegmentedAddress(0x1000, 0x0020));
 
         // Assert
         whileHeld.Should().BeNull();
         afterRelease.Should().BeNull();
-        pointObserver.Received(1).OnDeliveryPoint(hold,
+        pointObserver.Received(1).OnDeliveryPoint(releasedHold,
             new InterruptDeliveryPoint(0, new SegmentedAddress(0x1000, 0x0020)));
     }
 
@@ -146,11 +145,8 @@ public sealed class DualPicDeliveryReplayTests {
     public void LineLetThroughAndNotDeliveredIsForgottenWhenTheLastHoldEnds() {
         // Arrange: IRQ 1 is let through while masked, and the hold ends before it is unmasked
         _pic.SetIrqMask(1, true);
-        InterruptDeliveryHold hold = _pic.HoldDelivery();
-        try {
+        using (InterruptDeliveryHold hold = _pic.HoldDelivery()) {
             hold.Deliver(1);
-        } finally {
-            hold.Dispose();
         }
         using InterruptDeliveryHold nextHold = _pic.HoldDelivery();
         _pic.SetIrqMask(1, false);
@@ -161,6 +157,25 @@ public sealed class DualPicDeliveryReplayTests {
         // Assert: the next hold holds the request IRQ 1 still has latched
         vector.Should().BeNull();
         nextHold.HeldDeliveries.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void RestoreStateForgetsLinesLetThrough() {
+        // Arrange: IRQ 1 is let through while masked, then the controllers go back to a state captured before
+        _pic.SetIrqMask(1, true);
+        DualPicState beforeDeliver = _pic.CaptureState();
+        using InterruptDeliveryHold hold = _pic.HoldDelivery();
+        hold.Deliver(1);
+        _pic.RestoreState(beforeDeliver);
+        _pic.ActivateIrq(1);
+        _pic.SetIrqMask(1, false);
+
+        // Act
+        byte? vector = _pic.ComputeVectorNumber();
+
+        // Assert: the new request on IRQ 1 is held like any other
+        vector.Should().BeNull();
+        hold.HeldDeliveries.Select(delivery => delivery.Irq).Should().Equal((byte)1);
     }
 
     [Fact]
