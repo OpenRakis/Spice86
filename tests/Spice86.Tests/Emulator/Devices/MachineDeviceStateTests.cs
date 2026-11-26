@@ -77,6 +77,27 @@ public sealed class MachineDeviceStateTests {
         none.Dos.Should().BeNull();
     }
 
+    [Fact]
+    public void RestoreOfTheDosMemberGivesBackTheDosState() {
+        // Arrange
+        using Spice86Creator creator = new("externalint", enablePit: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        MachineDeviceState dosOnly = machine.CaptureDeviceState(MachineDevices.Dos);
+        ushort dtaSegment = machine.Dos.FileManager.DiskTransferAreaAddressSegment;
+        ushort dtaOffset = machine.Dos.FileManager.DiskTransferAreaAddressOffset;
+
+        // Act
+        machine.Dos.FileManager.SetDiskTransferAreaAddress((ushort)(dtaSegment + 1), (ushort)(dtaOffset + 2));
+        machine.RestoreDeviceState(dosOnly);
+
+        // Assert
+        dosOnly.Dos.Should().NotBeNull();
+        dosOnly.Pic.Should().BeNull();
+        machine.Dos.FileManager.DiskTransferAreaAddressSegment.Should().Be(dtaSegment);
+        machine.Dos.FileManager.DiskTransferAreaAddressOffset.Should().Be(dtaOffset);
+    }
+
     private static void ChangePicAndPitThroughPorts(Machine machine) {
         machine.IoPortDispatcher.WriteByte(PrimaryPicDataPort, 0xA5);
         machine.IoPortDispatcher.WriteByte(PitControlPort, Channel0RateGenerator);

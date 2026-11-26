@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Tests.Utility;
 
@@ -34,6 +35,7 @@ public sealed class DosStateTests {
     private const ushort MultilingualCodePage = 850;
     private const uint DirectoryBufferAddress = 0x40000;
     private const uint ConsoleBufferAddress = 0x41000;
+    private const ushort StdinHandle = 0;
     private const ushort StdoutHandle = 1;
     private const uint TextVideoMemory = 0xB8000;
     private const uint BiosCursorPositionPage0 = 0x450;
@@ -118,6 +120,66 @@ public sealed class DosStateTests {
         fixture.Memory.UInt8[attributeAddress].Should().Be(RedOnBlack);
     }
 
+    [Fact]
+    public void RestoreGivesBackThePendingConsoleInputAndTheKeyReassignments() {
+        // Arrange: A is reassigned to B, and a cursor position report waits to be read from CON
+        using TempFile directory = CreateFolderWithFiles();
+        using DosTestFixture fixture = new(directory.Path);
+        WriteToStdout(fixture, "\u001b[65;66p\u001b[6n");
+        DosState captured = fixture.Dos.CaptureState();
+        ushort pendingLength = (ushort)captured.Console.StuffAheadBuffer.Length;
+        byte[] readAtCapture = ReadFromStdin(fixture, pendingLength);
+
+        // Act: the reassignment is removed, then the state is restored
+        WriteToStdout(fixture, "\u001b[65p");
+        fixture.Dos.RestoreState(captured);
+
+        // Assert
+        pendingLength.Should().BeGreaterThan(0);
+        ReadFromStdin(fixture, pendingLength).Should().Equal(readAtCapture);
+        ConsoleDeviceState console = fixture.Dos.CaptureState().Console;
+        console.KeyRedefinitions.Select(static key => (key.KeyCode, key.Replacement.ToArray()[0]))
+            .Should().Equal(((ushort)'A', (byte)'B'));
+    }
+
+    [Fact]
+    public void RestoreOfAStateWithAnUnmountedDriveThrowsAndChangesNothing() {
+        // Arrange
+        using TempFile directory = CreateFolderWithFiles();
+        using DosTestFixture fixture = new(directory.Path);
+        ArrangeCapturedState(fixture);
+        DosState unmountedDrive = fixture.Dos.CaptureState() with { CurrentDrive = 'Q' };
+        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).bx);
+        ServiceAnswers beforeRestore = ReadServiceAnswers(fixture);
+
+        // Act
+        Action restore = () => fixture.Dos.RestoreState(unmountedDrive);
+
+        // Assert: each read of the answers moves the search on, so the search is left out of the comparison
+        restore.Should().Throw<KeyNotFoundException>();
+        ServiceAnswers afterRestore = ReadServiceAnswers(fixture);
+        afterRestore.Should().Be(beforeRestore with { NextFile = afterRestore.NextFile });
+    }
+
+    [Fact]
+    public void RestoreOfAStateWithARefusedCodePageThrowsAndChangesNothing() {
+        // Arrange
+        using TempFile directory = CreateFolderWithFiles();
+        using DosTestFixture fixture = new(directory.Path);
+        ArrangeCapturedState(fixture);
+        DosState refusedCodePage = fixture.Dos.CaptureState() with { ActiveCodePage = 1 };
+        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).bx);
+        ServiceAnswers beforeRestore = ReadServiceAnswers(fixture);
+
+        // Act
+        Action restore = () => fixture.Dos.RestoreState(refusedCodePage);
+
+        // Assert: each read of the answers moves the search on, so the search is left out of the comparison
+        restore.Should().Throw<InvalidOperationException>();
+        ServiceAnswers afterRestore = ReadServiceAnswers(fixture);
+        afterRestore.Should().Be(beforeRestore with { NextFile = afterRestore.NextFile });
+    }
+
     private static TempFile CreateFolderWithFiles() {
         TempFile directory = new("Spice86_DosState_Tests");
         string subFolder = Path.Join(directory.Path, "SUB");
@@ -180,6 +242,13 @@ public sealed class DosStateTests {
         fixture.Memory.LoadData(ConsoleBufferAddress, bytes);
         fixture.DosFileManager.WriteToFileOrDevice(StdoutHandle, (ushort)bytes.Length, ConsoleBufferAddress)
             .IsError.Should().BeFalse();
+    }
+
+    private static byte[] ReadFromStdin(DosTestFixture fixture, ushort length) {
+        DosFileOperationResult result = fixture.DosFileManager.ReadFileOrDevice(StdinHandle, length,
+            ConsoleBufferAddress);
+        result.IsError.Should().BeFalse();
+        return fixture.Memory.ReadRam(length, ConsoleBufferAddress);
     }
 
     private static uint AttributeAddressAtCursor(DosTestFixture fixture) {

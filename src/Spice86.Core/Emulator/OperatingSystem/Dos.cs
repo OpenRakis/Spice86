@@ -389,21 +389,31 @@ public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDisc
     /// <inheritdoc />
     /// <exception cref="KeyNotFoundException">When a drive of the state is not mounted.</exception>
     /// <exception cref="InvalidOperationException">When the state's code page or allocation strategy is refused.</exception>
+    /// <remarks>
+    /// The drives, the allocation strategy and the code page are checked first, so when one of them is refused
+    /// the method throws before it changes the DOS state.
+    /// </remarks>
     public void RestoreState(DosState state) {
-        FileManager.SetDiskTransferAreaAddress(state.DiskTransferAreaSegment, state.DiskTransferAreaOffset);
-        foreach (DosDriveDirectoryState directory in state.CurrentDirectories) {
-            DosDriveManager.GetDrive(directory.DriveLetter).CurrentDosDirectory = directory.Directory;
-        }
-        DosDriveManager.CurrentDrive = DosDriveManager.GetDrive(state.CurrentDrive);
+        DosDriveBase currentDrive = DosDriveManager.GetDrive(state.CurrentDrive);
+        DosDriveBase[] directoryDrives = state.CurrentDirectories
+            .Select(directory => DosDriveManager.GetDrive(directory.DriveLetter))
+            .ToArray();
+        ushort previousAllocationStrategy = MemoryManager.AllocationStrategyValue;
         if (!MemoryManager.TrySetAllocationStrategy(state.AllocationStrategy)) {
             throw new InvalidOperationException($"Allocation strategy {state.AllocationStrategy:X4} is not valid.");
         }
-        ProcessManager.LastChildReturnCode = state.LastChildReturnCode;
-        DosInt21Handler.IsCtrlCCheckEnabled = state.IsCtrlCCheckEnabled;
         if (!_codePageState.TrySetActiveCodePage(state.ActiveCodePage, DosCodePageState.UseCurrentSystemCodePage,
                 out DosErrorCode errorCode)) {
+            MemoryManager.TrySetAllocationStrategy(previousAllocationStrategy);
             throw new InvalidOperationException($"Code page {state.ActiveCodePage} is not supported: {errorCode}.");
         }
+        FileManager.SetDiskTransferAreaAddress(state.DiskTransferAreaSegment, state.DiskTransferAreaOffset);
+        for (int i = 0; i < directoryDrives.Length; i++) {
+            directoryDrives[i].CurrentDosDirectory = state.CurrentDirectories[i].Directory;
+        }
+        DosDriveManager.CurrentDrive = currentDrive;
+        ProcessManager.LastChildReturnCode = state.LastChildReturnCode;
+        DosInt21Handler.IsCtrlCCheckEnabled = state.IsCtrlCCheckEnabled;
         FileManager.RestoreFileSearches(state.FileSearches);
         _consoleDevice.RestoreState(state.Console);
     }
