@@ -522,13 +522,13 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.LogDebug("BATCH: REN {Args}", trimmed);
         }
         if (!TryExtractFirstToken(trimmed, out string source, out string tail)) {
-            WriteToStandardOutput("Insufficient parameters\r\n");
+            WriteToStandardOutput("Required parameter missing\r\n");
             return false;
         }
 
         string target = tail.Trim();
         if (target.Length == 0) {
-            WriteToStandardOutput("Insufficient parameters\r\n");
+            WriteToStandardOutput("Required parameter missing\r\n");
             return false;
         }
 

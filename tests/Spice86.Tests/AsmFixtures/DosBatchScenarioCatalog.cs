@@ -1547,7 +1547,7 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_ren_missing_target", run => run
             .Text("FILE.TXT", "data")
             .StartBatch("REN FILE.TXT > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Should().Contain("parameter",
+                _ => run.TextFile("OUT.TXT").Should().Contain("Required parameter missing",
                     "REN with missing target should report the MS-DOS \"Required parameter missing\" error")));
     }
 
