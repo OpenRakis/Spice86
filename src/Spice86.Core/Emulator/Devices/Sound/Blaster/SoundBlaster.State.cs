@@ -58,7 +58,7 @@ public partial class SoundBlaster {
     ///         The Sound Blaster's scheduler events are removed and queued again as far ahead as they were at
     ///         capture, and the time of the last DMA block read moves by the time that passed since. The Sound
     ///         Blaster's callbacks are put back on its DMA channels without calling them and without changing the
-    ///         channels' registers; restore the DMA controllers' state for those.
+    ///         channels' registers or request lines; restore the DMA controllers' state for those.
     ///     </para>
     ///     <para>
     ///         The IRQ line is not touched: restore the interrupt controller's state for that. The host audio

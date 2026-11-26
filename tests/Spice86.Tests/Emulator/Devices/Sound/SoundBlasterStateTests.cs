@@ -26,6 +26,9 @@ public sealed class SoundBlasterStateTests : IDisposable {
     private const ushort DmaMaskPort = 0x0A;
     private const ushort DmaFlipFlopResetPort = 0x0C;
     private const ushort DmaChannel1PagePort = 0x83;
+    private const ushort DmaStatusPort = 0x08;
+    private const byte DmaChannel1RequestBit = 0x20;
+    private const byte SingleCycle8BitDmaDac = 0x14;
 
     private const byte MasterVolumeLeftRegister = 0x30;
     private const byte MixerResetRegister = 0x00;
@@ -140,6 +143,22 @@ public sealed class SoundBlasterStateTests : IDisposable {
 
         // Assert
         _machine.Memory[DmaChannel1Target].Should().Be(DmaIdentificationOfZero);
+    }
+
+    [Fact]
+    public void RestoreLeavesTheDmaRequestLineAsTheDmaChannelHasIt() {
+        // Arrange: a playback command registers the card's callback and raises the request on DMA channel 1,
+        // then a DSP reset clears the request and keeps the callback
+        WriteDsp(SingleCycle8BitDmaDac, 0x00, 0x00);
+        _machine.IoPortDispatcher.WriteByte(DspResetPort, 1);
+        _machine.IoPortDispatcher.WriteByte(DspResetPort, 0);
+        SoundBlasterState captured = _machine.SoundBlaster.CaptureState();
+
+        // Act
+        _machine.SoundBlaster.RestoreState(captured);
+
+        // Assert
+        (_machine.IoPortDispatcher.ReadByte(DmaStatusPort) & DmaChannel1RequestBit).Should().Be(0);
     }
 
     private SoundBlasterState SetUpDspAndMixer() {
