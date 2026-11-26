@@ -214,7 +214,8 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x03] = 0x00;
         expectedMemory[0x04] = 0x01;
         expectedMemory[0x05] = 0x00;
-        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyinstructions" }, expectedMemory);
+        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyinstructions" }, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyInstructions);
     }
 
     /// <summary>Runs selfmodifyrep: the 0x21 bytes of the rep-patched buffer.</summary>
@@ -224,7 +225,8 @@ internal static class AsmFixtureCatalog {
             expectedMemory[i] = 0xAB;
         }
         expectedMemory[0x20] = 0x02;
-        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyrep" }, expectedMemory);
+        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyrep" }, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyRep);
     }
 
     /// <summary>Runs selfmodifyterminator: the stack holds both the first-pass and the patched marker.</summary>
@@ -419,7 +421,8 @@ internal static class AsmFixtureCatalog {
             MaxCycles = 100000,
             EnablePit = true
         };
-        return ResultFixture(settings, AssertInteriorEntryCompleted);
+        return ResultFixture(settings, AssertInteriorEntryCompleted)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.InteriorEntry);
     }
 
     /// <summary>Runs interrupt_handler_changes_register: a timer handler writes AX through a call that
@@ -616,25 +619,31 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs speculative_branch on the observed or unobserved arm and checks the arm's result bytes.</summary>
     public static AsmFixture SpeculativeBranch(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xEE, 0xAA), arm);
+            return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xEE, 0xAA), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchUnobserved);
         }
-        return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xDD, 0xAA), arm);
+        return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xDD, 0xAA), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchObserved);
     }
 
     /// <summary>Runs speculative arms at the same offset in two segments and checks both results.</summary>
     public static AsmFixture SpeculativeRunSameOffset(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xEE, 0xCC), arm);
+            return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xEE, 0xCC), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeRunSameOffsetUnobserved);
         }
-        return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xDD, 0xBB), arm);
+        return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xDD, 0xBB), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeRunSameOffsetObserved);
     }
 
     /// <summary>Runs speculative_closure on the given arm: the unobserved arm loops once more.</summary>
     public static AsmFixture SpeculativeClosure(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0x03, 0xBB), arm);
+            return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0x03, 0xBB), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeClosureUnobserved);
         }
-        return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0xDD, 0xBB), arm);
+        return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0xDD, 0xBB), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeClosureObserved);
     }
 
     /// <summary>Runs speculative_convergence on the given arm: both arms converge on the same merge point.</summary>
@@ -644,40 +653,51 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0xBB : (byte)0xAA;
         expectedMemory[0x402] = 0xCC;
         expectedMemory[0x403] = 0xFF;
-        return SpeculativeFixture("speculative_convergence", expectedMemory, arm);
+        AsmFixture fixture = SpeculativeFixture("speculative_convergence", expectedMemory, arm);
+        if (arm == SpeculativeArm.Unobserved) {
+            return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeConvergenceUnobserved);
+        }
+        return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeConvergenceObserved);
     }
 
     /// <summary>Runs speculative_mixed_block on the given arm: the unobserved arm falls through to 0xEE.</summary>
     public static AsmFixture SpeculativeMixedBlock(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xEE, 0xAA), arm);
+            return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xEE, 0xAA), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeMixedBlockUnobserved);
         }
-        return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xDD, 0xAA), arm);
+        return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xDD, 0xAA), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeMixedBlockObserved);
     }
 
     /// <summary>Runs speculative_call_entry on its observed arm: the call target wrote the observed bytes.</summary>
     public static AsmFixture SpeculativeCallEntry() {
-        return SpeculativeFixture("speculative_call_entry", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_call_entry", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeCallEntry);
     }
 
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
-        return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeInvalidOpcode);
     }
 
     /// <summary>Runs speculative_zero_memory on its observed arm: the code patched over the zero region ran.</summary>
     public static AsmFixture SpeculativeZeroMemory() {
-        return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeZeroMemory);
     }
 
     /// <summary>Runs speculative_transfer_into_data on its observed arm: none of the four transfers into data is taken.</summary>
     public static AsmFixture SpeculativeTransferIntoData() {
-        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeTransferIntoData);
     }
 
     /// <summary>Runs speculative_smc_guard on its observed arm: the run completes without self-modification.</summary>
     public static AsmFixture SpeculativeSmcGuard() {
-        return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeSmcGuard);
     }
 
     /// <summary>Runs speculative_smc_lowram on its observed arm: the .com code lives in low RAM, the
@@ -688,12 +708,14 @@ internal static class AsmFixtureCatalog {
             BinName = Path.GetFullPath("Resources/cpuTests/speculative_smc_lowram.com"),
             MaxCycles = 1000
         };
-        return MemoryFixture(settings, SpeculativeMemory(0x01, 0xDD, 0xAA));
+        return MemoryFixture(settings, SpeculativeMemory(0x01, 0xDD, 0xAA))
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeSmcLowRam);
     }
 
     /// <summary>Runs speculative_discard on its observed arm: the run completes without divergence.</summary>
     public static AsmFixture SpeculativeDiscard() {
-        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeDiscard);
     }
 
     /// <summary>Runs speculative_a20_smc_guard on its observed arm: the selector jumps to the
@@ -705,7 +727,7 @@ internal static class AsmFixtureCatalog {
                 "speculative_a20_smc_guard: the init marker was written");
             result.Memory.UInt8[0x0401].Should().Be(0xDD,
                 "speculative_a20_smc_guard: the observed arm wrote its result byte");
-        });
+        }).WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeA20SmcGuard);
     }
 
     /// <summary>Runs callstackunwind on the given arm: the observed arm returns leaf to recovery, while the
@@ -717,7 +739,11 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x10] = 0xAA;
         expectedMemory[0x11] = 0xBB;
         expectedMemory[0x12] = arm == SpeculativeArm.Unobserved ? (byte)0xEE : (byte)0xDD;
-        return SpeculativeFixture("callstackunwind", expectedMemory, arm);
+        AsmFixture fixture = SpeculativeFixture("callstackunwind", expectedMemory, arm);
+        if (arm == SpeculativeArm.Unobserved) {
+            return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.CallStackUnwindUnobserved);
+        }
+        return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.CallStackUnwindObserved);
     }
 
     /// <summary>Returns the register oracle of the given partition fixture bin.</summary>
@@ -1440,7 +1466,8 @@ internal static class AsmFixtureCatalog {
             BinName = "partition_mutual_recursion_unwind",
             MaxCycles = 10000
         };
-        return MemoryFixture(settings, expectedMemory);
+        return MemoryFixture(settings, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionMutualRecursionUnwind);
     }
 
     /// <summary>Runs selfmodifycalltarget: every self-modified call-target variant reached its marker.</summary>
@@ -1453,7 +1480,8 @@ internal static class AsmFixtureCatalog {
             BinName = "selfmodifycalltarget",
             MaxCycles = 20000
         };
-        return MemoryFixture(settings, expectedMemory);
+        return MemoryFixture(settings, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyCallTarget);
     }
 
     /// <summary>Runs multimisalignedcall: the dispatcher ran three times and every continuation wrote its marker.</summary>
@@ -1625,14 +1653,16 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture Jump1WithoutSpeculation() {
         AsmFixture fixture = Dump("jump1");
         AsmRunSettings settings = fixture.Settings with { EnableSpeculativeCfgExploration = false };
-        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult);
+        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.Jump1NoSpec);
     }
 
     /// <summary>Runs the observed arm of speculative_branch with speculative exploration off: 01 DD AA.</summary>
     public static AsmFixture SpeculativeBranchWithoutSpeculation() {
         AsmFixture fixture = SpeculativeBranch(SpeculativeArm.Observed);
         AsmRunSettings settings = fixture.Settings with { EnableSpeculativeCfgExploration = false };
-        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult);
+        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchNoSpec);
     }
 
     /// <summary>Runs intchain with interrupt vectors installed: the INT 8 handler increments the BIOS tick counter once.</summary>

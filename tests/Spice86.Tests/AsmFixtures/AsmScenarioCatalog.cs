@@ -9,6 +9,7 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
@@ -603,33 +604,33 @@ internal static class AsmScenarioCatalog {
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("callstackunwind",
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Unobserved)),
-            PartitionScenario("partition_jump_into_function_middle"),
+            PartitionScenario("partition_jump_into_function_middle", AsmScenarioEngineAssertions.PartitionJumpIntoFunctionMiddle),
             AsmScenario.FromFixture("partition_shared_tail", () => AsmFixtureCatalog.Partition("partition_shared_tail")
                 .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionSharedTail)),
-            PartitionScenario("partition_multi_entry_dominated_shared"),
-            PartitionScenario("partition_multi_entry_irreducible_shared"),
+            PartitionScenario("partition_multi_entry_dominated_shared", AsmScenarioEngineAssertions.PartitionMultiEntryDominatedShared),
+            PartitionScenario("partition_multi_entry_irreducible_shared", AsmScenarioEngineAssertions.PartitionMultiEntryIrreducibleShared),
             // The shared region's two exits are each reached from both entries and do not reach each other, so
             // the blocks no single entry dominates form two unconnected regions. Partitioning must keep both.
-            PartitionScenario("partition_multi_entry_disconnected_shared"),
-            PartitionScenario("partition_cross_function_loop"),
-            PartitionScenario("partition_mixed_activation_cycle"),
+            PartitionScenario("partition_multi_entry_disconnected_shared", AsmScenarioEngineAssertions.PartitionMultiEntryDisconnectedShared),
+            PartitionScenario("partition_cross_function_loop", AsmScenarioEngineAssertions.PartitionCrossFunctionLoop),
+            PartitionScenario("partition_mixed_activation_cycle", AsmScenarioEngineAssertions.PartitionMixedActivationCycle),
             AsmScenario.FromFixture("partition_indirect_call_jump", () => AsmFixtureCatalog.Partition("partition_indirect_call_jump")
                 .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionIndirectCallJump)),
-            PartitionScenario("partition_jump_table"),
-            PartitionScenario("partition_untested_indirect"),
-            PartitionScenario("partition_jump_table_mixed"),
+            PartitionScenario("partition_jump_table", AsmScenarioEngineAssertions.PartitionJumpTable),
+            PartitionScenario("partition_untested_indirect", AsmScenarioEngineAssertions.PartitionUntestedIndirect),
+            PartitionScenario("partition_jump_table_mixed", AsmScenarioEngineAssertions.PartitionJumpTableMixed),
             AsmScenario.FromFixture("partition_far_dispatch", () => AsmFixtureCatalog.Partition("partition_far_dispatch").WithEngineAssertions(AsmScenarioEngineAssertions.PartitionFarDispatch)),
             AsmScenario.FromFixture("partition_shared_return_landings", () => AsmFixtureCatalog.Partition("partition_shared_return_landings")
                 .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionSharedReturnLandings)),
-            PartitionScenario("partition_far_call_chain"),
-            PartitionScenario("partition_far_jump_segment_change"),
-            PartitionScenario("partition_sign_conditions"),
-            PartitionScenario("partition_untested_far_indirect"),
-            PartitionScenario("partition_untaken_cpuid"),
-            PartitionScenario("partition_signed_min_compare"),
-            PartitionScenario("partition_back_edge_fallthrough"),
-            PartitionScenario("partition_jump_to_next"),
-            PartitionScenario("partition_two_fault_handlers"),
+            PartitionScenario("partition_far_call_chain", AsmScenarioEngineAssertions.PartitionFarCallChain),
+            PartitionScenario("partition_far_jump_segment_change", AsmScenarioEngineAssertions.PartitionFarJumpSegmentChange),
+            PartitionScenario("partition_sign_conditions", AsmScenarioEngineAssertions.PartitionSignConditions),
+            PartitionScenario("partition_untested_far_indirect", AsmScenarioEngineAssertions.PartitionUntestedFarIndirect),
+            PartitionScenario("partition_untaken_cpuid", AsmScenarioEngineAssertions.PartitionUntakenCpuid),
+            PartitionScenario("partition_signed_min_compare", AsmScenarioEngineAssertions.PartitionSignedMinCompare),
+            PartitionScenario("partition_back_edge_fallthrough", AsmScenarioEngineAssertions.PartitionBackEdgeFallthrough),
+            PartitionScenario("partition_jump_to_next", AsmScenarioEngineAssertions.PartitionJumpToNext),
+            PartitionScenario("partition_two_fault_handlers", AsmScenarioEngineAssertions.PartitionTwoFaultHandlers),
             PartitionScenario("cc_copy_in_observers"),
             PartitionScenario("cc_register_leaf"),
             PartitionScenario("cc_dispatch_targets"),
@@ -743,6 +744,11 @@ internal static class AsmScenarioCatalog {
 
     private static AsmScenario PartitionScenario(string binName) {
         return AsmScenario.FromFixture(binName, () => AsmFixtureCatalog.Partition(binName));
+    }
+
+    private static AsmScenario PartitionScenario(string binName, Action<AsmRunScope, Machine> engineAssertions) {
+        return AsmScenario.FromFixture(binName,
+            () => AsmFixtureCatalog.Partition(binName).WithEngineAssertions(engineAssertions));
     }
 
     /// <summary>The unknown-memory-is-RAM relaxation, the one named relaxation this catalogue runs beside

@@ -221,6 +221,9 @@ internal static class AsmScenarioEngineAssertions {
         // The SelectorNode is reachable as a block-level successor (the underlying
         // instruction-level edge call → selector aliases through CfgBlock.Successors).
         Assert.Contains(selector, callBlock.Successors);
+
+        // Graph-level assertion: speculation entered the overwritten address before the patch.
+        AssertDeadBlockAt(GraphOf(machine), "selfmodifycall", new SegmentedAddress(0xF000, 0x0010));
     }
 
     /// <summary>selfmodifyterminator: the SelectorNode injected at the terminator's address is
@@ -261,6 +264,11 @@ internal static class AsmScenarioEngineAssertions {
             Assert.NotNull(variantInstruction.ContainingBlock);
             Assert.Contains(variantInstruction, variantInstruction.ContainingBlock.Instructions);
         }
+
+        // Graph-level assertion: speculation entered the rewritten terminator and its target.
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "selfmodifyterminator", new SegmentedAddress(0xF000, 0x0019));
+        AssertDeadBlockAt(graph, "selfmodifyterminator", new SegmentedAddress(0xF000, 0x001B));
     }
 
     /// <summary>divfaultloop: the fault handler's retried division rewires the fault edges, checked
@@ -652,5 +660,339 @@ internal static class AsmScenarioEngineAssertions {
         int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
         partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
             "every block of the same-address return loop must belong to exactly one partition");
+    }
+
+    // ---- CFG shape assertions over block addresses ----
+    // Every check below reads the CfgCpuGraph the CfgBlocksTestJson exporter produces, states facts by
+    // SegmentedAddress (never by block id) and fails naming the scenario key and the address.
+
+    private static string EntryOf(SegmentedAddress address) => $"{address.Segment:X4}:{address.Offset:X4}";
+
+    private static CfgCpuGraph GraphOf(Machine machine) =>
+        CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+    private static CfgBlockInfo? BlockAt(CfgCpuGraph graph, SegmentedAddress address) =>
+        graph.Blocks.FirstOrDefault(block => block.Entry == EntryOf(address));
+
+    private static void AssertDeadBlockAt(CfgCpuGraph graph, string key, SegmentedAddress address) =>
+        graph.Blocks.Should().Contain(block => block.Entry == EntryOf(address) && block.Dead == true,
+            $"{key}: a dead version of the speculated arm must be entered at {EntryOf(address)}");
+
+    private static void AssertDeadBlocksAt(CfgCpuGraph graph, string key, params SegmentedAddress[] addresses) {
+        foreach (SegmentedAddress address in addresses) {
+            AssertDeadBlockAt(graph, key, address);
+        }
+    }
+
+    private static void AssertLiveBlockAt(CfgCpuGraph graph, string key, SegmentedAddress address) {
+        CfgBlockInfo? block = BlockAt(graph, address);
+        block.Should().NotBeNull($"{key}: a block must be entered at {EntryOf(address)}");
+        block!.Dead.Should().NotBe(true, $"{key}: the block at {EntryOf(address)} ran in this run");
+    }
+
+    private static void AssertNoBlockAt(CfgCpuGraph graph, string key, SegmentedAddress address) =>
+        BlockAt(graph, address).Should().BeNull($"{key}: no block may be entered at {EntryOf(address)}");
+
+    private static void AssertNoDeadBlocks(CfgCpuGraph graph, string key) =>
+        graph.Blocks.Should().OnlyContain(block => block.Dead != true,
+            $"{key}: with speculation off no block is dead");
+
+    private static void AssertPartitionEntryAt(CfgCpuGraph graph, string key, SegmentedAddress address) {
+        graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
+        graph.Partitions!.SelectMany(partition => partition.Entries)
+            .Should().Contain(entry => entry.Address == EntryOf(address),
+                $"{key}: a partition must be entered at {EntryOf(address)}");
+    }
+
+    private static void AssertPartitionEntryCountAt(CfgCpuGraph graph, string key, SegmentedAddress address, int count) {
+        graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
+        graph.Partitions!.Count(partition => partition.Entries.Any(entry => entry.Address == EntryOf(address)))
+            .Should().Be(count, $"{key}: {EntryOf(address)} must be an entry of exactly {count} partitions");
+    }
+
+    private static void AssertSamePartitionHasEntries(CfgCpuGraph graph, string key, params SegmentedAddress[] addresses) {
+        graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
+        string[] entries = addresses.Select(EntryOf).ToArray();
+        graph.Partitions!.Should().Contain(partition => entries.All(
+                entry => partition.Entries.Any(candidate => candidate.Address == entry)),
+            $"{key}: one partition must hold the entries {string.Join(", ", entries)}");
+    }
+
+    private static void AssertEntryPointAt(CfgCpuGraph graph, string key, SegmentedAddress address) =>
+        graph.EntryPointAddresses.Should().Contain(EntryOf(address),
+            $"{key}: {EntryOf(address)} must be an entry point of the graph");
+
+    private static void AssertTransferKind(CfgCpuGraph graph, string key, string kind) {
+        graph.Transfers.Should().NotBeNull($"{key}: transfers must be exported");
+        graph.Transfers!.Should().Contain(transfer => transfer.Kind == kind,
+            $"{key}: a {kind} transfer must exist");
+    }
+
+    private static void AssertTransferKindCount(CfgCpuGraph graph, string key, string kind, int count) {
+        graph.Transfers.Should().NotBeNull($"{key}: transfers must be exported");
+        graph.Transfers!.Count(transfer => transfer.Kind == kind)
+            .Should().Be(count, $"{key}: exactly {count} {kind} transfers must exist");
+    }
+
+    private static void AssertSinglePartitionOfLiveBlocks(CfgCpuGraph graph, string key) {
+        graph.Partitions.Should().NotBeNull($"{key}: partitioning must run");
+        int[] liveBlocks = graph.Blocks.Where(block => block.Dead != true).Select(block => block.Id).ToArray();
+        graph.Partitions!.Should().ContainSingle($"{key}: all live blocks belong to a single partition")
+            .Which.Blocks.Should().BeEquivalentTo(liveBlocks,
+                $"{key}: the single partition covers every live block");
+    }
+
+    /// <summary>speculative_branch observed arm: the JNZ-taken arm is a dead speculated block.</summary>
+    public static void SpeculativeBranchObserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_branch", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_branch unobserved arm: the fallthrough arm is the dead speculated block.</summary>
+    public static void SpeculativeBranchUnobserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_branch", new SegmentedAddress(0xF000, 0x000C));
+
+    /// <summary>speculative_branch without speculation: no dead blocks and no block at the taken arm.</summary>
+    public static void SpeculativeBranchNoSpec(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertNoDeadBlocks(graph, "speculative_branch");
+        AssertNoBlockAt(graph, "speculative_branch", new SegmentedAddress(0xF000, 0x0013));
+    }
+
+    /// <summary>speculative_run_same_offset observed arm: dead blocks at the same offset in two segments.</summary>
+    public static void SpeculativeRunSameOffsetObserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "speculative_run_same_offset",
+            new SegmentedAddress(0xF010, 0x010D), new SegmentedAddress(0xF000, 0x010D));
+
+    /// <summary>speculative_run_same_offset unobserved arm: the other pair of same-offset blocks is dead.</summary>
+    public static void SpeculativeRunSameOffsetUnobserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "speculative_run_same_offset",
+            new SegmentedAddress(0xF010, 0x0107), new SegmentedAddress(0xF000, 0x0107));
+
+    /// <summary>speculative_closure observed arm: the speculated arm, its loop-back and continuation are dead.</summary>
+    public static void SpeculativeClosureObserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "speculative_closure",
+            new SegmentedAddress(0xF000, 0x0022), new SegmentedAddress(0xF000, 0x001B),
+            new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_closure unobserved arm: the other arm's entry block is dead.</summary>
+    public static void SpeculativeClosureUnobserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_closure", new SegmentedAddress(0xF000, 0x000C));
+
+    /// <summary>speculative_convergence observed arm: the speculated arm is dead.</summary>
+    public static void SpeculativeConvergenceObserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_convergence", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_convergence unobserved arm: the other arm's entry block is dead.</summary>
+    public static void SpeculativeConvergenceUnobserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_convergence", new SegmentedAddress(0xF000, 0x000C));
+
+    /// <summary>speculative_mixed_block observed arm: the unobserved arm block is dead.</summary>
+    public static void SpeculativeMixedBlockObserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_mixed_block", new SegmentedAddress(0xF000, 0x000C));
+
+    /// <summary>speculative_mixed_block unobserved arm: the observed arm block is dead.</summary>
+    public static void SpeculativeMixedBlockUnobserved(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_mixed_block", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_call_entry: speculation created a call arm and entered the subroutine body it calls.</summary>
+    public static void SpeculativeCallEntry(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "speculative_call_entry",
+            new SegmentedAddress(0xF000, 0x0013), new SegmentedAddress(0xF000, 0x001B));
+
+    /// <summary>speculative_invalid_opcode: speculation stopped at the invalid-opcode region, no block exists there.</summary>
+    public static void SpeculativeInvalidOpcode(AsmRunScope scope, Machine machine) =>
+        AssertNoBlockAt(GraphOf(machine), "speculative_invalid_opcode", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_zero_memory: speculation entered the zero region as a dead block while the
+    /// patched-over code it shadows ran live.</summary>
+    public static void SpeculativeZeroMemory(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "speculative_zero_memory", new SegmentedAddress(0xF000, 0x0030));
+        AssertLiveBlockAt(graph, "speculative_zero_memory", new SegmentedAddress(0xF000, 0x0043));
+    }
+
+    /// <summary>speculative_transfer_into_data: all four transfers into data produced dead blocks.</summary>
+    public static void SpeculativeTransferIntoData(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "speculative_transfer_into_data",
+            new SegmentedAddress(0xF000, 0x001F), new SegmentedAddress(0xF000, 0x0021),
+            new SegmentedAddress(0xF000, 0x0026), new SegmentedAddress(0xF000, 0x002B));
+
+    /// <summary>speculative_smc_guard: the self-modifying arm speculation found is dead.</summary>
+    public static void SpeculativeSmcGuard(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_smc_guard", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_smc_lowram: the self-modifying store's arm in low RAM is a dead block.</summary>
+    public static void SpeculativeSmcLowRam(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_smc_lowram", new SegmentedAddress(0x016F, 0x0118));
+
+    /// <summary>speculative_discard: the speculated arm that gets discarded is dead.</summary>
+    public static void SpeculativeDiscard(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_discard", new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>speculative_a20_smc_guard: the A20-wrapped speculated arm is dead.</summary>
+    public static void SpeculativeA20SmcGuard(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "speculative_a20_smc_guard", new SegmentedAddress(0xFFFE, 0x0014));
+
+    /// <summary>callstackunwind observed arm: the leaf's discarded-return path is dead; every nested call
+    /// target is a partition entry.</summary>
+    public static void CallStackUnwindObserved(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x040D));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0100));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0200));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0300));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0400));
+    }
+
+    /// <summary>callstackunwind unobserved arm: the same partition entries, with the other leaf path dead.</summary>
+    public static void CallStackUnwindUnobserved(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertDeadBlockAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0407));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0100));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0200));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0300));
+        AssertPartitionEntryAt(graph, "callstackunwind", new SegmentedAddress(0xF000, 0x0400));
+    }
+
+    /// <summary>interior_entry: the interior landings are graph entry points.</summary>
+    public static void InteriorEntry(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertEntryPointAt(graph, "interior_entry", new SegmentedAddress(0xF000, 0x0200));
+        AssertEntryPointAt(graph, "interior_entry", new SegmentedAddress(0xF000, 0x020C));
+        AssertEntryPointAt(graph, "interior_entry", new SegmentedAddress(0xF000, 0x0300));
+    }
+
+    /// <summary>jump1 without speculation: every branch lands on observed code, no dead blocks.</summary>
+    public static void Jump1NoSpec(AsmRunScope scope, Machine machine) =>
+        AssertNoDeadBlocks(GraphOf(machine), "jump1");
+
+    /// <summary>selfmodifyinstructions: two dead block versions sit at the rewritten entry.</summary>
+    public static void SelfModifyInstructions(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        graph.Blocks.Where(block => block.Entry == EntryOf(new SegmentedAddress(0xF000, 0x1400)) && block.Dead == true)
+            .Should().HaveCount(2, "selfmodifyinstructions: two speculated versions of the rewritten entry are dead");
+    }
+
+    /// <summary>selfmodifyrep: the rep-prefixed rewrite's speculated version is dead.</summary>
+    public static void SelfModifyRep(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "selfmodifyrep", new SegmentedAddress(0xF000, 0x001C));
+
+    /// <summary>selfmodifycalltarget: the shared call-target address is an entry of three partitions.</summary>
+    public static void SelfModifyCallTarget(AsmRunScope scope, Machine machine) =>
+        AssertPartitionEntryCountAt(GraphOf(machine), "selfmodifycalltarget",
+            new SegmentedAddress(0xF000, 0x0028), 3);
+
+    /// <summary>partition_jump_into_function_middle: a partition is entered in the middle of the routine.</summary>
+    public static void PartitionJumpIntoFunctionMiddle(AsmRunScope scope, Machine machine) =>
+        AssertPartitionEntryAt(GraphOf(machine), "partition_jump_into_function_middle",
+            new SegmentedAddress(0xF000, 0x0025));
+
+    /// <summary>partition_multi_entry_dominated_shared: the three synthetic entries of the shared region.</summary>
+    public static void PartitionMultiEntryDominatedShared(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_multi_entry_dominated_shared", new SegmentedAddress(0xF000, 0x0041));
+        AssertPartitionEntryAt(graph, "partition_multi_entry_dominated_shared", new SegmentedAddress(0xF000, 0x0046));
+        AssertPartitionEntryAt(graph, "partition_multi_entry_dominated_shared", new SegmentedAddress(0xF000, 0x004B));
+    }
+
+    /// <summary>partition_multi_entry_irreducible_shared: the irreducible region's two entries sit in one partition.</summary>
+    public static void PartitionMultiEntryIrreducibleShared(AsmRunScope scope, Machine machine) =>
+        AssertSamePartitionHasEntries(GraphOf(machine), "partition_multi_entry_irreducible_shared",
+            new SegmentedAddress(0xF000, 0x006F), new SegmentedAddress(0xF000, 0x007D));
+
+    /// <summary>partition_multi_entry_disconnected_shared: the two disconnected regions each get their two
+    /// shared entries.</summary>
+    public static void PartitionMultiEntryDisconnectedShared(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_multi_entry_disconnected_shared", new SegmentedAddress(0xF000, 0x0045));
+        AssertPartitionEntryAt(graph, "partition_multi_entry_disconnected_shared", new SegmentedAddress(0xF000, 0x004B));
+        AssertPartitionEntryAt(graph, "partition_multi_entry_disconnected_shared", new SegmentedAddress(0xF000, 0x0051));
+        AssertPartitionEntryAt(graph, "partition_multi_entry_disconnected_shared", new SegmentedAddress(0xF000, 0x0055));
+    }
+
+    /// <summary>partition_cross_function_loop: both loop partners are partition entries and the loop shows a
+    /// cyclic cross-partition flow.</summary>
+    public static void PartitionCrossFunctionLoop(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_cross_function_loop", new SegmentedAddress(0xF000, 0x0028));
+        AssertPartitionEntryAt(graph, "partition_cross_function_loop", new SegmentedAddress(0xF000, 0x002E));
+        AssertTransferKind(graph, "partition_cross_function_loop", "cyclicCrossPartitionFlow");
+    }
+
+    /// <summary>partition_mixed_activation_cycle: both activation entries are partition entries joined by a
+    /// cyclic cross-partition flow.</summary>
+    public static void PartitionMixedActivationCycle(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_mixed_activation_cycle", new SegmentedAddress(0xF000, 0x0028));
+        AssertPartitionEntryAt(graph, "partition_mixed_activation_cycle", new SegmentedAddress(0xF000, 0x002E));
+        AssertTransferKind(graph, "partition_mixed_activation_cycle", "cyclicCrossPartitionFlow");
+    }
+
+    /// <summary>partition_jump_table: every live block belongs to the single partition.</summary>
+    public static void PartitionJumpTable(AsmRunScope scope, Machine machine) =>
+        AssertSinglePartitionOfLiveBlocks(GraphOf(machine), "partition_jump_table");
+
+    /// <summary>partition_untested_indirect: the indirect dispatch's unobserved targets are dead blocks.</summary>
+    public static void PartitionUntestedIndirect(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "partition_untested_indirect",
+            new SegmentedAddress(0xF000, 0x001A), new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>partition_jump_table_mixed: every live block belongs to the single partition.</summary>
+    public static void PartitionJumpTableMixed(AsmRunScope scope, Machine machine) =>
+        AssertSinglePartitionOfLiveBlocks(GraphOf(machine), "partition_jump_table_mixed");
+
+    /// <summary>partition_far_call_chain: the far calls enter partitions in two different segments.</summary>
+    public static void PartitionFarCallChain(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_far_call_chain", new SegmentedAddress(0xF010, 0x0044));
+        AssertPartitionEntryAt(graph, "partition_far_call_chain", new SegmentedAddress(0xF001, 0x0141));
+    }
+
+    /// <summary>partition_far_jump_segment_change: the far jump's landing segment is a partition entry.</summary>
+    public static void PartitionFarJumpSegmentChange(AsmRunScope scope, Machine machine) =>
+        AssertPartitionEntryAt(GraphOf(machine), "partition_far_jump_segment_change",
+            new SegmentedAddress(0xF100, 0x004F));
+
+    /// <summary>partition_sign_conditions: the untested sign arms are dead blocks.</summary>
+    public static void PartitionSignConditions(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "partition_sign_conditions",
+            new SegmentedAddress(0xF000, 0x0032), new SegmentedAddress(0xF000, 0x0012));
+
+    /// <summary>partition_untested_far_indirect: the unobserved far indirect targets are dead blocks.</summary>
+    public static void PartitionUntestedFarIndirect(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlocksAt(GraphOf(machine), "partition_untested_far_indirect",
+            new SegmentedAddress(0xF000, 0x001B), new SegmentedAddress(0xF000, 0x0013));
+
+    /// <summary>partition_untaken_cpuid: the CPUID arm the run never took is a dead block.</summary>
+    public static void PartitionUntakenCpuid(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "partition_untaken_cpuid", new SegmentedAddress(0xF000, 0x0010));
+
+    /// <summary>partition_signed_min_compare: the unobserved signed-min arm is a dead block.</summary>
+    public static void PartitionSignedMinCompare(AsmRunScope scope, Machine machine) =>
+        AssertDeadBlockAt(GraphOf(machine), "partition_signed_min_compare", new SegmentedAddress(0xF000, 0x0029));
+
+    /// <summary>partition_back_edge_fallthrough: every live block belongs to the single partition.</summary>
+    public static void PartitionBackEdgeFallthrough(AsmRunScope scope, Machine machine) =>
+        AssertSinglePartitionOfLiveBlocks(GraphOf(machine), "partition_back_edge_fallthrough");
+
+    /// <summary>partition_jump_to_next: every live block belongs to the single partition.</summary>
+    public static void PartitionJumpToNext(AsmRunScope scope, Machine machine) =>
+        AssertSinglePartitionOfLiveBlocks(GraphOf(machine), "partition_jump_to_next");
+
+    /// <summary>partition_two_fault_handlers: both fault-handler partitions are entries and the two faults
+    /// produce cpuFault transfers.</summary>
+    public static void PartitionTwoFaultHandlers(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_two_fault_handlers", new SegmentedAddress(0xF000, 0x001A));
+        AssertPartitionEntryAt(graph, "partition_two_fault_handlers", new SegmentedAddress(0xF000, 0x003A));
+        AssertTransferKindCount(graph, "partition_two_fault_handlers", "cpuFault", 2);
+    }
+
+    /// <summary>partition_mutual_recursion_unwind: both mutually recursive call targets are partition entries
+    /// joined by a cyclic cross-partition flow.</summary>
+    public static void PartitionMutualRecursionUnwind(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = GraphOf(machine);
+        AssertPartitionEntryAt(graph, "partition_mutual_recursion_unwind", new SegmentedAddress(0xF000, 0x0015));
+        AssertPartitionEntryAt(graph, "partition_mutual_recursion_unwind", new SegmentedAddress(0xF000, 0x0025));
+        AssertTransferKind(graph, "partition_mutual_recursion_unwind", "cyclicCrossPartitionFlow");
     }
 }
