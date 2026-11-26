@@ -108,6 +108,24 @@ public class DeviceScheduler {
     }
 
     /// <summary>
+    ///     Gets every queued event of a handler, earliest first.
+    /// </summary>
+    /// <param name="handler">Callback whose events are looked up.</param>
+    /// <returns>The scheduled time and value of each event of the handler.</returns>
+    public IReadOnlyList<QueuedEvent> GetEvents(EventHandler handler) {
+        List<QueuedEvent> events = new();
+        for (int i = 1; i <= _queue.Count; i++) {
+            ScheduledEntry entry = _queue.NodeAt(i);
+            if (entry.Handler == handler) {
+                events.Add(new QueuedEvent(entry.Priority, entry.Value));
+            }
+        }
+
+        events.Sort(static (left, right) => left.TimeMs.CompareTo(right.TimeMs));
+        return events;
+    }
+
+    /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     public void RemoveEvents(EventHandler handler) {

@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.OperatingSystem;
 
@@ -17,4 +18,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 /// <param name="Pic">State of the interrupt controllers, or <see langword="null" />.</param>
 /// <param name="Pit">State of the programmable interval timer, or <see langword="null" />.</param>
 /// <param name="Dos">State of the DOS kernel kept outside emulated memory, or <see langword="null" />.</param>
-public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, DosState? Dos);
+/// <param name="SoundBlaster">State of the Sound Blaster, or <see langword="null" />.</param>
+public sealed record MachineDeviceState(DualPicState? Pic, PitTimerState? Pit, DosState? Dos,
+    SoundBlasterState? SoundBlaster);

@@ -75,6 +75,7 @@ public sealed class MachineDeviceStateTests {
         none.Pic.Should().BeNull();
         none.Pit.Should().BeNull();
         none.Dos.Should().BeNull();
+        none.SoundBlaster.Should().BeNull();
     }
 
     [Fact]
