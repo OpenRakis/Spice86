@@ -676,6 +676,7 @@ internal static class AsmFixtureCatalog {
             .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeCallEntry);
     }
 
+
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
@@ -716,6 +717,12 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture SpeculativeDiscard() {
         return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
             .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeDiscard);
+    }
+
+    /// <summary>Runs speculative_discard on its unobserved arm: the alternative path writes 0xEE
+    /// to [0x0401] before the done marker.</summary>
+    public static AsmFixture SpeculativeDiscardUnobserved() {
+        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xEE, 0xAA), SpeculativeArm.Unobserved);
     }
 
     /// <summary>Runs speculative_a20_smc_guard on its observed arm: the selector jumps to the

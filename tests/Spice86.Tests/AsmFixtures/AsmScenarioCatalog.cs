@@ -593,6 +593,9 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_mixed_block", () => AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_mixed_block", () => AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_call_entry", AsmFixtureCatalog.SpeculativeCallEntry).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeCallEntry),
+            // No Unobserved variants: invalid_opcode, zero_memory and transfer_into_data execute data or
+            // invalid opcodes on the unobserved arm; the smc guards patch the next instruction into an
+            // undefined opcode; a20_smc_guard stays valid but writes no result bytes beyond its setup.
             AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeInvalidOpcode),
             AsmScenario.FromFixture("speculative_zero_memory", AsmFixtureCatalog.SpeculativeZeroMemory).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeZeroMemory),
             // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the
@@ -602,6 +605,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
             AsmScenario.FromFixture("speculative_smc_lowram", AsmFixtureCatalog.SpeculativeSmcLowRam),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
+            AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscardUnobserved),
             AsmScenario.FromFixture("speculative_a20_smc_guard", AsmFixtureCatalog.SpeculativeA20SmcGuard),
             AsmScenario.FromFixture("callstackunwind",
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Observed)),
