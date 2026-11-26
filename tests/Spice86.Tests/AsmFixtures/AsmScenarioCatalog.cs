@@ -441,6 +441,35 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("idiom_jump_table_switch", () => AsmFixtureCatalog.Idiom("idiom_jump_table_switch",
                 (0x600, 0x01), (0x601, 0xD0), (0x602, 0xD1)))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomJumpTableSwitch),
+            AsmScenario.FromFixture("idiom_fail_as_untested", () => AsmFixtureCatalog.Idiom("idiom_fail_as_untested",
+                (0x600, 0x01), (0x601, 0xDD)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomFailAsUntested),
+            AsmScenario.FromFixture("idiom_memory_accessors", () => AsmFixtureCatalog.Idiom("idiom_memory_accessors",
+                (0x600, 0x01), (0x601, 0x78), (0x602, 0x42), (0x603, 0x42)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomMemoryAccessors),
+            AsmScenario.FromFixture("idiom_stack_frames", () => AsmFixtureCatalog.Idiom("idiom_stack_frames",
+                (0x600, 0x01), (0x601, 0x43)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStackFrames),
+            AsmScenario.FromFixture("idiom_fault_dispatch", () => AsmFixtureCatalog.Idiom("idiom_fault_dispatch",
+                (0x600, 0x01), (0x601, 0x42)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomFaultDispatch),
+            AsmScenario.FromFixture("idiom_relaxation_unknown_memory_is_ram",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_base", (0x600, 0x01), (0x601, 0x00))
+                    .WithGenerationPolicy(RelaxedRamPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationRam),
+            AsmScenario.FromFixture("idiom_relaxation_accesses_stay_in_segment",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_segment", (0x600, 0x01), (0x601, 0x42))
+                    .WithGenerationPolicy(RelaxedSegmentPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationSegment),
+            AsmScenario.FromFixture("idiom_relaxation_abandoned_stack_slots",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_stack", (0x600, 0x01), (0x601, 0x34), (0x602, 0x78))
+                    .WithGenerationPolicy(RelaxedStackPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationStack),
+            AsmScenario.FromFixture("idiom_relaxation_saved_slots",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_saved",
+                    (0x600, 0x01), (0x601, 0x11), (0x602, 0x22))
+                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationSaved),
             AsmScenario.FromFixture("fpuinit", AsmFixtureCatalog.FpuInit),
             CpuBin("add"),
             CpuBin("bcdcnv"),

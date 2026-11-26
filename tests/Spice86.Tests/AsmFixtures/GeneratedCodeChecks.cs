@@ -51,7 +51,7 @@ internal static class GeneratedCodeChecks {
     /// <summary>Concatenates the program files of <paramref name="program"/>, dropping the support
     /// wiring files (<c>CfgGeneratedOverrides.Support.*.cs</c>) and the segment globals classes
     /// (<c>*Globals.cs</c>).</summary>
-    private static string ProgramOnlyText(GeneratedCSharpProgram program) {
+    internal static string ProgramOnlyText(GeneratedCSharpProgram program) {
         const string marker = "// ==== file: ";
         StringBuilder builder = new();
         bool keep = true;

@@ -69,6 +69,46 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "case 0x001A:")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomFailAsUntested = [
+        new(Contains, "throw FailAsUntested(\"Untested indirect jump at F000:0019\");"),
+        new(Contains, "VerifySpeculativeEntryOrFail(biosSegment, 0x001B")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomMemoryAccessors = [
+        new(Contains, "UInt8[DS, index + 2] = 0x42;"),
+        new(Contains, "AX = DsGlobals.Word0610;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomStackFrames = [
+        new(Contains, "unknown_F000_000F_F000FFrame frame = new(Memory, State.SegmentRegisters, SP);"),
+        new(Contains, "frame.Local4 = word1;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomFaultDispatch = [
+        new(Contains, "catch (CpuException cpuException) {"),
+        new(Contains, "DispatchCpuFault(cpuException")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomRelaxationRam = [
+        new(Contains, "// Relaxations: UnknownMemoryIsRam"),
+        new(Contains, "SegmentA000Globals.Byte0010 = 0x42;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomRelaxationSegment = [
+        new(Contains, "// Relaxations: AccessesStayInSegment"),
+        new(Contains, "UInt8[DS, index] = 0x42;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomRelaxationStack = [
+        new(Contains, "// Relaxations: AbandonedStackSlotsUnobserved"),
+        new(Contains, "DX = SsUInt16[SP + 2];")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomRelaxationSaved = [
+        new(Contains, "// Relaxations: SavedSlotsWrittenOnlyByPops"),
+        new(Contains, "Stack.Save(BX, CX);")
+    ];
+
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")
     ];

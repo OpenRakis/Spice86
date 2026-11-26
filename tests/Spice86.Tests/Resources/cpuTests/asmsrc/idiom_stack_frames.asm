@@ -1,4 +1,5 @@
 ; Build: fasm idiom_stack_frames.asm ../idiom_stack_frames.bin
+; a bp frame with a local slot and a mov sp,bp epilogue.
 use16
 
 start:
@@ -10,7 +11,9 @@ start:
 framed:
     push bp
     mov bp, sp
-    mov ax, [bp+4]
+    sub sp, 2
+    mov [bp-2], ax
+    mov ax, [bp-2]
     add ax, 0x40
     mov sp, bp
     pop bp

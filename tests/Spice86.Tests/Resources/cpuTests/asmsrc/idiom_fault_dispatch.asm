@@ -1,4 +1,5 @@
 ; Build: fasm idiom_fault_dispatch.asm ../idiom_fault_dispatch.bin
+; a divide-by-zero fault dispatches to the observed int 0 handler.
 use16
 
 start:
@@ -7,7 +8,6 @@ start:
     mov ds, ax
     mov word [0x0000], fault_handler
     mov word [0x0002], 0xF000
-    xor dx, dx
     xor cx, cx
     mov ax, 5
     div cx
@@ -15,8 +15,7 @@ start:
     hlt
 fault_handler:
     mov byte [0x0601], 0x42
-    add sp, 0
-    iret
+    hlt
 
     rb 65520-$
     jmp start
