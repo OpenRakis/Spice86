@@ -323,7 +323,7 @@ When Spice86 exits, it dumps its data (memory dump, execution flow, CFG) and gen
 
 The generated project under `GeneratedProject/` is immediately runnable and already overrides the explored assembly with equivalent C#. From there you rewrite the generated functions, function by function, to discover and document the program's intent. This is well suited to LLM assistance.
 
-See [Generated C# override project](#generated-c-override-project) for how to run it and [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code) for the override API.
+See [Generated C# override project](#generated-c-override-project) for how to run it and [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code) for the override API. [doc/codegenIdioms.md](doc/codegenIdioms.md) shows small examples of the code the generator produces.
 
 Optionally, you can also open the memory dump in [Ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) for additional static analysis (see [Ghidra plugin](#ghidra-plugin)).
 

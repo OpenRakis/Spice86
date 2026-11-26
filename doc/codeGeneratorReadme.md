@@ -1,6 +1,6 @@
 # C# Code Generator
 
-Turns a discovered CFG (control flow graph) into a compilable C# override class that replaces the emulated assembly at runtime.
+Turns a discovered CFG (control flow graph) into a compilable C# override class that replaces the emulated assembly at runtime. [codegenIdioms.md](codegenIdioms.md) shows small ASM programs and the C# the generator produces for them.
 
 ## What it does
 
