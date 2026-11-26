@@ -11,7 +11,8 @@ public sealed record GeneratorOptions {
     /// <summary>The options of a check build, generated code made to be compared with the emulated original:
     /// every instrumentation option on.</summary>
     public static GeneratorOptions CheckBuild { get; } = new() {
-        ServiceCallNotifications = true
+        ServiceCallNotifications = true,
+        KeepStoreWidths = true
     };
 
     /// <summary>Whether each emitted method runs the census classifiers the generated-program diagnostics
@@ -27,4 +28,11 @@ public sealed record GeneratorOptions {
     /// call through the handler's stub. Off by default: the statement costs a call per service call, and the
     /// default output has none.</summary>
     public bool ServiceCallNotifications { get; init; }
+
+    /// <summary>Whether each memory store keeps the width of the instruction it comes from. The joined-memory
+    /// pass then leaves two adjacent word stores as they are, where it otherwise stores both words as one
+    /// dword at the second store. Off by default: a check build turns it on so that an
+    /// <see cref="Spice86.Core.Emulator.Memory.IMemoryWriteObserver"/> sees the same writes, with the same
+    /// widths and in the same order, from the generated code as from the emulated original.</summary>
+    public bool KeepStoreWidths { get; init; }
 }

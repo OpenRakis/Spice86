@@ -41,6 +41,7 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _collectCensuses;
     private readonly bool _verify;
     private readonly bool _serviceCallNotifications;
+    private readonly bool _keepStoreWidths;
     private readonly int _maxLinesPerFile;
 
     /// <summary>The production generator: no census collection, no IR verification.</summary>
@@ -71,6 +72,7 @@ internal sealed class CfgCSharpGenerator {
         _collectCensuses = options.CollectCensuses;
         _verify = options.Verify;
         _serviceCallNotifications = options.ServiceCallNotifications;
+        _keepStoreWidths = options.KeepStoreWidths;
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -102,7 +104,7 @@ internal sealed class CfgCSharpGenerator {
             effectBuilder.Compute());
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications);
+            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, _keepStoreWidths);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 

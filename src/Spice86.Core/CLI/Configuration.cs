@@ -145,7 +145,9 @@ public sealed class Configuration : CommandSettings {
     /// emulated original, not to be shipped. A check build prints a <c>ServiceCalled</c> statement before
     /// each direct call of a DOS or BIOS service implementation, so an
     /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
-    /// call. Off by default.
+    /// call, and keeps each memory store at the width of its instruction, so an
+    /// <see cref="Spice86.Core.Emulator.Memory.IMemoryWriteObserver"/> sees the same writes as from the
+    /// emulated original. Off by default.
     /// </summary>
     [CommandOption("--GeneratedCodeCheckBuild")]
     public bool GeneratedCodeCheckBuild { get; init; }

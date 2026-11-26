@@ -55,6 +55,6 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <param name="array">The byte array used as RAM storage.</param>
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayReaderWriter(array);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter, new RealModeMmu8086());
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter, new RealModeMmu8086(), MemoryWriteEvents.Unobserved);
     }
 }

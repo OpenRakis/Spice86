@@ -339,14 +339,15 @@ public class Stack {
     }
 
     /// <summary>
-    /// Pushes a SegmentedAddress value on the stack
+    /// Pushes a SegmentedAddress value on the stack: the segment first, then the offset, as a far call
+    /// or an interrupt pushes CS, then IP.
     /// </summary>
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void PushSegmentedAddress(SegmentedAddress value) {
         ushort newSp = (ushort)(_state.SP - 4);
         ValidateStackAccess(newSp, 4);
-        _memory.WriteUInt16Segmented(_state.SS, newSp, value.Offset);
         _memory.WriteUInt16Segmented(_state.SS, (ushort)(newSp + 2), value.Segment);
+        _memory.WriteUInt16Segmented(_state.SS, newSp, value.Offset);
         _state.SP = newSp;
     }
 

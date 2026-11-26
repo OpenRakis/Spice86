@@ -39,7 +39,8 @@ internal sealed class IrMethodEmitter(
     HardwareInterruptEffectBuilder effectBuilder,
     bool collectCensuses,
     bool verify,
-    bool serviceCallNotifications) {
+    bool serviceCallNotifications,
+    bool keepStoreWidths) {
 
     private readonly IrLifter _lifter = new(context, lowerer, assemblyRenderer);
 
@@ -53,7 +54,7 @@ internal sealed class IrMethodEmitter(
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
-            context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+            context.Program.Inputs.IoPorts, effectBuilder.HasOnlyBuiltInTargets, !keepStoreWidths, timer);
         ConstantMemoryAccessTable constantMemoryAccesses = IrConstantMemoryAccesses.Collect(irMethod);
         (BlockNode EntryDispatch, BlockNode Body, GotoCensus Census, GotoTargets Targets) structured =
             timer.Measure("lowering and structuring", () => {
