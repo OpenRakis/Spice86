@@ -9,8 +9,11 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 /// the service ran can differ from the caller's are what the stub's <c>iret</c> restores).</param>
 /// <param name="Memory">Effect of the service on emulated memory.</param>
 /// <param name="Io">Whether the service performs I/O port accesses.</param>
+/// <param name="Transfer">How the service hands control back: whether it returns to the caller,
+/// runs a child program, or terminates the current process.</param>
 public sealed record ServiceContract(CallEffect Registers,
-    ServiceMemoryEffect Memory, bool Io) {
+    ServiceMemoryEffect Memory, bool Io,
+    ServiceTransferKind Transfer = ServiceTransferKind.Returns) {
     /// <summary>
     /// Contract used when the effects of a service cannot be described precisely:
     /// it may read and write every register and flag, memory and I/O ports.

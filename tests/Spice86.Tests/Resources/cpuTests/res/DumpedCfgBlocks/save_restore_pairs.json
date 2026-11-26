@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:01A6",
+  "lastExecutedAddress": "F000:01B0",
   "lastExecutedBlockId": 288,
   "blocks": [
     {
       "id": 288,
       "entry": "F000:019F",
-      "term": "F000:01A6",
+      "term": "F000:01B0",
       "pred": [
         281,
         283
@@ -22,6 +22,8 @@
         "31D2|xor DX,DX",
         "53|push BX",
         "5B|pop BX",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -85,7 +87,7 @@
         "BC0010|mov SP,0x1000",
         "FC|cld",
         "BF4000|mov DI,0x0040",
-        "BEB001|mov SI,0x01B0",
+        "BEBA01|mov SI,0x01BA",
         "B81111|mov AX,0x1111",
         "50|push AX",
         "B92222|mov CX,0x2222",
@@ -143,7 +145,7 @@
         "894506|mov word ptr DS:[DI\u002B6],AX",
         "B84444|mov AX,0x4444",
         "50|push AX",
-        "E85C01|call near 0x01A7"
+        "E86601|call near 0x01B1"
       ]
     },
     {
@@ -177,8 +179,8 @@
     },
     {
       "id": 42,
-      "entry": "F000:01A7",
-      "term": "F000:01AF",
+      "entry": "F000:01B1",
+      "term": "F000:01B9",
       "pred": [
         32
       ],

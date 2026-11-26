@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
+// ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -11,14 +11,117 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_003D_F003D(ushort word1) {
+        DX = word1;
+        CheckExternalEvents(biosSegment, 0x003D);
+        DX++;
+        FarReturn();
+        return DX;
     }
+
+    public virtual Action unknown_F000_003D_F003D_Asm() {
+        DX = unknown_F000_003D_F003D(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_0041_F0041(ushort word1) {
+        DX = word1;
+        CheckExternalEvents(biosSegment, 0x0041);
+        DX += 0x0010;
+        FarReturn();
+        return DX;
+    }
+
+    public virtual Action unknown_F000_0041_F0041_Asm() {
+        DX = unknown_F000_0041_F0041(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: CX, DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_0045_F0045() {
+        CheckExternalEvents(biosSegment, 0x0045);
+        return unknown_F000_003D_F003D(DX);
+    }
+
+    public virtual Action unknown_F000_0045_F0045_Asm() {
+        DX = unknown_F000_0045_F0045();
+        return Returned;
+    }
+
+    /// <summary>Inputs: CX, DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_0047_F0047() {
+        CheckExternalEvents(biosSegment, 0x0047);
+        return unknown_F000_0041_F0041(DX);
+    }
+
+    public virtual Action unknown_F000_0047_F0047_Asm() {
+        DX = unknown_F000_0047_F0047();
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        AX = 0x1000;
+        SS = 0x1000;
+        SP = 0x0100;
+        DX = 0;
+        CX = 4;
+        do {
+            CheckExternalEvents(biosSegment, 0x000D);
+            BX = CX;
+            BX = Alu16.Dec(BX);
+            BX = Alu16.Shl(BX, 2);
+            ushort targetSegment_0013 = UInt16[CS, BX + 0x0057];
+            ushort targetOffset_0013 = UInt16[CS, BX + 0x55];
+            switch ((uint)(targetSegment_0013 << 16 | targetOffset_0013)) {
+                case 0xF000_003D:
+                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_003D_F003D_AsmEntry);
+                    break;
+                case 0xF000_0041:
+                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_0041_F0041_AsmEntry);
+                    break;
+                case 0xF000_0045:
+                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_0045_F0045_AsmEntry);
+                    break;
+                case 0xF000_0047:
+                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_0047_F0047_AsmEntry);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested far call target {targetSegment_0013:X4}:{targetOffset_0013:X4} at F000:0013");
+            }
+            CX--;
+        } while (CX != 0);
+        CX = 2;
+        do {
+            CheckExternalEvents(biosSegment, 0x001C);
+            BX = (ushort)(CX - 1 << 2);
+            ushort targetSegment_0022 = UInt16[CS, BX + 0x0067];
+            ushort targetOffset_0022 = UInt16[CS, BX + 0x65];
+            if (targetSegment_0022 == biosSegment && targetOffset_0022 == 0x0049) {
+                DX += 0x0100;
+            }
+            else {
+                if (targetSegment_0022 != biosSegment || targetOffset_0022 != 0x004F) {
+                    throw FailAsUntested($"Untested far jump target {targetSegment_0022:X4}:{targetOffset_0022:X4} at F000:0022");
+                }
+                DX += 0x1000;
+            }
+            CX--;
+        } while (CX != 0);
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x060A] = DX;
+        SsUInt16[0x0608] = CX;
+        return Hlt();
+    }
+
 }
 
-
-// ==== file: CfgGeneratedOverrides.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -34,24 +137,35 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort biosSegment;
 
-    private readonly Func<int, Action> unknown_F000_0029_F0029_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_002D_F002D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_003D_F003D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0041_F0041_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0045_F0045_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0047_F0047_AsmEntry;
     private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         biosSegment = 0xF000;
 
-        unknown_F000_0029_F0029_AsmEntry = _ => unknown_F000_0029_F0029_Asm();
-        unknown_F000_002D_F002D_AsmEntry = _ => unknown_F000_002D_F002D_Asm();
+        unknown_F000_003D_F003D_AsmEntry = _ => unknown_F000_003D_F003D_Asm();
+        unknown_F000_0041_F0041_AsmEntry = _ => unknown_F000_0041_F0041_Asm();
+        unknown_F000_0045_F0045_AsmEntry = _ => unknown_F000_0045_F0045_Asm();
+        unknown_F000_0047_F0047_AsmEntry = _ => unknown_F000_0047_F0047_Asm();
         unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0029, unknown_F000_0029_F0029_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002D, unknown_F000_002D_F002D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x003D, unknown_F000_003D_F003D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0041, unknown_F000_0041_F0041_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0045, unknown_F000_0045_F0045_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0047, unknown_F000_0047_F0047_AsmEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x0017), unknown_F000_003D_F003D_AsmEntry, new CallLanding(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry), new CallLanding(new(biosSegment, 0x0041), unknown_F000_0041_F0041_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x0017), unknown_F000_0041_F0041_AsmEntry, new CallLanding(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry), new CallLanding(new(biosSegment, 0x0041), unknown_F000_0041_F0041_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x0017), unknown_F000_0045_F0045_AsmEntry, new CallLanding(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry), new CallLanding(new(biosSegment, 0x0041), unknown_F000_0041_F0041_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x0017), unknown_F000_0047_F0047_AsmEntry, new CallLanding(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry), new CallLanding(new(biosSegment, 0x0041), unknown_F000_0041_F0041_AsmEntry));
     }
 
+    protected override bool ObservedTransfersOnly => true;
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -64,106 +178,27 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_0029_F0029(ushort dx) {
-        DX = dx;
-        CheckExternalEvents(biosSegment, 0x0029);
-        // F000:0029 add DX,1
-        DX = Alu16.Add(DX, 1);
-        // F000:002C ret far
-        FarReturn();
-        return DX;
-    }
-
-    public virtual Action unknown_F000_0029_F0029_Asm() {
-        DX = unknown_F000_0029_F0029(DX);
-        return Returned;
-    }
-
-    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
-    public virtual ushort unknown_F000_002D_F002D(ushort dx) {
-        DX = dx;
-        CheckExternalEvents(biosSegment, 0x002D);
-        // F000:002D add DX,0x0010
-        DX = Alu16.Add(DX, 0x0010);
-        // F000:0030 ret far
-        FarReturn();
-        return DX;
-    }
-
-    public virtual Action unknown_F000_002D_F002D_Asm() {
-        DX = unknown_F000_002D_F002D(DX);
-        return Returned;
-    }
-
-    /// <summary>Inputs: none. Does not return.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0x1000
-        AX = 0x1000;
-        // F000:0003 mov SS,AX
-        SS = 0x1000;
-        // F000:0005 mov SP,0x0100
-        SP = 0x0100;
-        // F000:0008 xor DX,DX
-        DX = 0;
-        // F000:000A mov CX,2
-        CX = 2;
-        do {
-            CheckExternalEvents(biosSegment, 0x000D);
-            // F000:000D mov BX,CX
-            BX = CX;
-            // F000:000F dec BX
-            BX = Alu16.Dec(BX);
-            // F000:0010 shl BX,2
-            BX = Alu16.Shl(BX, 2);
-            // F000:0013 call far dword ptr CS:[BX+0x3D]
-            ushort targetSegment_0013 = UInt16[CS, (ushort)(BX + 0x003F)];
-            ushort targetOffset_0013 = UInt16[CS, (ushort)(BX + 0x3D)];
-            switch ((uint)(targetSegment_0013 << 16 | targetOffset_0013)) {
-                case 0xF000_0029:
-                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_0029_F0029_AsmEntry);
-                    break;
-                case 0xF000_002D:
-                    FarCall(biosSegment, 0x0017, biosSegment, unknown_F000_002D_F002D_AsmEntry);
-                    break;
-                default:
-                    throw FailAsUntested($"Untested far call target {targetSegment_0013:X4}:{targetOffset_0013:X4} at F000:0013");
-            }
-            // F000:0017 loop 0x000D
-            CX--;
-        } while (CX != 0);
-        // F000:0019 mov CX,2
-        CX = 2;
-        do {
-            CheckExternalEvents(biosSegment, 0x001C);
-            // F000:001C mov BX,CX
-            // F000:001E dec BX
-            // F000:001F shl BX,2
-            BX = (ushort)(CX - 1 << 2);
-            // F000:0022 jmp far dword ptr CS:[BX+0x45]
-            ushort targetSegment_0022 = UInt16[CS, (ushort)(BX + 0x0047)];
-            ushort targetOffset_0022 = UInt16[CS, (ushort)(BX + 0x45)];
-            if (targetSegment_0022 == biosSegment && targetOffset_0022 == 0x0031) {
-                // F000:0031 add DX,0x0100
-                DX = Alu16.Add(DX, 0x0100);
-                // F000:0035 jmp short 0x0026
-            }
-            else {
-                if (targetSegment_0022 != biosSegment || targetOffset_0022 != 0x0037) {
-                    throw FailAsUntested($"Untested far jump target {targetSegment_0022:X4}:{targetOffset_0022:X4} at F000:0022");
-                }
-                // F000:0037 add DX,0x1000
-                DX = Alu16.Add(DX, 0x1000);
-                // F000:003B jmp short 0x0026
-            }
-            // F000:0026 loop 0x001C
-            CX--;
-        } while (CX != 0);
-        // F000:0028 hlt
-        return Hlt();
-    }
-
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 }
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

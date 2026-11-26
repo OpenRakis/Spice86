@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 8,
-          "address": "F000:000F",
+          "address": "F000:0022",
           "kind": "functionEntry"
         }
       ]
@@ -25,7 +25,7 @@
       "entries": [
         {
           "block": 21,
-          "address": "F000:0016",
+          "address": "F000:0029",
           "kind": "functionEntry"
         }
       ]
@@ -37,7 +37,7 @@
       "blocks": [
         3,
         20,
-        26,
+        27,
         2
       ],
       "entries": [
@@ -58,7 +58,7 @@
       "entries": [
         {
           "block": 23,
-          "address": "F000:0012",
+          "address": "F000:0025",
           "kind": "sharedEntry"
         }
       ]
@@ -71,8 +71,8 @@
       "toPartition": 4,
       "fromBlock": 8,
       "toBlock": 23,
-      "from": "F000:000F",
-      "target": "F000:0012"
+      "from": "F000:0022",
+      "target": "F000:0025"
     },
     {
       "kind": "crossPartitionFlow",
@@ -80,8 +80,8 @@
       "toPartition": 4,
       "fromBlock": 21,
       "toBlock": 23,
-      "from": "F000:0016",
-      "target": "F000:0012"
+      "from": "F000:0029",
+      "target": "F000:0025"
     },
     {
       "kind": "callOut",
@@ -90,7 +90,7 @@
       "fromBlock": 3,
       "toBlock": 8,
       "from": "F000:0008",
-      "target": "F000:000F",
+      "target": "F000:0022",
       "callContinuationBlock": 20,
       "callContinuationAddress": "F000:000B"
     },
@@ -101,8 +101,8 @@
       "fromBlock": 20,
       "toBlock": 21,
       "from": "F000:000B",
-      "target": "F000:0016",
-      "callContinuationBlock": 26,
+      "target": "F000:0029",
+      "callContinuationBlock": 27,
       "callContinuationAddress": "F000:000E"
     },
     {
@@ -111,7 +111,7 @@
       "toPartition": 3,
       "fromBlock": 23,
       "toBlock": 20,
-      "from": "F000:0015",
+      "from": "F000:0028",
       "target": "F000:000B"
     },
     {
@@ -119,8 +119,8 @@
       "fromPartition": 4,
       "toPartition": 3,
       "fromBlock": 23,
-      "toBlock": 26,
-      "from": "F000:0015",
+      "toBlock": 27,
+      "from": "F000:0028",
       "target": "F000:000E"
     }
   ]

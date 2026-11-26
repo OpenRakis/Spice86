@@ -47,6 +47,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration);
+        SpeculativeExplorer = CfgNodeFeeder.InstructionsFeeder.SpeculativeExplorer;
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, hltStopsEmulation, loggerService);
     }
@@ -55,6 +56,12 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     /// Handles at high level parsing, linking and book keeping of nodes from the graph.
     /// </summary>
     public CfgNodeFeeder CfgNodeFeeder { get; }
+
+    /// <summary>
+    /// The speculative explorer bound once at construction, or null when speculative exploration
+    /// is disabled.
+    /// </summary>
+    public SpeculativeExplorer? SpeculativeExplorer { get; }
 
     /// <summary>
     /// Handles the various contexts of the execution.
@@ -244,7 +251,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         _state.IsHalted = false;
         (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
 
-        _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
+        _executionContextManager.SignalHardwareInterrupt(externalInterruptVectorNumber.Value, target, expectedReturn);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
     }
 

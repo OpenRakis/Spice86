@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -16,8 +17,13 @@ using System.Text.RegularExpressions;
 /// baseline.
 /// </summary>
 internal static class GeneratedCodeMetricsAssertions {
+    /// <summary>Minimum and maximum readability bounds of one part of one fixture.</summary>
+    internal sealed record PartBounds(IReadOnlyDictionary<string, int> Minimum,
+        IReadOnlyDictionary<string, int> Maximum);
+
+    /// <summary>Bounds of one fixture, split into the program part and the support part.</summary>
     internal sealed record ReadabilityBaseline(string SourceSha256,
-        IReadOnlyDictionary<string, int> Minimum, IReadOnlyDictionary<string, int> Maximum);
+        PartBounds Program, PartBounds Support);
 
     internal static string BaselineDirectory =>
         Path.Join(MachineGoldens.SourceResourcesDirectory(), "GeneratedCodeReadability");
@@ -75,8 +81,8 @@ internal static class GeneratedCodeMetricsAssertions {
         JsonElement root = document.RootElement;
         RequireFields(root, "schemaVersion", "referenceRevision");
         if (root.GetProperty("schemaVersion").ValueKind != JsonValueKind.Number
-            || !root.GetProperty("schemaVersion").TryGetInt32(out int schemaVersion) || schemaVersion != 2) {
-            throw new InvalidDataException("Readability baseline schemaVersion must be 2.");
+            || !root.GetProperty("schemaVersion").TryGetInt32(out int schemaVersion) || schemaVersion != 3) {
+            throw new InvalidDataException("Readability baseline schemaVersion must be 3.");
         }
         RequireHash(root.GetProperty("referenceRevision"), 40, "referenceRevision");
         SortedDictionary<string, ReadabilityBaseline> baselines = new(StringComparer.Ordinal);
@@ -86,15 +92,22 @@ internal static class GeneratedCodeMetricsAssertions {
             }
             using JsonDocument fixtureDocument = JsonDocument.Parse(source);
             JsonElement entry = fixtureDocument.RootElement;
-            RequireFields(entry, "sourceSha256", "minimum", "maximum");
+            RequireFields(entry, "sourceSha256", "program", "support");
             string hash = RequireHash(entry.GetProperty("sourceSha256"), 64, fixture);
-            IReadOnlyDictionary<string, int> minimum = ReadBounds(entry.GetProperty("minimum"), true, fixture);
-            IReadOnlyDictionary<string, int> maximum = ReadBounds(entry.GetProperty("maximum"), false, fixture);
-            RequireMetrics(minimum, MandatoryMinimumMetrics, fixture);
-            RequireMetrics(maximum, MandatoryMaximumMetrics, fixture);
-            baselines.Add(fixture, new(hash, minimum, maximum));
+            PartBounds program = ReadPartBounds(entry.GetProperty("program"), fixture);
+            PartBounds support = ReadPartBounds(entry.GetProperty("support"), fixture);
+            baselines.Add(fixture, new(hash, program, support));
         }
         return baselines;
+    }
+
+    private static PartBounds ReadPartBounds(JsonElement element, string fixture) {
+        RequireFields(element, "minimum", "maximum");
+        IReadOnlyDictionary<string, int> minimum = ReadBounds(element.GetProperty("minimum"), true, fixture);
+        IReadOnlyDictionary<string, int> maximum = ReadBounds(element.GetProperty("maximum"), false, fixture);
+        RequireMetrics(minimum, MandatoryMinimumMetrics, fixture);
+        RequireMetrics(maximum, MandatoryMaximumMetrics, fixture);
+        return new PartBounds(minimum, maximum);
     }
 
     private static void RequireObject(JsonElement element, string name) {
@@ -169,16 +182,86 @@ internal static class GeneratedCodeMetricsAssertions {
         };
     }
 
+    private static readonly object TighteningGate = new();
+    private static readonly Dictionary<(string Fixture, string Part, bool Minimum, string Key), int>
+        LoosestMeasured = new();
+
+    /// <summary>Tightens the fixture's bound file toward the values this run measured: a maximum goes
+    /// down to the largest measured value, a minimum up to the smallest, never past the baseline.</summary>
+    internal static void WriteTightenedBounds(
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
+        string fixture = parts.Program.Fixture;
+        lock (TighteningGate) {
+            Accumulate(parts.Program, "program", fixture);
+            Accumulate(parts.Support, "support", fixture);
+            ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
+            string path = Path.Join(BaselineDirectory, fixture + ".json");
+            File.WriteAllText(path, FormatBaseline(baseline, fixture));
+        }
+    }
+
+    private static void Accumulate(GeneratedCodeMetrics metrics, string part, string fixture) {
+        ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
+        PartBounds bounds = part == "program" ? baseline.Program : baseline.Support;
+        Record(metrics, part, fixture, bounds.Minimum.Keys, true);
+        Record(metrics, part, fixture, bounds.Maximum.Keys, false);
+    }
+
+    private static void Record(GeneratedCodeMetrics metrics, string part, string fixture,
+        IEnumerable<string> keys, bool minimum) {
+        foreach (string key in keys) {
+            (string, string, bool, string) boundKey = (fixture, part, minimum, key);
+            int measured = MetricValue(metrics, key);
+            if (!LoosestMeasured.TryGetValue(boundKey, out int seen)) {
+                LoosestMeasured[boundKey] = measured;
+                continue;
+            }
+            LoosestMeasured[boundKey] = minimum ? Math.Min(seen, measured) : Math.Max(seen, measured);
+        }
+    }
+
+    private static string FormatBaseline(ReadabilityBaseline baseline, string fixture) {
+        using MemoryStream stream = new();
+        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true })) {
+            writer.WriteStartObject();
+            writer.WriteString("sourceSha256", baseline.SourceSha256);
+            WritePart(writer, "program", baseline.Program, fixture);
+            WritePart(writer, "support", baseline.Support, fixture);
+            writer.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+    }
+
+    private static void WritePart(Utf8JsonWriter writer, string name, PartBounds part, string fixture) {
+        writer.WritePropertyName(name);
+        writer.WriteStartObject();
+        WriteBounds(writer, "minimum", part.Minimum, fixture, name, true);
+        WriteBounds(writer, "maximum", part.Maximum, fixture, name, false);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteBounds(Utf8JsonWriter writer, string name,
+        IReadOnlyDictionary<string, int> bounds, string fixture, string part, bool minimum) {
+        writer.WritePropertyName(name);
+        writer.WriteStartObject();
+        foreach ((string key, int baseline) in bounds.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
+            writer.WriteNumber(key, minimum
+                ? Math.Max(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, true, key), int.MinValue))
+                : Math.Min(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, false, key), int.MaxValue)));
+        }
+        writer.WriteEndObject();
+    }
+
     internal static IReadOnlyList<string> FindReadabilityRegressions(GeneratedCodeMetrics actual,
-        IReadOnlyDictionary<string, int> minimum, IReadOnlyDictionary<string, int> maximum) {
+        string part, IReadOnlyDictionary<string, int> minimum, IReadOnlyDictionary<string, int> maximum) {
         List<string> failures = new();
-        AppendRegressions(actual, minimum, true, failures);
-        AppendRegressions(actual, maximum, false, failures);
+        AppendRegressions(actual, part, minimum, true, failures);
+        AppendRegressions(actual, part, maximum, false, failures);
         return failures;
     }
 
-    private static void AppendRegressions(GeneratedCodeMetrics actual, IReadOnlyDictionary<string, int> bounds,
-        bool minimum, List<string> failures) {
+    private static void AppendRegressions(GeneratedCodeMetrics actual, string part,
+        IReadOnlyDictionary<string, int> bounds, bool minimum, List<string> failures) {
         foreach ((string key, int limit) in bounds.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
             ValidateMetric(key, minimum);
             if (limit < 0) {
@@ -188,7 +271,7 @@ internal static class GeneratedCodeMetricsAssertions {
             long delta = (long)count - limit;
             if (minimum ? delta < 0 : delta > 0) {
                 string direction = minimum ? "minimum" : "maximum";
-                failures.Add($"{actual.Fixture}: {key} {direction}={limit}, actual={count}, delta={delta:+0;-0;0}.");
+                failures.Add($"{actual.Fixture} {part}: {key} {direction}={limit}, actual={count}, delta={delta:+0;-0;0}.");
             }
         }
     }
@@ -203,24 +286,29 @@ internal static class GeneratedCodeMetricsAssertions {
     /// interrupt-enabling instruction, no identical CheckExternalEvents call repeated with only label
     /// lines in between, and the reviewed per-fixture readability baseline.
     /// </summary>
-    /// <param name="metrics">The metrics computed for the fixture.</param>
+    /// <param name="parts">The program and support metrics computed for the fixture.</param>
     /// <param name="source">The generated source text the metrics were computed from.</param>
     /// <param name="methods">Method counts and source locations for regression diagnostics.</param>
-    public static void AssertInvariants(GeneratedCodeMetrics metrics, string source,
+    public static void AssertInvariants(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts, string source,
         IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
-        metrics.Warnings.Should().Be(0, "generated code of {0} must compile without warnings", metrics.Fixture);
-        metrics.UncheckedExpressions.Should().Be(0, "generated code of {0} must not use unchecked(...)", metrics.Fixture);
-        metrics.Labels.Should().Be(metrics.DistinctGotoTargets,
-            "every label emitted for {0} must be the target of at least one goto", metrics.Fixture);
-        AssertEventCheckFollowsInterruptEnablingInstructions(metrics, source);
-        AssertNoConsecutiveDuplicateEventChecks(metrics, source);
-        ReadabilityBaseline baseline = GetBaseline(metrics.Fixture, LoadBaseline());
-        IReadOnlyList<string> failures = FindReadabilityRegressions(metrics, baseline.Minimum, baseline.Maximum);
+        foreach (GeneratedCodeMetrics metrics in parts.Parts) {
+            metrics.Warnings.Should().Be(0, "generated code of {0} must compile without warnings", metrics.Fixture);
+            metrics.UncheckedExpressions.Should().Be(0, "generated code of {0} must not use unchecked(...)", metrics.Fixture);
+            metrics.Labels.Should().Be(metrics.DistinctGotoTargets,
+                "every label emitted for {0} must be the target of at least one goto", metrics.Fixture);
+            AssertEventCheckFollowsInterruptEnablingInstructions(metrics, source);
+            AssertNoConsecutiveDuplicateEventChecks(metrics, source);
+        }
+        ReadabilityBaseline baseline = GetBaseline(parts.Program.Fixture, LoadBaseline());
+        List<string> failures = new(FindReadabilityRegressions(parts.Program, "program",
+            baseline.Program.Minimum, baseline.Program.Maximum));
+        failures.AddRange(FindReadabilityRegressions(parts.Support, "support",
+            baseline.Support.Minimum, baseline.Support.Maximum));
         if (failures.Count != 0) {
             string details = string.Join(Environment.NewLine, methods.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .Select(pair => $"{pair.Key} {pair.Value.SourceLocation}: {pair.Value.ToLine()}"));
             failures.Should().BeEmpty("generated code of {0} must preserve its readability bounds. Method details:{1}{2}",
-                metrics.Fixture, Environment.NewLine, details);
+                parts.Program.Fixture, Environment.NewLine, details);
         }
     }
 

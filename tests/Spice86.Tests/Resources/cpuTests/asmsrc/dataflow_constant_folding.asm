@@ -176,6 +176,8 @@ cf_zero_taken:
     pushf
     pop dx
     mov [0E6h], dx
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 cf_callee:

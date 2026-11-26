@@ -52,11 +52,12 @@ public sealed class MouseDriverTests {
         Mouse mouse = new(_state, _sharedMouseData, pic, MouseType.Ps2, NullLogger.Instance, false, clock, scheduler, _inputEventHub);
         IVgaFunctionality video = Substitute.For<IVgaFunctionality>();
         video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
-        _driver = new MouseDriver(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance);
+        _driver = new MouseDriver(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance,
+            static (_, _) => { });
         _driver.WriteAssemblyInRam(new MemoryAsmWriter(memory, new(DriverStubSegment, 0),
             new CallbackHandler(_state, NullLogger.Instance)));
         _handler = new MouseInt33Handler(memory, Substitute.For<IFunctionHandlerProvider>(),
-            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>()), NullLogger.Instance, _driver);
+            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>(), false), NullLogger.Instance, _driver);
     }
 
     [Theory]
@@ -134,9 +135,10 @@ public sealed class MouseDriverTests {
         video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
         Memory memory = new(new(), new Ram(A20Gate.EndOfHighMemoryArea), new A20Gate(false),
             new RealModeMmu386(), false);
-        MouseDriver driver = new(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance);
+        MouseDriver driver = new(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance,
+            static (_, _) => { });
         MouseInt33Handler handler = new(memory, Substitute.For<IFunctionHandlerProvider>(),
-            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>()), NullLogger.Instance, driver);
+            new Stack(memory, _state), _state, new ServiceCallEvents(new HashSet<byte>(), false), NullLogger.Instance, driver);
         MemoryAsmWriter asmWriter = new(memory, new SegmentedAddress(0xC000, 0),
             new CallbackHandler(_state, NullLogger.Instance));
         SegmentedAddress driverAddress = driver.WriteAssemblyInRam(asmWriter);
@@ -149,10 +151,11 @@ public sealed class MouseDriverTests {
         // registered routine.
         driver.BeforeUserHandlerExecution();
 
-        // Assert: the stub is "far ret (default); callback; far call <target>; callback; far ret"
-        // starting at driverAddress-1, so the far call target sits at driverAddress+5. A routine
-        // registered at 0x1234:0x0000 is enabled (only 0:0 disables), so the call must reach it.
-        memory.SegmentedAddress16[driverAddress.Linear + 5].Should()
+        // Assert: the stub is "far ret (default); callback; call far CS:[disp16]; callback; far ret;
+        // pointer" starting at driverAddress-1, so the switchable far pointer the call reads sits at
+        // driverAddress+14. A routine registered at 0x1234:0x0000 is enabled (only 0:0 disables), so
+        // the pointer must hold it.
+        memory.SegmentedAddress16[driverAddress.Linear + 14].Should()
             .Be(new SegmentedAddress(0x1234, 0), "the routine at 0x1234:0x0000 is called");
         _sharedMouseData.UserSubroutineEverRegistered.Should().BeTrue();
     }

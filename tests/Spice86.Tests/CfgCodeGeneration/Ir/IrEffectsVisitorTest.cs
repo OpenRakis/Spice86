@@ -301,7 +301,7 @@ public sealed class IrEffectsVisitorTest {
     }
 
     [Fact]
-    public void StackPop32_WritesEsp() {
+    public void StackPop32_WritesSpOnly() {
         // Arrange
         StackCallValueNode node = new(StackOperation.Pop, BitWidth.DWORD_32);
 
@@ -309,7 +309,50 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be(CpuValues.Esp);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
+        effects.TokenReads.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackPush32_ReadsAndWritesSpOnly() {
+        // Arrange
+        StackCallNode node = new(StackOperation.Push, BitWidth.DWORD_32,
+            new RegisterNode(DataType.UINT32, 0));
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Eax | CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
+        effects.TokenWrites.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackPeek32_ReadsSpOnly() {
+        // Arrange
+        StackCallValueNode node = new(StackOperation.Peek, BitWidth.DWORD_32, Constant());
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.None);
+        effects.TokenReads.Should().Be(IrTokens.Memory);
+    }
+
+    [Fact]
+    public void StackLeave32_ReadsBpAndWritesSpAndFullEbp() {
+        // Arrange
+        StackCallNode node = new(StackOperation.Leave, BitWidth.DWORD_32);
+
+        // Act
+        IrEffects effects = Of(node);
+
+        // Assert
+        effects.Reads.Should().Be(CpuValues.Bp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp | CpuValues.Ebp);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -371,7 +414,7 @@ public sealed class IrEffectsVisitorTest {
     }
 
     [Fact]
-    public void StackPopAll32_Writes32BitRegistersAndEsp() {
+    public void StackPopAll32_WritesFullEsp() {
         // Arrange
         StackCallNode node = new(StackOperation.PopAll, BitWidth.DWORD_32);
 
@@ -505,7 +548,7 @@ public sealed class IrEffectsVisitorTest {
     }
 
     [Fact]
-    public void CheckExternalEvents_ReadsAndMayWriteHandlerVisibleRegistersButNoFlags() {
+    public void CheckExternalEvents_ReadsAndMayWriteHandlerVisibleRegisters() {
         // Arrange
         CpuValues handlerRegisters = CpuValues.Eax | CpuValues.Ecx
             | CpuValues.Edx | CpuValues.Ebx | CpuValues.Ebp | CpuValues.Esi
@@ -516,19 +559,34 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(new CheckExternalEventsNode(new SegmentedAddress(0x1000, 0x20), HardwareInterruptEffectBuilder.Conservative));
 
         // Assert
-        effects.Reads.Should().Be(handlerRegisters);
+        // The handler registers plus SS and SP, which the delivery needs to push the frame; an
+        // unknown handler can also observe the pushed FLAGS image, so flags are read too.
+        effects.Reads.Should().Be(handlerRegisters | CpuValues.Ss | CpuValues.Sp
+            | CpuValues.StatusFlags | CpuValues.Direction);
         effects.MustWrite.Should().Be(CpuValues.None);
-        // A delivered interrupt clears the halted state, so the check may write it too.
-        effects.MayWrite.Should().Be(handlerRegisters | CpuValues.Halted);
+        // A delivered interrupt clears the halted state, so the check may write it too; an unknown
+        // handler may also patch the pushed FLAGS image its iret restores, so flags may be written.
+        effects.MayWrite.Should().Be(handlerRegisters | CpuValues.Halted
+            | CpuValues.StatusFlags | CpuValues.Direction);
         effects.TokenReads.Should().Be(IrTokens.All);
         effects.TokenWrites.Should().Be(IrTokens.All);
         effects.DeliversInterrupts.Should().BeTrue();
         effects.MayFault.Should().BeFalse();
-        (effects.Reads & (CpuValues.StatusFlags | CpuValues.Direction)).Should().Be(CpuValues.None);
-        (effects.MayWrite & (CpuValues.StatusFlags | CpuValues.Direction)).Should().Be(CpuValues.None);
         CpuValues stackRegisters = CpuValues.Sp | CpuValues.Ss;
-        (effects.Reads & stackRegisters).Should().Be(CpuValues.None);
+        (effects.Reads & stackRegisters).Should().Be(stackRegisters);
         (effects.MayWrite & stackRegisters).Should().Be(CpuValues.None);
+    }
+
+    [Fact]
+    public void HardwareInterruptEffect_AlwaysReadsTheStackRegisters() {
+        // The delivery pushes FLAGS, CS and IP at SS:SP before any handler instruction runs, so the
+        // contract's Uses always include them - the conservative set, and any computed effect
+        // (ComputeEffect adds them unconditionally), reads them too. Writes never include them:
+        // the iret restores the stack pointer.
+        (HardwareInterruptEffectBuilder.Conservative.Reads & (CpuValues.Ss | CpuValues.Sp))
+            .Should().Be(CpuValues.Ss | CpuValues.Sp);
+        (HardwareInterruptEffectBuilder.Conservative.Writes & (CpuValues.Ss | CpuValues.Sp))
+            .Should().Be(CpuValues.None);
     }
 
     [Fact]

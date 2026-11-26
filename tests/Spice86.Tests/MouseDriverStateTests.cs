@@ -236,7 +236,7 @@ public sealed class MouseDriverStateTests : IDisposable {
         Mouse mouse = new(state, sharedMouseData, pic, MouseType.Ps2, NullLogger.Instance, false, clock, scheduler, gui);
         IVgaFunctionality video = Substitute.For<IVgaFunctionality>();
         video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
-        MouseDriver driver = new(state, sharedMouseData, memory, mouse, video, NullLogger.Instance, gui);
+        MouseDriver driver = new(state, sharedMouseData, memory, mouse, video, NullLogger.Instance, static (_, _) => { }, gui);
         driver.WriteAssemblyInRam(new MemoryAsmWriter(memory, new(DriverStubSegment, 0),
             new CallbackHandler(state, NullLogger.Instance)));
         return driver;

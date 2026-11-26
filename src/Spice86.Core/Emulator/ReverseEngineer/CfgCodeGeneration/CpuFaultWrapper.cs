@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 using System.Collections.Generic;
@@ -34,7 +35,18 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
             .ThenBy(e => e.Target.Address.Offset)
             .ToList();
 
+        List<SegmentedAddress> resumeTargets = orderedEdges
+            .SelectMany(edge => {
+                CfgGeneratorContext.LandingResolution resolution =
+                    context.ResolveFaultResumeTargets(context.GetPartition(edge.Target));
+                return resolution.Entries.Select(landing => landing.Entry.Address)
+                    .Concat(resolution.UnresolvedTargets);
+            })
+            .Distinct()
+            .OrderBy(address => address.Linear)
+            .ToList();
+
         return new CpuFaultTryCatchNode(CodeGenerationAst.Sequence(body), instruction.Address,
-            orderedEdges.Select(transferEmitter.FaultHandler).ToList());
+            orderedEdges.Select(transferEmitter.FaultHandler).ToList(), resumeTargets);
     }
 }

@@ -1755,7 +1755,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario TimeHostSyncProducesTimeOutput() {
         return Scenario("batch_time_host_sync", run => run
             .StartBatch("TIME /H\r\nTIME /T > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")));
+                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")))
+            .WithoutGeneratedFinalStateGate("TIME /H synchronizes from the host clock, so the printed time differs between runs");
     }
 
     /// <summary>VER prints a version string.</summary>

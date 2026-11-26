@@ -1,5 +1,6 @@
 namespace Spice86.Tests.CfgCpu.Blocks;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
@@ -35,9 +36,13 @@ internal static class CfgTestHelpers {
             value: opcode,
             signatureValue: ImmutableList.Create<byte?>(opcode),
             final: true);
-        return new(_allocator.AllocateId(), address, opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount: 1) {
+        CfgInstruction instruction = new(_allocator.AllocateId(), address, opcodeField,
+            new List<InstructionPrefix>(), maxSuccessorsCount: 1) {
             Kind = kind
         };
+        InstructionNode nop = new(InstructionOperation.NOP);
+        instruction.AttachAsts(nop, nop);
+        return instruction;
     }
 
     /// <summary>Builds a <see cref="CfgBlock"/> of one synthetic instruction at <paramref name="offset"/> of segment 0x1000.</summary>

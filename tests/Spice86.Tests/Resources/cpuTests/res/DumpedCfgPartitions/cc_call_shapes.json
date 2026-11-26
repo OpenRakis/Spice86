@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 10,
-          "address": "F000:00C9",
+          "address": "F000:00D3",
           "kind": "functionEntry"
         }
       ]
@@ -27,7 +27,7 @@
       "entries": [
         {
           "block": 36,
-          "address": "F000:00D0",
+          "address": "F000:00DA",
           "kind": "functionEntry"
         }
       ]
@@ -45,7 +45,7 @@
       "entries": [
         {
           "block": 64,
-          "address": "F000:00DC",
+          "address": "F000:00E6",
           "kind": "functionEntry"
         }
       ]
@@ -61,7 +61,7 @@
       "entries": [
         {
           "block": 93,
-          "address": "F000:00EC",
+          "address": "F000:00F6",
           "kind": "functionEntry"
         }
       ]
@@ -78,13 +78,13 @@
         199,
         202,
         200,
-        206,
+        207,
         105
       ],
       "entries": [
         {
           "block": 105,
-          "address": "F000:00F2",
+          "address": "F000:00FC",
           "kind": "functionEntry"
         }
       ]
@@ -99,7 +99,7 @@
       "entries": [
         {
           "block": 135,
-          "address": "F000:00F6",
+          "address": "F000:0100",
           "kind": "functionEntry"
         }
       ]
@@ -114,7 +114,7 @@
       "entries": [
         {
           "block": 177,
-          "address": "F000:00FA",
+          "address": "F000:0104",
           "kind": "functionEntry"
         }
       ]
@@ -129,7 +129,7 @@
       "entries": [
         {
           "block": 189,
-          "address": "F000:00FD",
+          "address": "F000:0107",
           "kind": "functionEntry"
         }
       ]
@@ -164,7 +164,7 @@
       "toPartition": 9,
       "fromBlock": 10,
       "toBlock": 24,
-      "from": "F000:00CF",
+      "from": "F000:00D9",
       "target": "F000:000E"
     },
     {
@@ -173,7 +173,7 @@
       "toPartition": 9,
       "fromBlock": 10,
       "toBlock": 33,
-      "from": "F000:00CF",
+      "from": "F000:00D9",
       "target": "F000:0018"
     },
     {
@@ -182,7 +182,7 @@
       "toPartition": 9,
       "fromBlock": 39,
       "toBlock": 52,
-      "from": "F000:00DB",
+      "from": "F000:00E5",
       "target": "F000:0022"
     },
     {
@@ -191,7 +191,7 @@
       "toPartition": 9,
       "fromBlock": 41,
       "toBlock": 61,
-      "from": "F000:00D7",
+      "from": "F000:00E1",
       "target": "F000:002B"
     },
     {
@@ -200,7 +200,7 @@
       "toPartition": 9,
       "fromBlock": 85,
       "toBlock": 91,
-      "from": "F000:00E8",
+      "from": "F000:00F2",
       "target": "F000:0035"
     },
     {
@@ -209,7 +209,7 @@
       "toPartition": 9,
       "fromBlock": 95,
       "toBlock": 103,
-      "from": "F000:00F1",
+      "from": "F000:00FB",
       "target": "F000:003B"
     },
     {
@@ -219,7 +219,7 @@
       "fromBlock": 108,
       "toBlock": 135,
       "from": "F000:006B",
-      "target": "F000:00F6",
+      "target": "F000:0100",
       "callContinuationBlock": 141,
       "callContinuationAddress": "F000:006D"
     },
@@ -230,7 +230,7 @@
       "fromBlock": 141,
       "toBlock": 135,
       "from": "F000:007A",
-      "target": "F000:00F6",
+      "target": "F000:0100",
       "callContinuationBlock": 151,
       "callContinuationAddress": "F000:007C"
     },
@@ -241,7 +241,7 @@
       "fromBlock": 151,
       "toBlock": 177,
       "from": "F000:00AD",
-      "target": "F000:00FA",
+      "target": "F000:0104",
       "callContinuationBlock": 181,
       "callContinuationAddress": "F000:00AF"
     },
@@ -252,7 +252,7 @@
       "fromBlock": 181,
       "toBlock": 189,
       "from": "F000:00B8",
-      "target": "F000:00FD",
+      "target": "F000:0107",
       "callContinuationBlock": 199,
       "callContinuationAddress": "F000:00BA"
     },
@@ -262,7 +262,7 @@
       "toPartition": 5,
       "fromBlock": 135,
       "toBlock": 141,
-      "from": "F000:00F9",
+      "from": "F000:0103",
       "target": "F000:006D"
     },
     {
@@ -271,7 +271,7 @@
       "toPartition": 5,
       "fromBlock": 135,
       "toBlock": 151,
-      "from": "F000:00F9",
+      "from": "F000:0103",
       "target": "F000:007C"
     },
     {
@@ -280,7 +280,7 @@
       "toPartition": 5,
       "fromBlock": 177,
       "toBlock": 181,
-      "from": "F000:00FC",
+      "from": "F000:0106",
       "target": "F000:00AF"
     },
     {
@@ -289,7 +289,7 @@
       "toPartition": 5,
       "fromBlock": 189,
       "toBlock": 199,
-      "from": "F000:0105",
+      "from": "F000:010F",
       "target": "F000:00BA"
     },
     {
@@ -299,7 +299,7 @@
       "fromBlock": 3,
       "toBlock": 10,
       "from": "F000:000B",
-      "target": "F000:00C9",
+      "target": "F000:00D3",
       "callContinuationBlock": 24,
       "callContinuationAddress": "F000:000E"
     },
@@ -310,7 +310,7 @@
       "fromBlock": 24,
       "toBlock": 10,
       "from": "F000:0015",
-      "target": "F000:00C9",
+      "target": "F000:00D3",
       "callContinuationBlock": 33,
       "callContinuationAddress": "F000:0018"
     },
@@ -321,7 +321,7 @@
       "fromBlock": 33,
       "toBlock": 36,
       "from": "F000:001F",
-      "target": "F000:00D0",
+      "target": "F000:00DA",
       "callContinuationBlock": 52,
       "callContinuationAddress": "F000:0022"
     },
@@ -332,7 +332,7 @@
       "fromBlock": 52,
       "toBlock": 36,
       "from": "F000:0028",
-      "target": "F000:00D0",
+      "target": "F000:00DA",
       "callContinuationBlock": 61,
       "callContinuationAddress": "F000:002B"
     },
@@ -343,7 +343,7 @@
       "fromBlock": 61,
       "toBlock": 64,
       "from": "F000:0032",
-      "target": "F000:00DC",
+      "target": "F000:00E6",
       "callContinuationBlock": 91,
       "callContinuationAddress": "F000:0035"
     },
@@ -354,7 +354,7 @@
       "fromBlock": 91,
       "toBlock": 93,
       "from": "F000:0038",
-      "target": "F000:00EC",
+      "target": "F000:00F6",
       "callContinuationBlock": 103,
       "callContinuationAddress": "F000:003B"
     },
@@ -365,7 +365,7 @@
       "fromBlock": 103,
       "toBlock": 105,
       "from": "F000:003E",
-      "target": "F000:00F2"
+      "target": "F000:00FC"
     }
   ]
 }

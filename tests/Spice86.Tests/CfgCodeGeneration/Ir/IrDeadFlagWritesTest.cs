@@ -57,15 +57,16 @@ public sealed class IrDeadFlagWritesTest {
     }
 
     [Fact]
-    public void ClcBeforeJcKeepsTheWrite() {
-        // Arrange: clc / jc +2
+    public void NegBeforeJcKeepsTheWrite() {
+        // Arrange: neg al / jc +2 - a non-constant flag write the branch still reads stays;
+        // a constant write like clc now folds into the branch and disappears with it.
         TestInstructionHelper helper = new();
-        CfgInstruction clc = Parse(helper, 0x0000, 0xF8);
-        CfgInstruction jc = Parse(helper, 0x0001, 0x72, 0x02);
-        CfgInstruction fallthrough = Parse(helper, 0x0003, 0x90);
-        CfgInstruction taken = Parse(helper, 0x0005, 0x90);
-        Chain(clc, jc);
-        CfgBlock clcBlock = Block(1, clc, jc);
+        CfgInstruction neg = Parse(helper, 0x0000, 0xF6, 0xD8);
+        CfgInstruction jc = Parse(helper, 0x0002, 0x72, 0x02);
+        CfgInstruction fallthrough = Parse(helper, 0x0004, 0x90);
+        CfgInstruction taken = Parse(helper, 0x0006, 0x90);
+        Chain(neg, jc);
+        CfgBlock clcBlock = Block(1, neg, jc);
         Branch(jc, fallthrough, taken);
 
         // Act

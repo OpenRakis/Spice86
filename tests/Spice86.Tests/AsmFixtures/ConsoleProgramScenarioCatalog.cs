@@ -365,7 +365,7 @@ internal static class ConsoleProgramScenarioCatalog {
                 VideoByte(result, 0).Should().Be(0x61, "INT 16h AH=00h should return 'a' in AL");
                 VideoByte(result, 1).Should().Be(0x1E, "INT 16h AH=00h should return the scancode of A in AH");
                 VideoByte(result, 2).Should().Be(0x1E, "the hooked INT 9 handler should have seen the scancode on port 60h");
-            }));
+            })).WithoutGeneratedFinalStateGate("the key is injected through a chained INT 9 on a timer tick, so the landing point is timing-dependent");
     }
 
     /// <summary>A second blocking INT 16h AH=00h call waits with interrupts enabled until the next timer
@@ -377,7 +377,7 @@ internal static class ConsoleProgramScenarioCatalog {
             .RunWithKeys("NEXTKEY.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x61, "the first INT 16h AH=00h should return 'a'");
                 VideoByte(result, 1).Should().Be(0x62, "the second INT 16h AH=00h should return 'b', not the stale 'a' again");
-            }));
+            })).WithoutGeneratedFinalStateGate("the second blocking INT 16h waits for a key injected on a timer tick, which is timing-dependent");
     }
 
     private static AsmScenario Scenario(string identity, Func<DosProgramRun, AsmFixture> build) {

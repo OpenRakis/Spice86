@@ -240,7 +240,7 @@ public class FallthroughGotoRemoverTest {
     public void GotoEndingAFaultTryBodyReachingTheNextBoundaryIsRemoved() {
         // Arrange
         CpuFaultTryCatchNode tryCatch = new(new BlockNode(new MethodCallNode(null, "Foo"), new GotoNode(_second)),
-            new SegmentedAddress(0x1000, 0x0010), []);
+            new SegmentedAddress(0x1000, 0x0010), [], []);
         BlockNode body = new(
             Boundary(_first, "first", tryCatch),
             Boundary(_second, "second", new GotoNode(_first)));
@@ -255,7 +255,7 @@ public class FallthroughGotoRemoverTest {
             "    Foo();",
             "}",
             "catch (CpuException cpuException) {",
-            "    return DispatchCpuFault(cpuException, cs1, 0x0010, []);",
+            "    return DispatchCpuFault(cpuException, cs1, 0x0010, [], []);",
             "}",
             "// second",
             "goto L_first;"));
@@ -447,7 +447,7 @@ public class FallthroughGotoRemoverTest {
 
     private string Print(IVisitableAstNode node) {
         CSharpSourceWriter writer = new();
-        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0x1000] = "cs1" }), LabelOf);
+        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0x1000] = "cs1" }), LabelOf, printAsmComments: true);
         printer.Print(node);
         return writer.ToString();
     }

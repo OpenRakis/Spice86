@@ -185,6 +185,8 @@ pass_loop:
     add si, 8
     cmp di, 4 * 80h
     jb pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; Observer for int 64h: records BX:CX as the pair's write-backs must reach it.

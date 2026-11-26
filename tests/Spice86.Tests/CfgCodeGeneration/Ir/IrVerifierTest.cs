@@ -39,9 +39,9 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock first = StartingBlock(0, instruction);
-        first.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(first, new IrExit(instruction, ReturnValue()));
         IrBlock second = StartingBlock(0, instruction);
-        second.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(second, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, first)], nodes: [instruction], first, second);
 
         // Act
@@ -70,7 +70,7 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Terminator = new IrJump(instruction, new IrEdge(new IrBlock(9), false));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(instruction, new IrEdge(new IrBlock(9), false)));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -85,8 +85,8 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(new IrStatement(new BreakNode(), instruction, IrEffects.None));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, new IrStatement(new BreakNode(), instruction, IrEffects.None));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -101,8 +101,8 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(new IrStatement(new CommentNode("wrong"), instruction, IrEffects.Unknown));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, new IrStatement(new CommentNode("wrong"), instruction, IrEffects.Unknown));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -119,8 +119,8 @@ public sealed class IrVerifierTest {
         CfgInstruction second = Instruction(1);
         IrBlock block = StartingBlock(0, first);
         IrBlock continuation = new(1);
-        continuation.Terminator = new IrExit(second, ReturnValue());
-        block.Terminator = new IrJump(first, new IrEdge(continuation, true));
+        IrEditor.WithoutSsa.SetTerminator(continuation, new IrExit(second, ReturnValue()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(first, new IrEdge(continuation, true)));
         IrMethod method = Method(entries: [Entry(first, block)], nodes: [first, second],
             block, continuation);
 
@@ -139,9 +139,9 @@ public sealed class IrVerifierTest {
         first.Successors.Add(second);
         IrBlock block = StartingBlock(0, first);
         IrBlock target = new(1);
-        target.Statements.Add(Statement(new CommentNode("mid"), second));
-        target.Terminator = new IrExit(second, ReturnValue());
-        block.Terminator = new IrJump(first, new IrEdge(target, false));
+        IrEditor.WithoutSsa.Append(target, Statement(new CommentNode("mid"), second));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(second, ReturnValue()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(first, new IrEdge(target, false)));
         IrMethod method = Method(entries: [Entry(first, block)], nodes: [first, second], block, target);
 
         // Act
@@ -158,8 +158,8 @@ public sealed class IrVerifierTest {
         CfgInstruction second = Instruction(1);
         IrBlock block = StartingBlock(0, first);
         IrBlock target = StartingBlock(1, second);
-        target.Terminator = new IrExit(second, ReturnValue());
-        block.Terminator = new IrJump(first, new IrEdge(target, false));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(second, ReturnValue()));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(first, new IrEdge(target, false)));
         IrMethod method = Method(entries: [Entry(first, block)], nodes: [first, second], block, target);
 
         // Act
@@ -175,11 +175,11 @@ public sealed class IrVerifierTest {
         CfgInstruction first = Instruction(0);
         CfgInstruction second = Instruction(1);
         IrBlock entry = StartingBlock(0, first);
-        entry.Terminator = new IrExit(first, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrExit(first, ReturnValue()));
         IrBlock misplaced = new(1);
-        misplaced.Statements.Add(Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
-        misplaced.Statements.Add(Statement(new CommentNode("after"), second));
-        misplaced.Terminator = new IrExit(second, ReturnValue());
+        IrEditor.WithoutSsa.Append(misplaced, Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
+        IrEditor.WithoutSsa.Append(misplaced, Statement(new CommentNode("after"), second));
+        IrEditor.WithoutSsa.SetTerminator(misplaced, new IrExit(second, ReturnValue()));
         IrMethod method = Method(entries: [Entry(first, entry)], nodes: [first, second],
             entry, misplaced);
 
@@ -197,7 +197,7 @@ public sealed class IrVerifierTest {
         CfgInstruction handler = Instruction(1);
         instruction.SuccessorsPerType[InstructionSuccessorType.CpuFault] = new HashSet<ICfgNode> { handler };
         IrBlock block = StartingBlock(0, instruction);
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction, handler], block);
 
         // Act
@@ -212,8 +212,8 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(Statement(new VariableReferenceNode(DataType.UINT16, "tmp"), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Statement(new VariableReferenceNode(DataType.UINT16, "tmp"), instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -228,9 +228,9 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(Statement(Declaration("tmp"), instruction));
-        block.Statements.Add(Statement(Declaration("tmp"), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Statement(Declaration("tmp"), instruction));
+        IrEditor.WithoutSsa.Append(block, Statement(Declaration("tmp"), instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -245,9 +245,9 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(Statement(new VariableReferenceNode(DataType.UINT16, "tmp"), instruction));
-        block.Statements.Add(Statement(Declaration("tmp"), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Statement(new VariableReferenceNode(DataType.UINT16, "tmp"), instruction));
+        IrEditor.WithoutSsa.Append(block, Statement(Declaration("tmp"), instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -262,8 +262,8 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = StartingBlock(0, instruction);
-        block.Statements.Add(Statement(new MethodScopedVariableReferenceNode(DataType.UINT16, "tmp"), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Statement(new MethodScopedVariableReferenceNode(DataType.UINT16, "tmp"), instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -278,8 +278,8 @@ public sealed class IrVerifierTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = new(0);
-        block.Statements.Add(Statement(new CommentNode("mid"), instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Statement(new CommentNode("mid"), instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method(entries: [Entry(instruction, block)], nodes: [instruction], block);
 
         // Act
@@ -294,7 +294,7 @@ public sealed class IrVerifierTest {
         // Arrange
         IrMethod method = WellFormedMethod();
         CfgInstruction origin = Instruction(9);
-        method.Blocks[0].Statements.Add(Statement(
+        IrEditor.WithoutSsa.Append(method.Blocks[0], Statement(
             new OpaqueNode(new CommentNode("untyped")), origin));
 
         // Act
@@ -313,7 +313,7 @@ public sealed class IrVerifierTest {
         // Arrange: AX = (CarryFlag ? -2 : 2) - the direction-step shape.
         IrMethod method = WellFormedMethod();
         CfgInstruction origin = Instruction(9);
-        method.Blocks[0].Statements.Add(Statement(new BinaryOperationNode(DataType.UINT16,
+        IrEditor.WithoutSsa.Append(method.Blocks[0], Statement(new BinaryOperationNode(DataType.UINT16,
             new RegisterNode(DataType.UINT16, 0), BinaryOperation.ASSIGN,
             new ConditionalValueNode(DataType.INT16, new CpuFlagNode(Flags.Direction),
                 new ConstantNode(DataType.INT16, unchecked((ulong)(ushort)-2)),
@@ -331,7 +331,7 @@ public sealed class IrVerifierTest {
         // Arrange: AX = (CarryFlag ? [DS:0] : 0) - a select over a memory read is not pure.
         IrMethod method = WellFormedMethod();
         CfgInstruction origin = Instruction(9);
-        method.Blocks[0].Statements.Add(Statement(new BinaryOperationNode(DataType.UINT16,
+        IrEditor.WithoutSsa.Append(method.Blocks[0], Statement(new BinaryOperationNode(DataType.UINT16,
             new RegisterNode(DataType.UINT16, 0), BinaryOperation.ASSIGN,
             new ConditionalValueNode(DataType.UINT16, new CpuFlagNode(Flags.Carry),
                 new SegmentedPointerNode(DataType.UINT16,
@@ -354,7 +354,7 @@ public sealed class IrVerifierTest {
         // Arrange: an arm that writes (ASSIGN) or can fault (DIVIDE, MODULO) is not pure.
         IrMethod method = WellFormedMethod();
         CfgInstruction origin = Instruction(9);
-        method.Blocks[0].Statements.Add(Statement(new BinaryOperationNode(DataType.UINT16,
+        IrEditor.WithoutSsa.Append(method.Blocks[0], Statement(new BinaryOperationNode(DataType.UINT16,
             new RegisterNode(DataType.UINT16, 0), BinaryOperation.ASSIGN,
             new ConditionalValueNode(DataType.UINT16, new CpuFlagNode(Flags.Carry),
                 new BinaryOperationNode(DataType.UINT16,
@@ -379,14 +379,14 @@ public sealed class IrVerifierTest {
         IrBlock whenFalse = new(2);
         IrBlock join = new(3);
         IrBlock secondBlock = StartingBlock(4, second);
-        secondBlock.Statements.Insert(0, Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
+        IrEditor.WithoutSsa.Insert(secondBlock, 0, Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
 
-        entry.Terminator = new IrBranch(first, new CpuFlagNode(Flags.Carry),
-            new IrEdge(whenTrue, true), new IrEdge(whenFalse, true));
-        whenTrue.Terminator = new IrJump(first, new IrEdge(join, true));
-        whenFalse.Terminator = new IrJump(first, new IrEdge(join, true));
-        join.Terminator = new IrJump(first, new IrEdge(secondBlock, false));
-        secondBlock.Terminator = new IrExit(second, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(first, new CpuFlagNode(Flags.Carry),
+            new IrEdge(whenTrue, true), new IrEdge(whenFalse, true)));
+        IrEditor.WithoutSsa.SetTerminator(whenTrue, new IrJump(first, new IrEdge(join, true)));
+        IrEditor.WithoutSsa.SetTerminator(whenFalse, new IrJump(first, new IrEdge(join, true)));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrJump(first, new IrEdge(secondBlock, false)));
+        IrEditor.WithoutSsa.SetTerminator(secondBlock, new IrExit(second, ReturnValue()));
 
         return Method(entries: [Entry(first, entry)], nodes: [first, second],
             entry, whenTrue, whenFalse, join, secondBlock);
@@ -406,7 +406,7 @@ public sealed class IrVerifierTest {
 
     private static IrBlock StartingBlock(int id, ICfgNode origin) {
         IrBlock block = new(id);
-        block.Statements.Add(Statement(new InstructionStartNode("nop"), origin));
+        IrEditor.WithoutSsa.Append(block, Statement(new InstructionStartNode("nop"), origin));
         return block;
     }
 

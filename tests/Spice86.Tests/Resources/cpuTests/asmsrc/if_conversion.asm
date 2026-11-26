@@ -75,6 +75,8 @@ start:
     mov cx, 2
 .done:
     mov [di+1Ah], cx
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 inputs:

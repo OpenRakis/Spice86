@@ -136,13 +136,13 @@ public class CfgGraphReloadTest {
         using (Spice86DependencyInjection di = creator.Create()) {
             di.ProgramExecutor.Run();
             original = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager, null,
-                di.GeneratorInputsCollector.Capture().ChangedMemory);
+                di.GeneratorInputsCollector.Capture(di.Machine.CfgCpu.ExecutionContextManager).ChangedMemory);
         }
 
         using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: true))
         using (Spice86DependencyInjection di = creator.Create()) {
             CfgReloadDump reExported = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager,
-                null, di.GeneratorInputsCollector.Capture().ChangedMemory);
+                null, di.GeneratorInputsCollector.Capture(di.Machine.CfgCpu.ExecutionContextManager).ChangedMemory);
             // Records compare structurally, but the array members are reference-typed, so compare
             // the canonical (sorted) JSON the exporter already produces deterministically.
             Assert.Equal(SerializeDump(original), SerializeDump(reExported));
@@ -334,6 +334,81 @@ public class CfgGraphReloadTest {
     }
 
     [Theory]
+    [InlineData(1, 0x0012, false)]
+    [InlineData(2, 0x0000, true)]
+    public void ReloadedSpeculativeSelfModificationReconciles(byte selector, ushort expectedAx, bool expectPoison) {
+        using TempFile recordedDataDirectory = new(nameof(ReloadedSpeculativeSelfModificationReconciles));
+        const string binName = "speculative_reload_immediate";
+        SegmentedAddress target = new(0xF000, 0x0100);
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: false))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.Machine.Memory.UInt8[0, 0x0500] = 0;
+            di.ProgramExecutor.Run();
+            CfgInstruction speculativeTarget = Assert.Single(di.Machine.CfgCpu.CfgNodeFeeder.NodeIndex.GetAtAddress(target));
+            Assert.True(speculativeTarget.IsSpeculative, "the untaken arm must be in the dump as a speculative node");
+        }
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: true))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.Machine.Memory.UInt8[0, 0x0500] = selector;
+            di.ProgramExecutor.Run();
+            Assert.Equal(expectedAx, di.Machine.Memory.UInt16[0, 0x0400]);
+            Assert.Equal(expectPoison, di.Machine.CfgCpu.CfgNodeFeeder.NodeIndex.PoisonSet.Contains(target));
+        }
+    }
+
+    [Fact]
+    public void HardwareInterruptDeliveriesSurviveDumpAndReload() {
+        // externalint delivers hardware interrupts (the PIT raises IRQ0) during its run, so the
+        // exported dump must carry the (vector, handler) pairs; after reload the live set holds
+        // them again, and a subsequent export serializes the same list.
+        const string binName = "externalint";
+        using TempFile recordedDataDirectory = new(nameof(HardwareInterruptDeliveriesSurviveDumpAndReload));
+
+        CfgReloadDump original;
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: false))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.ProgramExecutor.Run();
+            original = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager, null,
+                di.GeneratorInputsCollector.Capture(di.Machine.CfgCpu.ExecutionContextManager).ChangedMemory);
+        }
+
+        Assert.NotNull(original.HardwareInterruptDeliveries);
+        Assert.NotEmpty(original.HardwareInterruptDeliveries);
+
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: true))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            // The live manager holds the restored pairs before any new interrupt is delivered.
+            ExecutionContextManager manager = di.Machine.CfgCpu.ExecutionContextManager;
+            string[] expected = original.HardwareInterruptDeliveries;
+            string[] restored = manager.HardwareInterruptDeliveries
+                .Select(delivery => $"{delivery.Vector:X2}={delivery.Target}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray();
+            Assert.Equal(expected, restored);
+
+            CfgReloadDump reExported = new CfgReloadExporter().Export(manager, null,
+                di.GeneratorInputsCollector.Capture(manager).ChangedMemory);
+            Assert.Equal(expected, reExported.HardwareInterruptDeliveries);
+        }
+    }
+
+    [Fact]
+    public void OldDumpWithoutDeliveriesReloadsEmpty() {
+        // A dump written before the field existed deserializes it as null: reload must restore an
+        // empty delivery set instead of failing.
+        CfgReloadDump dump = CaptureDump("segpr") with { HardwareInterruptDeliveries = null };
+
+        ILogger loggerService = Substitute.For<ILogger>();
+        using Spice86Creator creator = CreateCreator("segpr");
+        using Spice86DependencyInjection di = creator.Create();
+        using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
+        CfgGraphReloader reloader = new(di.Machine.CfgCpu, di.Machine.CpuState, compiler, di.CfgIdAllocator);
+        reloader.Reload(dump);
+
+        Assert.Empty(di.Machine.CfgCpu.ExecutionContextManager.HardwareInterruptDeliveries);
+    }
+
+    [Theory]
     [MemberData(nameof(EndToEndBins))]
     public void EndToEndReloadThenRunMatchesCleanRun(string binName) {
         // Faithful full-feature check through the real DI path: a clean run vs. a run that first
@@ -395,7 +470,7 @@ public class CfgGraphReloadTest {
         using Spice86DependencyInjection di = creator.Create();
         di.ProgramExecutor.Run();
         Machine machine = di.Machine;
-        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null, di.GeneratorInputsCollector.Capture().ChangedMemory);
+        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null, di.GeneratorInputsCollector.Capture(machine.CfgCpu.ExecutionContextManager).ChangedMemory);
         return (dump, machine.Memory.ReadRam());
     }
 
@@ -426,7 +501,7 @@ public class CfgGraphReloadTest {
     }
 
     private static CfgNodeExecutionCompiler NewCompiler(ILogger loggerService) {
-        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls, TestJitSettings.ExpandStackCalls);
     }
 
     private static string SerializeDump(CfgReloadDump dump) {

@@ -1,0 +1,64 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:006F",
+  "lastExecutedBlockId": 3,
+  "blocks": [
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:006F",
+      "pred": [
+        2
+      ],
+      "succ": [],
+      "asm": [
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "66BC00103412|mov ESP,0x12341000",
+        "6650|push EAX",
+        "6658|pop EAX",
+        "66C8040000|enterw 4,0",
+        "66C9|leavew",
+        "6689260002|mov dword ptr DS:[0x0200],ESP",
+        "66BC00503412|mov ESP,0x12345000",
+        "C8000000|enter 0,0",
+        "C9|leave",
+        "6689260402|mov dword ptr DS:[0x0204],ESP",
+        "66BC00703412|mov ESP,0x12347000",
+        "66C8000000|enterw 0,0",
+        "66C9|leavew",
+        "6689260802|mov dword ptr DS:[0x0208],ESP",
+        "C706FE04EFBE|mov word ptr DS:[0x04FE],0xBEEF",
+        "66BC00903412|mov ESP,0x12349000",
+        "BD0005|mov BP,0x0500",
+        "C8020002|enter 2,2",
+        "C9|leave",
+        "66C706FC050DF0FECA|mov dword ptr DS:[0x05FC],0xCAFEF00D",
+        "66BC00A03412|mov ESP,0x1234A000",
+        "66BD00063412|mov EBP,0x12340600",
+        "66C8040002|enterw 4,2",
+        "66C9|leavew",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    }
+  ],
+  "truncated": false
+}

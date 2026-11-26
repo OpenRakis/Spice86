@@ -108,8 +108,8 @@ public class CompletesNormallyVisitorTest {
     [Fact]
     public void TryCatchAndBoundaryFollowTheirBody() {
         // Assert
-        CompletesNormallyVisitor.CompletesNormally(new CpuFaultTryCatchNode(new BlockNode(Foo), At, [])).Should().BeTrue();
-        CompletesNormallyVisitor.CompletesNormally(new CpuFaultTryCatchNode(new BlockNode(_jump), At, [])).Should().BeFalse();
+        CompletesNormallyVisitor.CompletesNormally(new CpuFaultTryCatchNode(new BlockNode(Foo), At, [], [])).Should().BeTrue();
+        CompletesNormallyVisitor.CompletesNormally(new CpuFaultTryCatchNode(new BlockNode(_jump), At, [], [])).Should().BeFalse();
         CompletesNormallyVisitor.CompletesNormally(new InstructionBoundaryNode(Substitute.For<ICfgNode>(), "", new BlockNode(_jump))).Should().BeFalse();
     }
 
@@ -146,7 +146,7 @@ public class CompletesNormallyVisitorTest {
         BlockNode[] bodies = [
             new BlockNode(new IfElseNode(Condition, new BlockNode(leave), new BlockNode()), _jump),
             new BlockNode(new InstructionBoundaryNode(Substitute.For<ICfgNode>(), "", new BlockNode(leave)), _jump),
-            new BlockNode(new CpuFaultTryCatchNode(new BlockNode(leave), At, []), _jump)
+            new BlockNode(new CpuFaultTryCatchNode(new BlockNode(leave), At, [], []), _jump)
         ];
 
         // Assert

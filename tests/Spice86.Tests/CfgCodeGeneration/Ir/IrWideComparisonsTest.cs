@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
@@ -48,7 +49,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -73,7 +74,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -97,7 +98,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: the root cannot absorb mid (the store is not a marker), and mid's own
         // `DX > CX ? F : (AX < BP ? T : F)` tail is a general `&&`, not a relational
@@ -122,7 +123,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(0);
@@ -141,7 +142,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: the inside-instruction edge keeps the root out of mid, and mid's
         // general `&&` tail is not a range either - nothing folds.
@@ -165,7 +166,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -193,7 +194,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -214,7 +215,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(0);
@@ -231,7 +232,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: the root stays a separate signed compare; mid's `> ? F : low` tail is a
         // general `&&` of two different expressions, not a range - nothing folds.
@@ -261,7 +262,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: no wide compare; the root keeps its mixed `(short)DX < CX` shape.
         folded.Should().Be(0);
@@ -285,7 +286,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: no wide compare; mid's general `&&` tail is left to the AST combiner.
         folded.Should().Be(0);
@@ -311,7 +312,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: b1 folded its own chain; the root keeps its plain `!=` and still reaches b1.
         folded.Should().Be(1);
@@ -342,7 +343,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -383,7 +384,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -423,7 +424,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(0);
@@ -444,16 +445,17 @@ public sealed class IrWideComparisonsTest {
                 new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.MINUS,
                     new ConstantNode(DataType.UINT8, 'a')))),
             new InstructionStartNode("cmp"));
-        root.Statements[^1] = IrStatement.Create(root.Statements[^1].Node, cmp);
+        IrEditor.WithoutSsa.Replace(root, root.Statements.Count - 1,
+            IrStatement.Create(root.Statements[^1].Node, cmp));
         IrMethod method = Method([root, leafT, leafF], root);
         IrBlock anchor = new(_nextOffset);
-        anchor.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), cmp));
-        anchor.Terminator = new IrExit(NextInstruction(), new FailAsUntestedNode([]));
+        IrEditor.WithoutSsa.Append(anchor, IrStatement.Create(new InstructionStartNode("nop"), cmp));
+        IrEditor.WithoutSsa.SetTerminator(anchor, new IrExit(NextInstruction(), new FailAsUntestedNode([])));
         method.StructuralSuccessors[anchor] = [];
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(0);
@@ -487,7 +489,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(1);
@@ -515,7 +517,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         folded.Should().Be(0);
@@ -536,7 +538,7 @@ public sealed class IrWideComparisonsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int folded = IrWideComparisons.Apply(method, ssa);
+        int folded = IrWideComparisons.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: no wide compare at the root; mid's general `&&` tail is not a range
         // either - nothing folds.
@@ -552,18 +554,18 @@ public sealed class IrWideComparisonsTest {
         IrJump jump = new(NextInstruction(), new IrEdge(target, false));
         IrBlock block = new(_nextOffset);
         foreach (IVisitableAstNode node in extra) {
-            block.Statements.Add(IrStatement.Create(node, NextInstruction()));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, NextInstruction()));
         }
-        block.Terminator = jump;
+        IrEditor.WithoutSsa.SetTerminator(block, jump);
         return block;
     }
 
     private static IrBlock JumpTarget(params IVisitableAstNode[] extra) {
         IrBlock block = new(_nextOffset);
         foreach (IVisitableAstNode node in extra) {
-            block.Statements.Add(IrStatement.Create(node, NextInstruction()));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, NextInstruction()));
         }
-        block.Terminator = new IrExit(NextInstruction(), new FailAsUntestedNode([]));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(NextInstruction(), new FailAsUntestedNode([])));
         return block;
     }
 
@@ -607,24 +609,24 @@ public sealed class IrWideComparisonsTest {
     private static IrBlock TestBlock(IrTerminator terminator,
             params IVisitableAstNode[] extra) {
         IrBlock block = new(_nextOffset);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"),
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"),
             terminator.Origin));
         foreach (IVisitableAstNode node in extra) {
-            block.Statements.Add(IrStatement.Create(node, NextInstruction()));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, NextInstruction()));
         }
-        block.Terminator = terminator;
+        IrEditor.WithoutSsa.SetTerminator(block, terminator);
         return block;
     }
 
     private static IrBlock Leaf(params IVisitableAstNode[] extra) {
         IrBlock block = new(_nextOffset);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"),
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"),
             NextInstruction()));
         foreach (IVisitableAstNode node in extra) {
-            block.Statements.Add(IrStatement.Create(node, NextInstruction()));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, NextInstruction()));
         }
-        block.Terminator = new IrExit(NextInstruction(),
-            new FailAsUntestedNode([]));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(NextInstruction(),
+            new FailAsUntestedNode([])));
         return block;
     }
 

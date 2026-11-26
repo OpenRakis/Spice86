@@ -48,7 +48,7 @@ public sealed class IrDoublePrecisionTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int rewritten = IrDoublePrecision.Apply(method, ssa);
+        int rewritten = IrDoublePrecision.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), GenerationPolicy.Strict);
 
         // Assert
         rewritten.Should().Be(1);
@@ -71,7 +71,7 @@ public sealed class IrDoublePrecisionTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        IrDoublePrecision.Apply(method, ssa);
+        IrDoublePrecision.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), GenerationPolicy.Strict);
 
         // Assert: the inner shl/rcl pair may combine, but the loop itself must stay.
         loop.Terminator.Should().BeOfType<IrBranch>();
@@ -87,7 +87,7 @@ public sealed class IrDoublePrecisionTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        IrDoublePrecision.Apply(method, ssa);
+        IrDoublePrecision.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), GenerationPolicy.Strict);
 
         // Assert
         loop.Terminator.Should().BeOfType<IrBranch>();
@@ -106,18 +106,18 @@ public sealed class IrDoublePrecisionTest {
         RegisterNode bx = new(DataType.UINT16, 3), cx = new(DataType.UINT16, 1);
         IrBlock block = new(0), exit = Leaf();
         CfgInstruction addOrigin = NextInstruction();
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("add"), addOrigin));
-        block.Statements.Add(IrStatement.Create(Assign(bx,
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("add"), addOrigin));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(Assign(bx,
             new BinaryOperationNode(DataType.UINT16, bx, BinaryOperation.PLUS, one)),
             addOrigin));
         CfgInstruction adcOrigin = NextInstruction();
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("adc"), adcOrigin));
-        block.Statements.Add(IrStatement.Create(Assign(cx,
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("adc"), adcOrigin));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(Assign(cx,
             new BinaryOperationNode(DataType.UINT16, cx, BinaryOperation.PLUS,
                 new TypeConversionNode(DataType.UINT16,
                     new BinaryOperationNode(DataType.BOOL, bx, BinaryOperation.EQUAL,
                         new ConstantNode(DataType.UINT16, 0))))), adcOrigin));
-        block.Terminator = new IrJump(NextInstruction(), new IrEdge(exit, false));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrJump(NextInstruction(), new IrEdge(exit, false)));
         IrMethod method = new("M", [block, exit],
             [new IrEntry(NextInstruction(), block)],
             new HashSet<ICfgNode>(),
@@ -125,7 +125,7 @@ public sealed class IrDoublePrecisionTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int rewritten = IrDoublePrecision.Apply(method, ssa);
+        int rewritten = IrDoublePrecision.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), GenerationPolicy.Strict);
 
         // Assert
         rewritten.Should().Be(0);
@@ -159,7 +159,7 @@ public sealed class IrDoublePrecisionTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int rewritten = IrDoublePrecision.Apply(method, ssa);
+        int rewritten = IrDoublePrecision.Apply(method, new IrEditor(ssa, new GenerationStepTimer()), GenerationPolicy.Strict);
 
         // Assert: the loop collapsed into one wide result declaration.
         rewritten.Should().Be(1);
@@ -223,24 +223,24 @@ public sealed class IrDoublePrecisionTest {
         IrBlock loop = new(1);
         IrBlock exit = Leaf();
         IrBlock pre = new(0);
-        pre.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), NextInstruction()));
-        pre.Statements.Add(IrStatement.Create(preheader, NextInstruction()));
-        pre.Terminator = new IrJump(NextInstruction(), new IrEdge(loop, false));
+        IrEditor.WithoutSsa.Append(pre, IrStatement.Create(new InstructionStartNode("nop"), NextInstruction()));
+        IrEditor.WithoutSsa.Append(pre, IrStatement.Create(preheader, NextInstruction()));
+        IrEditor.WithoutSsa.SetTerminator(pre, new IrJump(NextInstruction(), new IrEdge(loop, false)));
 
         AddShiftRuns(loop, Ax, Dx, "left");
         // dec cx
         CfgInstruction decOrigin = NextInstruction();
-        loop.Statements.Add(IrStatement.Create(new InstructionStartNode("dec"), decOrigin));
-        loop.Statements.Add(IrStatement.Create(Assign(Cx,
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(new InstructionStartNode("dec"), decOrigin));
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(Cx,
             new BinaryOperationNode(DataType.UINT16, Cx, BinaryOperation.MINUS,
                 new ConstantNode(DataType.UINT16, 1))), decOrigin));
         foreach (IVisitableAstNode node in extra) {
-            loop.Statements.Add(IrStatement.Create(node, NextInstruction()));
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(node, NextInstruction()));
         }
-        loop.Terminator = new IrBranch(NextInstruction(),
+        IrEditor.WithoutSsa.SetTerminator(loop, new IrBranch(NextInstruction(),
             new BinaryOperationNode(DataType.BOOL, Cx, BinaryOperation.NOT_EQUAL,
                 new ConstantNode(DataType.UINT16, 0)),
-            new IrEdge(loop, false), new IrEdge(exit, false));
+            new IrEdge(loop, false), new IrEdge(exit, false)));
 
         IrMethod method = new("M", [pre, loop, exit],
             [new IrEntry(NextInstruction(), pre)],
@@ -259,21 +259,21 @@ public sealed class IrDoublePrecisionTest {
         IrBlock loop = new(1);
         IrBlock exit = Leaf();
         IrBlock pre = new(0);
-        pre.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), NextInstruction()));
-        pre.Terminator = new IrBranch(NextInstruction(),
+        IrEditor.WithoutSsa.Append(pre, IrStatement.Create(new InstructionStartNode("nop"), NextInstruction()));
+        IrEditor.WithoutSsa.SetTerminator(pre, new IrBranch(NextInstruction(),
             new BinaryOperationNode(DataType.BOOL, count, BinaryOperation.NOT_EQUAL,
                 new ConstantNode(count.DataType, 0)),
-            new IrEdge(loop, false), new IrEdge(exit, false));
+            new IrEdge(loop, false), new IrEdge(exit, false)));
         AddShiftRuns(loop, low, high, direction);
         CfgInstruction decOrigin = NextInstruction();
-        loop.Statements.Add(IrStatement.Create(new InstructionStartNode("dec"), decOrigin));
-        loop.Statements.Add(IrStatement.Create(Assign(count,
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(new InstructionStartNode("dec"), decOrigin));
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(count,
             new BinaryOperationNode(count.DataType, count, BinaryOperation.MINUS,
                 new ConstantNode(count.DataType, 1))), decOrigin));
-        loop.Terminator = new IrBranch(NextInstruction(),
+        IrEditor.WithoutSsa.SetTerminator(loop, new IrBranch(NextInstruction(),
             new BinaryOperationNode(DataType.BOOL, count, BinaryOperation.NOT_EQUAL,
                 new ConstantNode(count.DataType, 0)),
-            new IrEdge(loop, false), new IrEdge(exit, false));
+            new IrEdge(loop, false), new IrEdge(exit, false)));
         IrMethod method = new("M", [pre, loop, exit],
             [new IrEntry(NextInstruction(), pre)],
             new HashSet<ICfgNode>(),
@@ -291,23 +291,23 @@ public sealed class IrDoublePrecisionTest {
         int halfWidth = half.BitWidth == BitWidth.BYTE_8 ? 8 : 16;
         ConstantNode one = new(DataType.INT32, 1);
         CfgInstruction shiftOrigin = NextInstruction();
-        loop.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(
             new InstructionStartNode(direction == "left" ? "shl"
                 : direction == "signedRight" ? "sar" : "shr"), shiftOrigin));
         RegisterNode carryOut = direction == "left" ? low : high;
-        loop.Statements.Add(IrStatement.Create(Assign(Carry,
+        IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(Carry,
             new BinaryOperationNode(DataType.BOOL,
                 new BinaryOperationNode(half, carryOut, BinaryOperation.BITWISE_AND,
                     new ConstantNode(half,
                         (ulong)(direction == "left" ? 1 << (halfWidth - 1) : 1))),
                 BinaryOperation.NOT_EQUAL, new ConstantNode(half, 0))), shiftOrigin));
         if (direction == "left") {
-            loop.Statements.Add(IrStatement.Create(Assign(low,
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(low,
                 new BinaryOperationNode(half, low, BinaryOperation.LEFT_SHIFT, one)),
                 shiftOrigin));
             CfgInstruction rclOrigin = NextInstruction();
-            loop.Statements.Add(IrStatement.Create(new InstructionStartNode("rcl"), rclOrigin));
-            loop.Statements.Add(IrStatement.Create(Assign(high,
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(new InstructionStartNode("rcl"), rclOrigin));
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(high,
                 new BinaryOperationNode(half,
                     new BinaryOperationNode(half, high, BinaryOperation.LEFT_SHIFT, one),
                     BinaryOperation.BITWISE_OR,
@@ -320,10 +320,10 @@ public sealed class IrDoublePrecisionTest {
                         new TypeConversionNode(signedHalf, high),
                         BinaryOperation.RIGHT_SHIFT, one))
                 : new BinaryOperationNode(half, high, BinaryOperation.RIGHT_SHIFT, one);
-            loop.Statements.Add(IrStatement.Create(Assign(high, shifted), shiftOrigin));
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(high, shifted), shiftOrigin));
             CfgInstruction rcrOrigin = NextInstruction();
-            loop.Statements.Add(IrStatement.Create(new InstructionStartNode("rcr"), rcrOrigin));
-            loop.Statements.Add(IrStatement.Create(Assign(low,
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(new InstructionStartNode("rcr"), rcrOrigin));
+            IrEditor.WithoutSsa.Append(loop, IrStatement.Create(Assign(low,
                 new BinaryOperationNode(half,
                     new BinaryOperationNode(half, low, BinaryOperation.RIGHT_SHIFT, one),
                     BinaryOperation.BITWISE_OR,
@@ -339,9 +339,9 @@ public sealed class IrDoublePrecisionTest {
 
     private static IrBlock Leaf() {
         IrBlock block = new(2);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"),
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"),
             NextInstruction()));
-        block.Terminator = new IrExit(NextInstruction(), new FailAsUntestedNode([]));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(NextInstruction(), new FailAsUntestedNode([])));
         return block;
     }
 

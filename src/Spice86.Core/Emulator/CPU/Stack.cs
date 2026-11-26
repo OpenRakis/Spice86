@@ -286,7 +286,40 @@ public class Stack {
         // ESP: preserve high word from the slot, low word is the new SP
         _state.ESP = (espSlot & 0xFFFF0000u) | offset;
     }
-    
+
+    /// <summary>Pushes each value in order, like the register pushes that open a function.</summary>
+    /// <param name="values">The values to push, in push order.</param>
+    public void Save(params ReadOnlySpan<ushort> values) {
+        foreach (ushort value in values) {
+            Push16(value);
+        }
+    }
+
+    /// <summary>Pops two values, returning them in pop order.</summary>
+    public (ushort, ushort) Restore2() => (Pop16(), Pop16());
+
+    /// <summary>Pops three values, returning them in pop order.</summary>
+    public (ushort, ushort, ushort) Restore3() => (Pop16(), Pop16(), Pop16());
+
+    /// <summary>Pops four values, returning them in pop order.</summary>
+    public (ushort, ushort, ushort, ushort) Restore4() => (Pop16(), Pop16(), Pop16(), Pop16());
+
+    /// <summary>Pops five values, returning them in pop order.</summary>
+    public (ushort, ushort, ushort, ushort, ushort) Restore5() =>
+        (Pop16(), Pop16(), Pop16(), Pop16(), Pop16());
+
+    /// <summary>Pops six values, returning them in pop order.</summary>
+    public (ushort, ushort, ushort, ushort, ushort, ushort) Restore6() =>
+        (Pop16(), Pop16(), Pop16(), Pop16(), Pop16(), Pop16());
+
+    /// <summary>Pops and discards <paramref name="count"/> values, like the discarded pops of a restore nobody reads.</summary>
+    /// <param name="count">The number of values to discard.</param>
+    public void Release(int count) {
+        for (int index = 0; index < count; index++) {
+            Pop16();
+        }
+    }
+
     /// <summary>
     /// Peeks a SegmentedAddress value from the stack
     /// </summary>

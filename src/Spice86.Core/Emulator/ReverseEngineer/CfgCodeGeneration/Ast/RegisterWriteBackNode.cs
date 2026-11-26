@@ -22,7 +22,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 /// </remarks>
 internal sealed record RegisterWriteBackNode : IVisitableAstNode {
     /// <summary>Creates a write-back of <paramref name="local"/> into <paramref name="register"/>.</summary>
-    public RegisterWriteBackNode(RegisterNode register, RegisterLocalNode local) {
+    public RegisterWriteBackNode(ValueNode register, RegisterLocalNode local) {
         if (local.Register != register) {
             throw new ArgumentException(
                 $"Cannot write back local {local.VariableName} of {local.Register} into {register}.",
@@ -33,7 +33,7 @@ internal sealed record RegisterWriteBackNode : IVisitableAstNode {
     }
 
     /// <summary>The register written back.</summary>
-    public RegisterNode Register { get; }
+    public ValueNode Register { get; }
 
     /// <summary>The local holding the register's value.</summary>
     public RegisterLocalNode Local { get; }

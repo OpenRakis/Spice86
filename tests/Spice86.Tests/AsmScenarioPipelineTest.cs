@@ -372,12 +372,14 @@ public sealed class AsmScenarioPipelineTest {
         List<string> machineKeys = new();
 
         // Act
-        foreach (AsmScenario scenario in AsmScenarioCatalog.Int21Scenarios) {
-            using AsmRunScope scope = scenario.Prepare();
-            scope.Fixture.Settings.BinName.Should().EndWith("TEST.COM",
-                "every INT 21h program runs from the same C:\\TEST.COM file name");
-            generatedKeys.Add(GeneratedCodeMachineTestRunner.GoldenKey(scope.Fixture.Settings));
-            machineKeys.Add(MachineGoldens.GoldenKey(scope.Fixture));
+        foreach (AsmRunScope scope in AsmScenarioCatalog.Int21Scenarios
+                .Select(scenario => scenario.Prepare())) {
+            using (scope) {
+                scope.Fixture.Settings.BinName.Should().EndWith("TEST.COM",
+                    "every INT 21h program runs from the same C:\\TEST.COM file name");
+                generatedKeys.Add(GeneratedCodeMachineTestRunner.GoldenKey(scope.Fixture.Settings));
+                machineKeys.Add(MachineGoldens.GoldenKey(scope.Fixture));
+            }
         }
 
         // Assert
@@ -547,6 +549,29 @@ public sealed class AsmScenarioPipelineTest {
         // Clean up successful scope
         successScope.Dispose();
         Directory.Exists(successDirectory).Should().BeFalse("successful scope's directory should be cleaned up on dispose");
+    }
+
+    /// <summary>A generated execution is prepared with its interpreted baseline's run key, so both
+    /// runs share the host folder: a leftover file of the baseline run must not reach the generated
+    /// run's folder.</summary>
+    [Fact]
+    public void PrepareWithTheSameRunKeyRecreatesTheWorkingFolderWithoutLeftovers() {
+        const string identity = "same_run_key_folder";
+        List<string> directories = new();
+        AsmScenario scenario = new AsmScenario(identity, scope => {
+            directories.Add(scope.CreateWorkingDirectory(identity));
+            return AsmFixtureCatalog.JmpMov();
+        }, []);
+
+        const string runKey = "0123456789abcdef0123456789abcdef";
+        using AsmRunScope baseline = scenario.Prepare(runKey);
+        File.WriteAllText(Path.Join(directories[0], "leftover.txt"), "baseline leftover");
+
+        using AsmRunScope generated = scenario.Prepare(runKey);
+
+        directories[1].Should().Be(directories[0], "the same run key must produce the same host folder");
+        File.Exists(Path.Join(directories[1], "leftover.txt")).Should().BeFalse(
+            "a leftover of the baseline run must not reach the generated run");
     }
 
     /// <summary>Console and INT 16h scenario subsets are disjoint and their union equals the complete

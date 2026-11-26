@@ -1,0 +1,119 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:002B",
+  "lastExecutedBlockId": 52,
+  "blocks": [
+    {
+      "id": 52,
+      "entry": "F000:0021",
+      "term": "F000:002B",
+      "pred": [
+        3,
+        42
+      ],
+      "succ": [],
+      "asm": [
+        "83C402|add SP,2",
+        "A30002|mov word ptr DS:[0x0200],AX",
+        "89260402|mov word ptr DS:[0x0204],SP",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 42,
+      "entry": "F000:0034",
+      "term": "F000:003D",
+      "pred": [
+        15,
+        36
+      ],
+      "succ": [
+        52
+      ],
+      "asm": [
+        "8B4604|mov AX,word ptr SS:[BP\u002B4]",
+        "A30202|mov word ptr DS:[0x0202],AX",
+        "01D0|add AX,DX",
+        "5D|pop BP",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:001E",
+      "pred": [
+        2
+      ],
+      "succ": [
+        15,
+        52
+      ],
+      "asm": [
+        "FA|cli",
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "31C0|xor AX,AX",
+        "8EC0|mov ES,AX",
+        "26C70680013E00|mov word ptr ES:[0x0180],0x003E",
+        "268C0E8201|mov word ptr ES:[0x0182],CS",
+        "681111|push 0x1111",
+        "E80B00|call near 0x002C"
+      ]
+    },
+    {
+      "id": 36,
+      "entry": "F000:003E",
+      "term": "F000:0046",
+      "pred": [
+        15
+      ],
+      "succ": [
+        42
+      ],
+      "asm": [
+        "89E3|mov BX,SP",
+        "36C7470A9999|mov word ptr SS:[BX\u002B0x0A],0x9999",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 15,
+      "entry": "F000:002C",
+      "term": "F000:0032",
+      "pred": [
+        3
+      ],
+      "succ": [
+        36,
+        42
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "8B5604|mov DX,word ptr SS:[BP\u002B4]",
+        "CD60|int 0x60"
+      ]
+    }
+  ],
+  "truncated": false
+}

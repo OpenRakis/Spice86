@@ -5,18 +5,23 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0016",
-  "lastExecutedBlockId": 22,
+  "lastExecutedAddress": "F000:0049",
+  "lastExecutedBlockId": 53,
   "blocks": [
     {
-      "id": 22,
-      "entry": "F000:0016",
-      "term": "F000:0016",
+      "id": 53,
+      "entry": "F000:0031",
+      "term": "F000:0049",
       "pred": [
-        19
+        49
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "36A30406|mov word ptr SS:[0x0604],AX",
+        "36891E0606|mov word ptr SS:[0x0606],BX",
+        "3689160806|mov word ptr SS:[0x0608],DX",
         "F4|hlt"
       ]
     },
@@ -33,53 +38,185 @@
       ]
     },
     {
-      "id": 19,
-      "entry": "F000:000D",
-      "term": "F000:0010",
+      "id": 49,
+      "entry": "F000:001C",
+      "term": "F000:001F",
       "pred": [
-        3,
-        15
+        38,
+        41
       ],
       "succ": [
-        22
+        53
       ],
       "asm": [
-        "BB1600|mov BX,0x0016",
+        "BB3100|mov BX,0x0031",
         "FFE3|jmp near BX"
       ]
     },
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:000B",
+      "term": "F000:000A",
       "pred": [
         2
       ],
       "succ": [
-        15,
-        19
+        9,
+        22
       ],
       "asm": [
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
-        "BB1200|mov BX,0x0012",
-        "FFD3|call near BX"
+        "31D2|xor DX,DX",
+        "E81B00|call near 0x0028"
       ]
     },
     {
-      "id": 15,
-      "entry": "F000:0012",
-      "term": "F000:0015",
+      "id": 38,
+      "entry": "F000:0023",
+      "term": "F000:0023",
       "pred": [
-        3
+        9,
+        23,
+        31
       ],
       "succ": [
-        19
+        41,
+        49
+      ],
+      "asm": [
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 41,
+      "entry": "F000:0016",
+      "term": "F000:0019",
+      "pred": [
+        29,
+        38
+      ],
+      "succ": [
+        31,
+        49
+      ],
+      "asm": [
+        "BD2600|mov BP,0x0026",
+        "E80500|call near 0x0021"
+      ]
+    },
+    {
+      "id": 9,
+      "entry": "F000:0028",
+      "term": "F000:002C",
+      "pred": [
+        3,
+        36
+      ],
+      "succ": [
+        22,
+        38
       ],
       "asm": [
         "B81111|mov AX,0x1111",
+        "42|inc DX",
         "C3|ret near"
+      ]
+    },
+    {
+      "id": 22,
+      "entry": "F000:000D",
+      "term": "F000:000D",
+      "pred": [
+        3,
+        9
+      ],
+      "succ": [
+        23,
+        29
+      ],
+      "asm": [
+        "E81D00|call near 0x002D"
+      ]
+    },
+    {
+      "id": 31,
+      "entry": "F000:0021",
+      "term": "F000:0021",
+      "pred": [
+        29,
+        41
+      ],
+      "succ": [
+        36,
+        38,
+        46
+      ],
+      "asm": [
+        "FFD5|call near BP"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:002D",
+      "term": "F000:0030",
+      "pred": [
+        22,
+        46
+      ],
+      "succ": [
+        29,
+        38
+      ],
+      "asm": [
+        "83C210|add DX,0x0010",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 29,
+      "entry": "F000:0010",
+      "term": "F000:0013",
+      "pred": [
+        22,
+        23
+      ],
+      "succ": [
+        31,
+        41
+      ],
+      "asm": [
+        "BD2400|mov BP,0x0024",
+        "E80B00|call near 0x0021"
+      ]
+    },
+    {
+      "id": 36,
+      "entry": "F000:0024",
+      "term": "F000:0024",
+      "pred": [
+        31
+      ],
+      "succ": [
+        9
+      ],
+      "asm": [
+        "EB02|jmp short 0x0028"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:0026",
+      "term": "F000:0026",
+      "pred": [
+        31
+      ],
+      "succ": [
+        23
+      ],
+      "asm": [
+        "EB05|jmp short 0x002D"
       ]
     }
   ],

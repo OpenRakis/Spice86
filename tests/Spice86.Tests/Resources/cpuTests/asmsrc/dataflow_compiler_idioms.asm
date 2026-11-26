@@ -163,10 +163,55 @@ pass_loop:
     mov [bx+2Eh], dx
     cmp di, di
 
+; S10: a zero moves through xchg to the dividend's high word - DX is a known 0 at
+; the div, so the dividend is (uint)AX alone.
+; Catches: a swap that defines unknown versions instead of the written value.
+    xor cx, cx
+    mov dx, 1234h
+    xchg dx, cx
+    mov ax, [cs:si]
+    div word [cs:si+2]
+    mov [bx+30h], ax
+    mov [bx+32h], dx
+    cmp di, di
+
+; S11: shl/rcl then add/adc - the accumulator is the shift pair's wide value.
+; The store between keeps the high-half write's version a second reader.
+; Catches: an add/adc pair that recomputes the accumulator halves instead of
+; reading the shift pair's wide temporary.
+    mov dx, [cs:si+2]
+    mov ax, [cs:si]
+    mov cx, [cs:si+2]
+    shl ax, 1
+    rcl dx, 1
+    mov [bx+38h], dx
+    add ax, cx
+    adc dx, 0
+    mov [bx+34h], ax
+    mov [bx+36h], dx
+    cmp di, di
+
+; S12: AX changes between the shift pair and the add - no shared wide value, the
+; recombined halves must stay.
+; Catches: a bind that skips the low-slice equality check.
+    mov dx, [cs:si+2]
+    mov ax, [cs:si]
+    mov cx, [cs:si+2]
+    shl ax, 1
+    rcl dx, 1
+    inc ax
+    add ax, cx
+    adc dx, 0
+    mov [bx+3Ah], ax
+    mov [bx+3Ch], dx
+    cmp di, di
+
     add bx, 40h
     add si, 4
     dec bp
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 observe_dx_iret:

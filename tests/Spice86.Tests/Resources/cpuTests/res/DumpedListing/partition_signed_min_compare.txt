@@ -11,5 +11,9 @@ F000:0021 cmp EAX,0x80000000
 F000:0027 jle short 0x002C
 F000:0029 add DX,0x0010
 F000:002C xor AX,AX
-F000:002E hlt
+F000:002E mov word ptr SS:[0x0600],SP
+F000:0033 mov word ptr SS:[0x0602],SS
+F000:0038 mov word ptr SS:[0x060A],DX
+F000:003D mov word ptr SS:[0x0604],AX
+F000:0041 hlt
 F000:FFF0 jmp short 0

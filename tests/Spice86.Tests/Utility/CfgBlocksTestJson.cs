@@ -88,7 +88,7 @@ internal static class CfgBlocksTestJson {
         LoadedImageRegistry loadedImageRegistry = new();
         return new CfgCpuSnapshotBuilder(new CfgBlockGraphExporter(), new CfgFunctionPartitioner(),
             new FunctionCatalogue(),
-            new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
+            new GeneratorInputsCollector(new InstalledInterruptHandlers([], false),
                 new InterruptVectorTable(memory), new CallbackHandler(state, NullLogger.Instance),
                 loadedImageRegistry, new SharedMouseData(),
                 new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),

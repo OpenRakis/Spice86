@@ -44,6 +44,7 @@ public sealed class ServiceCallEventsTests {
 
     private static AsmRunSettings Observed(AsmRunSettings settings, Recorder recorder) {
         return settings with {
+            GeneratedCodeCheckBuild = true,
             ConfigureMachine = machine => machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder
         };
     }
@@ -74,9 +75,10 @@ public sealed class ServiceCallEventsTests {
         AsmRunSettings settings = AsmFixtureCatalog.Partition("int_service_calls").Settings;
         Recorder recorder = new();
         AsmRunSettings unobserved = settings with {
+            GeneratedCodeCheckBuild = true,
             ConfigureMachine = machine => {
                 machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder;
-                machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = null;
+                machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = IServiceCallObserver.None;
             }
         };
 
@@ -147,15 +149,19 @@ public sealed class ServiceCallEventsTests {
         using AsmFixtureRun generatedRun =
             AsmFixtureRunner.RunSettingsWithOverride(Observed(settings, generated), compiled.Supplier);
 
-        // Assert: with the option on, the source is the default source plus one ServiceCalled line per direct call
+        // Assert: the check build is the default build plus, per direct call, the duplicate caller stack
+        // save and the ServiceCalled line that follows it
         string notification = nameof(CSharpOverrideHelper.ServiceCalled) + "(";
+        string callerStackSave = nameof(DosInt21Handler.RecordCallerStack) + "(SS, SP);";
         defaultBuild.SourceText.Should().NotContain(notification);
         List<string> checkLines = checkBuild.SourceText.Split('\n').ToList();
         List<string> notifications = checkLines.Where(line => line.TrimStart().StartsWith(notification)).ToList();
         notifications.Should().HaveCount(2);
         notifications.Should().Contain(line => line.TrimStart().StartsWith(notification + "0x21, 0x40, "));
         notifications.Should().Contain(line => line.TrimStart().StartsWith(notification + "0x21, 0x3D, "));
-        checkLines.Where(line => !line.TrimStart().StartsWith(notification)).Should()
+        checkLines.Where((line, index) => !line.TrimStart().StartsWith(notification)
+                && !(line.Contains(callerStackSave)
+                    && checkLines[index + 1].TrimStart().StartsWith(notification))).Should()
             .Equal(defaultBuild.SourceText.Split('\n'));
 
         // Assert: each notification follows the caller stack save, as the event follows it through the stub

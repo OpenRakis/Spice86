@@ -56,7 +56,7 @@ public class EmsUnitTests {
 
         // Create EMS manager
         _ems = new ExpandedMemoryManager(_memory, _functionHandlerProvider, _stack, _state,
-            new ServiceCallEvents(new HashSet<byte>()), _loggerService);
+            new ServiceCallEvents(new HashSet<byte>(), false), _loggerService);
     }
 
     /// <summary>

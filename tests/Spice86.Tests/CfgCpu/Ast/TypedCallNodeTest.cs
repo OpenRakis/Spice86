@@ -133,12 +133,12 @@ public class TypedCallNodeTest {
 
     [Fact]
     public void CallbackHelperNode_KeepsItsSubtype() {
-        CallbackHelperNode call = new(Ax);
+        CallbackHelperNode call = new(null, Ax);
 
         MethodCallNode rebuilt = call.WithArguments([One]);
 
         rebuilt.Should().BeOfType<CallbackHelperNode>().Which.Should().BeEquivalentTo(
-            new CallbackHelperNode(One));
+            new CallbackHelperNode(null, One));
     }
 
     [Fact]

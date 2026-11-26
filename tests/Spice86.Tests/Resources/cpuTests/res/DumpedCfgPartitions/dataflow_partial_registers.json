@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 41,
-          "address": "F000:00A4",
+          "address": "F000:00AE",
           "kind": "functionEntry"
         }
       ]
@@ -43,7 +43,7 @@
       "toPartition": 2,
       "fromBlock": 41,
       "toBlock": 82,
-      "from": "F000:00A4",
+      "from": "F000:00AE",
       "target": "F000:0069"
     },
     {
@@ -52,7 +52,7 @@
       "toPartition": 2,
       "fromBlock": 41,
       "toBlock": 103,
-      "from": "F000:00A4",
+      "from": "F000:00AE",
       "target": "F000:0086"
     },
     {
@@ -62,7 +62,7 @@
       "fromBlock": 82,
       "toBlock": 41,
       "from": "F000:0083",
-      "target": "F000:00A4",
+      "target": "F000:00AE",
       "callContinuationBlock": 103,
       "callContinuationAddress": "F000:0086"
     },
@@ -73,7 +73,7 @@
       "fromBlock": 113,
       "toBlock": 41,
       "from": "F000:0066",
-      "target": "F000:00A4",
+      "target": "F000:00AE",
       "callContinuationBlock": 82,
       "callContinuationAddress": "F000:0069"
     }

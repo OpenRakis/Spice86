@@ -115,6 +115,7 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitSpeculativeGuardNode(SpeculativeGuardNode node) => GotoTargets.None;
 
+
     public GotoTargets VisitDivisionNode(DivisionNode node) => GotoTargets.None;
 
     public GotoTargets VisitMultiplicationNode(MultiplicationNode node) => GotoTargets.None;
@@ -164,6 +165,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     public GotoTargets VisitMethodCallValueNode(MethodCallValueNode node) => GotoTargets.None;
 
     public GotoTargets VisitThrowNode(ThrowNode node) => GotoTargets.None;
+
+    public GotoTargets VisitStackRangeCheckNode(StackRangeCheckNode node) => GotoTargets.None;
 
     public GotoTargets VisitSetInterruptShadowNode(SetInterruptShadowNode node) => GotoTargets.None;
 

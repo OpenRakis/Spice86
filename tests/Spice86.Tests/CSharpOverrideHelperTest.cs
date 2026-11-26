@@ -218,13 +218,16 @@ public class CSharpOverrideHelperTest {
 
         CpuDivisionErrorException exception = new("Division by zero");
 
-        // Act
-        Action returnedAction = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        // Act - the handler is entered at 0x3456:0x0078, so that is the observed resume target
+        Action returnedAction = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x3456, 0x0078)]);
 
-        // Assert
-        returnedAction.Should().BeSameAs(markerAction);
+        // Assert - the returned action wraps the handler's action with the resume check
         invocationCounter.Should().Be(1, "only the first matching delegate should run");
         executionCounter.Should().Be(0, "the returned action should not be executed");
+        returnedAction();
+        executionCounter.Should().Be(1, "the returned action runs the handler's action");
+        helper.State.IpSegmentedAddress.Should().Be(new SegmentedAddress(0x3456, 0x0078));
     }
 
     [Theory]
@@ -272,7 +275,7 @@ public class CSharpOverrideHelperTest {
         CpuDivisionErrorException exception = new("Division by zero");
 
         // Act & Assert
-        Action act = () => helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        Action act = () => helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets, []);
         act.Should().Throw<UnrecoverableException>()
             .WithMessage("*Untested CPU fault target*")
             .WithMessage("*3456:0078*")
@@ -324,9 +327,10 @@ public class CSharpOverrideHelperTest {
 
         CpuDivisionErrorException exception = new("Division by zero");
 
-        // Act 1 - IVT points to first handler
+        // Act 1 - IVT points to first handler, entered at 0x3456:0x0078
         machine.InterruptVectorTable[0] = new SegmentedAddress(0x3456, 0x0078);
-        Action returnedAction1 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x3456, 0x0078)])();
 
         // Reset CPU state for second call
         machine.CpuState.SP = 0x0100;
@@ -334,13 +338,12 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.IP = 0x0042;
         machine.CpuState.InterruptFlag = true;
 
-        // Act 2 - IVT points to second handler
+        // Act 2 - IVT points to second handler, entered at 0x4567:0x0089
         machine.InterruptVectorTable[0] = new SegmentedAddress(0x4567, 0x0089);
-        Action returnedAction2 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets,
+            [new SegmentedAddress(0x4567, 0x0089)])();
 
-        // Assert
-        returnedAction1.Should().BeSameAs(markerAction1);
-        returnedAction2.Should().BeSameAs(markerAction2);
+        // Assert - the IVT lookup ran per dispatch, each action running its handler's action
         invocationCounter1.Should().Be(1);
         invocationCounter2.Should().Be(1);
     }
@@ -1461,6 +1464,31 @@ public class CSharpOverrideHelperTest {
         dsRead.Should().Throw<CpuGeneralProtectionFaultException>();
     }
 
+    /// <summary>
+    /// With <c>ObservedTransfersOnly</c> set the base <c>HardwareInterruptFunction</c> fails any
+    /// delivery as untested; without it the base keeps looking up the override registered at the
+    /// vector's target.
+    /// </summary>
+    [Fact]
+    public void HardwareInterruptFunctionHonorsObservedTransfersOnly() {
+        using Spice86Creator creator = new Spice86Creator(binName: "add");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        HardwareDispatchOverride restricted = new(new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 }, true);
+        HardwareDispatchOverride permissive = new(new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 }, false);
+        SegmentedAddress handler = new(0xF000, 0x0031);
+
+        Action restrictedDispatch = () => _ = restricted.Dispatch(0x08, handler);
+        restrictedDispatch.Should().Throw<UnrecoverableException>()
+            .WithMessage("*Hardware interrupt 0x08 targets F000:0031*");
+
+        Action handlerAction = permissive.Dispatch(0x08, handler)(0);
+        permissive.HandlerCalled.Should().Be(1);
+        handlerAction.Should().NotBeNull();
+    }
+
     private CSharpOverrideHelper CreateHelper(Machine machine) =>
         CreateHelper(machine, new Dictionary<SegmentedAddress, FunctionInformation>());
 
@@ -1486,6 +1514,29 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.EAX.Should().Be(before.Eax, "the division helper must not modify EAX");
         machine.CpuState.EDX.Should().Be(before.Edx, "the division helper must not modify EDX");
         machine.CpuState.Flags.FlagRegister.Should().Be(before.Flags, "the division helper must not modify flags");
+    }
+}
+
+class HardwareDispatchOverride : CSharpOverrideHelper {
+    private readonly bool _observedTransfersOnly;
+
+    public HardwareDispatchOverride(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILogger loggerService, Configuration configuration, bool observedTransfersOnly)
+        : base(functionInformations, machine, loggerService, configuration) {
+        _observedTransfersOnly = observedTransfersOnly;
+        DefineFunction(0xF000, 0x0031, Handler_F000_0031_F0031);
+    }
+
+    public int HandlerCalled { get; private set; }
+
+    protected override bool ObservedTransfersOnly => _observedTransfersOnly;
+
+    public Func<int, Action> Dispatch(byte vectorNumber, SegmentedAddress target) =>
+        HardwareInterruptFunction(vectorNumber, target);
+
+    public Action Handler_F000_0031_F0031(int loadOffset) {
+        HandlerCalled++;
+        return InterruptRet();
     }
 }
 

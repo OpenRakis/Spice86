@@ -5,18 +5,22 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0028",
-  "lastExecutedBlockId": 52,
+  "lastExecutedAddress": "F000:003C",
+  "lastExecutedBlockId": 58,
   "blocks": [
     {
-      "id": 52,
+      "id": 58,
       "entry": "F000:0028",
-      "term": "F000:0028",
+      "term": "F000:003C",
       "pred": [
-        48
+        54
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "3689160A06|mov word ptr SS:[0x060A],DX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
         "F4|hlt"
       ]
     },
@@ -33,16 +37,16 @@
       ]
     },
     {
-      "id": 48,
+      "id": 54,
       "entry": "F000:0026",
       "term": "F000:0026",
       "pred": [
-        46,
-        57
+        52,
+        67
       ],
       "succ": [
-        50,
-        52
+        56,
+        58
       ],
       "asm": [
         "E2F4|loop 0x001C"
@@ -56,94 +60,96 @@
         2
       ],
       "succ": [
-        28
+        31
       ],
       "asm": [
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
         "31D2|xor DX,DX",
-        "B90200|mov CX,2"
+        "B90400|mov CX,4"
       ]
     },
     {
-      "id": 50,
+      "id": 56,
       "entry": "F000:001C",
       "term": "F000:0022",
       "pred": [
-        30,
-        48
+        33,
+        54
       ],
       "succ": [
-        46,
-        57
+        52,
+        67
       ],
       "asm": [
         "89CB|mov BX,CX",
         "4B|dec BX",
         "C1E302|shl BX,2",
-        "2EFF6F45|jmp far dword ptr CS:[BX\u002B0x45]"
+        "2EFF6F65|jmp far dword ptr CS:[BX\u002B0x65]"
       ]
     },
     {
-      "id": 46,
-      "entry": "F000:0037",
-      "term": "F000:003B",
+      "id": 52,
+      "entry": "F000:004F",
+      "term": "F000:0053",
       "pred": [
-        50
+        56
       ],
       "succ": [
-        48
+        54
       ],
       "asm": [
         "81C20010|add DX,0x1000",
-        "EBE9|jmp short 0x0026"
+        "EBD1|jmp short 0x0026"
       ]
     },
     {
-      "id": 57,
-      "entry": "F000:0031",
-      "term": "F000:0035",
+      "id": 67,
+      "entry": "F000:0049",
+      "term": "F000:004D",
       "pred": [
-        50
+        56
       ],
       "succ": [
-        48
+        54
       ],
       "asm": [
         "81C20001|add DX,0x0100",
-        "EBEF|jmp short 0x0026"
+        "EBD7|jmp short 0x0026"
       ]
     },
     {
-      "id": 28,
+      "id": 31,
       "entry": "F000:000D",
       "term": "F000:0013",
       "pred": [
         3,
-        27
+        30
       ],
       "succ": [
         23,
-        27,
-        37
+        24,
+        30,
+        40,
+        41
       ],
       "asm": [
         "89CB|mov BX,CX",
         "4B|dec BX",
         "C1E302|shl BX,2",
-        "2EFF5F3D|call far dword ptr CS:[BX\u002B0x3D]"
+        "2EFF5F55|call far dword ptr CS:[BX\u002B0x55]"
       ]
     },
     {
-      "id": 30,
+      "id": 33,
       "entry": "F000:0019",
       "term": "F000:0019",
       "pred": [
-        27
+        30
       ],
       "succ": [
-        50
+        56
       ],
       "asm": [
         "B90200|mov CX,2"
@@ -151,13 +157,59 @@
     },
     {
       "id": 23,
-      "entry": "F000:002D",
-      "term": "F000:0030",
+      "entry": "F000:0047",
+      "term": "F000:0047",
       "pred": [
-        28
+        31
       ],
       "succ": [
-        27
+        24
+      ],
+      "asm": [
+        "EBF8|jmp short 0x0041"
+      ]
+    },
+    {
+      "id": 30,
+      "entry": "F000:0017",
+      "term": "F000:0017",
+      "pred": [
+        24,
+        31,
+        41
+      ],
+      "succ": [
+        31,
+        33
+      ],
+      "asm": [
+        "E2F4|loop 0x000D"
+      ]
+    },
+    {
+      "id": 40,
+      "entry": "F000:0045",
+      "term": "F000:0045",
+      "pred": [
+        31
+      ],
+      "succ": [
+        41
+      ],
+      "asm": [
+        "EBF6|jmp short 0x003D"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:0041",
+      "term": "F000:0044",
+      "pred": [
+        23,
+        31
+      ],
+      "succ": [
+        30
       ],
       "asm": [
         "83C210|add DX,0x0010",
@@ -165,31 +217,15 @@
       ]
     },
     {
-      "id": 27,
-      "entry": "F000:0017",
-      "term": "F000:0017",
+      "id": 41,
+      "entry": "F000:003D",
+      "term": "F000:0040",
       "pred": [
-        23,
-        28,
-        37
+        31,
+        40
       ],
       "succ": [
-        28,
         30
-      ],
-      "asm": [
-        "E2F4|loop 0x000D"
-      ]
-    },
-    {
-      "id": 37,
-      "entry": "F000:0029",
-      "term": "F000:002C",
-      "pred": [
-        28
-      ],
-      "succ": [
-        27
       ],
       "asm": [
         "83C201|add DX,1",

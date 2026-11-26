@@ -168,6 +168,7 @@ internal static class AsmScenarioEngineAssertions {
         //   0006: je selfmodify   (2 bytes)
         //   0008: hlt             (1 byte)
         //   0009: mov ax, 1234    (3 bytes)  <- selfmodify label
+        //   (selfmodify body grew by two result stores; internal offsets shifted)
         CfgInstruction? je = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0006));
         CfgInstruction? hlt = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0008));
         CfgInstruction? selfModify = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0009));
@@ -270,17 +271,17 @@ internal static class AsmScenarioEngineAssertions {
         CurrentInstructions currentInstructions =
             machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
 
-        // div bx at F000:0028
-        CfgInstruction? div = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0028));
-        // handler entry (push bp) at F000:0037
-        CfgInstruction? handlerEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0037));
-        // handler iret at F000:0059
-        CfgInstruction? handlerIret = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0059));
-        // divblock entry (mov ax,10) at F000:0020 — the handler rewrites the return
+        // div word[cs:0x102] at F000:0029
+        CfgInstruction? div = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0029));
+        // handler entry (mov [0x08],bp) at F000:003B
+        CfgInstruction? handlerEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x003B));
+        // handler iret at F000:005C
+        CfgInstruction? handlerIret = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x005C));
+        // divblock entry (mov bp,05678h) at F000:001D — the handler rewrites the return
         // address so iret returns here instead of to the faulting div.
-        CfgInstruction? divblockEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0020));
-        // post-fault instruction: mov bx,[cs:0x100] at F000:002A
-        CfgInstruction? postDiv = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x002A));
+        CfgInstruction? divblockEntry = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x001D));
+        // post-fault instruction: mov bx,[cs:0x100] at F000:002E
+        CfgInstruction? postDiv = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x002E));
 
         Assert.NotNull(div);
         Assert.NotNull(handlerEntry);
@@ -551,18 +552,52 @@ internal static class AsmScenarioEngineAssertions {
         midBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(cliBlock);
     }
 
-    /// <summary>partition_indirect_call_jump: the indirect call produces a callOut transfer and the
-    /// ret of the indirect target an alignedReturn.</summary>
+    /// <summary>partition_indirect_call_jump: one indirect call instruction has two observed targets,
+    /// each transferring to a different landing entry while its return frame is open, and the program
+    /// still exercises an indirect jump.</summary>
     /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
     /// <param name="machine">Machine of the finished run.</param>
     public static void PartitionIndirectCallJump(AsmRunScope scope, Machine machine) {
         CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
 
         graph.Partitions.Should().NotBeNull();
-        graph.Partitions.Should().HaveCount(2, "one for the indirect target function, one for the entry point");
+        graph.Partitions.Should().HaveCountGreaterThan(2, "the two distinct landing entries and trampolines are observed");
         graph.Transfers.Should().NotBeNull();
-        graph.Transfers.Should().Contain(t => t.Kind == "callOut", "indirect call via BX must produce a callOut transfer");
-        graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn", "ret from indirect target must produce an alignedReturn transfer");
+        graph.Transfers.Where(t => t.Kind == "callOut")
+            .GroupBy(t => t.From)
+            .Should().Contain(group => group.Select(t => t.Target).Distinct().Count() == 2,
+                "one indirect call instruction must dispatch to both trampoline targets");
+        graph.Transfers.Where(t => t.Kind == "crossPartitionFlow")
+            .Select(t => t.Target).Distinct().Should().HaveCountGreaterThanOrEqualTo(2,
+                "each target must transfer to a different landing entry");
+        graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn");
+    }
+
+    /// <summary>One far call site observes four targets; two tail-jump to distinct landings.</summary>
+    public static void PartitionFarDispatch(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Where(t => t.Kind == "callOut").GroupBy(t => t.From)
+            .Should().Contain(group => group.Select(t => t.Target).Distinct().Count() == 4,
+                "one far call instruction must reach all four targets");
+        graph.Transfers.Where(t => t.Kind == "crossPartitionFlow").Select(t => t.Target)
+            .Distinct().Should().HaveCountGreaterThanOrEqualTo(2,
+                "the far trampolines must reach different function entries");
+    }
+
+    /// <summary>Two overlapping calls share a return address but reach different landings.</summary>
+    public static void PartitionSharedReturnLandings(AsmRunScope scope, Machine machine) {
+        CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+        graph.Transfers.Should().NotBeNull();
+        graph.Transfers.Where(t => t.Kind == "callOut")
+            .GroupBy(t => t.CallContinuationAddress)
+            .Should().Contain(group => group.Key != null
+                && group.Select(t => t.From).Distinct().Count() == 2
+                && group.Select(t => t.Target).Distinct().Count() == 2,
+                "two distinct CALL instructions must share one return address and call different targets");
+        graph.Transfers.Where(t => t.Kind == "crossPartitionFlow")
+            .Select(t => t.Target).Distinct().Should().HaveCountGreaterThanOrEqualTo(2,
+                "the two callees must reach separate landing entries");
     }
 
     /// <summary>partition_shared_tail: the ret of the shared tail produces an alignedReturn transfer.</summary>

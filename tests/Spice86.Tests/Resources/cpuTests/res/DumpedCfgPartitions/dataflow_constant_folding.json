@@ -5,12 +5,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        259,
-        257
+        261,
+        259
       ],
       "entries": [
         {
-          "block": 259,
+          "block": 261,
           "address": "F000:0137",
           "kind": "returnTargetEntry"
         }
@@ -26,7 +26,7 @@
       "entries": [
         {
           "block": 94,
-          "address": "F000:017C",
+          "address": "F000:0186",
           "kind": "functionEntry"
         }
       ]
@@ -36,12 +36,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        256
+        258
       ],
       "entries": [
         {
-          "block": 256,
-          "address": "F000:0184",
+          "block": 258,
+          "address": "F000:018E",
           "kind": "executionContextEntry"
         }
       ]
@@ -81,10 +81,10 @@
       "kind": "cpuFault",
       "fromPartition": 1,
       "toPartition": 3,
-      "fromBlock": 259,
-      "toBlock": 256,
+      "fromBlock": 261,
+      "toBlock": 258,
       "from": "F000:0137",
-      "target": "F000:0184"
+      "target": "F000:018E"
     },
     {
       "kind": "alignedReturn",
@@ -92,16 +92,16 @@
       "toPartition": 4,
       "fromBlock": 94,
       "toBlock": 181,
-      "from": "F000:0183",
+      "from": "F000:018D",
       "target": "F000:00F2"
     },
     {
       "kind": "dynamicReturn",
       "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 256,
-      "toBlock": 259,
-      "from": "F000:0187",
+      "fromBlock": 258,
+      "toBlock": 261,
+      "from": "F000:0191",
       "target": "F000:0137"
     },
     {
@@ -109,7 +109,7 @@
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 187,
-      "toBlock": 259,
+      "toBlock": 261,
       "from": "F000:0134",
       "target": "F000:0137"
     },
@@ -120,7 +120,7 @@
       "fromBlock": 85,
       "toBlock": 94,
       "from": "F000:00EF",
-      "target": "F000:017C",
+      "target": "F000:0186",
       "callContinuationBlock": 181,
       "callContinuationAddress": "F000:00F2"
     }

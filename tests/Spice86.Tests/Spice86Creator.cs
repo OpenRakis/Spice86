@@ -38,13 +38,14 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null)
+        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null,
+        bool generatedCodeCheckBuild = false)
         : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
             recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
-            enableSpeculativeCfgExploration, clockStartTime) {
+            enableSpeculativeCfgExploration, clockStartTime, generatedCodeCheckBuild) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
@@ -52,12 +53,18 @@ public sealed class Spice86Creator : IDisposable {
             settings.FailOnUnhandledPort, settings.EnableA20Gate, settings.EnableXms, settings.EnableEms,
             null, settings.CDrive, overrideSupplier,
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
-            settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
+            settings.ExeArgs, settings.InstructionTimeScale, jitMode, false,
+            settings.RecordedDataDirectory, settings.ReloadCfgGraph,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, null) {
+            settings.EnableSpeculativeCfgExploration, TestClockStartTime,
+            settings.GeneratedCodeCheckBuild) {
         EnableUmb = settings.EnableUmb;
         HltStopsEmulation = settings.HltStopsEmulation;
     }
+
+    /// <summary>The fixed emulated start time of fixture runs: every machine reports the same DOS
+    /// date and time, so timestamps written to emulated RAM are reproducible between runs.</summary>
+    private static readonly DateTimeOffset TestClockStartTime = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
         bool failOnUnhandledPort, bool enableA20Gate, bool enableXms, bool enableEms,
@@ -66,7 +73,8 @@ public sealed class Spice86Creator : IDisposable {
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
-        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
+        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime,
+        bool generatedCodeCheckBuild) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -126,6 +134,7 @@ public sealed class Spice86Creator : IDisposable {
             RenderingMode = renderingMode,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
             ClockStartTime = clockStartTime,
+            GeneratedCodeCheckBuild = generatedCodeCheckBuild,
         };
 
         _maxCycles = maxCycles;

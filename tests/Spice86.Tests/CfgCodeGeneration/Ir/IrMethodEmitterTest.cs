@@ -19,8 +19,8 @@ using Xunit;
 using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
 
 /// <summary>
-/// The IR pipeline emits whole methods on small lifted programs: an <c>aam</c> throw-if nests as a
-/// guard, and every emitted source compiles.
+/// The IR pipeline emits whole methods on small lifted programs: an <c>aam</c> constant divisor folds
+/// its zero check away, and every emitted source compiles.
 /// </summary>
 public sealed class IrMethodEmitterTest {
 
@@ -29,7 +29,7 @@ public sealed class IrMethodEmitterTest {
 
 
     [Fact]
-    public void AamThrowIfDoesNotNestTheRestOfTheMethod() {
+    public void AamConstantDivisorFoldsAwayTheZeroCheck() {
         // Arrange
         TestInstructionHelper helper = new();
         CfgInstruction aam = Parse(helper, 0x0000, 0xD4, 0x0A);
@@ -43,8 +43,9 @@ public sealed class IrMethodEmitterTest {
 
         // Assert
         AssertCompiles(program);
-        program.SourceText.Should().Contain("if (v2_0000 == 0)");
-        program.SourceText.Should().Contain("        // F000:0002");
+        program.SourceText.Should().NotContain("if (v2_0000 == 0)");
+        program.SourceText.Should().Contain("AH = (byte)(v1_0000 / v2_0000);");
+        program.AddressMap.Should().Contain(entry => entry.Address == "F000:0002");
     }
 
     [Fact]

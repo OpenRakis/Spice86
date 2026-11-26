@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 167,
-          "address": "F000:0141",
+          "address": "F000:019D",
           "kind": "functionEntry"
         }
       ]
@@ -21,9 +21,9 @@
       "name": "unknown",
       "blocks": [
         3,
-        216,
+        246,
         171,
-        218,
+        248,
         2
       ],
       "entries": [
@@ -42,17 +42,17 @@
       "toPartition": 2,
       "fromBlock": 167,
       "toBlock": 171,
-      "from": "F000:0144",
+      "from": "F000:01A0",
       "target": "F000:00D3"
     },
     {
       "kind": "callOut",
       "fromPartition": 2,
       "toPartition": 1,
-      "fromBlock": 216,
+      "fromBlock": 246,
       "toBlock": 167,
       "from": "F000:00D1",
-      "target": "F000:0141",
+      "target": "F000:019D",
       "callContinuationBlock": 171,
       "callContinuationAddress": "F000:00D3"
     }

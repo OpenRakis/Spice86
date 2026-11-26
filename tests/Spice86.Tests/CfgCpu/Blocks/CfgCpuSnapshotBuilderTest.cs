@@ -68,7 +68,7 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
         LoadedImageRegistry loadedImageRegistry = new();
         CfgCpuSnapshotBuilder builder = new(new CfgBlockGraphExporter(), new CfgFunctionPartitioner(),
             _functionCatalogue,
-            new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
+            new GeneratorInputsCollector(new InstalledInterruptHandlers([], false),
                 new InterruptVectorTable(memory), new CallbackHandler(state, _loggerService),
                 loadedImageRegistry, new SharedMouseData(),
                 new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),

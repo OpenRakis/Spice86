@@ -23,19 +23,19 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 /// </remarks>
 internal sealed record RegisterLocalNode : ValueNode {
     /// <summary>Creates a local of <paramref name="register"/> printed with the register's own type.</summary>
-    public RegisterLocalNode(RegisterNode register, string variableName)
+    public RegisterLocalNode(ValueNode register, string variableName)
         : this(register, variableName, register.DataType) {
     }
 
     /// <summary>Creates a local of <paramref name="register"/> printed with <paramref name="printedType"/>.</summary>
-    public RegisterLocalNode(RegisterNode register, string variableName, DataType printedType)
+    public RegisterLocalNode(ValueNode register, string variableName, DataType printedType)
         : base(printedType) {
         Register = register;
         VariableName = variableName;
     }
 
     /// <summary>The register the local stands for.</summary>
-    public RegisterNode Register { get; }
+    public ValueNode Register { get; }
 
     /// <summary>The C# name of the local.</summary>
     public string VariableName { get; }

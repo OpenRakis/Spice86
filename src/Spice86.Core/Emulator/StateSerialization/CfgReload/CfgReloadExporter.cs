@@ -69,6 +69,13 @@ internal sealed class CfgReloadExporter {
                 .ToArray()
             : null;
 
+        string[]? hardwareInterruptDeliveries = contextManager.HardwareInterruptDeliveries is { Count: > 0 } deliveries
+            ? deliveries
+                .Select(delivery => $"{delivery.Vector:X2}={delivery.Target}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray()
+            : null;
+
         string[]? watchedAreas = ChangedMemorySnapshot.SerializeRanges(changedMemory.WatchedAreas);
         string[]? changedRanges = ChangedMemorySnapshot.SerializeRanges(changedMemory.ChangedRanges);
 
@@ -81,6 +88,7 @@ internal sealed class CfgReloadExporter {
                 .ToArray(),
             Blocks = blockInfos.OrderBy(b => b.Id).ToArray(),
             PoisonedAddresses = poisonedAddresses,
+            HardwareInterruptDeliveries = hardwareInterruptDeliveries,
             WatchedAreas = watchedAreas,
             ChangedRanges = changedRanges
         };

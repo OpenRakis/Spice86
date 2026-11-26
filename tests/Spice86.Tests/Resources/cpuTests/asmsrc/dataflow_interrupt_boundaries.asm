@@ -108,6 +108,8 @@ copy_bytes:
     dec word [0F00h]
     jnz pass_loop
     cli
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 divide_error:

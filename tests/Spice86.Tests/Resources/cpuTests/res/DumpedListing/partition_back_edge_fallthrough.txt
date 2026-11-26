@@ -8,5 +8,9 @@ F000:000F dec CX
 F000:0010 je short 0x0017
 F000:0012 add DX,1
 F000:0015 jmp short 0x000F
-F000:0017 hlt
+F000:0017 mov word ptr SS:[0x0600],SP
+F000:001C mov word ptr SS:[0x0602],SS
+F000:0021 mov word ptr SS:[0x060A],DX
+F000:0026 mov word ptr SS:[0x0608],CX
+F000:002B hlt
 F000:FFF0 jmp short 0

@@ -1,0 +1,18 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0xFFFE
+F000:000A push SP
+F000:000B push SP
+F000:000C call near 0x001A
+F000:000F add SP,4
+F000:0012 mov word ptr DS:[0x0200],AX
+F000:0015 mov word ptr DS:[0x0204],SP
+F000:0019 hlt
+F000:001A push BP
+F000:001B mov BP,SP
+F000:001D mov AX,word ptr SS:[BP+4]
+F000:0020 add AX,word ptr SS:[BP+6]
+F000:0023 pop BP
+F000:0024 ret near
+F000:FFF0 jmp short 0

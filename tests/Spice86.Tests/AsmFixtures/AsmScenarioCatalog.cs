@@ -8,6 +8,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
@@ -44,7 +45,8 @@ internal static class AsmScenarioCatalog {
         .. BatchScenarios,
         .. BootstrapScenarios,
         .. ConsoleProgramScenarios,
-        CompiledCompilerIdioms()
+        CompiledCompilerIdioms(GenerationPolicy.Strict),
+        CompiledCompilerIdioms(RelaxedSavedSlotsPolicy)
     ];
 
     /// <summary>Batch scripts routed through COMMAND.COM: redirection, labels, subroutines, call expansion,
@@ -153,12 +155,12 @@ internal static class AsmScenarioCatalog {
     }
 
     /// <summary>
-    /// Runs a TSR program that terminates and returns its exit code in AX. Each run prepares an
+    /// Runs a TSR program that terminates; DOS keeps its exit code in the SDA. Each run prepares an
     /// independent directory holding the program, so discovery and generated execution never share a
     /// host file.
     /// </summary>
     /// <param name="programName">File name of the TSR program under Resources/DosTsrTests.</param>
-    /// <param name="expectedExitCode">Exit code the program leaves in AX.</param>
+    /// <param name="expectedExitCode">Exit code the program terminates with.</param>
     /// <returns>The scenario for that program.</returns>
     public static AsmScenario TsrExitCode(string programName, byte expectedExitCode) {
         string identity = Path.GetFileNameWithoutExtension(programName);
@@ -172,8 +174,12 @@ internal static class AsmScenarioCatalog {
                 InstallInterruptVectors = true,
                 EnableA20Gate = true
             };
-            return new AsmFixture(settings, [], result =>
-                result.State.AX.Should().Be(expectedExitCode, $"{programName} returns its exit code in AX"));
+            return new AsmFixture(settings, [], result => {
+                ushort returnCode = result.Memory.UInt16[
+                    DosSwappableDataArea.BaseSegment, DosSwappableDataArea.ReturnCodeOffset];
+                ((byte)(returnCode & 0xFF)).Should().Be(expectedExitCode,
+                    $"{programName} leaves its exit code in DOS's SDA");
+            });
         }, [$"DosTsrTests/{programName}"]);
     }
 
@@ -226,6 +232,7 @@ internal static class AsmScenarioCatalog {
             CopyResourceFile("DosConsoleProgramTests", "video_writer_z_0.com", "WRITER.COM", directory);
             string startBatch = Path.Join(directory, "START.BAT");
             File.WriteAllText(startBatch, "TSR_BASIC.COM\r\nWRITER.COM\r\n");
+            DosTestFiles.SetFixedTimes(startBatch);
             AsmRunSettings settings = new() {
                 BinName = startBatch,
                 ScenarioName = identity,
@@ -276,7 +283,7 @@ internal static class AsmScenarioCatalog {
         }, [
             "DosFcbTests/fcb_process_isolation.com",
             "DosFcbTests/fcbchild.com"
-        ]);
+        ]).WithoutGeneratedFinalStateGate("FCB writes stamp the cycle-based emulated clock, and generated execution consumes different cycles than the interpreter, so the DOS timestamps in memory differ");
     }
 
     private static AsmRunSettings ExecSettings(string scenarioName, string cDrive, string programName) {
@@ -372,17 +379,16 @@ internal static class AsmScenarioCatalog {
     /// oracle checks the `total * 2 + w` long fold, the long `/10`, the signed `/2`, the `!count`
     /// boolean and the `1..9` range result of real compiler codegen.</summary>
     /// <returns>The scenario, with the compiled program as its primary resource.</returns>
-    private static AsmScenario CompiledCompilerIdioms() {
+    private static AsmScenario CompiledCompilerIdioms(GenerationPolicy policy) {
         return new AsmScenario("compiled_compiler_idioms", scope => {
             DosProgramRun run = new(scope, "compiled_compiler_idioms");
             run.ResourceCopy("NativeDosTests", "compiler_idioms.exe", "IDIOMS.EXE");
             AsmRunSettings settings = run.Settings("IDIOMS.EXE") with {
-                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000
+                EnablePit = false, ExeArgs = "7", MaxCycles = 3000000,
+                GenerationPolicy = policy
             };
-            return run.RunCustomSettings(settings, result => {
-                DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1");
-                result.State.AX.Should().Be(0);
-            });
+            return run.RunCustomSettings(settings, result =>
+                DosProgramRun.ScreenText(result).Should().Contain("581 58 -3 0 1"));
         }, ["NativeDosTests/compiler_idioms.exe"]) {
             PrimaryResourceFileName = "NativeDosTests/compiler_idioms.exe"
         };
@@ -397,6 +403,7 @@ internal static class AsmScenarioCatalog {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", resourceSubDirectory, sourceFileName);
         string target = Path.Join(targetDirectory, targetFileName);
         File.Copy(source, target, overwrite: true);
+        DosTestFiles.SetFixedTimes(target);
         return target;
     }
 
@@ -470,8 +477,25 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("multimisalignedcall", AsmFixtureCatalog.MultiMisalignedCall),
             AsmScenario.FromFixture("redirectedreturn", AsmFixtureCatalog.RedirectedReturn),
             AsmScenario.FromFixture("stalestackframes", AsmFixtureCatalog.StaleStackFrames),
+            // stack_esp_high_bits proves the stack helpers write only the low 16 bits of ESP:
+            // the mov esp write of the high half must survive push/pop and 16-bit and 32-bit
+            // enter/leave pairs.
+            AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits),
+            // convention_conditional_flag_input proves a may-write does not kill demand: the
+            // callee reads the caller's CF through shl's conditional write.
+            AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput),
+            // convention_return_outputs proves a return exit reads the method's outputs and its
+            // landings' inputs: dead flags and writes go, needed ones stay.
+            AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs),
+            // convention_landing_outputs proves an UnknownWay entry outputs what its returns'
+            // resolved call-continuation landings read.
+            AsmScenario.FromFixture("convention_landing_outputs", AsmFixtureCatalog.ConventionLandingOutputs),
+            // convention_resolved_calls proves a resolved call takes the callee's convention as its
+            // summary; a fault-reachable or redirected call keeps Unknown.
+            AsmScenario.FromFixture("convention_resolved_calls", AsmFixtureCatalog.ConventionResolvedCalls),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
-            AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
+            AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt)
+                .WithoutGeneratedFinalStateGate("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing point is timing-dependent"),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),
             // hlt runs with the real-hardware HLT (HLT with interrupts enabled waits for the timer tick
             // instead of ending the run): the discovered listing spans both HLTs, the generated code
@@ -480,8 +504,47 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("hlt", AsmFixtureCatalog.HltWaitsForHardwareInterrupt),
             AsmScenario.FromFixture("ioports", AsmFixtureCatalog.IoPorts),
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
-            AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry),
-            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister),
+            AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry)
+                .WithoutGeneratedFinalStateGate("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
+            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister)
+                .WithoutGeneratedFinalStateGate("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
+            // mouse_irq12 posts a move before the run so IRQ 12 is delivered while the program
+            // waits; with no user routine registered the driver's before/after callbacks take their
+            // no-routine contracts, and the delivery reaches vector 0x74. The oracle reads the frame
+            // the delivery pushes at the top of the program stack: CS:IP and FLAGS stay there after
+            // the handler returns, so the RAM image alone proves the IRQ arrived.
+            AsmScenario.FromFixture("mouse_irq12", () => {
+                AsmFixture fixture = AsmFixtureCatalog.MouseIrq12NoRoutine();
+                return new AsmFixture(fixture.Settings, fixture.ExpectedMemory, result => {
+                    fixture.AssertResult(result);
+                    result.Memory.UInt16[0x20FFA].Should().Be(0x0029,
+                        "the IRQ 12 delivery pushes the IP of the loop that follows sti; mov cx");
+                    result.Memory.UInt16[0x20FFC].Should().Be(0xF000,
+                        "the IRQ 12 delivery pushes CS on the program stack");
+                    (result.Memory.UInt16[0x20FFE] & 0x0200).Should().NotBe(0,
+                        "the IRQ 12 delivery pushes FLAGS with the interrupt flag set");
+                });
+            }).WithoutGeneratedFinalStateGate(
+                "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
+            // The registered variant registers the routine through INT 33h AX=000Ch before the wait
+            // loop; the discovery snapshot keeps both callback contracts Unknown then, and the
+            // routine's 0xCAFE store is the oracle.
+            AsmScenario.FromFixture("mouse_irq12.registered", AsmFixtureCatalog.MouseIrq12RegisteredRoutine),
+            // cc_irq_delivered_flags installs the program's own int 74h handler before the wait
+            // loop; the handler observes the delivered FLAGS image, so the event check must keep
+            // the interrupted code's flag work live.
+            AsmScenario.FromFixture("cc_irq_delivered_flags", AsmFixtureCatalog.IrqDeliveredFlags),
+            AsmScenario.FromFixture("cc_irq_delivered_flags.branch", AsmFixtureCatalog.IrqDeliveredFlagsBranch)
+                .WithoutGeneratedFinalStateGate(
+                    "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
+            AsmScenario.FromFixture("cc_irq_delivered_flags.patch", AsmFixtureCatalog.IrqDeliveredFlagsPatch),
+            // The hlt variant does sti right before the wait hlt: the sti emits no check of its
+            // own (a fallthrough hlt checks events in its wait loop), so generated code delivers
+            // while halted with the return address after the hlt, like the interpreter's shadow.
+            // The oracle counts the deliveries.
+            AsmScenario.FromFixture("cc_irq_delivered_flags.hlt", AsmFixtureCatalog.IrqDeliveredFlagsHlt)
+                .WithoutGeneratedFinalStateGate(
+                    "the pushed FLAGS image at 0x20FFE holds status flags the generated code does not compute"),
             AsmScenario.FromFixture("divfaultloop", () => AsmFixtureCatalog.DivFaultLoop()
                 .WithEngineAssertions(AsmScenarioEngineAssertions.DivFaultLoop)),
             AsmScenario.FromFixture("flagconditions", AsmFixtureCatalog.FlagConditions),
@@ -533,6 +596,7 @@ internal static class AsmScenarioCatalog {
             // time instead of throwing while it generates the whole program.
             AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData),
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
+            AsmScenario.FromFixture("speculative_smc_lowram", AsmFixtureCatalog.SpeculativeSmcLowRam),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
             AsmScenario.FromFixture("speculative_a20_smc_guard", AsmFixtureCatalog.SpeculativeA20SmcGuard),
             AsmScenario.FromFixture("callstackunwind",
@@ -554,7 +618,9 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_jump_table"),
             PartitionScenario("partition_untested_indirect"),
             PartitionScenario("partition_jump_table_mixed"),
-            PartitionScenario("partition_far_dispatch"),
+            AsmScenario.FromFixture("partition_far_dispatch", () => AsmFixtureCatalog.Partition("partition_far_dispatch").WithEngineAssertions(AsmScenarioEngineAssertions.PartitionFarDispatch)),
+            AsmScenario.FromFixture("partition_shared_return_landings", () => AsmFixtureCatalog.Partition("partition_shared_return_landings")
+                .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionSharedReturnLandings)),
             PartitionScenario("partition_far_call_chain"),
             PartitionScenario("partition_far_jump_segment_change"),
             PartitionScenario("partition_sign_conditions"),
@@ -564,9 +630,41 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_back_edge_fallthrough"),
             PartitionScenario("partition_jump_to_next"),
             PartitionScenario("partition_two_fault_handlers"),
+            PartitionScenario("cc_copy_in_observers"),
             PartitionScenario("cc_register_leaf"),
+            PartitionScenario("cc_dispatch_targets"),
+            PartitionScenario("cc_call_32bit"),
             PartitionScenario("cc_stack_frames"),
+            PartitionScenario("cc_mov_sp_bp_epilogue"),
+            PartitionScenario("cc_frame_web_typed_return"),
+            PartitionScenario("cc_push_sp_arguments"),
+            PartitionScenario("cc_argument_mutation_between_reads"),
+            PartitionScenario("cc_stack_argument_push_memory_alias"),
+            PartitionScenario("cc_stack_argument_loop_write"),
+            PartitionScenario("cc_stack_argument_interrupt_write"),
+            PartitionScenario("cc_stack_argument_timer_write"),
+            AsmScenario.FromFixture("cc_stack_frames",
+                () => AsmFixtureCatalog.Partition("cc_stack_frames")
+                    .WithGenerationPolicy(RelaxedStackPolicy)),
+            PartitionScenario("cc_stack_frames_read_after_pop"),
+            AsmScenario.FromFixture("cc_stack_frames_read_after_pop",
+                () => AsmFixtureCatalog.Partition("cc_stack_frames_read_after_pop")
+                    .WithGenerationPolicy(RelaxedStackPolicy)),
+            PartitionScenario("cc_saved_registers"),
+            AsmScenario.FromFixture("cc_saved_registers",
+                () => AsmFixtureCatalog.Partition("cc_saved_registers")
+                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy)),
+            PartitionScenario("cc_saved_registers_xchg_escape"),
+            AsmScenario.FromFixture("cc_saved_registers_xchg_escape",
+                () => AsmFixtureCatalog.Partition("cc_saved_registers_xchg_escape")
+                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy)),
             PartitionScenario("cc_call_shapes"),
+            PartitionScenario("cc_calls_keep_stack_offset"),
+            AsmScenario.FromFixture("cc_calls_keep_stack_offset",
+                () => AsmFixtureCatalog.Partition("cc_calls_keep_stack_offset")
+                    .WithGenerationPolicy(RelaxedStackPolicy)),
+            PartitionScenario("cc_stack_offset_joins"),
+            PartitionScenario("cc_untyped_call_passthrough"),
             PartitionScenario("dataflow_stack_save_restore"),
             PartitionScenario("dataflow_flag_definitions"),
             PartitionScenario("dataflow_partial_registers"),
@@ -578,29 +676,51 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("alu_dead_flags"),
             PartitionScenario("dataflow_shift_chains"),
             PartitionScenario("dataflow_expression_propagation"),
+            PartitionScenario("dataflow_forwarded_register_read"),
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
             PartitionScenario("dataflow_alias_traps"),
+            PartitionScenario("dataflow_alias_traps_286"),
+            PartitionScenario("dataflow_io_barrier"),
+            PartitionScenario("dataflow_device_order"),
+            AsmScenario.FromFixture("dataflow_device_order",
+                () => AsmFixtureCatalog.Partition("dataflow_device_order")
+                    .WithGenerationPolicy(RelaxedRamPolicy)),
+            PartitionScenario("dataflow_ram_policy"),
+            AsmScenario.FromFixture("dataflow_ram_policy",
+                () => AsmFixtureCatalog.Partition("dataflow_ram_policy")
+                    .WithGenerationPolicy(RelaxedRamPolicy)),
+            PartitionScenario("dataflow_stack_vram"),
+            PartitionScenario("dataflow_overwritten_stores"),
             PartitionScenario("dataflow_compiler_idioms"),
             PartitionScenario("dataflow_arithmetic_idioms"),
             PartitionScenario("dataflow_joined_memory"),
             AsmScenario.FromFixture("dataflow_joined_memory",
                 AsmFixtureCatalog.DataflowJoinedMemory286),
+            AsmScenario.FromFixture("dataflow_joined_memory",
+                () => AsmFixtureCatalog.Partition("dataflow_joined_memory")
+                    .WithGenerationPolicy(RelaxedSegmentPolicy)),
             PartitionScenario("dataflow_wide_conditions"),
             PartitionScenario("dataflow_wide_operations"),
             PartitionScenario("dataflow_legality_traps"),
             PartitionScenario("data_globals"),
-            PartitionScenario("data_segment_values"),
+            PartitionScenario("data_segment_values")
+                .WithoutGeneratedFinalStateGate("the program installs an IRQ0 handler and its asynchronous landing point is timing-dependent"),
             PartitionScenario("data_tables"),
             PartitionScenario("data_strings"),
             PartitionScenario("data_segments"),
             PartitionScenario("data_jump_tables"),
             PartitionScenario("interrupt_handler_partial_inputs"),
+            PartitionScenario("interrupt_call_pushed_flags"),
+            AsmScenario.FromFixture("int9_keeps_interrupted_flags",
+                    AsmFixtureCatalog.Int9KeepsInterruptedFlags)
+                .WithoutGeneratedFinalStateGate("the IRQ1 frame lands at a run-dependent instruction boundary, so the stale pushed frame bytes differ between modes"),
             PartitionScenario("data_global_offset_fault"),
             PartitionScenario("data_jump_tables_segments"),
             AsmScenario.FromFixture("data_jump_tables", AsmFixtureCatalog.DataJumpTablesPatched),
             PartitionScenario("register_locals"),
-            PartitionScenario("register_locals_across"),
+            PartitionScenario("register_locals_across")
+                .WithoutGeneratedFinalStateGate("the program installs an IRQ0 handler to fire mid-call, so its landing point is timing-dependent"),
             PartitionScenario("save_restore_pairs"),
             PartitionScenario("if_conversion"),
             PartitionScenario("int_service_calls"),
@@ -624,4 +744,26 @@ internal static class AsmScenarioCatalog {
     private static AsmScenario PartitionScenario(string binName) {
         return AsmScenario.FromFixture(binName, () => AsmFixtureCatalog.Partition(binName));
     }
+
+    /// <summary>The unknown-memory-is-RAM relaxation, the one named relaxation this catalogue runs beside
+    /// strict mode on the scenarios listed above.</summary>
+    private static readonly GenerationPolicy RelaxedRamPolicy =
+        new(GenerationRelaxation.UnknownMemoryIsRam);
+
+    /// <summary>The accesses-stay-in-segment relaxation: an indexed access with an unproved
+    /// range is assumed not to wrap the segment end.</summary>
+    private static readonly GenerationPolicy RelaxedSegmentPolicy =
+        new(GenerationRelaxation.AccessesStayInSegment);
+
+    /// <summary>The abandoned-stack-slots relaxation: a private typed stack argument's bytes are
+    /// assumed unobserved after the call, so the site reserves their space without writing
+    /// them.</summary>
+    private static readonly GenerationPolicy RelaxedStackPolicy =
+        new(GenerationRelaxation.AbandonedStackSlotsUnobserved);
+
+    /// <summary>The saved-slots relaxation: a slot a save push of a register wrote is assumed
+    /// written only by its pop, so the slot survives call and service boundaries when the method
+    /// lets no stack address escape.</summary>
+    private static readonly GenerationPolicy RelaxedSavedSlotsPolicy =
+        new(GenerationRelaxation.SavedSlotsWrittenOnlyByPops);
 }

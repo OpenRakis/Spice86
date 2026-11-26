@@ -1,0 +1,114 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0022",
+  "lastExecutedBlockId": 41,
+  "blocks": [
+    {
+      "id": 41,
+      "entry": "F000:0011",
+      "term": "F000:0022",
+      "pred": [
+        3,
+        35
+      ],
+      "succ": [],
+      "asm": [
+        "A34000|mov word ptr DS:[0x0040],AX",
+        "89164200|mov word ptr DS:[0x0042],DX",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 35,
+      "entry": "F000:0029",
+      "term": "F000:002F",
+      "pred": [
+        11,
+        14
+      ],
+      "succ": [
+        41
+      ],
+      "asm": [
+        "89E3|mov BX,SP",
+        "368B5702|mov DX,word ptr SS:[BX\u002B2]",
+        "C20200|ret near 2"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000E",
+      "pred": [
+        2
+      ],
+      "succ": [
+        11,
+        41
+      ],
+      "asm": [
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "FC|cld",
+        "687856|push 0x5678",
+        "E81200|call near 0x0023"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0032",
+      "term": "F000:0039",
+      "pred": [
+        11
+      ],
+      "succ": [
+        35
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "8B4604|mov AX,word ptr SS:[BP\u002B4]",
+        "5D|pop BP",
+        "C20200|ret near 2"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:0023",
+      "term": "F000:0026",
+      "pred": [
+        3
+      ],
+      "succ": [
+        14,
+        35
+      ],
+      "asm": [
+        "683412|push 0x1234",
+        "E80900|call near 0x0032"
+      ]
+    }
+  ],
+  "truncated": false
+}

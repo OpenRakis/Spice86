@@ -4,28 +4,30 @@
   "totalEntryPoints": 2,
   "entryPointAddresses": [
     "F000:FFF0",
-    "F000:010E"
+    "F000:0118"
   ],
-  "lastExecutedAddress": "F000:00FA",
+  "lastExecutedAddress": "F000:0104",
   "lastExecutedBlockId": 219,
   "blocks": [
     {
       "id": 219,
       "entry": "F000:00F9",
-      "term": "F000:00FA",
+      "term": "F000:0104",
       "pred": [
         208
       ],
       "succ": [],
       "asm": [
         "FA|cli",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
     {
       "id": 131,
-      "entry": "F000:010E",
-      "term": "F000:011D",
+      "entry": "F000:0118",
+      "term": "F000:0127",
       "pred": [],
       "succ": [],
       "asm": [
@@ -90,11 +92,11 @@
         "BC0010|mov SP,0x1000",
         "31C0|xor AX,AX",
         "8EC0|mov ES,AX",
-        "26C7060000FB00|mov word ptr ES:[0],0x00FB",
+        "26C70600000501|mov word ptr ES:[0],0x0105",
         "268C0E0200|mov word ptr ES:[2],CS",
-        "26C70620000E01|mov word ptr ES:[0x0020],0x010E",
+        "26C70620001801|mov word ptr ES:[0x0020],0x0118",
         "268C0E2200|mov word ptr ES:[0x0022],CS",
-        "26C70680011E01|mov word ptr ES:[0x0180],0x011E",
+        "26C70680012801|mov word ptr ES:[0x0180],0x0128",
         "268C0E8201|mov word ptr ES:[0x0182],CS",
         "8CD8|mov AX,DS",
         "8EC0|mov ES,AX",
@@ -159,7 +161,7 @@
       ],
       "asm": [
         "31DB|xor BX,BX",
-        "BE2501|mov SI,0x0125",
+        "BE2F01|mov SI,0x012F",
         "C706000F0200|mov word ptr DS:[0x0F00],2"
       ]
     },
@@ -226,8 +228,8 @@
     },
     {
       "id": 103,
-      "entry": "F000:00FB",
-      "term": "F000:010D",
+      "entry": "F000:0105",
+      "term": "F000:0117",
       "pred": [
         118
       ],
@@ -247,8 +249,8 @@
     },
     {
       "id": 180,
-      "entry": "F000:0123",
-      "term": "F000:0124",
+      "entry": "F000:012D",
+      "term": "F000:012E",
       "pred": [
         173
       ],
@@ -277,7 +279,7 @@
         "AB|stos word ptr ES:[DI],AX",
         "897F14|mov word ptr DS:[BX\u002B0x14],DI",
         "FC|cld",
-        "E85800|call near 0x0123"
+        "E86200|call near 0x012D"
       ]
     },
     {
@@ -374,8 +376,8 @@
     },
     {
       "id": 161,
-      "entry": "F000:011E",
-      "term": "F000:0122",
+      "entry": "F000:0128",
+      "term": "F000:012C",
       "pred": [
         57
       ],

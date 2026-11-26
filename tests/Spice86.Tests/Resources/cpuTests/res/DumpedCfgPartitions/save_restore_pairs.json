@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 42,
-          "address": "F000:01A7",
+          "address": "F000:01B1",
           "kind": "functionEntry"
         }
       ]
@@ -77,7 +77,7 @@
       "toPartition": 2,
       "fromBlock": 42,
       "toBlock": 86,
-      "from": "F000:01AF",
+      "from": "F000:01B9",
       "target": "F000:004B"
     },
     {
@@ -87,7 +87,7 @@
       "fromBlock": 32,
       "toBlock": 42,
       "from": "F000:0048",
-      "target": "F000:01A7",
+      "target": "F000:01B1",
       "callContinuationBlock": 86,
       "callContinuationAddress": "F000:004B"
     }

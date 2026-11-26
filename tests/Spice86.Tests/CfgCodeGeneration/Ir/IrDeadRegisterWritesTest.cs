@@ -87,15 +87,15 @@ public sealed class IrDeadRegisterWritesTest {
         BinaryOperationNode read = new(DataType.UINT8, new RegisterNode(DataType.UINT8, 0),
             BinaryOperation.ASSIGN, pointer);
         IrStatement observer = new(read, access, IrEffectsVisitor.Of(read, hasFault));
-        head.Statements.Add(IrStatement.Create(new InstructionStartNode("entry"), entry));
-        head.Statements.Add(dead);
-        head.Statements.Add(live);
-        tail.Statements.Add(observer);
-        tail.Terminator = new IrExit(access,
-            new FailAsUntestedNode([UntestedMessagePart.Literal("unobserved fallthrough")]));
+        IrEditor.WithoutSsa.Append(head, IrStatement.Create(new InstructionStartNode("entry"), entry));
+        IrEditor.WithoutSsa.Append(head, dead);
+        IrEditor.WithoutSsa.Append(head, live);
+        IrEditor.WithoutSsa.Append(tail, observer);
+        IrEditor.WithoutSsa.SetTerminator(tail, new IrExit(access,
+            new FailAsUntestedNode([UntestedMessagePart.Literal("unobserved fallthrough")])));
         List<IrBlock> blocks = [head];
         if (separateBlock) {
-            head.Terminator = new IrJump(secondWrite, new IrEdge(tail, false));
+            IrEditor.WithoutSsa.SetTerminator(head, new IrJump(secondWrite, new IrEdge(tail, false)));
             blocks.Add(tail);
         }
         IrMethod method = new("FaultBeforeAbort", blocks, [new IrEntry(entry, head)],
@@ -104,7 +104,7 @@ public sealed class IrDeadRegisterWritesTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        IrDeadRegisterWrites.Apply(method, ssa);
+        IrDeadRegisterWrites.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         head.Statements.Contains(dead).Should().Be(!hasFault);
@@ -146,7 +146,7 @@ public sealed class IrDeadRegisterWritesTest {
         IrBlock irBlock = method.Blocks.Single(candidate => candidate.Statements.Any(
             statement => IsBxAssignment(statement.Node, 7)));
         ICfgNode origin = irBlock.Statements.First(statement => IsBxAssignment(statement.Node, 7)).Origin;
-        irBlock.Statements.Insert(0, IrStatement.Create(
+        IrEditor.WithoutSsa.Insert(irBlock, 0, IrStatement.Create(
             new CheckExternalEventsNode(origin.Address, HardwareInterruptEffectBuilder.Conservative), origin));
 
         // Act

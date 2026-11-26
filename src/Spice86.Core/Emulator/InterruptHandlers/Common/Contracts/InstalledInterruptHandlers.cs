@@ -23,9 +23,11 @@ public sealed class InstalledInterruptHandlers {
     /// </summary>
     /// <param name="hardwareVectorNumbers">The interrupt vectors that are hardware-triggered
     /// (external events).</param>
-    public InstalledInterruptHandlers(IEnumerable<byte> hardwareVectorNumbers) {
+    /// <param name="serviceCallsObserved">Whether the run observes service calls (the generated-code check
+    /// build): the interrupt stubs register their notifying callback only then.</param>
+    public InstalledInterruptHandlers(IEnumerable<byte> hardwareVectorNumbers, bool serviceCallsObserved) {
         _hardwareVectorNumbers = new HashSet<byte>(hardwareVectorNumbers);
-        ServiceCallEvents = new ServiceCallEvents(_hardwareVectorNumbers);
+        ServiceCallEvents = new ServiceCallEvents(_hardwareVectorNumbers, serviceCallsObserved);
     }
 
     /// <summary>

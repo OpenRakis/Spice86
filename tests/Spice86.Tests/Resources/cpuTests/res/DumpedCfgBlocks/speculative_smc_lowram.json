@@ -1,0 +1,81 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "016F:0100",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "016F:0100"
+  ],
+  "lastExecutedAddress": "016F:0133",
+  "lastExecutedBlockId": 15,
+  "blocks": [
+    {
+      "id": 2,
+      "entry": "016F:0100",
+      "term": "016F:010F",
+      "pred": [],
+      "succ": [
+        8,
+        10
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED8|mov DS,AX",
+        "C606000401|mov byte ptr DS:[0x0400],1",
+        "A00005|mov AL,byte ptr DS:[0x0500]",
+        "84C0|test AL,AL",
+        "7507|jne short 0x0118"
+      ]
+    },
+    {
+      "id": 15,
+      "entry": "016F:0129",
+      "term": "016F:0133",
+      "pred": [
+        8,
+        10
+      ],
+      "succ": [],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED8|mov DS,AX",
+        "C6060204AA|mov byte ptr DS:[0x0402],0xAA",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 8,
+      "entry": "016F:0118",
+      "dead": true,
+      "term": "016F:0127",
+      "pred": [
+        2
+      ],
+      "succ": [
+        15
+      ],
+      "asm": [
+        "B86F01|mov AX,0x016F",
+        "8ED8|mov DS,AX",
+        "C6062301EE|mov byte ptr DS:[0x0123],0xEE",
+        "C606010400|mov byte ptr DS:[0x0401],0",
+        "EB00|jmp short 0x0129"
+      ]
+    },
+    {
+      "id": 10,
+      "entry": "016F:0111",
+      "term": "016F:0116",
+      "pred": [
+        2
+      ],
+      "succ": [
+        15
+      ],
+      "asm": [
+        "C6060104DD|mov byte ptr DS:[0x0401],0xDD",
+        "EB11|jmp short 0x0129"
+      ]
+    }
+  ],
+  "truncated": false
+}

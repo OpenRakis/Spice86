@@ -36,6 +36,13 @@ internal sealed record CfgReloadDump {
     [JsonPropertyName("poisonedAddresses")] public string[]? PoisonedAddresses { get; init; }
 
     /// <summary>
+    /// The <c>(vector, handler)</c> pair of every hardware interrupt delivered during the run,
+    /// serialized as <c>"VV=SEG:OFF"</c> entries. Optional: dumps written before this field
+    /// existed carry no deliveries.
+    /// </summary>
+    [JsonPropertyName("hardwareInterruptDeliveries")] public string[]? HardwareInterruptDeliveries { get; init; }
+
+    /// <summary>
     /// Merged <c>[start, end)</c> physical-address ranges the loaded images occupied, as
     /// <c>"0xSTART-0xEND"</c> pairs; omitted when nothing was watched.
     /// </summary>

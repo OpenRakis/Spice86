@@ -5,18 +5,23 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0022",
+  "lastExecutedAddress": "F000:003B",
   "lastExecutedBlockId": 26,
   "blocks": [
     {
       "id": 26,
       "entry": "F000:0022",
-      "term": "F000:0022",
+      "term": "F000:003B",
       "pred": [
         23
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
+        "3689160A06|mov word ptr SS:[0x060A],DX",
+        "36890E0806|mov word ptr SS:[0x0608],CX",
+        "36891E0606|mov word ptr SS:[0x0606],BX",
         "F4|hlt"
       ]
     },
@@ -38,8 +43,8 @@
       "term": "F000:0020",
       "pred": [
         24,
-        29,
-        34
+        34,
+        39
       ],
       "succ": [
         24,
@@ -77,18 +82,18 @@
       ],
       "succ": [
         23,
-        29,
-        34
+        34,
+        39
       ],
       "asm": [
         "89CB|mov BX,CX",
         "4B|dec BX",
         "D1E3|shl BX,1",
-        "2EFF6723|jmp near word ptr CS:[BX\u002B0x23]"
+        "2EFF673C|jmp near word ptr CS:[BX\u002B0x3C]"
       ]
     },
     {
-      "id": 29,
+      "id": 34,
       "entry": "F000:001B",
       "term": "F000:001E",
       "pred": [
@@ -103,7 +108,7 @@
       ]
     },
     {
-      "id": 34,
+      "id": 39,
       "entry": "F000:0016",
       "term": "F000:0019",
       "pred": [

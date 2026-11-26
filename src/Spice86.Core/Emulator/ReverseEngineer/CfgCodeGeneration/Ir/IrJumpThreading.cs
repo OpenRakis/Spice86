@@ -13,12 +13,13 @@ using System.Linq;
 /// non-trampoline target in one pass.
 /// </summary>
 internal static class IrJumpThreading {
-    /// <summary>Threads every trampoline of <paramref name="method"/> out of its edges and removes it.</summary>
-    public static void Apply(IrMethod method) {
+    /// <summary>Threads every trampoline of <paramref name="method"/> out of its edges and removes
+    /// it, editing through <paramref name="editor"/>.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) {
         HashSet<IrBlock> entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
         Dictionary<IrBlock, int> predecessorCounts = [];
         foreach (IrBlock block in method.Blocks) {
-            if (block.Terminator is null) {
+            if (!block.HasTerminator) {
                 continue;
             }
             foreach (IrEdge edge in block.Terminator.Edges) {
@@ -38,7 +39,7 @@ internal static class IrJumpThreading {
             return;
         }
         foreach (IrBlock block in method.Blocks.Where(block => !jumps.ContainsKey(block))) {
-            block.Terminator = Retarget(block.Terminator, jumps);
+            editor.SetTerminator(block, Retarget(block.Terminator, jumps));
         }
         foreach (List<IrBlock> targets in method.StructuralSuccessors.Values) {
             for (int index = 0; index < targets.Count; index++) {

@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
-using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -13,11 +12,6 @@ public interface ICallback : IRunnable {
     /// Defines the callback number. For example, 0x2F for DOS Interrupt Handler 2F implementation.
     /// </summary>
     public ushort Index { get; }
-
-    /// <summary>
-    /// Invoked when interruptions are invoked by machine code overrides. See <see cref="CSharpOverrideHelper"/>
-    /// </summary>
-    public void RunFromOverriden();
 
     /// <summary>
     /// Address where the instruction is installed in memory

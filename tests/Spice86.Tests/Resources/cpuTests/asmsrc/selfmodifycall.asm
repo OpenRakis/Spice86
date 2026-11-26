@@ -26,6 +26,12 @@ function_return_point:
 self_modifying_handler:
     cmp byte [counter], 0
     je .ret_only
+    mov word [ss:602h], ss
+    mov word [ss:610h], ds
+    mov word [ss:612h], counter
+    mov ax,sp
+    add ax,2
+    mov word [ss:600h], ax
     ; Ensure ES points to BIOS code segment (F000h) before patching
     mov ax,0F000h
     mov es,ax

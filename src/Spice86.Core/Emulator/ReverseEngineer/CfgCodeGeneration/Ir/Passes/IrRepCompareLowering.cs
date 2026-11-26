@@ -20,8 +20,11 @@ using System.Linq;
 /// </summary>
 internal static class IrRepCompareLowering {
     /// <summary>Rewrites every rewritable <see cref="IrInstructionShape.RepCompare"/> instruction.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         Dictionary<ICfgNode, List<IrOrigins.Located>> byOrigin = IrOrigins.ByOrigin(method);
+        List<((IrBlock Block, int Index, IrStatement Replacement) Sub,
+            (IrBlock Block, IrBranch Branch) Latch)> rewrites = [];
         foreach ((ICfgNode origin, IrInstructionShape shape) in method.Shapes) {
             if (shape != IrInstructionShape.RepCompare
                 || !byOrigin.TryGetValue(origin, out List<IrOrigins.Located>? statements)
@@ -40,11 +43,14 @@ internal static class IrRepCompareLowering {
             ValueNode stop = latch.OnEqual
                 ? equal.Reference
                 : new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, equal.Reference);
-            IrStatement replacement = IrStatement.Create(equal, origin);
-            ssa.Replace(sub.Block.Statements[sub.Index], replacement);
-            sub.Block.Statements[sub.Index] = replacement;
-            latch.Block.Terminator = new IrBranch(latch.Branch.Origin, stop,
-                latch.Branch.WhenTrue, latch.Branch.WhenFalse);
+            rewrites.Add(((sub.Block, sub.Index, IrStatement.Create(equal, origin)),
+                (latch.Block, new IrBranch(latch.Branch.Origin, stop,
+                    latch.Branch.WhenTrue, latch.Branch.WhenFalse))));
+        }
+        foreach (((IrBlock subBlock, int subIndex, IrStatement replacement),
+                (IrBlock latchBlock, IrBranch branch)) in rewrites) {
+            editor.Replace(subBlock, subIndex, replacement);
+            editor.SetTerminator(latchBlock, branch);
         }
     }
 

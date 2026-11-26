@@ -23,38 +23,38 @@ F000:0017 callback 9
 F000:001B iret
 F000:005D callback 0x0070
 F000:0061 iret
-F000:0063 call far F000:00E9
+F000:0063 call far dword ptr CS:[0x006D]
 F000:0068 callback 0x0074
 F000:006C iret
-F000:006D callback 0x0104
-F000:0071 iret
-F000:0072 callback 0x0105
-F000:0076 iret
-F000:0077 callback 0x0106
-F000:007B iret
-F000:007C callback 0x0107
-F000:0080 iret
-F000:0081 callback 0x0108
-F000:0085 iret
-F000:0086 callback 0x0109
-F000:008A iret
-F000:0096 cmp AH,7
-F000:0099 je short 0x00AA
-F000:009B cmp AH,8
-F000:009E je short 0x00AA
-F000:00A0 cmp AH,0x0A
-F000:00A3 je short 0x00AA
-F000:00A5 callback 0x0021
-F000:00A9 iret
-F000:00AA sti
-F000:00AB callback 0x010A
-F000:00AF cmp byte ptr CS:[0x0095],0
-F000:00B5 jne short 0x00BB
-F000:00B7 int 0x28
-F000:00BB callback 0x010B
-F000:00BF iret
-F000:00E8 ret far
-F000:00E9 callback 0x010C
-F000:00ED call far F000:00E8
-F000:00F2 callback 0x010D
-F000:00F6 ret far
+F000:0071 callback 0x0104
+F000:0075 iret
+F000:0076 callback 0x0105
+F000:007A iret
+F000:007B callback 0x0106
+F000:007F iret
+F000:0080 callback 0x0107
+F000:0084 iret
+F000:0085 callback 0x0108
+F000:0089 iret
+F000:008A callback 0x0109
+F000:008E iret
+F000:009A cmp AH,7
+F000:009D je short 0x00AE
+F000:009F cmp AH,8
+F000:00A2 je short 0x00AE
+F000:00A4 cmp AH,0x0A
+F000:00A7 je short 0x00AE
+F000:00A9 callback 0x0021
+F000:00AD iret
+F000:00AE sti
+F000:00AF callback 0x010A
+F000:00B3 cmp byte ptr CS:[0x0099],0
+F000:00B9 jne short 0x00BF
+F000:00BB int 0x28
+F000:00BF callback 0x010B
+F000:00C3 iret
+F000:00EC ret far
+F000:00ED callback 0x010C
+F000:00F1 call far dword ptr CS:[0x00FB]
+F000:00F6 callback 0x010D
+F000:00FA ret far

@@ -47,7 +47,8 @@ internal sealed class GeneratorIrRoundTrip : IExecutionAstRewriter {
 
     private static IVisitableAstNode RewriteInstruction(CfgInstruction instruction,
         IVisitableAstNode executionAst) {
-        IrFlattener flattener = new(true);
+        IrFlattener flattener = new(true, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads,
+            typedSignatures: null);
         IrBlock start = flattener.StartBlock(instruction, true, null);
         flattener.Flatten(executionAst, instruction, string.Empty, _ => false);
         if (flattener.PendingJumps.Count > 0) {
@@ -55,14 +56,14 @@ internal sealed class GeneratorIrRoundTrip : IExecutionAstRewriter {
                 $"Execution AST of {instruction.Address} holds a goto to another CFG node.");
         }
         foreach (IrBlock block in flattener.Blocks.Where(block => !block.HasTerminator)) {
-            block.Terminator = new IrExit(instruction,
+            IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction,
                 new MoveIpNextNode(new ConstantNode(DataType.UINT32,
-                    instruction.NextInMemoryAddress32.Offset)));
+                    instruction.NextInMemoryAddress32.Offset))));
         }
         IrMethod method = new($"roundtrip_{instruction.Address}", flattener.Blocks,
             [new IrEntry(instruction, start)], new HashSet<ICfgNode> { instruction },
             new Dictionary<ICfgNode, IrInstructionShape>());
-        IrJumpThreading.Apply(method);
+        IrJumpThreading.Apply(method, IrEditor.WithoutSsa);
         List<LoweredBlock<IrBlock>> lowered = [.. IrBlockLowering.Lower(method, method.Blocks)];
         HashSet<IGotoTarget> entryTargets = [start];
         BlockNode structured = MethodStructurizer.Structure(lowered, Loops(method, start), method.Name,

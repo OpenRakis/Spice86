@@ -122,7 +122,8 @@ public sealed class ChangedMemoryMapMachineTest {
 
     private sealed class ChangedMemoryMapAssertions {
         public ChangedMemoryMapAssertions(AsmFixtureRun run) {
-            GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector.Capture();
+            GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector
+                .Capture(run.Machine.CfgCpu.ExecutionContextManager);
             Map = inputs.ChangedMemory;
             Images = inputs.ProgramImages.Images;
         }

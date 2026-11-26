@@ -118,7 +118,7 @@ public class DosInt2fHandler : InterruptHandler {
 
     /// <summary>XMS driver multiplex services; BX/ES keep their preserved values except
     /// on the callback-address query.</summary>
-    public (byte al, ushort bx, ushort es, bool carryFlag) XmsServices(
+    public (byte al, ushort bx, ushort es, bool failed) XmsServices(
         byte al, ushort preservedBx, ushort preservedEs) {
         switch (al) {
             //Is XMS Driver installed
@@ -138,9 +138,9 @@ public class DosInt2fHandler : InterruptHandler {
 
     [InterruptService(0x43, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Es | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(XmsServices), Inputs = [CpuValues.Al, CpuValues.Bx, CpuValues.Es])]
-    public void XmsServices(bool calledFromVm) {
+    public void XmsServices() {
         (State.AL, State.BX, State.ES, bool carryFlag) = XmsServices(State.AL, State.BX, State.ES);
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>High memory area multiplex services; outputs keep their preserved values
@@ -203,9 +203,9 @@ public class DosInt2fHandler : InterruptHandler {
     /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="Mscdex"/>.
     /// </summary>
     [InterruptService(0x15, Unknown = true)]
-    public void MscdexServices(bool calledFromVm) {
+    public void MscdexServices() {
         if (_mscdexService.Dispatch()) {
-            SetCarryFlag(true, calledFromVm);
+            SetCarryFlag(true);
         }
     }
 }

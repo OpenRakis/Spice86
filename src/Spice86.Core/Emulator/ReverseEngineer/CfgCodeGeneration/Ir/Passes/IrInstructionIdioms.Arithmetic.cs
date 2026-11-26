@@ -63,7 +63,7 @@ internal static partial class IrInstructionIdioms {
     internal static bool SealWindow(IrBlock block, int first, int last, int[] consumed,
         IReadOnlyDictionary<IrStatement, CpuValues> keptByStatement, ValueNode replacement,
         IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         HashSet<int> consumedIndices = [.. consumed];
         for (int i = first; i <= last; i++) {
             if (!consumedIndices.Contains(i) && !IsMarker(statements[i])) {
@@ -230,7 +230,7 @@ internal static partial class IrInstructionIdioms {
     /// stale when a pass edits the list, so the site is found by the definitions table.</summary>
     private static int DefIndex(IrBlock block, IrSsa ssa, int version) =>
         ssa.DefiningStatement(version) is { } definer
-            ? block.Statements.IndexOf(definer)
+            ? block.IndexOfStatement(definer)
             : -1;
 
 
@@ -267,7 +267,7 @@ internal static partial class IrInstructionIdioms {
     /// <summary><c>cwd; r = r - d; sar r,1</c> is signed /2, and
     /// <c>cwd; d = d &amp; (2^k - 1); r = r + d; sar r,k</c> is signed /2^k.</summary>
     private static SequenceRewrite? SignedPow2Division(IrBlock block, int index, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         if (!SignExtension(statements[index], out RegisterNode? sign, out RegisterNode? source)) {
             return null;
         }
@@ -328,7 +328,7 @@ internal static partial class IrInstructionIdioms {
     /// keeps the remainder and the second pair restores the sign. <c>short.MinValue</c> is exact
     /// because the absolute value wraps before the mask.</summary>
     private static SequenceRewrite? SignedPow2Modulo(IrBlock block, int index, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         if (!SignExtension(statements[index], out RegisterNode? sign, out RegisterNode? source)) {
             return null;
         }
@@ -374,7 +374,7 @@ internal static partial class IrInstructionIdioms {
     /// <c>floor(src * m / 2^(16+s)) == floor(src / d)</c> over the whole ushort domain: the low
     /// result and the MUL flag versions must die with the sequence.</summary>
     private static SequenceRewrite? ReciprocalDivision(IrBlock block, int index, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         if (statements[index].Node is not MultiplicationNode {
                 Width: BitWidth.WORD_16, Signed: false } multiplication) {
             return null;
@@ -450,7 +450,7 @@ internal static partial class IrInstructionIdioms {
     /// register and the saved copy so a mid-chain observed value stays correct; the saved
     /// register must reach the chain through <c>s = r</c>.</summary>
     private static SequenceRewrite? ConstantMultiply(IrBlock block, int index, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         if (!AssignOf(statements[index], out RegisterNode? target, out _)
             || target.DataType != DataType.UINT16 || target.RegisterIndex >= 4) {
             return null;

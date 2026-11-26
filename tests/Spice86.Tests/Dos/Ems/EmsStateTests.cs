@@ -33,7 +33,7 @@ public sealed class EmsStateTests {
         State state = new(CpuModel.INTEL_80286);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), new A20Gate(false), new RealModeMmu386(), false);
         _ems = new ExpandedMemoryManager(_memory, Substitute.For<IFunctionHandlerProvider>(), new Stack(_memory, state),
-            state, new ServiceCallEvents(new HashSet<byte>()), Substitute.For<ILogger>());
+            state, new ServiceCallEvents(new HashSet<byte>(), false), Substitute.For<ILogger>());
     }
 
     [Fact]

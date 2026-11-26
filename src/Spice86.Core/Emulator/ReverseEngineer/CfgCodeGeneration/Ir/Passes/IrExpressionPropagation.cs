@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
@@ -12,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 
 using System.Linq;
 
@@ -24,7 +26,9 @@ using System.Linq;
 /// token either the version is the same or every memory-writing statement in between is a plain
 /// store or a push (<see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> refuses the rest) whose
 /// writes are all <see cref="IrAliasRelation.Disjoint"/> known RAM from every memory read the moved
-/// expression makes. An event check needs no refusal of its own: its may-write re-versions the
+/// expression makes. A read not proved conventional RAM also keeps its order with other such
+/// reads (<see cref="IrMemoryAliasAnalysis.DeviceReadOrderSafe"/>): the version rule cannot see
+/// a device read's side effect. An event check needs no refusal of its own: its may-write re-versions the
 /// registers a handler can observe, so the version rule already blocks a merge across it.
 /// </summary>
 internal static class IrExpressionPropagation {
@@ -37,36 +41,122 @@ internal static class IrExpressionPropagation {
     private const uint RegisterValues = (1u << (int)IrSsaValue.Gs + 1) - 1;
 
     /// <summary>Merges the single-use register writes of <paramref name="method"/> into their readers.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
-        IrMemoryAliasAnalysis alias = new(ssa);
+        IrTemporaries temporaries = IrTemporaries.Build(method);
         foreach (IrBlock block in method.Blocks) {
-            MergeBlock(block, entryNodes, ssa, alias);
+            if (editor.Ssa.IsStale) {
+                editor.Rebind(method, "ssa rebind expression propagation");
+            }
+            MergeBlock(block, method, entryNodes, editor.Ssa, editor,
+                new IrMemoryAliasAnalysis(method, editor.Ssa, policy), temporaries, policy);
         }
     }
 
-    private static void MergeBlock(IrBlock block, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+    private static void MergeBlock(IrBlock block, IrMethod method, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa, IrEditor editor, IrMemoryAliasAnalysis alias, IrTemporaries temporaries,
+        GenerationPolicy policy) {
+        if (ssa.IsLivenessStale) {
+            ssa.RecomputeLiveness();
+        }
         int[] covered = new int[block.Statements.Count];
         Array.Fill(covered, 1);
         List<int> removed = [];
         for (int i = 0; i < block.Statements.Count; i++) {
-            if (covered[i] > 0
-                && TryMerge(block, i, entryNodes, ssa, covered, alias) is not null) {
-                removed.Add(i);
+            if (ssa.IsStale) {
+                ssa = editor.Rebind(method, "ssa rebind expression propagation");
+                alias = new IrMemoryAliasAnalysis(method, ssa, policy);
+                temporaries = IrTemporaries.Build(method);
+            }
+            if (covered[i] > 0) {
+                if (TryMerge(block, i, entryNodes, ssa, editor, covered, alias) is not null) {
+                    removed.Add(i);
+                } else if (TryComposeHalves(block, i, entryNodes, ssa, editor, covered, alias)
+                    is { } composedWriters) {
+                    removed.AddRange(composedWriters);
+                } else if (TryMergeTemporary(block, method, i, entryNodes, ssa, editor, covered,
+                    alias, temporaries) is { } tempRemoved) {
+                    removed.Add(i);
+                    removed.AddRange(tempRemoved);
+                }
             }
         }
         foreach (int index in removed.OrderByDescending(index => index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+            editor.Remove(block, index);
         }
     }
 
-    /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
-    /// its register when every condition holds; returns the reader's index.</summary>
-    private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        int[] covered, IrMemoryAliasAnalysis alias) {
+    /// <summary>A register version produced by a plain assignment whose only live use is a typed
+    /// method's return exit merges into the return element: <c>AX = e; NearReturn(); return AX;</c>
+    /// prints <c>NearReturn(); return e;</c> and the assignment goes. The legality is the merge's
+    /// own: the writer shape is <see cref="SingleRegisterWriter"/>'s, the moved expression's
+    /// register and IO-token reads keep their versions up to the exit, memory order holds,
+    /// and no faulting or guard statement lies between the writer and the exit - which
+    /// itself cannot fault. Whether the read is really an output element of a typed signature is
+    /// the caller's check: this returns the writer, the register and the merged expression.</summary>
+    internal static (IrStatement Writer, RegisterNode Register, ValueNode Expression,
+            ProcedureReturnHelperNode Helper)? MergedIntoReturn(IrBlock block, int i,
+            HashSet<ICfgNode> entryNodes, IrSsa ssa, IrMemoryAliasAnalysis alias) {
         IrStatement writer = block.Statements[i];
+        if (SingleRegisterWriter(writer, entryNodes, ssa) is not
+                (RegisterNode r1, ValueNode e1, _, int writerVersion)
+            || ssa.LiveUses(writerVersion) is not [IrSsaUse {
+                    Phi: null, Statement: null, Block: var useBlock,
+                    Terminator: IrExit {
+                        Transfer: ReturnNode { Value: ProcedureReturnHelperNode helper } } exit }]
+            || useBlock != block
+            || !ReferenceEquals(exit, block.Terminator)
+            || exit.Effects.MayFault) {
+            return null;
+        }
+        int end = block.Statements.Count;
+        for (int k = i; k < end; k++) {
+            IrStatement between = block.Statements[k];
+            if (between.Effects.MayFault
+                || between.Node is SpeculativeGuardNode) {
+                return null;
+            }
+        }
+        IrEffects moved = IrEffectsVisitor.Of(e1, false);
+        // A self-read (AX = AX + 1) cannot merge: the version check anchors after the writer, where
+        // the merged register already holds its new version, so the moved expression would evaluate
+        // the change a second time at the exit.
+        if ((moved.Reads & IrValueSets.Of(r1)) != CpuValues.None) {
+            return null;
+        }
+        // The printed return expression evaluates after the return helper statement ran: a near or
+        // far `ret` already popped the return address (and CS for a far one), so a moved read of SP -
+        // directly or through a stack-addressed operand like a frame argument - would see the
+        // post-return value.
+        if ((moved.Reads & (helper.Distance == CallDistance.Far
+                    ? CpuValues.Sp | CpuValues.Cs : CpuValues.Sp)) != CpuValues.None) {
+            return null;
+        }
+        IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
+        if (moved.TouchesMemory) {
+            tokens |= IrTokens.Io;
+        }
+        if (!ssa.SameVersions(moved.Reads, tokens, (block, i + 1), (block, end))
+            || !MemoryCrossable(block, i, end, moved, ssa, alias)) {
+            return null;
+        }
+        ValueNode merged = (ValueNode)IrConstantFolder.FoldConstantTerms(e1);
+        if (CountNodes(merged) > MaxMergedNodes) {
+            return null;
+        }
+        return (writer, r1, merged, helper);
+    }
+
+    /// <summary>The shared writer shape of <see cref="TryMerge"/> and
+    /// <see cref="MergedIntoReturn"/>: a plain <c>R = e</c> assignment of a mergeable expression
+    /// to a general register (not a segment, not SP) at a non-entry origin, defining exactly one
+    /// version of one register value and nothing else still live.</summary>
+    private static (RegisterNode Register, ValueNode Expression, IrSsaValue Value, int Version)?
+        SingleRegisterWriter(IrStatement writer, HashSet<ICfgNode> entryNodes, IrSsa ssa) {
         if (entryNodes.Contains(writer.Origin)
             || writer.Node is not BinaryOperationNode {
                 BinaryOperation: BinaryOperation.ASSIGN,
@@ -96,9 +186,19 @@ internal static class IrExpressionPropagation {
                 return null;
             }
         }
-        if (writerVersion < 0 || definedRegisters != 0) {
+        return writerVersion < 0 || definedRegisters != 0 ? null : (r1, e1, r1Value, writerVersion);
+    }
+
+    /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
+    /// its register when every condition holds; returns the reader's index.</summary>
+    private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
+        IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
+        IrStatement writer = block.Statements[i];
+        if (SingleRegisterWriter(writer, entryNodes, ssa) is not
+                (RegisterNode r1, ValueNode e1, IrSsaValue r1Value, int writerVersion)) {
             return null;
         }
+        uint r1Bits = IrSsaValues.ValueBits(IrValueSets.Of(r1));
         if (ssa.LiveUses(writerVersion) is not [IrSsaUse { Phi: null, Statement: not null }]) {
             return null;
         }
@@ -165,25 +265,390 @@ internal static class IrExpressionPropagation {
             return null;
         }
         IrStatement replacement = IrStatement.Create(assign with { Right = merged }, reader.Origin);
-        ssa.Replace(reader, replacement);
-        block.Statements[j] = replacement;
+        editor.Replace(block, j, replacement);
+        if (!ssa.IsStale) {
+            ssa.RecomputeLiveness();
+        }
         covered[j] += covered[i];
         covered[i] = 0;
         return j;
     }
 
+    /// <summary>A single-use variable declaration <c>uint t = e;</c> (a temporary the
+    /// double-precision and temporary passes produce, which this pass runs after and
+    /// <see cref="IrPlainTemporaryPropagation"/> runs before) is substituted into every reader when
+    /// each read is a later statement of the same block, the variable is read nowhere else -
+    /// another block or the terminator - and the move keeps the merge's own legality: a mergeable
+    /// initializer, no faulting or guard statement between the declaration and its last reader,
+    /// every register and IO-token read of the initializer keeps its version and memory order
+    /// holds to each reader.
+    /// Temporaries are single-assignment, so no statement between them can rewrite a variable the
+    /// initializer reads.</summary>
+    private static List<int>? TryMergeTemporary(IrBlock block, IrMethod method, int i,
+        HashSet<ICfgNode> entryNodes, IrSsa ssa, IrEditor editor, int[] covered,
+        IrMemoryAliasAnalysis alias, IrTemporaries temporaries) {
+        IrStatement writer = block.Statements[i];
+        if (entryNodes.Contains(writer.Origin)
+            || writer.Node is not VariableDeclarationNode declaration
+            || !Mergeable(declaration.Initializer)) {
+            return null;
+        }
+        List<int> readers = [];
+        foreach ((IrBlock readBlock, int index) in temporaries.ReadsOf(declaration.VariableName)) {
+            if (!ReferenceEquals(readBlock, block)
+                || index <= i
+                || index >= block.Statements.Count) {
+                return null;
+            }
+            readers.Add(index);
+        }
+        if (readers.Count == 0) {
+            return null;
+        }
+        foreach (int j in readers) {
+            if (entryNodes.Contains(block.Statements[j].Origin)
+                || CountVariableReferences(block.Statements[j].Node, declaration.VariableName)
+                    != 1) {
+                return null;
+            }
+        }
+        // A reader that only writes the temp's value into a dead register version goes away with
+        // the declaration: the pair's wide write rewrites the register before anything reads it,
+        // so the substituted initializer must keep the version the declaration evaluated, not the
+        // one the dead write left.
+        HashSet<int> deadReaders = [];
+        foreach (int j in readers) {
+            if (DeadWriter(block.Statements[j], ssa)) {
+                deadReaders.Add(j);
+            }
+        }
+        List<int> liveReaders = [.. readers.Where(j => !deadReaders.Contains(j))];
+        int lastReader = liveReaders.Count == 0 ? readers[^1] : liveReaders[^1];
+        for (int k = i; k <= lastReader; k++) {
+            IrStatement between = block.Statements[k];
+            if (between.Effects.MayFault
+                || between.Node is SpeculativeGuardNode) {
+                return null;
+            }
+        }
+        IrEffects moved = IrEffectsVisitor.Of(declaration.Initializer, false);
+        IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
+        if (moved.TouchesMemory) {
+            tokens |= IrTokens.Io;
+        }
+        foreach (int j in liveReaders) {
+            bool registerWritesSafe = true;
+            for (int k = i + 1; k < j; k++) {
+                if (!deadReaders.Contains(k)
+                    && (block.Statements[k].Effects.MayWrite & moved.Reads)
+                        != CpuValues.None) {
+                    registerWritesSafe = false;
+                    break;
+                }
+            }
+            if (!registerWritesSafe
+                || !ssa.SameVersions(CpuValues.None, tokens, (block, i + 1), (block, j))
+                || !MemoryCrossable(block, i, j, moved, ssa, alias)) {
+                return null;
+            }
+        }
+        ValueNode typed = declaration.Initializer.DataType == declaration.DataType
+            ? declaration.Initializer
+            : new TypeConversionNode(declaration.DataType, declaration.Initializer);
+        if (CountNodes(typed) > MaxMergedNodes) {
+            return null;
+        }
+        List<(int Index, IVisitableAstNode Node)> merged = [];
+        foreach (int j in liveReaders) {
+            if (SubstituteVariable(block.Statements[j].Node, declaration.VariableName, typed)
+                    is not { } rawMerged
+                || IrConstantFolder.FoldConstantTerms(rawMerged) is not { } rewritten
+                || covered[i] + covered[j] > MaxChainLength) {
+                return null;
+            }
+            merged.Add((j, rewritten));
+        }
+        foreach ((int j, IVisitableAstNode rewritten) in merged) {
+            editor.Replace(block, j,
+                IrStatement.Create(rewritten, block.Statements[j].Origin));
+            covered[j] += covered[i];
+        }
+        if (!ssa.IsStale) {
+            ssa.RecomputeLiveness();
+        }
+        covered[i] = 0;
+        return [.. deadReaders];
+    }
+
+    /// <summary>Whether <paramref name="statement"/> is a plain register assignment whose defined
+    /// versions are all dead - nothing reads the register before the next write: it can go away
+    /// with the declaration it reads.</summary>
+    private static bool DeadWriter(IrStatement statement, IrSsa ssa) {
+        if (statement.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: RegisterNode
+            }
+            || statement.Effects.MayFault
+            || statement.Effects.DeliversInterrupts
+            || statement.Effects.TokenWrites != IrTokens.None) {
+            return false;
+        }
+        bool definedRegister = false;
+        foreach ((IrSsaValue value, int version) in ssa.Definitions(statement)) {
+            if (value >= IrSsaValue.Memory) {
+                return false;
+            }
+            foreach (IrSsaUse use in ssa.LiveUses(version)) {
+                if (use.Phi is not null) {
+                    return false;
+                }
+                if (use.ConditionalNewVersion >= 0) {
+                    // The version survives only as the not-taken side of a conditional
+                    // definition: dead when that definition's statement rewrites every byte
+                    // this statement wrote and cannot itself fault away.
+                    if (use.Statement is not { } overwriter
+                        || overwriter.Effects.MayFault
+                        || (statement.Effects.MustWrite & ~overwriter.Effects.MustWrite)
+                            != CpuValues.None) {
+                        return false;
+                    }
+                    continue;
+                }
+                return false;
+            }
+            definedRegister = true;
+        }
+        return definedRegister;
+    }
+
+    /// <summary>Replaces the one <see cref="VariableReferenceNode"/> named <paramref name="name"/>
+    /// inside <paramref name="node"/> with <paramref name="value"/>; null when the reference sits
+    /// inside a node shape the substitution cannot reach (same shapes
+    /// <see cref="IrPlainTemporaryPropagation"/> refuses) or inside a resolved instruction
+    /// field.</summary>
+    private static IVisitableAstNode? SubstituteVariable(IVisitableAstNode node, string name,
+        ValueNode value) {
+        switch (node) {
+            case VariableReferenceNode reference:
+                return reference.VariableName == name ? value : reference;
+            case InstructionFieldNode field:
+                return ContainsVariable(field.ResolvedNode, name) ? null : field;
+        }
+        if (!ContainsVariable(node, name)) {
+            return node;
+        }
+        return node switch {
+            ExplicitCastNode or SegmentedAddressNode or OpaqueNode or DivisionNode
+                or MultiplicationNode or TupleSwapNode or FailAsUntestedNode or BlockNode
+                or IfElseNode or WhileNode or WhileWithExitNode or InstructionPointerNode
+                or LoadOffsetParameterNode or SegmentVariableNode or OffsetLiteralNode
+                or SignatureFieldNode or MethodGroupNode or SelectorNode or SetInterruptShadowNode
+                or ThrowNode or CyclicJumpNode or LocalDeclarationNode or InterruptReturnNode
+                or PreTestLoopNode or DoWhileNode or InfiniteLoopNode or SwitchNode
+                or CpuFaultTryCatchNode or InstructionBoundaryNode or InstructionNode
+                or CfgInstructionNode or RegisterLocalNode or RegisterWriteBackNode => null,
+            _ => IrAstChildren.TryMapChildren(node, child => SubstituteVariable(child, name, value))
+        };
+    }
+
+    private static bool ContainsVariable(IVisitableAstNode node, string name) =>
+        CountVariableReferences(node, name) != 0;
+
+    private static int CountVariableReferences(IVisitableAstNode node, string name) =>
+        IrAstChildren.Descendants(node).Count(descendant =>
+            descendant is VariableReferenceNode reference && reference.VariableName == name);
+
+    /// <summary>A read of a multi-byte register whose reaching version is a chain of partial
+    /// definitions - byte halves written by plain assignments since the last full definition, in
+    /// either order - prints as the composed value: <c>AL = UInt8[word3, i]; AH = 0; SI = AX;</c>
+    /// becomes <c>SI = (ushort)(UInt8[word3, i] | 0 &lt;&lt; 8);</c>, which constant folding reduces
+    /// to the zero-extension. Every partial writer's version must be used only by the chain or the
+    /// reader, so the writers go away with the read; any other use - the wide register or one byte
+    /// read elsewhere - refuses. The legality is the merge's own: SameVersions and MemoryCrossable
+    /// for every moved expression, no fault, guard or entry point between the earliest writer and
+    /// the reader.</summary>
+    private static List<int>? TryComposeHalves(IrBlock block, int j, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa, IrEditor editor, int[] covered, IrMemoryAliasAnalysis alias) {
+        IrStatement reader = block.Statements[j];
+        if (entryNodes.Contains(reader.Origin)
+            || reader.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: ValueNode,
+                Right: RegisterNode readRegister
+            } assign) {
+            return null;
+        }
+        if (readRegister is SegmentRegisterNode) {
+            return null;
+        }
+        CpuValues readMask = IrValueSets.Of(readRegister);
+        if ((readMask & CpuValues.Sp) != CpuValues.None
+            || (IrEffectsVisitor.Of(assign.Left, false).Reads & readMask) != CpuValues.None
+            || (IrEffectsVisitor.Of(assign.Left, false).MayWrite & readMask) != CpuValues.None) {
+            return null;
+        }
+        uint readBits = IrSsaValues.ValueBits(readMask);
+        if (readBits == 0 || (readBits & (readBits - 1)) != 0
+            || (readMask & (readMask - 1)) == 0) {
+            // A single-byte read has nothing to compose.
+            return null;
+        }
+        IrSsaValue value = (IrSsaValue)System.Numerics.BitOperations.TrailingZeroCount(readBits);
+        int version = ssa.VersionUsed(reader, value);
+        if (version < 0 || ssa.Info(version).Kind != IrSsaDefinitionKind.PartialDefinition) {
+            return null;
+        }
+        // Walk the partial-definition chain back until every read byte is written.
+        List<(int Index, IrStatement Statement, CpuValues Mask, ValueNode Expression, int Version)>
+            writers = [];
+        CpuValues collected = CpuValues.None;
+        int cursor = version;
+        while ((readMask & ~collected) != CpuValues.None) {
+            IrSsaVersionInfo info = ssa.Info(cursor);
+            if (info.Kind != IrSsaDefinitionKind.PartialDefinition
+                || ssa.DefiningStatement(cursor) is not { } writer
+                || !block.Statements.Contains(writer)
+                || entryNodes.Contains(writer.Origin)
+                || writer.Node is not BinaryOperationNode {
+                    BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: RegisterNode writtenRegister,
+                    Right: ValueNode writtenExpression
+                }
+                || !Mergeable(writtenExpression)) {
+                return null;
+            }
+            CpuValues writtenMask = IrValueSets.Of(writtenRegister);
+            if ((writtenMask & readMask) == CpuValues.None
+                || (writtenMask & collected) != CpuValues.None) {
+                return null;
+            }
+            // The writer must define only the byte chain of this register's value.
+            if (ssa.Definitions(writer).Any(definition =>
+                    definition.Value != value || definition.Version != cursor)) {
+                return null;
+            }
+            writers.Add((IrSsa.PositionIn(block, writer), writer, writtenMask & readMask,
+                writtenExpression, cursor));
+            collected |= writtenMask & readMask;
+            cursor = info.Previous;
+        }
+        HashSet<IrStatement> chainSites = [.. writers.Select(writer => writer.Statement), reader];
+        foreach ((_, IrStatement writer, _, _, int writerVersion) in writers) {
+            if (ssa.LiveUses(writerVersion).Any(use => use.Statement is null
+                    || !chainSites.Contains(use.Statement))) {
+                return null;
+            }
+        }
+        int first = writers.Min(writer => writer.Index);
+        for (int k = first; k <= j; k++) {
+            IrStatement between = block.Statements[k];
+            if (between.Effects.MayFault
+                || between.Node is SpeculativeGuardNode) {
+                return null;
+            }
+        }
+        foreach ((int index, _, _, ValueNode expression, _) in writers) {
+            IrEffects moved = IrEffectsVisitor.Of(expression, false);
+            IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
+            if (moved.TouchesMemory) {
+                tokens |= IrTokens.Io;
+            }
+            if (!ssa.SameVersions(moved.Reads, tokens, (block, index + 1), (block, j))
+                || !MemoryCrossable(block, index, j, moved, ssa, alias)) {
+                return null;
+            }
+        }
+        ValueNode composed = Compose(writers, readRegister.DataType);
+        ValueNode folded = (ValueNode)IrConstantFolder.FoldConstantTerms(composed);
+        folded = Unwiden(folded);
+        if (CountNodes(folded) > MaxMergedNodes
+            || (writers.Sum(writer => covered[writer.Index]) + covered[j] > MaxChainLength
+                && CountNodes(folded) >= CountNodes(composed))) {
+            return null;
+        }
+        editor.Replace(block, j,
+            IrStatement.Create(assign with { Right = folded }, reader.Origin));
+        foreach ((int index, _, _, _, _) in writers) {
+            covered[j] += covered[index];
+            covered[index] = 0;
+        }
+        if (!ssa.IsStale) {
+            ssa.RecomputeLiveness();
+        }
+        return [.. writers.Select(writer => writer.Index)];
+    }
+
+    /// <summary><c>(ushort)(lo | hi &lt;&lt; 8)</c> over the partial definitions' expressions,
+    /// each shifted to its byte offset inside the read register.</summary>
+    private static ValueNode Compose(
+        List<(int Index, IrStatement Statement, CpuValues Mask, ValueNode Expression, int Version)>
+            writers, DataType dataType) {
+        ValueNode? result = null;
+        foreach ((_, _, CpuValues mask, ValueNode expression, _) in writers
+                 .OrderBy(writer => System.Numerics.BitOperations.TrailingZeroCount((ulong)writer.Mask))) {
+            int shift = (System.Numerics.BitOperations.TrailingZeroCount((ulong)mask) % 4) * 8;
+            if (ConstantEvaluation.Resolved(Unwiden(expression)) is { Value: 0 }) {
+                continue;
+            }
+            int width = System.Numerics.BitOperations.PopCount(
+                (ulong)mask >> System.Numerics.BitOperations.TrailingZeroCount((ulong)mask)) / 8;
+            // Convert to the width the writer covers, not the read's: a (ushort) around a byte
+            // arithmetic right side would lose the byte truncation its value semantics require.
+            DataType termType = width switch { 1 => DataType.UINT8, 2 => DataType.UINT16,
+                _ => DataType.UINT32 };
+            ValueNode operand = expression;
+            while (operand is TypeConversionNode { Value: { } inner }
+                   && inner.DataType.BitWidth <= operand.DataType.BitWidth) {
+                operand = inner;
+            }
+            ValueNode term = operand.DataType == termType
+                ? operand
+                : new TypeConversionNode(termType, operand);
+            if (shift != 0) {
+                term = new BinaryOperationNode(dataType, term, BinaryOperation.LEFT_SHIFT,
+                    new ConstantNode(DataType.INT32, (ulong)shift));
+            }
+            result = result is null
+                ? term
+                : new BinaryOperationNode(dataType, result, BinaryOperation.BITWISE_OR, term);
+        }
+        result ??= new ConstantNode(dataType, 0);
+        return result.DataType.BitWidth <= dataType.BitWidth
+            ? result
+            : new TypeConversionNode(dataType, result);
+    }
+
+    /// <summary><paramref name="node"/> without outer conversions that only widen an already
+    /// narrower value: the byte writers' expressions arrive already extended
+    /// (<c>(uint)read</c>), which would print as nested casts under the composed conversion.</summary>
+    private static ValueNode Unwiden(ValueNode node) {
+        while (node is TypeConversionNode { Value: { } inner }
+               && Unwiden(inner) is { } candidate
+               && candidate.DataType.BitWidth <= node.DataType.BitWidth) {
+            node = candidate;
+        }
+        return node;
+    }
+
     /// <summary>Whether the moved expression's memory reads can cross the statements between the
-    /// writer at <paramref name="i"/> and the reader at <paramref name="j"/>: yes when the read does
-    /// not touch memory or the memory version is unchanged; otherwise every memory-writing statement
-    /// strictly between them must be a plain store or a push whose writes are all proved
+    /// writer at <paramref name="i"/> and the reader at <paramref name="j"/>: a read not proved
+    /// conventional RAM keeps its order with other such reads
+    /// (<see cref="IrMemoryAliasAnalysis.DeviceReadOrderSafe"/>); beyond that, yes when the memory
+    /// version is unchanged, otherwise every memory-writing statement strictly between them must
+    /// be a plain store or a push whose writes are all proved
     /// <see cref="IrAliasRelation.Disjoint"/> from each moved read, all known RAM.</summary>
     private static bool MemoryCrossable(IrBlock block, int i, int j, IrEffects moved, IrSsa ssa,
         IrMemoryAliasAnalysis alias) {
-        if ((moved.TokenReads & IrTokens.Memory) == IrTokens.None
-            || ssa.SameVersions(CpuValues.None, IrTokens.Memory, (block, i + 1), (block, j))) {
+        if ((moved.TokenReads & IrTokens.Memory) == IrTokens.None) {
             return true;
         }
         IReadOnlyList<IrMemoryAccess> reads = alias.Reads(block, i);
+        if (!alias.DeviceReadOrderSafe(block, i, j, reads)) {
+            return false;
+        }
+        if (ssa.SameVersions(CpuValues.None, IrTokens.Memory, (block, i + 1), (block, j))) {
+            return true;
+        }
         for (int k = i + 1; k < j; k++) {
             if ((block.Statements[k].Effects.TokenWrites & IrTokens.Memory) == IrTokens.None) {
                 continue;
@@ -193,7 +658,7 @@ internal static class IrExpressionPropagation {
             }
             foreach (IrMemoryAccess write in alias.Writes(block, k)) {
                 foreach (IrMemoryAccess read in reads) {
-                    if (!alias.IsKnownRam(write) || !alias.IsKnownRam(read)
+                    if (!alias.AllowsRam(write) || !alias.AllowsRam(read)
                         || alias.Relation(write, read) != IrAliasRelation.Disjoint) {
                         return false;
                     }
@@ -223,6 +688,49 @@ internal static class IrExpressionPropagation {
 
     private static bool Overlaps(RegisterNode register, RegisterNode other) =>
         (IrValueSets.Of(register) & IrValueSets.Of(other)) != CpuValues.None;
+
+    /// <summary>Runs only the temporary-declaration merge (the last step of <see cref="Apply"/>)
+    /// over every block of <paramref name="method"/>: for a pass that creates wide temporaries after
+    /// this pass's own run (<see cref="IrDoublePrecision"/>).</summary>
+    internal static void ApplyTemporaries(IrMethod method, IrEditor editor, GenerationPolicy policy) {
+        HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
+        IrTemporaries temporaries = IrTemporaries.Build(method);
+        foreach (IrBlock block in method.Blocks) {
+            IrSsa ssa = editor.Ssa;
+            if (ssa.IsStale) {
+                ssa = editor.Rebind(method, "ssa rebind expression propagation");
+            }
+            MergeTemporariesBlock(block, method, entryNodes, ssa, editor,
+                new IrMemoryAliasAnalysis(method, ssa, policy), temporaries, policy);
+        }
+    }
+
+    private static void MergeTemporariesBlock(IrBlock block, IrMethod method,
+        HashSet<ICfgNode> entryNodes, IrSsa ssa, IrEditor editor, IrMemoryAliasAnalysis alias,
+        IrTemporaries temporaries, GenerationPolicy policy) {
+        if (ssa.IsLivenessStale) {
+            ssa.RecomputeLiveness();
+        }
+        int[] covered = new int[block.Statements.Count];
+        Array.Fill(covered, 1);
+        List<int> removed = [];
+        for (int i = 0; i < block.Statements.Count; i++) {
+            if (ssa.IsStale) {
+                ssa = editor.Rebind(method, "ssa rebind expression propagation");
+                alias = new IrMemoryAliasAnalysis(method, ssa, policy);
+                temporaries = IrTemporaries.Build(method);
+            }
+            if (covered[i] > 0
+                && TryMergeTemporary(block, method, i, entryNodes, ssa, editor, covered,
+                    alias, temporaries) is { } tempRemoved) {
+                removed.Add(i);
+                removed.AddRange(tempRemoved);
+            }
+        }
+        foreach (int index in removed.OrderByDescending(index => index)) {
+            editor.Remove(block, index);
+        }
+    }
 
     /// <summary>Whether <paramref name="node"/> can travel into another statement: a pure read of
     /// registers, constants, conversions, unary and non-assignment binary operations, or a memory

@@ -10,9 +10,12 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System;
 using System.Reflection;
 
 /// <summary>
@@ -34,10 +37,6 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     protected Stack Stack;
 
-    /// <summary>
-    /// Indicates whether the interrupt stack is present.
-    /// </summary>
-    private bool _interruptStackPresent = true;
     private IEmulatorLoggerState _loggerState = new Spice86LoggerState();
     private readonly InterruptServiceDeclarations _declarations;
     private HandlerServices? _services;
@@ -81,11 +80,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     private Action ServiceActionOf(MethodInfo method) {
-        if (method.GetParameters().Length == 0) {
-            return (Action)method.CreateDelegate(typeof(Action), this);
-        }
-        Action<bool> action = (Action<bool>)method.CreateDelegate(typeof(Action<bool>), this);
-        return () => action(true);
+        return (Action)method.CreateDelegate(typeof(Action), this);
     }
 
     public void SetLoggerState(IEmulatorLoggerState loggerState) {
@@ -116,6 +111,17 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     public abstract void Run();
 
+    /// <summary>
+    /// The entry bookkeeping of a service that has one: the interpreted <see cref="Run()"/> entry
+    /// calls it after the interrupt pushed its frame and before the service dispatches, and the
+    /// generated typed service call runs it from the same lowered SP through
+    /// <see cref="CSharpOverrideHelper.ServiceCall(ushort, ushort, InterruptHandler, Action)"/>.
+    /// The caller decides whether the service about to dispatch has bookkeeping; the hook itself
+    /// performs it unconditionally and must not consult the selector register.
+    /// </summary>
+    public virtual void OnInterruptEntry() {
+    }
+
     /// <inheritdoc />
     public virtual SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         // Default implementation for most Interrupts:
@@ -124,11 +130,17 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
 
         // Write ASM
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, RunServiceFromStub);
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, StubServiceCallback);
         memoryAsmWriter.WriteIret();
 
         return interruptHandlerAddress;
     }
+
+    /// <summary>The callback the stub of a <see cref="Run"/>-only handler registers: the notifying
+    /// <see cref="RunServiceFromStub"/> when the run observes service calls, the plain
+    /// <see cref="Run"/> otherwise.</summary>
+    protected Action StubServiceCallback =>
+        _serviceCallEvents.ServiceCallsObserved ? RunServiceFromStub : Run;
 
     /// <summary>
     /// The callback of a stub whose only C# step is <see cref="Run()"/>. Tells the service call observer
@@ -136,7 +148,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// services tells the observer from <see cref="Run(int)"/>, once it knows the selector value.
     /// A handler that writes its own stub registers this method where it would register <see cref="Run()"/>.
     /// </summary>
-    protected void RunServiceFromStub() {
+    protected internal void RunServiceFromStub() {
         if (_serviceCallEvents.ObserverFor(VectorNumber) is { } observer && _declarations.SingleService is { } single) {
             observer.OnServiceCall(new ServiceCall(VectorNumber, null, single.Entry, false,
                 ServiceCallInputs.ReadAll(State, single.Entry)));
@@ -195,55 +207,77 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     /// <summary>
-    /// Sets the Carry Flag in the CPU state and optionally on the interrupt stack.
+    /// Sets the Carry Flag in the CPU state and on the interrupt stack.
     /// </summary>
     /// <param name="value">The value to set for the Carry Flag.</param>
-    /// <param name="setOnStack">If set to true, the Carry Flag will also be set on the interrupt stack.</param>
-    protected void SetCarryFlag(bool value, bool setOnStack) {
+    protected void SetCarryFlag(bool value) {
         State.CarryFlag = value;
-        if (_interruptStackPresent && setOnStack) {
-            Stack.SetFlagOnInterruptStack(Flags.Carry, value);
-        }
+        Stack.SetFlagOnInterruptStack(Flags.Carry, value);
     }
 
     /// <summary>
-    /// Sets the Zero Flag in the CPU state and optionally on the interrupt stack.
+    /// Sets the Zero Flag in the CPU state and on the interrupt stack.
     /// </summary>
     /// <param name="value">The value to set for the Zero Flag.</param>
-    /// <param name="setOnStack">If set to true, the Zero Flag will also be set on the interrupt stack.</param>
-    protected void SetZeroFlag(bool value, bool setOnStack) {
+    protected void SetZeroFlag(bool value) {
         State.ZeroFlag = value;
-        if (_interruptStackPresent && setOnStack) {
-            Stack.SetFlagOnInterruptStack(Flags.Zero, value);
-        }
+        Stack.SetFlagOnInterruptStack(Flags.Zero, value);
     }
 
-    /// <summary>Reads the caller's Carry Flag: the stacked flag word of the interrupt frame when
-    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
-    protected bool ReadCarryFlag(bool calledFromVm) {
-        if (_interruptStackPresent && calledFromVm) {
-            return (Stack.Peek16(4) & Flags.Carry) != 0;
-        }
-        return State.CarryFlag;
+    /// <summary>Reads the caller's Carry Flag from the stacked flag word of the interrupt frame.</summary>
+    protected bool ReadCarryFlag() {
+        return (Stack.Peek16(4) & Flags.Carry) != 0;
     }
 
-    /// <summary>Reads the caller's Zero Flag: the stacked flag word of the interrupt frame when
-    /// <paramref name="calledFromVm"/> and a frame is present, the CPU state otherwise.</summary>
-    protected bool ReadZeroFlag(bool calledFromVm) {
-        if (_interruptStackPresent && calledFromVm) {
-            return (Stack.Peek16(4) & Flags.Zero) != 0;
-        }
-        return State.ZeroFlag;
+    /// <summary>Reads the caller's Zero Flag from the stacked flag word of the interrupt frame.</summary>
+    protected bool ReadZeroFlag() {
+        return (Stack.Peek16(4) & Flags.Zero) != 0;
     }
 
     /// <summary>
-    /// Runs the C# code that replaces the machine code. <br/>
-    /// While the C# code is run, the interrupt stack is disabled.
+    /// Pushes the FLAGS/CS:IP frame a hardware-style <c>int</c> pushes before the handler runs and
+    /// clears IF: a generated terminate call replaces the whole interrupt entry, so it needs the
+    /// same frame on the stack for the termination bookkeeping the interpreted path performs with
+    /// the real frame, and for the emulated iret that consumes it.
     /// </summary>
-    public void RunFromOverriden() {
-        // When running from overriden code, this is a direct C# code so there is no stack to edit.
-        _interruptStackPresent = false;
-        Run();
-        _interruptStackPresent = true;
+    protected void PushInterruptFrame() {
+        Stack.Push16(State.Flags.FlagRegister16);
+        Stack.PushSegmentedAddress(State.IpSegmentedAddress);
+        State.InterruptFlag = false;
+    }
+
+    /// <summary>
+    /// Finishes a terminate service invoked directly by generated code: halts when process
+    /// termination already stopped the machine (a root program exiting back to its loader),
+    /// otherwise unwinds to the resume address the termination poked on the restored parent
+    /// stack, like the interpreted <c>int</c> stub's iret landing on the terminate address.
+    /// </summary>
+    /// <param name="terminatedPsp">The PSP segment of the process that terminated.</param>
+    /// <param name="ipBefore">CS:IP before the termination ran: when the termination left a new
+    /// value (a batch engine continue launching the next program) it is the resume target;
+    /// otherwise the resume is the address it poked on the restored parent stack, where the
+    /// stub's iret would land.</param>
+    /// <param name="emulatesIret">When true the caller replaces the interrupt stub's iret (a
+    /// generated terminate call): the frame the termination restored is consumed like iret does,
+    /// landing on the poked address with the stacked flags restored. When false the frame stays
+    /// in place for a following iret (an interpreted interrupt handler whose Run call unwound).</param>
+    /// <exception cref="HaltRequestedException">The machine stopped.</exception>
+    /// <exception cref="ProcessTerminatedException">Control resumes at another address.</exception>
+    /// <returns>Never returns: the return type only lets a generated terminate call print as a
+    /// method's returned action.</returns>
+    protected Action ExitOrThrowProcessTerminated(ushort terminatedPsp, SegmentedAddress ipBefore, bool emulatesIret) {
+        if (!State.IsRunning) {
+            LoggerService.LogTrace("Program terminated; the machine is stopping.");
+            throw new HaltRequestedException();
+        }
+        if (State.IpSegmentedAddress != ipBefore) {
+            throw new ProcessTerminatedException(State.IpSegmentedAddress, terminatedPsp);
+        }
+        if (emulatesIret) {
+            State.IpSegmentedAddress = Stack.PopSegmentedAddress();
+            State.Flags.FlagRegister16 = Stack.Pop16();
+            throw new ProcessTerminatedException(State.IpSegmentedAddress, terminatedPsp);
+        }
+        throw new ProcessTerminatedException(new SegmentedAddress(Stack.Peek16(2), Stack.Peek16(0)), terminatedPsp);
     }
 }

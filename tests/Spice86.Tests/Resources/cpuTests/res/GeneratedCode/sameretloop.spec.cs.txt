@@ -1,4 +1,4 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
+// ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -11,14 +11,57 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Outputs: none. Changes: PF, AF, ZF, SF, OF.</summary>
+    public virtual Action unknown_F000_0013_F0013() {
+        while (true) {
+            CheckExternalEvents(biosSegment, 0x0013);
+            SegmentF000Globals.Byte0035 += 1;
+            if (SegmentF000Globals.Byte0035 >= 4) {
+                break;
+            }
+            Stack.Push16(0x0013);
+            return NearRet();
+        }
+        SsUInt16[0x0600] = SP;
+        SsUInt16[0x0602] = SS;
+        SsUInt16[0x0612] = 0x0035;
+        return Hlt();
     }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: AX.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        SS = 0;
+        SP = 0x0100;
+        SegmentF000Globals.Byte0035 = 0;
+        AX = 0x0013;
+        Stack.Push16(0x0013);
+        return NearRet();
+    }
+
 }
 
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
-// ==== file: CfgGeneratedOverrides.cs ====
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public byte Byte0035 { get => _memory.UInt8[Segment, 0x0035]; set => _memory.UInt8[Segment, 0x0035] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -49,9 +92,10 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
+    protected override bool ObservedTransfersOnly => true;
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -64,66 +108,27 @@ using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: none. Outputs: flags. Changes: flags.</summary>
-    public virtual Action unknown_F000_0013_F0013() {
-        byte flagOperand_0018 = 0;
-        while (true) {
-            CheckExternalEvents(biosSegment, 0x0013);
-            // F000:0013 inc byte ptr CS:[0x0024]
-            SegmentF000Globals.Byte0024 += 1;
-            // F000:0018 cmp byte ptr CS:[0x0024],4
-            flagOperand_0018 = SegmentF000Globals.Byte0024;
-            Alu8.Sub(flagOperand_0018, 4);
-            // F000:001E jae short 0x0023
-            if (flagOperand_0018 >= 4) {
-                break;
-            }
-            // F000:0020 push 0x13
-            Stack.Push16(0x0013);
-            // F000:0022 ret near
-            return NearRet();
-        }
-        // F000:0023 hlt
-        return Hlt();
-    }
-
-    /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
-    public virtual Action unknown_F000_FFF0_FFFF0() {
-        CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0
-        // F000:0003 mov SS,AX
-        SS = 0;
-        // F000:0005 mov SP,0x0100
-        SP = 0x0100;
-        // F000:0008 mov byte ptr CS:[0x0024],0
-        SegmentF000Globals.Byte0024 = 0;
-        // F000:000E mov AX,0x0013
-        AX = 0x0013;
-        // F000:0011 push AX
-        Stack.Push16(0x0013);
-        // F000:0012 ret near
-        return NearRet();
-    }
-
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
 }
 
-// ==== file: SegmentF000Globals.cs ====
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
 
 namespace Spice86.Generated;
 
-public sealed class SegmentF000Globals : MemoryBasedDataStructure {
-    private readonly IMemory _memory;
-    private readonly ushort Segment;
+// Relaxations: none
 
-    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
-        _memory = memory;
-        Segment = 0xF000;
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
     }
-
-    public byte Byte0024 { get => _memory.UInt8[Segment, 0x0024]; set => _memory.UInt8[Segment, 0x0024] = value; }
 }
+

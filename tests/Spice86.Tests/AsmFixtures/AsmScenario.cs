@@ -42,21 +42,45 @@ internal sealed class AsmScenario {
     /// that program to another file name. Empty when the started program is the resource itself.</summary>
     public string PrimaryResourceFileName { get; init; } = "";
 
+    /// <summary>Why this scenario skips the interpreted-vs-generated final-state comparison, or
+    /// <see langword="null"/> when it does not. Generation, compilation, the generated-source
+    /// golden and the generated execution with its oracle and engine assertions still run; only
+    /// the final-state comparison is skipped.</summary>
+    public string? GeneratedFinalStateGateSkipReason { get; private set; }
+
+    /// <summary>Returns the same scenario marked as skipping the final-state gate.</summary>
+    /// <param name="reason">Why the final-state comparison is skipped.</param>
+    /// <returns>The scenario, with the skip reason recorded.</returns>
+    public AsmScenario WithoutGeneratedFinalStateGate(string reason) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        GeneratedFinalStateGateSkipReason = reason;
+        return this;
+    }
+
     /// <summary>Creates a scenario with the same identity, resources and preparation, but another oracle.
     /// Used by discrimination tests that prove a wrong expectation fails in both execution modes.</summary>
     /// <param name="rewriteOracle">Rewrites the fixture the preparation produced.</param>
     /// <returns>The scenario with the rewritten oracle.</returns>
     public AsmScenario WithOracle(Func<AsmFixture, AsmFixture> rewriteOracle) {
         return new AsmScenario(Identity, scope => rewriteOracle(_prepareFixture(scope)), ResourceDependencies) {
-            PrimaryResourceFileName = PrimaryResourceFileName
+            PrimaryResourceFileName = PrimaryResourceFileName,
+            GeneratedFinalStateGateSkipReason = GeneratedFinalStateGateSkipReason
         };
     }
 
     /// <summary>Prepares a fresh run of this scenario: a new scope, a new working directory when the scenario
     /// needs one, new observation handlers and a new fixture holding the one oracle.</summary>
     /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
-    public AsmRunScope Prepare() {
-        AsmRunScope scope = new();
+    public AsmRunScope Prepare() => PrepareInto(new AsmRunScope());
+
+    /// <summary>Prepares a run of this scenario under an earlier run's key, so its host paths match
+    /// that run's. Used for the generated execution of a variant, which must reproduce the host
+    /// environment its interpreted baseline ran in.</summary>
+    /// <param name="runKey">Run key of the interpreted baseline run.</param>
+    /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
+    public AsmRunScope Prepare(string runKey) => PrepareInto(new AsmRunScope(runKey));
+
+    private AsmRunScope PrepareInto(AsmRunScope scope) {
         bool succeeded = false;
         try {
             scope.AttachFixture(_prepareFixture(scope));

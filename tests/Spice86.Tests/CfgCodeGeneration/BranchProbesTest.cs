@@ -59,7 +59,7 @@ public sealed class BranchProbesTest {
         CSharpSourceWriter writer = new();
         CSharpExpressionPrinter expressions = new(new Dictionary<ushort, string>()) { BranchProbes = probes };
         CSharpStatementPrinter printer = new(writer, expressions,
-            _ => throw new InvalidOperationException("no label expected"));
+            _ => throw new InvalidOperationException("no label expected"), printAsmComments: false);
         printer.Print(node);
         return writer.ToString();
     }

@@ -5,11 +5,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        2
+        3
       ],
       "entries": [
         {
-          "block": 2,
+          "block": 3,
           "address": "F000:0006",
           "kind": "executionContextEntry"
         }
@@ -20,11 +20,11 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        23
+        26
       ],
       "entries": [
         {
-          "block": 23,
+          "block": 26,
           "address": "F000:0017",
           "kind": "executionContextEntry"
         }
@@ -35,12 +35,12 @@
       "kind": "observed",
       "name": "unknown",
       "blocks": [
-        38,
-        37
+        43,
+        42
       ],
       "entries": [
         {
-          "block": 37,
+          "block": 42,
           "address": "F000:FFF0",
           "kind": "executionContextEntry"
         }
@@ -51,21 +51,30 @@
       "kind": "synthetic",
       "name": "unknown",
       "blocks": [
-        43,
-        25,
-        10,
-        17,
-        19
+        48
       ],
       "entries": [
         {
-          "block": 25,
-          "address": "F000:001A",
-          "kind": "sharedEntry"
-        },
-        {
-          "block": 43,
+          "block": 48,
           "address": "F000:000A",
+          "kind": "sharedEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "synthetic",
+      "name": "unknown",
+      "blocks": [
+        28,
+        11,
+        18,
+        20
+      ],
+      "entries": [
+        {
+          "block": 28,
+          "address": "F000:001A",
           "kind": "sharedEntry"
         }
       ]
@@ -76,17 +85,17 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 4,
-      "fromBlock": 2,
-      "toBlock": 43,
+      "fromBlock": 3,
+      "toBlock": 48,
       "from": "F000:0006",
       "target": "F000:000A"
     },
     {
       "kind": "crossPartitionFlow",
       "fromPartition": 2,
-      "toPartition": 4,
-      "fromBlock": 23,
-      "toBlock": 25,
+      "toPartition": 5,
+      "fromBlock": 26,
+      "toBlock": 28,
       "from": "F000:0018",
       "target": "F000:001A"
     },
@@ -94,10 +103,19 @@
       "kind": "crossPartitionFlow",
       "fromPartition": 3,
       "toPartition": 4,
-      "fromBlock": 38,
-      "toBlock": 43,
+      "fromBlock": 43,
+      "toBlock": 48,
       "from": "F000:0007",
       "target": "F000:000A"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 4,
+      "toPartition": 5,
+      "fromBlock": 48,
+      "toBlock": 28,
+      "from": "F000:0015",
+      "target": "F000:001A"
     }
   ]
 }

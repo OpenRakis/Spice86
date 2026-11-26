@@ -35,18 +35,23 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     private readonly Stack<Dictionary<string, ParameterExpression>> _variableScopes = new();
 
     private readonly bool _expandAluCalls;
+    private readonly bool _expandStackCalls;
 
-    /// <summary>Creates a builder that compiles ALU calls as calls to the ALU.</summary>
-    public AstExpressionBuilder() : this(false) {
+    /// <summary>Creates a builder that compiles ALU and stack calls as calls to the helpers.</summary>
+    public AstExpressionBuilder() : this(false, false) {
     }
 
     /// <summary>Creates a builder.</summary>
     /// <param name="expandAluCalls">When true, the ALU calls <see cref="AluExpansionBuilder"/> can expand are compiled
     /// as that expansion instead of a call to the ALU.</param>
-    public AstExpressionBuilder(bool expandAluCalls) {
+    /// <param name="expandStackCalls">When true, the stack calls <see cref="StackExpansionBuilder"/>
+    /// expands are compiled as that expansion instead of a call to <c>Stack</c>. PushAll keeps its
+    /// helper: its pending-fault ordering cannot be lowered by a leading check node.</param>
+    public AstExpressionBuilder(bool expandAluCalls, bool expandStackCalls) {
         _registerRenderer = new RegisterRenderer(AsmRenderingConfig.CreateSpice86Style());
         _allParameters = [_stateParameter, _memoryParameter];
         _expandAluCalls = expandAluCalls;
+        _expandStackCalls = expandStackCalls;
     }
 
     private static Type FromDataType(DataType dataType) {
@@ -377,6 +382,9 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitMethodCallValueNode(MethodCallValueNode node) {
+        if (_expandStackCalls && node is StackCallValueNode stackCall) {
+            return StackExpansionToExpression(StackExpansionBuilder.Expand(stackCall));
+        }
         AluExpansion? expansion = _expandAluCalls && node is AluCallValueNode aluCall
             ? AluExpansionBuilder.TryExpand(aluCall) : null;
         if (expansion is null) {
@@ -384,6 +392,59 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             return VisitMethodCallNode(node.CallNode);
         }
         return ExpansionToExpression(expansion);
+    }
+
+    private Expression StackExpansionToExpression(StackExpansion expansion) {
+        // Operands are built in the enclosing scope so that they cannot resolve to the expansion's own temps.
+        List<Expression> operandValues = expansion.Operands.Select(operand => operand.Initializer.Accept(this)).ToList();
+        Dictionary<string, ParameterExpression> expansionScope = new();
+        _variableScopes.Push(expansionScope);
+        try {
+            List<ParameterExpression> variables = RegisterVariablesInScope(
+                [.. expansion.Operands, .. expansion.Statements], expansionScope);
+            List<Expression> expressions = [];
+            for (int i = 0; i < operandValues.Count; i++) {
+                Expression value = operandValues[i];
+                if (value.Type != variables[i].Type) {
+                    value = Expression.Convert(value, variables[i].Type);
+                }
+                expressions.Add(Expression.Assign(variables[i], value));
+            }
+            foreach (IVisitableAstNode statement in expansion.Statements) {
+                expressions.Add(statement.Accept(this));
+            }
+            if (expansion.Result is { } result) {
+                expressions.Add(result.Reference.Accept(this));
+            } else {
+                expressions.Add(Expression.Empty());
+            }
+            return Expression.Block(variables, expressions);
+        } finally {
+            _variableScopes.Pop();
+        }
+    }
+
+    /// <summary>Lowers the check to one MMU access check per slot: the slot offsets descend from
+    /// <see cref="StackRangeCheckNode.Offset"/> for a push range and ascend for a pop range.</summary>
+    public Expression VisitStackRangeCheckNode(StackRangeCheckNode node) {
+        PropertyInfo mmuProperty = EnsureNonNull(typeof(Memory).GetProperty(nameof(Memory.Mmu)));
+        Expression mmu = Expression.Property(_memoryParameter, mmuProperty);
+        MethodInfo checkAccess = EnsureNonNull(typeof(IMmu).GetMethod(nameof(IMmu.CheckAccess)));
+        Expression segment = new SegmentRegisterNode((int)SegmentRegisterIndex.SsIndex).Accept(this);
+        if (segment.Type != typeof(ushort)) {
+            segment = Expression.Convert(segment, typeof(ushort));
+        }
+        Expression baseOffset = Expression.Convert(node.Offset.Accept(this), typeof(int));
+        List<Expression> checks = [];
+        for (int i = 0; i < node.Count; i++) {
+            int displacement = node.Direction == StackRangeDirection.Push ? -(i + 1) : i;
+            Expression offset = Expression.Convert(
+                Expression.Convert(Expression.Add(baseOffset,
+                    Expression.Constant(displacement * node.SizeBytes)), typeof(ushort)), typeof(uint));
+            checks.Add(Expression.Call(mmu, checkAccess, segment, offset,
+                Expression.Constant((uint)node.SizeBytes), Expression.Constant(SegmentAccessKind.Stack)));
+        }
+        return Expression.Block(checks);
     }
 
     private BlockExpression ExpansionToExpression(AluExpansion expansion) {
@@ -458,6 +519,12 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitMethodCallNode(MethodCallNode node) {
+        // PushAll stays on the helper: the pre-check must record a pending fault the stores run
+        // before, and a leading check node cannot defer its throw past them.
+        if (_expandStackCalls && node is StackCallNode stackCall
+            && stackCall.Operation != StackOperation.PushAll) {
+            return StackExpansionToExpression(StackExpansionBuilder.Expand(stackCall));
+        }
         // Get the target object (helper or helper.PropertyPath)
         Expression target;
         Type targetType;

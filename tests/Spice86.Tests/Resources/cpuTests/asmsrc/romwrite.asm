@@ -18,6 +18,12 @@ start:
     rep movsb
     mov word [es:0x9190], 0xA55A
     mov ax, 0x600D
+    mov word [cs:0x604], ax
+    mov word [cs:0x608], cx
+    mov word [cs:0x60C], si
+    mov word [cs:0x60E], di
+    mov word [cs:0x610], ds
+    mov word [cs:0x612], es
     hlt
 
 times 0xFFF0 - ($ - $$) db 0

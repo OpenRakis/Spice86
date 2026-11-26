@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -11,6 +12,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Computes the <see cref="IrEffects"/> of one IR statement or terminator expression. Nodes that are
@@ -38,10 +41,11 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(CpuValues.None, CpuValues.Halted, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects InterruptReturnUse =
         new(CpuValues.Registers, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
-    private const CpuValues PopAllRegisters16 = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
-        | CpuValues.Sp | CpuValues.Bp | CpuValues.Si | CpuValues.Di;
-    private const CpuValues PopAllRegisters32 = CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx
-        | CpuValues.Esp | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi;
+
+    /// <summary>The expansion's own effects of each stack operation and width, without the argument
+    /// effects the call itself already contributes.</summary>
+    private static readonly ConcurrentDictionary<(StackOperation Operation, BitWidth Width), IrEffects>
+        StackEffects = new();
 
     /// <summary>The effects of <paramref name="node"/>; <paramref name="mayFault"/> sets <see cref="IrEffects.MayFault"/>.</summary>
     public static IrEffects Of(IVisitableAstNode node, bool mayFault) {
@@ -155,60 +159,68 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
 
     private static IrEffects StatementCallEffect(MethodCallNode node) => node switch {
         ProgramInterruptCallHelperNode call => ProgramInterruptCall(call),
-        StackCallNode { Operation: StackOperation.Push or StackOperation.PushAll } stack
-            => Pushing(stack.Width),
-        StackCallNode { Operation: StackOperation.PopAll } stack => PopAll(stack.Width),
-        StackCallNode { Operation: StackOperation.Leave } stack => Leave(stack.Width),
+        StackCallNode stack => StackEffect(stack.Operation, stack.Width,
+            StackExpansionBuilder.Expand(stack)),
         PortWriteCallNode => ReadWriteIo,
         DeviceOperationCallNode => ReadWriteIo,
         BoundCheckCallNode => IrEffects.None,
         InterruptServiceCallNode service => ServiceContractEffects.Of(service),
         InterruptCallHelperNode call => ServiceContractEffects.Of(call),
+        CallbackHelperNode { Contract: { } contract } => ServiceContractEffects.Of(contract),
+        ProcedureCallHelperNode call => call.Summary ?? IrEffects.Unknown,
         FpuControlCallNode => WriteFpuControlWord,
         _ => IrEffects.Unknown
     };
 
     private static IrEffects ValueCallEffect(MethodCallValueNode node) => node switch {
-        StackCallValueNode { Operation: StackOperation.Pop } stack
-            => StackAccess(StackPointerOf(stack.Width) | CpuValues.Ss, StackPointerOf(stack.Width),
-                IrTokens.Memory, IrTokens.None),
-        StackCallValueNode { Operation: StackOperation.Peek } stack
-            => StackAccess(StackPointerOf(stack.Width) | CpuValues.Ss, CpuValues.None,
-                IrTokens.Memory, IrTokens.None),
+        StackCallValueNode stack => StackEffect(stack.Operation, stack.Width,
+            StackExpansionBuilder.Expand(stack)),
         PortReadCallNode => ReadWriteIo,
         DeviceOperationValueNode => ReadWriteIo,
         BitScanCallNode => IrEffects.None,
+        ProcedureCallReturnedElsewhereHelperNode call => call.Summary ?? IrEffects.Unknown,
         SignatureMatchesHelperNode => ReadMemory,
         FpuControlWordNode => ReadFpuControlWord,
         HaltedValueNode => ReadHalted,
         _ => IrEffects.Unknown
     };
 
-    /// <summary>A direct call to a program interrupt handler: it reads the handler's uses, SP / SS /
-    /// CS for the pushed frame, the pushed FLAGS image (status flags and DF) and the interrupt
+    /// <summary>The machine reads of pushing an interrupt frame (FLAGS, CS and IP at SS:SP): the
+    /// reads the 16-bit push stack expansion reports, so the software-int call and the hardware
+    /// delivery effect describe the same push.</summary>
+    internal static readonly CpuValues InterruptFrameReads =
+        StackEffect(StackOperation.Push, BitWidth.WORD_16,
+            StackExpansionBuilder.Expand(new StackCallNode(StackOperation.Push, BitWidth.WORD_16,
+                new ConstantNode(DataType.UINT16, 0)))).Reads;
+
+    /// <summary>A direct call to a program interrupt handler: it reads the handler's uses, the
+    /// pushed frame's reads (<see cref="InterruptFrameReads"/>) and CS, the pushed FLAGS image
+    /// (status flags and DF) and the interrupt
     /// effect's reads for a hardware interrupt it can deliver; it may write the handler's writes,
     /// every status flag and DF (a handler can patch the stacked FLAGS image before its iret) and
     /// the effect's writes. Nothing is a must-write: an iret restores what it read.</summary>
     private static IrEffects ProgramInterruptCall(ProgramInterruptCallHelperNode node) =>
-        new(node.Handler.Reads | CpuValues.Sp | CpuValues.Ss | CpuValues.Cs | CpuValues.StatusFlags
+        new(node.Handler.Reads | InterruptFrameReads | CpuValues.Cs | CpuValues.StatusFlags
                 | CpuValues.Direction | node.HardwareInterruptEffect.Reads,
             CpuValues.None,
             node.Handler.Writes | CpuValues.StatusFlags | CpuValues.Direction | node.HardwareInterruptEffect.Writes,
             IrTokens.All, IrTokens.All, false, true);
 
-    private static IrEffects PopAll(BitWidth width) {
-        CpuValues popped = width == BitWidth.DWORD_32 ? PopAllRegisters32 : PopAllRegisters16;
-        return StackAccess(StackPointerOf(width) | CpuValues.Ss, popped,
-            IrTokens.Memory, IrTokens.None);
-    }
-
-    private static IrEffects Leave(BitWidth width) {
-        CpuValues framePointer = width == BitWidth.DWORD_32 ? CpuValues.Ebp : CpuValues.Bp;
-        return StackAccess(framePointer | CpuValues.Ss, StackPointerOf(width) | framePointer,
-            IrTokens.Memory, IrTokens.None);
-    }
+    /// <summary>The call-independent effects of <paramref name="expansion"/> (its statements in
+    /// order, operands excluded: the call's arguments are visited by the caller), cached per
+    /// operation and width.</summary>
+    private static IrEffects StackEffect(StackOperation operation, BitWidth width,
+        StackExpansion expansion) =>
+        StackEffects.GetOrAdd((operation, width), _ => {
+            IrEffects effect = IrEffects.None;
+            foreach (IVisitableAstNode statement in expansion.Statements) {
+                effect = effect.Then(statement.Accept(Instance));
+            }
+            return effect;
+        });
 
     public IrEffects VisitSpeculativeGuardNode(SpeculativeGuardNode node) => ReadMemory;
+
 
     /// <summary>A hardware interrupt handler can run at the check: it reads the effect's
     /// <see cref="CallEffect.Reads"/> and may write its
@@ -314,16 +326,12 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(IrValueSets.FromStatusFlags(flags.Reads), IrValueSets.FromStatusFlags(flags.MustWrite),
             IrValueSets.FromStatusFlags(flags.MayWrite), IrTokens.None, IrTokens.None, false, false);
 
-    private static CpuValues StackPointerOf(BitWidth width) =>
-        width == BitWidth.DWORD_32 ? CpuValues.Esp : CpuValues.Sp;
-
-    private static IrEffects StackAccess(CpuValues reads, CpuValues mustWrite, IrTokens tokenReads,
-        IrTokens tokenWrites) =>
-        new(reads, mustWrite, CpuValues.None, tokenReads, tokenWrites, false, false);
-
-    private static IrEffects Pushing(BitWidth width) =>
-        StackAccess(StackPointerOf(width) | CpuValues.Ss, StackPointerOf(width),
-            IrTokens.None, IrTokens.Memory);
+    /// <summary>The check reads its slot offsets and the SS register but no memory data. Whether it
+    /// may fault is decided by the statement's observed fault edge, so its own
+    /// <see cref="IrEffects.MayFault"/> stays clear.</summary>
+    public IrEffects VisitStackRangeCheckNode(StackRangeCheckNode node) =>
+        node.Offset.Accept(this).Then(new IrEffects(CpuValues.Ss, CpuValues.None, CpuValues.None,
+            IrTokens.None, IrTokens.None, false, false));
 
     private static CpuValues SwapRegisters(ValueNode node) =>
         node is RegisterNode register ? IrValueSets.Of(register) : CpuValues.None;

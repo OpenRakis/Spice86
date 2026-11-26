@@ -16,6 +16,11 @@ public sealed class DosSwappableDataArea : MemoryBasedDataStructure {
     /// </summary>
     public const int InDosFlagOffset = 0x01;
 
+    /// <summary>
+    /// Offset of the return code of the last terminated process (AL = code, AH = termination type).
+    /// </summary>
+    public const int ReturnCodeOffset = 0x14;
+
     public DosSwappableDataArea(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
@@ -105,8 +110,8 @@ public sealed class DosSwappableDataArea : MemoryBasedDataStructure {
     /// Gets or sets the return code from the last process termination.
     /// </summary>
     public ushort ReturnCode {
-        get => UInt16[0x14];
-        set => UInt16[0x14] = value;
+        get => UInt16[ReturnCodeOffset];
+        set => UInt16[ReturnCodeOffset] = value;
     }
 
     /// <summary>

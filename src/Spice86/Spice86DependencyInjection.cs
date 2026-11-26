@@ -272,7 +272,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
         InstalledInterruptHandlers installedInterruptHandlers =
-            new(dualPic.EnumerateHardwareInterruptVectorNumbers());
+            new(dualPic.EnumerateHardwareInterruptVectorNumbers(),
+                configuration.GeneratedCodeCheckBuild);
         ServiceCallEvents serviceCallEvents = installedInterruptHandlers.ServiceCallEvents;
 
         if (configuration.InitializeDOS is false) {
@@ -351,7 +352,7 @@ public class Spice86DependencyInjection : IDisposable {
         IExecutionAstRewriter executionAstRewriter = configuration.JitGeneratorIr
             ? new GeneratorIrRoundTrip()
             : new IdentityExecutionAstRewriter();
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode, executionAstRewriter, configuration.JitGeneratorIr);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode, executionAstRewriter, configuration.JitGeneratorIr, configuration.JitGeneratorIr);
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
 
         SequentialIdAllocator cfgIdAllocator = new();
@@ -359,6 +360,10 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
             configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.HltStopsEmulation, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+        Action<SegmentedAddress, SegmentedAddress> registerCallTarget = (_, _) => { };
+        if (cfgCpu.SpeculativeExplorer is { } explorer) {
+            registerCallTarget = explorer.RegisterSpeculativeTarget;
+        }
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CfgCpu created...");
@@ -417,10 +422,13 @@ public class Spice86DependencyInjection : IDisposable {
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
         // same address (Bios Segment F000)
+        LoadedImageRegistry loadedImageRegistry = new();
         MemoryAsmWriter memoryAsmWriter = new(memory,
             new SegmentedAddress(
                 configuration.ProvidedAsmHandlersSegment, 0),
-            callbackHandler);
+            callbackHandler) {
+            ImageRegistry = loadedImageRegistry
+        };
 
         SharedMouseData sharedMouseData = new();
         SharedMouseData = sharedMouseData;
@@ -481,7 +489,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         ListingExporter listingExporter = new(cfgCpu, nodeToString);
 
-        LoadedImageRegistry loadedImageRegistry = new();
         ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
             functionCatalogue, loggerState, installedInterruptHandlers);
@@ -498,9 +505,25 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner,
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
-        GeneratorOptions generatorOptions = configuration.GeneratedCodeCheckBuild
+        GenerationRelaxation relaxations = GenerationRelaxation.None;
+        if (configuration.GeneratedCodeAssumeUnknownMemoryIsRam) {
+            relaxations |= GenerationRelaxation.UnknownMemoryIsRam;
+        }
+        if (configuration.GeneratedCodeAssumeAccessesStayInSegment) {
+            relaxations |= GenerationRelaxation.AccessesStayInSegment;
+        }
+        if (configuration.GeneratedCodeAssumeAbandonedStackSlotsUnobserved) {
+            relaxations |= GenerationRelaxation.AbandonedStackSlotsUnobserved;
+        }
+        if (configuration.GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops) {
+            relaxations |= GenerationRelaxation.SavedSlotsWrittenOnlyByPops;
+        }
+        GeneratorOptions generatorOptions = (configuration.GeneratedCodeCheckBuild
             ? GeneratorOptions.CheckBuild
-            : GeneratorOptions.Default;
+            : GeneratorOptions.Default) with {
+            PrintAsmComments = configuration.GeneratedCodeAsmComments,
+            Policy = new GenerationPolicy(relaxations)
+        };
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(generatorOptions,
             maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile), loggerService);
         DumpProgressReporter dumpProgressReporter = new(loggerService, new SystemTimeProvider());
@@ -622,6 +645,7 @@ public class Spice86DependencyInjection : IDisposable {
             inputEventHub);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,
+            registerCallTarget,
             inputEventHub);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -636,7 +660,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         var dummyInt1CHandler = new DummyInt1CHandler();
 
-        BiosMouseInt74Handler mouseIrq12Handler = new(dualPic, memory);
+        BiosMouseInt74Handler mouseIrq12Handler = new(dualPic, memory,
+            registerCallTarget);
         if (configuration.InitializeDOS is not false) {
             // Register the BIOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(vgaBios);
@@ -782,6 +807,14 @@ public class Spice86DependencyInjection : IDisposable {
         if (configuration.InitializeDOS is not false) {
             cfgCpu.ExecutionContextManager.SeedKnownSafeHandlersAndRegisterEntryPoints(
                 installedInterruptHandlers.HardwareAddresses);
+            // The switchable far pointers of the mouse stubs were written before their call
+            // instructions entered the graph, so their target registration during install was a
+            // no-op: link the seeded call sites to the targets the pointers hold now. This must
+            // run even when no interrupt ever fires. The int 74h registration goes first:
+            // exploring the driver entry it points to mints the driver's own call-site node,
+            // which the driver registration can then link to its default routine.
+            mouseIrq12Handler.RegisterCurrentCallTarget();
+            mouseDriver.RegisterCurrentCallTarget();
         }
 
         McpHttpHost? mcpHttpTransport = null;

@@ -5,18 +5,20 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:001B",
+  "lastExecutedAddress": "F000:0025",
   "lastExecutedBlockId": 81,
   "blocks": [
     {
       "id": 81,
       "entry": "F000:001B",
-      "term": "F000:001B",
+      "term": "F000:0025",
       "pred": [
         80
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -147,7 +149,7 @@
         43
       ],
       "asm": [
-        "2EFF2E1C00|jmp far dword ptr CS:[0x001C]"
+        "2EFF2E2600|jmp far dword ptr CS:[0x0026]"
       ]
     },
     {

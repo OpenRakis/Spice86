@@ -5,18 +5,20 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:00A3",
+  "lastExecutedAddress": "F000:00AD",
   "lastExecutedBlockId": 115,
   "blocks": [
     {
       "id": 115,
       "entry": "F000:00A3",
-      "term": "F000:00A3",
+      "term": "F000:00AD",
       "pred": [
         103
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -75,7 +77,7 @@
         "BC0010|mov SP,0x1000",
         "FC|cld",
         "31DB|xor BX,BX",
-        "BEA500|mov SI,0x00A5",
+        "BEAF00|mov SI,0x00AF",
         "C706000F0200|mov word ptr DS:[0x0F00],2"
       ]
     },
@@ -119,13 +121,13 @@
         "8ED8|mov DS,AX",
         "2E8B04|mov AX,word ptr CS:[SI]",
         "A30000|mov word ptr DS:[0],AX",
-        "E83B00|call near 0x00A4"
+        "E84500|call near 0x00AE"
       ]
     },
     {
       "id": 41,
-      "entry": "F000:00A4",
-      "term": "F000:00A4",
+      "entry": "F000:00AE",
+      "term": "F000:00AE",
       "pred": [
         82,
         113
@@ -160,7 +162,7 @@
         "8EC0|mov ES,AX",
         "2E8B4402|mov AX,word ptr CS:[SI\u002B2]",
         "26A30200|mov word ptr ES:[2],AX",
-        "E81E00|call near 0x00A4"
+        "E82800|call near 0x00AE"
       ]
     }
   ],

@@ -314,7 +314,7 @@ public class ConditionCombinerTest {
 
     private string Print(IVisitableAstNode node) {
         CSharpSourceWriter writer = new();
-        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string>()), LabelOf);
+        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string>()), LabelOf, printAsmComments: true);
         printer.Print(node);
         return writer.ToString();
     }

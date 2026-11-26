@@ -1,7 +1,10 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Collections.Generic;
 
 /// <summary>
 /// The machine state a snapshot partitioning needs, captured once from the live machine: the
@@ -22,12 +25,17 @@ internal sealed record GeneratorInputs(
             HardwareVectorNumbers = new HashSet<byte>(),
             InstalledInterruptHandlerAddresses = [],
             HardwareVectorTargets = new Dictionary<byte, SegmentedAddress>(),
+            HardwareInterruptDeliveries = [],
             ChainedVectorTargets = new Dictionary<byte, SegmentedAddress>(),
             ServiceVectors = new Dictionary<byte, InterruptServiceVector>(),
             CallbackDescriptions = new Dictionary<ushort, string>(),
-            MouseUserSubroutineRegistered = false
+            CallbackContracts = new Dictionary<ushort, ServiceContract>(),
+            MouseUserSubroutineRegistered = false,
+            ProgramSetCurrentPsp = false,
+            TerminateResumeTargets = new HashSet<SegmentedAddress>(),
+            ResumeDispatchTargets = new HashSet<SegmentedAddress>()
         },
-        new ProgramImages(0, []),
+        new ProgramImages(0, [], []),
         new ChangedMemorySnapshot { WatchedAreas = [], ChangedRanges = [] },
         [],
         new Dictionary<ushort, Type>(),

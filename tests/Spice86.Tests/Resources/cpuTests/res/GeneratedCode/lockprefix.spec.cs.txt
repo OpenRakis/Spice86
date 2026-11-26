@@ -1,67 +1,3 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-
-
-// ==== file: CfgGeneratedOverrides.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort biosSegment;
-
-    private readonly Func<int, Action> unknown_F000_0045_F0045Entry;
-    private readonly Func<int, Action> unknown_F000_004E_F004EEntry;
-    private readonly Func<int, Action> unknown_F000_0057_F0057Entry;
-    private readonly Func<int, Action> unknown_F000_005A_F005AEntry;
-    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
-
-    protected readonly DsGlobals DsGlobals;
-    protected readonly Segment0000Globals Segment0000Globals;
-
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        biosSegment = 0xF000;
-        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
-        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
-
-        unknown_F000_0045_F0045Entry = _ => unknown_F000_0045_F0045();
-        unknown_F000_004E_F004EEntry = _ => unknown_F000_004E_F004E();
-        unknown_F000_0057_F0057Entry = _ => unknown_F000_0057_F0057();
-        unknown_F000_005A_F005AEntry = _ => unknown_F000_005A_F005A();
-        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0045, unknown_F000_0045_F0045Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x004E, unknown_F000_004E_F004EEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0057, unknown_F000_0057_F0057Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005A, unknown_F000_005A_F005AEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
-    }
-
-}
-
 // ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -81,54 +17,42 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_0045_F0045() {
         CheckExternalEvents(biosSegment, 0x0045);
-        // F000:0045 mov word ptr DS:[4],0x004E
         DsGlobals.Word0004 = 0x004E;
-        // F000:004B invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction ADD at F000:004B: no memory destination operand");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x004B, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x004B, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_004E_F004E() {
         CheckExternalEvents(biosSegment, 0x004E);
-        // F000:004E mov word ptr DS:[4],0x0057
         DsGlobals.Word0004 = 0x0057;
-        // F000:0054 invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction INC at F000:0054: no memory destination operand");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0054, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0054, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_0057_F0057() {
         CheckExternalEvents(biosSegment, 0x0057);
-        // F000:0057 hlt
         return Hlt();
     }
 
-    /// <summary>Inputs: DS. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>
+    /// <summary>Inputs: BP, DS, CF, DF. Outputs: AX, BP, flags, DF. Changes: AX, BP, flags, DF.</summary>
     public virtual Action unknown_F000_005A_F005A() {
         unknown_F000_005A_F005AFrame frame = new(Memory, State.SegmentRegisters, SP);
         CheckExternalEvents(biosSegment, 0x005A);
-        // F000:005A push BP
         Stack.Push16(BP);
-        // F000:005B mov BP,SP
-        // F000:005D mov AX,word ptr DS:[4]
         AX = DsGlobals.Word0004;
-        // F000:0060 mov word ptr SS:[BP+2],AX
         frame.ReturnIp = AX;
-        // F000:0063 pop BP
         BP = Stack.Pop16();
-        // F000:0064 inc word ptr DS:[0]
-        DsGlobals.Word0000 += 1;
-        // F000:0068 iret
+        DsGlobals.Word0000 = Alu16.Inc(DsGlobals.Word0000);
         return InterruptRet();
     }
 
@@ -142,38 +66,22 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: none. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 xor AX,AX
         AX = 0;
-        // F000:0002 mov DS,AX
         DS = 0;
-        // F000:0004 mov SS,AX
         SS = 0;
-        // F000:0006 mov SP,0x8000
         SP = 0x8000;
-        // F000:0009 mov word ptr DS:[0x0018],0x005A
-        // F000:000F mov word ptr DS:[0x001A],CS
         Segment0000Globals.Dword0018 = 0x0000005A | (uint)CS << 16;
-        // F000:0013 mov word ptr DS:[0],0
-        // F000:0019 mov word ptr DS:[2],0
-        Segment0000Globals.Dword0000 = 0;
-        // F000:001F mov word ptr DS:[0x0010],1
+        Segment0000Globals.Word0000 = 0;
         Segment0000Globals.Word0010 = 1;
-        // F000:0025 add word ptr DS:[0x0010],AX
         Segment0000Globals.Word0010 = Alu16.Add(Segment0000Globals.Word0010, 0);
-        // F000:002A inc word ptr DS:[0x0010]
         Segment0000Globals.Word0010 += 1;
-        // F000:002F dec word ptr DS:[0x0010]
         Segment0000Globals.Word0010 = Alu16.Dec(Segment0000Globals.Word0010);
-        // F000:0034 mov word ptr DS:[2],3
-        // F000:003A mov word ptr DS:[4],0x0045
         Segment0000Globals.Dword0002 = 0x00450003;
-        // F000:0040 invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction MOV at F000:0040: not in the LOCK-allowed instruction set");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, biosSegment, 0x0040, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0040, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x005A), unknown_F000_005A_F005A)], [new SegmentedAddress(biosSegment, 0x0045), new SegmentedAddress(biosSegment, 0x004E), new SegmentedAddress(biosSegment, 0x0057)]);
         }
     }
 
@@ -220,7 +128,7 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
         Segment = 0x0000;
     }
 
-    public uint Dword0000 { get => _memory.UInt32[Segment, 0x0000]; set => _memory.UInt32[Segment, 0x0000] = value; }
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 
     public uint Dword0002 { get => _memory.UInt32[Segment, 0x0002]; set => _memory.UInt32[Segment, 0x0002] = value; }
 
@@ -228,3 +136,86 @@ public sealed class Segment0000Globals : MemoryBasedDataStructure {
 
     public uint Dword0018 { get => _memory.UInt32[Segment, 0x0018]; set => _memory.UInt32[Segment, 0x0018] = value; }
 }
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0045_F0045Entry;
+    private readonly Func<int, Action> unknown_F000_004E_F004EEntry;
+    private readonly Func<int, Action> unknown_F000_0057_F0057Entry;
+    private readonly Func<int, Action> unknown_F000_005A_F005AEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+
+        unknown_F000_0045_F0045Entry = _ => unknown_F000_0045_F0045();
+        unknown_F000_004E_F004EEntry = _ => unknown_F000_004E_F004E();
+        unknown_F000_0057_F0057Entry = _ => unknown_F000_0057_F0057();
+        unknown_F000_005A_F005AEntry = _ => unknown_F000_005A_F005A();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0045, unknown_F000_0045_F0045Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x004E, unknown_F000_004E_F004EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0057, unknown_F000_0057_F0057Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005A, unknown_F000_005A_F005AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

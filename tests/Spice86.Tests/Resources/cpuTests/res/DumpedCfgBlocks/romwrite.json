@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:002D",
+  "lastExecutedAddress": "F000:004A",
   "lastExecutedBlockId": 3,
   "blocks": [
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:002D",
+      "term": "F000:004A",
       "pred": [
         2
       ],
@@ -31,6 +31,12 @@
         "F3A4|rep movs byte ptr ES:[DI],byte ptr DS:[SI]",
         "26C70690915AA5|mov word ptr ES:[0x9190],0xA55A",
         "B80D60|mov AX,0x600D",
+        "2EA30406|mov word ptr CS:[0x0604],AX",
+        "2E890E0806|mov word ptr CS:[0x0608],CX",
+        "2E89360C06|mov word ptr CS:[0x060C],SI",
+        "2E893E0E06|mov word ptr CS:[0x060E],DI",
+        "2E8C1E1006|mov word ptr CS:[0x0610],DS",
+        "2E8C061206|mov word ptr CS:[0x0612],ES",
         "F4|hlt"
       ]
     },

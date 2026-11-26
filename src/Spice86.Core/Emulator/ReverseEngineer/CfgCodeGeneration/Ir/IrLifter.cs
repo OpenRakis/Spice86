@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -27,9 +28,30 @@ internal sealed class IrLifter(
     InstructionLowerer lowerer,
     AstInstructionRenderer assemblyRenderer) {
 
+    /// <summary>No effect overrides: the first prepare round lifts as before.</summary>
+    public static readonly IReadOnlyDictionary<ICfgNode, IrEffects> NoEffects =
+        new Dictionary<ICfgNode, IrEffects>();
+
+    /// <summary>No fault-path read overrides: every faulting statement uses every value.</summary>
+    public static readonly IReadOnlyDictionary<ICfgNode, CpuValues> NoFaultReads =
+        new Dictionary<ICfgNode, CpuValues>();
+
     /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order.</summary>
-    public IrMethod Lift(MethodPlan method) {
-        IrFlattener flattener = new(false);
+    public IrMethod Lift(MethodPlan method) =>
+        Lift(method, NoEffects, NoEffects, NoFaultReads, typedSignatures: null);
+
+    /// <summary>Lifts every node of <paramref name="method"/>'s emission plans, in order; an exit
+    /// whose origin is a key of <paramref name="exitEffects"/> gets that entry's effect instead of
+    /// the transfer's own, and the call statement of an origin in <paramref name="callEffects"/>
+    /// gets that summary instead of <see cref="IrEffects.Unknown"/>. A statement of an origin in
+    /// <paramref name="faultReads"/> faults reading that set instead of every value. A call whose
+    /// summary is applied and whose target <paramref name="typedSignatures"/> types takes the
+    /// callee's parameters as operand arguments.</summary>
+    public IrMethod Lift(MethodPlan method, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        TypedSignatures? typedSignatures) {
+        IrFlattener flattener = new(false, exitEffects, callEffects, faultReads, typedSignatures);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, IrBlock> startBlocks = [];
         Dictionary<ICfgNode, IrInstructionShape> shapes = [];
@@ -50,7 +72,7 @@ internal sealed class IrLifter(
             }
         }
         foreach (IrFlattener.PendingJump jump in flattener.PendingJumps) {
-            jump.From.Terminator = new IrJump(jump.Origin, new IrEdge(startBlocks[jump.Target], false));
+            IrEditor.WithoutSsa.SetTerminator(jump.From, new IrJump(jump.Origin, new IrEdge(startBlocks[jump.Target], false)));
         }
         List<IrEntry> entries = method.Entries
             .Select(entry => new IrEntry(entry.Node, startBlocks[entry.Node]))
@@ -61,7 +83,7 @@ internal sealed class IrLifter(
             lifted.LocalSuffixes[instruction] = method.GetLocalSuffix(instruction);
         }
         foreach (IrBlock block in lifted.Blocks) {
-            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode } exit || IsHlt(exit)) {
+            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode and not FailAsUntestedNode } exit || IsHlt(exit)) {
                 continue;
             }
             foreach (ICfgNode successor in block.Terminator.Origin.Successors) {
@@ -75,7 +97,7 @@ internal sealed class IrLifter(
                     : lifted.StructuralSuccessors[block] = []).Add(target);
             }
         }
-        IrJumpThreading.Apply(lifted);
+        IrJumpThreading.Apply(lifted, IrEditor.WithoutSsa);
         MoveInstructionExitTailsLast(lifted);
         return lifted;
     }
@@ -144,7 +166,7 @@ internal sealed class IrLifter(
         }
         string comment = InstructionBoundary.AsmCommentText(assemblyRenderer, node)
             ?? throw new NotSupportedException($"IR lifting does not support node {node.GetType().FullName} at {node.Address}.");
-        flattener.Add(new InstructionStartNode(comment), node, string.Empty);
+        flattener.Add(new InstructionStartNode(comment) { Address = node.Address }, node, string.Empty);
     }
 
     private IVisitableAstNode BodyOf(NodeEmissionPlan plan) => plan.Node switch {

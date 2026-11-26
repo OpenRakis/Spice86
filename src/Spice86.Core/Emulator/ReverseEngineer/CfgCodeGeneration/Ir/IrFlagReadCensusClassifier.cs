@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 
 using System.Linq;
+using System.Numerics;
 
 /// <summary>
 /// The flag read census classification: attributes one <see cref="FlagSetterKind"/>,
@@ -23,11 +24,14 @@ using System.Linq;
 /// </summary>
 internal static class IrFlagReadCensusClassifier {
     /// <summary>Classifies every status-flag read of <paramref name="body"/> through <paramref name="ssa"/>.</summary>
-    public static FlagReadCensus Classify(IrMethod method, IrSsa ssa, IVisitableAstNode body) {
+    /// <param name="substituted">The node instances the register-local plan prints as a local
+    /// instead: they are not printed flag reads, so the census must not count them.</param>
+    public static FlagReadCensus Classify(IrMethod method, IrSsa ssa, IVisitableAstNode body,
+        IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? substituted = null) {
         FlagReadCensus census = new();
         Positions(method, ssa, out Dictionary<IVisitableAstNode, (IrBlock Block, int Index)> positions,
             out Dictionary<int, (IrStatement Statement, int Index)> setterByVersion);
-        Classifier classifier = new(ssa, positions, setterByVersion);
+        Classifier classifier = new(ssa, positions, setterByVersion, substituted);
         classifier.Walk(body, null, false, census);
         return census;
     }
@@ -59,7 +63,8 @@ internal static class IrFlagReadCensusClassifier {
     private sealed class Classifier(
         IrSsa ssa,
         Dictionary<IVisitableAstNode, (IrBlock Block, int Index)> positions,
-        Dictionary<int, (IrStatement Statement, int Index)> setterByVersion) {
+        Dictionary<int, (IrStatement Statement, int Index)> setterByVersion,
+        IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? substituted) {
 
         /// <summary>Walks the structured body on an explicit stack, so deeply nested <c>if</c> / <c>else</c>
         /// chains cannot overflow the thread's stack; <paramref name="position"/> is the lifted position of
@@ -76,6 +81,7 @@ internal static class IrFlagReadCensusClassifier {
                     currentPosition = found;
                 }
                 if (!currentInWrite && currentPosition is { } read && current is CpuFlagNode flag
+                    && substituted?.ContainsKey(current) != true
                     && ValueOf(flag.FlagMask) is IrSsaValue value) {
                     ClassifyRead(read, value, census);
                 }
@@ -92,12 +98,41 @@ internal static class IrFlagReadCensusClassifier {
                 yield return (assign.Right, false);
                 yield break;
             }
-            if (node is InterruptServiceCallNode serviceCall) {
-                foreach (IVisitableAstNode argument in serviceCall.Arguments) {
-                    yield return (argument, false);
+            if (node is RegisterWriteBackNode writeBack) {
+                // The target is a flag write, not a read; the local's effects are none.
+                yield return (writeBack.Register, true);
+                yield return (writeBack.Local, false);
+                yield break;
+            }
+            if (node is InterruptServiceCallNode) {
+                // Every flag the printed statement reads sits inside its lambdas (the typed
+                // invocation and the stacked-flags writer): the metrics walker counts them as
+                // generated flag uses, not IR flag reads, so the census must not count them
+                // either. The results are write targets and never flag reads.
+                yield break;
+            }
+            if (node is ProcedureCallHelperNode call) {
+                // A typed call's operand arguments print inside its `() => f(...)` lambda, which
+                // the metrics walker does not count as printed flag reads, so the census must not
+                // count them either. The operand count is the bit count of TypedArgumentMask.
+                int skip = OperandCount(call.TypedArgumentMask);
+                for (int index = 0; index < call.Arguments.Count; index++) {
+                    if (index < call.Arguments.Count - 1 - skip || index == call.Arguments.Count - 1) {
+                        yield return (call.Arguments[index], false);
+                    }
                 }
-                foreach (IVisitableAstNode result in serviceCall.Results) {
-                    yield return (result, true);
+                yield break;
+            }
+            if (node is StackArgumentCallNode stackCall) {
+                // Same operand slice, flattened into this node's Arguments after its Call's
+                // arguments; the trailing stack arguments print at invocation level and stay.
+                int callArgumentCount = stackCall.Call.Arguments.Count;
+                int skip = OperandCount(stackCall.Call.TypedArgumentMask);
+                for (int index = 0; index < stackCall.Arguments.Count; index++) {
+                    bool operand = index >= callArgumentCount - 1 - skip && index < callArgumentCount - 1;
+                    if (!operand) {
+                        yield return (stackCall.Arguments[index], false);
+                    }
                 }
                 yield break;
             }
@@ -105,6 +140,10 @@ internal static class IrFlagReadCensusClassifier {
                 yield return (child, false);
             }
         }
+
+        /// <summary>The operand count a typed call carries: one operand bit per signature
+        /// parameter, aggregated on <see cref="ProcedureCallHelperNode.TypedArgumentMask"/>.</summary>
+        private static int OperandCount(CpuValues mask) => BitOperations.PopCount((ulong)mask);
 
         private void ClassifyRead((IrBlock Block, int Index) read, IrSsaValue value,
             FlagReadCensus census) {

@@ -8,6 +8,10 @@ start:
     call function_a
     mov cx, 2
     call function_b
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:608h], cx
     hlt
 
 function_a:

@@ -72,6 +72,8 @@ store_delay:
     cmp word [stored], 0x03FF
     jne failure
     mov ax, 0x600D
+    mov word [ss:604h], ax
+    mov word [ss:606h], bx
     hlt
 
 failure:

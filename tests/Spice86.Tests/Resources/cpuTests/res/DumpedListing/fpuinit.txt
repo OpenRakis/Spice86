@@ -13,7 +13,7 @@ F000:001B xor BX,BX
 F000:001D mov AX,word ptr DS:[0x0100]
 F000:0020 and AH,0x0F
 F000:0023 cmp AH,3
-F000:0026 jne near 0x00C4
+F000:0026 jne near 0x00CF
 F000:002A fwait
 F000:002B fnstcw word ptr DS:[0x0100]
 F000:002F inc BX
@@ -26,40 +26,42 @@ F000:003D fwait
 F000:003E fnstcw word ptr DS:[0x0100]
 F000:0042 fwait
 F000:0043 test byte ptr DS:[0x0100],0x80
-F000:0048 je short 0x00C4
-F000:004A mov word ptr DS:[0x0100],0x0B7F
-F000:0050 mov word ptr DS:[0x0104],0xA55A
-F000:0056 fldcw word ptr DS:[0x0100]
-F000:005B fnstcw word ptr DS:[0x0102]
-F000:0060 cmp word ptr DS:[0x0102],0x0B7F
-F000:0066 jne short 0x00C4
-F000:0068 cmp word ptr DS:[0x0104],0xA55A
-F000:006E jne short 0x00C4
-F000:0070 fndisi
-F000:0072 fnstcw word ptr DS:[0x0102]
-F000:0076 cmp word ptr DS:[0x0102],0x0BFF
-F000:007C jne short 0x00C4
-F000:007E mov AX,0x2000
-F000:0081 mov ES,AX
-F000:0083 mov EDI,0x00000100
-F000:0089 mov word ptr ES:[DI],0x077F
-F000:008E fldcw word ptr ES:[EDI]
-F000:0092 fnstcw word ptr DS:[0x0102]
-F000:0096 cmp word ptr DS:[0x0102],0x077F
-F000:009C jne short 0x00C4
-F000:009E fninit
-F000:00A0 fnstcw word ptr DS:[0x0102]
-F000:00A4 cmp word ptr DS:[0x0102],0x03FF
-F000:00AA jne short 0x00C4
-F000:00AC fldcw word ptr DS:[0x0100]
-F000:00B0 fwait
-F000:00B1 fninit
-F000:00B3 fwait
-F000:00B4 fnstcw word ptr DS:[0x0102]
-F000:00B8 cmp word ptr DS:[0x0102],0x03FF
-F000:00BE jne short 0x00C4
-F000:00C0 mov AX,0x600D
-F000:00C3 hlt
-F000:00C4 mov AX,0x0BAD
-F000:00C7 hlt
+F000:0048 je near 0x00CF
+F000:004C mov word ptr DS:[0x0100],0x0B7F
+F000:0052 mov word ptr DS:[0x0104],0xA55A
+F000:0058 fldcw word ptr DS:[0x0100]
+F000:005D fnstcw word ptr DS:[0x0102]
+F000:0062 cmp word ptr DS:[0x0102],0x0B7F
+F000:0068 jne short 0x00CF
+F000:006A cmp word ptr DS:[0x0104],0xA55A
+F000:0070 jne short 0x00CF
+F000:0072 fndisi
+F000:0074 fnstcw word ptr DS:[0x0102]
+F000:0078 cmp word ptr DS:[0x0102],0x0BFF
+F000:007E jne short 0x00CF
+F000:0080 mov AX,0x2000
+F000:0083 mov ES,AX
+F000:0085 mov EDI,0x00000100
+F000:008B mov word ptr ES:[DI],0x077F
+F000:0090 fldcw word ptr ES:[EDI]
+F000:0094 fnstcw word ptr DS:[0x0102]
+F000:0098 cmp word ptr DS:[0x0102],0x077F
+F000:009E jne short 0x00CF
+F000:00A0 fninit
+F000:00A2 fnstcw word ptr DS:[0x0102]
+F000:00A6 cmp word ptr DS:[0x0102],0x03FF
+F000:00AC jne short 0x00CF
+F000:00AE fldcw word ptr DS:[0x0100]
+F000:00B2 fwait
+F000:00B3 fninit
+F000:00B5 fwait
+F000:00B6 fnstcw word ptr DS:[0x0102]
+F000:00BA cmp word ptr DS:[0x0102],0x03FF
+F000:00C0 jne short 0x00CF
+F000:00C2 mov AX,0x600D
+F000:00C5 mov word ptr SS:[0x0604],AX
+F000:00C9 mov word ptr SS:[0x0606],BX
+F000:00CE hlt
+F000:00CF mov AX,0x0BAD
+F000:00D2 hlt
 F000:FFF0 jmp near 0

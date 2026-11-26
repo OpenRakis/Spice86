@@ -54,20 +54,35 @@ internal sealed class HardwareInterruptEffectBuilder {
 
     /// <summary>The registers a hardware interrupt handler can observe and clobber: every general and
     /// segment register except SP/ESP and SS (its iret restores the stack pointer). No status flag or
-    /// DF: the iret restores FLAGS.</summary>
+    /// DF: the iret restores FLAGS, so only a handler that writes the pushed image dirties them -
+    /// <see cref="DeliveredFlags"/> covers that case.</summary>
     public const CpuValues InterruptHandlerRegisters = CpuValues.Eax | CpuValues.Ecx
         | CpuValues.Edx | CpuValues.Ebx | CpuValues.Ebp | CpuValues.Esi
         | CpuValues.Edi | CpuValues.Es | CpuValues.Cs | CpuValues.Ds
         | CpuValues.Fs | CpuValues.Gs;
 
+    /// <summary>The status flags and DF a handler can observe when it reads the FLAGS image the
+    /// delivery pushed or the flags it was entered with, and can dirty when it writes that image;
+    /// a handler that cannot observe them leaves the interrupted code's flag work dead, and one
+    /// that cannot patch them leaves its flags unchanged.</summary>
+    private const CpuValues DeliveredFlags = CpuValues.StatusFlags | CpuValues.Direction;
+
+    /// <summary>The byte offset of the FLAGS word inside the 16-bit frame a delivery pushes:
+    /// IP at +0, CS at +2, FLAGS at +4.</summary>
+    private const int DeliveredFlagsOffset = 4;
+
     /// <summary>The effect to assume when the program's hardware interrupt handlers are unknown:
-    /// every register a handler can observe may be read and may be changed.</summary>
+    /// every register a handler can observe, the delivery frame and the FLAGS image may be read,
+    /// and every register a handler can clobber plus the FLAGS image it may patch may be changed.</summary>
     internal static CallEffect Conservative { get; } =
-        new(InterruptHandlerRegisters, InterruptHandlerRegisters);
+        new(InterruptHandlerRegisters | IrEffectsVisitor.InterruptFrameReads | DeliveredFlags,
+            InterruptHandlerRegisters | DeliveredFlags);
 
     private static CallEffect Empty { get; } = new(CpuValues.None, CpuValues.None);
 
     private static readonly IrSsaValue[] SsaRegisters = IrValueSets.ValuesIn(CpuValues.Registers);
+    private static readonly IrSsaValue[] SsaValues =
+        IrValueSets.ValuesIn(CpuValues.Registers | DeliveredFlags);
 
     private readonly CfgGeneratorContext _context;
     private readonly TransferEmitter _transferEmitter;
@@ -77,6 +92,11 @@ internal sealed class HardwareInterruptEffectBuilder {
     private readonly Dictionary<CfgBlock, CfgCodePartition> _partitionByBlock = new();
     private readonly Dictionary<CfgCodePartition, MethodPlan> _methodByPartition = new();
     private readonly Dictionary<(CfgCodePartition Partition, ICfgNode Entry), CallEffect> _summaries = new();
+    private readonly Dictionary<(CfgCodePartition Partition, ICfgNode Entry, int Low, int High,
+            bool Writes), bool> _frameRangeAccesses = new();
+    private readonly HashSet<(CfgCodePartition, ICfgNode, int, int, bool)> _decidingFrameRanges =
+        new();
+    private readonly Dictionary<MethodPlan, IrFrames> _framesByMethod = new();
     private readonly Dictionary<MethodPlan, (IrMethod Method, IrSsa Ssa, IrStackSlots Slots)>
         _liftedByMethod = new();
     private readonly HashSet<(CfgCodePartition Partition, ICfgNode Entry)> _inProgress = new();
@@ -116,6 +136,9 @@ internal sealed class HardwareInterruptEffectBuilder {
             return effect;
         } finally {
             _summaries.Clear();
+            _frameRangeAccesses.Clear();
+            _decidingFrameRanges.Clear();
+            _framesByMethod.Clear();
         }
     }
 
@@ -148,14 +171,21 @@ internal sealed class HardwareInterruptEffectBuilder {
             CallEffect summary = SummaryOf(partition, entry.Node);
             reads |= summary.Reads;
             writes |= summary.Writes;
+            if (ObservesDeliveredFlags(partition, entry)) {
+                reads |= DeliveredFlags;
+            }
+            if (PatchesDeliveredFlags(partition, entry)) {
+                writes |= DeliveredFlags;
+            }
         }
         if (setup.MouseUserSubroutineRegistered) {
             reads |= MouseUserSubroutineUses;
             writes |= MouseUserSubroutineWrites;
         }
         return new CallEffect(
-            reads & InterruptHandlerRegisters,
-            writes & InterruptHandlerRegisters);
+            (reads & (InterruptHandlerRegisters | DeliveredFlags))
+                | IrEffectsVisitor.InterruptFrameReads,
+            writes & (InterruptHandlerRegisters | DeliveredFlags));
     }
 
     /// <summary>The registers the summary of the (<paramref name="partition"/>,
@@ -329,10 +359,188 @@ internal sealed class HardwareInterruptEffectBuilder {
         IrPassPipeline.Run(method, IrPass.InstructionIdioms, verify: false, buildWebs: false,
             new GenerationStepTimer());
         IrSsa ssa = IrSsa.Build(method);
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, ssa, _context.Policy),
+            _ => null);
         (IrMethod Method, IrSsa Ssa, IrStackSlots Slots) data = (method, ssa, slots);
         _liftedByMethod[methodPlan] = data;
         return data;
+    }
+
+    /// <summary>The frame analysis of the lifted method of <paramref name="methodPlan"/>:
+    /// computed once per method, over the same neutrally lifted IR the summaries use.</summary>
+    private IrFrames FramesOf(MethodPlan methodPlan) {
+        if (_framesByMethod.TryGetValue(methodPlan, out IrFrames? frames)) {
+            return frames;
+        }
+        (IrMethod method, IrSsa ssa, IrStackSlots slots) = LiftedMethodOf(methodPlan);
+        frames = IrFrames.Compute(method, ssa, slots, statement =>
+            statement.Origin is CfgInstruction instruction
+                ? CallTargetWrites(instruction)
+                : CpuValues.Registers);
+        _framesByMethod[methodPlan] = frames;
+        return frames;
+    }
+
+    /// <summary>Whether the handler entered at <paramref name="entry"/> may observe the FLAGS
+    /// image the delivery pushed: an installed stub never touches the frame itself, only the
+    /// program handlers its <c>int</c> instructions invoke may; a program handler may when a
+    /// stack access reaches the FLAGS word at <see cref="DeliveredFlagsOffset"/> of its delivery
+    /// frame or the reach cannot be proven.</summary>
+    private bool ObservesDeliveredFlags(CfgCodePartition partition, CfgCodePartitionEntry entry) {
+        if (_installed.Contains(entry.Address)) {
+            return InstalledTargetsAccessAboveFrame(partition, writes: false);
+        }
+        return MayAccessFrameRange(partition, entry.Node,
+            DeliveredFlagsOffset, DeliveredFlagsOffset + 2, writes: false);
+    }
+
+    /// <summary>Whether the handler entered at <paramref name="entry"/> may write the FLAGS image
+    /// the delivery pushed: the same reach as <see cref="ObservesDeliveredFlags"/> restricted to
+    /// write accesses, so a handler that only reads the image does not dirty the flags.</summary>
+    private bool PatchesDeliveredFlags(CfgCodePartition partition, CfgCodePartitionEntry entry) {
+        if (_installed.Contains(entry.Address)) {
+            return InstalledTargetsAccessAboveFrame(partition, writes: true);
+        }
+        return MayAccessFrameRange(partition, entry.Node,
+            DeliveredFlagsOffset, DeliveredFlagsOffset + 2, writes: true);
+    }
+
+    /// <summary>Whether the method entered at <paramref name="entry"/> may perform a stack
+    /// access covering a byte in [<paramref name="lowOffset"/>, <paramref name="highOffset"/>)
+    /// relative to its own entry SP - a write access only when <paramref name="writes"/> is set:
+    /// a proven frame access overlapping the range answers true, an SS access the frame analysis
+    /// cannot place may reach it, and a followed call / <c>int</c> target that may access above its
+    /// own entry frame reaches the caller's range. A cycle or an unanalysable method or target
+    /// answers true: the range cannot be proven untouched.</summary>
+    private bool MayAccessFrameRange(CfgCodePartition partition, ICfgNode entry,
+        int lowOffset, int highOffset, bool writes) {
+        (CfgCodePartition, ICfgNode, int, int, bool) key =
+            (partition, entry, lowOffset, highOffset, writes);
+        if (_frameRangeAccesses.TryGetValue(key, out bool cached)) {
+            return cached;
+        }
+        if (!_decidingFrameRanges.Add(key)) {
+            return true;
+        }
+        bool result = ComputeFrameRangeAccess(partition, entry, lowOffset, highOffset, writes);
+        _decidingFrameRanges.Remove(key);
+        _frameRangeAccesses[key] = result;
+        return result;
+    }
+
+    private bool ComputeFrameRangeAccess(CfgCodePartition partition, ICfgNode entry,
+        int lowOffset, int highOffset, bool writes) {
+        if (!_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
+            return true;
+        }
+        (IrMethod method, IrSsa ssa, IrStackSlots _) = LiftedMethodOf(methodPlan);
+        IrFrames frames = FramesOf(methodPlan);
+        foreach (IrFrameAccess access in frames.Accesses) {
+            if ((!writes || access.IsWrite)
+                && access.EntryOffset < highOffset && access.EntryOffset + access.Width > lowOffset) {
+                return true;
+            }
+        }
+        IrMemoryAliasAnalysis alias = new(method, ssa);
+        Dictionary<SegmentedPointerNode, IrFrameAccess?> byNode =
+            new(ReferenceEqualityComparer.Instance);
+        foreach ((SegmentedPointerNode pointer, IrFrameAccess? access) in frames.PointerResults) {
+            if (!byNode.ContainsKey(pointer) || access is null) {
+                byNode[pointer] = access;
+            }
+        }
+        foreach (IrBlock block in method.Blocks) {
+            for (int index = 0; index < block.Statements.Count; index++) {
+                IrStatement statement = block.Statements[index];
+                ValueNode? storeTarget = null;
+                if (statement.Node is BinaryOperationNode {
+                        BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: SegmentedPointerNode or AbsolutePointerNode } assign) {
+                    storeTarget = assign.Left;
+                }
+                foreach (SegmentedPointerNode pointer in IrAstChildren.Descendants(statement.Node)
+                             .OfType<SegmentedPointerNode>()) {
+                    if (writes && !ReferenceEquals(pointer, storeTarget)) {
+                        continue;
+                    }
+                    if (alias.OfPointer(pointer, statement, block, index).SegmentRegister
+                            == IrSsaValue.Ss
+                        && (!byNode.TryGetValue(pointer, out IrFrameAccess? access)
+                            || access is null)) {
+                        return true;
+                    }
+                }
+                if (statement.Origin is CfgInstruction instruction && !instruction.IsReturn
+                    && FollowsAboveFrameAccess(instruction, partition, writes)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether a transfer origin of <paramref name="instruction"/> reaches a target
+    /// that may access above its own entry frame: a target inside the analysed partition is an
+    /// internal edge whose accesses were already scanned; an unanalysable target answers true.</summary>
+    private bool FollowsAboveFrameAccess(CfgInstruction instruction, CfgCodePartition partition,
+        bool writes) {
+        foreach (ICfgNode target in TransferTargets(instruction)) {
+            if (target.ContainingBlock is { } block
+                && _partitionByBlock.TryGetValue(block, out CfgCodePartition? owner)
+                && ReferenceEquals(owner, partition)) {
+                continue;
+            }
+            if (IsInstalled(target)) {
+                if (TargetOf(target) is { } installed
+                    && InstalledTargetsAccessAboveFrame(installed.Partition, writes)) {
+                    return true;
+                }
+                continue;
+            }
+            if (TargetOf(target) is not { } followed
+                || TargetAccessesAboveFrame(followed.Partition, followed.Entry.Node, writes)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether the program handlers the installed stub of
+    /// <paramref name="installedPartition"/> calls through its <c>int</c> instructions may
+    /// access above their own entry frames. Mirrors <see cref="InstalledHandlerSummary"/>: only
+    /// analysable program targets are followed.</summary>
+    private bool InstalledTargetsAccessAboveFrame(CfgCodePartition installedPartition, bool writes) {
+        foreach (CfgInstruction instruction in installedPartition.Blocks
+                     .SelectMany(block => block.Instructions)
+                     .OfType<CfgInstruction>()) {
+            if (!IsInterruptCall(instruction)) {
+                continue;
+            }
+            foreach (ICfgNode target in TransferTargets(instruction)) {
+                if (IsInstalled(target)) {
+                    continue;
+                }
+                if (TargetOf(target) is not { } followed
+                    || TargetAccessesAboveFrame(followed.Partition, followed.Entry.Node, writes)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether the method of (<paramref name="partition"/>, <paramref name="entry"/>)
+    /// may access at or above the bytes its own entry frame holds (its return address and the
+    /// locals below it stay inside its frame; anything at <see cref="IrFrames.ReturnAddressBytes"/>
+    /// or beyond reaches the caller). An unanalysable method or frame answers true.</summary>
+    private bool TargetAccessesAboveFrame(CfgCodePartition partition, ICfgNode entry, bool writes) {
+        if (!_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
+            return true;
+        }
+        if (FramesOf(methodPlan).ReturnAddressBytes is not { } returnBytes) {
+            return true;
+        }
+        return MayAccessFrameRange(partition, entry, returnBytes, int.MaxValue, writes);
     }
 
     /// <summary>Records the observed targets of the <c>int</c> instructions of
@@ -438,7 +646,11 @@ internal sealed class HardwareInterruptEffectBuilder {
             anySite = true;
             List<SegmentedAddress> targets = TransferTargets(instruction)
                 .Select(target => target.Address).ToList();
-            if (targets.Count == 0 || targets.Any(target => target != service.StubAddress)) {
+            // A target the stub's own dispatch callback moved CS:IP to - an EXEC child's entry
+            // or a terminate's resume landing - is not a hooked target: the site still invokes
+            // only the installed stub.
+            if (targets.Count == 0 || targets.Any(target => target != service.StubAddress
+                    && !_context.ExecChildEntries.Contains(target))) {
                 return false;
             }
         }
@@ -470,7 +682,7 @@ internal sealed class HardwareInterruptEffectBuilder {
             _ssa = ssa;
             _preservation = new IrPreservation(method, ssa, slots, TransferChanges);
             _partition = partition;
-            _entryVersions = SsaRegisters
+            _entryVersions = SsaValues
                 .Select(value => ssa.VersionBefore(entry.Block, 0, value))
                 .ToArray();
         }
@@ -482,7 +694,7 @@ internal sealed class HardwareInterruptEffectBuilder {
             foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
                 if (target.ContainingBlock is { } block
                     && _owner._partitionByBlock.TryGetValue(block, out CfgCodePartition? partition)
-                    && partition == _partition) {
+                    && ReferenceEquals(partition, _partition)) {
                     continue;
                 }
                 yield return target;
@@ -558,7 +770,9 @@ internal sealed class HardwareInterruptEffectBuilder {
         /// <summary>The <see cref="CpuValues"/> bits <paramref name="reads"/> covers that can still
         /// hold an entry input at <paramref name="site"/>: the entry version itself, and every
         /// version the analysis cannot prove a full overwrite - a partial definition or a join
-        /// (phi) can carry the incoming bytes, so its reads conservatively count as entry reads.</summary>
+        /// (phi) can carry the incoming bytes, so its reads conservatively count as entry reads.
+        /// Status flags and DF count the same way: a flag read at its entry version is the FLAGS
+        /// image the delivery pushed, which the interrupted code must have computed.</summary>
         public CpuValues EntryReads(CpuValues reads, IrStatement site) =>
             EntryReads(reads, value => _ssa.VersionUsed(site, value));
 
@@ -567,8 +781,8 @@ internal sealed class HardwareInterruptEffectBuilder {
 
         private CpuValues EntryReads(CpuValues reads, Func<IrSsaValue, int> versionUsed) {
             CpuValues result = CpuValues.None;
-            for (int i = 0; i < SsaRegisters.Length; i++) {
-                IrSsaValue value = SsaRegisters[i];
+            for (int i = 0; i < SsaValues.Length; i++) {
+                IrSsaValue value = SsaValues[i];
                 int version = versionUsed(value);
                 if (version < 0 || version == _entryVersions[i]
                     || _ssa.Info(version).Kind != IrSsaDefinitionKind.Definition) {

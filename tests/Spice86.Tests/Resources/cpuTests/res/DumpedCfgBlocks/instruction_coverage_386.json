@@ -5,13 +5,13 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:0162",
+  "lastExecutedAddress": "F000:016C",
   "lastExecutedBlockId": 3,
   "blocks": [
     {
       "id": 3,
       "entry": "F000:0000",
-      "term": "F000:0162",
+      "term": "F000:016C",
       "pred": [
         2
       ],
@@ -128,6 +128,8 @@
         "0F91474B|setno byte ptr DS:[BX\u002B0x4B]",
         "0F9A474C|setp byte ptr DS:[BX\u002B0x4C]",
         "0F9B474D|setnp byte ptr DS:[BX\u002B0x4D]",
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },

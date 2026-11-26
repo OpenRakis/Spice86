@@ -1,0 +1,198 @@
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual Action unknown_F000_0029_F0029() {
+        CheckExternalEvents(biosSegment, 0x0029);
+        if (BP != 0x002D) {
+            throw FailAsUntested($"Untested near call target 0x{BP:X4} at F000:0029");
+        }
+        NearCall(biosSegment, 0x002C, unknown_F000_002D_F002D_AsmEntry);
+        return unknown_F000_002C_F002C();
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual Action unknown_F000_002A_F002A() {
+        CheckExternalEvents(biosSegment, 0x002A);
+        if (BP != 0x002F) {
+            throw FailAsUntested($"Untested near call target 0x{BP:X4} at F000:002A");
+        }
+        NearCall(biosSegment, 0x002C, unknown_F000_002F_F002F_AsmEntry);
+        return unknown_F000_002C_F002C();
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_002D_F002D() {
+        CheckExternalEvents(biosSegment, 0x002D);
+        return unknown_F000_0031_F0031(DX);
+    }
+
+    public virtual Action unknown_F000_002D_F002D_Asm() {
+        DX = unknown_F000_002D_F002D();
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_002F_F002F() {
+        CheckExternalEvents(biosSegment, 0x002F);
+        return unknown_F000_0033_F0033(DX);
+    }
+
+    public virtual Action unknown_F000_002F_F002F_Asm() {
+        DX = unknown_F000_002F_F002F();
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_0031_F0031(ushort word1) {
+        DX = word1;
+        CheckExternalEvents(biosSegment, 0x0031);
+        DX++;
+        NearReturn();
+        return DX;
+    }
+
+    public virtual Action unknown_F000_0031_F0031_Asm() {
+        DX = unknown_F000_0031_F0031(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX.</summary>
+    public virtual ushort unknown_F000_0033_F0033(ushort word1) {
+        DX = word1;
+        CheckExternalEvents(biosSegment, 0x0033);
+        DX += 0x0010;
+        NearReturn();
+        return DX;
+    }
+
+    public virtual Action unknown_F000_0033_F0033_Asm() {
+        DX = unknown_F000_0033_F0033(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        SS = 0;
+        SP = 0x0100;
+        DX = 0;
+        DX = NearCall(biosSegment, 0x000F, () => unknown_F000_0031_F0031(0));
+        DX = NearCall(biosSegment, 0x0012, () => unknown_F000_0033_F0033(DX));
+        BP = 0x002D;
+        NearCall(biosSegment, 0x0018, unknown_F000_0029_F0029Entry);
+        BP = 0x002F;
+        NearCall(biosSegment, 0x001E, unknown_F000_002A_F002AEntry);
+        SsUInt32[0x0600] = (uint)SP | (uint)DX << 16;
+        return Hlt();
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    public virtual Action unknown_F000_002C_F002C() {
+        CheckExternalEvents(biosSegment, 0x002C);
+        return NearRet();
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0029_F0029Entry;
+    private readonly Func<int, Action> unknown_F000_002A_F002AEntry;
+    private readonly Func<int, Action> unknown_F000_002D_F002D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_002F_F002F_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0031_F0031_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0033_F0033_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+    private readonly Func<int, Action> unknown_F000_002C_F002CEntry;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+
+        unknown_F000_0029_F0029Entry = _ => unknown_F000_0029_F0029();
+        unknown_F000_002A_F002AEntry = _ => unknown_F000_002A_F002A();
+        unknown_F000_002D_F002D_AsmEntry = _ => unknown_F000_002D_F002D_Asm();
+        unknown_F000_002F_F002F_AsmEntry = _ => unknown_F000_002F_F002F_Asm();
+        unknown_F000_0031_F0031_AsmEntry = _ => unknown_F000_0031_F0031_Asm();
+        unknown_F000_0033_F0033_AsmEntry = _ => unknown_F000_0033_F0033_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        unknown_F000_002C_F002CEntry = _ => unknown_F000_002C_F002C();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0029, unknown_F000_0029_F0029Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002A, unknown_F000_002A_F002AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002D, unknown_F000_002D_F002D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002F, unknown_F000_002F_F002F_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0031, unknown_F000_0031_F0031_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0033, unknown_F000_0033_F0033_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002C, unknown_F000_002C_F002CEntry, "unknown");
+        DefineCallLandings(new(biosSegment, 0x0018), unknown_F000_0029_F0029Entry, new CallLanding(new(biosSegment, 0x002C), unknown_F000_002C_F002CEntry));
+        DefineCallLandings(new(biosSegment, 0x001E), unknown_F000_002A_F002AEntry, new CallLanding(new(biosSegment, 0x002C), unknown_F000_002C_F002CEntry));
+        DefineCallLandings(new(biosSegment, 0x002C), unknown_F000_002D_F002D_AsmEntry, new CallLanding(new(biosSegment, 0x0031), unknown_F000_0031_F0031_AsmEntry));
+        DefineCallLandings(new(biosSegment, 0x002C), unknown_F000_002F_F002F_AsmEntry, new CallLanding(new(biosSegment, 0x0033), unknown_F000_0033_F0033_AsmEntry));
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

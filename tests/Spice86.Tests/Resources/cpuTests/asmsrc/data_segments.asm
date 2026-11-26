@@ -71,6 +71,8 @@ start:
     mov ax, 2000h
     mov es, ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

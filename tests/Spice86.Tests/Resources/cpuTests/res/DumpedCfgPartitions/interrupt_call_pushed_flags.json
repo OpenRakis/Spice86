@@ -1,0 +1,193 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        68,
+        75
+      ],
+      "entries": [
+        {
+          "block": 68,
+          "address": "F000:004D",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        82,
+        88
+      ],
+      "entries": [
+        {
+          "block": 82,
+          "address": "F000:0056",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        35
+      ],
+      "entries": [
+        {
+          "block": 35,
+          "address": "F000:0059",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        59,
+        67,
+        78,
+        91,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "callOut",
+      "fromPartition": 1,
+      "toPartition": 3,
+      "fromBlock": 68,
+      "toBlock": 35,
+      "from": "F000:0053",
+      "target": "F000:0059",
+      "callContinuationBlock": 75,
+      "callContinuationAddress": "F000:0055"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 4,
+      "fromBlock": 75,
+      "toBlock": 78,
+      "from": "F000:0055",
+      "target": "F000:0037"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 2,
+      "toPartition": 3,
+      "fromBlock": 82,
+      "toBlock": 35,
+      "from": "F000:0056",
+      "target": "F000:0059",
+      "callContinuationBlock": 88,
+      "callContinuationAddress": "F000:0058"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 2,
+      "toPartition": 4,
+      "fromBlock": 88,
+      "toBlock": 91,
+      "from": "F000:0058",
+      "target": "F000:0041"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 35,
+      "toBlock": 75,
+      "from": "F000:006F",
+      "target": "F000:0055"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 35,
+      "toBlock": 88,
+      "from": "F000:006F",
+      "target": "F000:0058"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 3,
+      "toPartition": 4,
+      "fromBlock": 35,
+      "toBlock": 59,
+      "from": "F000:006F",
+      "target": "F000:002B"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 3,
+      "toPartition": 4,
+      "fromBlock": 35,
+      "toBlock": 67,
+      "from": "F000:006F",
+      "target": "F000:0034"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 4,
+      "toPartition": 1,
+      "fromBlock": 67,
+      "toBlock": 68,
+      "from": "F000:0034",
+      "target": "F000:004D",
+      "callContinuationBlock": 78,
+      "callContinuationAddress": "F000:0037"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 4,
+      "toPartition": 2,
+      "fromBlock": 78,
+      "toBlock": 82,
+      "from": "F000:003E",
+      "target": "F000:0056",
+      "callContinuationBlock": 91,
+      "callContinuationAddress": "F000:0041"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 4,
+      "toPartition": 3,
+      "fromBlock": 3,
+      "toBlock": 35,
+      "from": "F000:0029",
+      "target": "F000:0059",
+      "callContinuationBlock": 59,
+      "callContinuationAddress": "F000:002B"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 4,
+      "toPartition": 3,
+      "fromBlock": 59,
+      "toBlock": 35,
+      "from": "F000:0032",
+      "target": "F000:0059",
+      "callContinuationBlock": 67,
+      "callContinuationAddress": "F000:0034"
+    }
+  ]
+}

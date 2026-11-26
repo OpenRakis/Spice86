@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Text;
 
@@ -47,6 +48,16 @@ internal sealed class GeneratedCSharpProgram {
     /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
     /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.
     /// </summary>
+    /// <summary>
+    /// One entry per printed instruction - address, file, method and 1-based line range - the data
+    /// behind <c>GeneratedAddressMap.json</c>; empty for programs built without generation.
+    /// </summary>
+    public IReadOnlyList<GeneratedAddressMapEntry> AddressMap { get; init; } = [];
+
+    /// <summary>
+    /// The census of the <c>goto</c>s the printed program holds; empty for programs built without generation. A
+    /// diagnostic of the generator, read by the <c>goto</c> census report of the generated-code tests.
+    /// </summary>
     public GotoCensus GotoCensus { get; init; } = new();
     /// <summary>
     /// The census of the status-flag reads the printed program holds; empty for programs built without
@@ -58,6 +69,12 @@ internal sealed class GeneratedCSharpProgram {
     /// generation. A diagnostic of the generator, read by the web census report of the generated-code tests.
     /// </summary>
     public WebCensus WebCensus { get; init; } = new();
+    /// <summary>
+    /// Every candidate method whose generated body stayed untyped, with the first rule of the
+    /// typed-signature analysis that refused it; empty for programs built without generation. A
+    /// diagnostic of the generator, read by the untyped census report of the generated-code tests.
+    /// </summary>
+    public IReadOnlyList<UntypedMethod> UntypedMethods { get; init; } = [];
     /// <summary>
     /// The constant-offset memory accesses the printed program's methods make through a segment
     /// register other than SS, collected from their final IR; empty for programs built without
@@ -71,6 +88,31 @@ internal sealed class GeneratedCSharpProgram {
     /// labels: one per CS global access per code segment that accesses it.
     /// </summary>
     public IReadOnlyList<DataSymbolLabel> DataSymbolLabels { get; init; } = [];
+
+    /// <summary>The addresses of the <c>int</c> instructions whose typed service call's frame
+    /// bytes are excluded from the differential gate: frameless calls, which write no interrupt
+    /// frame at all, and terminating calls, whose pushed frame's flag image can legitimately
+    /// differ because the typed convention drops flag outputs. The gate excludes the six bytes
+    /// such a frame occupies below the recorded caller stack pointer.</summary>
+    public IReadOnlyList<SegmentedAddress> FramelessServiceCallSites { get; init; } = [];
+
+    /// <summary>The <c>call</c> instruction address and reserved argument bytes of every
+    /// <c>CallWithStackSpace</c> site the program contains: the bytes the interpreted run's
+    /// argument pushes wrote and the relaxed run only reserves. The differential gate excludes
+    /// exactly that many bytes above the stack pointer the interpreted run had at the call, and
+    /// only under the abandoned-stack-slots relaxation. Empty otherwise.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> StackSpaceCallSites {
+        get; init;
+    } = [];
+
+    /// <summary>The <c>push</c> instruction address and pushed byte count of every same-register
+    /// save pair a typed method dropped under the abandoned-stack-slots relaxation: the bytes the
+    /// interpreted run's push wrote below its stack pointer. The differential gate excludes
+    /// exactly that many bytes below the stack pointer the interpreted run had at the push, and
+    /// only under that relaxation. Empty otherwise.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, int Bytes)> DroppedStackSlotSites {
+        get; init;
+    } = [];
 
 
 }

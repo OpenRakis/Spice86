@@ -13,6 +13,10 @@ far_again:
     shl bx, 2
     call dword [cs:far_table+bx]
     loop far_again
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
+    mov word [ss:608h], cx
     hlt
 far_a:
     add dx, 1

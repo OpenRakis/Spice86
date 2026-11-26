@@ -70,18 +70,20 @@ F000:0104 mov byte ptr DS:[0x0049],AL
 F000:0107 mov byte ptr DS:[0x004A],0
 F000:010C xor AX,AX
 F000:010E mov ES,AX
-F000:0110 mov word ptr ES:[0x0030],0x012C
+F000:0110 mov word ptr ES:[0x0030],0x0136
 F000:0117 mov word ptr ES:[0x0032],CS
 F000:011C mov AX,0x2000
 F000:011F mov ES,AX
 F000:0121 mov BX,0x1234
 F000:0124 mov AL,byte ptr SS:[0x00010000]
-F000:012B hlt
-F000:012C push BP
-F000:012D mov BP,SP
-F000:012F mov byte ptr DS:[0x004A],1
-F000:0134 mov word ptr DS:[0x004B],BX
-F000:0138 mov word ptr SS:[BP+2],0x012B
-F000:013D pop BP
-F000:013E iret
+F000:012B mov word ptr SS:[0x0600],SP
+F000:0130 mov word ptr SS:[0x0602],SS
+F000:0135 hlt
+F000:0136 push BP
+F000:0137 mov BP,SP
+F000:0139 mov byte ptr DS:[0x004A],1
+F000:013E mov word ptr DS:[0x004B],BX
+F000:0142 mov word ptr SS:[BP+2],0x012B
+F000:0147 pop BP
+F000:0148 iret
 F000:FFF0 jmp short 0

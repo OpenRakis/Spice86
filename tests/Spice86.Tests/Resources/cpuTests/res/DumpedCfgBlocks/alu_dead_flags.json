@@ -5,18 +5,20 @@
   "entryPointAddresses": [
     "F000:FFF0"
   ],
-  "lastExecutedAddress": "F000:01DE",
+  "lastExecutedAddress": "F000:01E8",
   "lastExecutedBlockId": 196,
   "blocks": [
     {
       "id": 196,
       "entry": "F000:01DE",
-      "term": "F000:01DE",
+      "term": "F000:01E8",
       "pred": [
         185
       ],
       "succ": [],
       "asm": [
+        "3689260006|mov word ptr SS:[0x0600],SP",
+        "368C160206|mov word ptr SS:[0x0602],SS",
         "F4|hlt"
       ]
     },
@@ -70,7 +72,7 @@
         "BC0010|mov SP,0x1000",
         "FC|cld",
         "31DB|xor BX,BX",
-        "BEDF01|mov SI,0x01DF",
+        "BEE901|mov SI,0x01E9",
         "C706000F0400|mov word ptr DS:[0x0F00],4"
       ]
     },

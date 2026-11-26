@@ -46,20 +46,21 @@ public class DataCommentTest {
             ServiceStringArgument.None, null, []);
 
     private static CfgBlock[] SplitAfterInterrupt(TestInstructionHelper helper,
-        (ushort Offset, byte[] Bytes)[] instructions, bool withDosStub) {
+        (ushort Offset, byte[] Bytes)[] instructions) {
         CfgInstruction[] parsed = instructions
             .Select(instruction => Parse(helper, instruction.Offset, instruction.Bytes))
             .ToArray();
         Chain(parsed);
         int interrupt = Array.FindIndex(instructions, instruction => instruction.Bytes[0] == 0xCD);
-        if (withDosStub && interrupt >= 0) {
-            // The only observed target of the int site is the installed DOS stub.
+        if (interrupt >= 0) {
+            // The int site needs an observed target to stay an InterruptCall: the stub, installed
+            // as the vector's handler only when the test sets up service contracts.
             CfgInstruction stub = Parse(helper, DosStub.Offset, [0xCF]);
             parsed[interrupt].SuccessorsPerType[InstructionSuccessorType.Normal] =
                 new HashSet<ICfgNode> { stub };
             parsed = [.. parsed, stub];
         }
-        if (interrupt < 0 || interrupt + 1 == parsed.Length - (withDosStub ? 1 : 0)) {
+        if (interrupt < 0 || interrupt + 1 == parsed.Length - 1) {
             return [Block(1, parsed)];
         }
         // A call's continuation is a CallToReturn edge, not a Normal one.
@@ -75,8 +76,14 @@ public class DataCommentTest {
     private static GeneratedCSharpProgram Generate(ChangedMemorySnapshot changed, byte[] memory,
         IReadOnlyDictionary<int, InterruptServiceEntry>? dosContracts,
         params (ushort Offset, byte[] Bytes)[] instructions) {
-        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), instructions,
-            dosContracts is not null);
+        // The stack value proofs that feed the string hints need a known RAM SS; give the method
+        // one in code rather than relying on a loader entry fact the generator does not get here.
+        (ushort Offset, byte[] Bytes)[] rebased = [
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
+        ];
+        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), rebased);
         CfgCodePartition partition = new() {
             Id = 1,
             Kind = CfgCodePartitionKind.Observed,
@@ -296,7 +303,7 @@ public class DataCommentTest {
         golden.Should().Contain("InterruptCall(cs1, 0x0111, 0x21)");
         golden.Should().Contain("Dos.WriteFile(");
         golden.Should().Contain("// DOS 40h write handle 1 \"");
-        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\"))");
+        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x0179, '\\0', \"NOFILE.TXT\"))");
         golden.Should().NotContain("// DOS 3Dh");
     }
 
@@ -424,7 +431,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x000C, 0x21)");
+        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x0011, 0x21)");
         program.SourceText.Should().Contain("// DOS 09h print \"Hi$\"");
         program.SourceText.Should().NotContain("\"Hi\")");
         AssertCompiles(program);

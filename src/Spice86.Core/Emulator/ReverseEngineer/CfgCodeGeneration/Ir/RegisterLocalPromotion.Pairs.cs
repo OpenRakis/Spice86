@@ -42,14 +42,15 @@ internal static partial class RegisterLocalPromotion {
             && item.Candidate.Register is not SegmentRegisterNode)];
         HashSet<Candidate> consumed = new(ReferenceEqualityComparer.Instance);
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
-        int counter = 0;
+        List<(Candidate Low, string LowName, Candidate High, string HighName, Pairing Pairing)>
+            pairings = [];
         foreach ((Candidate candidate, string name) in eligible) {
             if (consumed.Contains(candidate)) {
                 continue;
             }
             foreach ((Candidate other, string otherName) in eligible) {
                 if (ReferenceEquals(candidate, other) || consumed.Contains(other)
-                    || (IrValueSets.Of(candidate.Register) & IrValueSets.Of(other.Register))
+                    || (MaskOf(candidate.Register) & MaskOf(other.Register))
                         != CpuValues.None) {
                     continue;
                 }
@@ -57,21 +58,33 @@ internal static partial class RegisterLocalPromotion {
                         is not { } pairing) {
                     continue;
                 }
-                string localName;
-                do {
-                    localName = $"value{++counter}";
-                } while (reservedNames.Contains(localName) || declared.Contains(localName));
-                declared.Add(localName);
                 (Candidate low, string lowName, Candidate high, string highName) = pairing.LowFirst
                     ? (candidate, name, other, otherName) : (other, otherName, candidate, name);
-                ApplyPair(method, low, lowName, high, highName, localName, pairing.Actions,
-                    reads, declarations, writeBacks, dropped, replacements);
+                pairings.Add((low, lowName, high, highName, pairing));
                 consumed.Add(candidate);
                 consumed.Add(other);
                 break;
             }
         }
+        HashSet<string> taken = new(reservedNames, StringComparer.Ordinal);
+        taken.UnionWith(declared);
+        int counter = 0;
+        foreach ((Candidate low, string lowName, Candidate high, string highName, Pairing pairing)
+                in pairings.OrderBy(pair => FirstAddressOf(pair.Low, pair.High))
+                    .ThenBy(pair => pair.LowName, StringComparer.Ordinal)) {
+            string localName;
+            do {
+                localName = $"dword{++counter}";
+            } while (taken.Contains(localName));
+            taken.Add(localName);
+            declared.Add(localName);
+            ApplyPair(method, low, lowName, high, highName, localName, pairing.Actions,
+                reads, declarations, writeBacks, dropped, replacements);
+        }
     }
+
+    private static SegmentedAddress FirstAddressOf(Candidate low, Candidate high) =>
+        low.FirstAddress < high.FirstAddress ? low.FirstAddress : high.FirstAddress;
 
     /// <summary>The pairing of two candidates: which one is the low half and one action per
     /// definition pair.</summary>
@@ -163,7 +176,7 @@ internal static partial class RegisterLocalPromotion {
     /// <summary>Whether only markers sit between the two definitions: they are the first and
     /// second halves of one definition site.</summary>
     private static bool EffectivelyAdjacent(Definition first, Definition second) {
-        List<IrStatement> statements = first.Block.Statements;
+        IReadOnlyList<IrStatement> statements = first.Block.Statements;
         for (int i = first.Index + 1; i < second.Index; i++) {
             if (!IrInstructionIdioms.IsMarker(statements[i])) {
                 return false;
@@ -217,7 +230,7 @@ internal static partial class RegisterLocalPromotion {
         if (name is null) {
             return null;
         }
-        List<IrStatement> statements = definition.Block.Statements;
+        IReadOnlyList<IrStatement> statements = definition.Block.Statements;
         int index = low ? definition.Index - 1 : definition.Index - 2;
         if (index < 0) {
             return null;
@@ -308,7 +321,7 @@ internal static partial class RegisterLocalPromotion {
             reads[node] = new SubstitutedRead($"(ushort)({localName} >> 16)", null);
         }
         foreach (IVisitableAstNode root in method.Blocks
-                .SelectMany(block => block.Statements.Select(statement => (IVisitableAstNode)statement.Node)
+                .SelectMany(block => block.Statements.Select(statement => statement.Node)
                     .Concat(IrAstChildren.RootsOf(block.Terminator)))) {
             foreach (BinaryOperationNode or in IrAstChildren.Descendants(root)
                     .OfType<BinaryOperationNode>()) {

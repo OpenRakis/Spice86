@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
@@ -29,8 +30,12 @@ using System.Linq;
 internal static class IrDoublePrecision {
     private static readonly RegisterRenderer Registers = new(AsmRenderingConfig.CreateSpice86Style());
 
-    /// <summary>Rewrites every register-pair operation of <paramref name="method"/>; returns how many.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
+    /// <summary>Rewrites every register-pair operation of <paramref name="method"/>; returns how many.
+    /// A temporary a rewrite leaves read only in the same block - by a chain of later pair matches,
+    /// whose own write covers the register the temporary's half-write touched - is then merged into
+    /// its readers (<see cref="IrExpressionPropagation.ApplyTemporaries"/>).</summary>
+    public static int Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
+        IrSsa ssa = editor.Ssa;
         // Counted loops are planned first so later SSA queries still see the original method:
         // their body is the pair shift the per-block matcher would otherwise consume before the
         // loop shape can be proven.
@@ -38,6 +43,7 @@ internal static class IrDoublePrecision {
         HashSet<IrBlock> loopBlocks = [.. loopPlans.Select(plan => plan.Block)];
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
         List<(IrBlock Block, List<Match> Matches)> found = [];
+        IrMemoryAliasAnalysis alias = new(method, ssa);
         foreach (IrBlock block in method.Blocks) {
             if (loopBlocks.Contains(block)) {
                 continue;
@@ -46,7 +52,7 @@ internal static class IrDoublePrecision {
             List<Match> matches = [];
             List<(int From, int To)> claimed = [];
             for (int r = 0; r < runs.Count; r++) {
-                if (MatchAt(block, runs, r, ssa) is { } match) {
+                if (MatchAt(method, block, runs, r, matches, ssa, alias) is { } match) {
                     // A non-adjacent match may span another match's window: rewritten indices
                     // would shift under it, so overlapping or nested matches are dropped.
                     int from = match.Indices[0];
@@ -67,9 +73,7 @@ internal static class IrDoublePrecision {
         }
         int rewritten = loopPlans.Count;
         foreach (CountedLoopPlan plan in loopPlans) {
-            plan.Block.Statements.Clear();
-            plan.Block.Statements.AddRange(plan.Statements);
-            plan.Block.Terminator = plan.Terminator;
+            editor.ReplaceAll(plan.Block, plan.Statements, plan.Terminator);
         }
         if (found.Count == 0) {
             return rewritten;
@@ -78,10 +82,11 @@ internal static class IrDoublePrecision {
             // Rewrite from the last pair to the first: the positions were collected on the original
             // statement list and an earlier rewrite shifts every later one.
             for (int i = matches.Count - 1; i >= 0; i--) {
-                Rewrite(method, block, matches[i]);
+                Rewrite(method, block, matches[i], editor);
             }
             rewritten += matches.Count;
         }
+        IrExpressionPropagation.ApplyTemporaries(method, editor, policy);
         return rewritten;
     }
 
@@ -93,43 +98,37 @@ internal static class IrDoublePrecision {
     /// operands are ignored.
     /// </summary>
     internal static ValueNode Combined(DoublePrecisionForm form, DataType half,
-        ValueNode alo, ValueNode ahi, ValueNode blo, ValueNode bhi) {
+        ValueNode alo, ValueNode ahi, ValueNode blo, ValueNode bhi, ValueNode? aWide) {
         DataType wide = WideType(half);
         int width = Width(half);
+        ValueNode aPair = aWide ?? Pair(wide, alo, ahi, width);
         return form switch {
             DoublePrecisionForm.Add => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.PLUS,
-                Pair(wide, blo, bhi, width)),
+                aPair, BinaryOperation.PLUS, Pair(wide, blo, bhi, width)),
             DoublePrecisionForm.Subtract => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.MINUS,
-                Pair(wide, blo, bhi, width)),
+                aPair, BinaryOperation.MINUS, Pair(wide, blo, bhi, width)),
             DoublePrecisionForm.Negate => new BinaryOperationNode(wide,
-                new ConstantNode(wide, 0), BinaryOperation.MINUS,
-                Pair(wide, alo, ahi, width)),
+                new ConstantNode(wide, 0), BinaryOperation.MINUS, aPair),
             DoublePrecisionForm.ShiftLeft => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.LEFT_SHIFT,
+                aPair, BinaryOperation.LEFT_SHIFT,
                 new ConstantNode(DataType.INT32, 1)),
             DoublePrecisionForm.ShiftRight => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.RIGHT_SHIFT,
+                aPair, BinaryOperation.RIGHT_SHIFT,
                 new ConstantNode(DataType.INT32, 1)),
             DoublePrecisionForm.SignedShiftRight => new TypeConversionNode(wide,
                 new BinaryOperationNode(SignedWideType(half),
-                    new TypeConversionNode(SignedWideType(half), Pair(wide, alo, ahi, width)),
+                    new TypeConversionNode(SignedWideType(half), aPair),
                     BinaryOperation.RIGHT_SHIFT, new ConstantNode(DataType.INT32, 1))),
             DoublePrecisionForm.And => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.BITWISE_AND,
-                Pair(wide, blo, bhi, width)),
+                aPair, BinaryOperation.BITWISE_AND, Pair(wide, blo, bhi, width)),
             DoublePrecisionForm.Or => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.BITWISE_OR,
-                Pair(wide, blo, bhi, width)),
+                aPair, BinaryOperation.BITWISE_OR, Pair(wide, blo, bhi, width)),
             DoublePrecisionForm.Xor => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.BITWISE_XOR,
-                Pair(wide, blo, bhi, width)),
+                aPair, BinaryOperation.BITWISE_XOR, Pair(wide, blo, bhi, width)),
             DoublePrecisionForm.Not => new UnaryOperationNode(wide,
-                UnaryOperation.BITWISE_NOT, Pair(wide, alo, ahi, width)),
+                UnaryOperation.BITWISE_NOT, aPair),
             _ => new BinaryOperationNode(wide,
-                Pair(wide, alo, ahi, width), BinaryOperation.MULTIPLY,
-                Pair(wide, blo, bhi, width))
+                aPair, BinaryOperation.MULTIPLY, Pair(wide, blo, bhi, width))
         };
     }
 
@@ -191,16 +190,22 @@ internal static class IrDoublePrecision {
 
     /// <summary>A matched pattern: its statements' positions, the registers and operand trees it
     /// binds and the <see cref="DoublePrecisionForm"/> it rewrites as.</summary>
+    /// <param name="AWide">When set, the wide accumulator the add/subtract's a-side halves are
+    /// the two slices of: the combined value's left operand is this node instead of
+    /// <c>Pair(ALo, AHi)</c>.</param>
+    /// <param name="SuppressHighWrite">A later match bound the wide temporary this match's
+    /// result writes: the result's high-half write has no reader left and is not emitted.</param>
     private sealed record Match(DoublePrecisionForm Form, DataType Half, RegisterNode Low,
         RegisterNode High, ValueNode ALo, ValueNode AHi, ValueNode? BLo, ValueNode? BHi,
         List<int> Indices, ICfgNode FirstOrigin, ICfgNode LastOrigin, int Runs,
-        bool OmitFirstHalfWrite);
+        bool OmitFirstHalfWrite, ValueNode? AWide, bool SuppressHighWrite);
 
     /// <summary>The statements of one instruction of the block: the indices of the statements
     /// that are not the instruction's boundary marker.</summary>
     private sealed record Run(ICfgNode Origin, List<int> BodyIndices);
 
-    private static Match? MatchAt(IrBlock block, List<Run> runs, int r, IrSsa ssa) {
+    private static Match? MatchAt(IrMethod method, IrBlock block, List<Run> runs, int r,
+            List<Match> previous, IrSsa ssa, IrMemoryAliasAnalysis alias) {
         if (TryNegate(block, runs, r) is { } match) {
             return match;
         }
@@ -210,10 +215,10 @@ internal static class IrDoublePrecision {
         if (TryShift(block, runs, r, false) is { } rightShift) {
             return rightShift;
         }
-        if (TryAddSub(block, runs, r, true) is { } add) {
+        if (TryAddSub(method, block, runs, r, true, previous, ssa, alias) is { } add) {
             return add;
         }
-        if (TryAddSub(block, runs, r, false) is { } subtract) {
+        if (TryAddSub(method, block, runs, r, false, previous, ssa, alias) is { } subtract) {
             return subtract;
         }
         return TryLogical(block, runs, r, ssa);
@@ -313,7 +318,7 @@ internal static class IrDoublePrecision {
         }
         List<int> indices = [.. first.BodyIndices, .. second.BodyIndices, .. third.BodyIndices];
         return new Match(DoublePrecisionForm.Negate, low.DataType, low, high, alo, high, null, null,
-            indices, first.Origin, third.Origin, 3, false);
+            indices, first.Origin, third.Origin, 3, false, null, false);
     }
 
     private static Match? TryShift(IrBlock block, List<Run> runs, int r, bool left) {
@@ -343,7 +348,7 @@ internal static class IrDoublePrecision {
         DoublePrecisionForm form = left ? DoublePrecisionForm.ShiftLeft
             : carry.Signed ? DoublePrecisionForm.SignedShiftRight : DoublePrecisionForm.ShiftRight;
         return new Match(form, low.DataType, low, high, low, high, null, null, indices,
-            first.Origin, second.Origin, 2, first.BodyIndices.Count == 1);
+            first.Origin, second.Origin, 2, first.BodyIndices.Count == 1, null, false);
     }
 
     /// <summary>Validates the carry-out side of the pair: the flag carry assignment whose masked
@@ -422,7 +427,8 @@ internal static class IrDoublePrecision {
         return other;
     }
 
-    private static Match? TryAddSub(IrBlock block, List<Run> runs, int r, bool add) {
+    private static Match? TryAddSub(IrMethod method, IrBlock block, List<Run> runs, int r,
+            bool add, List<Match> previous, IrSsa ssa, IrMemoryAliasAnalysis alias) {
         if (r + 1 >= runs.Count) {
             return null;
         }
@@ -474,9 +480,127 @@ internal static class IrDoublePrecision {
             return null;
         }
         List<int> indices = [.. first.BodyIndices, .. second.BodyIndices];
+        ValueNode? aWide = null;
+        if (low.DataType == DataType.UINT16
+            && ShiftAccumulator(method, block, runs, r, first, low, high, alo, ahi,
+                previous, ssa, alias) is { } accumulator) {
+            aWide = accumulator.Reference;
+            if (accumulator.SuppressHighWrite) {
+                previous[^1] = previous[^1] with { SuppressHighWrite = true };
+            }
+        }
         return new Match(add ? DoublePrecisionForm.Add : DoublePrecisionForm.Subtract,
             low.DataType, low, high, alo, ahi, blo, bhi, indices,
-            first.Origin, second.Origin, 2, false);
+            first.Origin, second.Origin, 2, false, aWide, false);
+    }
+
+    /// <summary>When the add/subtract's accumulator continues the wide value an earlier shift
+    /// pair just computed: <paramref name="previous"/> ends in a
+    /// left-shift match (shl/rcl) on the same halves, <paramref name="high"/> is read by the
+    /// second instruction at the version the pair's rotate write defined, and
+    /// <paramref name="alo"/> is that pair's low slice - <paramref name="low"/> itself when the
+    /// pair keeps its first-half write, or a forwarded copy of the low half of its combined
+    /// initializer (<c>(ushort)((ushort)x &lt;&lt; k)</c> is the same value as
+    /// <c>(ushort)(x &lt;&lt; k)</c>). The pair's left operand then reads the wide temporary the
+    /// earlier match's rewrite emits. The pair's high-half write is suppressed when the
+    /// add/subtract is its version's only reader; any further reader keeps it. Refuses when a
+    /// register the forwarded copy reads changed version between the rotate and the add, or a
+    /// faulting, interrupting or memory-boundary statement between them could observe the
+    /// register the write defined.</summary>
+    private static (VariableReferenceNode Reference, bool SuppressHighWrite)? ShiftAccumulator(
+            IrMethod method, IrBlock block, List<Run> runs, int r, Run first,
+            RegisterNode low, RegisterNode high, ValueNode alo, ValueNode ahi,
+            List<Match> previous, IrSsa ssa, IrMemoryAliasAnalysis alias) {
+        if (previous.Count == 0 || previous[^1] is not { } shift
+            || shift.Form != DoublePrecisionForm.ShiftLeft
+            || !shift.High.Equals(high) || !shift.Low.Equals(low)
+            || !ahi.Equals(high)
+            || SsaValueOf(high) is not { } highValue) {
+            return null;
+        }
+        int addIndex = first.BodyIndices[0];
+        IrStatement adcStatement = block.Statements[runs[r + 1].BodyIndices[0]];
+        int version = ssa.VersionUsed(adcStatement, highValue);
+        if (version < 0 || ssa.DefiningStatement(version) is not { } definition
+            || !ReferenceEquals(definition, block.Statements[shift.Indices[^1]])) {
+            return null;
+        }
+        ValueNode initializer = (ValueNode)IrConstantFolder.FoldConstantTerms(
+            IrConstantFolder.Fold(
+                Combined(shift.Form, shift.Half, shift.ALo, shift.AHi,
+                    shift.BLo ?? shift.ALo, shift.BHi ?? shift.AHi, shift.AWide),
+                IrConstantFolder.NoVariableConstants));
+        if (shift.OmitFirstHalfWrite) {
+            // The shifted low write was already dead: the add reads a forwarded copy of it.
+            // It denotes the temporary's low slice only while every register it reads still
+            // holds the version the combined initializer will evaluate.
+            if (LowHalfOf(alo) is not { } lowHalf || LowHalfOf(initializer) is not { } expected
+                || !lowHalf.Equals(expected)) {
+                return null;
+            }
+            IrEffects lowEffects = IrEffectsVisitor.Of(lowHalf, false);
+            if (!ssa.SameVersions(lowEffects.Reads, lowEffects.TokenReads,
+                    (block, shift.Indices[^1]), (block, addIndex))) {
+                return null;
+            }
+        } else {
+            if (!alo.Equals(low) || SsaValueOf(low) is not { } lowValue) {
+                return null;
+            }
+            int lowVersion = ssa.VersionUsed(block.Statements[addIndex], lowValue);
+            if (lowVersion < 0 || ssa.DefiningStatement(lowVersion) is not { } lowDefinition
+                || !ReferenceEquals(lowDefinition,
+                    block.Statements[shift.Indices[^2]])) {
+                return null;
+            }
+        }
+        for (int i = shift.Indices[^1] + 1; i < addIndex; i++) {
+            IrEffects effects = block.Statements[i].Effects;
+            if (effects.MayFault || effects.DeliversInterrupts
+                || alias.IsFullMemoryBoundary(block, i)) {
+                return null;
+            }
+        }
+        bool suppressHighWrite = ssa.Uses(version)
+            .All(use => use.Statement is not null && ReferenceEquals(use.Statement, adcStatement));
+        return (new VariableReferenceNode(DataType.UINT32, TempName(method, shift)),
+            suppressHighWrite);
+    }
+
+    /// <summary>The <see cref="IrSsaValue"/> a 16-bit general register's bytes belong to, or
+    /// null when its bit set does not name exactly one value.</summary>
+    private static IrSsaValue? SsaValueOf(RegisterNode register) {
+        uint bits = IrSsaValues.ValueBits(IrValueSets.Of(register));
+        return System.Numerics.BitOperations.IsPow2(bits)
+            ? (IrSsaValue)System.Numerics.BitOperations.TrailingZeroCount(bits) : null;
+    }
+
+    /// <summary>The expression computing the low 16 bits of <paramref name="node"/>, or null when
+    /// the shape is not one this pass reasons about: a conversion does not change the low half of
+    /// what it converts, a left shift's low half is its operand's low half shifted, an or whose
+    /// right side starts at bit 16 contributes nothing to the low half, and a leaf is itself once
+    /// truncated. <c>(ushort)((ushort)x &lt;&lt; k)</c> and <c>(ushort)(x &lt;&lt; k)</c> fold to
+    /// the same form.</summary>
+    private static ValueNode? LowHalfOf(ValueNode node) {
+        switch (node) {
+            case TypeConversionNode { Value: { } value }:
+                return LowHalfOf(value);
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.LEFT_SHIFT,
+                    Left: { } left, Right: { } right }:
+                return LowHalfOf(left) is { } lowLeft
+                    ? new BinaryOperationNode(DataType.UINT16, lowLeft,
+                        BinaryOperation.LEFT_SHIFT, right) : null;
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.BITWISE_OR,
+                    Left: { } low, Right: BinaryOperationNode {
+                        BinaryOperation: BinaryOperation.LEFT_SHIFT,
+                        Right: ConstantNode { Value: >= 16 } } }:
+                return LowHalfOf(low);
+            case RegisterNode or VariableReferenceNode or ConstantNode:
+                return node.DataType.BitWidth == BitWidth.WORD_16 ? node
+                    : new TypeConversionNode(DataType.UINT16, node);
+            default:
+                return null;
+        }
     }
 
     /// <summary>Whether <paramref name="relation"/> is the carry out of <c>low + 1</c>:
@@ -549,19 +673,19 @@ internal static class IrDoublePrecision {
         return null;
     }
 
-    private static void Rewrite(IrMethod method, IrBlock block, Match match) {
+    private static void Rewrite(IrMethod method, IrBlock block, Match match, IrEditor editor) {
         DataType half = match.Half;
         DataType wide = WideType(half);
         int width = Width(half);
         int last = match.Indices[^1];
-        string name = $"{PairName(match.High, match.Low)}_{Suffix(method, match.FirstOrigin)}";
+        string name = TempName(method, match);
         VariableDeclarationNode declaration = new(wide, name,
             (ValueNode)IrConstantFolder.FoldConstantTerms(IrConstantFolder.Fold(
                 Combined(match.Form, half, match.ALo, match.AHi,
-                    match.BLo ?? match.ALo, match.BHi ?? match.AHi),
+                    match.BLo ?? match.ALo, match.BHi ?? match.AHi, match.AWide),
                 IrConstantFolder.NoVariableConstants)));
         VariableReferenceNode pair = declaration.Reference;
-        List<IrStatement> statements = block.Statements;
+        List<IrStatement> statements = [.. block.Statements];
         statements[last] = IrStatement.Create(declaration, match.LastOrigin);
         // The first instruction's half write may be absent from the pattern (its shifted value was
         // forwarded into its readers and the register write removed). Emitting it anyway would
@@ -571,7 +695,8 @@ internal static class IrDoublePrecision {
             && match.Form is DoublePrecisionForm.ShiftLeft);
         bool writeHigh = !(match.OmitFirstHalfWrite
             && match.Form is DoublePrecisionForm.ShiftRight
-                or DoublePrecisionForm.SignedShiftRight);
+                or DoublePrecisionForm.SignedShiftRight)
+            && !match.SuppressHighWrite;
         int position = last + 1;
         if (writeLow && writeHigh && ParentOf(match.Low, match.High) is { } parent) {
             // The two half writes L = (byte)v; H = (byte)(v >> 8) of one register are X = v: the
@@ -600,7 +725,12 @@ internal static class IrDoublePrecision {
         for (int i = match.Indices.Count - 2; i >= 0; i--) {
             statements.RemoveAt(match.Indices[i]);
         }
+        editor.ReplaceAll(block, statements, block.Terminator);
     }
+
+    /// <summary>The name <see cref="Rewrite"/> gives a match's wide temporary.</summary>
+    private static string TempName(IrMethod method, Match match) =>
+        $"{PairName(match.High, match.Low)}_{Suffix(method, match.FirstOrigin)}";
 
     /// <summary>The pair temporary's name: the high register's name lowercased followed by the low
     /// one's first capital (<c>dxAx</c>, <c>ahAl</c>, <c>edxEax</c>).</summary>
@@ -646,7 +776,7 @@ internal static class IrDoublePrecision {
         if (first.BodyIndices.Count != 1) {
             return null;
         }
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         int lowIndex = first.BodyIndices[0];
         if (Assign(statements[lowIndex].Node) is not (RegisterNode low, { } lowRight)
             || low is SegmentRegisterNode || low.DataType != DataType.UINT16
@@ -700,7 +830,7 @@ internal static class IrDoublePrecision {
                 }
                 return new Match(form, DataType.UINT16, low, high, alo, halves.AHi,
                     blo, halves.BHi, [lowIndex, highIndex], first.Origin,
-                    between.Origin, 1, false);
+                    between.Origin, 1, false, null, false);
             }
             if (!IrInstructionIdioms.Joinable(between)
                 || (between.Effects.Reads & IrValueSets.Of(low)) != CpuValues.None
@@ -774,15 +904,15 @@ internal static class IrDoublePrecision {
     /// outLo = savedHigh; outLo *= otherLow; outHi += outLo; outLo = savedProduct</c> becomes
     /// one wide multiply declaration and the two half writes. Runs before expression propagation
     /// flattens the copies; returns how many sequences were rewritten.</summary>
-    public static int ApplyProducts(IrMethod method, IrSsa ssa) {
+    public static int ApplyProducts(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
-        int rewritten = 0;
+        // Match on the original statements and SSA, then rewrite in reverse order: a rewrite
+        // shifts the positions a later match was proven against.
+        List<(IrBlock Block, ProductMatch Match)> matches = [];
         foreach (IrBlock block in method.Blocks) {
-            // Match on the original statements and SSA, then rewrite in reverse order: a rewrite
-            // shifts the positions a later match was proven against.
-            List<ProductMatch> matches = [];
             List<(int From, int To)> claimed = [];
-            List<IrStatement> statements = block.Statements;
+            IReadOnlyList<IrStatement> statements = block.Statements;
             for (int i = 0; i < statements.Count; i++) {
                 if (statements[i].Node is not MultiplicationNode {
                         Width: BitWidth.WORD_16, Signed: false }) {
@@ -798,14 +928,13 @@ internal static class IrDoublePrecision {
                     continue;
                 }
                 claimed.Add((window.First, window.Last));
-                matches.Add(window);
-            }
-            for (int m = matches.Count - 1; m >= 0; m--) {
-                RewriteProduct(method, block, matches[m]);
-                rewritten++;
+                matches.Add((block, window));
             }
         }
-        return rewritten;
+        for (int m = matches.Count - 1; m >= 0; m--) {
+            RewriteProduct(method, matches[m].Block, matches[m].Match, editor);
+        }
+        return matches.Count;
     }
 
     /// <summary>The bound roles of a product window.</summary>
@@ -814,7 +943,7 @@ internal static class IrDoublePrecision {
         int First, int Last, int[] Consumed);
 
     private static ProductMatch? ProductWindow(IrBlock block, int multIndex, IrSsa ssa) {
-        List<IrStatement> statements = block.Statements;
+        IReadOnlyList<IrStatement> statements = block.Statements;
         MultiplicationNode multiply = (MultiplicationNode)statements[multIndex].Node;
         int s0 = PreviousEffective(statements, PreviousEffective(statements, multIndex));
         int s1 = PreviousEffective(statements, multIndex);
@@ -913,7 +1042,7 @@ internal static class IrDoublePrecision {
         // (saved copies, intermediate products, flags) must die inside it.
         DataType wide = WideType(DataType.UINT16);
         ValueNode replacement = Combined(DoublePrecisionForm.Multiply, DataType.UINT16,
-            aLow, aHigh, otherLow, otherHigh);
+            aLow, aHigh, otherLow, otherHigh, null);
         bool sealedOk = IrInstructionIdioms.SealWindow(block, first, last, [.. consumed],
             new Dictionary<IrStatement, CpuValues> {
                 [statements[steps[7]]] = IrValueSets.Of(outputLow),
@@ -997,7 +1126,7 @@ internal static class IrDoublePrecision {
         return -1;
     }
 
-    private static void RewriteProduct(IrMethod method, IrBlock block, ProductMatch window) {
+    private static void RewriteProduct(IrMethod method, IrBlock block, ProductMatch window, IrEditor editor) {
         DataType half = DataType.UINT16;
         DataType wide = WideType(half);
         int width = Width(half);
@@ -1006,11 +1135,11 @@ internal static class IrDoublePrecision {
         VariableDeclarationNode declaration = new(wide, name,
             (ValueNode)IrConstantFolder.FoldConstantTerms(IrConstantFolder.Fold(
                 Combined(DoublePrecisionForm.Multiply, half, window.ALow, window.AHigh,
-                    window.OtherLow, window.OtherHigh),
+                    window.OtherLow, window.OtherHigh, null),
                 IrConstantFolder.NoVariableConstants)));
         VariableReferenceNode pair = declaration.Reference;
         ICfgNode origin = block.Statements[last].Origin;
-        List<IrStatement> statements = block.Statements;
+        List<IrStatement> statements = [.. block.Statements];
         statements[last] = IrStatement.Create(declaration, origin);
         statements.Insert(last + 1, IrStatement.Create(new BinaryOperationNode(half,
             new RegisterNode(half, window.OutputLow.RegisterIndex), BinaryOperation.ASSIGN,
@@ -1023,6 +1152,7 @@ internal static class IrDoublePrecision {
         for (int i = window.Consumed.Length - 2; i >= 0; i--) {
             statements.RemoveAt(window.Consumed[i]);
         }
+        editor.ReplaceAll(block, statements, block.Terminator);
     }
 
     // ------------------------------------------------------------------

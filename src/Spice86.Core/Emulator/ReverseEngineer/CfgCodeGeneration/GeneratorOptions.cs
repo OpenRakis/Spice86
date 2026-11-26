@@ -48,4 +48,11 @@ public sealed record GeneratorOptions {
     /// <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.GeneratedCodeManifest"/>,
     /// which the dumper writes next to the sources. Off by default.</summary>
     public bool Manifest { get; init; }
+
+    /// <summary>Whether every instruction keeps its <c>// SSSS:OOOO asm</c> comment; the address map
+    /// records the address either way.</summary>
+    public bool PrintAsmComments { get; init; }
+
+    /// <summary>The generation policy: the strict generation plus the relaxations it enables.</summary>
+    internal GenerationPolicy Policy { get; init; } = GenerationPolicy.Strict;
 }

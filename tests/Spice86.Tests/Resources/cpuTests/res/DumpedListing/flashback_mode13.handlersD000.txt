@@ -14,26 +14,26 @@ D000:0017 callback 9
 D000:001B iret
 D000:005D callback 0x0070
 D000:0061 iret
-D000:0063 call far D000:00E9
+D000:0063 call far dword ptr CS:[0x006D]
 D000:0068 callback 0x0074
 D000:006C iret
-D000:006D callback 0x0104
-D000:0071 iret
-D000:0072 callback 0x0105
-D000:0076 iret
-D000:0077 callback 0x0106
-D000:007B iret
-D000:007C callback 0x0107
-D000:0080 iret
-D000:0081 callback 0x0108
-D000:0085 iret
-D000:0086 callback 0x0109
-D000:008A iret
-D000:00E8 ret far
-D000:00E9 callback 0x010C
-D000:00ED call far D000:00E8
-D000:00F2 callback 0x010D
-D000:00F6 ret far
+D000:0071 callback 0x0104
+D000:0075 iret
+D000:0076 callback 0x0105
+D000:007A iret
+D000:007B callback 0x0106
+D000:007F iret
+D000:0080 callback 0x0107
+D000:0084 iret
+D000:0085 callback 0x0108
+D000:0089 iret
+D000:008A callback 0x0109
+D000:008E iret
+D000:00EC ret far
+D000:00ED callback 0x010C
+D000:00F1 call far dword ptr CS:[0x00FB]
+D000:00F6 callback 0x010D
+D000:00FA ret far
 F000:4000 cli
 F000:4001 mov AX,0x1000
 F000:4004 mov SS,AX

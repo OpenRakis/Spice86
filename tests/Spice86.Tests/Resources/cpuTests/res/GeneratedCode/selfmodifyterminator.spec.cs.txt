@@ -1,64 +1,3 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-
-
-// ==== file: CfgGeneratedOverrides.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort biosSegment;
-
-    private static readonly byte?[] Signature_0019_jne = [0x75, 0xF5];
-    private static readonly byte?[] Signature_0019_jmp = [0xEB, 0x05];
-    private static readonly byte?[] Signature_001B_mov = [0xB8, 0xAD, 0xDE];
-    private static readonly byte?[] Signature_001E_push = [0x50];
-    private static readonly byte?[] Signature_001F_hlt = [0xF4];
-
-    private readonly Func<int, Action> unknown_F000_0022_F0022_AsmEntry;
-    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
-
-    protected readonly DsGlobals DsGlobals;
-    protected readonly SegmentF000Globals SegmentF000Globals;
-
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        biosSegment = 0xF000;
-        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
-        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
-
-        unknown_F000_0022_F0022_AsmEntry = _ => unknown_F000_0022_F0022_Asm();
-        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0022, unknown_F000_0022_F0022_AsmEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
-    }
-
-}
-
 // ==== file: CfgGeneratedOverrides.F000.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -73,86 +12,50 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: DS. Outputs: none. Changes: AX, ES, flags.</summary>
-    public virtual void unknown_F000_0022_F0022(ushort ds) {
-        DS = ds;
-        byte flagOperand_0022 = 0;
+    /// <summary>Inputs: AX, DS. Outputs: none. Changes: AX, ES.</summary>
+    public virtual void unknown_F000_0022_F0022(ushort word1, ushort word2) {
+        DS = word2;
         CheckExternalEvents(biosSegment, 0x0022);
-        // F000:0022 cmp byte ptr DS:[0x0040],0
-        flagOperand_0022 = DsGlobals.Byte0040;
-        Alu8.Sub(flagOperand_0022, 0);
-        // F000:0027 je short 0x003B
-        if (flagOperand_0022 == 0) {
-            // F000:003B inc byte ptr DS:[0x0040]
-            DsGlobals.Byte0040 = Alu8.Inc(DsGlobals.Byte0040);
-            // F000:003F ret near
+        if (DsGlobals.Byte0040 == 0) {
+            DsGlobals.Byte0040 += 1;
             NearReturn();
             return;
         }
-        // F000:0029 mov AX,0xF000
         AX = 0xF000;
-        // F000:002C mov ES,AX
         ES = 0xF000;
-        // F000:002E mov byte ptr ES:[0x0019],0xEB
         SegmentF000Globals.Byte0019 = 0xEB;
-        // F000:0034 mov byte ptr ES:[0x001A],5
         SegmentF000Globals.Byte001A = 5;
-        // F000:003A ret near
         NearReturn();
         return;
     }
 
     public virtual Action unknown_F000_0022_F0022_Asm() {
-        unknown_F000_0022_F0022(DS);
+        unknown_F000_0022_F0022(AX, DS);
         return Returned;
     }
 
     /// <summary>Inputs: DS. Does not return.</summary>
     public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort word1 = 0;
         CheckExternalEvents(biosSegment, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        // F000:0000 mov AX,0
-        // F000:0003 mov SS,AX
         SS = 0;
-        // F000:0005 mov SP,4
         SP = 4;
-        // F000:0008 mov AX,0xFFFF
-        AX = 0xFFFF;
-        // F000:000B mov byte ptr DS:[0x0040],0
+        word1 = 0xFFFF;
         DsGlobals.Byte0040 = 0;
         while (true) {
             CheckExternalEvents(biosSegment, 0x0010);
-            // F000:0010 push AX
-            Stack.Push16(AX);
-            // F000:0011 call near 0x0022
-            NearCall(biosSegment, 0x0014, () => unknown_F000_0022_F0022(DS));
-            // F000:0014 mov AX,0x0042
-            // F000:0017 or AX,AX
-            AX = 0x0042;
-            CarryFlag = false;
-            ParityFlag = true;
-            AuxiliaryFlag = false;
-            ZeroFlag = false;
-            SignFlag = false;
-            OverflowFlag = false;
-            // F000:0019 selector
-            if (SelectorSignatureMatches(biosSegment, 0x0019, Signature_0019_jne)) {
-                goto L_0019_36;
-            }
-            if (SelectorSignatureMatches(biosSegment, 0x0019, Signature_0019_jmp)) {
+            Stack.Push16(word1);
+            AX = word1;
+            NearCall(biosSegment, 0x0014, () => unknown_F000_0022_F0022(word1, DS));
+            word1 = 0x0042;
+            if (!SelectorSignatureMatches(biosSegment, 0x0019, Signature_0019_jne)) {
                 break;
             }
-            else {
-                throw FailAsUntested("Untested code variant at F000:0019");
-            }
-        L_0019_36:
-            // F000:0019 jne short 0x0010
-            ;
         }
-        // F000:0019 jmp short 0x0020
-        // F000:0020 push AX
+        if (!SelectorSignatureMatches(biosSegment, 0x0019, Signature_0019_jmp)) {
+            throw FailAsUntested("Untested code variant at F000:0019");
+        }
         Stack.Push16(0x0042);
-        // F000:0021 hlt
         return Hlt();
     }
 
@@ -200,3 +103,83 @@ public sealed class SegmentF000Globals : MemoryBasedDataStructure {
 
     public byte Byte001A { get => _memory.UInt8[Segment, 0x001A]; set => _memory.UInt8[Segment, 0x001A] = value; }
 }
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0022_F0022_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_F000_0022_F0022_AsmEntry = _ => unknown_F000_0022_F0022_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0022, unknown_F000_0022_F0022_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0019_jne = [0x75, 0xF5];
+    private static readonly byte?[] Signature_0019_jmp = [0xEB, 0x05];
+    private static readonly byte?[] Signature_001B_mov = [0xB8, 0xAD, 0xDE];
+    private static readonly byte?[] Signature_001E_push = [0x50];
+    private static readonly byte?[] Signature_001F_hlt = [0xF4];
+
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

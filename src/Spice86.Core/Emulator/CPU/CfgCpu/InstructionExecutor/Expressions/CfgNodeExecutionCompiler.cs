@@ -31,6 +31,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
     private readonly IExecutionAstRewriter _rewriter;
     private readonly bool _expandAluCalls;
+    private readonly bool _expandStackCalls;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
         ICfgNode Node, long Generation)> _compilationQueue = new();
@@ -46,17 +47,23 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// </summary>
     /// <param name="rewriter">Rewrites each node's execution AST before it is compiled.</param>
     /// <param name="expandAluCalls">When true, ALU calls are compiled as their inline expansion instead of a call to
-    /// the ALU (see <see cref="AstExpressionBuilder(bool)"/>).</param>
+    /// the ALU (see <see cref="AstExpressionBuilder(bool, bool)"/>).</param>
+    /// <param name="expandStackCalls">When true, stack calls are compiled as their inline expansion
+    /// instead of a call to <c>Stack</c>; PushAll keeps the helper call.</param>
     public CfgNodeExecutionCompiler(CfgNodeExecutionCompilerMonitor monitor, ILogger logger, JitMode jitMode,
-        IExecutionAstRewriter rewriter, bool expandAluCalls) {
+        IExecutionAstRewriter rewriter, bool expandAluCalls, bool expandStackCalls) {
         _monitor = monitor;
         _logger = logger;
         _jitMode = jitMode;
         _rewriter = rewriter;
         _expandAluCalls = expandAluCalls;
+        _expandStackCalls = expandStackCalls;
 
         if (_expandAluCalls) {
             _logger.LogInformation("CfgNodeExecutionCompiler: ALU calls are executed as inline expansions");
+        }
+        if (_expandStackCalls) {
+            _logger.LogInformation("CfgNodeExecutionCompiler: stack calls are executed as inline expansions");
         }
 
         if (_jitMode == JitMode.InterpretedThenCompiled) {
@@ -123,7 +130,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// </summary>
     public void Compile(ICfgNode node) {
         IVisitableAstNode executionAst = _rewriter.Rewrite(node, node.ExecutionAst);
-        AstExpressionBuilder expressionBuilder = new(_expandAluCalls);
+        AstExpressionBuilder expressionBuilder = new(_expandAluCalls, _expandStackCalls);
         Expression expression = executionAst.Accept(expressionBuilder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper =
             expressionBuilder.ToActionWithHelper(expression);

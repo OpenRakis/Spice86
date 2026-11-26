@@ -33,6 +33,38 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--A20Gate")]
     public bool A20Gate { get; init; }
 
+    /// <summary>When <c>true</c>, generated overrides print the
+    /// <c>// SSSS:OOOO asm</c> comment of every instruction; off by default - the instruction
+    /// address map keeps the navigation.</summary>
+    [CommandOption("--GeneratedCodeAsmComments")]
+    public bool GeneratedCodeAsmComments { get; init; }
+
+    /// <summary>When <c>true</c>, generated overrides treat memory the analysis cannot prove as
+    /// ordinary RAM; off by default - strict mode optimizes proved RAM only. A proved device range
+    /// is never relaxed.</summary>
+    [CommandOption("--GeneratedCodeAssumeUnknownMemoryIsRam")]
+    public bool GeneratedCodeAssumeUnknownMemoryIsRam { get; init; }
+
+    /// <summary>When <c>true</c>, generated overrides assume an indexed memory access whose
+    /// offset range is unproved stays inside its segment; off by default - strict mode assumes
+    /// it may wrap. An access proved to cross stays exact.</summary>
+    [CommandOption("--GeneratedCodeAssumeAccessesStayInSegment")]
+    public bool GeneratedCodeAssumeAccessesStayInSegment { get; init; }
+
+    /// <summary>When <c>true</c>, generated overrides assume the bytes of a private typed stack
+    /// argument are not observed after the call returns, so the call site reserves the stack
+    /// space without writing them; off by default - strict mode writes them like the pushes
+    /// did.</summary>
+    [CommandOption("--GeneratedCodeAssumeAbandonedStackSlotsUnobserved")]
+    public bool GeneratedCodeAssumeAbandonedStackSlotsUnobserved { get; init; }
+
+    /// <summary>When <c>true</c>, generated overrides assume a slot a save push of a register
+    /// wrote is written only by its pop, so the slot survives call and service boundaries when
+    /// the method lets no stack address escape; off by default - strict mode drops every slot at
+    /// a full memory boundary.</summary>
+    [CommandOption("--GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops")]
+    public bool GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops { get; init; }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>

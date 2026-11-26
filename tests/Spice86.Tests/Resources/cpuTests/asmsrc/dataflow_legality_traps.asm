@@ -385,11 +385,85 @@ wait_df:
     add si, 54
     dec word [0F00h]
     jnz pass_loop
+
+; BH-1: a word read is composed from its byte writers, in either order; a zero high
+; half folds to the zero-extension
+    mov ah, 12h
+    mov al, 34h
+    mov si, ax
+    mov [bx+00h], si
+    mov cl, 56h
+    mov ch, 78h
+    mov di, cx
+    mov [bx+02h], di
+    mov dl, 9Eh
+    mov dh, 0
+    mov si, dx
+    mov [bx+04h], si
+
+; BH-2: a wider write whose high half a later byte write overwrites keeps the writes
+; apart - only the latest version of each half may compose
+    mov si, inputs
+    mov ch, [cs:si+0Ch]
+    mov ax, 0507h
+    mov ah, ch
+    mov di, ax
+    mov [bx+06h], di
+
+; BH-3: a faulting bound between the halves - its handler observes the half-written
+; register, so the byte writes must stay where the exception saw them
+    mov word [0E0Ch], 0
+    mov word [0E0Eh], 0
+    push es
+    mov ax, 0
+    mov es, ax
+    mov word [es:5*4], bound_handler
+    mov [es:5*4+2], cs
+    pop es
+    mov word [0E14h], 8
+    mov word [0E16h], 0Fh
+    mov edx, 0
+    mov cx, 0
+    mov dl, 7
+    bound cx, [0E14h]
+    mov dh, 4
+    mov di, dx
+    mov [bx+08h], di
+    mov ax, [0E0Ch]
+    mov [bx+0Ah], ax
+    mov ax, [0E0Eh]
+    mov [bx+0Ch], ax
+
+; BH-4: the wide register is read again after the word read - the byte writes stay
+    mov al, 9Ah
+    mov ah, 0
+    mov si, ax
+    mov [bx+0Eh], si
+    mov [bx+10h], ax
+
+; BH-5: a byte of the pair is read on its own after the word read - the writes stay
+    mov dl, 77h
+    mov dh, 0
+    mov si, dx
+    mov [bx+12h], si
+    mov [bx+14h], dl
+
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 set_carry_flag:
     stc
     ret
+
+bound_handler:
+    push bp
+    mov bp, sp
+    mov [0E0Ch], cx
+    mov [0E0Eh], dx
+    add word [bp+2], 4
+    pop bp
+    iret
 
 ssa8_handler:
     add cx, 1

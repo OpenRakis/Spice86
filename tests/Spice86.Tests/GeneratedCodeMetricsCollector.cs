@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Shared.Emulator.Memory;
 using System.Collections.Immutable;
 
@@ -34,8 +35,13 @@ internal static class GeneratedCodeMetricsCollector {
     private static readonly HashSet<string> TypedFlagParameterNames = new(StringComparer.Ordinal) {
         "carryFlag", "parityFlag", "auxiliaryFlag", "zeroFlag", "signFlag", "overflowFlag"
     };
+
+    /// <summary>The generic names of typed flag parameters (<c>flag1</c>, <c>flag2</c>).</summary>
+    private static readonly System.Text.RegularExpressions.Regex TypedFlagParameterName =
+        new("^flag[0-9]+$");
     private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
-        "Push16", "Push32", "Pop16", "Pop32"
+        "Push16", "Push32", "Pop16", "Pop32", "Save", "Release",
+        "Restore2", "Restore3", "Restore4", "Restore5", "Restore6"
     };
     private static readonly HashSet<string> MemoryIndexerNames = new(StringComparer.Ordinal) {
         "UInt8", "UInt16", "UInt32", "Int8", "Int16", "Int32",
@@ -51,11 +57,12 @@ internal static class GeneratedCodeMetricsCollector {
     };
     private static readonly System.Text.RegularExpressions.Regex LocationTableClassName = new(
         @"^(Segment[0-9A-F]{4}|Image(Minus)?[0-9A-F]{4})Tables$");
-    private static readonly HashSet<string> RegisterLocalNames = new(StringComparer.Ordinal) {
-        "ax", "cx", "dx", "bx", "bp", "si", "di", "es", "ds",
-        "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh",
-        "eax", "ecx", "edx", "ebx", "ebp", "esi", "edi"
-    };
+    /// <summary>The generic local names: a width prefix and a number (<c>word1</c>,
+    /// <c>byte2</c>, <c>dword1</c>). The generator's temporaries and variables never take this
+    /// shape (<c>flagOperand_0103</c>, <c>dxAx_003A</c>, <c>cs1</c>, <c>arg0</c>, <c>value</c>
+    /// keyword arguments).</summary>
+    private static readonly System.Text.RegularExpressions.Regex RegisterLocalName =
+        new("^(byte|word|dword|flag)[0-9]+$");
     private static readonly HashSet<string> RegisterNames = new(StringComparer.Ordinal) {
         "AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI",
         "ES", "CS", "SS", "DS", "FS", "GS", "IP",
@@ -63,20 +70,10 @@ internal static class GeneratedCodeMetricsCollector {
         "EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"
     };
 
-    /// <summary>The register local name <paramref name="name"/> starts from, trailing digits removed
-    /// (<c>cx1</c> gives <c>cx</c>).</summary>
-    private static string RegisterLocalBase(string name) {
-        int end = name.Length;
-        while (end > 0 && char.IsAsciiDigit(name[end - 1])) {
-            end--;
-        }
-        return name[..end];
-    }
-
-    /// <summary>Whether <paramref name="name"/> is a numbered register local (<c>cx1</c>, <c>ax2</c>).</summary>
+    /// <summary>Whether <paramref name="name"/> is a generated register local; every one of them is
+    /// numbered.</summary>
     private static bool IsNumberedRegisterLocal(string name) =>
-        name.Length > 0 && char.IsAsciiDigit(name[^1])
-        && RegisterLocalNames.Contains(RegisterLocalBase(name));
+        RegisterLocalName.IsMatch(name);
     private static readonly HashSet<SyntaxKind> CompoundAssignmentKinds = new() {
         SyntaxKind.AddAssignmentExpression, SyntaxKind.SubtractAssignmentExpression,
         SyntaxKind.AndAssignmentExpression, SyntaxKind.OrAssignmentExpression,
@@ -84,10 +81,41 @@ internal static class GeneratedCodeMetricsCollector {
         SyntaxKind.RightShiftAssignmentExpression
     };
 
+    /// <summary>Metrics of one generated program, split along the file boundary S.1 established:
+    /// every emulator-owned support file in <see cref="Support"/> and every other generated file
+    /// in <see cref="Program"/>.</summary>
+    internal sealed record GeneratedCodePartMetrics(GeneratedCodeMetrics Program, GeneratedCodeMetrics Support) {
+        public IEnumerable<GeneratedCodeMetrics> Parts {
+            get {
+                yield return Program;
+                yield return Support;
+            }
+        }
+    }
+
+    /// <summary>True for the support file names <see cref="GeneratedOverrideNames"/> assigns in S.1.</summary>
+    public static bool IsSupportFileName(string fileName) =>
+        fileName == GeneratedOverrideNames.SupplierFileName
+        || (fileName.StartsWith(GeneratedOverrideNames.OverrideClassName + ".Support.", StringComparison.Ordinal)
+            && fileName.EndsWith(".cs", StringComparison.Ordinal));
+
     public static GeneratedCodeMetrics Collect(string fixture, GeneratedCompilation compilation) {
         EnsureBinding(compilation);
         return Collect(fixture, compilation, compilation.SyntaxTrees.Select(tree => tree.GetRoot()).ToArray());
     }
+
+    /// <summary>Measures the program part and the support part of <paramref name="compilation"/> separately.</summary>
+    public static GeneratedCodePartMetrics CollectParts(string fixture, GeneratedCompilation compilation) {
+        EnsureBinding(compilation);
+        SyntaxNode[] programRoots = RootsOf(compilation.SyntaxTrees.Where(tree => !IsSupportFileName(tree.FilePath)));
+        SyntaxNode[] supportRoots = RootsOf(compilation.SyntaxTrees.Where(tree => IsSupportFileName(tree.FilePath)));
+        return new GeneratedCodePartMetrics(
+            Collect(fixture, compilation, programRoots),
+            Collect(fixture, compilation, supportRoots));
+    }
+
+    private static SyntaxNode[] RootsOf(IEnumerable<SyntaxTree> trees) =>
+        trees.Select(tree => tree.GetRoot()).ToArray();
 
     public static IReadOnlyDictionary<string, GeneratedCodeMetrics> CollectMethods(
         string fixture, GeneratedCompilation compilation) {
@@ -101,8 +129,9 @@ internal static class GeneratedCodeMetricsCollector {
                 IMethodSymbol symbol = model.GetDeclaredSymbol(method)
                     ?? throw new InvalidOperationException($"Unbound method in {fixture}.");
                 string key = symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+                string fileLabel = tree.FilePath.Length == 0 ? $"tree={treeIndex}" : tree.FilePath;
                 methods.Add(key, Collect(fixture, compilation, [method]) with {
-                    SourceLocation = $"tree={treeIndex},line={method.GetLocation().GetLineSpan().StartLinePosition.Line + 1}"
+                    SourceLocation = $"file={fileLabel},line={method.GetLocation().GetLineSpan().StartLinePosition.Line + 1}"
                 });
             }
         }
@@ -340,17 +369,59 @@ internal static class GeneratedCodeMetricsCollector {
             };
         }
 
+        /// <summary>The generic <c>flagN</c> names the current method binds to a status flag: an
+        /// entry copy (<c>CarryFlag = flag1</c>) or the flag argument its <c>_Asm</c> wrapper passes
+        /// at the parameter's position. Only those parameters stand for a census flag. A parameter
+        /// bound to <c>DirectionFlag</c> or a promoted flag local of the same shape is not a flag
+        /// read.</summary>
+        private HashSet<string> _statusFlagParameterNames = new(StringComparer.Ordinal);
+
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
             GotoTargets.Clear();
+            _statusFlagParameterNames = StatusFlagBoundParameters(node);
             base.VisitMethodDeclaration(node);
             DistinctGotoTargetsPerMethod += GotoTargets.Count;
         }
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node) {
             GotoTargets.Clear();
+            _statusFlagParameterNames = new(StringComparer.Ordinal);
             base.VisitConstructorDeclaration(node);
             DistinctGotoTargetsPerMethod += GotoTargets.Count;
+        }
+
+        private HashSet<string> StatusFlagBoundParameters(SyntaxNode node) {
+            HashSet<string> names = new(StringComparer.Ordinal);
+            SemanticModel model = _models[node.SyntaxTree];
+            foreach (AssignmentExpressionSyntax assignment in node.DescendantNodes()
+                    .OfType<AssignmentExpressionSyntax>()
+                    .Where(assignment => assignment.Left is IdentifierNameSyntax flag
+                        && StatusFlagNames.Contains(flag.Identifier.ValueText)
+                        && assignment.Right is IdentifierNameSyntax parameter
+                        && TypedFlagParameterName.IsMatch(parameter.Identifier.ValueText)
+                        && model.GetSymbolInfo(parameter).Symbol is IParameterSymbol)) {
+                names.Add(((IdentifierNameSyntax)assignment.Right).Identifier.ValueText);
+            }
+            if (model.GetDeclaredSymbol(node) is not IMethodSymbol method) {
+                return names;
+            }
+            foreach (InvocationExpressionSyntax invocation in node.SyntaxTree.GetRoot()
+                    .DescendantNodes().OfType<InvocationExpressionSyntax>()) {
+                if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol invoked
+                    || !SymbolEqualityComparer.Default.Equals(invoked, method)) {
+                    continue;
+                }
+                SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
+                for (int index = 0; index < arguments.Count && index < method.Parameters.Length;
+                        index++) {
+                    if (arguments[index].Expression is IdentifierNameSyntax flag
+                        && StatusFlagNames.Contains(flag.Identifier.ValueText)) {
+                        names.Add(method.Parameters[index].Name);
+                    }
+                }
+            }
+            return names;
         }
 
         public override void VisitLabeledStatement(LabeledStatementSyntax node) {
@@ -572,8 +643,7 @@ internal static class GeneratedCodeMetricsCollector {
             if (node.Parent is BlockSyntax { Parent: MethodDeclarationSyntax }) {
                 MethodVariables++;
                 if (node.Declaration.Variables.Any(variable =>
-                        RegisterLocalNames.Contains(variable.Identifier.ValueText)
-                        || IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
+                        IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
                     RegisterLocals++;
                     if (node.Declaration.Variables.Any(variable =>
                             IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
@@ -598,11 +668,19 @@ internal static class GeneratedCodeMetricsCollector {
 
         /// <summary>Whether <paramref name="node"/> names a flag the IR actually reads: a status
         /// flag name that is not a generated flag use, or a typed flag parameter that is not the
-        /// entry assignment to its flag.</summary>
-        private static bool IsCountedFlagName(IdentifierNameSyntax node) {
+        /// entry assignment to its flag and not a member name (<c>r.carryFlag</c> reads a
+        /// service call result tuple, not the CPU flag). A generic <c>flagN</c> name counts only
+        /// when it binds to a parameter: a promoted flag local of the same shape is a local, not
+        /// a flag read.</summary>
+        private bool IsCountedFlagName(IdentifierNameSyntax node) {
             string name = node.Identifier.ValueText;
-            return (StatusFlagNames.Contains(name) && !IsGeneratedFlagUse(node))
-                || (TypedFlagParameterNames.Contains(name) && !IsFlagParameterEntryAssignment(node));
+            bool flagName = TypedFlagParameterNames.Contains(name)
+                || (TypedFlagParameterName.IsMatch(name) && _statusFlagParameterNames.Contains(name));
+            bool typedParameterRead = flagName
+                && !IsFlagParameterEntryAssignment(node)
+                && (node.Parent is not MemberAccessExpressionSyntax memberAccess
+                    || memberAccess.Name != node);
+            return (StatusFlagNames.Contains(name) && !IsGeneratedFlagUse(node)) || typedParameterRead;
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) {

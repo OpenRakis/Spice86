@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -61,10 +62,13 @@ public class MouseDriver : IMouseDriver {
     /// <param name="mouseDevice">The mouse device / hardware</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The service used to log messages, such as runtime warnings.</param>
+    /// <param name="registerCallTarget">Notification invoked with <c>(call site, target)</c> when
+    /// the switchable user-routine call's pointer is written, for CFG speculative linking.</param>
     /// <param name="gui">Optional GUI mouse events interface for UI integration.</param>
     public MouseDriver(State state, SharedMouseData sharedMouseData,
         IIndexable memory, IMouseDevice mouseDevice,
         IVgaFunctionality vgaFunctions, ILogger loggerService,
+        Action<SegmentedAddress, SegmentedAddress> registerCallTarget,
         IGuiMouseEvents? gui = null) {
         _state = state;
         _sharedMouseData = sharedMouseData;
@@ -78,7 +82,7 @@ public class MouseDriver : IMouseDriver {
         _vgaFunctions = vgaFunctions;
 
         _vgaFunctions.VideoModeChanged += OnVideoModeChanged;
-        _userHandlerAddressSwitcher = new InMemoryAddressSwitcher(memory);
+        _userHandlerAddressSwitcher = new InMemoryAddressSwitcher(memory, registerCallTarget);
         Reset();
     }
 
@@ -112,6 +116,7 @@ public class MouseDriver : IMouseDriver {
     public int CurrentMinY { get => _sharedMouseData.CurrentMinY; set => _sharedMouseData.CurrentMinY = value; }
 
     /// <inheritdoc />
+    [InterruptService(Memory = ServiceMemoryEffect.Write)]
     public void BeforeUserHandlerExecution() {
         bool callUserRoutine = CanCallUserRoutine();
         _passCalledUserRoutine.Push(callUserRoutine);
@@ -160,6 +165,12 @@ public class MouseDriver : IMouseDriver {
         // User routine needs to be disabled because it is called unconditionally in interrupt handler ASM. Disabling means calling an empty function.
         _userHandlerAddressSwitcher.SetAddressToDefault();
     }
+
+    /// <summary>
+    /// Registers the user-routine call's current pointer target with the CFG for speculative
+    /// linking: the pointer is written before the call instruction is discovered in the graph.
+    /// </summary>
+    public void RegisterCurrentCallTarget() => _userHandlerAddressSwitcher.RegisterCurrentCallTarget();
 
     /// <inheritdoc />
     public MouseUserCallback GetRegisteredCallback() {
@@ -291,6 +302,7 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
+    [InterruptService]
     public void AfterUserHandlerExecution() {
         // A pass that did not call the user routine saved nothing. When it is nested inside the pass that
         // did, the saved registers and the in-progress flag belong to that outer pass and must stay intact.
@@ -453,22 +465,25 @@ public class MouseDriver : IMouseDriver {
         // Mouse driver implementation:
         //  - Create a FAR ret which is the default user handler (called when program does not provide anything else)
         //  - Create a callback (0xFE) that will call the BeforeUserHandlerExecution method
-        //  - Create a modifiable Far call instruction that is calling the default handler
+        //  - Create a memory-indirect Far call CS:[disp16] reading a switchable pointer
         //  - Create a callback (0xFF) that does the cleanup with AfterUserHandlerExecution
         //  - Create a FAR ret
+        //  - Create the 4-byte far pointer the call reads, after the FAR ret so it is never executed
 
         // Write ASM
-        // Default user handler: nothing, just a far ret. 
+        // Default user handler: nothing, just a far ret.
         _userHandlerAddressSwitcher.DefaultAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.WriteFarRet();
 
         SegmentedAddress driverAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.MouseBeforeUserHandler, BeforeUserHandlerExecution);
-        // Far call to default handler, can be changed via _inMemoryAddressSwitcher
-        memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
+        // Far call through the switchable pointer, can be changed via _inMemoryAddressSwitcher
+        memoryAsmWriter.WriteCsIndirectFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.MouseAfterUserHandler, AfterUserHandlerExecution);
         // Far ret to return to caller
         memoryAsmWriter.WriteFarRet();
+        // The far pointer the call reads; sits after the FAR ret, outside any instruction path
+        memoryAsmWriter.WriteSwitcherPointer(_userHandlerAddressSwitcher);
         return driverAddress;
     }
 }

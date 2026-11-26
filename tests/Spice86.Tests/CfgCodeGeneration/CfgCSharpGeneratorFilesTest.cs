@@ -53,6 +53,29 @@ public class CfgCSharpGeneratorFilesTest {
     }
 
     [Fact]
+    public void AsmCommentOptionPrintsOrSuppressesInstructionComments() {
+        // Arrange: one ret instruction at F000:0000.
+        TestInstructionHelper helper = new();
+        CfgPartitionedProgram partitioned = new() {
+            Partitions = [PartitionOf(1, 0xF000, RetBlock(helper, 0xF000, 0x0000, 1))],
+            Transfers = [], Inputs = GeneratorInputs.Empty
+        };
+
+        // Act
+        GeneratedCSharpProgram commented = new CfgCSharpGenerator(collectCensuses: false,
+            verify: false, printAsmComments: true).Generate(partitioned);
+        GeneratedCSharpProgram silent = new CfgCSharpGenerator(collectCensuses: false,
+            verify: false, printAsmComments: false).Generate(partitioned);
+
+        // Assert
+        commented.SourceText.Should().Contain("// F000:0000 ret");
+        silent.SourceText.Should().NotContain("// F000:0000 ret");
+        silent.AddressMap.Should().ContainSingle(entry => entry.Address == "F000:0000"
+            && entry.File == "CfgGeneratedOverrides.F000.cs" && entry.Method == "partition1_F000_0000_F0000",
+            "the suppressed instruction still maps to its file and method");
+    }
+
+    [Fact]
     public void EveryFileParsesAloneAndTheSetCompiles() {
         // Arrange
         GeneratedCSharpProgram program = Generate((0xF000, 1), (0xD000, 2));
@@ -113,7 +136,7 @@ public class CfgCSharpGeneratorFilesTest {
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x100)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x100, null)])
             }
         };
 

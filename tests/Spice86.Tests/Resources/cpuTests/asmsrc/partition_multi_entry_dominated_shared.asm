@@ -12,6 +12,11 @@ start:
     call root_b
     mov al, 1
     call root_b
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:606h], bx
+    mov word [ss:608h], cx
     hlt
 
 root_a:

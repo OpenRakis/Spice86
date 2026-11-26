@@ -26,7 +26,9 @@ using System.Linq;
 /// pointer read reads the slot at that delta; a peek of constant argument k reads at
 /// <c>delta + k</c>; a constant SP/ESP adjustment moves the delta (an increase frees the slots it
 /// passes); a <c>Leave</c>, <c>PushAll</c>, <c>PopAll</c>, any other SP/ESP or SS write, and any
-/// <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> statement rebase SP on the statement.
+/// <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> statement that may write SP/ESP or SS
+/// rebase SP on the statement. A full memory boundary that may write neither keeps the offset and
+/// the BP copy and only drops the slots.
 /// Every memory write of a statement kills the slots its access is not
 /// <see cref="IrAliasRelation.Disjoint"/> with, against the synthetic
 /// <see cref="IrMemoryAliasAnalysis.StackAccess"/> of the slot. A slot defined on some reaching
@@ -47,20 +49,38 @@ internal sealed class IrStackSlots {
     private readonly Dictionary<IrStatement, IrStackOffset> _after = [];
     private readonly Dictionary<IrBlock, IrStackOffset> _blockEntry = [];
     private readonly Dictionary<IrBlock, IrStackOffset> _blockEnd = [];
+    private readonly Dictionary<IrBlock, IrStackOffset> _blockEndBp = [];
+    private readonly HashSet<IrStackSlotDefinition> _ramProvedDefinitions = [];
     private readonly Dictionary<IrStatement, List<IrStackSlotRead>> _readsByStatement = [];
     private readonly Dictionary<IrStackSlotDefinition, List<IrStackSlotRead>> _readsByDefinition = [];
 
     /// <summary>Runs the analysis on <paramref name="method"/>, using
-    /// <paramref name="alias"/> as the kill oracle.</summary>
-    public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias) {
-        IrStackSlots slots = new(alias);
+    /// <paramref name="alias"/> as the kill oracle and <paramref name="callPopCounts"/> as the
+    /// proved-callee map: for a resolved call whose callee is proved to return to its caller with
+    /// a <c>ret n</c>, it returns the popped byte count <c>n</c>, so the statement keeps the
+    /// offset's base advanced by <c>n</c> instead of rebasing (the callee may still write any
+    /// memory, so the slot contents are dropped like any full memory boundary; the BP copy
+    /// survives unless the call may write BP or SS). A caller without that map passes a function
+    /// returning <c>null</c>.</summary>
+    public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias,
+        Func<IrStatement, int?> callPopCounts) =>
+        Compute(method, alias, callPopCounts, IrStackState.Entry);
+
+    /// <summary>The same analysis with <paramref name="entryState"/> as the entry-block seed: a
+    /// shared entry reached only by partition transfers starts with the SP and BP the jump
+    /// sites hold, not the flat entry value.</summary>
+    public static IrStackSlots Compute(IrMethod method, IrMemoryAliasAnalysis alias,
+        Func<IrStatement, int?> callPopCounts, IrStackState entryState) {
+        IrStackSlots slots = new(alias, callPopCounts);
+        slots._keepSavedAtBoundaries =
+            alias.Policy.AssumeSavedSlotsWrittenOnlyByPops && !StackEscapes(method);
         BlockGraph<IrBlock> graph = method.ToStructuringGraph();
         DepthFirstOrdering<IrBlock> traversal = new(
             [.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
         ForwardDataflowResult<IrBlock, IrStackState> result = ForwardDataflowSolver.Solve(
             graph, traversal,
             (block, state) => slots.TransferBlock(block, state, false),
-            IrStackState.Join, IrStackState.Unreached, IrStackState.Entry);
+            IrStackState.Join, IrStackState.Unreached, entryState);
         foreach (IrBlock block in graph.Blocks) {
             slots.TransferBlock(block, result.In[block], true);
         }
@@ -69,12 +89,15 @@ internal sealed class IrStackSlots {
 
     /// <summary>The slots of a method that holds no stack node at all: no read is ever recorded.
     /// </summary>
-    internal static readonly IrStackSlots Empty = new(null);
+    internal static readonly IrStackSlots Empty = new(null, null);
 
     private readonly IrMemoryAliasAnalysis? _alias;
+    private readonly Func<IrStatement, int?>? _callPopCounts;
+    private bool _keepSavedAtBoundaries;
 
-    private IrStackSlots(IrMemoryAliasAnalysis? alias) {
+    private IrStackSlots(IrMemoryAliasAnalysis? alias, Func<IrStatement, int?>? callPopCounts) {
         _alias = alias;
+        _callPopCounts = callPopCounts;
     }
 
     /// <summary>The SP offset before <paramref name="statement"/>, null when the analysis has not
@@ -97,6 +120,36 @@ internal sealed class IrStackSlots {
     public IrStackOffset? OffsetAtBlockEnd(IrBlock block) =>
         _blockEnd.TryGetValue(block, out IrStackOffset offset) ? offset : null;
 
+    /// <summary>The BP copy at <paramref name="block"/>'s end, after its statements and before
+    /// its terminator's effects.</summary>
+    public IrStackOffset? BpOffsetAtBlockEnd(IrBlock block) =>
+        _blockEndBp.TryGetValue(block, out IrStackOffset offset) ? offset : null;
+
+    /// <summary>The offset resolved back to the method entry: an offset the analysis rebased on a
+    /// statement carries that statement as <see cref="IrStackOffset.Base"/> and its delta is
+    /// relative to the SP the base saw. The chain is followed only through a base statement that
+    /// writes neither SP / ESP nor SS (an event check, a memory-boundary store): SP after such a
+    /// statement is SP before it. Any SP / SS write ends the chain - a rebase on it left the
+    /// entry-relative SP unknown.</summary>
+    internal int? EntryDelta(IrStackOffset? offset) {
+        if (offset is not { Kind: IrStackOffsetKind.Known } current) {
+            return null;
+        }
+        int delta = current.Delta;
+        HashSet<IrStatement> seen = [];
+        for (IrStatement? base_ = current.Base; base_ is not null && seen.Add(base_);
+             base_ = current.Base) {
+            if (((base_.Effects.MustWrite | base_.Effects.MayWrite) & StackWrites)
+                != CpuValues.None
+                || OffsetBefore(base_) is not { Kind: IrStackOffsetKind.Known } before) {
+                return null;
+            }
+            current = before;
+            delta += before.Delta;
+        }
+        return delta;
+    }
+
     /// <summary>The stack reads <paramref name="statement"/> performs.</summary>
     public IReadOnlyList<IrStackSlotRead> ReadsOf(IrStatement statement) =>
         _readsByStatement.TryGetValue(statement, out List<IrStackSlotRead>? reads) ? reads : [];
@@ -114,6 +167,7 @@ internal sealed class IrStackSlots {
         }
         if (record) {
             _blockEnd[block] = state.Offset;
+            _blockEndBp[block] = state.Bp;
         }
         IrTerminator terminator = block.Terminator;
         if (((terminator.Effects.MustWrite | terminator.Effects.MayWrite) & StackWrites)
@@ -141,9 +195,224 @@ internal sealed class IrStackSlots {
     private IrStackState TransferredState(IrBlock block, int index, IrStatement statement,
         IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         if (alias.IsFullMemoryBoundary(block, index)) {
+            IrStackState stripped = _keepSavedAtBoundaries
+                ? OnlySavedSlots(state) : state.WithoutSlots();
+            if (_callPopCounts?.Invoke(statement) is { } pop) {
+                // A call proved to return to its caller with "ret n": the return address the call
+                // pushed and the callee popped cancel out, so SP advances by n on the same base.
+                // The slot contents are dropped - the callee may write any memory - except
+                // saved-register slots when the policy assumes them written only by their pops.
+                IrStackOffset offset = stripped.Offset;
+                if (offset.Kind == IrStackOffsetKind.Known) {
+                    offset = IrStackOffset.Known(offset.Base, offset.Delta + pop);
+                }
+                return TrackBp(statement, stripped.WithOffset(offset));
+            }
+            if (((statement.Effects.MustWrite | statement.Effects.MayWrite) & StackWrites)
+                    == CpuValues.None) {
+                // A boundary that cannot move SP (an event check, a wide store): the offset and
+                // the BP copy survive, only the slot contents are dropped - saved-register slots
+                // of a non-escaping method excepted under the relaxation.
+                return TrackBp(statement, stripped);
+            }
             return IrStackState.Rebase(statement);
         }
         return ApplyStatement(block, index, statement, state, record, alias);
+    }
+
+    /// <summary>The slots that survive a boundary under the saved-slots relaxation: only the
+    /// slots whose every definition is a push of a register - the save slots a restore pops
+    /// back. Every other slot is dropped as in strict mode.</summary>
+    private static IrStackState OnlySavedSlots(IrStackState state) {
+        if (state.Slots.Count == 0) {
+            return state;
+        }
+        List<int> dropped = [.. state.Slots
+            .Where(pair => !pair.Value.All(IsSavedRegisterPush))
+            .Select(pair => pair.Key)];
+        if (dropped.Count == 0) {
+            return state;
+        }
+        IrStackState kept = state.CopySlots();
+        foreach (int delta in dropped) {
+            kept.Slots.Remove(delta);
+            kept.PartialSlots.Remove(delta);
+        }
+        return kept;
+    }
+
+    private static bool IsSavedRegisterPush(IrStackSlotDefinition definition) =>
+        definition.Statement.Node is StackCallNode { Operation: StackOperation.Push,
+            Arguments: [RegisterNode] };
+
+    /// <summary>Whether any statement of <paramref name="method"/> lets a stack address escape
+    /// the frame: an SS write, an SS push, an <c>sp</c> push, an SS or SP/BP value copied into a
+    /// segment register, a stack value stored to memory, or a statement materializing an SP- or
+    /// BP-derived value in a register outside SP and BP (a <c>lea</c> of an SS-relative address,
+    /// an SP/BP copy or an exchange another segment's pointer can use) - including through a
+    /// temporary variable like the one <c>xchg</c> lowers its copy to. Such a pointer can reach
+    /// the saved slots through other code, so the saved-slots relaxation refuses the
+    /// method.</summary>
+    private static readonly IReadOnlySet<IVisitableAstNode> NoFramePointers =
+        new HashSet<IVisitableAstNode>(ReferenceEqualityComparer.Instance);
+
+    internal static bool StackEscapes(IrMethod method) =>
+        StackEscapes(method, NoFramePointers);
+
+    /// <summary><see cref="StackEscapes(IrMethod)"/> over the statements of
+    /// <paramref name="method"/>, except that an SP or BP register read sitting inside a pointer
+    /// <paramref name="frames"/> proved to be a frame access does not escape: the pointer resolves
+    /// against the entry stack pointer, so the slot it reaches stays inside the frame.</summary>
+    internal static bool StackEscapes(IrMethod method, IrFrames frames) {
+        HashSet<IVisitableAstNode> framePointers = new(ReferenceEqualityComparer.Instance);
+        foreach ((SegmentedPointerNode pointer, IrFrameAccess? access) in frames.PointerResults) {
+            if (access is not null) {
+                framePointers.Add(pointer);
+            }
+        }
+        return StackEscapes(method, framePointers);
+    }
+
+    private static bool StackEscapes(IrMethod method,
+        IReadOnlySet<IVisitableAstNode> framePointers) {
+        IReadOnlySet<VariableReferenceNode> stackVariables =
+            StackValuedVariables(method, framePointers);
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                if (EscapesStack(statement, framePointers, stackVariables)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>The temporary variables of <paramref name="method"/> that hold a stack value:
+    /// every <see cref="VariableDeclarationNode"/> whose initializer reads SP/BP, SS or an
+    /// already stack-valued variable, grown to a fixed point so a stack value copied through a
+    /// chain of temporaries still counts.</summary>
+    private static IReadOnlySet<VariableReferenceNode> StackValuedVariables(IrMethod method,
+        IReadOnlySet<IVisitableAstNode> framePointers) {
+        HashSet<VariableReferenceNode> variables = [];
+        bool added = true;
+        while (added) {
+            added = false;
+            foreach (IrBlock block in method.Blocks) {
+                foreach (IrStatement statement in block.Statements) {
+                    foreach (IVisitableAstNode node in
+                            DescendantsExcept(statement.Node, framePointers)
+                                .Prepend(statement.Node)) {
+                        if (node is VariableDeclarationNode { Reference: { } reference } declaration
+                                && !variables.Contains(reference)
+                                && ReadsStackValue(declaration.Initializer,
+                                    true, framePointers, variables)) {
+                            variables.Add(reference);
+                            added = true;
+                        }
+                    }
+                }
+            }
+        }
+        return variables;
+    }
+
+    /// <summary>The descendants of <paramref name="node"/> that do not sit inside a pointer of
+    /// <paramref name="skipped"/>: the pointer's address register is a proven frame access, so
+    /// its read is private to the frame.</summary>
+    private static IEnumerable<IVisitableAstNode> DescendantsExcept(IVisitableAstNode node,
+        IReadOnlySet<IVisitableAstNode> skipped) {
+        foreach (IVisitableAstNode child in IrAstChildren.ChildrenOf(node)) {
+            if (skipped.Contains(child)) {
+                continue;
+            }
+            yield return child;
+            foreach (IVisitableAstNode descendant in DescendantsExcept(child, skipped)) {
+                yield return descendant;
+            }
+        }
+    }
+
+    private static bool EscapesStack(IrStatement statement,
+        IReadOnlySet<IVisitableAstNode> framePointers,
+        IReadOnlySet<VariableReferenceNode> stackVariables) {
+        if (((statement.Effects.MustWrite | statement.Effects.MayWrite) & CpuValues.Ss)
+                != CpuValues.None) {
+            return true;
+        }
+        foreach (IVisitableAstNode node
+                in DescendantsExcept(statement.Node, framePointers).Prepend(statement.Node)) {
+            switch (node) {
+                case StackCallNode { Operation: StackOperation.Push,
+                        Arguments: [SegmentRegisterNode {
+                            RegisterIndex: (int)SegmentRegisterIndex.SsIndex }
+                            or RegisterNode {
+                                RegisterIndex: (int)RegisterIndex.SpIndex }] }:
+                    return true;
+                case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: SegmentRegisterNode, Right: { } segmentRight }:
+                    if (ReadsStackValue(segmentRight, true, framePointers, stackVariables)) {
+                        return true;
+                    }
+                    break;
+                case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: RegisterNode {
+                            RegisterIndex: not ((int)RegisterIndex.SpIndex
+                                or (int)RegisterIndex.BpIndex) },
+                        Right: { } right }:
+                    if (ReadsStackValue(right, false, framePointers, stackVariables)) {
+                        return true;
+                    }
+                    break;
+                case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                        Left: SegmentedPointerNode or AbsolutePointerNode,
+                        Right: { } storeRight }:
+                    if (ReadsStackValue(storeRight, true, framePointers, stackVariables)) {
+                        return true;
+                    }
+                    break;
+                case InstructionNode:
+                    if ((statement.Effects.Reads & (CpuValues.Esp | CpuValues.Ebp))
+                            != CpuValues.None
+                        && ((statement.Effects.MustWrite | statement.Effects.MayWrite)
+                            & CpuValues.Registers
+                            & ~(CpuValues.Esp | CpuValues.Ebp | CpuValues.Ss)) != CpuValues.None
+                        && (framePointers.Count == 0
+                            || ReadsStackValue(statement.Node, false, framePointers,
+                                stackVariables))) {
+                        return true;
+                    }
+                    break;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Whether <paramref name="node"/> reads the SP or BP register - or, when
+    /// <paramref name="includeStackSegment"/>, the SS segment register - or a variable of
+    /// <paramref name="stackVariables"/>, outside a pointer of
+    /// <paramref name="framePointers"/>. A root that is itself a proven frame pointer reads
+    /// nothing: its whole subtree is private to the frame.</summary>
+    private static bool ReadsStackValue(IVisitableAstNode node, bool includeStackSegment,
+        IReadOnlySet<IVisitableAstNode> framePointers,
+        IReadOnlySet<VariableReferenceNode> stackVariables) =>
+        !framePointers.Contains(node)
+        && DescendantsExcept(node, framePointers).Prepend(node).Any(descendant =>
+            IsStackValue(descendant, includeStackSegment, stackVariables));
+
+    /// <summary>Whether <paramref name="node"/> is one stack-valued read: a reference to a
+    /// variable holding a stack value, or a read of SP or BP - of SS too when
+    /// <paramref name="includeStackSegment"/>.</summary>
+    private static bool IsStackValue(IVisitableAstNode node, bool includeStackSegment,
+        IReadOnlySet<VariableReferenceNode> stackVariables) {
+        if (node is VariableReferenceNode reference) {
+            return stackVariables.Contains(reference);
+        }
+        if (node is not RegisterNode register) {
+            return false;
+        }
+        return register.RegisterIndex is (int)RegisterIndex.SpIndex or (int)RegisterIndex.BpIndex
+            || (includeStackSegment && register is SegmentRegisterNode {
+                RegisterIndex: (int)SegmentRegisterIndex.SsIndex });
     }
 
     private IrStackState ApplyStatement(IrBlock block, int index, IrStatement statement,
@@ -185,12 +454,19 @@ internal sealed class IrStackSlots {
                         .WithOffset(IrStackOffset.Known(state.Offset.Base, delta))
                         .CopySlots();
                     RemoveSlotsIn(pushed, delta, width);
-                    pushed.Slots[delta] = [new IrStackSlotDefinition(statement, delta)];
+                    IrStackSlotDefinition definition = new(statement, delta);
+                    pushed.Slots[delta] = [definition];
                     pushed.PartialSlots.Remove(delta);
+                    if (alias.AllowsRam(
+                            SlotAccessAt(block, index, state, delta, width, alias))) {
+                        _ramProvedDefinitions.Add(definition);
+                    }
                     return pushed;
                 }
                 return state;
             }
+            case StackCallNode { Operation: StackOperation.Pop } pop:
+                return ApplyPop(block, index, pop.Width, statement, state, record, alias);
             case StackCallNode { Operation: StackOperation.Leave
                 or StackOperation.PushAll or StackOperation.PopAll }:
                 return IrStackState.Rebase(statement);
@@ -200,7 +476,7 @@ internal sealed class IrStackSlots {
         if (stackValues.Count > 0) {
             IrStackOffset before = state.Offset;
             foreach (StackCallValueNode stack in stackValues) {
-                state = ApplyStackValue(stack, statement, state, record);
+                state = ApplyStackValue(block, index, stack, statement, state, record, alias);
             }
             return KillWrittenSlots(block, index, statement, state, before, alias);
         }
@@ -222,34 +498,47 @@ internal sealed class IrStackSlots {
         return KillWrittenSlots(block, index, statement, state, beforeAdjust, alias);
     }
 
-    private IrStackState ApplyStackValue(StackCallValueNode stack, IrStatement statement,
-        IrStackState state, bool record) {
+    private IrStackState ApplyStackValue(IrBlock block, int index, StackCallValueNode stack,
+        IrStatement statement, IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
         switch (stack.Operation) {
-            case StackOperation.Pop: {
-                int width = (int)stack.Width / 8;
-                if (record) {
-                    RecordRead(statement, state.Offset.Delta, width, state);
-                }
-                if (state.Offset.Kind != IrStackOffsetKind.Known) {
-                    return state;
-                }
-                int delta = state.Offset.Delta;
-                IrStackState moved = state
-                    .WithOffset(IrStackOffset.Known(state.Offset.Base, delta + width))
-                    .CopySlots();
-                RemoveSlotsIn(moved, delta, width);
-                return moved;
-            }
+            case StackOperation.Pop:
+                return ApplyPop(block, index, stack.Width, statement, state, record, alias);
             case StackOperation.Peek:
                 if (record && ConstantWordOf(stack.CallNode.Arguments
                     .OfType<ValueNode>().FirstOrDefault()) is { } peekDelta) {
-                    RecordRead(statement, state.Offset.Delta + peekDelta,
-                        (int)stack.Width / 8, state);
+                    int delta = state.Offset.Delta + peekDelta;
+                    int width = (int)stack.Width / 8;
+                    RecordRead(statement, delta, width, state,
+                        alias.AllowsRam(SlotAccessAt(block, index, state, delta, width, alias)));
                 }
                 return state;
             default:
                 return state;
         }
+    }
+
+    /// <summary>The slot effect of a pop, whether the statement carries it in a
+    /// <see cref="StackCallValueNode"/> or is itself a bare <see cref="StackCallNode"/> the
+    /// dead-write removal left: the read is recorded at the current offset, then the offset
+    /// advances and the popped bytes leave the slot table.</summary>
+    private IrStackState ApplyPop(IrBlock block, int index, BitWidth popWidth,
+        IrStatement statement, IrStackState state, bool record, IrMemoryAliasAnalysis alias) {
+        int width = (int)popWidth / 8;
+        if (record) {
+            IrMemoryAccess popAccess =
+                SlotAccessAt(block, index, state, state.Offset.Delta, width, alias);
+            RecordRead(statement, state.Offset.Delta, width, state,
+                alias.AllowsRam(popAccess));
+        }
+        if (state.Offset.Kind != IrStackOffsetKind.Known) {
+            return state;
+        }
+        int delta = state.Offset.Delta;
+        IrStackState moved = state
+            .WithOffset(IrStackOffset.Known(state.Offset.Base, delta + width))
+            .CopySlots();
+        RemoveSlotsIn(moved, delta, width);
+        return moved;
     }
 
     private void RecordPointerReads(IrBlock block, int index, IrStatement statement,
@@ -261,7 +550,8 @@ internal sealed class IrStackSlots {
                 .Where(read => read is { SegmentRegister: IrSsaValue.Ss, OffsetTerms: [
                     { Register: RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
                         RegisterIndex: (int)RegisterIndex.SpIndex } }] })) {
-            RecordRead(statement, state.Offset.Delta + read.OffsetDisplacement, read.Width, state);
+            RecordRead(statement, state.Offset.Delta + read.OffsetDisplacement, read.Width, state,
+                alias.AllowsRam(read));
         }
     }
 
@@ -362,16 +652,36 @@ internal sealed class IrStackSlots {
         return adjustment > 0 ? state.WithoutSlotsBelow(delta) : state;
     }
 
+    /// <summary>The slot access at <paramref name="delta"/> as the statement at
+    /// <paramref name="index"/> sees it: constant when the offset base leaves a known SP, else
+    /// <c>SS:[SP + delta - beforeDelta]</c> on the statement's SP version.</summary>
+    private static IrMemoryAccess SlotAccessAt(IrBlock block, int index, IrStackState state,
+        int delta, int width, IrMemoryAliasAnalysis alias) {
+        IrMemoryAccess access;
+        if (state.Offset.Base is { } baseStatement
+            && alias.StackPointerConstantAfter(baseStatement) is { } stackPointer) {
+            access = alias.ConstantStackAccess(block, index, stackPointer + delta, width);
+        } else {
+            access = alias.StackAccess(block, index, delta - state.Offset.Delta, width);
+        }
+        return access;
+    }
+
     /// <summary>Records a read of <paramref name="width"/> bytes at <paramref name="delta"/>: only
     /// a slot starting there with the same width supplies it; a slot of another width leaves the
-    /// read unattributed.</summary>
-    private void RecordRead(IrStatement statement, int delta, int width, IrStackState state) {
+    /// read unattributed. <paramref name="accessKnownRam"/> is the shared
+    /// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> decision on the read's own access; the read
+    /// is RAM-proved when its access and every supplying definition's write are.</summary>
+    private void RecordRead(IrStatement statement, int delta, int width, IrStackState state,
+        bool accessKnownRam) {
         HashSet<IrStackSlotDefinition> definitions = new(state.DefinitionsOf(delta));
         if (definitions.Count > 0 && SlotWidth(definitions) != width) {
             definitions = [];
         }
+        bool provedRam = accessKnownRam && definitions.Count > 0
+            && definitions.All(_ramProvedDefinitions.Contains);
         IrStackSlotRead read = new(statement, delta, definitions,
-            definitions.Count > 0 && !state.PartialSlots.Contains(delta));
+            definitions.Count > 0 && !state.PartialSlots.Contains(delta), provedRam);
         if (!_readsByStatement.TryGetValue(statement, out List<IrStackSlotRead>? reads)) {
             reads = [];
             _readsByStatement[statement] = reads;

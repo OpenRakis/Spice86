@@ -66,6 +66,10 @@ public class InstructionsFeeder : IClearable {
         }
     }
 
+    /// <summary>The speculative explorer, or null when speculative exploration is disabled.
+    /// Exposed once for DI binding, not for per-call forwarding.</summary>
+    public SpeculativeExplorer? SpeculativeExplorer => _speculativeExplorer;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
         // Try to get instruction from cache that represents current memory state.
@@ -117,8 +121,8 @@ public class InstructionsFeeder : IClearable {
         if (matchingSpeculative is { IsSpeculative: true }) {
             existingSpeculative = matchingSpeculative;
         }
-        if (_speculativeReconciler.Reconcile(existingSpeculative, parsed, address)) {
-            return existingSpeculative;
+        if (_speculativeReconciler.Reconcile(existingSpeculative, parsed, address) is { } observed) {
+            return observed;
         }
         // Signatures differ: run the full uniqueness check (signature reduction against
         // previous instructions) so we reuse an existing node when possible.
@@ -132,16 +136,16 @@ public class InstructionsFeeder : IClearable {
     /// instruction parsed from memory. This is the graph-driven counterpart to the promote-on-parse
     /// path in <see cref="ParseCheckingExistingSpeculative"/>; both live here so reconciliation has a
     /// single owning class rather than being split between the two feeders.
-    /// Returns <c>true</c> when the node was promoted and the caller should keep executing it;
-    /// <c>false</c> when it was swept, diverged, or speculation is disabled and the caller should use
-    /// the live node instead.
+    /// Returns the observed survivor the caller must execute when the node was reconciled and
+    /// promoted; <c>null</c> when it was swept, diverged, or speculation is disabled and the caller
+    /// should use the live node instead.
     /// </summary>
-    public bool TryPromoteStaleSpeculativeNode(CfgInstruction speculativeGraphNode, CfgInstruction liveInstruction) {
+    public CfgInstruction? TryReconcileStaleSpeculativeNode(CfgInstruction speculativeGraphNode, CfgInstruction liveInstruction) {
         // GetInstructionFromMemory already reconciled the memory-matching variant at this address on
         // its way here. Only reconcile when this specific variant survived that pass (still indexed);
         // otherwise it was already resolved and there is nothing left to do.
         if (_speculativeReconciler is null || !NodeIndex.Contains(speculativeGraphNode)) {
-            return false;
+            return null;
         }
         return _speculativeReconciler.Reconcile(speculativeGraphNode, liveInstruction, liveInstruction.Address);
     }

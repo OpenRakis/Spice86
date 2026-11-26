@@ -29,6 +29,13 @@ internal sealed record IrMemoryAccess {
     /// <summary>The constant displacement of the offset, a signed 16-bit value.</summary>
     public int OffsetDisplacement { get; init; }
 
+    /// <summary>The inclusive interval the 16-bit offset is proved to stay inside when the
+    /// offset is one register term whose value range at the access is known
+    /// (<see cref="Ranges.IrValueRanges"/>) - <c>[min + displacement, max + displacement]</c>,
+    /// only when the high end does not wrap 16 bits. <c>null</c> for any other shape or a
+    /// range that can wrap.</summary>
+    public (uint Lo, uint Hi)? OffsetRange { get; init; }
+
     /// <summary>The access width in bytes.</summary>
     public int Width { get; init; }
 

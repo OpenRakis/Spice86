@@ -10,7 +10,7 @@
       "entries": [
         {
           "block": 30,
-          "address": "F000:00BD",
+          "address": "F000:00C7",
           "kind": "functionEntry"
         }
       ]
@@ -25,7 +25,7 @@
       "entries": [
         {
           "block": 116,
-          "address": "F000:00C8",
+          "address": "F000:00D2",
           "kind": "functionEntry"
         }
       ]
@@ -42,7 +42,7 @@
       "entries": [
         {
           "block": 166,
-          "address": "F000:00CB",
+          "address": "F000:00D5",
           "kind": "functionEntry"
         }
       ]
@@ -79,7 +79,7 @@
       "toPartition": 4,
       "fromBlock": 30,
       "toBlock": 70,
-      "from": "F000:00C7",
+      "from": "F000:00D1",
       "target": "F000:003E"
     },
     {
@@ -88,7 +88,7 @@
       "toPartition": 4,
       "fromBlock": 116,
       "toBlock": 162,
-      "from": "F000:00CA",
+      "from": "F000:00D4",
       "target": "F000:00A0"
     },
     {
@@ -97,7 +97,7 @@
       "toPartition": 4,
       "fromBlock": 170,
       "toBlock": 188,
-      "from": "F000:00D9",
+      "from": "F000:00E3",
       "target": "F000:00AB"
     },
     {
@@ -106,7 +106,7 @@
       "toPartition": 4,
       "fromBlock": 172,
       "toBlock": 188,
-      "from": "F000:00D4",
+      "from": "F000:00DE",
       "target": "F000:00AB"
     },
     {
@@ -116,7 +116,7 @@
       "fromBlock": 193,
       "toBlock": 30,
       "from": "F000:003B",
-      "target": "F000:00BD",
+      "target": "F000:00C7",
       "callContinuationBlock": 70,
       "callContinuationAddress": "F000:003E"
     },
@@ -127,7 +127,7 @@
       "fromBlock": 110,
       "toBlock": 116,
       "from": "F000:009D",
-      "target": "F000:00C8",
+      "target": "F000:00D2",
       "callContinuationBlock": 162,
       "callContinuationAddress": "F000:00A0"
     },
@@ -138,7 +138,7 @@
       "fromBlock": 162,
       "toBlock": 166,
       "from": "F000:00A8",
-      "target": "F000:00CB",
+      "target": "F000:00D5",
       "callContinuationBlock": 188,
       "callContinuationAddress": "F000:00AB"
     }

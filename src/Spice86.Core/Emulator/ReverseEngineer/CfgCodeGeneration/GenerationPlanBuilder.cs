@@ -57,6 +57,7 @@ internal static class GenerationPlanBuilder {
             foreach (CfgCodePartitionEntry entry in method.Entries) {
                 int loadOffset = context.GetEntryLoadOffset(method.Partition, entry.Node);
                 registrations.Add(new OverrideRegistration(
+                    entry.Address,
                     context.GetSegmentVariable(entry.Address.Segment),
                     entry.Address.Offset,
                     method.MethodName,
@@ -140,15 +141,43 @@ internal static class GenerationPlanBuilder {
             instruction => $"{instruction.Address.Offset:X4}",
             instruction => instruction.Id.ToString());
 
+        // sti starts the interrupt shadow: interrupts are recognized only after the next instruction.
+        // An sti always ends its block (EndBlockAfterFallthrough), so its check moves after the first
+        // instruction of its fallthrough block when that instruction runs to completion (not a call,
+        // a return or a transfer), and drops entirely when that instruction is a hlt whose wait loop
+        // delivers the pending interrupt like the interpreter's shadow does. A fallthrough block that
+        // already checks at its entry, or whose first instruction is a transfer, keeps the check right
+        // after sti - the remaining timing difference. popf / popfd start no shadow and keep theirs.
+        HashSet<ICfgNode> shadowDeferredEnablers = [];
+        HashSet<ICfgNode> shadowCheckTargets = [];
+        foreach (CfgBlock block in blocks) {
+            foreach (ICfgNode node in block.Instructions) {
+                if (node is not CfgInstruction instruction
+                    || !InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
+                    || !InterruptShadowDetectorVisitor.StartsInterruptShadow(instruction.ExecutionAst)
+                    || FallthroughBlockChecks(node, block, blockGraph, checkedBlocks)
+                    || !ShadowCheckMoves(block, blockGraph, checkedBlocks, out ICfgNode? target)) {
+                    continue;
+                }
+                shadowDeferredEnablers.Add(node);
+                if (target is not null) {
+                    shadowCheckTargets.Add(target);
+                }
+            }
+        }
+
         List<NodeEmissionPlan> nodeEmissionPlans = [];
         foreach (CfgBlock block in blocks) {
             // First instruction of each block is the entry: it gets the label.
             bool isBlockEntry = true;
             foreach (ICfgNode node in block.Instructions) {
                 bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block);
-                bool emitsExternalEventCheckAfter = node is CfgInstruction instruction
-                    && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
-                    && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks);
+                bool emitsExternalEventCheckAfter =
+                    (node is CfgInstruction instruction
+                        && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
+                        && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks)
+                        && !shadowDeferredEnablers.Contains(node))
+                    || shadowCheckTargets.Contains(node);
                 nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, isBlockEntry, emitsExternalEventCheck, emitsExternalEventCheckAfter));
                 isBlockEntry = false;
             }
@@ -172,6 +201,44 @@ internal static class GenerationPlanBuilder {
         if (fallthrough != null) {
             yield return fallthrough;
         }
+    }
+
+    /// <summary>
+    /// Whether an <c>sti</c> ending <paramref name="block"/> gives up its own event check: the check lands
+    /// after the first instruction of its fallthrough block when that instruction runs to completion
+    /// (<paramref name="target"/>), and drops entirely when that instruction is a <c>hlt</c> whose wait
+    /// loop checks events itself. False when there is no fallthrough block, the fallthrough block already
+    /// checks at its entry, or its first instruction is a transfer.
+    /// </summary>
+    private static bool ShadowCheckMoves(CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks, out ICfgNode? target) {
+        target = null;
+        CfgBlock? fallthrough = graph.GetFallthroughSuccessor(block);
+        if (fallthrough is null || checkedBlocks.Contains(fallthrough) || fallthrough.Instructions.Count == 0) {
+            return false;
+        }
+        ICfgNode first = fallthrough.Instructions[0];
+        if (IsOrdinaryInstruction(first)) {
+            target = first;
+            return true;
+        }
+        return IsHaltInstruction(first);
+    }
+
+    /// <summary>
+    /// Whether the node is an instruction that runs to completion: no call, no return, no jump
+    /// (<see cref="InstructionKind.None"/>) and no halt or transfer inside its execution AST.
+    /// </summary>
+    private static bool IsOrdinaryInstruction(ICfgNode node) {
+        return node is CfgInstruction { Kind: InstructionKind.None } instruction
+            && !CallReturnHaltDetectorVisitor.ContainsCallReturnOrHalt(instruction.ExecutionAst);
+    }
+
+    /// <summary>
+    /// Whether the node is a <c>hlt</c>: an ordinary-kind instruction whose execution AST halts.
+    /// </summary>
+    private static bool IsHaltInstruction(ICfgNode node) {
+        return node is CfgInstruction { Kind: InstructionKind.None } instruction
+            && HltDetectorVisitor.ContainsHlt(instruction.ExecutionAst);
     }
 
     private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks) {

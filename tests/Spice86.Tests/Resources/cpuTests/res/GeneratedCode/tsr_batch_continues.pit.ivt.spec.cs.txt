@@ -1,143 +1,3 @@
-// ==== file: CfgGeneratedOverrideSupplier.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
-    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
-        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
-    }
-}
-
-
-// ==== file: CfgGeneratedOverrides.cs ====
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU.Exceptions;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
-using Spice86.Core.Emulator.VM;
-using Microsoft.Extensions.Logging;
-using Spice86.Shared.Emulator.Memory;
-using System;
-using System.Collections.Generic;
-
-namespace Spice86.Generated;
-
-public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
-    protected readonly ushort cs2;
-    protected readonly ushort biosSegment;
-
-    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
-    private static readonly byte?[] Signature_000A_push = [0x1E];
-    private static readonly byte?[] Signature_000B_push = [0x50];
-    private static readonly byte?[] Signature_000C_push = [0x52];
-    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
-    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
-    private static readonly byte?[] Signature_0013_pop = [0x5A];
-    private static readonly byte?[] Signature_0014_pop = [0x58];
-    private static readonly byte?[] Signature_0015_pop = [0x1F];
-    private static readonly byte?[] Signature_0016_iret = [0xCF];
-    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
-    private static readonly byte?[] Signature_001B_iret = [0xCF];
-    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
-    private static readonly byte?[] Signature_0061_iret = [0xCF];
-    private static readonly byte?[] Signature_0063_call = [0x9A, 0xE9, 0x00, 0x00, 0xF0];
-    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
-    private static readonly byte?[] Signature_006C_iret = [0xCF];
-    private static readonly byte?[] Signature_006D_callback = [0xFE, 0x38, 0x04, 0x01];
-    private static readonly byte?[] Signature_0071_iret = [0xCF];
-    private static readonly byte?[] Signature_0072_callback = [0xFE, 0x38, 0x05, 0x01];
-    private static readonly byte?[] Signature_0076_iret = [0xCF];
-    private static readonly byte?[] Signature_0077_callback = [0xFE, 0x38, 0x06, 0x01];
-    private static readonly byte?[] Signature_007B_iret = [0xCF];
-    private static readonly byte?[] Signature_007C_callback = [0xFE, 0x38, 0x07, 0x01];
-    private static readonly byte?[] Signature_0080_iret = [0xCF];
-    private static readonly byte?[] Signature_0081_callback = [0xFE, 0x38, 0x08, 0x01];
-    private static readonly byte?[] Signature_0085_iret = [0xCF];
-    private static readonly byte?[] Signature_0086_callback = [0xFE, 0x38, 0x09, 0x01];
-    private static readonly byte?[] Signature_008A_iret = [0xCF];
-    private static readonly byte?[] Signature_00AA_sti = [0xFB];
-    private static readonly byte?[] Signature_00AB_callback = [0xFE, 0x38, 0x0A, 0x01];
-    private static readonly byte?[] Signature_00AF_cmp = [0x2E, 0x80, 0x3E, 0x95, 0x00, 0x00];
-    private static readonly byte?[] Signature_00B5_jne = [0x75, 0x04];
-    private static readonly byte?[] Signature_00B7_int = [0xCD, 0x28];
-    private static readonly byte?[] Signature_00BB_callback = [0xFE, 0x38, 0x0B, 0x01];
-    private static readonly byte?[] Signature_00BF_iret = [0xCF];
-    private static readonly byte?[] Signature_00E8_ret = [0xCB];
-    private static readonly byte?[] Signature_00E9_callback = [0xFE, 0x38, 0x0C, 0x01];
-    private static readonly byte?[] Signature_00ED_call = [0x9A, 0xE8, 0x00, 0x00, 0xF0];
-    private static readonly byte?[] Signature_00F2_callback = [0xFE, 0x38, 0x0D, 0x01];
-    private static readonly byte?[] Signature_00F6_ret = [0xCB];
-
-    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_pop, Signature_0014_pop, Signature_0015_pop, Signature_0016_iret];
-    private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
-
-    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
-    private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
-    private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
-    private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
-    private readonly Func<int, Action> unknown_F000_0063_F0063Entry;
-    private readonly Func<int, Action> unknown_F000_006D_F006DEntry;
-    private readonly Func<int, Action> unknown_F000_0072_F0072Entry;
-    private readonly Func<int, Action> unknown_F000_0077_F0077Entry;
-    private readonly Func<int, Action> unknown_F000_007C_F007CEntry;
-    private readonly Func<int, Action> unknown_F000_0081_F0081Entry;
-    private readonly Func<int, Action> unknown_F000_0086_F0086Entry;
-    private readonly Func<int, Action> unknown_F000_0096_F0096Entry;
-    private readonly Func<int, Action> unknown_F000_00E8_F00E8Entry;
-    private readonly Func<int, Action> unknown_F000_00E9_F00E9Entry;
-
-    protected readonly CsGlobals CsGlobals;
-    protected readonly SegmentB800Globals SegmentB800Globals;
-
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = (ushort)(programStartSegment - 0x0002);
-        cs2 = (ushort)(programStartSegment + 0x0007);
-        biosSegment = 0xF000;
-        CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
-        SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
-
-        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
-        unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
-        unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
-        unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
-        unknown_F000_0063_F0063Entry = _ => unknown_F000_0063_F0063();
-        unknown_F000_006D_F006DEntry = _ => unknown_F000_006D_F006D();
-        unknown_F000_0072_F0072Entry = _ => unknown_F000_0072_F0072();
-        unknown_F000_0077_F0077Entry = _ => unknown_F000_0077_F0077();
-        unknown_F000_007C_F007CEntry = _ => unknown_F000_007C_F007C();
-        unknown_F000_0081_F0081Entry = _ => unknown_F000_0081_F0081();
-        unknown_F000_0086_F0086Entry = _ => unknown_F000_0086_F0086();
-        unknown_F000_0096_F0096Entry = _ => unknown_F000_0096_F0096();
-        unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
-        unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0063, unknown_F000_0063_F0063Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x006D, unknown_F000_006D_F006DEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0072, unknown_F000_0072_F0072Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0077, unknown_F000_0077_F0077Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007C, unknown_F000_007C_F007CEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0081, unknown_F000_0081_F0081Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0086, unknown_F000_0086_F0086Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
-    }
-
-}
-
 // ==== file: CfgGeneratedOverrides.016E.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -152,30 +12,21 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
+    /// <summary>Inputs: DS. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
-        // 016E:0100 mov DX,0x0111
         DX = 0x0111;
-        // 016E:0103 mov AH,0x25
-        // 016E:0105 mov AL,0x22
-        AX = 0x2522;
-        // 016E:0107 int 0x21
-        Dos.RecordCallerStack(SS, SP);
-        Dos.SetInterruptVector(0x22, DS, 0x0111);
-        // 016E:0109 mov AX,0x3100
+        AH = 0x25;
+        ServiceCall(Dos, () => Dos.SetInterruptVector(0x22, DS, 0x0111));
         AX = 0x3100;
-        // 016E:010C mov DX,8
         DX = 8;
-        // 016E:010F int 0x21
-        InterruptCall(cs1, 0x0111, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:010F");
+        return TerminateCall(cs1, 0x0111, () => Dos.TerminateAndStayResident(AL, DX));
     }
 
 }
 
-// ==== file: CfgGeneratedOverrides.F000.cs ====
+// ==== file: CfgGeneratedOverrides.0177.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -189,255 +40,16 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0006_F0006() {
-        CheckExternalEvents(biosSegment, 0x0006);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
-        // F000:0006 callback 8
-        // Spice86 callback: TimerInt8Handler.IncTickCounterValue
-        Callback(biosSegment, 0x0006, 8);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000A, Signature_000A_push);
-        // F000:000A push DS
-        Stack.Push16(DS);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000B, Signature_000B_push);
-        // F000:000B push AX
-        Stack.Push16(AX);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
-        // F000:000C push DX
-        Stack.Push16(DX);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
-        // F000:000D int 0x1C
-        InterruptCall(biosSegment, 0x000F, 0x1C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x000F, Signature_000F_callback);
-        // F000:000F callback 0x0101
-        // Spice86 callback: TimerInt8Handler.AfterInt8Execution
-        Callback(biosSegment, 0x000F, 0x0101);
-        VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
-        // F000:0013 pop DX
-        DX = Stack.Pop16();
-        // F000:0014 pop AX
-        AX = Stack.Pop16();
-        // F000:0015 pop DS
-        DS = Stack.Pop16();
-        // F000:0016 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0017_F0017() {
-        CheckExternalEvents(biosSegment, 0x0017);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);
-        // F000:0017 callback 9
-        // INT 09h: BiosKeyboardInt9Handler
-        Callback(biosSegment, 0x0017, 9);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_iret);
-        // F000:001B iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_005D_F005D() {
-        CheckExternalEvents(biosSegment, 0x005D);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
-        // F000:005D callback 0x0070
-        // INT 70h: Rtc.HandleInterrupt
-        Callback(biosSegment, 0x005D, 0x0070);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_iret);
-        // F000:0061 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0063_F0063() {
-        CheckExternalEvents(biosSegment, 0x0063);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
-        // F000:0063 call far F000:00E9
-        FarCall(biosSegment, 0x0068, biosSegment, unknown_F000_00E9_F00E9Entry);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0068, Signature_0068_callback);
-        // F000:0068 callback 0x0074
-        // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
-        Callback(biosSegment, 0x0068, 0x0074);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x006C, Signature_006C_iret);
-        // F000:006C iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_006D_F006D() {
-        CheckExternalEvents(biosSegment, 0x006D);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x006D, Signature_006D_callback);
-        // F000:006D callback 0x0104
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x006D, 0x0104);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0071, Signature_0071_iret);
-        // F000:0071 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0072_F0072() {
-        CheckExternalEvents(biosSegment, 0x0072);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0072, Signature_0072_callback);
-        // F000:0072 callback 0x0105
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x0072, 0x0105);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0076, Signature_0076_iret);
-        // F000:0076 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0077_F0077() {
-        CheckExternalEvents(biosSegment, 0x0077);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0077, Signature_0077_callback);
-        // F000:0077 callback 0x0106
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x0077, 0x0106);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x007B, Signature_007B_iret);
-        // F000:007B iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_007C_F007C() {
-        CheckExternalEvents(biosSegment, 0x007C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x007C, Signature_007C_callback);
-        // F000:007C callback 0x0107
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x007C, 0x0107);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0080, Signature_0080_iret);
-        // F000:0080 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0081_F0081() {
-        CheckExternalEvents(biosSegment, 0x0081);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0081, Signature_0081_callback);
-        // F000:0081 callback 0x0108
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x0081, 0x0108);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_iret);
-        // F000:0085 iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_0086_F0086() {
-        CheckExternalEvents(biosSegment, 0x0086);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x0086, Signature_0086_callback);
-        // F000:0086 callback 0x0109
-        // Spice86 callback: DefaultIrqHandler.HandleIrq
-        Callback(biosSegment, 0x0086, 0x0109);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_iret);
-        // F000:008A iret
-        return InterruptRet();
-    }
-
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
-    public virtual Action unknown_F000_0096_F0096() {
-        byte flagOperand_00AF = 0;
-        while (true) {
-            CheckExternalEvents(biosSegment, 0x0096);
-            // F000:0096 cmp AH,7
-            Alu8.Sub(AH, 7);
-            // F000:0099 je short 0x00AA
-            if (AH == 7) {
-                break;
-            }
-            // F000:009B cmp AH,8
-            Alu8.Sub(AH, 8);
-            // F000:009E je short 0x00AA
-            if (AH == 8) {
-                break;
-            }
-            // F000:00A0 cmp AH,0x0A
-            Alu8.Sub(AH, 0x0A);
-            // F000:00A3 je short 0x00AA
-            if (AH == 0x0A) {
-                break;
-            }
-            // F000:00A5 callback 0x0021
-            // INT 21h: Dos services selected by AH
-            if (!CallbackMovedCsIp(biosSegment, 0x00A5, 0x0021)) {
-                // F000:00A9 iret
-                return InterruptRet();
-            }
-            if (CS != cs2 || IP != 0x0100) {
-                throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A5");
-            }
-            CS = cs2;
-            // 0177:0100 mov AX,0xB800
-            AX = 0xB800;
-            // 0177:0103 mov ES,AX
-            ES = 0xB800;
-            // 0177:0105 mov DI,0
-            DI = 0;
-            // 0177:0108 mov AL,0x5A
-            // 0177:010A mov AH,7
-            AX = 0x075A;
-            // 0177:010C stos word ptr ES:[DI],AX
-            SegmentB800Globals.Word0000 = 0x075A;
-            DI = (ushort)(DirectionFlag ? -2 : 2);
-            // 0177:010D mov AX,0x4C00
-            AX = 0x4C00;
-            // 0177:0110 int 0x21
-            InterruptCall(cs2, 0x0112, 0x21);
-            throw FailAsUntested("Untested return from call at 0177:0110");
-        }
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AA, Signature_00AA_sti);
-        // F000:00AA sti
-        InterruptFlag = true;
-        CheckExternalEvents(biosSegment, 0x00AB);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00AB, Signature_00AB_callback);
-        // F000:00AB callback 0x010A
-        // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
-        Callback(biosSegment, 0x00AB, 0x010A);
-        VerifySpeculativeRunOrFail(biosSegment, 0x00AF, SpeculativeRun_00AF);
-        // F000:00AF cmp byte ptr CS:[0x0095],0
-        flagOperand_00AF = CsGlobals.Byte0095;
-        Alu8.Sub(flagOperand_00AF, 0);
-        // F000:00B5 jne short 0x00BB
-        if (flagOperand_00AF != 0) {
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_callback);
-            // F000:00BB callback 0x010B
-            // Spice86 callback: DosInt21Handler.DispatchStdinInput
-            Callback(biosSegment, 0x00BB, 0x010B);
-            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_iret);
-            // F000:00BF iret
-            return InterruptRet();
-        }
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00B7, Signature_00B7_int);
-        // F000:00B7 int 0x28
-        InterruptCall(biosSegment, 0x00B9, 0x28);
-        throw FailAsUntested("Untested return from call at F000:00B7");
-    }
-
-    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
-    public virtual Action unknown_F000_00E8_F00E8() {
-        CheckExternalEvents(biosSegment, 0x00E8);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00E8, Signature_00E8_ret);
-        // F000:00E8 ret far
-        return FarRet();
-    }
-
-    /// <summary>Inputs: all. Outputs: all. Changes: all.</summary>
-    public virtual Action unknown_F000_00E9_F00E9() {
-        CheckExternalEvents(biosSegment, 0x00E9);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00E9, Signature_00E9_callback);
-        // F000:00E9 callback 0x010C
-        // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
-        Callback(biosSegment, 0x00E9, 0x010C);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_call);
-        // F000:00ED call far F000:00E8
-        FarCall(biosSegment, 0x00F2, biosSegment, unknown_F000_00E8_F00E8Entry);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00F2, Signature_00F2_callback);
-        // F000:00F2 callback 0x010D
-        // Spice86 callback: MouseDriver.AfterUserHandlerExecution
-        Callback(biosSegment, 0x00F2, 0x010D);
-        VerifySpeculativeEntryOrFail(biosSegment, 0x00F6, Signature_00F6_ret);
-        // F000:00F6 ret far
-        return FarRet();
+    /// <summary>Inputs: DF. Does not return.</summary>
+    public virtual Action unknown_0177_0100_01870() {
+        CheckExternalEvents(cs2, 0x0100);
+        AX = 0xB800;
+        ES = 0xB800;
+        AL = 0x5A;
+        SegmentB800Globals.Word0000 = 0x075A;
+        DI = (ushort)(DirectionFlag ? -2 : 2);
+        AX = 0x4C00;
+        return TerminateCall(cs2, 0x0112, () => Dos.Terminate(AL));
     }
 
 }
@@ -460,8 +72,8 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
         _segmentRegisters = segmentRegisters;
     }
 
-    /// CS:0x0095, whatever CS holds at the access.
-    public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
+    /// CS:0x0099, whatever CS holds at the access.
+    public byte Byte0099 { get => _memory.UInt8[Segment, 0x0099]; set => _memory.UInt8[Segment, 0x0099] = value; }
 }
 
 // ==== file: SegmentB800Globals.cs ====
@@ -482,3 +94,399 @@ public sealed class SegmentB800Globals : MemoryBasedDataStructure {
 
     public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 }
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public ushort Word006D { get => _memory.UInt16[Segment, 0x006D]; set => _memory.UInt16[Segment, 0x006D] = value; }
+
+    public ushort Word006F { get => _memory.UInt16[Segment, 0x006F]; set => _memory.UInt16[Segment, 0x006F] = value; }
+
+    public ushort Word00FB { get => _memory.UInt16[Segment, 0x00FB]; set => _memory.UInt16[Segment, 0x00FB] = value; }
+
+    public ushort Word00FD { get => _memory.UInt16[Segment, 0x00FD]; set => _memory.UInt16[Segment, 0x00FD] = value; }
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Wiring.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_016E_0100_017E0Entry;
+    private readonly Func<int, Action> unknown_0177_0100_01870Entry;
+    private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
+    private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
+    private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
+    private readonly Func<int, Action> unknown_F000_0063_F0063Entry;
+    private readonly Func<int, Action> unknown_F000_0071_F0071Entry;
+    private readonly Func<int, Action> unknown_F000_0076_F0076Entry;
+    private readonly Func<int, Action> unknown_F000_007B_F007BEntry;
+    private readonly Func<int, Action> unknown_F000_0080_F0080Entry;
+    private readonly Func<int, Action> unknown_F000_0085_F0085Entry;
+    private readonly Func<int, Action> unknown_F000_008A_F008AEntry;
+    private readonly Func<int, Action> unknown_F000_009A_F009AEntry;
+    private readonly Func<int, Action> unknown_F000_00EC_F00ECEntry;
+    private readonly Func<int, Action> unknown_F000_00ED_F00EDEntry;
+
+    protected readonly CsGlobals CsGlobals;
+    protected readonly SegmentB800Globals SegmentB800Globals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = (ushort)(programStartSegment - 0x0002);
+        cs2 = (ushort)(programStartSegment + 0x0007);
+        biosSegment = 0xF000;
+        CsGlobals = new CsGlobals(Memory, State.SegmentRegisters);
+        SegmentB800Globals = new SegmentB800Globals(Memory, programStartSegment);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_016E_0100_017E0Entry = _ => unknown_016E_0100_017E0();
+        unknown_0177_0100_01870Entry = _ => unknown_0177_0100_01870();
+        unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
+        unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
+        unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
+        unknown_F000_0063_F0063Entry = _ => unknown_F000_0063_F0063();
+        unknown_F000_0071_F0071Entry = _ => unknown_F000_0071_F0071();
+        unknown_F000_0076_F0076Entry = _ => unknown_F000_0076_F0076();
+        unknown_F000_007B_F007BEntry = _ => unknown_F000_007B_F007B();
+        unknown_F000_0080_F0080Entry = _ => unknown_F000_0080_F0080();
+        unknown_F000_0085_F0085Entry = _ => unknown_F000_0085_F0085();
+        unknown_F000_008A_F008AEntry = _ => unknown_F000_008A_F008A();
+        unknown_F000_009A_F009AEntry = _ => unknown_F000_009A_F009A();
+        unknown_F000_00EC_F00ECEntry = _ => unknown_F000_00EC_F00EC();
+        unknown_F000_00ED_F00EDEntry = _ => unknown_F000_00ED_F00ED();
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, RunBatchPrograms(unknown_016E_0100_017E0Entry, new CallLanding(new(cs2, 0x0100), unknown_0177_0100_01870Entry)), "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0100, unknown_0177_0100_01870Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0063, unknown_F000_0063_F0063Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0071, unknown_F000_0071_F0071Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0076, unknown_F000_0076_F0076Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x007B, unknown_F000_007B_F007BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0080, unknown_F000_0080_F0080Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0085, unknown_F000_0085_F0085Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x008A, unknown_F000_008A_F008AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x009A, unknown_F000_009A_F009AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00EC, unknown_F000_00EC_F00ECEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00ED, unknown_F000_00ED_F00EDEntry, "unknown");
+        DefineCallLandings(new(cs1, 0x0109), null, new CallLanding(new(cs2, 0x0100), unknown_0177_0100_01870Entry));
+        DefineCallLandings(new(cs1, 0x0111), null, new CallLanding(new(cs2, 0x0100), unknown_0177_0100_01870Entry));
+        DefineCallLandings(new(cs2, 0x0112), null, new CallLanding(new(cs2, 0x0100), unknown_0177_0100_01870Entry));
+    }
+
+    protected override bool ObservedTransfersOnly => true;
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Guards.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_push = [0x1E];
+    private static readonly byte?[] Signature_000B_push = [0x50];
+    private static readonly byte?[] Signature_000C_push = [0x52];
+    private static readonly byte?[] Signature_000D_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000F_callback = [0xFE, 0x38, 0x01, 0x01];
+    private static readonly byte?[] Signature_0013_pop = [0x5A];
+    private static readonly byte?[] Signature_0014_pop = [0x58];
+    private static readonly byte?[] Signature_0015_pop = [0x1F];
+    private static readonly byte?[] Signature_0016_iret = [0xCF];
+    private static readonly byte?[] Signature_0017_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_001B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_0061_iret = [0xCF];
+    private static readonly byte?[] Signature_0063_call = [0x2E, 0xFF, 0x1E, 0x6D, 0x00];
+    private static readonly byte?[] Signature_0068_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_006C_iret = [0xCF];
+    private static readonly byte?[] Signature_0071_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0075_iret = [0xCF];
+    private static readonly byte?[] Signature_0076_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_007A_iret = [0xCF];
+    private static readonly byte?[] Signature_007B_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007F_iret = [0xCF];
+    private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_0084_iret = [0xCF];
+    private static readonly byte?[] Signature_0085_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0089_iret = [0xCF];
+    private static readonly byte?[] Signature_008A_callback = [0xFE, 0x38, 0x09, 0x01];
+    private static readonly byte?[] Signature_008E_iret = [0xCF];
+    private static readonly byte?[] Signature_00AE_sti = [0xFB];
+    private static readonly byte?[] Signature_00AF_callback = [0xFE, 0x38, 0x0A, 0x01];
+    private static readonly byte?[] Signature_00B3_cmp = [0x2E, 0x80, 0x3E, 0x99, 0x00, 0x00];
+    private static readonly byte?[] Signature_00B9_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00BB_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00BF_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00C3_iret = [0xCF];
+    private static readonly byte?[] Signature_00EC_ret = [0xCB];
+    private static readonly byte?[] Signature_00ED_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00F1_call = [0x2E, 0xFF, 0x1E, 0xFB, 0x00];
+    private static readonly byte?[] Signature_00F6_callback = [0xFE, 0x38, 0x0D, 0x01];
+    private static readonly byte?[] Signature_00FA_ret = [0xCB];
+
+    private static readonly byte?[][] SpeculativeRun_00B3 = [Signature_00B3_cmp, Signature_00B9_jne];
+
+}
+
+// ==== file: CfgGeneratedOverrides.Support.Stubs.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: all. Does not return.</summary>
+    public virtual Action unknown_F000_0006_F0006() {
+        CheckExternalEvents(biosSegment, 0x0006);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0006, Signature_0006_callback);
+        // Spice86 callback: TimerInt8Handler.IncTickCounterValue
+        Callback(biosSegment, 0x0006, 8);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000A, Signature_000A_push);
+        Stack.Push16(DS);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000B, Signature_000B_push);
+        Stack.Push16(AX);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000C, Signature_000C_push);
+        Stack.Push16(DX);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x000D, Signature_000D_int);
+        throw FailAsUntested("Untested interrupt at F000:000D");
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0017_F0017() {
+        CheckExternalEvents(biosSegment, 0x0017);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0017, Signature_0017_callback);
+        // INT 09h: BiosKeyboardInt9Handler
+        Callback(biosSegment, 0x0017, 9);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_005D_F005D() {
+        CheckExternalEvents(biosSegment, 0x005D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x005D, Signature_005D_callback);
+        // INT 70h: Rtc.HandleInterrupt
+        Callback(biosSegment, 0x005D, 0x0070);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0061, Signature_0061_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0063_F0063() {
+        CheckExternalEvents(biosSegment, 0x0063);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0063, Signature_0063_call);
+        ushort targetSegment_0063 = SegmentF000Globals.Word006F;
+        ushort targetOffset_0063 = SegmentF000Globals.Word006D;
+        if (targetSegment_0063 != biosSegment || targetOffset_0063 != 0x00ED) {
+            throw FailAsUntested($"Untested far call target {targetSegment_0063:X4}:{targetOffset_0063:X4} at F000:0063");
+        }
+        FarCall(biosSegment, 0x0068, biosSegment, unknown_F000_00ED_F00EDEntry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0068, Signature_0068_callback);
+        // Spice86 callback: BiosMouseInt74Handler.AfterMouseDriverExecution
+        Callback(biosSegment, 0x0068, 0x0074);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x006C, Signature_006C_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0071_F0071() {
+        CheckExternalEvents(biosSegment, 0x0071);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0071, Signature_0071_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0071, 0x0104);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0075, Signature_0075_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0076_F0076() {
+        CheckExternalEvents(biosSegment, 0x0076);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0076, Signature_0076_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0076, 0x0105);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007A, Signature_007A_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_007B_F007B() {
+        CheckExternalEvents(biosSegment, 0x007B);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007B, Signature_007B_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x007B, 0x0106);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x007F, Signature_007F_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0080_F0080() {
+        CheckExternalEvents(biosSegment, 0x0080);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0080, Signature_0080_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0080, 0x0107);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0084, Signature_0084_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_0085_F0085() {
+        CheckExternalEvents(biosSegment, 0x0085);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0085, Signature_0085_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x0085, 0x0108);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x0089, Signature_0089_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: flags, DF. Outputs: flags, DF. Changes: flags, DF.</summary>
+    public virtual Action unknown_F000_008A_F008A() {
+        CheckExternalEvents(biosSegment, 0x008A);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x008A, Signature_008A_callback);
+        // Spice86 callback: DefaultIrqHandler.HandleIrq
+        Callback(biosSegment, 0x008A, 0x0109);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x008E, Signature_008E_iret);
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: none. Changes: all.</summary>
+    public virtual Action unknown_F000_009A_F009A() {
+        byte flagOperand_00B3 = 0;
+    entrydispatcher:
+        CheckExternalEvents(biosSegment, 0x009A);
+        Alu8.Sub(AH, 7);
+        if (AH != 7) {
+            Alu8.Sub(AH, 8);
+            if (AH != 8) {
+                Alu8.Sub(AH, 0x0A);
+                if (AH == 0x0A) {
+                    goto L_00AE;
+                }
+                // INT 21h: Dos services selected by AH
+                if (!CallbackMovedCsIp(biosSegment, 0x00A9, 0x0021)) {
+                    return InterruptRet();
+                }
+                if (CS == cs2 && IP == 0x0100) {
+                    if (JumpDispatcher.Jump(unknown_0177_0100_01870Entry, 0x0000)) {
+                        goto entrydispatcher;
+                    }
+                    return JumpDispatcher.RequiredJumpAsmReturn;
+                }
+                else {
+                    throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:00A9");
+                }
+            }
+        }
+    L_00AE:
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AE, Signature_00AE_sti);
+        InterruptFlag = true;
+        CheckExternalEvents(biosSegment, 0x00AF);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00AF, Signature_00AF_callback);
+        // Spice86 callback: DosInt21Handler.CallbackCheckStdinReady
+        Callback(biosSegment, 0x00AF, 0x010A);
+        VerifySpeculativeRunOrFail(biosSegment, 0x00B3, SpeculativeRun_00B3);
+        flagOperand_00B3 = CsGlobals.Byte0099;
+        Alu8.Sub(flagOperand_00B3, 0);
+        if (flagOperand_00B3 != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00BF, Signature_00BF_callback);
+            // Spice86 callback: DosInt21Handler.DispatchStdinInput
+            Callback(biosSegment, 0x00BF, 0x010B);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00C3, Signature_00C3_iret);
+            return InterruptRet();
+        }
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00BB, Signature_00BB_int);
+        throw FailAsUntested("Untested interrupt at F000:00BB");
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    public virtual Action unknown_F000_00EC_F00EC() {
+        CheckExternalEvents(biosSegment, 0x00EC);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00EC, Signature_00EC_ret);
+        return FarRet();
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    public virtual Action unknown_F000_00ED_F00ED() {
+        CheckExternalEvents(biosSegment, 0x00ED);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00ED, Signature_00ED_callback);
+        // Spice86 callback: MouseDriver.BeforeUserHandlerExecution
+        Callback(biosSegment, 0x00ED, 0x010C);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F1, Signature_00F1_call);
+        ushort targetSegment_00F1 = SegmentF000Globals.Word00FD;
+        ushort targetOffset_00F1 = SegmentF000Globals.Word00FB;
+        if (targetSegment_00F1 != biosSegment || targetOffset_00F1 != 0x00EC) {
+            throw FailAsUntested($"Untested far call target {targetSegment_00F1:X4}:{targetOffset_00F1:X4} at F000:00F1");
+        }
+        FarCall(biosSegment, 0x00F6, biosSegment, unknown_F000_00EC_F00ECEntry);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00F6, Signature_00F6_callback);
+        // Spice86 callback: MouseDriver.AfterUserHandlerExecution
+        Callback(biosSegment, 0x00F6, 0x010D);
+        VerifySpeculativeEntryOrFail(biosSegment, 0x00FA, Signature_00FA_ret);
+        return FarRet();
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+// Relaxations: none
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+

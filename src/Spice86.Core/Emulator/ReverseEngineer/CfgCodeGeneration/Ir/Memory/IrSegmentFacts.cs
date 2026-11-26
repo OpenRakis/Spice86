@@ -38,7 +38,8 @@ internal sealed class IrSegmentFacts {
         && _calls.All(pair => other._calls.TryGetValue(pair.Key, out IrSegmentCallValue? value)
             && value is not null && pair.Value.Equals(value));
 
-    private static bool FactEquals(IrSegmentEntryFact first, IrSegmentEntryFact second) =>
+    /// <summary>Whether two entry facts hold the same known values and equalities.</summary>
+    internal static bool FactEquals(IrSegmentEntryFact first, IrSegmentEntryFact second) =>
         first.KnownValues.Count == second.KnownValues.Count
         && first.EqualTo.Count == second.EqualTo.Count
         && first.KnownValues.All(pair => second.KnownValues.TryGetValue(pair.Key, out ushort value)

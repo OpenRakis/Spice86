@@ -101,6 +101,8 @@ internal static class IrAstChildren {
             case InterruptServiceCallNode serviceCall:
                 children.AddRange(serviceCall.Arguments);
                 children.AddRange(serviceCall.Results);
+                Add(serviceCall.ReturnSegment);
+                Add(serviceCall.ReturnOffset);
                 break;
             case MethodCallNode call:
                 children.AddRange(call.Arguments);
@@ -175,6 +177,9 @@ internal static class IrAstChildren {
             case MoveIpNextNode moveIp:
                 Add(moveIp.NextIp);
                 break;
+            case StackRangeCheckNode rangeCheck:
+                Add(rangeCheck.Offset);
+                break;
             case RegisterWriteBackNode writeBack:
                 Add(writeBack.Register); Add(writeBack.Local);
                 break;
@@ -225,9 +230,13 @@ internal static class IrAstChildren {
         ReturnNode returnNode => Map(node, map, [returnNode.Value],
             c => returnNode with { Value = Child<IVisitableAstNode>(c[0]) }),
         // A service call's results are write targets, like an assignment's left: the mapping
-        // covers the argument reads only and never substitutes a result lvalue.
-        InterruptServiceCallNode serviceCall => MapList(serviceCall, map, serviceCall.Arguments,
-            serviceCall.WithArguments),
+        // covers the argument reads and the return address only and never substitutes a result
+        // lvalue.
+        InterruptServiceCallNode serviceCall => Map(serviceCall, map,
+            [serviceCall.ReturnSegment, serviceCall.ReturnOffset, .. serviceCall.Arguments],
+            children => serviceCall.WithMappedReads(Child<IVisitableAstNode>(children[0]),
+                Child<IVisitableAstNode>(children[1]),
+                [.. children.Skip(2).Select(Child<IVisitableAstNode>)])),
         MethodCallNode call => MapList(call, map, call.Arguments, call.WithArguments),
         MethodCallValueNode callValue => MapList(callValue, map, callValue.CallNode.Arguments,
             callValue.WithArguments),
@@ -282,6 +291,8 @@ internal static class IrAstChildren {
             parameters => instruction with { Parameters = parameters }),
         MoveIpNextNode moveIp => Map(node, map, [moveIp.NextIp],
             c => moveIp with { NextIp = Child<IVisitableAstNode>(c[0]) }),
+        StackRangeCheckNode rangeCheck => Map(node, map, [rangeCheck.Offset],
+            c => rangeCheck with { Offset = Child<ValueNode>(c[0]) }),
         InstructionFieldNode or ConstantNode or CpuFlagNode or FlagRegisterNode or RegisterNode
             or VariableReferenceNode or InstructionPointerNode or LoadOffsetParameterNode
             or SegmentVariableNode or OffsetLiteralNode or SignatureFieldNode or CommentNode
@@ -291,7 +302,7 @@ internal static class IrAstChildren {
             or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
             or SegmentedAddressListNode or RegisterLocalNode => node,
         RegisterWriteBackNode writeBack => Map(node, map, [writeBack.Register, writeBack.Local],
-            c => new RegisterWriteBackNode(Child<RegisterNode>(c[0]), Child<RegisterLocalNode>(c[1]))),
+            c => new RegisterWriteBackNode(Child<ValueNode>(c[0]), Child<RegisterLocalNode>(c[1]))),
         _ => throw new NotSupportedException(
             $"{node.GetType().Name} has no AST children mapping."),
     };

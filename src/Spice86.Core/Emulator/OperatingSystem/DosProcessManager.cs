@@ -195,10 +195,14 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Gets or sets the return code of the last terminated child process.
     /// </summary>
     /// <remarks>
+    /// Stored in the SDA at offset 14h, where real DOS keeps it for INT 21h/4Dh.
     /// The low byte (AL) contains the exit code, and the high byte (AH) contains
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
     /// </remarks>
-    public ushort LastChildReturnCode { get; set; }
+    public ushort LastChildReturnCode {
+        get => _sda.ReturnCode;
+        set => _sda.ReturnCode = value;
+    }
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
 
@@ -360,7 +364,11 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
-        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, loadType, environmentSegment, callerCS, callerIP);
+        DosExecResult result = LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, loadType, environmentSegment, callerCS, callerIP);
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            TrackResumeDispatchTarget(result, callerCS, callerIP);
+        }
+        return result;
     }
 
     /// <summary>
@@ -376,7 +384,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     internal DosExecResult LoadInitialProgram(string programName, DosExecParameterBlock paramBlock,
         string commandTail, ushort environmentSegment, ushort callerCS, ushort callerIP) {
-        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, callerCS, callerIP);
+        return TrackResumeDispatchTarget(
+            LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, callerCS, callerIP),
+            callerCS, callerIP);
     }
 
     /// <summary>
@@ -398,10 +408,12 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             callerCS = _sda.CurrentProgramSegmentPrefix;
             callerIP = InternalPrograms.StubReturnOffset;
         }
-        return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
-            0, callerIP, callerCS, _sda.CurrentProgramSegmentPrefix,
-            "BATCH$$$.COM", LoadedImageKind.InternalBatchProgram,
-            comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
+        return TrackResumeDispatchTarget(
+            HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
+                0, callerIP, callerCS, _sda.CurrentProgramSegmentPrefix,
+                "BATCH$$$.COM", LoadedImageKind.InternalBatchProgram,
+                comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize)),
+            callerCS, callerIP);
     }
 
     internal DosExecResult LoadInitialBootProgram(char driveLetter) {
@@ -551,7 +563,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosProgram, hostPath,
             block.DataBlockSegment,
-            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize));
+            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize,
+            (ushort)(exeFile.InitSS + loadImageSegment)));
 
         return exeResult;
     }
@@ -605,7 +618,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loadedImageRegistry.Register(new LoadedImage(imageKind, hostPath,
             comBlock.DataBlockSegment,
             MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize),
-            (uint)fileBytes.Length));
+            (uint)fileBytes.Length, comBlock.DataBlockSegment));
 
         return comResult;
     }
@@ -698,7 +711,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
 
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosOverlay, hostPath,
-            loadSegment, MemoryUtils.ToPhysicalAddress(loadSegment, 0), exeFile.ProgramSize));
+            loadSegment, MemoryUtils.ToPhysicalAddress(loadSegment, 0), exeFile.ProgramSize, null));
 
         // For overlays, DOS doesn't return anything in the parameter block
         // Just return success with AX=0 and DX=0
@@ -790,7 +803,44 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 // Halt emulation; COMMAND.COM has no execution context.
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
+            } else {
+                _terminateResumeTargets.Add(_state.IpSegmentedAddress);
             }
+        }
+    }
+
+    /// <summary>The entry addresses a terminate during the run resumed at through the batch
+    /// engine launching the next program: generated code resumes them from the root entry's
+    /// <c>RunBatchPrograms</c> loop instead of the interrupt stub's callback-moved-CS:IP path.</summary>
+    internal IReadOnlySet<SegmentedAddress> TerminateResumeTargets => _terminateResumeTargets;
+    private readonly HashSet<SegmentedAddress> _terminateResumeTargets = [];
+
+    /// <summary>The terminate-resume targets that can still reach the interrupt stub's
+    /// callback-moved-CS:IP dispatch: launched by a service or stub-return path rather than the
+    /// root pump, or resumed by a terminate that ran through the untyped handler path whose
+    /// <see cref="Spice86.Shared.Emulator.Errors.ProcessTerminatedException"/> is swallowed. Generated code keeps a dispatch arm
+    /// for them even when a terminate resume also points there.</summary>
+    internal IReadOnlySet<SegmentedAddress> ResumeDispatchTargets => _resumeDispatchTargets;
+    private readonly HashSet<SegmentedAddress> _resumeDispatchTargets = [];
+
+    // A launch whose caller is the root batch context (0:0) only ever resumes through the pump's
+    // terminate unwind, so its entry needs no stub dispatch arm. Every other launch returns to a
+    // real caller: the service or stub the callback ran in sees CS:IP moved to the child entry and
+    // the generated dispatch must keep an arm for it.
+    private DosExecResult TrackResumeDispatchTarget(DosExecResult result, ushort callerCS, ushort callerIP) {
+        if (result.Success && (callerCS != 0 || callerIP != 0)) {
+            _resumeDispatchTargets.Add(new SegmentedAddress(result.InitialCS, result.InitialIP));
+        }
+        return result;
+    }
+
+    /// <summary>Records the resume address a terminate left on the machine when it ran through
+    /// the untyped handler dispatch: that resume arrives through the interrupt stub's
+    /// callback-moved-CS:IP check (the service returned, or its unwind was swallowed), so
+    /// generated code keeps its dispatch arm.</summary>
+    internal void RecordDispatchedTerminateResume(SegmentedAddress address) {
+        if (_terminateResumeTargets.Contains(address)) {
+            _resumeDispatchTargets.Add(address);
         }
     }
 

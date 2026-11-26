@@ -36,6 +36,8 @@ selfmodify:
     mov ax, 1234
     mov word [cs:selfmodify+1], 5678
     mov cx, 1
+    mov word [cs:604h], ax
+    mov word [cs:608h], cx
     cmp ax, 5678
     je jump
     mov cx, 0

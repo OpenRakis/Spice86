@@ -1,0 +1,28 @@
+F000:0000 cli
+F000:0001 mov AX,0x2000
+F000:0004 mov DS,AX
+F000:0006 mov SS,AX
+F000:0008 mov SP,0x1000
+F000:000B xor AX,AX
+F000:000D mov ES,AX
+F000:000F mov word ptr ES:[0x0180],0x003E
+F000:0016 mov word ptr ES:[0x0182],CS
+F000:001B push 0x1111
+F000:001E call near 0x002C
+F000:0021 add SP,2
+F000:0024 mov word ptr DS:[0x0200],AX
+F000:0027 mov word ptr DS:[0x0204],SP
+F000:002B hlt
+F000:002C push BP
+F000:002D mov BP,SP
+F000:002F mov DX,word ptr SS:[BP+4]
+F000:0032 int 0x60
+F000:0034 mov AX,word ptr SS:[BP+4]
+F000:0037 mov word ptr DS:[0x0202],AX
+F000:003A add AX,DX
+F000:003C pop BP
+F000:003D ret near
+F000:003E mov BX,SP
+F000:0040 mov word ptr SS:[BX+0x0A],0x9999
+F000:0046 iret
+F000:FFF0 jmp short 0

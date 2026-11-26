@@ -55,7 +55,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
             if (LoggerService.IsEnabled(LogLevel.Warning)) {
                 LoggerService.LogWarning("BIOS INT14H: Unsupported function AH=0x{Function:X2}", operation);
             }
-            SetCarryFlag(true, true);
+            SetCarryFlag(true);
             return;
         }
 
@@ -87,7 +87,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     /// <summary>Initializes serial port <paramref name="portIndex"/> with
     /// <paramref name="configuration"/>; returns both line/modem status bytes in AX, or
     /// <see langword="null"/> when the port is invalid or absent.</summary>
-    public (ushort? ax, bool carryFlag) InitializePort(byte configuration, ushort portIndex) {
+    public (ushort? status, bool failed) InitializePort(byte configuration, ushort portIndex) {
         if (!TryGetPort(portIndex, out ushort port)) {
             return (null, false);
         }
@@ -105,18 +105,18 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     }
 
     [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void InitializePort(bool calledFromVm) {
+    private void InitializePort() {
         (ushort? ax, bool carryFlag) = InitializePort(State.AL, State.DX);
         if (ax is { } value) {
             State.AX = value;
         }
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Writes <paramref name="character"/> to serial port
     /// <paramref name="portIndex"/> when the transmitter is empty; returns the line status in
     /// AH, or <see langword="null"/> when the port is invalid or absent.</summary>
-    public (byte? ah, bool carryFlag) TransmitCharacter(byte character, ushort portIndex) {
+    public (byte? status, bool failed) TransmitCharacter(byte character, ushort portIndex) {
         if (!TryGetPort(portIndex, out ushort port)) {
             return (null, false);
         }
@@ -134,19 +134,19 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     }
 
     [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void TransmitCharacter(bool calledFromVm) {
+    private void TransmitCharacter() {
         (byte? ah, bool carryFlag) = TransmitCharacter(State.AL, State.DX);
         if (ah is { } value) {
             State.AH = value;
         }
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Reads a character from serial port <paramref name="portIndex"/>; with no
     /// data ready, returns the line status in AH and
     /// <paramref name="previousCharacter"/> in AL, or <see langword="null"/> when the port is
     /// invalid or absent.</summary>
-    public (ushort? ax, bool carryFlag) ReceiveCharacter(byte previousCharacter, ushort portIndex) {
+    public (ushort? statusAndCharacter, bool failed) ReceiveCharacter(byte previousCharacter, ushort portIndex) {
         if (!TryGetPort(portIndex, out ushort port)) {
             return (null, false);
         }
@@ -163,18 +163,18 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     }
 
     [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void ReceiveCharacter(bool calledFromVm) {
+    private void ReceiveCharacter() {
         (ushort? ax, bool carryFlag) = ReceiveCharacter(State.AL, State.DX);
         if (ax is { } value) {
             State.AX = value;
         }
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Returns the line and modem status bytes of serial port
     /// <paramref name="portIndex"/> in AX, or <see langword="null"/> when the port is invalid
     /// or absent.</summary>
-    public (ushort? ax, bool carryFlag) GetPortStatus(ushort portIndex) {
+    public (ushort? status, bool failed) GetPortStatus(ushort portIndex) {
         if (!TryGetPort(portIndex, out ushort port)) {
             return (null, false);
         }
@@ -185,12 +185,12 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     }
 
     [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
-    private void GetPortStatus(bool calledFromVm) {
+    private void GetPortStatus() {
         (ushort? ax, bool carryFlag) = GetPortStatus(State.DX);
         if (ax is { } value) {
             State.AX = value;
         }
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     private bool TryGetPort(ushort portIndex, out ushort port) {
