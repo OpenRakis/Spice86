@@ -63,13 +63,15 @@ internal static class DeviceRegisterSnapshot {
 
     private static void CapturePit(Machine machine,
         List<(string Device, string Register, uint Value)> registers) {
+        PitTimerState timer = machine.Timer.CaptureState();
+        PitChannelState[] channels = [timer.Channel0, timer.Channel1, timer.Channel2];
         for (int channel = 0; channel < 3; channel++) {
-            PitChannelSnapshot snapshot = machine.Timer.GetChannelSnapshot(channel);
-            registers.Add(("pit", $"channel{channel}.mode", (byte)snapshot.Mode));
-            registers.Add(("pit", $"channel{channel}.bcd", snapshot.Bcd ? 1u : 0u));
-            registers.Add(("pit", $"channel{channel}.readaccess", (byte)snapshot.ReadMode));
-            registers.Add(("pit", $"channel{channel}.writeaccess", (byte)snapshot.WriteMode));
-            registers.Add(("pit", $"channel{channel}.reload", snapshot.WriteLatch));
+            PitChannelState channelState = channels[channel];
+            registers.Add(("pit", $"channel{channel}.mode", (byte)channelState.Mode));
+            registers.Add(("pit", $"channel{channel}.bcd", channelState.Bcd ? 1u : 0u));
+            registers.Add(("pit", $"channel{channel}.readaccess", (byte)channelState.ReadMode));
+            registers.Add(("pit", $"channel{channel}.writeaccess", (byte)channelState.WriteMode));
+            registers.Add(("pit", $"channel{channel}.reload", channelState.WriteLatch));
         }
     }
 
