@@ -45,13 +45,13 @@ public sealed class Spice86Creator : IDisposable {
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
         bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null,
-        bool generatedCodeCheckBuild = false)
+        bool checkBuild = false)
         : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
             recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
-            enableSpeculativeCfgExploration, clockStartTime, generatedCodeCheckBuild) {
+            enableSpeculativeCfgExploration, clockStartTime, checkBuild) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
@@ -63,7 +63,7 @@ public sealed class Spice86Creator : IDisposable {
             settings.RecordedDataDirectory, settings.ReloadCfgGraph,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
             settings.EnableSpeculativeCfgExploration, TestClockStartTime,
-            settings.GeneratedCodeCheckBuild) {
+            settings.CheckBuild) {
         EnableUmb = settings.EnableUmb;
         HltStopsEmulation = settings.HltStopsEmulation;
         _settings = settings;
@@ -81,7 +81,7 @@ public sealed class Spice86Creator : IDisposable {
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
         bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime,
-        bool generatedCodeCheckBuild) {
+        bool checkBuild) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -141,7 +141,7 @@ public sealed class Spice86Creator : IDisposable {
             RenderingMode = renderingMode,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
             ClockStartTime = clockStartTime,
-            GeneratedCodeCheckBuild = generatedCodeCheckBuild,
+            GeneratedCode = checkBuild ? "CheckBuild" : null,
         };
 
         _maxCycles = maxCycles;

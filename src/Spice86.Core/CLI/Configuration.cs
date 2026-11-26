@@ -33,37 +33,28 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--A20Gate")]
     public bool A20Gate { get; init; }
 
-    /// <summary>When <c>true</c>, generated overrides print the
-    /// <c>// SSSS:OOOO asm</c> comment of every instruction; off by default - the instruction
-    /// address map keeps the navigation.</summary>
-    [CommandOption("--GeneratedCodeAsmComments")]
-    public bool GeneratedCodeAsmComments { get; init; }
+    /// <summary>Comma list selecting what generated overrides contain: entries applied left to
+    /// right, <c>+name</c> enables and <c>-name</c> disables (no sign enables). The valid names are
+    /// the rows of <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.GeneratedCodeSelection"/>:
+    /// AsmComments, CheckBuild (a preset for the service-call notifications, branch probes and
+    /// split port accesses of a check build; later entries may override it), BranchProbes,
+    /// ServiceCallNotifications, DeviceOperations, AssumeUnknownMemoryIsRam,
+    /// AssumeAccessesStayInSegment, AssumeAbandonedStackSlotsUnobserved and
+    /// AssumeSavedSlotsWrittenOnlyByPops. An unknown name fails parsing and lists them. Every dump
+    /// writes <c>manifest.json</c> next to the sources, whatever the selection.</summary>
+    [CommandOption("--GeneratedCode <LIST>")]
+    public string? GeneratedCode { get; init; }
 
-    /// <summary>When <c>true</c>, generated overrides treat memory the analysis cannot prove as
-    /// ordinary RAM; off by default - strict mode optimizes proved RAM only. A proved device range
-    /// is never relaxed.</summary>
-    [CommandOption("--GeneratedCodeAssumeUnknownMemoryIsRam")]
-    public bool GeneratedCodeAssumeUnknownMemoryIsRam { get; init; }
-
-    /// <summary>When <c>true</c>, generated overrides assume an indexed memory access whose
-    /// offset range is unproved stays inside its segment; off by default - strict mode assumes
-    /// it may wrap. An access proved to cross stays exact.</summary>
-    [CommandOption("--GeneratedCodeAssumeAccessesStayInSegment")]
-    public bool GeneratedCodeAssumeAccessesStayInSegment { get; init; }
-
-    /// <summary>When <c>true</c>, generated overrides assume the bytes of a private typed stack
-    /// argument are not observed after the call returns, so the call site reserves the stack
-    /// space without writing them; off by default - strict mode writes them like the pushes
-    /// did.</summary>
-    [CommandOption("--GeneratedCodeAssumeAbandonedStackSlotsUnobserved")]
-    public bool GeneratedCodeAssumeAbandonedStackSlotsUnobserved { get; init; }
-
-    /// <summary>When <c>true</c>, generated overrides assume a slot a save push of a register
-    /// wrote is written only by its pop, so the slot survives call and service boundaries when
-    /// the method lets no stack address escape; off by default - strict mode drops every slot at
-    /// a full memory boundary.</summary>
-    [CommandOption("--GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops")]
-    public bool GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops { get; init; }
+    /// <summary>Validates the <c>--GeneratedCode</c> list: every entry must be a valid sign and a
+    /// known name.</summary>
+    public override Spectre.Console.ValidationResult Validate() {
+        try {
+            Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.GeneratedCodeSelection.Resolve(GeneratedCode);
+        } catch (FormatException exception) {
+            return Spectre.Console.ValidationResult.Error(exception.Message);
+        }
+        return Spectre.Console.ValidationResult.Success();
+    }
 
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
@@ -172,18 +163,6 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--ClockJitterSeed <CLOCKJITTERSEED>")]
     public int? ClockJitterSeed { get; init; }
 
-    /// <summary>
-    /// Generates the C# override project as a check build: generated code made to be compared with the
-    /// emulated original, not to be shipped. A check build prints a <c>ServiceCalled</c> statement before
-    /// each direct call of a DOS or BIOS service implementation, so an
-    /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
-    /// call. It wraps every branch condition and switch value in a probe that reports to an
-    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/>, prints every port access
-    /// on its own instead of as device operations. Off by default. Every dump writes
-    /// <c>manifest.json</c> next to the sources, check build or not.
-    /// </summary>
-    [CommandOption("--GeneratedCodeCheckBuild")]
-    public bool GeneratedCodeCheckBuild { get; init; }
 
     /// <summary>
     /// Optional fixed start date/time for the emulated clock. Accepts any value parseable by

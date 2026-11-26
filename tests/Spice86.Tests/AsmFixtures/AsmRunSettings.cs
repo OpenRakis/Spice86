@@ -62,7 +62,7 @@ internal sealed record AsmRunSettings {
 
     /// <summary>Whether the machine observes service calls (the generated-code check build): the
     /// interrupt stubs register their notifying callback only then.</summary>
-    public bool GeneratedCodeCheckBuild { get; init; }
+    public bool CheckBuild { get; init; }
 
     /// <summary>Scheduler mode used by this fixture's video device.</summary>
     public RenderingMode RenderingMode { get; init; } = RenderingMode.Async;

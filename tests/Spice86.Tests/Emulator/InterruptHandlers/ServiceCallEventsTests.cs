@@ -44,7 +44,7 @@ public sealed class ServiceCallEventsTests {
 
     private static AsmRunSettings Observed(AsmRunSettings settings, Recorder recorder) {
         return settings with {
-            GeneratedCodeCheckBuild = true,
+            CheckBuild = true,
             ConfigureMachine = machine => machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder
         };
     }
@@ -75,7 +75,7 @@ public sealed class ServiceCallEventsTests {
         AsmRunSettings settings = AsmFixtureCatalog.Partition("int_service_calls").Settings;
         Recorder recorder = new();
         AsmRunSettings unobserved = settings with {
-            GeneratedCodeCheckBuild = true,
+            CheckBuild = true,
             ConfigureMachine = machine => {
                 machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = recorder;
                 machine.InstalledInterruptHandlers.ServiceCallEvents.Observer = IServiceCallObserver.None;

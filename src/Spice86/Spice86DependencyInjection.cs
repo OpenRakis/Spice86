@@ -271,9 +271,11 @@ public class Spice86DependencyInjection : IDisposable {
         FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        GeneratedCodeSelection.Resolved generatedCodeSelection =
+            GeneratedCodeSelection.Resolve(configuration.GeneratedCode);
         InstalledInterruptHandlers installedInterruptHandlers =
             new(dualPic.EnumerateHardwareInterruptVectorNumbers(),
-                configuration.GeneratedCodeCheckBuild);
+                generatedCodeSelection.ServiceCallNotifications);
         ServiceCallEvents serviceCallEvents = installedInterruptHandlers.ServiceCallEvents;
 
         if (configuration.InitializeDOS is false) {
@@ -502,24 +504,12 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner,
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
-        GenerationRelaxation relaxations = GenerationRelaxation.None;
-        if (configuration.GeneratedCodeAssumeUnknownMemoryIsRam) {
-            relaxations |= GenerationRelaxation.UnknownMemoryIsRam;
-        }
-        if (configuration.GeneratedCodeAssumeAccessesStayInSegment) {
-            relaxations |= GenerationRelaxation.AccessesStayInSegment;
-        }
-        if (configuration.GeneratedCodeAssumeAbandonedStackSlotsUnobserved) {
-            relaxations |= GenerationRelaxation.AbandonedStackSlotsUnobserved;
-        }
-        if (configuration.GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops) {
-            relaxations |= GenerationRelaxation.SavedSlotsWrittenOnlyByPops;
-        }
-        GeneratorOptions generatorOptions = (configuration.GeneratedCodeCheckBuild
-            ? GeneratorOptions.CheckBuild
-            : GeneratorOptions.Default) with {
-            PrintAsmComments = configuration.GeneratedCodeAsmComments,
-            Policy = new GenerationPolicy(relaxations)
+        GeneratorOptions generatorOptions = GeneratorOptions.Default with {
+            PrintAsmComments = generatedCodeSelection.AsmComments,
+            ServiceCallNotifications = generatedCodeSelection.ServiceCallNotifications,
+            BranchProbes = generatedCodeSelection.BranchProbes,
+            DeviceOperations = generatedCodeSelection.DeviceOperations,
+            Policy = new GenerationPolicy(generatedCodeSelection.Relaxations)
         };
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(generatorOptions,
             maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile), loggerService);

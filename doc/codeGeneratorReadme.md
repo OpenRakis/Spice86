@@ -136,14 +136,14 @@ In pipeline order; the SSA is built once before the first group and rebuilt once
 `GenerationPolicy` is the immutable set of named relaxations the whole run shares; the default is
 strict mode with no relaxations. Each relaxation is one command-line option:
 
-- `--GeneratedCodeAssumeUnknownMemoryIsRam` (`UnknownMemoryIsRam`): memory the analysis cannot
+- `AssumeUnknownMemoryIsRam` (`UnknownMemoryIsRam`): memory the analysis cannot
   classify is treated as ordinary RAM.
-- `--GeneratedCodeAssumeAccessesStayInSegment` (`AccessesStayInSegment`): an indexed access whose
+- `AssumeAccessesStayInSegment` (`AccessesStayInSegment`): an indexed access whose
   offset range is unproved is treated as staying inside its segment.
-- `--GeneratedCodeAssumeAbandonedStackSlotsUnobserved` (`AbandonedStackSlotsUnobserved`): the bytes
+- `AssumeAbandonedStackSlotsUnobserved` (`AbandonedStackSlotsUnobserved`): the bytes
   of a proved private typed stack argument are not observed after the call returns, so the site
   reserves stack space without writing them.
-- `--GeneratedCodeAssumeSavedSlotsWrittenOnlyByPops` (`SavedSlotsWrittenOnlyByPops`): a slot
+- `AssumeSavedSlotsWrittenOnlyByPops` (`SavedSlotsWrittenOnlyByPops`): a slot
   written only by a register's save push survives call boundaries, so the restoring pop proves the
   pushed bytes.
 
@@ -153,10 +153,12 @@ as `// Relaxations: none` or the enabled names.
 
 `GeneratorOptions` carries the other switches. `PrintAsmComments` keeps the `// SSSS:OOOO asm`
 comment of every instruction (off by default; the manifest's address map keeps the navigation).
-`--GeneratedCodeCheckBuild` selects the check build: `ServiceCalled` statements before direct
-service calls, branch probes on every condition and switch value, and device operations split back
-into single port accesses, so a check build can be compared access-by-access with the emulated
-original.
+The command line selects these through one option, `--GeneratedCode <LIST>`: a comma list of
+`+name` / `-name` entries (no sign enables) applied left to right. The names are AsmComments,
+BranchProbes, ServiceCallNotifications, DeviceOperations, the four relaxations above and the
+`CheckBuild` preset, which enables the service-call notifications and the branch probes and splits
+device operations back into single port accesses, so a check build can be compared access-by-access
+with the emulated original; a later entry may override part of the preset.
 
 ## How to add a pass
 
