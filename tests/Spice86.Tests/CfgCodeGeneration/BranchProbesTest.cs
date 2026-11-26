@@ -290,6 +290,37 @@ public sealed class BranchProbesTest {
         read.Sites.Select(site => site.Id).Should().Equal(0, 1);
     }
 
+    [Fact]
+    public void ManifestAddressMapSurvivesAJsonRoundTrip() {
+        // Arrange: two methods, each in its file with instructions; the second instruction of the
+        // first method prints nothing, so its range is empty (LastLine = FirstLine - 1).
+        GeneratedCodeManifest manifest = new([
+                new GeneratedMethodManifest("First",
+                    [new MethodEntryManifest(0xF000, 0x0010)],
+                    [], [], []),
+                new GeneratedMethodManifest("Second",
+                    [new MethodEntryManifest(0xF000, 0x0040)],
+                    [new MethodValueManifest("ax", "ushort", "AX")],
+                    [new MethodValueManifest("result", "ushort", "BX")],
+                    [])
+            ]) {
+            AddressMap = [
+                new AddressMapEntryManifest("F000:0010", "CfgGeneratedOverrides.F000.cs", "First", 12, 14),
+                new AddressMapEntryManifest("F000:0013", "CfgGeneratedOverrides.F000.cs", "First", 15, 14),
+                new AddressMapEntryManifest("F000:0040", "CfgGeneratedOverrides.F000.cs", "Second", 20, 23)
+            ]
+        };
+
+        // Act
+        GeneratedCodeManifest read = GeneratedCodeManifest.FromJson(manifest.ToJson());
+
+        // Assert
+        read.AddressMap.Should().Equal(manifest.AddressMap);
+        read.Methods.Select(method => method.Name).Should().Equal("First", "Second");
+        read.Methods[1].Parameters.Should().Equal(manifest.Methods[1].Parameters);
+        read.Methods[1].Outputs.Should().Equal(manifest.Methods[1].Outputs);
+    }
+
     private static GeneratedCSharpProgram Generate(CfgPartitionedProgram program, GeneratorOptions options) {
         return new CfgCSharpGenerator(options with { CollectCensuses = true, Verify = true }).Generate(program);
     }
