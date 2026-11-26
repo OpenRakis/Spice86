@@ -5,7 +5,7 @@ using System.Diagnostics;
 /// <summary>
 /// Represents the registers of the video DAC.
 /// </summary>
-public class DacRegisters {
+public class DacRegisters : IStatefulDevice<DacState> {
     private int _indexRegister;
     private byte _internalIndex;
     private int _tripletCounter;
@@ -116,7 +116,7 @@ public class DacRegisters {
                 Palette[_internalIndex, _tripletCounter++] = (byte)(value & 0x3F);
                 if (_tripletCounter == 3) {
                     LastWrittenPaletteIndex = _internalIndex;
-                    RebuildPaletteMapEntry(_internalIndex);
+                    RebuildPaletteMapEntriesShowing(_internalIndex);
                     _indexRegister++;
                     _internalIndex++;
                     _tripletCounter = 0;
@@ -156,6 +156,18 @@ public class DacRegisters {
     }
 
     /// <summary>
+    /// Rebuilds the <see cref="PaletteMap"/> entries that show palette entry <paramref name="paletteIndex"/>:
+    /// every index that <see cref="PixelMask"/> turns into <paramref name="paletteIndex"/>.
+    /// </summary>
+    private void RebuildPaletteMapEntriesShowing(int paletteIndex) {
+        for (int i = 0; i < PaletteMap.Length; i++) {
+            if ((i & _pixelMask) == paletteIndex) {
+                RebuildPaletteMapEntry(i);
+            }
+        }
+    }
+
+    /// <summary>
     /// Rebuilds all 256 entries in <see cref="PaletteMap"/>. Call this when
     /// <see cref="PixelMask"/> changes (all mappings are affected).
     /// </summary>
@@ -184,6 +196,34 @@ public class DacRegisters {
             int dacIndex = bits67 | bits4And5 | bits0To3;
             AttributeMap[i] = PaletteMap[dacIndex];
         }
+    }
+
+    /// <summary>
+    /// Captures the palette, the pixel mask and the position of the index and data port state machine.
+    /// </summary>
+    /// <returns>The state of the DAC.</returns>
+    public DacState CaptureState() {
+        byte[] palette = new byte[Palette.Length];
+        Buffer.BlockCopy(Palette, 0, palette, 0, palette.Length);
+        return new DacState(palette, _pixelMask, _indexRegister, _internalIndex, _tripletCounter, State,
+            TripletJustCompleted, LastWrittenPaletteIndex);
+    }
+
+    /// <summary>
+    /// Puts the DAC back in a captured state and rebuilds <see cref="PaletteMap"/>. <see cref="AttributeMap"/>
+    /// also depends on the attribute controller, so the caller rebuilds it with <see cref="RebuildAttributeMap"/>.
+    /// </summary>
+    /// <param name="state">State captured by <see cref="CaptureState"/>.</param>
+    public void RestoreState(DacState state) {
+        Buffer.BlockCopy(state.Palette.ToArray(), 0, Palette, 0, Palette.Length);
+        _pixelMask = state.PixelMask;
+        _indexRegister = state.IndexRegister;
+        _internalIndex = state.InternalIndex;
+        _tripletCounter = state.TripletCounter;
+        State = state.State;
+        TripletJustCompleted = state.TripletJustCompleted;
+        LastWrittenPaletteIndex = state.LastWrittenPaletteIndex;
+        RebuildAllPaletteMap();
     }
 
     private static uint ToArgb(byte r6, byte g6, byte b6) {

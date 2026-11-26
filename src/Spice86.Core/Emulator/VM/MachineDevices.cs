@@ -38,6 +38,11 @@ public enum MachineDevices {
     Ems = 16,
 
     /// <summary>
+    ///     The VGA card (<see cref="Machine.VgaCard" />): registers, DAC, video memory planes and latches.
+    /// </summary>
+    Vga = 32,
+
+    /// <summary>
     ///     The state the DOS kernel (<see cref="Machine.Dos" />) keeps outside emulated memory.
     /// </summary>
     Dos = 64,
@@ -56,5 +61,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems | Dos | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Dos | Dma | SoundBlaster
 }

@@ -90,6 +90,11 @@ public class Renderer : IVgaRenderer {
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
+    /// <summary>
+    ///     The video memory the renderer draws from, mapped at A0000h.
+    /// </summary>
+    public VideoMemory VideoMemory => _memory;
+
     /// <inheritdoc />
     public int Width => FrameInfo.Width;
 
