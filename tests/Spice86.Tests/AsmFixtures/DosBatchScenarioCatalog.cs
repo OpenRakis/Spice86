@@ -404,7 +404,11 @@ internal static class DosBatchScenarioCatalog {
                 "imgmount a \"C:\\DISK.IMG\" -t floppy\r\n" +
                 "if errorlevel 1 echo FAIL > C:\\RESULT.TXT\r\n" +
                 "if not errorlevel 1 echo OK > C:\\RESULT.TXT\r\n",
-                _ => run.HostFileExists("SHADOW.TXT").Should().BeFalse()));
+                _ => {
+                run.HostFileExists("SHADOW.TXT").Should().BeFalse();
+                run.TextFile("RESULT.TXT").Should().Be("OK \r\n",
+                    "imgmount succeeds, and ECHO keeps the space before the redirection operator");
+            }));
     }
 
     /// <summary>GOTO jumps over the commands between it and the label.</summary>
@@ -778,7 +782,7 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario EchoOffSetsStatusOutput() {
         return Scenario("batch_echo_off_status", run => run
             .StartBatch("ECHO OFF\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is OFF.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is off.\r\n")));
     }
 
     /// <summary>ECHO ON after ECHO OFF restores the state report.</summary>
@@ -786,7 +790,7 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario EchoOnAfterOffRestoresStatusOutput() {
         return Scenario("batch_echo_on_status", run => run
             .StartBatch("ECHO OFF\r\nECHO ON\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is ON.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is on.\r\n")));
     }
 
     /// <summary>With ECHO ON every batch line is echoed before it executes, so both the command line and
@@ -1048,8 +1052,9 @@ internal static class DosBatchScenarioCatalog {
                 result => Cell(result, 0).Should().Be('Y')));
     }
 
-    /// <summary>CHOICE maps N to ERRORLEVEL 2, which satisfies both ERRORLEVEL tests, so the first
-    /// matching command wins.</summary>
+    /// <summary>CHOICE maps N to ERRORLEVEL 2. MS-DOS IF ERRORLEVEL n tests >= n, so ERRORLEVEL 2
+    /// satisfies both following tests and both commands run; the check proves the W2.COM one because
+    /// later console output overwrites the early screen cells SKIP.COM writes to.</summary>
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceDefaultYnSelectsN() {
         return Scenario("batch_choice_default_yn_selects_n", run => run
@@ -1128,7 +1133,8 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_choice_prompt_text", run => run
             .Text("KEY.TXT", "Y")
             .StartBatch("CHOICE /C:YN Continue > PROMPT.TXT < KEY.TXT\r\n",
-                _ => run.TextFile("PROMPT.TXT").Should().Contain("[Y,N]?")));
+                _ => run.TextFile("PROMPT.TXT").Should().Contain("Continue[Y,N]?",
+                    "CHOICE prints the key list directly after the prompt text, without a space (MS-DOS 6.22)")));
     }
 
     /// <summary>CHOICE /T with no keypress selects the timeout default.</summary>
@@ -1294,7 +1300,7 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_echo_off_inner_batch", run => run
             .Text("INNER.BAT", "@ECHO OFF\r\n")
             .StartBatch("ECHO ON\r\nCALL INNER.BAT\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is ON.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is on.\r\n")));
     }
 
     /// <summary>The batch reader stops at the 0x1A marker, so the lines after it never run.</summary>

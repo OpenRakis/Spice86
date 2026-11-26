@@ -18,7 +18,7 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(cs1, 0x0100);
         AH = 9;
         DX = 0x0129;
-        // DOS 09h print "Choose:  \x0D\x0A$"
+        // DOS 09h print "Choose:\x0D\x0A$"
         InterruptCall(cs1, 0x0107, 0x21);
         while (true) {
             CheckExternalEvents(cs1, 0x0107);

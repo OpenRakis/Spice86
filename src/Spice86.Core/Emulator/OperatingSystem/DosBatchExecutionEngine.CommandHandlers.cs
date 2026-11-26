@@ -74,7 +74,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         if (normalizedArguments.Length == 0) {
             bool currentEcho = _batchFileContexts.Count > 0 ? _batchFileContexts.Peek().EchoEnabled : _echoEnabled;
-            WriteToStandardOutput(currentEcho ? "ECHO is ON.\r\n" : "ECHO is OFF.\r\n");
+            WriteToStandardOutput(currentEcho ? "ECHO is on.\r\n" : "ECHO is off.\r\n");
             return false;
         }
 
