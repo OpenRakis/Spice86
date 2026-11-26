@@ -519,8 +519,10 @@ public sealed partial class DualPic : DefaultIOPortHandler, IStatefulDevice<Dual
     /// </summary>
     /// <remarks>
     ///     Lines latched since the capture are forgotten and lines latched at capture are latched again,
-    ///     whatever the devices behind them do now. <see cref="IrqMaskChanged" /> is raised for each line whose
-    ///     mask bit differs from the one before the call.
+    ///     whatever the devices behind them do now. Lines let through with
+    ///     <see cref="InterruptDeliveryHold.Deliver" /> and not yet delivered are forgotten too, so a later request
+    ///     on them is held. <see cref="IrqMaskChanged" /> is raised for each line whose mask bit differs from the
+    ///     one before the call.
     /// </remarks>
     /// <param name="state">State captured by <see cref="CaptureState" />.</param>
     public void RestoreState(DualPicState state) {
@@ -528,6 +530,7 @@ public sealed partial class DualPic : DefaultIOPortHandler, IStatefulDevice<Dual
         _primaryPic.RestoreState(state.Primary);
         _secondaryPic.RestoreState(state.Secondary);
         IrqCheck = state.IrqCheck;
+        _linesLetThrough = 0;
 
         int restoredMasks = _primaryPic.InterruptMaskRegister | (_secondaryPic.InterruptMaskRegister << 8);
         int changedMasks = previousMasks ^ restoredMasks;
