@@ -22,23 +22,30 @@ internal static class GeneratedCodeChecks {
             return;
         }
         string programText = ProgramOnlyText(program);
+        string[] programLines = programText.Split('\n').Select(line => line.Trim()).ToArray();
+        List<string> failures = [];
         foreach (GeneratedCodeCheck check in checks) {
             switch (check.Kind) {
                 case GeneratedCodeCheckKind.Contains:
-                    programText.Should().Contain(check.Text,
-                        $"{goldenKey}: Contains check '{check.Text}'");
+                    if (!programText.Contains(check.Text)) {
+                        failures.Add($"{goldenKey}: Contains check '{check.Text}'");
+                    }
                     break;
                 case GeneratedCodeCheckKind.DoesNotContain:
-                    programText.Should().NotContain(check.Text,
-                        $"{goldenKey}: DoesNotContain check '{check.Text}'");
+                    if (programText.Contains(check.Text)) {
+                        failures.Add($"{goldenKey}: DoesNotContain check '{check.Text}'");
+                    }
                     break;
                 case GeneratedCodeCheckKind.MethodSignature:
-                    programText.Split('\n').Select(line => line.Trim())
-                        .Should().Contain(check.Text,
-                            $"{goldenKey}: MethodSignature check '{check.Text}'");
+                    if (!programLines.Contains(check.Text)) {
+                        failures.Add($"{goldenKey}: MethodSignature check '{check.Text}'");
+                    }
                     break;
             }
         }
+        failures.Should().BeEmpty(
+            "the generated program-only code must match every check line:{0}{1}",
+            Environment.NewLine, string.Join(Environment.NewLine, failures));
     }
 
     /// <summary>Concatenates the program files of <paramref name="program"/>, dropping the support

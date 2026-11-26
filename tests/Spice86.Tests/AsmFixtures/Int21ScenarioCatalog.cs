@@ -50,20 +50,20 @@ internal static class Int21ScenarioCatalog {
 
     /// <summary>Every INT 21h scenario, in the order of the resources they execute.</summary>
     public static IReadOnlyList<AsmScenario> Scenarios => [
-        Simple("dbcs_lead_byte_table_al0.com"),
+        Simple("dbcs_lead_byte_table_al0.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DbcsLeadByteTableAl0),
         Simple("dbcs_lead_byte_table_invalid_al.com"),
         Simple("cds_initialized_known_location.com"),
         Simple("dbcs_table_private_area.com"),
         Simple("psp_parent_command_com.com"),
-        Simple("environment_block_not_corrupted.com"),
-        Simple("environment_block_contains_program_path.com"),
+        Simple("environment_block_not_corrupted.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.EnvironmentBlockNotCorrupted),
+        Simple("environment_block_contains_program_path.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.EnvironmentBlockContainsProgramPath),
         Simple("child_return_code_initial.com"),
         Simple("child_return_code_subsequent_zero.com"),
         Simple("int20_terminates.com"),
         Simple("create_new_psp_valid_copy.com"),
         Simple("create_child_psp_valid.com"),
         Simple("program_arguments_access_argv.com"),
-        Simple("program_arguments_print_argv0.com"),
+        Simple("program_arguments_print_argv0.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ProgramArgumentsPrintArgv0),
         StandardFileHandlesInherited(),
         Simple("select_default_drive.com"),
         Simple("allocation_info_default_drive.com"),
@@ -119,7 +119,7 @@ internal static class Int21ScenarioCatalog {
                 AdditionalResourceDependencies = [
                     $"{ResourceSubDirectory}/child_opens_files_without_closing.com"
                 ]
-            }, NoDetailAssertions),
+            }, NoDetailAssertions).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ChildExecTerminateReleasesHandles),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
         GetTrueName(),
         PspSwitchFrameReuse(),

@@ -283,7 +283,8 @@ internal static class ConsoleProgramScenarioCatalog {
             .ResourceCopy(ProgramDirectory, "print_dollar_string.com", "PRINT.COM")
             .StartBatch("PRINT.COM > OUTPUT.TXT\r\n",
                 _ => run.TextFile("OUTPUT.TXT").Should().Contain("Hello DOS",
-                    "AH=09h should write the string to stdout (stopping at $)")));
+                    "AH=09h should write the string to stdout (stopping at $)")))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ConsoleAh09PrintString);
     }
 
     /// <summary>INT 21h AH=09h checks the standard input for a pending break before writing, so the

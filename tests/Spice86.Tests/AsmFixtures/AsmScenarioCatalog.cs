@@ -93,8 +93,8 @@ internal static class AsmScenarioCatalog {
 
     /// <summary>EXEC scenarios: the master program with its overlay and the FCB parent with its child.</summary>
     public static IReadOnlyList<AsmScenario> ExecScenarios => [
-        ExecModesAndOverlays(),
-        FcbChild()
+        ExecModesAndOverlays().WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DosExecModesAndOverlays),
+        FcbChild().WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DosFcbChild)
     ];
 
     /// <summary>DOS reallocation programs, one per padding size, each checking the carry flag of AH=4Ah.</summary>
@@ -417,17 +417,18 @@ internal static class AsmScenarioCatalog {
             CpuBin("datatrnf"),
             CpuBin("div"),
             CpuBin("interrupt"),
-            CpuBin("jump1"),
+            CpuBin("jump1").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.Jump1Spec),
             // jump2 exercises a runtime far-call dispatch; it must transfer explicitly on a matched
             // observed target instead of falling through to the trailing untested-target failure.
-            CpuBin("jump2"),
+            CpuBin("jump2").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.Jump2),
             CpuBin("rep"),
             CpuBin("rotate"),
             // segpr contains a direct call whose callee never returns during discovery, so there is no observed
             // continuation edge. The generator must still emit the call helper with the statically-known expected
             // return address, then guard the unobserved post-call path with an explicit untested failure.
             AsmScenario.FromFixture("segpr", () => AsmFixtureCatalog.Dump("segpr")
-                .WithEngineAssertions(AsmScenarioEngineAssertions.Segpr)),
+                .WithEngineAssertions(AsmScenarioEngineAssertions.Segpr))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.Segpr),
             CpuBin("shifts"),
             CpuBin("strings"),
             CpuBin("sub"),
@@ -438,7 +439,8 @@ internal static class AsmScenarioCatalog {
             // jmpmov exercises a runtime far-jump dispatch; it must transfer explicitly on a matched
             // observed target instead of falling through to the trailing untested-target failure.
             AsmScenario.FromFixture("jmpmov", () => AsmFixtureCatalog.JmpMov()
-                .WithEngineAssertions(AsmScenarioEngineAssertions.JmpMov)),
+                .WithEngineAssertions(AsmScenarioEngineAssertions.JmpMov))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.Jmpmov),
             AsmScenario.FromFixture("returnedterminator", AsmFixtureCatalog.ReturnedTerminator),
             // The LOCK prefix validation correctly fires INT 6 (#UD) for architecturally invalid
             // uses of LOCK and does NOT fire it for valid uses.
@@ -481,19 +483,19 @@ internal static class AsmScenarioCatalog {
             // stack_esp_high_bits proves the stack helpers write only the low 16 bits of ESP:
             // the mov esp write of the high half must survive push/pop and 16-bit and 32-bit
             // enter/leave pairs.
-            AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits),
+            AsmScenario.FromFixture("stack_esp_high_bits", AsmFixtureCatalog.StackEspHighBits).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.StackEspHighBits),
             // convention_conditional_flag_input proves a may-write does not kill demand: the
             // callee reads the caller's CF through shl's conditional write.
-            AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput),
+            AsmScenario.FromFixture("convention_conditional_flag_input", AsmFixtureCatalog.ConventionConditionalFlagInput).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ConventionConditionalFlagInput),
             // convention_return_outputs proves a return exit reads the method's outputs and its
             // landings' inputs: dead flags and writes go, needed ones stay.
-            AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs),
+            AsmScenario.FromFixture("convention_return_outputs", AsmFixtureCatalog.ConventionReturnOutputs).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ConventionReturnOutputs),
             // convention_landing_outputs proves an UnknownWay entry outputs what its returns'
             // resolved call-continuation landings read.
             AsmScenario.FromFixture("convention_landing_outputs", AsmFixtureCatalog.ConventionLandingOutputs),
             // convention_resolved_calls proves a resolved call takes the callee's convention as its
             // summary; a fault-reachable or redirected call keeps Unknown.
-            AsmScenario.FromFixture("convention_resolved_calls", AsmFixtureCatalog.ConventionResolvedCalls),
+            AsmScenario.FromFixture("convention_resolved_calls", AsmFixtureCatalog.ConventionResolvedCalls).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ConventionResolvedCalls),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt)
                 .WithTimingDependentState("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing point is timing-dependent"),
@@ -507,7 +509,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("device_operations", AsmFixtureCatalog.DeviceOperations),
             AsmScenario.FromFixture("interior_entry", AsmFixtureCatalog.InteriorEntry)
                 .WithTimingDependentState("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
-            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister)
+            AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.InterruptHandlerChangesRegister)
                 .WithTimingDependentState("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
             // mouse_irq12 posts a move before the run so IRQ 12 is delivered while the program
             // waits; with no user routine registered the driver's before/after callbacks take their
@@ -530,12 +532,13 @@ internal static class AsmScenarioCatalog {
             // The registered variant registers the routine through INT 33h AX=000Ch before the wait
             // loop; the discovery snapshot keeps both callback contracts Unknown then, and the
             // routine's 0xCAFE store is the oracle.
-            AsmScenario.FromFixture("mouse_irq12.registered", AsmFixtureCatalog.MouseIrq12RegisteredRoutine),
+            AsmScenario.FromFixture("mouse_irq12.registered", AsmFixtureCatalog.MouseIrq12RegisteredRoutine).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.MouseIrq12Registered),
             // cc_irq_delivered_flags installs the program's own int 74h handler before the wait
             // loop; the handler observes the delivered FLAGS image, so the event check must keep
             // the interrupted code's flag work live.
             AsmScenario.FromFixture("cc_irq_delivered_flags", AsmFixtureCatalog.IrqDeliveredFlags),
             AsmScenario.FromFixture("cc_irq_delivered_flags.branch", AsmFixtureCatalog.IrqDeliveredFlagsBranch)
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcIrqDeliveredFlagsBranch)
                 .WithUncomparedRam(0x20FFE, 2,
                     "the IRQ 12 delivery pushes the interrupted code's FLAGS here; generated code does not compute status flags no handler reads from the image, and the oracle checks what the handler observed"),
             AsmScenario.FromFixture("cc_irq_delivered_flags.patch", AsmFixtureCatalog.IrqDeliveredFlagsPatch),
@@ -577,7 +580,7 @@ internal static class AsmScenarioCatalog {
             // silently collapse to an unconditional transfer to the taken target. The guarded `if` with
             // FailAsUntested is visible in the `jump1` golden (no suffix); the run checks the `jump1`
             // memory dump.
-            AsmScenario.FromFixture("jump1", AsmFixtureCatalog.Jump1WithoutSpeculation),
+            AsmScenario.FromFixture("jump1", AsmFixtureCatalog.Jump1WithoutSpeculation).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.Jump1NoSpec),
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_branch", AsmFixtureCatalog.SpeculativeBranchWithoutSpeculation),
@@ -589,13 +592,13 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_convergence", () => AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_mixed_block", () => AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_mixed_block", () => AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Unobserved)),
-            AsmScenario.FromFixture("speculative_call_entry", AsmFixtureCatalog.SpeculativeCallEntry),
-            AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode),
-            AsmScenario.FromFixture("speculative_zero_memory", AsmFixtureCatalog.SpeculativeZeroMemory),
+            AsmScenario.FromFixture("speculative_call_entry", AsmFixtureCatalog.SpeculativeCallEntry).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeCallEntry),
+            AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeInvalidOpcode),
+            AsmScenario.FromFixture("speculative_zero_memory", AsmFixtureCatalog.SpeculativeZeroMemory).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeZeroMemory),
             // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the
             // transfer has no successor in the CFG. The generator must fail that transfer as untested at run
             // time instead of throwing while it generates the whole program.
-            AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData),
+            AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SpeculativeTransferIntoData),
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
             AsmScenario.FromFixture("speculative_smc_lowram", AsmFixtureCatalog.SpeculativeSmcLowRam),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
@@ -604,7 +607,7 @@ internal static class AsmScenarioCatalog {
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("callstackunwind",
                 () => AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Unobserved)),
-            PartitionScenario("partition_jump_into_function_middle", AsmScenarioEngineAssertions.PartitionJumpIntoFunctionMiddle),
+            PartitionScenario("partition_jump_into_function_middle", AsmScenarioEngineAssertions.PartitionJumpIntoFunctionMiddle).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.PartitionJumpIntoFunctionMiddle),
             AsmScenario.FromFixture("partition_shared_tail", () => AsmFixtureCatalog.Partition("partition_shared_tail")
                 .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionSharedTail)),
             PartitionScenario("partition_multi_entry_dominated_shared", AsmScenarioEngineAssertions.PartitionMultiEntryDominatedShared),
@@ -630,12 +633,12 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_signed_min_compare", AsmScenarioEngineAssertions.PartitionSignedMinCompare),
             PartitionScenario("partition_back_edge_fallthrough", AsmScenarioEngineAssertions.PartitionBackEdgeFallthrough),
             PartitionScenario("partition_jump_to_next", AsmScenarioEngineAssertions.PartitionJumpToNext),
-            PartitionScenario("partition_two_fault_handlers", AsmScenarioEngineAssertions.PartitionTwoFaultHandlers),
+            PartitionScenario("partition_two_fault_handlers", AsmScenarioEngineAssertions.PartitionTwoFaultHandlers).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.PartitionTwoFaultHandlers),
             PartitionScenario("cc_copy_in_observers"),
             PartitionScenario("cc_register_leaf"),
-            PartitionScenario("cc_dispatch_targets"),
-            PartitionScenario("cc_call_32bit"),
-            PartitionScenario("cc_stack_frames"),
+            PartitionScenario("cc_dispatch_targets").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcDispatchTargets),
+            PartitionScenario("cc_call_32bit").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcCall32Bit),
+            PartitionScenario("cc_stack_frames").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcStackFrames),
             PartitionScenario("cc_mov_sp_bp_epilogue"),
             PartitionScenario("cc_frame_web_typed_return"),
             PartitionScenario("cc_push_sp_arguments"),
@@ -646,73 +649,78 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("cc_stack_argument_timer_write"),
             AsmScenario.FromFixture("cc_stack_frames",
                 () => AsmFixtureCatalog.Partition("cc_stack_frames")
-                    .WithGenerationPolicy(RelaxedStackPolicy)),
+                    .WithGenerationPolicy(RelaxedStackPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcStackFramesStk),
             PartitionScenario("cc_stack_frames_read_after_pop"),
             AsmScenario.FromFixture("cc_stack_frames_read_after_pop",
                 () => AsmFixtureCatalog.Partition("cc_stack_frames_read_after_pop")
                     .WithGenerationPolicy(RelaxedStackPolicy)),
-            PartitionScenario("cc_saved_registers"),
+            PartitionScenario("cc_saved_registers").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcSavedRegisters),
             AsmScenario.FromFixture("cc_saved_registers",
                 () => AsmFixtureCatalog.Partition("cc_saved_registers")
-                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy)),
+                    .WithGenerationPolicy(RelaxedSavedSlotsPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcSavedRegistersSav),
             PartitionScenario("cc_saved_registers_xchg_escape"),
             AsmScenario.FromFixture("cc_saved_registers_xchg_escape",
                 () => AsmFixtureCatalog.Partition("cc_saved_registers_xchg_escape")
                     .WithGenerationPolicy(RelaxedSavedSlotsPolicy)),
-            PartitionScenario("cc_call_shapes"),
-            PartitionScenario("cc_calls_keep_stack_offset"),
+            PartitionScenario("cc_call_shapes").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcCallShapes),
+            PartitionScenario("cc_calls_keep_stack_offset").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcCallsKeepStackOffset),
             AsmScenario.FromFixture("cc_calls_keep_stack_offset",
                 () => AsmFixtureCatalog.Partition("cc_calls_keep_stack_offset")
-                    .WithGenerationPolicy(RelaxedStackPolicy)),
+                    .WithGenerationPolicy(RelaxedStackPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcCallsKeepStackOffsetStk),
             PartitionScenario("cc_stack_offset_joins"),
-            PartitionScenario("cc_untyped_call_passthrough"),
-            PartitionScenario("dataflow_stack_save_restore"),
+            PartitionScenario("cc_untyped_call_passthrough").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcUntypedCallPassthrough),
+            PartitionScenario("dataflow_stack_save_restore").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowStackSaveRestore),
             PartitionScenario("dataflow_flag_definitions"),
             PartitionScenario("dataflow_partial_registers"),
             PartitionScenario("dataflow_constant_folding"),
-            PartitionScenario("dataflow_double_precision"),
+            PartitionScenario("dataflow_double_precision").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowDoublePrecision),
             AsmScenario.FromFixture("dataflow_double_precision",
                 AsmFixtureCatalog.DataflowDoublePrecision386),
             PartitionScenario("dataflow_idioms"),
-            PartitionScenario("alu_dead_flags"),
+            PartitionScenario("alu_dead_flags").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.AluDeadFlags),
             PartitionScenario("dataflow_shift_chains"),
             PartitionScenario("dataflow_expression_propagation"),
-            PartitionScenario("dataflow_forwarded_register_read"),
+            PartitionScenario("dataflow_forwarded_register_read").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowForwardedRegisterRead),
             PartitionScenario("dataflow_interrupt_boundaries"),
             PartitionScenario("dataflow_rewrite_traps"),
             PartitionScenario("dataflow_alias_traps"),
             PartitionScenario("dataflow_alias_traps_286"),
             PartitionScenario("dataflow_io_barrier"),
-            PartitionScenario("dataflow_device_order"),
+            PartitionScenario("dataflow_device_order").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowDeviceOrder),
             AsmScenario.FromFixture("dataflow_device_order",
                 () => AsmFixtureCatalog.Partition("dataflow_device_order")
                     .WithGenerationPolicy(RelaxedRamPolicy)),
-            PartitionScenario("dataflow_ram_policy"),
+            PartitionScenario("dataflow_ram_policy").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowRamPolicy),
             AsmScenario.FromFixture("dataflow_ram_policy",
                 () => AsmFixtureCatalog.Partition("dataflow_ram_policy")
-                    .WithGenerationPolicy(RelaxedRamPolicy)),
-            PartitionScenario("dataflow_stack_vram"),
-            PartitionScenario("dataflow_overwritten_stores"),
-            PartitionScenario("dataflow_compiler_idioms"),
+                    .WithGenerationPolicy(RelaxedRamPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowRamPolicyRam),
+            PartitionScenario("dataflow_stack_vram").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowStackVram),
+            PartitionScenario("dataflow_overwritten_stores").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowOverwrittenStores),
+            PartitionScenario("dataflow_compiler_idioms").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowCompilerIdioms),
             PartitionScenario("dataflow_arithmetic_idioms"),
             PartitionScenario("dataflow_joined_memory"),
             AsmScenario.FromFixture("dataflow_joined_memory",
                 AsmFixtureCatalog.DataflowJoinedMemory286),
             AsmScenario.FromFixture("dataflow_joined_memory",
                 () => AsmFixtureCatalog.Partition("dataflow_joined_memory")
-                    .WithGenerationPolicy(RelaxedSegmentPolicy)),
+                    .WithGenerationPolicy(RelaxedSegmentPolicy))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowJoinedMemorySeg),
             PartitionScenario("dataflow_wide_conditions"),
             PartitionScenario("dataflow_wide_operations"),
-            PartitionScenario("dataflow_legality_traps"),
+            PartitionScenario("dataflow_legality_traps").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataflowLegalityTraps),
             PartitionScenario("data_globals"),
-            PartitionScenario("data_segment_values")
+            PartitionScenario("data_segment_values").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataSegmentValues)
                 .WithTimingDependentState("the program installs an IRQ0 handler and its asynchronous landing point is timing-dependent"),
             PartitionScenario("data_tables"),
             PartitionScenario("data_strings"),
             PartitionScenario("data_segments"),
-            PartitionScenario("data_jump_tables"),
+            PartitionScenario("data_jump_tables").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DataJumpTables),
             PartitionScenario("interrupt_handler_partial_inputs"),
-            PartitionScenario("interrupt_call_pushed_flags"),
+            PartitionScenario("interrupt_call_pushed_flags").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.InterruptCallPushedFlags),
             AsmScenario.FromFixture("int9_keeps_interrupted_flags",
                     AsmFixtureCatalog.Int9KeepsInterruptedFlags)
                 .WithTimingDependentState("the IRQ1 frame lands at a run-dependent instruction boundary, so the stale pushed frame bytes differ between modes"),
@@ -722,11 +730,11 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("register_locals"),
             PartitionScenario("register_locals_across")
                 .WithTimingDependentState("the program installs an IRQ0 handler to fire mid-call, so its landing point is timing-dependent"),
-            PartitionScenario("save_restore_pairs"),
+            PartitionScenario("save_restore_pairs").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.SaveRestorePairs),
             PartitionScenario("if_conversion"),
-            PartitionScenario("int_service_calls"),
+            PartitionScenario("int_service_calls").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IntServiceCalls),
             PartitionScenario("interrupt_contract_unseen_handler"),
-            PartitionScenario("interrupt_contract_unseen_1c_handler"),
+            PartitionScenario("interrupt_contract_unseen_1c_handler").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.InterruptContractUnseen1cHandler),
             PartitionScenario("instruction_coverage_386"),
             // partition_mutual_recursion_unwind has two call-target partitions that jump to each other in a
             // strongly connected component, lowered as CyclicCrossPartitionFlow (JumpDispatcher.Jump +

@@ -343,7 +343,8 @@ internal static class DosBatchScenarioCatalog {
             .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "TOOL.COM")
             .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "TOOL.EXE")
             .StartBatch("CALL TOOL\r\n",
-                result => Cell(result, 0).Should().Be('C')));
+                result => Cell(result, 0).Should().Be('C')))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallNoextFallsBackToCom);
     }
 
     /// <summary>The same script as <see cref="CallWithoutExtensionFallsBackToCom"/>, prepared without
@@ -896,7 +897,8 @@ internal static class DosBatchScenarioCatalog {
                     Cell(result, 0).Should().Be('A');
                     Cell(result, 1).Should().Be('B');
                     Cell(result, 2).Should().Be('C');
-                }));
+                }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallLabelNested);
     }
 
     /// <summary>A label subroutine may CALL another batch file.</summary>
@@ -921,7 +923,8 @@ internal static class DosBatchScenarioCatalog {
             .StartBatch("CALL :NOTFOUND\r\nCALL W1.COM\r\nCALL W2.COM\r\n", result => {
                 Cell(result, 0).Should().Be('A');
                 Cell(result, 1).Should().Be('B');
-            }));
+            }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallLabelUnknown);
     }
 
     /// <summary>FOR expands a wildcard to the matching files and calls the route batch once per match.</summary>
