@@ -19,8 +19,8 @@ using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
 /// The speculative-guard merge pass prints one <c>VerifySpeculativeRunOrFail</c> for a straight-line
 /// run of speculative instructions when nothing between the first instruction and a later one can
 /// change the run's bytes or leave the run, and keeps the per-instruction
-/// <c>VerifySpeculativeEntryOrFail</c> wherever a memory write (SG-1), an interrupt delivery (SG-2), a
-/// fault edge (SG-3), a port access (SG-4) or a contiguity break (SG-5) blocks the merge.
+/// <c>VerifySpeculativeEntryOrFail</c> wherever a memory write, an interrupt delivery, a
+/// fault edge, a port access or a contiguity break blocks the merge.
 /// </summary>
 public sealed class IrSpeculativeGuardMergeTest {
     private static List<string> GuardLines(GeneratedCSharpProgram program, string callName) =>

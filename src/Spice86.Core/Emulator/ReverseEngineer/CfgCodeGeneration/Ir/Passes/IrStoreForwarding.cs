@@ -16,16 +16,16 @@ using System.Linq;
 /// accesses the same bytes: <c>mov [si],ax</c> followed by <c>mov bx,[si]</c> emits
 /// <c>UInt16[DS, SI] = AX; BX = AX;</c>. The store stays; no store is removed.
 /// Legality rows, all through <see cref="IrMemoryAliasAnalysis"/> and <see cref="IrSsa.SameVersions"/>:
-/// SF-1: <see cref="IrAliasRelation.Equal"/> between the store target and the read, the same
+/// <see cref="IrAliasRelation.Equal"/> between the store target and the read, the same
 /// <see cref="DataType"/>, both known RAM (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>);
-/// SF-2: the stored value is pure - registers, constants, conversions, unary and non-assignment
+/// the stored value is pure - registers, constants, conversions, unary and non-assignment
 /// binary operations, no token read, no call, no temporary;
-/// SF-3: no statement strictly between is a <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
+/// no statement strictly between is a <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
 /// or <see cref="IrEffects.MayFault"/>, and every write of a statement between is
 /// <see cref="IrAliasRelation.Disjoint"/> from the store, known RAM;
-/// SF-4: <see cref="IrSsa.SameVersions"/> of the stored value's reads between the store and the
+/// <see cref="IrSsa.SameVersions"/> of the stored value's reads between the store and the
 /// reader;
-/// SF-5: the reader's origin carries no <see cref="IrInstructionShape"/> tag.
+/// the reader's origin carries no <see cref="IrInstructionShape"/> tag.
 /// </summary>
 internal static class IrStoreForwarding {
     /// <summary>Forwards provably equal stores into their readers, block by block.</summary>

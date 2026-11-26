@@ -35,20 +35,20 @@ using System.Reflection;
 /// <para>Legality, in the effects model (<c>CpuValues</c>, <c>IrTokens</c>, <c>MayFault</c>,
 /// <c>DeliversInterrupts</c>; <c>IrSsa.SameVersions</c> for the moves it implies):</para>
 /// <list type="bullet">
-/// <item>IS-1: the site is typed only when every <c>int</c> site of the program on the vector
+/// <item>the site is typed only when every <c>int</c> site of the program on the vector
 /// observed only the installed stub; a program handler, a hook, an uninstalled-then-seen vector
 /// or a site with no observed target anywhere on the vector keeps the untyped call as
 /// <see cref="InterruptSiteKind.Hooked"/> (the direct call could not deliver the observed
 /// behaviour, and a vector check cannot repair a handler the program replaced).</item>
-/// <item>IS-2: the selector register's bytes must be known (not undetermined) at the site;
+/// <item>the selector register's bytes must be known (not undetermined) at the site;
 /// otherwise the call keeps <c>InterruptCall</c> as <see cref="InterruptSiteKind.SelectorUnknown"/>.</item>
-/// <item>IS-3: the selector value must have a precise contract bound to an implementation whose
+/// <item>the selector value must have a precise contract bound to an implementation whose
 /// restrictions the constant inputs satisfy; an <c>Unknown</c> contract or a missing entry keeps
 /// <c>InterruptCall</c> as <see cref="InterruptSiteKind.NoContract"/>, while a service without an
 /// implementation (or an unsatisfied binding restriction) keeps real dispatch as
 /// <see cref="InterruptSiteKind.BuiltInDispatch"/> with the precise contract's normal-return
 /// effects.</item>
-/// <item>IS-4: the typed call's effects are the contract's: reads are only the explicit
+/// <item>the typed call's effects are the contract's: reads are only the explicit
 /// input arguments (a conditionally-preserved output arrives as an explicit input binding
 /// the pre-call value); only the result targets are must-written;
 /// may-write is <c>Writes</c>; tokens are Memory always and Io when the service does I/O;
