@@ -426,6 +426,21 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("idiom_locals_naming", () => AsmFixtureCatalog.Idiom("idiom_locals_naming",
                 (0x600, 0x01), (0x601, 0x04), (0x610, 0xAA), (0x611, 0xAA), (0x612, 0xAA), (0x613, 0xAA)))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomLocalsNaming),
+            AsmScenario.FromFixture("idiom_typed_signature", () => AsmFixtureCatalog.Idiom("idiom_typed_signature",
+                (0x600, 0x01), (0x601, 0x35), (0x602, 0x45)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomTypedSignature),
+            AsmScenario.FromFixture("idiom_stack_save_restore", () => AsmFixtureCatalog.Idiom("idiom_stack_save_restore",
+                (0x600, 0x01), (0x601, 0xDD), (0x602, 0x11)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStackSaveRestore),
+            AsmScenario.FromFixture("idiom_call_sites", () => AsmFixtureCatalog.Idiom("idiom_call_sites",
+                (0x600, 0x01), (0x601, 0x42), (0x602, 0x55)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomCallSites),
+            AsmScenario.FromFixture("idiom_contracts", () => AsmFixtureCatalog.Idiom("idiom_contracts",
+                (0x600, 0x01), (0x601, 0xDD), (0x602, 0x42)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomContracts),
+            AsmScenario.FromFixture("idiom_jump_table_switch", () => AsmFixtureCatalog.Idiom("idiom_jump_table_switch",
+                (0x600, 0x01), (0x601, 0xD0), (0x602, 0xD1)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomJumpTableSwitch),
             AsmScenario.FromFixture("fpuinit", AsmFixtureCatalog.FpuInit),
             CpuBin("add"),
             CpuBin("bcdcnv"),

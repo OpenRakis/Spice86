@@ -44,6 +44,31 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "index++;")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomTypedSignature = [
+        new(Contains, "(byte result, byte result2) unknown_F000_0013_F0013(ushort word1)"),
+        new(Contains, "(result, result2) = NearCall(biosSegment, 0x000B, () => unknown_F000_0013_F0013(5));")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomStackSaveRestore = [
+        new(Contains, "Stack.Push16(0x1111);"),
+        new(Contains, "Stack.Release(1);")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomCallSites = [
+        new(Contains, "AL = CallWithStackArguments(biosSegment, 0x000A, () => unknown_F000_001D_F001D((ushort)0x0042), (ushort)0x0042);"),
+        new(Contains, "result = NearCall32(biosSegment, 0x0019, () => unknown_F000_0029_F0029());")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomContracts = [
+        new(Contains, "/// <summary>Inputs: none. Outputs: AL. Changes: AL, flags, DF.</summary>"),
+        new(Contains, "InterruptCall(biosSegment, 0x001D, 0x80,")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomJumpTableSwitch = [
+        new(Contains, "switch (UInt16[CS, BX + 0x2F]) {"),
+        new(Contains, "case 0x001A:")
+    ];
+
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")
     ];

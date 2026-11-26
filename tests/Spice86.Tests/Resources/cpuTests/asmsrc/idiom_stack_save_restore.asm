@@ -15,7 +15,6 @@ start:
     pop bx
     pop ax
     mov byte [0x0602], ah
-    pop dx
     hlt
 
     rb 65520-$
