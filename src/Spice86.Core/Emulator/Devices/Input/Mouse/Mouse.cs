@@ -216,4 +216,79 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         DeltaX = 0;
         DeltaY = 0;
     }
+
+    /// <summary>
+    ///     Captures the state of the mouse device.
+    /// </summary>
+    /// <returns>The state of the device.</returns>
+    public MouseDeviceState CaptureState() {
+        double now = _clock.ElapsedTimeMs;
+        double? pendingSampleTime = _scheduler.GetNextEventTime(DeliverPendingUpdate);
+        double? pendingSampleDelay = pendingSampleTime is null ? null : pendingSampleTime.Value - now;
+        double? lastSampleTime = double.IsNegativeInfinity(_lastUpdateTimeMs) ? null : _lastUpdateTimeMs;
+        return new MouseDeviceState(
+            MouseXRelative,
+            MouseYRelative,
+            IsLeftButtonDown,
+            IsRightButtonDown,
+            IsMiddleButtonDown,
+            DeltaX,
+            DeltaY,
+            LastTrigger,
+            _pendingTrigger,
+            _previousMouseXRelative,
+            _previousMouseYRelative,
+            _previousIsLeftButtonDown,
+            _previousIsRightButtonDown,
+            _previousIsMiddleButtonDown,
+            _sampleRate,
+            DoubleSpeedThreshold,
+            HorizontalMickeysPerPixel,
+            VerticalMickeysPerPixel,
+            now,
+            lastSampleTime,
+            pendingSampleDelay);
+    }
+
+    /// <summary>
+    ///     Puts the mouse device back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     The time of the last sample is moved by the time that passed on the emulated clock since the capture,
+    ///     so the next sample waits as long as it waited at capture. The sample event is removed from the
+    ///     scheduler and queued again as far ahead as it was at capture. The IRQ 12 line is not touched: restore
+    ///     the interrupt controller's state for that.
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(MouseDeviceState state) {
+        double elapsedSinceCapture = _clock.ElapsedTimeMs - state.CapturedAtMs;
+        MouseXRelative = state.MouseXRelative;
+        MouseYRelative = state.MouseYRelative;
+        IsLeftButtonDown = state.IsLeftButtonDown;
+        IsRightButtonDown = state.IsRightButtonDown;
+        IsMiddleButtonDown = state.IsMiddleButtonDown;
+        DeltaX = state.DeltaX;
+        DeltaY = state.DeltaY;
+        LastTrigger = state.LastTrigger;
+        _pendingTrigger = state.PendingTrigger;
+        _previousMouseXRelative = state.PreviousMouseXRelative;
+        _previousMouseYRelative = state.PreviousMouseYRelative;
+        _previousIsLeftButtonDown = state.PreviousIsLeftButtonDown;
+        _previousIsRightButtonDown = state.PreviousIsRightButtonDown;
+        _previousIsMiddleButtonDown = state.PreviousIsMiddleButtonDown;
+        SampleRate = state.SampleRate;
+        DoubleSpeedThreshold = state.DoubleSpeedThreshold;
+        HorizontalMickeysPerPixel = state.HorizontalMickeysPerPixel;
+        VerticalMickeysPerPixel = state.VerticalMickeysPerPixel;
+        _lastUpdateTimeMs = double.NegativeInfinity;
+        if (state.LastSampleTimeMs is { } lastSampleTime) {
+            _lastUpdateTimeMs = lastSampleTime + elapsedSinceCapture;
+        }
+
+        _scheduler.RemoveEvents(DeliverPendingUpdate);
+        _updateScheduled = state.PendingSampleDelayMs is not null;
+        if (state.PendingSampleDelayMs is { } pendingSampleDelay) {
+            _scheduler.AddEvent(DeliverPendingUpdate, pendingSampleDelay);
+        }
+    }
 }

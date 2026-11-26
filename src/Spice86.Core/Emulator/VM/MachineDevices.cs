@@ -48,6 +48,12 @@ public enum MachineDevices {
     Dos = 64,
 
     /// <summary>
+    ///     The mouse device (<see cref="Machine.MouseDevice" />) with its sample event, and the INT 33h mouse driver
+    ///     (<see cref="Machine.MouseDriver" />).
+    /// </summary>
+    Mouse = 128,
+
+    /// <summary>
     ///     The two DMA controllers and their eight channels (<see cref="Machine.DmaSystem" />).
     /// </summary>
     Dma = 256,
@@ -61,5 +67,5 @@ public enum MachineDevices {
     /// <summary>
     ///     Every device that supports state capture.
     /// </summary>
-    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Dos | Dma | SoundBlaster
+    All = Pic | Pit | A20Gate | Xms | Ems | Vga | Dos | Mouse | Dma | SoundBlaster
 }

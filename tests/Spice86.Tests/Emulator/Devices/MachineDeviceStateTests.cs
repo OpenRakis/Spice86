@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.VM;
 
 using Xunit;
@@ -88,6 +89,8 @@ public sealed class MachineDeviceStateTests {
         none.Pit.Should().BeNull();
         none.Vga.Should().BeNull();
         none.Dos.Should().BeNull();
+        none.MouseDevice.Should().BeNull();
+        none.MouseDriver.Should().BeNull();
         none.Dma.Should().BeNull();
         none.SoundBlaster.Should().BeNull();
         none.A20Gate.Should().BeNull();
@@ -168,6 +171,27 @@ public sealed class MachineDeviceStateTests {
         dosOnly.Pic.Should().BeNull();
         machine.Dos.FileManager.DiskTransferAreaAddressSegment.Should().Be(dtaSegment);
         machine.Dos.FileManager.DiskTransferAreaAddressOffset.Should().Be(dtaOffset);
+    }
+
+    [Fact]
+    public void RestoreGivesBackTheMousePositionAndRangesSetThroughTheDriver() {
+        // Arrange
+        using Spice86Creator creator = new("externalint", enablePit: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.MouseDriver.CurrentMaxX = 300;
+        machine.MouseDriver.SetCursorPosition(150, 20);
+        MachineDeviceState captured = machine.CaptureDeviceState(MachineDevices.Mouse);
+        MouseStatusRecord statusAtCapture = machine.MouseDriver.CurrentMouseStatus;
+
+        // Act
+        machine.MouseDriver.Reset();
+        machine.RestoreDeviceState(captured);
+
+        // Assert
+        captured.Pic.Should().BeNull();
+        machine.MouseDriver.CurrentMouseStatus.Should().Be(statusAtCapture);
+        machine.MouseDriver.CurrentMaxX.Should().Be(300);
     }
 
     private static void ChangeDevicesThroughPorts(Machine machine) {

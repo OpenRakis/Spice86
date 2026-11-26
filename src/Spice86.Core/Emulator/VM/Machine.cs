@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -352,10 +353,9 @@ public sealed class Machine : IDisposable {
     /// </summary>
     /// <remarks>
     /// Covered devices: the interrupt controllers, the programmable interval timer, the VGA card (registers, DAC,
-    /// video memory planes and latches), the DMA controllers, the Sound Blaster, the A20 line, the XMS and EMS
-    /// drivers when DOS loaded them, and the state the DOS kernel keeps outside emulated memory. The other devices
-    /// are not
-    /// covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
+    /// video memory planes and latches), the mouse device with the INT 33h mouse driver, the DMA controllers, the
+    /// Sound Blaster, the A20 line, the XMS and EMS drivers when DOS loaded them, and the state the DOS kernel keeps
+    /// outside emulated memory. The other devices are not covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>
@@ -378,6 +378,12 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Dos) != 0) {
             dos = Dos.CaptureState();
         }
+        MouseDeviceState? mouseDevice = null;
+        MouseDriverState? mouseDriver = null;
+        if ((devices & MachineDevices.Mouse) != 0) {
+            mouseDevice = MouseDevice.CaptureState();
+            mouseDriver = MouseDriver.CaptureState();
+        }
         DmaBusState? dma = null;
         if ((devices & MachineDevices.Dma) != 0) {
             dma = DmaSystem.CaptureState();
@@ -398,7 +404,8 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Ems) != 0) {
             ems = Dos.Ems?.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, vga, dos, dma, soundBlaster, a20Gate, xms, ems);
+        return new MachineDeviceState(pic, pit, vga, dos, mouseDevice, mouseDriver, dma, soundBlaster, a20Gate,
+            xms, ems);
     }
 
     /// <summary>
@@ -423,6 +430,12 @@ public sealed class Machine : IDisposable {
         }
         if (state.Dos is { } dos) {
             Dos.RestoreState(dos);
+        }
+        if (state.MouseDevice is { } mouseDevice) {
+            MouseDevice.RestoreState(mouseDevice);
+        }
+        if (state.MouseDriver is { } mouseDriver) {
+            MouseDriver.RestoreState(mouseDriver);
         }
         if (state.Dma is { } dma) {
             DmaSystem.RestoreState(dma);
