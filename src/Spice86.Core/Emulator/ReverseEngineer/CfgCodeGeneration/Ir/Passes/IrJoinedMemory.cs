@@ -32,10 +32,6 @@ using System.Linq;
 /// never touched.</para>
 /// </summary>
 internal static class IrJoinedMemory {
-    /// <summary>Applies both forms over <paramref name="method"/>; returns the number of joined
-    /// statements. The SSA must be rebuilt by the caller when the result is not zero.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) => Apply(method, ssa, true);
-
     /// <summary>Applies the load form over <paramref name="method"/>, and the store form when
     /// <paramref name="joinStores"/> is true; returns the number of joined statements. The SSA must
     /// be rebuilt by the caller when the result is not zero.</summary>

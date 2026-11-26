@@ -42,7 +42,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -63,7 +63,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -88,7 +88,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -103,7 +103,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -119,7 +119,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -135,7 +135,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
@@ -153,7 +153,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, ssa, true);
 
         // Assert
         joined.Should().Be(0);
