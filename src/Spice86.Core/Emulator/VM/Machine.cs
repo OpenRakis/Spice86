@@ -351,9 +351,9 @@ public sealed class Machine : IDisposable {
     /// later. Registers and memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers, the programmable interval timer, the Sound Blaster, the A20
-    /// line, and the XMS and EMS drivers when DOS loaded them. DMA, VGA and the other devices are not covered.
-    /// Call this on the emulation thread between two instructions, or while the emulation is paused.
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the DMA controllers, the Sound
+    /// Blaster, the A20 line, and the XMS and EMS drivers when DOS loaded them. VGA and the other devices are not
+    /// covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
     /// <returns>
@@ -367,6 +367,10 @@ public sealed class Machine : IDisposable {
         PitTimerState? pit = null;
         if ((devices & MachineDevices.Pit) != 0) {
             pit = Timer.CaptureState();
+        }
+        DmaBusState? dma = null;
+        if ((devices & MachineDevices.Dma) != 0) {
+            dma = DmaSystem.CaptureState();
         }
         SoundBlasterState? soundBlaster = null;
         if ((devices & MachineDevices.SoundBlaster) != 0) {
@@ -384,7 +388,7 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Ems) != 0) {
             ems = Dos.Ems?.CaptureState();
         }
-        return new MachineDeviceState(pic, pit, soundBlaster, a20Gate, xms, ems);
+        return new MachineDeviceState(pic, pit, dma, soundBlaster, a20Gate, xms, ems);
     }
 
     /// <summary>
@@ -403,6 +407,9 @@ public sealed class Machine : IDisposable {
         }
         if (state.Pit is { } pit) {
             Timer.RestoreState(pit);
+        }
+        if (state.Dma is { } dma) {
+            DmaSystem.RestoreState(dma);
         }
         if (state.SoundBlaster is { } soundBlaster) {
             SoundBlaster.RestoreState(soundBlaster);

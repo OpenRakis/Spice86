@@ -10,7 +10,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Coordinates the primary and secondary DMA controllers and exposes ISA-compatible DMA behavior.
 /// </summary>
-public sealed class DmaBus : DefaultIOPortHandler {
+public sealed class DmaBus : DefaultIOPortHandler, IStatefulDevice<DmaBusState> {
     private static readonly Dictionary<ushort, byte> PageRegisterToChannel = new() {
         { 0x87, 0 }, // channel 0
         { 0x83, 1 }, // channel 1
@@ -57,6 +57,28 @@ public sealed class DmaBus : DefaultIOPortHandler {
         }
 
         InitializePortHandlers(ioPortDispatcher);
+    }
+
+    /// <summary>
+    ///     Captures the registers of both controllers and their eight channels.
+    /// </summary>
+    /// <returns>The state of the DMA controllers.</returns>
+    public DmaBusState CaptureState() {
+        return new DmaBusState(_primary.CaptureState(), _secondary.CaptureState());
+    }
+
+    /// <summary>
+    ///     Puts both controllers and their eight channels back in a captured state.
+    /// </summary>
+    /// <remarks>
+    ///     The registers are set without calling the transfer callbacks of the devices that use the channels, so
+    ///     a device such as the Sound Blaster is not told that a mask bit changed. The device's own state holds
+    ///     its transfer. Channel reservations and registered callbacks stay as they are.
+    /// </remarks>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(DmaBusState state) {
+        _primary.RestoreState(state.Primary);
+        _secondary.RestoreState(state.Secondary);
     }
 
     /// <summary>
