@@ -125,6 +125,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
         string goldenKey = MachineGoldens.GoldenKey(scope.Fixture);
         MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
+        CfgInvariants.AssertValid(goldenKey, run.Machine.CfgCpu.ExecutionContextManager);
         MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
         return (scope.Fixture.Settings, AsmFinalState.Capture(run, scope.Fixture.Settings), scope.RunKey);
     }
@@ -535,6 +536,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         Machine machine = run.Machine;
         string machineGoldenKey = MachineGoldens.GoldenKey(scope.Fixture);
         MachineGoldens.CompareListingWithExpected(machineGoldenKey, machine);
+        CfgInvariants.AssertValid(machineGoldenKey, machine.CfgCpu.ExecutionContextManager);
         MachineGoldens.CompareCfgBlocksJsonWithExpected(machineGoldenKey, machine);
 
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
