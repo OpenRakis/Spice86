@@ -86,8 +86,20 @@ internal sealed record AsmFinalState(byte[] Ram,
     }
 
     /// <summary>Clears the fields that follow the emulated clock, which differs between the
-    /// interpreted and the generated run like it does in a timing-dependent execution.</summary>
+    /// interpreted and the generated run like it does in a timing-dependent execution. The PIC
+    /// interrupt request bits go as well: the program cannot write them, they are raised by device
+    /// events (PIT tick, keyboard, mouse) whose landing before the run ends depends on when the
+    /// scheduler pump last ran, and a delivered interrupt still shows in the in-service register
+    /// and in RAM.</summary>
     private static MachineDeviceState Normalize(MachineDeviceState state) {
+        if (state.Pic is { } pic) {
+            state = state with {
+                Pic = pic with {
+                    Primary = pic.Primary with { InterruptRequestRegister = 0 },
+                    Secondary = pic.Secondary with { InterruptRequestRegister = 0 }
+                }
+            };
+        }
         if (state.Pit is { } pit) {
             state = state with {
                 Pit = pit with {
