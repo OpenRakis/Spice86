@@ -105,4 +105,35 @@ public class DosBatchRoutingIntegrationTests {
             "nothing runs, so the root COMMAND.COM program area must not become an entry point");
         File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Should().NotBeEmpty("VER wrote its output through the redirection");
     }
+
+    /// <summary>
+    /// An IF line that launches a program appends its redirection exactly once: the appended redirection of
+    /// the IF parse and the inherited redirection of ApplyInheritedRedirection must not both write.
+    /// </summary>
+    [Fact]
+    public void IfLineLaunchingProgram_AppendsRedirectionOnce() {
+        using TempFile tempFile = new("dos_batch_if_append_once");
+        string tempDir = tempFile.Path;
+
+        // Arrange
+        File.WriteAllText(Path.Join(tempDir, "OUT.TXT"), "FIRST\r\n");
+        File.WriteAllBytes(Path.Join(tempDir, "PROG.COM"),
+            File.ReadAllBytes(Path.Join("Resources", "DosConsoleProgramTests", "print_dollar_string.com")));
+        string startBatchPath = Path.Join(tempDir, "START.BAT");
+        File.WriteAllText(startBatchPath, "if not errorlevel 1 CALL PROG.COM >> OUT.TXT\r\n");
+        using Spice86Creator creator = new(
+            binName: startBatchPath,
+            enablePit: false,
+            maxCycles: 100000L,
+            installInterruptVectors: true,
+            cDrive: tempDir);
+        using Spice86DependencyInjection spice86 = creator.Create();
+
+        // Act
+        spice86.ProgramExecutor.Run();
+
+        // Assert
+        File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Should().Be("FIRST\r\nHello DOS",
+            "the redirection of the IF line applies exactly once to the launched program");
+    }
 }
