@@ -393,18 +393,9 @@ internal sealed class HardwareInterruptEffectBuilder {
         CfgCodePartition partition, ICfgNode entry) {
         CfgCodePartitionEntry? entryMeta = partition.Entries.FirstOrDefault(e => Equals(e.Node, entry));
         if (entryMeta is not null && _installed.Contains(entryMeta.Address)) {
-            foreach (CfgInstruction instruction in partition.Blocks
-                         .SelectMany(block => block.Instructions)
-                         .OfType<CfgInstruction>()) {
-                if (!IsInterruptCall(instruction)) {
-                    continue;
-                }
-                foreach (ICfgNode target in TransferTargets(instruction)) {
-                    if (TargetOf(target) is { } followed
-                        && !_installed.Contains(followed.Entry.Address)) {
-                        yield return (followed.Partition, followed.Entry.Node);
-                    }
-                }
+            foreach ((CfgCodePartition Partition, ICfgNode Entry) followed in
+                     InstalledHandlerTargets(partition)) {
+                yield return followed;
             }
             yield break;
         }
@@ -413,8 +404,8 @@ internal sealed class HardwareInterruptEffectBuilder {
                      .OfType<CfgInstruction>()
                      .Where(instruction => !instruction.IsReturn)) {
             foreach (ICfgNode target in FollowedTargets(instruction, partition)) {
-                if (TargetOf(target) is { } followed && !IsInstalled(followed.Entry.Node)) {
-                    yield return (followed.Partition, followed.Entry.Node);
+                if (ProgramTargetOf(target) is { } followed) {
+                    yield return followed;
                 }
             }
         }
@@ -451,6 +442,18 @@ internal sealed class HardwareInterruptEffectBuilder {
     private CallEffect InstalledHandlerSummary(CfgCodePartition partition) {
         CpuValues reads = CpuValues.None;
         CpuValues writes = CpuValues.None;
+        foreach ((CfgCodePartition followedPartition, ICfgNode followedEntry) in InstalledHandlerTargets(partition)) {
+            CallEffect summary = SummaryOf(followedPartition, followedEntry);
+            reads |= summary.Reads;
+            writes |= summary.Writes;
+        }
+        return new CallEffect(reads, writes);
+    }
+
+    /// <summary>The analysable program targets the installed handler reaches through its
+    /// <c>int</c> instructions.</summary>
+    private IEnumerable<(CfgCodePartition Partition, ICfgNode Entry)> InstalledHandlerTargets(
+        CfgCodePartition partition) {
         foreach (CfgInstruction instruction in partition.Blocks
                      .SelectMany(block => block.Instructions)
                      .OfType<CfgInstruction>()) {
@@ -458,15 +461,20 @@ internal sealed class HardwareInterruptEffectBuilder {
                 continue;
             }
             foreach (ICfgNode target in TransferTargets(instruction)) {
-                if (TargetOf(target) is not { } followed || _installed.Contains(followed.Entry.Address)) {
-                    continue;
+                if (TargetOf(target) is { } followed && !_installed.Contains(followed.Entry.Address)) {
+                    yield return (followed.Partition, followed.Entry.Node);
                 }
-                CallEffect summary = SummaryOf(followed.Partition, followed.Entry.Node);
-                reads |= summary.Reads;
-                writes |= summary.Writes;
             }
         }
-        return new CallEffect(reads, writes);
+    }
+
+    /// <summary>The program partition entry <paramref name="target"/> reaches, or null when it is
+    /// not analysable or belongs to an installed handler.</summary>
+    private (CfgCodePartition Partition, ICfgNode Entry)? ProgramTargetOf(ICfgNode target) {
+        if (TargetOf(target) is not { } followed || IsInstalled(followed.Entry.Node)) {
+            return null;
+        }
+        return (followed.Partition, followed.Entry.Node);
     }
 
     private CallEffect PartitionSummary(CfgCodePartition partition, ICfgNode entry) {
@@ -870,12 +878,11 @@ internal sealed class HardwareInterruptEffectBuilder {
             CpuValues reads = ownReads;
             CpuValues writes = CpuValues.None;
             foreach (ICfgNode target in TransferTargets(origin)) {
-                if (_owner.TargetOf(target) is not { } followedTarget
-                    || _owner.IsInstalled(followedTarget.Entry.Node)) {
+                if (_owner.ProgramTargetOf(target) is not { } followedTarget) {
                     followed = Empty;
                     return false;
                 }
-                CallEffect summary = _owner.SummaryOf(followedTarget.Partition, followedTarget.Entry.Node);
+                CallEffect summary = _owner.SummaryOf(followedTarget.Partition, followedTarget.Entry);
                 reads |= summary.Reads;
                 writes |= summary.Writes;
             }
