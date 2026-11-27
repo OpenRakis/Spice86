@@ -57,7 +57,7 @@ public class CfgGraphReloadTest {
     /// <c>intchain.com</c> is excluded: it is a DOS COM file with no deterministic graph fixture.
     /// </summary>
     public static IEnumerable<object[]> AllReloadBins => new[] {
-        "add", "alu_dead_flags", "bcdcnv", "bitwise", "cc_call_shapes", "cc_register_leaf", "cc_stack_frames", "cmpneg", "control", "datatrnf",
+        "add", "alu_dead_flags", "bcdcnv", "bitwise", "cc_call_shapes", "cc_recursive_summary", "cc_register_leaf", "cc_stack_frames", "cmpneg", "control", "datatrnf",
         "dataflow_constant_folding", "dataflow_double_precision", "dataflow_expression_propagation",
         "dataflow_flag_definitions", "dataflow_idioms", "dataflow_interrupt_boundaries",
         "data_globals", "data_jump_tables", "data_segment_values", "data_segments", "data_tables",

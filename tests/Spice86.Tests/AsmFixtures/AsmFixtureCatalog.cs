@@ -922,6 +922,10 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x000E), (0x42, 2, 0x000B), (0x44, 2, 0x000B), (0x48, 2, 0x3000),
                     (0x50, 2, 0x0003), (0x58, 2, 0x0011), (0x5A, 2, 0x0011), (0x5C, 2, 0x0011),
                     (0x70, 2, 0xAB00), (0x74, 2, 0xAB05), (0x80, 2, 0x7777)));
+            case "cc_recursive_summary":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4A,
+                    (0x40, 2, 0x0018), (0x42, 2, 0x0009), (0x44, 2, 0x0009),
+                    (0x46, 2, 0x0005), (0x48, 2, 0x0001)));
             case "cc_register_leaf":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x56,
                     (0x40, 2, 0x0007), (0x42, 2, 0x0030), (0x44, 1, 0x11), (0x45, 1, 0x22),

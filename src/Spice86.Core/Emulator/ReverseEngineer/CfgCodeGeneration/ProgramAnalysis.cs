@@ -28,16 +28,42 @@ internal sealed record ProgramAnalysis(IrSegmentSummaries SegmentSummaries, IrCa
     /// classification over the final segment values. Each analysis is reported as a step of
     /// <paramref name="progress"/> before it starts.</summary>
     public static ProgramAnalysis Compute(IReadOnlyList<PreparedMethod> methods, CfgGeneratorContext context,
-        HardwareInterruptEffectBuilder effectBuilder, ProgramImages images, DumpProgressReporter progress) {
+        HardwareInterruptEffectBuilder effectBuilder, ProgramImages images, DumpProgressReporter progress,
+        int maxDegreeOfParallelism = 1) {
         progress.Step(1, PartCount, "segment summaries");
         IrSegmentSummaries summaries = IrSegmentSummaries.Compute(methods, context, effectBuilder);
+        object progressLock = new();
+        Action<int> codeRound = round => {
+            lock (progressLock) {
+                progress.Step(2, PartCount, $"calling conventions, round {round}");
+            }
+        };
+        Action<int> observedRound = round => {
+            lock (progressLock) {
+                progress.Step(3, PartCount, $"observed conventions, round {round}");
+            }
+        };
+        IrCallingConventions conventions;
+        IrCallingConventions observed;
         progress.Step(2, PartCount, "calling conventions");
-        IrCallingConventions conventions = IrCallingConventions.Compute(methods, context, false,
-            round => progress.Step(2, PartCount, $"calling conventions, round {round}"), effectBuilder);
+        if (maxDegreeOfParallelism > 1) {
+            IrCallingConventions? parallelConventions = null;
+            IrCallingConventions? parallelObserved = null;
+            Parallel.Invoke(
+                () => parallelConventions = IrCallingConventions.Compute(methods, context, false,
+                    codeRound, effectBuilder),
+                () => parallelObserved = IrCallingConventions.Compute(methods, context, true,
+                    observedRound, effectBuilder));
+            conventions = parallelConventions!;
+            observed = parallelObserved!;
+        } else {
+            conventions = IrCallingConventions.Compute(methods, context, false,
+                codeRound, effectBuilder);
+            progress.Step(3, PartCount, "observed conventions");
+            observed = IrCallingConventions.Compute(methods, context, true,
+                observedRound, effectBuilder);
+        }
         progress.Detail($"Calling conventions fixed point finished in {conventions.Iterations} iterations");
-        progress.Step(3, PartCount, "observed conventions");
-        IrCallingConventions observed = IrCallingConventions.Compute(methods, context, true,
-            round => progress.Step(3, PartCount, $"observed conventions, round {round}"), effectBuilder);
         progress.Detail($"Observed conventions fixed point finished in {observed.Iterations} iterations");
         progress.Step(4, PartCount, "typed signatures");
         TypedSignatures signatures = TypedSignatures.Compute(methods, conventions);

@@ -429,6 +429,8 @@ cc_mov_sp_bp_epilogue.spec	program	0	0	0	0	54	41	25	2	3	4	1	0	102	7	-
 cc_mov_sp_bp_epilogue.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	34	0	-
 cc_push_sp_arguments.spec	program	0	0	0	0	7	8	7	2	3	3	0	0	24	1	-
 cc_push_sp_arguments.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	7	0	-
+cc_recursive_summary.spec	program	0	0	0	0	70	56	31	7	9	8	1	0	137	4	-
+cc_recursive_summary.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	23	0	-
 cc_register_leaf.spec	program	0	0	0	0	31	40	27	8	8	16	0	0	124	6	-
 cc_register_leaf.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	24	0	-
 cc_saved_registers.spec	program	1	0	0	0	33	35	20	9	9	16	0	0	102	10	-

@@ -49,4 +49,8 @@ public sealed record GeneratorOptions {
 
     /// <summary>The generation policy: the strict generation plus the relaxations it enables.</summary>
     internal GenerationPolicy Policy { get; init; } = GenerationPolicy.Strict;
+
+    /// <summary>How many worker threads the independent per-method preparation rounds may use.
+    /// Branch probe generation always uses one worker because probe numbering is ordered.</summary>
+    internal int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
 }

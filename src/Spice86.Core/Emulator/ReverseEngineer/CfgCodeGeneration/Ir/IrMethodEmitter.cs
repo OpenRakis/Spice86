@@ -133,7 +133,7 @@ internal sealed class IrMethodEmitter(
             body, liftedBlocks, liftedStatements, constantMemoryAccesses, framePlan);
         return new PreparedMethod(method, irMethod, pipeline.Ssa, pipeline.DosCalls,
             structured.EntryDispatch, body,
-            structured.Targets, emission, framePlan, savedPairs, entryFactSet);
+            structured.Targets, emission, framePlan, savedPairs, entryFactSet, context.Policy);
     }
 
     /// <summary>The entry facts of <paramref name="irMethod"/>'s own blocks: only entries the

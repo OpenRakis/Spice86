@@ -714,6 +714,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_jump_to_next", AsmScenarioEngineAssertions.PartitionJumpToNext),
             PartitionScenario("partition_two_fault_handlers", AsmScenarioEngineAssertions.PartitionTwoFaultHandlers).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.PartitionTwoFaultHandlers),
             PartitionScenario("cc_copy_in_observers"),
+            PartitionScenario("cc_recursive_summary"),
             PartitionScenario("cc_register_leaf"),
             PartitionScenario("cc_dispatch_targets").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcDispatchTargets),
             PartitionScenario("cc_call_32bit").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.CcCall32Bit),

@@ -33,8 +33,8 @@ using System.Linq;
 /// entry value by <see cref="IrPreservation"/>, shared with the calling conventions: the entry
 /// version, a pop of bytes a push took from a preserved version of the same register, or the
 /// previous bytes a followed call or <c>int</c>'s targets do not write. Anything the analysis
-/// cannot follow - an unknown effect, an unknown call or jump target, a cycle, a hardware vector
-/// whose IVT entry is not a known handler - yields the conservative set. A call or jump target
+/// cannot follow - an unknown effect, an unknown call or jump target, a cycle that does not converge,
+/// or a hardware vector whose IVT entry is not a known handler - yields the conservative set. A call or jump target
 /// inside the analysed partition is an internal edge of the method, not a transfer. The int 74h
 /// stub far-calls the mouse driver, which far-calls the user subroutine the program registered:
 /// that program code is not followed, so when a subroutine was registered during the run the
@@ -80,10 +80,13 @@ internal sealed class HardwareInterruptEffectBuilder {
 
     private static CallEffect Empty { get; } = new(CpuValues.None, CpuValues.None);
 
+    private const int MaxSummaryRounds = 64;
+
     private static readonly IrSsaValue[] SsaRegisters = IrValueSets.ValuesIn(CpuValues.Registers);
     private static readonly IrSsaValue[] SsaValues =
         IrValueSets.ValuesIn(CpuValues.Registers | DeliveredFlags);
 
+    private readonly object _summaryLock = new();
     private readonly CfgGeneratorContext _context;
     private readonly TransferEmitter _transferEmitter;
     private readonly AstInstructionRenderer _assemblyRenderer;
@@ -99,7 +102,9 @@ internal sealed class HardwareInterruptEffectBuilder {
     private readonly Dictionary<MethodPlan, IrFrames> _framesByMethod = new();
     private readonly Dictionary<MethodPlan, (IrMethod Method, IrSsa Ssa, IrStackSlots Slots)>
         _liftedByMethod = new();
-    private readonly HashSet<(CfgCodePartition Partition, ICfgNode Entry)> _inProgress = new();
+    private readonly Dictionary<(CfgCodePartition Partition, ICfgNode Entry), CallEffect> _workingSummaries = new();
+    private readonly HashSet<(CfgCodePartition Partition, ICfgNode Entry)> _activeScc = new();
+    private readonly HashSet<(CfgCodePartition Partition, ICfgNode Entry)> _unfinishedSummaries = new();
     private readonly HashSet<SegmentedAddress> _installed = new();
     private readonly HashSet<SegmentedAddress> _stubIntTargets = new();
     private bool _initialized;
@@ -123,6 +128,12 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// when a hardware vector's IVT target or a chained vector's target is not a known
     /// handler.</summary>
     public CallEffect Compute() {
+        lock (_summaryLock) {
+            return ComputeCore();
+        }
+    }
+
+    private CallEffect ComputeCore() {
         EnsureInitialized();
         try {
             CallEffect effect = ComputeEffect();
@@ -139,6 +150,9 @@ internal sealed class HardwareInterruptEffectBuilder {
             _frameRangeAccesses.Clear();
             _decidingFrameRanges.Clear();
             _framesByMethod.Clear();
+            _workingSummaries.Clear();
+            _activeScc.Clear();
+            _unfinishedSummaries.Clear();
         }
     }
 
@@ -192,14 +206,22 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// <paramref name="entry"/>) pair reports as possibly written: the partition summary is not
     /// limited to handler roots.</summary>
     internal CpuValues RegisterWrites(CfgCodePartition partition, ICfgNode entry) {
-        EnsureInitialized();
-        return SummaryOf(partition, entry).Writes;
+        lock (_summaryLock) {
+            EnsureInitialized();
+            return SummaryOf(partition, entry).Writes;
+        }
     }
 
     /// <summary>The union of every register every observed target of <paramref name="call"/>
     /// writes, or <see cref="CpuValues.Registers"/> when the call has no observed target or one of
     /// them is not the entry of a program partition.</summary>
     internal CpuValues CallTargetWrites(CfgInstruction call) {
+        lock (_summaryLock) {
+            return CallTargetWritesCore(call);
+        }
+    }
+
+    private CpuValues CallTargetWritesCore(CfgInstruction call) {
         EnsureInitialized();
         CpuValues writes = CpuValues.None;
         bool hasTarget = false;
@@ -219,6 +241,13 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// <c>null</c> for every other shape; the <c>int</c> keeps the generic vector lowering.</summary>
     internal (CfgCodePartition Partition, CfgCodePartitionEntry Entry, CallEffect Effect)?
         ProgramHandlerOf(CfgInstruction instruction) {
+        lock (_summaryLock) {
+            return ProgramHandlerOfCore(instruction);
+        }
+    }
+
+    private (CfgCodePartition Partition, CfgCodePartitionEntry Entry, CallEffect Effect)?
+        ProgramHandlerOfCore(CfgInstruction instruction) {
         EnsureInitialized();
         using IEnumerator<ICfgNode> targets = TransferTargets(instruction).GetEnumerator();
         if (!targets.MoveNext()) {
@@ -239,9 +268,11 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// neutrally lifted method) is kept.</summary>
     internal void SeedLifted(CfgCodePartition partition, IrMethod method, IrSsa ssa,
         IrStackSlots slots) {
-        EnsureInitialized();
-        if (_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
-            _liftedByMethod.TryAdd(methodPlan, (method, ssa, slots));
+        lock (_summaryLock) {
+            EnsureInitialized();
+            if (_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
+                _liftedByMethod.TryAdd(methodPlan, (method, ssa, slots));
+            }
         }
     }
 
@@ -270,14 +301,154 @@ internal sealed class HardwareInterruptEffectBuilder {
         if (_summaries.TryGetValue(key, out CallEffect? cached)) {
             return cached;
         }
-        if (!_inProgress.Add(key)) {
-            return Conservative;
+        if (_workingSummaries.TryGetValue(key, out CallEffect? working)) {
+            return working;
         }
+        if (_activeScc.Contains(key)) {
+            SegmentedAddress active = _activeScc.FirstOrDefault().Entry?.Address ?? entry.Address;
+            throw new InvalidOperationException(
+                $"Summary dependency misses {entry.Address}: it belongs to the active SCC of {active} but has no working summary.");
+        }
+        if (_unfinishedSummaries.Contains(key)) {
+            SegmentedAddress active = _activeScc.FirstOrDefault().Entry?.Address ?? entry.Address;
+            throw new InvalidOperationException(
+                $"Summary dependency misses {entry.Address}: it belongs to an unfinished SCC while {active} is being computed.");
+        }
+        foreach (List<(CfgCodePartition Partition, ICfgNode Entry)> scc in StronglyConnectedComponents(key)) {
+            ComputeScc(scc);
+        }
+        return _summaries[key];
+    }
+
+    /// <summary>Recomputes one strongly connected component from empty summaries until its member
+    /// effects stop growing; a member that still changes after the cap falls back to conservative.</summary>
+    private void ComputeScc(List<(CfgCodePartition Partition, ICfgNode Entry)> members) {
+        _activeScc.UnionWith(members);
+        foreach ((CfgCodePartition Partition, ICfgNode Entry) member in members) {
+            _workingSummaries[member] = Empty;
+        }
+        bool converged = false;
+        try {
+            for (int round = 0; round < MaxSummaryRounds; round++) {
+                bool changed = false;
+                foreach ((CfgCodePartition partition, ICfgNode entry) in members) {
+                    (CfgCodePartition Partition, ICfgNode Entry) member = (partition, entry);
+                    CallEffect previous = _workingSummaries[member];
+                    CfgCodePartitionEntry? entryMeta = partition.Entries.FirstOrDefault(e => Equals(e.Node, entry));
+                    CallEffect next = EntrySummary(partition, entry, entryMeta);
+                    if ((previous.Reads & ~next.Reads) != CpuValues.None
+                        || (previous.Writes & ~next.Writes) != CpuValues.None) {
+                        throw new InvalidOperationException(
+                            $"Summary of {entry.Address} lost bits between fixed-point rounds: the iteration is not monotone.");
+                    }
+                    if (!next.Equals(previous)) {
+                        _workingSummaries[member] = next;
+                        changed = true;
+                    }
+                }
+                if (!changed) {
+                    converged = true;
+                    break;
+                }
+            }
+            foreach ((CfgCodePartition Partition, ICfgNode Entry) member in members) {
+                _summaries[member] = converged ? _workingSummaries[member] : Conservative;
+                _unfinishedSummaries.Remove(member);
+            }
+        } finally {
+            foreach ((CfgCodePartition Partition, ICfgNode Entry) member in members) {
+                _activeScc.Remove(member);
+                _workingSummaries.Remove(member);
+            }
+        }
+    }
+
+    /// <summary>Tarjan's strongly connected components of the unresolved summary graph reachable
+    /// from <paramref name="root"/>, emitted callees first so every dependency is stored before use.</summary>
+    private List<List<(CfgCodePartition Partition, ICfgNode Entry)>> StronglyConnectedComponents(
+        (CfgCodePartition Partition, ICfgNode Entry) root) {
+        Dictionary<(CfgCodePartition Partition, ICfgNode Entry), int> indices = new();
+        Dictionary<(CfgCodePartition Partition, ICfgNode Entry), int> lowLinks = new();
+        Stack<(CfgCodePartition Partition, ICfgNode Entry)> stack = new();
+        HashSet<(CfgCodePartition Partition, ICfgNode Entry)> onStack = new();
+        List<List<(CfgCodePartition Partition, ICfgNode Entry)>> components = [];
+        int nextIndex = 0;
+
+        Visit(root);
+        _unfinishedSummaries.UnionWith(indices.Keys);
+        return components;
+
+        void Visit((CfgCodePartition Partition, ICfgNode Entry) key) {
+            indices[key] = nextIndex;
+            lowLinks[key] = nextIndex;
+            nextIndex++;
+            stack.Push(key);
+            onStack.Add(key);
+            foreach ((CfgCodePartition Partition, ICfgNode Entry) dependency in
+                     SummaryDependencies(key.Partition, key.Entry)) {
+                if (_summaries.ContainsKey(dependency)) {
+                    continue;
+                }
+                if (!indices.ContainsKey(dependency)) {
+                    Visit(dependency);
+                    lowLinks[key] = Math.Min(lowLinks[key], lowLinks[dependency]);
+                } else if (onStack.Contains(dependency)) {
+                    lowLinks[key] = Math.Min(lowLinks[key], indices[dependency]);
+                }
+            }
+            if (lowLinks[key] != indices[key]) {
+                return;
+            }
+            List<(CfgCodePartition Partition, ICfgNode Entry)> component = [];
+            (CfgCodePartition Partition, ICfgNode Entry) member;
+            do {
+                member = stack.Pop();
+                onStack.Remove(member);
+                component.Add(member);
+            } while (!member.Equals(key));
+            components.Add(component);
+        }
+    }
+
+    /// <summary>The summary keys <see cref="EntrySummary"/> can request for
+    /// (<paramref name="partition"/>, <paramref name="entry"/>): the same followed targets the
+    /// transfer rules use, before any effect is computed.</summary>
+    private IEnumerable<(CfgCodePartition Partition, ICfgNode Entry)> SummaryDependencies(
+        CfgCodePartition partition, ICfgNode entry) {
         CfgCodePartitionEntry? entryMeta = partition.Entries.FirstOrDefault(e => Equals(e.Node, entry));
-        CallEffect result = EntrySummary(partition, entry, entryMeta);
-        _inProgress.Remove(key);
-        _summaries[key] = result;
-        return result;
+        if (entryMeta is not null && _installed.Contains(entryMeta.Address)) {
+            foreach ((CfgCodePartition Partition, ICfgNode Entry) followed in
+                     InstalledHandlerTargets(partition)) {
+                yield return followed;
+            }
+            yield break;
+        }
+        foreach (CfgInstruction instruction in partition.Blocks
+                     .SelectMany(block => block.Instructions)
+                     .OfType<CfgInstruction>()
+                     .Where(instruction => !instruction.IsReturn)) {
+            foreach (ICfgNode target in FollowedTargets(instruction, partition)) {
+                if (ProgramTargetOf(target) is { } followed) {
+                    yield return followed;
+                }
+            }
+        }
+    }
+
+    /// <summary>The observed targets of <paramref name="instruction"/> the summary follows: edges
+    /// inside the analysed partition are internal, except a call to one of its entries, which is a
+    /// new activation and is followed as a self-call.</summary>
+    private IEnumerable<ICfgNode> FollowedTargets(CfgInstruction instruction,
+        CfgCodePartition partition) {
+        foreach (ICfgNode target in TransferTargets(instruction)) {
+            if (target.ContainingBlock is { } block
+                && _partitionByBlock.TryGetValue(block, out CfgCodePartition? owner)
+                && ReferenceEquals(owner, partition)
+                && (!instruction.IsCall || !partition.Entries.Any(entry => Equals(entry.Node, target)))) {
+                continue;
+            }
+            yield return target;
+        }
     }
 
     private CallEffect EntrySummary(CfgCodePartition partition, ICfgNode entry,
@@ -295,6 +466,18 @@ internal sealed class HardwareInterruptEffectBuilder {
     private CallEffect InstalledHandlerSummary(CfgCodePartition partition) {
         CpuValues reads = CpuValues.None;
         CpuValues writes = CpuValues.None;
+        foreach ((CfgCodePartition followedPartition, ICfgNode followedEntry) in InstalledHandlerTargets(partition)) {
+            CallEffect summary = SummaryOf(followedPartition, followedEntry);
+            reads |= summary.Reads;
+            writes |= summary.Writes;
+        }
+        return new CallEffect(reads, writes);
+    }
+
+    /// <summary>The analysable program targets the installed handler reaches through its
+    /// <c>int</c> instructions.</summary>
+    private IEnumerable<(CfgCodePartition Partition, ICfgNode Entry)> InstalledHandlerTargets(
+        CfgCodePartition partition) {
         foreach (CfgInstruction instruction in partition.Blocks
                      .SelectMany(block => block.Instructions)
                      .OfType<CfgInstruction>()) {
@@ -302,15 +485,20 @@ internal sealed class HardwareInterruptEffectBuilder {
                 continue;
             }
             foreach (ICfgNode target in TransferTargets(instruction)) {
-                if (TargetOf(target) is not { } followed || _installed.Contains(followed.Entry.Address)) {
-                    continue;
+                if (TargetOf(target) is { } followed && !_installed.Contains(followed.Entry.Address)) {
+                    yield return (followed.Partition, followed.Entry.Node);
                 }
-                CallEffect summary = SummaryOf(followed.Partition, followed.Entry.Node);
-                reads |= summary.Reads;
-                writes |= summary.Writes;
             }
         }
-        return new CallEffect(reads, writes);
+    }
+
+    /// <summary>The program partition entry <paramref name="target"/> reaches, or null when it is
+    /// not analysable or belongs to an installed handler.</summary>
+    private (CfgCodePartition Partition, ICfgNode Entry)? ProgramTargetOf(ICfgNode target) {
+        if (TargetOf(target) is not { } followed || IsInstalled(followed.Entry.Node)) {
+            return null;
+        }
+        return (followed.Partition, followed.Entry.Node);
     }
 
     private CallEffect PartitionSummary(CfgCodePartition partition, ICfgNode entry) {
@@ -375,7 +563,7 @@ internal sealed class HardwareInterruptEffectBuilder {
         (IrMethod method, IrSsa ssa, IrStackSlots slots) = LiftedMethodOf(methodPlan);
         frames = IrFrames.Compute(method, ssa, slots, statement =>
             statement.Origin is CfgInstruction instruction
-                ? CallTargetWrites(instruction)
+                ? CallTargetWritesCore(instruction)
                 : CpuValues.Registers);
         _framesByMethod[methodPlan] = frames;
         return frames;
@@ -627,6 +815,12 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// entry, when the snapshot covers it, must still point at the stub: a custom handler that
     /// was seen and later uninstalled is a conflicting live target like any other.</summary>
     internal bool HasOnlyBuiltInTargets(InterruptServiceVector service) {
+        lock (_summaryLock) {
+            return HasOnlyBuiltInTargetsCore(service);
+        }
+    }
+
+    private bool HasOnlyBuiltInTargetsCore(InterruptServiceVector service) {
         EnsureInitialized();
         bool anySite = false;
         foreach (CfgInstruction instruction in _context.Program.Partitions
@@ -688,18 +882,10 @@ internal sealed class HardwareInterruptEffectBuilder {
         }
 
         /// <summary>The observed call / <c>int</c> / jump targets of <paramref name="instruction"/>
-        /// that leave the analysed partition: a target whose block belongs to it is an internal
-        /// edge, not a transfer.</summary>
-        private IEnumerable<ICfgNode> TransferTargets(CfgInstruction instruction) {
-            foreach (ICfgNode target in HardwareInterruptEffectBuilder.TransferTargets(instruction)) {
-                if (target.ContainingBlock is { } block
-                    && _owner._partitionByBlock.TryGetValue(block, out CfgCodePartition? partition)
-                    && ReferenceEquals(partition, _partition)) {
-                    continue;
-                }
-                yield return target;
-            }
-        }
+        /// that leave the analysed partition or re-enter it as a call: a target whose block belongs
+        /// to it is an internal edge, not a transfer, unless the instruction calls one of its entries.</summary>
+        private IEnumerable<ICfgNode> TransferTargets(CfgInstruction instruction) =>
+            _owner.FollowedTargets(instruction, _partition);
 
         /// <summary>Whether the statement's origin instruction transfers out of the partition: a call,
         /// an <c>int</c> or a jump whose observed targets other than the fall-through must all be
@@ -722,12 +908,11 @@ internal sealed class HardwareInterruptEffectBuilder {
             CpuValues reads = ownReads;
             CpuValues writes = CpuValues.None;
             foreach (ICfgNode target in TransferTargets(origin)) {
-                if (_owner.TargetOf(target) is not { } followedTarget
-                    || _owner.IsInstalled(followedTarget.Entry.Node)) {
+                if (_owner.ProgramTargetOf(target) is not { } followedTarget) {
                     followed = Empty;
                     return false;
                 }
-                CallEffect summary = _owner.SummaryOf(followedTarget.Partition, followedTarget.Entry.Node);
+                CallEffect summary = _owner.SummaryOf(followedTarget.Partition, followedTarget.Entry);
                 reads |= summary.Reads;
                 writes |= summary.Writes;
             }

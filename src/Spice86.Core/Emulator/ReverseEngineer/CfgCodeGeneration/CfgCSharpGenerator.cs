@@ -52,6 +52,7 @@ internal sealed class CfgCSharpGenerator {
     private readonly int _maxLinesPerFile;
     private readonly bool _printAsmComments;
     private readonly GenerationPolicy _policy;
+    private readonly int _maxDegreeOfParallelism;
 
     /// <summary>The production generator: no census collection, no IR verification, no ASM
     /// instruction comments.</summary>
@@ -114,6 +115,9 @@ internal sealed class CfgCSharpGenerator {
         _deviceOperations = options.DeviceOperations;
         _printAsmComments = options.PrintAsmComments;
         _policy = options.Policy;
+        _maxDegreeOfParallelism = options.BranchProbes
+            ? 1
+            : Math.Max(1, options.MaxDegreeOfParallelism);
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -163,24 +167,31 @@ internal sealed class CfgCSharpGenerator {
         FlagReadCensus flagReadCensus = new();
         WebCensus webCensus = new();
         ConstantMemoryAccessTable constantMemoryAccesses = new();
-        List<PreparedMethod> prepared = new(plan.Methods.Count);
-        List<GenerationStepTimer> timers = new(plan.Methods.Count);
-        for (int i = 0; i < plan.Methods.Count; i++) {
+        List<PreparedMethod> prepared = [.. Enumerable.Repeat<PreparedMethod>(null!, plan.Methods.Count)];
+        List<GenerationStepTimer> timers = [.. Enumerable.Repeat<GenerationStepTimer>(null!, plan.Methods.Count)];
+        object progressLock = new();
+        ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = _maxDegreeOfParallelism };
+        int preparedCount = 0;
+        Parallel.For(0, plan.Methods.Count, parallelOptions, i => {
             MethodPlan method = plan.Methods[i];
-            progress.Step(i + 1, plan.Methods.Count, method.MethodName);
             GenerationStepTimer timer = new();
-            PreparedMethod preparedMethod = methodEmitter.Prepare(method, timer);
-            prepared.Add(preparedMethod);
-            timers.Add(timer);
-            MethodCensus methodCensus = preparedMethod.Emission.Census;
+            prepared[i] = methodEmitter.Prepare(method, timer);
+            timers[i] = timer;
+            int completed = Interlocked.Increment(ref preparedCount);
+            lock (progressLock) {
+                progress.Step(completed, plan.Methods.Count, method.MethodName);
+            }
+        });
+        for (int i = 0; i < plan.Methods.Count; i++) {
+            PreparedMethod preparedMethod = prepared[i];
             constantMemoryAccesses.Merge(preparedMethod.Emission.ConstantMemoryAccesses);
-            webCensus.Merge(methodCensus.Webs);
+            webCensus.Merge(preparedMethod.Emission.Census.Webs);
         }
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodeProgramAnalysis);
         ProgramAnalysis analysis = ProgramAnalysis.Compute(prepared, context, effectBuilder,
-            program.Inputs.ProgramImages, progress);
+            program.Inputs.ProgramImages, progress, _maxDegreeOfParallelism);
 
         // A return exit reads only the outputs of its method's entries (plus every value the
         // convention model does not describe and both tokens), and a resolved call reads and may
@@ -227,12 +238,18 @@ internal sealed class CfgCSharpGenerator {
             }
             used[i] = facts;
             reprepared++;
+        }
+        Parallel.For(0, prepared.Count, parallelOptions, i => {
+            if (used[i] is null) {
+                return;
+            }
             GenerationStepTimer timer = timers[i];
             MethodPlan methodPlan = plan.Methods[i];
             prepared[i] = timer.Measure("round 2 prepare",
-                () => methodEmitter.Prepare(methodPlan, timer, exitEffects, callEffects,
-                    faultReads, entryFacts, analysis.TypedSignatures));
-        }
+                () => methodEmitter.Prepare(methodPlan, timer,
+                    ExitEffectsFromReads(used[i]!.ExitReads), callEffectsByMethod[i],
+                    used[i]!.FaultReads, used[i]!.EntryFacts, analysis.TypedSignatures));
+        });
         progress.Detail($"Resolved calls summarized: {summarizedCalls}; kept Unknown: "
             + string.Join(", ", callSkips
                 .OrderBy(pair => pair.Key.ToString())
@@ -247,7 +264,7 @@ internal sealed class CfgCSharpGenerator {
             // this terminates - the round cap is a bug detector, not a tolerance.
             progress.Detail("Preparation round 2");
             ProgramAnalysis current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
-                program.Inputs.ProgramImages, progress);
+                program.Inputs.ProgramImages, progress, _maxDegreeOfParallelism);
             int rounds = 2;
             while (true) {
                 List<(int Index, UsedFacts Facts, string Reason)> violated = ConsumeViolations(prepared, used,
@@ -264,21 +281,24 @@ internal sealed class CfgCSharpGenerator {
                             $"{prepared[violation.Index].Method.MethodName}: {violation.Reason}")));
                 }
                 rounds++;
+                IReadOnlyDictionary<ICfgNode, IrEffects>?[] roundExitEffects =
+                    new IReadOnlyDictionary<ICfgNode, IrEffects>?[prepared.Count];
                 foreach ((int index, UsedFacts facts, _) in violated) {
-                    IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects =
-                        ExitEffectsFromReads(facts.ExitReads);
-                    IReadOnlyDictionary<ICfgNode, IrEffects> callEffects =
-                        CallEffectsFromUsed(facts);
-                    callEffectsByMethod[index] = callEffects;
+                    roundExitEffects[index] = ExitEffectsFromReads(facts.ExitReads);
+                    callEffectsByMethod[index] = CallEffectsFromUsed(facts);
+                }
+                Parallel.ForEach(violated, parallelOptions, violation => {
+                    int index = violation.Index;
+                    UsedFacts facts = violation.Facts;
                     GenerationStepTimer timer = timers[index];
                     prepared[index] = timer.Measure($"round {rounds} prepare",
                         () => methodEmitter.Prepare(plan.Methods[index], timer,
-                            exitEffects, callEffects, facts.FaultReads, facts.EntryFacts,
-                            current.TypedSignatures));
-                }
+                            roundExitEffects[index]!, callEffectsByMethod[index], facts.FaultReads,
+                            facts.EntryFacts, current.TypedSignatures));
+                });
                 progress.Detail($"Preparation round {rounds}");
                 current = ProgramAnalysis.Compute(prepared, context, effectBuilder,
-                    program.Inputs.ProgramImages, progress);
+                    program.Inputs.ProgramImages, progress, _maxDegreeOfParallelism);
             }
             if (_verify) {
                 VerifyObservedExitReads(prepared, analysis.ObservedConventions,
