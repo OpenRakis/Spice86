@@ -86,6 +86,7 @@ internal sealed class HardwareInterruptEffectBuilder {
     private static readonly IrSsaValue[] SsaValues =
         IrValueSets.ValuesIn(CpuValues.Registers | DeliveredFlags);
 
+    private readonly object _summaryLock = new();
     private readonly CfgGeneratorContext _context;
     private readonly TransferEmitter _transferEmitter;
     private readonly AstInstructionRenderer _assemblyRenderer;
@@ -127,6 +128,12 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// when a hardware vector's IVT target or a chained vector's target is not a known
     /// handler.</summary>
     public CallEffect Compute() {
+        lock (_summaryLock) {
+            return ComputeCore();
+        }
+    }
+
+    private CallEffect ComputeCore() {
         EnsureInitialized();
         try {
             CallEffect effect = ComputeEffect();
@@ -199,14 +206,22 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// <paramref name="entry"/>) pair reports as possibly written: the partition summary is not
     /// limited to handler roots.</summary>
     internal CpuValues RegisterWrites(CfgCodePartition partition, ICfgNode entry) {
-        EnsureInitialized();
-        return SummaryOf(partition, entry).Writes;
+        lock (_summaryLock) {
+            EnsureInitialized();
+            return SummaryOf(partition, entry).Writes;
+        }
     }
 
     /// <summary>The union of every register every observed target of <paramref name="call"/>
     /// writes, or <see cref="CpuValues.Registers"/> when the call has no observed target or one of
     /// them is not the entry of a program partition.</summary>
     internal CpuValues CallTargetWrites(CfgInstruction call) {
+        lock (_summaryLock) {
+            return CallTargetWritesCore(call);
+        }
+    }
+
+    private CpuValues CallTargetWritesCore(CfgInstruction call) {
         EnsureInitialized();
         CpuValues writes = CpuValues.None;
         bool hasTarget = false;
@@ -226,6 +241,13 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// <c>null</c> for every other shape; the <c>int</c> keeps the generic vector lowering.</summary>
     internal (CfgCodePartition Partition, CfgCodePartitionEntry Entry, CallEffect Effect)?
         ProgramHandlerOf(CfgInstruction instruction) {
+        lock (_summaryLock) {
+            return ProgramHandlerOfCore(instruction);
+        }
+    }
+
+    private (CfgCodePartition Partition, CfgCodePartitionEntry Entry, CallEffect Effect)?
+        ProgramHandlerOfCore(CfgInstruction instruction) {
         EnsureInitialized();
         using IEnumerator<ICfgNode> targets = TransferTargets(instruction).GetEnumerator();
         if (!targets.MoveNext()) {
@@ -246,9 +268,11 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// neutrally lifted method) is kept.</summary>
     internal void SeedLifted(CfgCodePartition partition, IrMethod method, IrSsa ssa,
         IrStackSlots slots) {
-        EnsureInitialized();
-        if (_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
-            _liftedByMethod.TryAdd(methodPlan, (method, ssa, slots));
+        lock (_summaryLock) {
+            EnsureInitialized();
+            if (_methodByPartition.TryGetValue(partition, out MethodPlan? methodPlan)) {
+                _liftedByMethod.TryAdd(methodPlan, (method, ssa, slots));
+            }
         }
     }
 
@@ -539,7 +563,7 @@ internal sealed class HardwareInterruptEffectBuilder {
         (IrMethod method, IrSsa ssa, IrStackSlots slots) = LiftedMethodOf(methodPlan);
         frames = IrFrames.Compute(method, ssa, slots, statement =>
             statement.Origin is CfgInstruction instruction
-                ? CallTargetWrites(instruction)
+                ? CallTargetWritesCore(instruction)
                 : CpuValues.Registers);
         _framesByMethod[methodPlan] = frames;
         return frames;
@@ -791,6 +815,12 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// entry, when the snapshot covers it, must still point at the stub: a custom handler that
     /// was seen and later uninstalled is a conflicting live target like any other.</summary>
     internal bool HasOnlyBuiltInTargets(InterruptServiceVector service) {
+        lock (_summaryLock) {
+            return HasOnlyBuiltInTargetsCore(service);
+        }
+    }
+
+    private bool HasOnlyBuiltInTargetsCore(InterruptServiceVector service) {
         EnsureInitialized();
         bool anySite = false;
         foreach (CfgInstruction instruction in _context.Program.Partitions
