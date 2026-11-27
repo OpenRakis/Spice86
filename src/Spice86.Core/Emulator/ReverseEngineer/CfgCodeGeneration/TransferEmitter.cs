@@ -23,6 +23,7 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// actual writing to source text happens elsewhere.
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
+    private readonly object _callLandingsLock = new();
     private readonly Dictionary<(SegmentedAddress ExpectedReturn, MethodGroupNode? Target), CallLandingListNode> _callLandings = [];
 
     /// <summary>The mid-call landings of every generated call site, keyed by the site's expected
@@ -40,14 +41,16 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             return;
         }
         (SegmentedAddress, MethodGroupNode?) key = (expectedReturn, target);
-        if (_callLandings.TryGetValue(key, out CallLandingListNode? existing)) {
-            if (!existing.Arms.SequenceEqual(landings.Arms)) {
-                throw new InvalidOperationException(
-                    $"Two call sites returning to {expectedReturn} observed different landing tables.");
+        lock (_callLandingsLock) {
+            if (_callLandings.TryGetValue(key, out CallLandingListNode? existing)) {
+                if (!existing.Arms.SequenceEqual(landings.Arms)) {
+                    throw new InvalidOperationException(
+                        $"Two call sites returning to {expectedReturn} observed different landing tables.");
+                }
+                return;
             }
-            return;
+            _callLandings[key] = landings;
         }
-        _callLandings[key] = landings;
     }
 
     /// <summary>
