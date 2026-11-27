@@ -594,6 +594,8 @@ internal static class AsmScenarioCatalog {
                 .WithTimingDependentState("the fixture's purpose is an IRQ delivered at varying interior entry points, which is timing-dependent"),
             AsmScenario.FromFixture("interrupt_handler_changes_register", AsmFixtureCatalog.InterruptHandlerChangesRegister).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.InterruptHandlerChangesRegister)
                 .WithTimingDependentState("the oracle counts a timer tick interrupt arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
+            AsmScenario.FromFixture("interrupt_handler_chain_preserves_ax", AsmFixtureCatalog.InterruptHandlerChainPreservesAx).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.InterruptHandlerChainPreservesAx)
+                .WithTimingDependentState("the oracle counts timer tick interrupts arriving while the program waits, so the IRQ0 landing stack frame is timing-dependent"),
             // mouse_irq12 posts a move before the run so IRQ 12 is delivered while the program
             // waits; with no user routine registered the driver's before/after callbacks take their
             // no-routine contracts, and the delivery reaches vector 0x74. The oracle reads the frame

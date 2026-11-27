@@ -95,6 +95,7 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<ICfgNode, List<(MethodData Caller, CallSite Site)>> _callSitesByContinuation = new();
     private readonly Dictionary<CfgCodePartitionEntry, MethodData> _methodByEntry = new();
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
+    private readonly HashSet<ICfgNode> _executionContextNodes = [];
     private readonly List<MethodData> _methods = [];
     private readonly bool _observed;
     private readonly HardwareInterruptEffectBuilder _effectBuilder;
@@ -106,13 +107,25 @@ internal sealed class IrCallingConventions {
         _context = context;
         _observed = observed;
         _effectBuilder = effectBuilder;
+        Dictionary<ICfgNode, EntryState> statesByNode = new();
         foreach (CfgCodePartition partition in context.Program.Partitions) {
             foreach (CfgCodePartitionEntry entry in partition.Entries) {
                 _entryByNode[entry.Node] = entry;
                 _entryByAddress[entry.Address] = entry;
-                _states[entry] = new EntryState();
+                if (entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry) {
+                    _executionContextNodes.Add(entry.Node);
+                }
+                if (!statesByNode.TryGetValue(entry.Node, out EntryState? state)) {
+                    state = new EntryState();
+                    statesByNode[entry.Node] = state;
+                }
+                _states[entry] = state;
             }
         }
+    }
+
+    private CfgCodePartitionEntry CanonicalEntry(CfgCodePartitionEntry entry) {
+        return _entryByNode.TryGetValue(entry.Node, out CfgCodePartitionEntry? canonical) ? canonical : entry;
     }
 
     /// <summary>How many iterations the last <see cref="Compute"/> ran to the fixed point.</summary>
@@ -492,10 +505,12 @@ internal sealed class IrCallingConventions {
     /// shared one.</summary>
     private IrStackState SharedEntryState(MethodData method) {
         IReadOnlyList<CfgCodePartitionEntry> entries = method.Source.Method.Entries;
-        if (entries.Count != 1
-            || entries[0].Kind != CfgCodePartitionEntryKind.SharedEntry
-            || _callersOf.ContainsKey(entries[0])
-            || !_transfersTo.TryGetValue(entries[0],
+        if (entries.Count != 1 || entries[0].Kind != CfgCodePartitionEntryKind.SharedEntry) {
+            return IrStackState.Entry;
+        }
+        CfgCodePartitionEntry entry = CanonicalEntry(entries[0]);
+        if (_callersOf.ContainsKey(entry)
+            || !_transfersTo.TryGetValue(entry,
                     out List<(MethodData Caller, ExitSite Site)>? sites)) {
             return IrStackState.Entry;
         }
@@ -533,7 +548,7 @@ internal sealed class IrCallingConventions {
         CfgCodePartitionEntry target = call.Targets[0];
         if (!_methodByEntry.TryGetValue(target, out MethodData? callee)
             || callee.Source.Method.Entries.Count != 1
-            || !ReferenceEquals(callee.Source.Method.Entries[0], target)
+            || !ReferenceEquals(CanonicalEntry(callee.Source.Method.Entries[0]), target)
             || !_provedReturns.TryGetValue(callee.Source.Method.MethodName,
                 out CalleeReturnEffect? effect)
             || CallHelperOf(statement)?.Distance != effect.Distance
@@ -855,7 +870,7 @@ internal sealed class IrCallingConventions {
         IrMethod irMethod = method.Source.IrMethod;
         MethodPlan plan = method.Source.Method;
         foreach (CfgCodePartitionEntry entry in plan.Entries) {
-            method.EntryByLoadOffset[_context.GetEntryLoadOffset(plan.Partition, entry.Node)] = entry;
+            method.EntryByLoadOffset[_context.GetEntryLoadOffset(plan.Partition, entry.Node)] = CanonicalEntry(entry);
         }
         foreach (IrEntry entry in irMethod.Entries
                 .Where(entry => _entryByNode.ContainsKey(entry.Node))) {
@@ -1185,7 +1200,7 @@ internal sealed class IrCallingConventions {
             return false;
         }
         if (loadOffset is null) {
-            entry = target.Source.Method.PrimaryEntry;
+            entry = CanonicalEntry(target.Source.Method.PrimaryEntry);
             return true;
         }
         return target.EntryByLoadOffset.TryGetValue(loadOffset.Value, out entry);
@@ -1230,7 +1245,7 @@ internal sealed class IrCallingConventions {
         foreach ((_, CfgCodePartitionEntry entry) in _entryByNode) {
             if (entry.Address.Equals(_context.Program.Inputs.ProgramEntryPoint)) {
                 _states[entry].UnknownWay = true;
-            } else if (entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry) {
+            } else if (_executionContextNodes.Contains(entry.Node)) {
                 _states[entry].UnknownWay = true;
             }
         }
@@ -1447,7 +1462,7 @@ internal sealed class IrCallingConventions {
     private CpuValues LiveAfter(CfgCodePartitionEntry entry, EntryState state) {
         if (state.UnknownWay
             && !entry.Address.Equals(_context.Program.Inputs.ProgramEntryPoint)) {
-            if (entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry
+            if (_executionContextNodes.Contains(entry.Node)
                 || !_methodByEntry.TryGetValue(entry, out MethodData? method)) {
                 return Reportable;
             }

@@ -450,6 +450,17 @@ internal static class AsmFixtureCatalog {
         return ResultFixture(settings, AssertInterruptHandlerChangesRegisterCompleted);
     }
 
+    /// <summary>Runs interrupt_handler_chain_preserves_ax: a chained timer handler must restore AX before
+    /// jumping to the previous handler.</summary>
+    public static AsmFixture InterruptHandlerChainPreservesAx() {
+        AsmRunSettings settings = new() {
+            BinName = "interrupt_handler_chain_preserves_ax",
+            MaxCycles = 0x400000,
+            EnablePit = true
+        };
+        return ResultFixture(settings, AssertInterruptHandlerChainPreservesAxCompleted);
+    }
+
     /// <summary>Unmasks IRQ 12 and posts a mouse move so the machine raises IRQ 12 while the
     /// program waits; the delivery runs the int 74h stub and its user-routine callbacks.</summary>
     private static void RaiseMouseIrq12(Machine machine) {
@@ -1793,6 +1804,12 @@ internal static class AsmFixtureCatalog {
     private static void AssertInterruptHandlerChangesRegisterCompleted(AsmFixtureResult result) {
         result.Memory.UInt16[0x20080].Should().Be(5,
             "the handler sets AX = 5 before a call that does not touch AX, and the main loop stores it");
+    }
+
+    /// <summary>Asserts the chained timer handler restored the interrupted AX.</summary>
+    private static void AssertInterruptHandlerChainPreservesAxCompleted(AsmFixtureResult result) {
+        result.Memory.UInt16[0x20080].Should().Be(0x1234,
+            "the chained handler must restore the interrupted AX before jumping to the old handler");
     }
 
     private static void AssertInteriorEntryCompleted(AsmFixtureResult result) {

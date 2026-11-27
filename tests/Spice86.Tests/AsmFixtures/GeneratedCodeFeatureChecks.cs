@@ -315,6 +315,10 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "return unknown_F000_000A_F000A();")
     ];
 
+    public static readonly GeneratedCodeCheck[] InterruptHandlerChainPreservesAx = [
+        new(Contains, "AX = Stack.Pop16();\n        return unknown_F000_0031_F0031();")
+    ];
+
     public static readonly GeneratedCodeCheck[] InterruptHandlerChangesRegister = [
         new(Contains, "/// <summary>Inputs: flags, DF. Outputs: AX, flags, DF. Changes: AX, flags, DF.</summary>")
     ];
