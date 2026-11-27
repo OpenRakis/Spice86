@@ -59,16 +59,14 @@ internal sealed class CfgGeneratorContext {
         _signatureFieldByInstruction = signatureFields.ToDictionary(
             field => field.Instruction,
             field => field.FieldName);
+        ExecChildEntries = CollectExecChildEntries();
     }
 
     public CfgPartitionedProgram Program { get; }
 
-    private IReadOnlyList<SegmentedAddress>? _execChildEntries;
-
     /// <summary>The child program entry addresses discovery observed the DOS dispatch callback
     /// (#0x21) move CS:IP to: the resolver list a typed EXEC call prints.</summary>
-    internal IReadOnlyList<SegmentedAddress> ExecChildEntries =>
-        _execChildEntries ??= CollectExecChildEntries();
+    internal IReadOnlyList<SegmentedAddress> ExecChildEntries { get; }
 
     private IReadOnlyList<SegmentedAddress> CollectExecChildEntries() {
         List<SegmentedAddress> entries = [];
