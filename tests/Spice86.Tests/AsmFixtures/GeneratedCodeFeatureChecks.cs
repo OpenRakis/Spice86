@@ -95,14 +95,26 @@ internal static class GeneratedCodeFeatureChecks {
         new(DoesNotContain, "CallWithStackSpace")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomStrictRam = [
+        new(Contains, "// Relaxations: none"),
+        new(Contains, "DsGlobals.Byte0601 = UInt8[ES, index];"),
+        new(DoesNotContain, "DsGlobals.Byte0601 = 0x42;")
+    ];
+
     public static readonly GeneratedCodeCheck[] IdiomRelaxationRam = [
         new(Contains, "// Relaxations: UnknownMemoryIsRam"),
-        new(Contains, "SegmentA000Globals.Byte0010 = 0x42;")
+        new(Contains, "DsGlobals.Byte0601 = 0x42;")
+    ];
+
+    public static readonly GeneratedCodeCheck[] IdiomStrictSegment = [
+        new(Contains, "// Relaxations: none"),
+        new(Contains, "UInt16[DS, index + 1] = 0x1234;"),
+        new(DoesNotContain, "UInt32[DS, index + 1] = 0x56781234;")
     ];
 
     public static readonly GeneratedCodeCheck[] IdiomRelaxationSegment = [
         new(Contains, "// Relaxations: AccessesStayInSegment"),
-        new(Contains, "UInt8[DS, index] = 0x42;")
+        new(Contains, "UInt32[DS, index + 1] = 0x56781234;")
     ];
 
     public static readonly GeneratedCodeCheck[] IdiomRelaxationStack = [
@@ -110,10 +122,18 @@ internal static class GeneratedCodeFeatureChecks {
         new(Contains, "DX = SsUInt16[SP + 2];")
     ];
 
+    public static readonly GeneratedCodeCheck[] IdiomStrictSaved = [
+        new(Contains, "// Relaxations: none"),
+        new(Contains, "/// <summary>Inputs: AL, SI, DI. Outputs: SI, DI. Changes: SI, DI.</summary>"),
+        new(DoesNotContain, "/// <summary>Inputs: AL. Outputs: none. Changes: none.</summary>")
+    ];
+
+
     public static readonly GeneratedCodeCheck[] IdiomRelaxationSaved = [
         new(Contains, "// Relaxations: SavedSlotsWrittenOnlyByPops"),
-        new(Contains, "Stack.Save(BX, CX);")
+        new(Contains, "/// <summary>Inputs: AL. Outputs: none. Changes: none.</summary>")
     ];
+
 
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")

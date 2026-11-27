@@ -1,28 +1,31 @@
 ; Build: fasm idiom_relaxation_saved.asm ../idiom_relaxation_saved.bin
-; saved-slots: a method saves registers around a call and restores them after.
+; saved-slots: a method saves registers across a device boundary,
+; changes them, and restores the saved slots whose values the caller observes.
 use16
 
 start:
-    mov byte [0x0600], 0x01
-    mov bx, 0x11
-    mov cx, 0x22
+    mov ax, 2000h
+    mov ss, ax
+    mov sp, 1000h
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
+    mov byte [es:0x0600], 0x01
+    mov si, 0x11
+    mov di, 0x22
     call worker
-    mov byte [0x0601], bl
-    mov byte [0x0602], cl
+    mov word [es:0x0601], si
+    mov word [es:0x0603], di
     hlt
 worker:
-    push bx
-    push cx
-    mov bx, 0x99
-    mov cx, 0x88
-    call leaf
-    pop cx
-    pop bx
+    push si
+    push di
+    out 0x80, al
+    mov si, 0x99
+    mov di, 0x88
+    pop di
+    pop si
     ret
-leaf:
-    mov ax, 0x55
-    ret
-
     rb 65520-$
     jmp start
     rb 65535-$

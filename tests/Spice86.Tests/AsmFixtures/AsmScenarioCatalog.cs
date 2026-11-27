@@ -456,12 +456,24 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("idiom_strict_abandoned_stack_slots",
                 () => AsmFixtureCatalog.Idiom("idiom_relaxation_stack", "idiom_strict_abandoned_stack_slots", (0x600, 0x01), (0x601, 0x34), (0x602, 0x78)))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStrictStack),
+            AsmScenario.FromFixture("idiom_strict_unknown_memory_is_ram",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_base", "idiom_strict_unknown_memory_is_ram", (0x600, 0x01), (0x601, 0x42)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStrictRam),
+            AsmScenario.FromFixture("idiom_strict_accesses_stay_in_segment",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_segment", "idiom_strict_accesses_stay_in_segment",
+                    (0x600, 0x01), (0x601, 0x34), (0x602, 0x12), (0x603, 0x78), (0x604, 0x56)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStrictSegment),
+            AsmScenario.FromFixture("idiom_strict_saved_slots",
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_saved",
+                    "idiom_strict_saved_slots", (0x600, 0x01), (0x601, 0x11), (0x603, 0x22)))
+                .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomStrictSaved),
             AsmScenario.FromFixture("idiom_relaxation_unknown_memory_is_ram",
-                () => AsmFixtureCatalog.Idiom("idiom_relaxation_base", "idiom_relaxation_unknown_memory_is_ram", (0x600, 0x01), (0x601, 0x00))
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_base", "idiom_relaxation_unknown_memory_is_ram", (0x600, 0x01), (0x601, 0x42))
                     .WithGenerationPolicy(RelaxedRamPolicy))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationRam),
             AsmScenario.FromFixture("idiom_relaxation_accesses_stay_in_segment",
-                () => AsmFixtureCatalog.Idiom("idiom_relaxation_segment", "idiom_relaxation_accesses_stay_in_segment", (0x600, 0x01), (0x601, 0x42))
+                () => AsmFixtureCatalog.Idiom("idiom_relaxation_segment", "idiom_relaxation_accesses_stay_in_segment",
+                    (0x600, 0x01), (0x601, 0x34), (0x602, 0x12), (0x603, 0x78), (0x604, 0x56))
                     .WithGenerationPolicy(RelaxedSegmentPolicy))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationSegment),
             AsmScenario.FromFixture("idiom_relaxation_abandoned_stack_slots",
@@ -470,7 +482,7 @@ internal static class AsmScenarioCatalog {
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationStack),
             AsmScenario.FromFixture("idiom_relaxation_saved_slots",
                 () => AsmFixtureCatalog.Idiom("idiom_relaxation_saved",
-                    "idiom_relaxation_saved_slots", (0x600, 0x01), (0x601, 0x11), (0x602, 0x22))
+                    "idiom_relaxation_saved_slots", (0x600, 0x01), (0x601, 0x11), (0x603, 0x22))
                     .WithGenerationPolicy(RelaxedSavedSlotsPolicy))
                 .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.IdiomRelaxationSaved),
             AsmScenario.FromFixture("fpuinit", AsmFixtureCatalog.FpuInit),

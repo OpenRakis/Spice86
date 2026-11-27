@@ -735,6 +735,267 @@ public partial class CfgGeneratedOverrides {
 }
 ```
 
+## Relaxation: unknown memory is RAM
+
+With UnknownMemoryIsRam, a store to memory whose segment cannot be proved forwards into the read of the same address.
+
+```asm
+; Build: fasm idiom_relaxation_base.asm ../idiom_relaxation_base.bin
+; unknown-memory-is-RAM: an indirect far access whose segment the analysis cannot prove.
+; At runtime the pointer targets low RAM, so forwarding the store is correct.
+use16
+
+start:
+    mov byte [0x0600], 0x01
+    les bx, [cs:far_pointer]
+    mov byte [es:bx], 0x42
+    mov al, [es:bx]
+    mov byte [0x0601], al
+    hlt
+far_pointer: dw 0x0610, 0x0000
+
+    rb 65520-$
+    jmp start
+    rb 65535-$
+    db 0ffh
+```
+
+Strict build:
+
+Relaxations: none.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        DsGlobals.Byte0600 = 1;
+        index = SegmentF000Globals.Word0015;
+        ES = SegmentF000Globals.Word0017;
+        UInt8[ES, index] = 0x42;
+        DsGlobals.Byte0601 = UInt8[ES, index];
+        return Hlt();
+    }
+
+}
+```
+
+Relaxed build:
+
+Relaxations: UnknownMemoryIsRam.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        DsGlobals.Byte0600 = 1;
+        index = SegmentF000Globals.Word0015;
+        ES = SegmentF000Globals.Word0017;
+        UInt8[ES, index] = 0x42;
+        DsGlobals.Byte0601 = 0x42;
+        return Hlt();
+    }
+
+}
+```
+
+## Relaxation: accesses stay in segment
+
+With AccessesStayInSegment, adjacent indexed word stores whose index range is unproved join into one dword store.
+
+```asm
+; Build: fasm idiom_relaxation_segment.asm ../idiom_relaxation_segment.bin
+; accesses-stay-in-segment: adjacent indexed word stores whose index range is not proved.
+; DS is zero, so every access is ordinary RAM; only the segment-end wrap proof is missing.
+use16
+
+start:
+    mov byte [0x0600], 0x01
+    xor ax, ax
+    mov ds, ax
+    mov si, [cs:input]
+    mov word [si+1], 0x1234
+    mov word [si+3], 0x5678
+    mov ax, [si+1]
+    mov [0x0601], ax
+    mov dx, [si+3]
+    mov [0x0603], dx
+    hlt
+input: dw 0x060F
+
+    rb 65520-$
+    jmp start
+    rb 65535-$
+    db 0ffh
+```
+
+Strict build:
+
+Relaxations: none.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        DsGlobals.Byte0600 = 1;
+        DS = 0;
+        index = SegmentF000Globals.Word0026;
+        UInt16[DS, index + 1] = 0x1234;
+        UInt16[DS, index + 3] = 0x5678;
+        Segment0000Globals.Word0601 = 0x1234;
+        Segment0000Globals.Word0603 = UInt16[DS, index + 3];
+        return Hlt();
+    }
+
+}
+```
+
+Relaxed build:
+
+Relaxations: AccessesStayInSegment.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort index;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        DsGlobals.Byte0600 = 1;
+        DS = 0;
+        index = SegmentF000Globals.Word0026;
+        UInt32[DS, index + 1] = 0x56781234;
+        Segment0000Globals.Word0601 = 0x1234;
+        Segment0000Globals.Word0603 = UInt16[DS, index + 3];
+        return Hlt();
+    }
+
+}
+```
+
+## Relaxation: saved slots written only by pops
+
+With SavedSlotsWrittenOnlyByPops, a saved-register slot keeps its pushed value across a device boundary when no stack address escapes.
+
+```asm
+; Build: fasm idiom_relaxation_saved.asm ../idiom_relaxation_saved.bin
+; saved-slots: a method saves registers across a device boundary,
+; changes them, and restores the saved slots whose values the caller observes.
+use16
+
+start:
+    mov ax, 2000h
+    mov ss, ax
+    mov sp, 1000h
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
+    mov byte [es:0x0600], 0x01
+    mov si, 0x11
+    mov di, 0x22
+    call worker
+    mov word [es:0x0601], si
+    mov word [es:0x0603], di
+    hlt
+worker:
+    push si
+    push di
+    out 0x80, al
+    mov si, 0x99
+    mov di, 0x88
+    pop di
+    pop si
+    ret
+    rb 65520-$
+    jmp start
+    rb 65535-$
+    db 0ffh
+```
+
+Strict build:
+
+Relaxations: none.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AL, SI, DI. Outputs: SI, DI. Changes: SI, DI.</summary>
+    /// Segment values at entry, from every call site: ES = 0x0000.
+    public virtual (ushort result, ushort result2) unknown_F000_0028_F0028(byte byte1) {
+        CheckExternalEvents(biosSegment, 0x0028);
+        Stack.Save(SI, DI);
+        Out8((ushort)0x80 /* no device */, byte1);
+        (DI, SI) = Stack.Restore2();
+        NearReturn();
+        return (SI, DI);
+    }
+
+    public virtual Action unknown_F000_0028_F0028_Asm() {
+        (SI, DI) = unknown_F000_0028_F0028(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort result = 0;
+        ushort result2 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        SS = 0x2000;
+        SP = 0x1000;
+        ES = 0;
+        Segment0000Globals.Byte0600 = 1;
+        SI = 0x0011;
+        DI = 0x0022;
+        (result, result2) = NearCall(biosSegment, 0x001D, () => unknown_F000_0028_F0028(0));
+        Segment0000Globals.Dword0601 = (uint)result | (uint)result2 << 16;
+        return Hlt();
+    }
+
+}
+```
+
+Relaxed build:
+
+Relaxations: SavedSlotsWrittenOnlyByPops.
+
+```csharp
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AL. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: ES = 0x0000.
+    public virtual void unknown_F000_0028_F0028(byte byte1) {
+        CheckExternalEvents(biosSegment, 0x0028);
+        Stack.Save(SI, DI);
+        Out8((ushort)0x80 /* no device */, byte1);
+        (DI, SI) = Stack.Restore2();
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_0028_F0028_Asm() {
+        unknown_F000_0028_F0028(AL);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        SS = 0x2000;
+        SP = 0x1000;
+        ES = 0;
+        Segment0000Globals.Byte0600 = 1;
+        SI = 0x0011;
+        DI = 0x0022;
+        NearCall(biosSegment, 0x001D, () => unknown_F000_0028_F0028(0));
+        Segment0000Globals.Dword0601 = (uint)SI | (uint)DI << 16;
+        return Hlt();
+    }
+
+}
+```
+
 ## Jump table switch
 
 An indexed jump table with every target observed at one site lowers to a switch with one case per target.
