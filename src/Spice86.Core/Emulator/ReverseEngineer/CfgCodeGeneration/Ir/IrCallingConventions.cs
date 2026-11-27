@@ -821,12 +821,7 @@ internal sealed class IrCallingConventions {
 
     private void Preprocess(IReadOnlyList<PreparedMethod> methods) {
         foreach (PreparedMethod source in methods) {
-            IrStackSlots slots = IrStackSlots.Empty;
-            if (NeedsStackSlots(source.IrMethod)) {
-                slots = IrStackSlots.Compute(source.IrMethod,
-                    new IrMemoryAliasAnalysis(source.IrMethod, source.Ssa, source.EntryFacts, _context.Policy),
-                    _ => null);
-            }
+            IrStackSlots slots = source.StackSlots.Value;
             _methodByName[source.Method.MethodName] = new MethodData {
                 Source = source,
                 Ssa = source.Ssa,
@@ -1232,7 +1227,7 @@ internal sealed class IrCallingConventions {
     private static bool Contains<T>(IVisitableAstNode node) where T : IVisitableAstNode =>
         node is T || IrAstChildren.Descendants(node).OfType<T>().Any();
 
-    private static bool NeedsStackSlots(IrMethod method) =>
+    internal static bool NeedsStackSlots(IrMethod method) =>
         method.Blocks.SelectMany(block => block.Statements).Any(statement =>
             statement.Node is StackCallNode
             || IrAstChildren.Descendants(statement.Node).OfType<StackCallValueNode>().Any()
