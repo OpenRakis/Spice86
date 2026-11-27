@@ -1,5 +1,15 @@
 namespace Spice86.Tests.InterruptHandlers;
 
+using FluentAssertions;
+
+using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+
 using Xunit;
 
 /// <summary>
@@ -17,6 +27,31 @@ public class MiscVectorsServiceContractTest {
             foreach (byte vector in vectors) {
                 yield return new ServiceContractCase { Vector = vector, SelectorValue = 0 };
             }
+            // A second INT 70h run with a periodic interrupt pending and a BIOS WAIT
+            // timeout to decrement: the handler reads and writes the BIOS data area,
+            // which the contract's Memory = ReadWrite covers.
+            yield return new ServiceContractCase {
+                Vector = 0x70, SelectorValue = 0,
+                Setup = machine => {
+                    IOPortDispatcher io = machine.Spice86.Machine.IoPortDispatcher;
+                    io.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterB);
+                    io.WriteByte(CmosPorts.Data, 0x42);
+                    io.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterC);
+                    io.WriteByte(CmosPorts.Data, 0x40);
+                    machine.Spice86.Machine.Memory.UInt32[0x49C] = 2000;
+                    machine.Spice86.Machine.Memory.UInt8[0x4A0] = 1;
+                }
+            };
+            // INT 9 with a scan code waiting in the 8042: the handler reads the
+            // keyboard ports, updates the BDA keyboard flags and enqueues the key
+            // code in the BIOS keyboard buffer, which the contract's
+            // Memory = ReadWrite, Io = true covers.
+            yield return new ServiceContractCase {
+                Vector = 0x09, SelectorValue = 0,
+                Setup = machine =>
+                    machine.Spice86.Machine.KeyboardController.KeyboardDevice
+                        .EnqueueKeyEvent(PcKeyboardKey.A, true)
+            };
         }
     }
 
@@ -31,5 +66,58 @@ public class MiscVectorsServiceContractTest {
     public void ServicesHonourDeclaredContract(ServiceContractCase testCase) {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContract(testCase);
+    }
+
+    /// <summary>The IRQ 3 default handler's declared contract (its BDA record of the
+    /// unexpected IRQ, its PIC acknowledge and mask) holds through its installed stub.
+    /// Run through the stub only: <c>DefaultIrqHandler</c> is not an
+    /// <c>InterruptHandler</c> and the callback mode cannot invoke it.</summary>
+    [Fact]
+    public void DefaultIrqHandlerHonoursDeclaredContractThroughStub() {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertContractThroughStub(
+            new ServiceContractCase { Vector = 0x0B, SelectorValue = 0 });
+    }
+
+    /// <summary>The mouse-driver user-routine callbacks' declared contracts hold on the
+    /// no-routine path: <c>BeforeUserHandlerExecution</c> (0x10C) only writes the far
+    /// call's target in memory and <c>AfterUserHandlerExecution</c> (0x10D) does
+    /// nothing. A registered routine keeps them <c>Unknown</c>.</summary>
+    [Theory]
+    [InlineData(0x10C)]
+    [InlineData(0x10D)]
+    public void MouseUserRoutineCallbacksHonourDeclaredContracts(ushort callbackNumber) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertContract(
+            new ServiceContractCase { Vector = 0, SelectorValue = 0, CallbackNumber = callbackNumber });
+    }
+
+    /// <summary>The terminating whole-vector DOS services (INT 20h legacy terminate, direct
+    /// INT 22h and INT 23h) declare <see cref="ServiceTransferKind.Terminates"/> and running
+    /// them through the installed stub never reaches the <c>int</c>'s return address.</summary>
+    [Theory]
+    [InlineData(0x20)]
+    [InlineData(0x22)]
+    [InlineData(0x23)]
+    public void TerminatingVectorsNeverReturnToCaller(byte vector) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertTerminatesThroughStub(vector, 0);
+    }
+
+    /// <summary>The stub callbacks the hardware-vector handlers install keep their declared
+    /// contract for the generator inputs: <see cref="HardwareInterruptSetup.ServiceEntryOf"/>
+    /// must see through the stub wrapper the way it sees through a bare
+    /// <see cref="InterruptHandler.Run"/> runnable.</summary>
+    [Theory]
+    [InlineData(0x09)]
+    [InlineData(0x70)]
+    public void InstalledStubCallbacksExposeDeclaredContract(byte vector) {
+        // Arrange
+        using ServiceContractMachine machine = new(false, false);
+        Callback registered = machine.Spice86.Machine.CallbackHandler.AllRunnables
+            .OfType<Callback>().First(runnable => runnable.Index == vector);
+
+        // Act / Assert
+        HardwareInterruptSetup.ServiceEntryOf(registered.Runnable).Should().NotBeNull();
     }
 }

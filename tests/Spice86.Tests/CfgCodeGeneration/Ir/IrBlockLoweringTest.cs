@@ -65,7 +65,8 @@ public class IrBlockLoweringTest {
         CSharpSourceWriter writer = new();
         new CSharpStatementPrinter(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0xF000] = "es" }),
             target => target is IrBlock block ? $"b{block.Id}"
-                : throw new InvalidOperationException($"Goto target {target} is not an IR block."))
+                : throw new InvalidOperationException($"Goto target {target} is not an IR block."),
+            printAsmComments: true)
             .Print(node);
         return writer.ToString();
     }

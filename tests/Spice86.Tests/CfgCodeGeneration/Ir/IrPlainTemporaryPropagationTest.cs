@@ -37,7 +37,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(2);
@@ -49,11 +49,11 @@ public sealed class IrPlainTemporaryPropagationTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(instruction, Declaration("tmp", Ax));
-        block.Terminator = new IrExit(instruction, new ReturnNode(Reference("tmp")));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, new ReturnNode(Reference("tmp"))));
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().ContainSingle()
@@ -70,7 +70,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(4);
@@ -84,11 +84,11 @@ public sealed class IrPlainTemporaryPropagationTest {
         IVisitableAstNode loop = new WhileNode(new ConstantNode(DataType.BOOL, 1),
             new BlockNode([Assign(Bx, Reference("tmp"))]));
         IrBlock block = Block(instruction, Declaration("tmp", Ax));
-        block.Statements.Add(new IrStatement(loop, instruction, IrEffects.None));
+        IrEditor.WithoutSsa.Append(block, new IrStatement(loop, instruction, IrEffects.None));
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -104,7 +104,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(4);
@@ -117,11 +117,11 @@ public sealed class IrPlainTemporaryPropagationTest {
         CfgInstruction first = Instruction(0);
         CfgInstruction second = Instruction(1);
         IrBlock block = Block(first, Declaration("tmp", Ax));
-        block.Statements.Add(IrStatement.Create(Assign(Bx, Reference("tmp")), second));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(Assign(Bx, Reference("tmp")), second));
         IrMethod method = Method(first, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -135,12 +135,12 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrBlock block = Block(instruction, Declaration("tmp", Ax),
             Assign(Bx, Reference("tmp")));
         IrBlock other = new(1);
-        other.Statements.Add(IrStatement.Create(Assign(Cx, Reference("tmp")), instruction));
-        other.Terminator = new IrExit(instruction, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.Append(other, IrStatement.Create(Assign(Cx, Reference("tmp")), instruction));
+        IrEditor.WithoutSsa.SetTerminator(other, new IrExit(instruction, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = Method(instruction, block, other);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -166,7 +166,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -181,7 +181,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IVisitableAstNode declaration = Declaration("offset", Ax);
         IVisitableAstNode read = Assign(Bx, Reference("offset"));
         IrBlock block = Block(instruction, declaration, read);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new DivisionNode(new DivisionPattern(BitWidth.WORD_16, false,
                 new ConstantNode(DataType.UINT32, 7), Cx,
                 new RegisterNode(DataType.UINT16, 0), new RegisterNode(DataType.UINT16, 2))),
@@ -189,7 +189,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -202,7 +202,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         CfgInstruction instruction = Instruction(0);
         VariableDeclarationNode declaration = Declaration("dividend", Ax);
         IrBlock block = Block(instruction, declaration);
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             new DivisionNode(new DivisionPattern(BitWidth.WORD_16, false,
                 Reference("dividend"), Cx,
                 new RegisterNode(DataType.UINT16, 0), new RegisterNode(DataType.UINT16, 2))),
@@ -210,7 +210,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -227,7 +227,7 @@ public sealed class IrPlainTemporaryPropagationTest {
         IrMethod method = Method(instruction, block);
 
         // Act
-        IrPlainTemporaryPropagation.Apply(method);
+        IrPlainTemporaryPropagation.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(2);
@@ -249,11 +249,11 @@ public sealed class IrPlainTemporaryPropagationTest {
 
     private static IrBlock Block(ICfgNode origin, params IVisitableAstNode[] nodes) {
         IrBlock block = new(0);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), origin));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"), origin));
         foreach (IVisitableAstNode node in nodes) {
-            block.Statements.Add(IrStatement.Create(node, origin));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, origin));
         }
-        block.Terminator = new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         return block;
     }
 

@@ -5,9 +5,11 @@ using FluentAssertions;
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -357,7 +359,7 @@ public class FunctionHandlerOverrideDispatchTest {
                     context.State.IsRunning = false;
                     return () => { };
                 }
-                context.Stack.Push16(loopAddress.Offset);
+                context.Stack.PushReturnAddress(CallDistance.Near, BitWidth.WORD_16, loopAddress);
                 return () => returns.NearRet16(0);
             }));
 
@@ -417,8 +419,7 @@ public class FunctionHandlerOverrideDispatchTest {
                     context.State.IsRunning = false;
                     return () => { };
                 }
-                context.Stack.Push16(context.State.Flags.FlagRegister16);
-                context.Stack.PushSegmentedAddress(loopAddress);
+                context.Stack.PushInterruptFrame(loopAddress);
                 return () => returns.InterruptRet();
             }));
 

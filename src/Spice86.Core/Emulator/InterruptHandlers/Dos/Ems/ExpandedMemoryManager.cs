@@ -308,7 +308,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     }
 
     /// <summary>Returns the EMM page frame segment in BX; status in AH.</summary>
-    public (byte ah, ushort bx) GetPageFrameSegment() {
+    public (byte status, ushort pageFrameSegment) GetPageFrameSegment() {
         if (LoggerService.IsEnabled(LogLevel.Debug)) {
             LoggerService.LogDebug("EMS: {@MethodName}: 0x{Result:X4}", nameof(GetPageFrameSegment), EmmPageFrameSegment);
         }
@@ -326,7 +326,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
 
     /// <summary>Returns the total number of pages in DX and the number of unallocated
     /// pages in BX; status in AH.</summary>
-    public (byte ah, ushort dx, ushort bx) GetUnallocatedPageCount() {
+    public (byte status, ushort totalPages, ushort freePages) GetUnallocatedPageCount() {
         ushort totalPages = EmmMemory.TotalPages;
         ushort freePages = GetFreePageCount();
         if (LoggerService.IsEnabled(LogLevel.Debug)) {
@@ -357,7 +357,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     /// <summary>Allocates <paramref name="pageCount"/> pages and returns the new handle
     /// in DX; status in AH. A failed allocation preserves <paramref name="previousDx"/>.
     /// </summary>
-    public (byte ah, ushort dx) AllocatePageHandle(ushort pageCount, ushort previousDx) {
+    public (byte status, ushort dx) AllocatePageHandle(ushort pageCount, ushort previousDx) {
         if (pageCount is 0) {
             return (EmmStatus.EmmTriedToAllocateZeroPages, previousDx);
         }
@@ -690,7 +690,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
 
     /// <summary>Returns the number of open EMM handles in BX; status in AH.</summary>
     /// <remarks>This number will not exceed 255.</remarks>
-    public (byte ah, ushort bx) GetEmmHandleCount() {
+    public (byte status, ushort handleCount) GetEmmHandleCount() {
         return (EmmStatus.EmmNoError, (ushort)EmmHandles.Count);
     }
 
@@ -711,7 +711,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     /// because the memory manager allows a maximum of 512 pages
     /// (8 MB) of expanded memory.
     /// </remarks>
-    public (ushort ax, ushort bx) GetHandlePages(ushort handleId) {
+    public (ushort ax, ushort pageCount) GetHandlePages(ushort handleId) {
         return (EmmStatus.EmmNoError, (ushort)EmmHandles[handleId].LogicalPages.Count);
     }
 
@@ -730,7 +730,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     /// <summary>Writes the open-handle/page-count table at
     /// <paramref name="tableAddress"/>; returns the status in AH and the allocated page
     /// count in BX.</summary>
-    public (byte ah, ushort bx) GetAllHandlePages(uint tableAddress) {
+    public (byte status, ushort entryCount) GetAllHandlePages(uint tableAddress) {
         ushort count = GetAllocatedHandlePagesCount();
         foreach (KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
             Memory.UInt16[tableAddress] = allocatedHandle.Value.HandleNumber;
@@ -908,7 +908,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     /// <summary>Writes the mappable physical address array to
     /// <paramref name="bufferAddress"/>; returns the status in AH and the entry count in
     /// CX.</summary>
-    public (byte ah, ushort cx) GetMappablePhysicalAddressArray(uint bufferAddress) {
+    public (byte status, ushort physicalPageCount) GetMappablePhysicalAddressArray(uint bufferAddress) {
         for (ushort i = 0; i < EmmPageFrame.Count; i++) {
             ushort segment = (ushort)(EmmPageFrameSegment + (i * EmmPageSize / 16));
             Memory.UInt16[bufferAddress] = segment;
@@ -952,7 +952,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice, IS
     /// selects the sub-function. The hardware configuration array is written at
     /// <paramref name="address"/>; only the unallocated-raw-pages sub-function returns
     /// register outputs.</summary>
-    public (byte? ah, ushort? dx, ushort? bx) ReadExpandedMemoryHardwareInformation(
+    public (byte? status, ushort? totalPages, ushort? freePages) ReadExpandedMemoryHardwareInformation(
         byte operation, uint address) {
         switch (operation) {
             case EmmSubFunctionsCodes.GetHardwareConfigurationArray:

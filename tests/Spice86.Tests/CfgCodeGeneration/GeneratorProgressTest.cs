@@ -40,7 +40,7 @@ public class GeneratorProgressTest {
         List<string> messages = new();
         reporter.MessageLogged += messages.Add;
 
-        new CfgCSharpGenerator().Generate(program, reporter);
+        new CfgCSharpGenerator(new GeneratorOptions { MaxDegreeOfParallelism = 1 }).Generate(program, reporter);
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> methodsSteps =
             steps.Where(s => s.Phase == DumpPhase.CodeMethods).ToList();
@@ -48,13 +48,16 @@ public class GeneratorProgressTest {
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> analysisSteps =
             steps.Where(s => s.Phase == DumpPhase.CodeProgramAnalysis).ToList();
-        analysisSteps.Select(s => s.Item).Take(3).Should().Equal(
-            "segment summaries", "calling conventions", "calling conventions, round 1");
-        analysisSteps.Select(s => s.Item).TakeLast(2).Should().Equal(
-            "typed signatures", "globals classification");
-        analysisSteps.Should().OnlyContain(s => s.Total == 4);
+        analysisSteps.Select(s => s.Item).Take(5).Should().Equal(
+            "segment summaries", "calling conventions", "observed conventions",
+            "calling conventions, round 1", "observed conventions, round 1");
+        analysisSteps.Select(s => s.Item).TakeLast(3).Should().Equal(
+            "typed signatures", "globals classification", "stack arguments");
+        analysisSteps.Should().OnlyContain(s => s.Total == 6);
         analysisSteps.Where(s => s.Current == 2).Should()
             .OnlyContain(s => s.Item.StartsWith("calling conventions"));
+        analysisSteps.Where(s => s.Current == 3).Should()
+            .OnlyContain(s => s.Item.StartsWith("observed conventions"));
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> printingSteps =
             steps.Where(s => s.Phase == DumpPhase.CodePrinting).ToList();
@@ -66,7 +69,7 @@ public class GeneratorProgressTest {
     }
 
     [Fact]
-    public void GenerateReportsTheMethodStepBeforeEmittingIt() {
+    public void GenerateReportsNoMethodStepWhenEmittingItThrows() {
         // Arrange: the first method's block jumps into the second partition, which has no transfer
         // metadata; the transfer emitter throws while lifting that method.
         TestInstructionHelper helper = new();
@@ -88,12 +91,15 @@ public class GeneratorProgressTest {
         reporter.StepReported += (phase, current, total, item) => steps.Add((phase, current, total, item));
 
         // Act
-        Action generate = () => new CfgCSharpGenerator().Generate(program, reporter);
+        Action generate = () => new CfgCSharpGenerator(new GeneratorOptions { MaxDegreeOfParallelism = 1 }).Generate(program, reporter);
 
-        // Assert: the step for the first method was already reported when its emission threw.
-        generate.Should().Throw<NotSupportedException>()
-            .WithMessage("Missing partition transfer metadata*");
-        steps.Should().Equal((DumpPhase.CodeMethods, 1, 2, "test_F000_0000_F0000"));
+        // Assert: preparation steps are completion events in the parallel rounds, so a method
+        // whose emission throws has no completed-step event. The generator unwraps the
+        // AggregateException Parallel.For wraps the body exception in.
+        Exception? thrown = Record.Exception(generate);
+        thrown.Should().BeOfType<NotSupportedException>();
+        thrown!.Message.Should().StartWith("Missing partition transfer metadata");
+        steps.Should().BeEmpty();
     }
 
     [Fact]

@@ -60,9 +60,7 @@ public sealed class InstalledHardwareStubTest {
         // Deliver like a hardware interrupt does: FLAGS, CS and IP of the interrupted code pushed,
         // execution continues at the IVT target with interrupts disabled.
         SegmentedAddress resumeAddress = new(handlerAddress.Segment, 0xFFF0);
-        machine.Stack.Push16(state.Flags.FlagRegister16);
-        machine.Stack.Push16(resumeAddress.Segment);
-        machine.Stack.Push16(resumeAddress.Offset);
+        machine.Stack.PushInterruptFrame(resumeAddress);
         state.CS = handlerAddress.Segment;
         state.IP = handlerAddress.Offset;
         state.InterruptFlag = false;

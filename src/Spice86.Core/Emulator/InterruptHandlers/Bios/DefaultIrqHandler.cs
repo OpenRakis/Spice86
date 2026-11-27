@@ -52,7 +52,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     /// <summary>
     ///     Handles an unexpected IRQ by recording it and acknowledging the PIC so the system continues to run.
     /// </summary>
-    [InterruptService(Unknown = true)]
+    [InterruptService(Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     private void HandleIrq() {
         _logger.LogWarning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
 

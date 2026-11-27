@@ -26,6 +26,8 @@ fault_write:
 after_write:
     mov ax, [dword 0]
     mov [44h], ax
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 gp_handler:

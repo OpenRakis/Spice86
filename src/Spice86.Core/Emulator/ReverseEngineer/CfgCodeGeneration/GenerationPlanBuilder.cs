@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 using SelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying.SelectorNode;
@@ -57,6 +58,7 @@ internal static class GenerationPlanBuilder {
             foreach (CfgCodePartitionEntry entry in method.Entries) {
                 int loadOffset = context.GetEntryLoadOffset(method.Partition, entry.Node);
                 registrations.Add(new OverrideRegistration(
+                    entry.Address,
                     context.GetSegmentVariable(entry.Address.Segment),
                     entry.Address.Offset,
                     method.MethodName,
@@ -140,15 +142,51 @@ internal static class GenerationPlanBuilder {
             instruction => $"{instruction.Address.Offset:X4}",
             instruction => instruction.Id.ToString());
 
+        // sti, mov ss and lss start the interrupt shadow: interrupts are recognized only after the next
+        // instruction. A check that would run right after a shadow-starting instruction moves after the
+        // next instruction that starts no shadow and runs to completion. Two checks can be pending there:
+        // the after-check of an sti, and the entry check of a checked block the instruction falls through
+        // to. A check whose next instruction is a transfer, or a block entry check whose first instruction
+        // is a hlt or starts a shadow, stays in place: the remaining timing difference.
+        HashSet<CfgBlock> shadowMovedBlocks = [];
+        HashSet<ICfgNode> shadowDeferredEnablers = [];
+        HashSet<ICfgNode> shadowCheckTargets = [];
+        foreach (CfgBlock block in blocks) {
+            CfgBlock? fallthrough = blockGraph.GetFallthroughSuccessor(block);
+            if (fallthrough is not null && checkedBlocks.Contains(fallthrough) && StartsShadow(block.Terminator)
+                && fallthrough.Instructions.Count > 0
+                && IsOrdinaryInstruction(fallthrough.Entry) && !StartsShadow(fallthrough.Entry)) {
+                shadowMovedBlocks.Add(fallthrough);
+                shadowCheckTargets.Add(fallthrough.Entry);
+            }
+            foreach (ICfgNode node in block.Instructions) {
+                if (node is not CfgInstruction instruction
+                    || !InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
+                    || !StartsShadow(node)
+                    || FallthroughBlockChecks(node, block, blockGraph, checkedBlocks)
+                    || !ShadowCheckMoves(node, block, blockGraph, checkedBlocks, out ICfgNode? target)) {
+                    continue;
+                }
+                shadowDeferredEnablers.Add(node);
+                if (target is not null) {
+                    shadowCheckTargets.Add(target);
+                }
+            }
+        }
+
         List<NodeEmissionPlan> nodeEmissionPlans = [];
         foreach (CfgBlock block in blocks) {
             // First instruction of each block is the entry: it gets the label.
             bool isBlockEntry = true;
             foreach (ICfgNode node in block.Instructions) {
-                bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block);
-                bool emitsExternalEventCheckAfter = node is CfgInstruction instruction
-                    && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
-                    && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks);
+                bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block)
+                    && !shadowMovedBlocks.Contains(block);
+                bool emitsExternalEventCheckAfter =
+                    (node is CfgInstruction instruction
+                        && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
+                        && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks)
+                        && !shadowDeferredEnablers.Contains(node))
+                    || shadowCheckTargets.Contains(node);
                 nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, isBlockEntry, emitsExternalEventCheck, emitsExternalEventCheckAfter));
                 isBlockEntry = false;
             }
@@ -172,6 +210,86 @@ internal static class GenerationPlanBuilder {
         if (fallthrough != null) {
             yield return fallthrough;
         }
+    }
+
+    /// <summary>
+    /// Whether an <c>sti</c> gives up its own event check because of its interrupt shadow. The walk goes
+    /// through the next instructions while they start a shadow of their own (mov ss, lss): the check lands
+    /// after the first one that does not (<paramref name="target"/>), or drops (null target) when the walk
+    /// reaches a checked block, whose own check covers it, or a hlt whose wait loop checks events. False
+    /// when the walk meets an instruction that does not run to completion, or has no next instruction.
+    /// </summary>
+    private static bool ShadowCheckMoves(ICfgNode sti, CfgBlock block, BlockGraph<CfgBlock> graph,
+        HashSet<CfgBlock> checkedBlocks, out ICfgNode? target) {
+        target = null;
+        ICfgNode current = sti;
+        CfgBlock currentBlock = block;
+        while (TryGetNextInstruction(current, currentBlock, graph, out ICfgNode? next, out CfgBlock? nextBlock)) {
+            if (nextBlock != currentBlock && checkedBlocks.Contains(nextBlock)) {
+                return true;
+            }
+            if (IsHaltInstruction(next)) {
+                return true;
+            }
+            if (!IsOrdinaryInstruction(next)) {
+                return false;
+            }
+            if (!StartsShadow(next)) {
+                target = next;
+                return true;
+            }
+            current = next;
+            currentBlock = nextBlock;
+        }
+        return false;
+    }
+
+    private static bool StartsShadow(ICfgNode node) =>
+        node is CfgInstruction instruction && InterruptShadowDetectorVisitor.StartsInterruptShadow(instruction.ExecutionAst);
+
+    /// <summary>
+    /// The instruction that runs after <paramref name="node"/> when it falls through: the next one in its
+    /// block, or the first one of the block's fallthrough block.
+    /// </summary>
+    private static bool TryGetNextInstruction(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph,
+        [NotNullWhen(true)] out ICfgNode? next, [NotNullWhen(true)] out CfgBlock? nextBlock) {
+        for (int index = 0; index < block.Instructions.Count; index++) {
+            if (!block.Instructions[index].Equals(node)) {
+                continue;
+            }
+            if (index + 1 < block.Instructions.Count) {
+                next = block.Instructions[index + 1];
+                nextBlock = block;
+                return true;
+            }
+            CfgBlock? fallthrough = graph.GetFallthroughSuccessor(block);
+            if (fallthrough is not null && fallthrough.Instructions.Count > 0) {
+                next = fallthrough.Instructions[0];
+                nextBlock = fallthrough;
+                return true;
+            }
+            break;
+        }
+        next = null;
+        nextBlock = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the node is an instruction that runs to completion: no call, no return, no jump
+    /// (<see cref="InstructionKind.None"/>) and no halt or transfer inside its execution AST.
+    /// </summary>
+    private static bool IsOrdinaryInstruction(ICfgNode node) {
+        return node is CfgInstruction { Kind: InstructionKind.None } instruction
+            && !CallReturnHaltDetectorVisitor.ContainsCallReturnOrHalt(instruction.ExecutionAst);
+    }
+
+    /// <summary>
+    /// Whether the node is a <c>hlt</c>: an ordinary-kind instruction whose execution AST halts.
+    /// </summary>
+    private static bool IsHaltInstruction(ICfgNode node) {
+        return node is CfgInstruction { Kind: InstructionKind.None } instruction
+            && CallReturnHaltDetectorVisitor.ContainsHlt(instruction.ExecutionAst);
     }
 
     private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks) {

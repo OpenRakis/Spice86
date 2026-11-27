@@ -32,9 +32,4 @@ public class Callback : ICallback {
     public void Run() {
         Runnable.Invoke();
     }
-
-    /// <inheritdoc/>
-    public void RunFromOverriden() {
-        Run();
-    }
 }

@@ -233,6 +233,8 @@ f1_done:
     mov di, 58h
     mov cx, 5
     rep stosw
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 leaf_alone:
@@ -257,6 +259,8 @@ d1_w1:
     jmp d1_w1
 d1_u1:
     inc si
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 d1_p2:
     mov bx, [cs:si+2]
@@ -272,6 +276,8 @@ d1_w2:
     jmp d1_w2
 d1_u2:
     inc si
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 leaf_reads_bx:
     mov [di+08h], bx

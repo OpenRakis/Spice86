@@ -48,18 +48,42 @@ internal sealed partial class IrSccpSolver {
         }
     }
 
-    /// <summary>The single register assignment of <paramref name="node"/> writing exactly
-    /// <paramref name="writtenMask"/> bytes of register <paramref name="registerIndex"/>, or null.</summary>
-    private static BinaryOperationNode? WriterOf(IVisitableAstNode node, int registerIndex,
-        uint writtenMask) =>
-        node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+    /// <summary>The value <paramref name="node"/> writes into exactly the
+    /// <paramref name="writtenMask"/> bytes of register <paramref name="registerIndex"/>: the
+    /// right side of its single register assignment, or the other operand of a swap of two
+    /// same-width general registers - a swap reads both operands before the statement, so the
+    /// value a side receives is what the other held.</summary>
+    private static ValueNode? WrittenValueOf(IVisitableAstNode node, int registerIndex,
+        uint writtenMask) {
+        switch (node) {
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
                 Left: RegisterNode register } assignment
-            && BitOperations.TrailingZeroCount((ulong)IrValueSets.Of(register))
-                / ByteCount == registerIndex
-            && (((ulong)IrValueSets.Of(register) >> (ByteCount * registerIndex)) & AllBytes)
-                == writtenMask
-            ? assignment
-            : null;
+                when WrittenRegisterIs(register, registerIndex, writtenMask):
+                return assignment.Right;
+            case TupleSwapNode { First: RegisterNode first, Second: RegisterNode second }
+                when first is not SegmentRegisterNode && second is not SegmentRegisterNode
+                    && first.DataType.BitWidth == second.DataType.BitWidth:
+                if (WrittenRegisterIs(first, registerIndex, writtenMask)) {
+                    return second;
+                }
+                if (WrittenRegisterIs(second, registerIndex, writtenMask)) {
+                    return first;
+                }
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Whether <paramref name="register"/> is register
+    /// <paramref name="registerIndex"/> written over exactly
+    /// <paramref name="writtenMask"/> bytes.</summary>
+    private static bool WrittenRegisterIs(RegisterNode register, int registerIndex,
+        uint writtenMask) =>
+        BitOperations.TrailingZeroCount((ulong)IrValueSets.Of(register))
+            / ByteCount == registerIndex
+        && (((ulong)IrValueSets.Of(register) >> (ByteCount * registerIndex)) & AllBytes)
+            == writtenMask;
 
     /// <summary>The per-byte meet of <paramref name="operandIds"/>: a byte is known when every
     /// determined operand knows it and all agree, undetermined while every operand is undetermined,

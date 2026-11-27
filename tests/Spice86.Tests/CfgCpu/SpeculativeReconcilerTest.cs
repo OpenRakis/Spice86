@@ -42,9 +42,9 @@ public sealed class SpeculativeReconcilerTest : SpeculativeTestBase {
         // Live memory still holds the same NOP, so the live signature is equivalent.
         CfgInstruction live = Parser.ParseInstructionAt(address);
 
-        bool promoted = _reconciler.Reconcile(speculative, live, address);
+        CfgInstruction? observed = _reconciler.Reconcile(speculative, live, address);
 
-        promoted.Should().BeTrue("a matching speculative node is promoted, not swept");
+        observed.Should().NotBeNull("a matching speculative node is promoted, not swept");
         speculative.IsSpeculative.Should().BeFalse("promotion clears the speculative flag");
         _currentInstructions.GetAtAddress(address).Should().BeSameAs(speculative,
             "the promoted node is installed in the current cache");
@@ -63,9 +63,9 @@ public sealed class SpeculativeReconcilerTest : SpeculativeTestBase {
         WriteRet(address);
         CfgInstruction live = Parser.ParseInstructionAt(address);
 
-        bool promoted = _reconciler.Reconcile(speculative, live, address);
+        CfgInstruction? observed = _reconciler.Reconcile(speculative, live, address);
 
-        promoted.Should().BeFalse("a diverged speculative node is swept, not promoted");
+        observed.Should().BeNull("a diverged speculative node is swept, not promoted");
         NodeIndex.PoisonSet.Should().Contain(address, "a diverged address is poisoned to stop future speculation");
         NodeIndex.HasAddress(address).Should().BeFalse("the swept speculative node is removed from the index");
         _currentInstructions.GetAtAddress(address).Should().BeNull("a swept node must not be installed as current");
@@ -91,9 +91,9 @@ public sealed class SpeculativeReconcilerTest : SpeculativeTestBase {
         Memory.UInt8[physAddr + 1] = 0x22;
         CfgInstruction live = Parser.ParseInstructionAt(address);
 
-        bool promoted = _reconciler.Reconcile(speculative, live, address);
+        CfgInstruction? observed = _reconciler.Reconcile(speculative, live, address);
 
-        promoted.Should().BeTrue("a reducible same-opcode variant is merged and promoted, not swept");
+        observed.Should().NotBeNull("a reducible same-opcode variant is merged and promoted, not swept");
         speculative.IsSpeculative.Should().BeFalse("the surviving reduced node is promoted to observed");
         NodeIndex.PoisonSet.Should().NotContain(address,
             "a reducible same-opcode variant must not poison the address");
@@ -123,9 +123,9 @@ public sealed class SpeculativeReconcilerTest : SpeculativeTestBase {
         Memory.UInt8[physAddr + 1] = 0x22;
         CfgInstruction live = Parser.ParseInstructionAt(address);
 
-        bool promoted = _reconciler.Reconcile(speculative, live, address);
+        CfgInstruction? observed = _reconciler.Reconcile(speculative, live, address);
 
-        promoted.Should().BeTrue();
+        observed.Should().NotBeNull();
         NodeIndex.HasAddress(successorAddress).Should().BeTrue(
             "the explored downstream speculative node must survive reduction, not be swept away");
         downstream.IsSpeculative.Should().BeTrue("downstream nodes stay speculative until visited");

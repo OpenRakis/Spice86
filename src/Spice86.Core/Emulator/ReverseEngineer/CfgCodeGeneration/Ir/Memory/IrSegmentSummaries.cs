@@ -39,10 +39,12 @@ internal sealed class IrSegmentSummaries {
         IrValueSets.ValuesIn(CpuValues.Es | CpuValues.Ds | CpuValues.Fs | CpuValues.Gs);
 
     /// <summary>The values the summaries track: the segment registers first (the equality pairs
-    /// cover only them), then the direction flag, whose value lattice is the same without
-    /// equalities.</summary>
+    /// cover only them), then SS and the direction flag, whose value lattice is the same without
+    /// equalities. SS stays out of <see cref="SegmentRegisters"/>: the equality mask has no bit
+    /// left for a fifth register, and a stack value proof asks for a constant, never an
+    /// equality.</summary>
     internal static readonly IrSsaValue[] TrackedValues =
-        [.. SegmentRegisters, IrSsaValue.Direction];
+        [.. SegmentRegisters, IrSsaValue.Ss, IrSsaValue.Direction];
     private const int MaxEqualityIterations = 40;
     private const int WideningIterations = 60;
     private static readonly int RegisterCount = SegmentRegisters.Length;
@@ -51,6 +53,7 @@ internal sealed class IrSegmentSummaries {
     private readonly CfgGeneratorContext _context;
     private readonly HardwareInterruptEffectBuilder _effectBuilder;
     private readonly List<MethodData> _methods = [];
+    private readonly Dictionary<MethodPlan, MethodData> _dataByPlan = new();
     private readonly Dictionary<MethodPlan, IrSegmentValues> _valuesByPlan = new();
     private readonly Dictionary<ICfgNode, (CfgCodePartition Partition, CfgCodePartitionEntry Entry)> _entryByNode = new();
     private readonly Dictionary<CfgCodePartitionEntry, EntryState> _states = new();
@@ -126,6 +129,15 @@ internal sealed class IrSegmentSummaries {
     /// facts.</summary>
     public IrSegmentValues ValuesFor(MethodPlan plan) => _valuesByPlan[plan];
 
+    /// <summary>The facts the last iteration proved for <paramref name="plan"/>'s method: the
+    /// per-entry segment values every way in gives it, and the call results. A prepare round may
+    /// feed them back as <see cref="IrSegmentFacts"/> the method's SSA resolves its entries
+    /// through.</summary>
+    public IrSegmentFacts FactsFor(MethodPlan plan) =>
+        _dataByPlan.TryGetValue(plan, out MethodData? data) && data.Facts is { } facts
+            ? facts
+            : IrSegmentFacts.None;
+
     private sealed class MethodData {
         public required PreparedMethod Source { get; init; }
         public required IrSsa Ssa { get; init; }
@@ -176,10 +188,11 @@ internal sealed class IrSegmentSummaries {
         }
         foreach (MethodData data in _methods) {
             data.SetValues(new IrSegmentValues(data.Source.IrMethod, data.Ssa, data.Slots,
-                IrSegmentFacts.None,
+                data.Source.EntryFacts,
                 data.Calls.SelectMany(call => call.Defined)
                     .Select(defined => defined.Version).ToHashSet()));
             _valuesByPlan[data.Source.Method] = data.Values;
+            _dataByPlan[data.Source.Method] = data;
         }
         SeedLiftedEffects();
         ComputePreservedMasks();
@@ -203,10 +216,7 @@ internal sealed class IrSegmentSummaries {
     /// <summary>The calls, returns, aborts and entry-version reads of one method's blocks.</summary>
     private MethodData CollectMethodData(PreparedMethod source) {
         IrSsa ssa = source.Ssa;
-        IrStackSlots slots = IrStackSlots.Empty;
-        if (NeedsStackSlots(source.IrMethod)) {
-            slots = IrStackSlots.Compute(source.IrMethod, new IrMemoryAliasAnalysis(ssa));
-        }
+        IrStackSlots slots = source.StackSlots;
         MethodData data = new MethodData {
             Source = source, Ssa = ssa, Slots = slots, Calls = [], Returns = [], FactEntries = []
         };
@@ -285,13 +295,6 @@ internal sealed class IrSegmentSummaries {
         }
     }
 
-    /// <summary>A method with no stack node records no stack read, so its slots stay empty: the
-    /// dataflow run is skipped.</summary>
-    private static bool NeedsStackSlots(IrMethod method) =>
-        method.Blocks.SelectMany(block => block.Statements).Any(statement =>
-            statement.Node is StackCallNode
-            || IrAstChildren.Descendants(statement.Node).OfType<StackCallValueNode>().Any());
-
     private static bool IsReturnExit(IrExit exit) =>
         exit.Transfer is InterruptReturnNode
         || IrAstChildren.Descendants(exit.Transfer).OfType<InterruptReturnNode>().Any()
@@ -323,7 +326,9 @@ internal sealed class IrSegmentSummaries {
     }
 
     /// <summary>The DOS loader state at the program entry: DS = ES = the PSP segment of the loaded
-    /// image holding the entry point. A non-DOS image (a raw binary) gives no loader way.</summary>
+    /// image holding the entry point, and SS = the stack segment the loader recorded for it (the
+    /// PSP segment of a COM program, the header value of an EXE). A non-DOS image (a raw binary)
+    /// gives no loader way.</summary>
     private Way? LoaderWay(CfgCodePartitionEntry entry) {
         ProgramImages images = _context.Program.Inputs.ProgramImages;
         uint physical = entry.Address.Linear;
@@ -336,6 +341,9 @@ internal sealed class IrSegmentSummaries {
         int ds = ValueIndex(IrSsaValue.Ds);
         int es = ValueIndex(IrSsaValue.Es);
         values[ds] = values[es] = new SegmentValue.Known(image.FirstSegment);
+        if (image.InitialStackSegment is { } stackSegment) {
+            values[ValueIndex(IrSsaValue.Ss)] = new SegmentValue.Known(stackSegment);
+        }
         return new Way(values, PairBit(Math.Min(ds, es), Math.Max(ds, es)));
     }
 

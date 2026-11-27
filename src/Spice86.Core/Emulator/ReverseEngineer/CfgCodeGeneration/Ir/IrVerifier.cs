@@ -110,7 +110,8 @@ internal static class IrVerifier {
         foreach (IrBlock block in method.Blocks) {
             foreach (IrStatement statement in block.Statements) {
                 IrEffects expected = IrEffectsVisitor.Of(statement.Node,
-                    IrStatement.MayFault(statement.Node, statement.Origin));
+                    IrStatement.MayFault(statement.Node, statement.Origin))
+                    with { FaultReads = statement.Effects.FaultReads };
                 if (!statement.Effects.Equals(expected)) {
                     Fail(method, block, statement.Origin, "stored effects differ from the computed effects (stored effects)");
                 }
@@ -135,13 +136,25 @@ internal static class IrVerifier {
 
     private static void VerifyEventChecks(IrMethod method) {
         foreach (IrBlock block in method.Blocks) {
-            int startIndex = block.Statements.FindIndex(statement => statement.Node is InstructionStartNode);
+            int startIndex = -1;
+            for (int i = 0; i < block.Statements.Count; i++) {
+                if (block.Statements[i].Node is InstructionStartNode) {
+                    startIndex = i;
+                    break;
+                }
+            }
             for (int index = 0; index < block.Statements.Count; index++) {
                 if (block.Statements[index].Node is not CheckExternalEventsNode) {
                     continue;
                 }
                 ICfgNode origin = block.Statements[index].Origin;
                 if (startIndex >= 0 && index < startIndex) {
+                    continue;
+                }
+                // A check an interrupt shadow moves after an instruction sits between
+                // instructions, right before the next instruction's start or its speculative guard.
+                if (index + 1 < block.Statements.Count
+                    && block.Statements[index + 1].Node is InstructionStartNode or SpeculativeGuardNode) {
                     continue;
                 }
                 // A check may also close a loop whose edges stay inside one instruction: the HLT wait loop
@@ -152,7 +165,7 @@ internal static class IrVerifier {
                         || block.Terminator.Edges.All(edge => edge.InsideInstruction))) {
                     continue;
                 }
-                Fail(method, block, origin, "event check is neither part of an instruction start, the last statement before an exit, nor at an instruction-internal loop latch (event checks)");
+                Fail(method, block, origin, "event check is neither part of an instruction start, the last statement of an instruction, the last statement before an exit, nor at an instruction-internal loop latch (event checks)");
             }
         }
     }
@@ -231,52 +244,27 @@ internal static class IrVerifier {
     /// Dominance between blocks unreachable from the entries cannot be checked and is skipped.
     /// </summary>
     /// <exception cref="InvalidOperationException">A rule is violated.</exception>
-    public static void VerifySsa(IrMethod method, IrSsa ssa) =>
-        VerifySsa(method, ssa, SsaCheck.Strict);
-
-    /// <summary>
-    /// <see cref="VerifySsa"/> for an SSA the passes already rewrote through
-    /// <see cref="IrSsa.Replace(IrStatement, IrStatement)"/> and <see cref="IrSsa.Remove"/>: the
-    /// dominance and phi rules are unchanged but the bookkeeping those calls maintain is
-    /// approximate in three ways this check tolerates. Recorded uses are not compared to the
-    /// effects at all because Replace copies them verbatim to every replacement, so a replacement
-    /// that reads more or less than the statement it replaces cannot match. A version change where
-    /// the effects define nothing is tolerated when no surviving site reads the version, because
-    /// Replace parks a definition no replacement writes on the last one. A partial definition whose
-    /// previous version no position defines anymore keeps its recorded previous link, because a
-    /// merged or removed writer leaves the link dangling.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">A rule is violated.</exception>
-    public static void VerifySsaAfterPasses(IrMethod method, IrSsa ssa) =>
-        VerifySsa(method, ssa, SsaCheck.AfterPasses);
-
-    private enum SsaCheck {
-        Strict,
-        AfterPasses
-    }
-
-    private static void VerifySsa(IrMethod method, IrSsa ssa, SsaCheck check) {
+    public static void VerifySsa(IrMethod method, IrSsa ssa) {
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> tree = DominatorTreeBuilder.BuildFromEntries(graph);
         HashSet<IrBlock> reachable = tree.Blocks.ToHashSet();
         HashSet<IrBlock> entries = graph.EntryBlocks.ToHashSet();
         for (int version = 0; version < ssa.VersionCount; version++) {
-            IrSsaVersionInfo info = ssa.Info(version);
             foreach (IrSsaUse use in ssa.Uses(version)) {
-                VerifyUseDominance(method, tree, reachable, info, use);
+                VerifyUseDominance(method, ssa, tree, reachable, version, use);
             }
         }
-        HashSet<object> liveSites = check == SsaCheck.AfterPasses ? LiveSites(method) : [];
         foreach (IrBlock block in method.Blocks) {
             VerifyPhiShapes(method, graph, entries, ssa, block);
             for (int index = 0; index <= block.Statements.Count; index++) {
-                VerifySsaEffects(method, ssa, block, index, check, liveSites);
+                VerifySsaEffects(method, ssa, block, index);
             }
         }
     }
 
-    private static void VerifyUseDominance(IrMethod method, DominatorTree<IrBlock> tree,
-        HashSet<IrBlock> reachable, IrSsaVersionInfo info, IrSsaUse use) {
+    private static void VerifyUseDominance(IrMethod method, IrSsa ssa, DominatorTree<IrBlock> tree,
+        HashSet<IrBlock> reachable, int version, IrSsaUse use) {
+        IrSsaVersionInfo info = ssa.Info(version);
         if (use.Phi is not null) {
             IrBlock predecessor = use.OperandPredecessor ?? use.Block;
             if (info.Block == predecessor) {
@@ -291,7 +279,17 @@ internal static class IrVerifier {
             }
             Fail(method, use.Block, $"use of version {info.Value} by a phi operand is not dominated by its definition (ssa)");
         }
-        if (info.Block == use.Block && info.StatementIndex < use.Index) {
+        object? useSite = use.Statement ?? (object?)use.Terminator;
+        int useIndex = useSite is null ? -1 : IrSsa.PositionIn(use.Block, useSite);
+        object? definitionSite = ssa.DefinitionSite(version);
+        int definitionIndex = definitionSite is null
+            ? -1
+            : IrSsa.PositionIn(info.Block, definitionSite);
+        if (info.Block == use.Block && definitionIndex >= 0 && definitionIndex < useIndex) {
+            return;
+        }
+        if (info.Block == use.Block && definitionIndex < 0) {
+            // A phi or a method entry version counts as defined at the block's entry.
             return;
         }
         if (info.Block != use.Block && reachable.Contains(info.Block) && reachable.Contains(use.Block)
@@ -321,21 +319,17 @@ internal static class IrVerifier {
         }
     }
 
-    private static void VerifySsaEffects(IrMethod method, IrSsa ssa, IrBlock block, int index,
-        SsaCheck check, HashSet<object> liveSites) {
+    private static void VerifySsaEffects(IrMethod method, IrSsa ssa, IrBlock block, int index) {
         bool isTerminator = index == block.Statements.Count;
         IrEffects effects = isTerminator ? block.Terminator.Effects : block.Statements[index].Effects;
         (uint full, uint partial) = IrSsaValues.WriteBits(effects);
-        uint used = IrSsaValues.ValueBits(effects.Reads) | IrSsaValues.TokenBits(effects.TokenReads)
-            | (effects.MayFault ? IrSsaValues.All : 0) | partial;
+        uint used = IrSsa.UsedBits(effects);
         for (int v = 0; v < (int)IrSsaValue.Count; v++) {
             IrSsaValue value = (IrSsaValue)v;
-            if (check == SsaCheck.Strict) {
-                int expectedUsed = (used & (1u << v)) != 0 ? 1 : 0;
-                int actualUsed = VersionUsed(ssa, block, index, isTerminator, value) != -1 ? 1 : 0;
-                if (expectedUsed != actualUsed) {
-                    Fail(method, block, $"use record of {value} does not match the effects (ssa)");
-                }
+            int expectedUsed = (used & (1u << v)) != 0 ? 1 : 0;
+            int actualUsed = VersionUsed(ssa, block, index, isTerminator, value) != -1 ? 1 : 0;
+            if (expectedUsed != actualUsed) {
+                Fail(method, block, $"use record of {value} does not match the effects (ssa)");
             }
             int before = ssa.VersionBefore(block, index, value);
             int after = ssa.VersionAfter(block, index, value);
@@ -344,20 +338,11 @@ internal static class IrVerifier {
                     Fail(method, block, $"full definition of {value} is not recorded as one (ssa)");
                 }
             } else if ((partial & (1u << v)) != 0) {
-                // After the passes, a merged or removed writer leaves its version as the previous
-                // link of a partial definition: the link is stale once no position defines it.
-                bool previousOrphaned = check == SsaCheck.AfterPasses
-                    && ssa.Info(after).Previous >= 0 && ssa.Info(after).Previous != before
-                    && !ssa.HasDefinitionSite(value, ssa.Info(after).Previous);
                 if (ssa.Info(after).Kind != IrSsaDefinitionKind.PartialDefinition
-                    || (ssa.Info(after).Previous != before && !previousOrphaned)) {
+                    || ssa.Info(after).Previous != before) {
                     Fail(method, block, $"partial definition of {value} is not recorded as one (ssa)");
                 }
-            } else if (after != before
-                && (check == SsaCheck.Strict || HasLiveUse(ssa, after, liveSites))) {
-                // After the passes, a version change where the effects define nothing is tolerated
-                // when no surviving site reads it: Replace parks the definition on the last
-                // replacement when none writes the value.
+            } else if (after != before) {
                 Fail(method, block, $"version of {value} changes where the effects define nothing (ssa)");
             }
         }
@@ -369,27 +354,6 @@ internal static class IrVerifier {
             ? ssa.VersionUsed(block.Terminator, value)
             : ssa.VersionUsed(block.Statements[index], value);
 
-    /// <summary>The statements and terminators <paramref name="method"/> currently holds: the site
-    /// table keeps entries for objects a pass replaced or removed, so only objects still reachable
-    /// from the blocks count.</summary>
-    private static HashSet<object> LiveSites(IrMethod method) {
-        HashSet<object> sites = new(ReferenceEqualityComparer.Instance);
-        foreach (IrBlock block in method.Blocks) {
-            foreach (IrStatement statement in block.Statements) {
-                sites.Add(statement);
-            }
-            sites.Add(block.Terminator);
-        }
-        return sites;
-    }
-
-    /// <summary>Whether a surviving site still reads <paramref name="version"/>: the liveness
-    /// recorded at build goes stale when a pass replaces or removes the only statement or terminator
-    /// that used it, so each live use must map back to a site the method still holds.</summary>
-    private static bool HasLiveUse(IrSsa ssa, int version, HashSet<object> liveSites) =>
-        ssa.LiveUses(version).Any(use => use.Phi is not null
-            || liveSites.Contains((object?)use.Statement ?? use.Terminator!));
-
     private static bool IsForbiddenInIr(IVisitableAstNode node) => node is
         IfElseNode or WhileNode or WhileWithExitNode or BlockNode or GotoNode or LabelNode or BreakNode
         or ContinueNode or SwitchNode or InfiniteLoopNode or DoWhileNode or CpuFaultTryCatchNode
@@ -400,6 +364,119 @@ internal static class IrVerifier {
 
     private static void Fail(IrMethod method, IrBlock block, string rule) =>
         throw new InvalidOperationException($"IR of {method.Name}, block {block.Id}: {rule}.");
+
+    /// <summary>The identity of one SSA version across two builds of the same method: its value, its
+    /// kind and the site or block that defines it.</summary>
+    private sealed record SsaVersionKey(IrSsaValue Value, IrSsaDefinitionKind Kind, IrBlock Block,
+        object? Site);
+
+    /// <summary>Builds the SSA of <paramref name="method"/> again and throws when
+    /// <paramref name="maintained"/> differs from it: every site must record the same uses and
+    /// definitions, and every version that exists under either build must hold the same live use
+    /// sites. Versions are compared by what they are - value, kind and defining site - never by id.</summary>
+    /// <exception cref="InvalidOperationException">The maintained SSA diverged from a fresh build.</exception>
+    internal static void VerifySsaMatchesFreshBuild(IrMethod method, IrSsa maintained) {
+        if (maintained.IsLivenessStale) {
+            maintained.RecomputeLiveness();
+        }
+        IrSsa fresh = IrSsa.Build(method);
+        List<string> differences = [];
+        CompareSiteRecords(maintained, fresh, differences);
+        CompareLiveUses(maintained, fresh, differences);
+        if (differences.Count != 0) {
+            throw new InvalidOperationException(
+                $"The maintained SSA of {method.Name} does not match a fresh build:\n"
+                + string.Join('\n', differences.Take(20)));
+        }
+    }
+
+    private static void CompareSiteRecords(IrSsa maintained, IrSsa fresh, List<string> differences) {
+        HashSet<object> sites = new(ReferenceEqualityComparer.Instance);
+        foreach (object site in maintained.UsesBySite.Keys.Concat(fresh.UsesBySite.Keys)
+                .Concat(maintained.DefinitionsBySite.Keys).Concat(fresh.DefinitionsBySite.Keys)) {
+            sites.Add(site);
+        }
+        foreach (object site in sites) {
+            ComparePairs(site, "uses", PairsOf(maintained.UsesBySite, site, maintained),
+                PairsOf(fresh.UsesBySite, site, fresh), differences);
+            ComparePairs(site, "definitions", PairsOf(maintained.DefinitionsBySite, site, maintained),
+                PairsOf(fresh.DefinitionsBySite, site, fresh), differences);
+        }
+    }
+
+    private static HashSet<(IrSsaValue Value, SsaVersionKey Key)> PairsOf(
+        IReadOnlyDictionary<object, (IrSsaValue Value, int Version)[]> records, object site, IrSsa ssa) {
+        if (!records.TryGetValue(site, out (IrSsaValue Value, int Version)[]? pairs)) {
+            return [];
+        }
+        HashSet<(IrSsaValue Value, SsaVersionKey Key)> keys = [];
+        foreach ((IrSsaValue value, int version) in pairs) {
+            keys.Add((value, VersionKeyOf(ssa, version)));
+        }
+        return keys;
+    }
+
+    private static void ComparePairs(object site, string label,
+        HashSet<(IrSsaValue Value, SsaVersionKey Key)> maintained,
+        HashSet<(IrSsaValue Value, SsaVersionKey Key)> fresh, List<string> differences) {
+        if (maintained.SetEquals(fresh)) {
+            return;
+        }
+        differences.Add($"{DescribeSite(site)} {label}: "
+            + $"maintained [{string.Join(", ", maintained)}] fresh [{string.Join(", ", fresh)}]");
+    }
+
+    private static void CompareLiveUses(IrSsa maintained, IrSsa fresh, List<string> differences) {
+        Dictionary<SsaVersionKey, HashSet<object>> maintainedLive = LiveUseSites(maintained);
+        Dictionary<SsaVersionKey, HashSet<object>> freshLive = LiveUseSites(fresh);
+        foreach (SsaVersionKey key in maintainedLive.Keys.Concat(freshLive.Keys).Distinct()) {
+            HashSet<object> maintainedSites = maintainedLive.GetValueOrDefault(key, []);
+            HashSet<object> freshSites = freshLive.GetValueOrDefault(key, []);
+            if (maintainedSites.SetEquals(freshSites)) {
+                continue;
+            }
+            differences.Add($"live uses of {key}: maintained [{SitesOf(maintainedSites)}] "
+                + $"fresh [{SitesOf(freshSites)}]");
+        }
+    }
+
+    private static Dictionary<SsaVersionKey, HashSet<object>> LiveUseSites(IrSsa ssa) {
+        Dictionary<SsaVersionKey, HashSet<object>> live = new();
+        for (int version = 0; version < ssa.VersionCount; version++) {
+            SsaVersionKey key = VersionKeyOf(ssa, version);
+            HashSet<object> sites = [];
+            foreach (IrSsaUse use in ssa.LiveUses(version)) {
+                sites.Add(UseSiteKey(use));
+            }
+            live[key] = sites;
+        }
+        return live;
+    }
+
+    private static SsaVersionKey VersionKeyOf(IrSsa ssa, int version) {
+        IrSsaVersionInfo info = ssa.Info(version);
+        object? site = info.Kind is IrSsaDefinitionKind.Definition or IrSsaDefinitionKind.PartialDefinition
+            ? ssa.DefinitionSite(version)
+            : null;
+        return new SsaVersionKey(info.Value, info.Kind, info.Block, site);
+    }
+
+    private static object UseSiteKey(IrSsaUse use) {
+        if (use.Phi is { } phi) {
+            return (phi.Value, use.Block, use.OperandPredecessor);
+        }
+        return (object?)use.Statement ?? use.Terminator
+            ?? throw new InvalidOperationException("An SSA use holds no site.");
+    }
+
+    private static string SitesOf(IEnumerable<object> sites) =>
+        string.Join(", ", sites.Select(DescribeSite));
+
+    private static string DescribeSite(object site) => site switch {
+        IrStatement statement => $"statement {statement.Node.GetType().Name} at {statement.Origin.Address}",
+        IrTerminator terminator => $"terminator {terminator.GetType().Name} at {terminator.Origin.Address}",
+        _ => site.ToString() ?? "site"
+    };
 
     private static void Fail(IrMethod method, IrBlock block, ICfgNode origin, string rule) =>
         throw new InvalidOperationException($"IR of {method.Name}, block {block.Id} at {origin.Address}: {rule}.");

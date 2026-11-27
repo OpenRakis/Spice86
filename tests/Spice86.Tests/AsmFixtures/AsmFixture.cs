@@ -1,5 +1,6 @@
 namespace Spice86.Tests.AsmFixtures;
 
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>One fixture scenario: the settings to run it with and the oracle to check after the run.</summary>
@@ -29,6 +30,15 @@ internal sealed class AsmFixture {
         ExpectedMemory = expectedMemory;
         AssertResult = assertResult;
         _engineAssertions = engineAssertions;
+    }
+
+    /// <summary>Returns a fixture with the same settings, expected memory and oracle, run under a
+    /// different generation policy.</summary>
+    /// <param name="policy">The generation policy the generated run uses.</param>
+    /// <returns>The fixture with the policy applied.</returns>
+    public AsmFixture WithGenerationPolicy(GenerationPolicy policy) {
+        return new AsmFixture(Settings with { GenerationPolicy = policy }, ExpectedMemory,
+            AssertResult, _engineAssertions);
     }
 
     /// <summary>Returns a fixture with the same settings, expected memory and oracle, plus engine checks

@@ -61,6 +61,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
@@ -271,6 +272,8 @@ public class Spice86DependencyInjection : IDisposable {
         FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        GeneratedCodeSelection.Resolved generatedCodeSelection =
+            GeneratedCodeSelection.Resolve(configuration.GeneratedCode);
         InstalledInterruptHandlers installedInterruptHandlers =
             new(dualPic.EnumerateHardwareInterruptVectorNumbers());
         ServiceCallEvents serviceCallEvents = installedInterruptHandlers.ServiceCallEvents;
@@ -348,10 +351,9 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgNodeExecutionCompilerMonitor cfgNodeExecutionCompilerMonitor = new(loggerService);
-        IExecutionAstRewriter executionAstRewriter = configuration.JitGeneratorIr
-            ? new GeneratorIrRoundTrip()
-            : new IdentityExecutionAstRewriter();
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode, executionAstRewriter, configuration.JitGeneratorIr);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode,
+            configuration.JitGeneratorIr ? new GeneratorIrRoundTrip() : new IdentityExecutionAstRewriter(),
+            configuration.JitGeneratorIr);
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
 
         SequentialIdAllocator cfgIdAllocator = new();
@@ -359,6 +361,7 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
             configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.HltStopsEmulation, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+        ICallTargetRegistry callTargetRegistry = cfgCpu.CallTargetRegistry;
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("CfgCpu created...");
@@ -417,13 +420,20 @@ public class Spice86DependencyInjection : IDisposable {
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
         // same address (Bios Segment F000)
+        LoadedImageRegistry loadedImageRegistry = new();
         MemoryAsmWriter memoryAsmWriter = new(memory,
             new SegmentedAddress(
                 configuration.ProvidedAsmHandlersSegment, 0),
-            callbackHandler);
+            callbackHandler) {
+            ImageRegistry = loadedImageRegistry
+        };
 
         SharedMouseData sharedMouseData = new();
         SharedMouseData = sharedMouseData;
+
+        // The facts DOS and the mouse driver record during the run: a CFG reload merges the facts
+        // of the dumped run back in before the program runs again.
+        RecordedRunFacts recordedRunFacts = new();
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             cfgCpu, stack, state, serviceCallEvents, a20Gate, biosDataArea, emulationLoopScheduler,
@@ -481,7 +491,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         ListingExporter listingExporter = new(cfgCpu, nodeToString);
 
-        LoadedImageRegistry loadedImageRegistry = new();
         ChangedMemoryMap changedMemoryMap = new(memory, memoryReadWriteBreakpoints, loadedImageRegistry);
         InterruptInstaller interruptInstaller = new(interruptVectorTable, memoryAsmWriter,
             functionCatalogue, loggerState, installedInterruptHandlers);
@@ -492,22 +501,20 @@ public class Spice86DependencyInjection : IDisposable {
         CfgBlockGraphExporter cfgBlockGraphExporter = new();
         CfgFunctionPartitioner cfgFunctionPartitioner = new();
         GeneratorInputsCollector generatorInputsCollector = new(installedInterruptHandlers,
-            interruptVectorTable, callbackHandler, loadedImageRegistry, sharedMouseData,
+            interruptVectorTable, callbackHandler, loadedImageRegistry, recordedRunFacts,
             changedMemoryMap, memory, ioPortDispatcher, configuration.ProgramEntryPointSegment);
         GeneratorInputsCollector = generatorInputsCollector;
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner,
             functionCatalogue, generatorInputsCollector, loggerService);
         CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
-        GeneratorOptions generatorOptions = configuration.GeneratedCodeCheckBuild
-            ? GeneratorOptions.CheckBuild
-            : GeneratorOptions.Default;
+        GeneratorOptions generatorOptions = generatedCodeSelection.ToOptions();
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(generatorOptions,
             maxLinesPerFile: CfgCSharpGenerator.MaxLinesPerFile), loggerService);
         DumpProgressReporter dumpProgressReporter = new(loggerService, new SystemTimeProvider());
         DumpProgressReporter = dumpProgressReporter;
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
             listingExporter, cfgCpuSnapshotBuilder, changedMemoryMap, cfgBlocksJsonExporter, cfgCSharpDumper, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
-            configuration, cfgCpu.CfgNodeFeeder.NodeIndex, dumpProgressReporter, loggerService);
+            configuration, cfgCpu.CfgNodeFeeder.NodeIndex, recordedRunFacts, dumpProgressReporter, loggerService);
         EmulatorStateSerializer emulatorStateSerializer = new(emulatorStateSerializationFolder,
             emulationStateDataReader, emulationStateDataWriter);
         EmulatorStateSerializer = emulatorStateSerializer;
@@ -537,7 +544,7 @@ public class Spice86DependencyInjection : IDisposable {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
             mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, callbackHandler, emsManager,
-            loadedImageRegistry, emulatedClock, serviceCallEvents);
+            loadedImageRegistry, emulatedClock, serviceCallEvents, recordedRunFacts);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("DOS XMS driver created...");
@@ -622,6 +629,8 @@ public class Spice86DependencyInjection : IDisposable {
             inputEventHub);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,
+            callTargetRegistry,
+            recordedRunFacts,
             inputEventHub);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -636,7 +645,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         var dummyInt1CHandler = new DummyInt1CHandler();
 
-        BiosMouseInt74Handler mouseIrq12Handler = new(dualPic, memory);
+        BiosMouseInt74Handler mouseIrq12Handler = new(dualPic, memory,
+            callTargetRegistry);
         if (configuration.InitializeDOS is not false) {
             // Register the BIOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(vgaBios);
@@ -770,7 +780,7 @@ public class Spice86DependencyInjection : IDisposable {
         // stored bytes, so it does not depend on the program image already being loaded in memory; that
         // image only matters later, when resumed execution memory-matches a reloaded node.
         ReloadCfgGraphIfRequested(configuration, emulationStateDataReader, cfgCpu, state,
-            cfgNodeExecutionCompiler, loggerService, cfgIdAllocator, changedMemoryMap);
+            cfgNodeExecutionCompiler, loggerService, cfgIdAllocator, changedMemoryMap, recordedRunFacts);
 
         // Seed emulator-installed hardware interrupt (external event) handlers for speculative
         // exploration and register them as CFG generation roots. The addresses were captured at
@@ -781,7 +791,9 @@ public class Spice86DependencyInjection : IDisposable {
         // when the PIC delivers their vector.
         if (configuration.InitializeDOS is not false) {
             cfgCpu.ExecutionContextManager.SeedKnownSafeHandlersAndRegisterEntryPoints(
-                installedInterruptHandlers.HardwareAddresses);
+                installedInterruptHandlers.HardwareAddresses,
+                new SwitchableCall?[] { mouseIrq12Handler.CurrentCall, mouseDriver.CurrentCall }
+                    .OfType<SwitchableCall>().ToArray());
         }
 
         McpHttpHost? mcpHttpTransport = null;
@@ -944,7 +956,8 @@ public class Spice86DependencyInjection : IDisposable {
     private static void ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILogger loggerService,
-        SequentialIdAllocator cfgIdAllocator, ChangedMemoryMap changedMemoryMap) {
+        SequentialIdAllocator cfgIdAllocator, ChangedMemoryMap changedMemoryMap,
+        RecordedRunFacts recordedRunFacts) {
         if (!configuration.ReloadCfgGraph) {
             return;
         }
@@ -952,7 +965,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (reloadDump == null) {
             return;
         }
-        new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator).Reload(reloadDump);
+        new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator, recordedRunFacts).Reload(reloadDump);
         if (reloadDump.WatchedAreas is not null || reloadDump.ChangedRanges is not null) {
             changedMemoryMap.Restore(ChangedMemorySnapshot.FromReloadDump(reloadDump));
         }

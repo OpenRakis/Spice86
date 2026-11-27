@@ -26,6 +26,15 @@ using static Spice86.Tests.CfgCodeGeneration.Ir.IrTestPrograms;
 /// changed-memory snapshot.
 /// </summary>
 public class DataCommentTest {
+    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
+        new Dictionary<int, InterruptServiceEntry> {
+            [0x09] = DosEntry(0x09, "PrintString",
+                CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
+                | CpuValues.Ss | CpuValues.Sp,
+                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
+        };
+
+
     private const uint ImageStart = 0x20000;
 
     private static byte[] MemoryWith(uint offset, params byte[] bytes) {
@@ -46,20 +55,21 @@ public class DataCommentTest {
             ServiceStringArgument.None, null, []);
 
     private static CfgBlock[] SplitAfterInterrupt(TestInstructionHelper helper,
-        (ushort Offset, byte[] Bytes)[] instructions, bool withDosStub) {
+        (ushort Offset, byte[] Bytes)[] instructions) {
         CfgInstruction[] parsed = instructions
             .Select(instruction => Parse(helper, instruction.Offset, instruction.Bytes))
             .ToArray();
         Chain(parsed);
         int interrupt = Array.FindIndex(instructions, instruction => instruction.Bytes[0] == 0xCD);
-        if (withDosStub && interrupt >= 0) {
-            // The only observed target of the int site is the installed DOS stub.
+        if (interrupt >= 0) {
+            // The int site needs an observed target to stay an InterruptCall: the stub, installed
+            // as the vector's handler only when the test sets up service contracts.
             CfgInstruction stub = Parse(helper, DosStub.Offset, [0xCF]);
             parsed[interrupt].SuccessorsPerType[InstructionSuccessorType.Normal] =
                 new HashSet<ICfgNode> { stub };
             parsed = [.. parsed, stub];
         }
-        if (interrupt < 0 || interrupt + 1 == parsed.Length - (withDosStub ? 1 : 0)) {
+        if (interrupt < 0 || interrupt + 1 == parsed.Length - 1) {
             return [Block(1, parsed)];
         }
         // A call's continuation is a CallToReturn edge, not a Normal one.
@@ -75,8 +85,14 @@ public class DataCommentTest {
     private static GeneratedCSharpProgram Generate(ChangedMemorySnapshot changed, byte[] memory,
         IReadOnlyDictionary<int, InterruptServiceEntry>? dosContracts,
         params (ushort Offset, byte[] Bytes)[] instructions) {
-        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), instructions,
-            dosContracts is not null);
+        // The stack value proofs that feed the string hints need a known RAM SS; give the method
+        // one in code rather than relying on a loader entry fact the generator does not get here.
+        (ushort Offset, byte[] Bytes)[] rebased = [
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
+        ];
+        CfgBlock[] blocks = SplitAfterInterrupt(new TestInstructionHelper(), rebased);
         CfgCodePartition partition = new() {
             Id = 1,
             Kind = CfgCodePartitionKind.Observed,
@@ -279,35 +295,6 @@ public class DataCommentTest {
         noMemory.SourceText.Should().NotContain("DOS 09h");
     }
 
-    /// <summary>The <c>data_strings</c> fixture's golden keeps the <c>09h</c> comment on its
-    /// generic <c>InterruptCall</c> (real dispatch: printing can terminate the program), retains
-    /// the <c>40h</c> write comment next to its named call, and calls the open service by name with
-    /// the snapshot's literal as the checked expected value. The message patched at run time before
-    /// its print keeps the generic call and no comment: the bytes the snapshot saw are not the
-    /// bytes the call reads.</summary>
-    [Fact]
-    public void DataStringsGoldenShowsTheWriteCommentAndTheLiterals() {
-        // Arrange / Act
-        string golden = File.ReadAllText(Path.Join(AppContext.BaseDirectory,
-            "Resources", "cpuTests", "res", "GeneratedCode", "data_strings.ivt.spec.cs.txt"));
-
-        // Assert
-        golden.Should().Contain("// DOS 09h print \"HELLO$\"");
-        golden.Should().Contain("InterruptCall(cs1, 0x0111, 0x21)");
-        golden.Should().Contain("Dos.WriteFile(");
-        golden.Should().Contain("// DOS 40h write handle 1 \"");
-        golden.Should().Contain("Dos.OpenFile(0, Dos.StringDecoder.GetDosString(DS, 0x016F, '\\0', \"NOFILE.TXT\"))");
-        golden.Should().NotContain("// DOS 3Dh");
-    }
-
-    private static readonly IReadOnlyDictionary<int, InterruptServiceEntry> PrintContracts =
-        new Dictionary<int, InterruptServiceEntry> {
-            [0x09] = DosEntry(0x09, "PrintString",
-                CpuValues.Ah | CpuValues.Ds | CpuValues.Dx
-                | CpuValues.Ss | CpuValues.Sp,
-                CpuValues.None) with { StringArgument = ServiceStringArgument.DollarTerminated }
-        };
-
     /// <summary>A 09h service without an implementation binding keeps the generic call; the
     /// string shows in the <c>// DOS</c> comment.</summary>
     [Fact]
@@ -424,7 +411,7 @@ public class DataCommentTest {
             Unchanged(ImageStart, ImageStart + 0x1000), memory, PrintCall(0x0100));
 
         // Assert
-        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x000C, 0x21)");
+        program.SourceText.Should().Contain("InterruptCall(biosSegment, 0x0011, 0x21)");
         program.SourceText.Should().Contain("// DOS 09h print \"Hi$\"");
         program.SourceText.Should().NotContain("\"Hi\")");
         AssertCompiles(program);

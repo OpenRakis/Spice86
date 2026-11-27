@@ -48,12 +48,15 @@ internal static class IrBlockLowering {
         HashSet<IrBlock> needsCheckBlocks = [.. backEdges
             .Where(edge => !edge.InsideInstruction)
             .Select(edge => edge.Target)];
+        HashSet<ICfgNode> checkedOrigins = [.. blocks.SelectMany(block => block.Statements)
+            .Where(statement => statement.Node is CheckExternalEventsNode)
+            .Select(statement => statement.Origin)];
         List<LoweredBlock<IrBlock>> lowered = [];
         foreach (IrBlock block in blocks) {
             if (inlinedExits.Contains(block)) {
                 continue;
             }
-            lowered.Add(new LoweredBlock<IrBlock>(block, block, HasEntryCheck(block), entryBlocks.Contains(block),
+            lowered.Add(new LoweredBlock<IrBlock>(block, block, ChecksAtFirstInstruction(block, checkedOrigins), entryBlocks.Contains(block),
                 needsCheckBlocks.Contains(block), insideOnly.Contains(block), BodyOf(block, graph)));
         }
         return lowered;
@@ -75,9 +78,11 @@ internal static class IrBlockLowering {
         target.StartsInstruction
         && loops.Loops.Any(loop => loop.Contains(from) && !loop.Contains(target));
 
-    /// <summary>The block's first statement is a <see cref="CheckExternalEventsNode"/>.</summary>
-    private static bool HasEntryCheck(IrBlock block) =>
-        block.Statements.Count > 0 && block.Statements[0].Node is CheckExternalEventsNode;
+    /// <summary>The block checks events at its first instruction: a <see cref="CheckExternalEventsNode"/>
+    /// starts it, or its first instruction carries one (an entry check an interrupt shadow moved after it).</summary>
+    private static bool ChecksAtFirstInstruction(IrBlock block, HashSet<ICfgNode> checkedOrigins) =>
+        (block.Statements.Count > 0 && block.Statements[0].Node is CheckExternalEventsNode)
+        || (block.StartsInstruction && checkedOrigins.Contains(block.EntryOrigin));
 
     /// <summary>
     /// The block body: one boundary per consecutive run of statements with the same origin, the last holding the

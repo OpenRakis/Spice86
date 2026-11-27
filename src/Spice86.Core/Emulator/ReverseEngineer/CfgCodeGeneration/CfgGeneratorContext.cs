@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -33,8 +35,10 @@ internal sealed class CfgGeneratorContext {
         Dictionary<ushort, string> segmentVariables,
         Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> transfersByEdge,
         Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> entriesByPartition,
-        IReadOnlyList<SignatureFieldPlan> signatureFields) {
+        IReadOnlyList<SignatureFieldPlan> signatureFields,
+        GenerationPolicy policy) {
         Program = program;
+        Policy = policy;
         _partitionByNode = partitionByNode;
         _methodNames = methodNames;
         _partitionBaseNames = partitionBaseNames;
@@ -55,9 +59,39 @@ internal sealed class CfgGeneratorContext {
         _signatureFieldByInstruction = signatureFields.ToDictionary(
             field => field.Instruction,
             field => field.FieldName);
+        ExecChildEntries = CollectExecChildEntries();
     }
 
     public CfgPartitionedProgram Program { get; }
+
+    /// <summary>The child program entry addresses discovery observed the DOS dispatch callback
+    /// (#0x21) move CS:IP to: the resolver list a typed EXEC call prints.</summary>
+    internal IReadOnlyList<SegmentedAddress> ExecChildEntries { get; }
+
+    private IReadOnlyList<SegmentedAddress> CollectExecChildEntries() {
+        List<SegmentedAddress> entries = [];
+        foreach (CfgBlock block in Program.Partitions.SelectMany(partition => partition.Blocks)) {
+            foreach (ICfgNode node in block.Instructions) {
+                if (node is not CfgInstruction instruction
+                    || instruction.ExecutionAst is not CallbackNode callback
+                    || !ConstantEvaluation.TryEvaluateReplacing(callback.CallbackNumber,
+                        _ => null, out ulong number) || number != 0x21
+                    || !instruction.SuccessorsPerType.TryGetValue(
+                        InstructionSuccessorType.Normal, out ISet<ICfgNode>? successors)) {
+                    continue;
+                }
+                entries.AddRange(successors
+                    .Where(successor =>
+                        successor.Address != instruction.NextInMemoryAddress32.ToSegmentedAddress())
+                    .Select(successor => successor.Address));
+            }
+        }
+        return [.. entries.Distinct()];
+    }
+
+    /// <summary>The relaxations the whole generation run shares: effects, SSA, summaries, passes
+    /// and emission read this one object.</summary>
+    public GenerationPolicy Policy { get; }
 
     /// <summary>Every signature field the generated class declares, in emission order.</summary>
     public IReadOnlyList<SignatureFieldPlan> SignatureFields { get; }
@@ -188,4 +222,79 @@ internal sealed class CfgGeneratorContext {
         // whichever continuation partition the stack unwinds to. So no static continuation is recorded here.
         return new CallContinuation(expectedReturn, ObservedContinuationEdge: null, redirected);
     }
+
+    /// <summary>
+    /// The partition entries discovery observed the call's callee transferring control to while the call's
+    /// frame was still open: the targets of the callee partition's dynamic returns and same-activation
+    /// flows that land on an entry, over every partition reachable through transfers that keep the frame
+    /// open. A landing's own partition runs inside the same open frame, so its transfers are collected
+    /// too. Calls and CPU faults cross an activation boundary - the nested call dispatches its own
+    /// landings and a fault runs in its own execution context - so they are not traversed. The expected
+    /// return address is not a landing: the call's dispatch recognizes it before consulting this list.
+    /// </summary>
+    /// <param name="calleePartition">The partition the call site transfers to.</param>
+    /// <param name="expectedReturn">The address the call expects to return to.</param>
+    public IReadOnlyList<(CfgCodePartition Partition, CfgCodePartitionEntry Entry)> ResolveCallLandings(
+        CfgCodePartition calleePartition, SegmentedAddress expectedReturn) =>
+        ResolveLandings(calleePartition, expectedReturn).Entries;
+
+    /// <summary>The landings of a CPU fault handler's activation: every frame-open transfer target
+    /// reachable from <paramref name="handlerPartition"/> - the addresses discovery observed the
+    /// fault resuming at, whether or not a partition entry sits there.</summary>
+    /// <param name="handlerPartition">The partition the fault edge transfers to.</param>
+    internal LandingResolution ResolveFaultResumeTargets(CfgCodePartition handlerPartition) =>
+        ResolveLandings(handlerPartition, null);
+
+    /// <summary>The frame-open landings of an activation started at <paramref name="partition"/>,
+    /// split into targets that are partition entries and those that are not.</summary>
+    /// <param name="partition">The partition the activation transfers to.</param>
+    /// <param name="excludeTarget">An address that is not a landing (the call's expected return, which
+    /// its dispatch recognizes before consulting the list), or <see langword="null"/> to list every target.</param>
+    private LandingResolution ResolveLandings(CfgCodePartition partition, SegmentedAddress? excludeTarget) {
+        List<(CfgCodePartition, CfgCodePartitionEntry)> entries = [];
+        List<SegmentedAddress> unresolved = [];
+        HashSet<SegmentedAddress> armed = [];
+        HashSet<CfgCodePartition> visited = [partition];
+        Queue<CfgCodePartition> pending = new();
+        pending.Enqueue(partition);
+        while (pending.Count > 0) {
+            CfgCodePartition current = pending.Dequeue();
+            foreach (CfgCodePartitionTransfer transfer in Program.Transfers) {
+                if (!ReferenceEquals(current, transfer.FromPartition) || !KeepsCallFrameOpen(transfer.Kind)) {
+                    continue;
+                }
+                if (visited.Add(transfer.ToPartition)) {
+                    pending.Enqueue(transfer.ToPartition);
+                }
+                if (transfer.Target == excludeTarget || !armed.Add(transfer.Target)) {
+                    continue;
+                }
+                CfgCodePartitionEntry? entry = GetEntries(transfer.ToPartition)
+                    .Where(candidate => candidate.Address == transfer.Target)
+                    .Cast<CfgCodePartitionEntry?>()
+                    .FirstOrDefault();
+                if (entry is { } found) {
+                    entries.Add((transfer.ToPartition, found));
+                } else {
+                    unresolved.Add(transfer.Target);
+                }
+            }
+        }
+        return new LandingResolution(
+            entries.OrderBy(landing => landing.Item2.Address.Linear).ToList(),
+            unresolved.OrderBy(target => target.Linear).ToList());
+    }
+
+    /// <summary>The frame-open landings of one activation: the transfer targets that are partition
+    /// entries (each with its partition and entry) and the ones that are not.</summary>
+    /// <param name="Entries">Landing addresses that are entries of their partition, sorted by address.</param>
+    /// <param name="UnresolvedTargets">Observed landing addresses no partition entry covers, sorted by address.</param>
+    internal sealed record LandingResolution(
+        IReadOnlyList<(CfgCodePartition Partition, CfgCodePartitionEntry Entry)> Entries,
+        IReadOnlyList<SegmentedAddress> UnresolvedTargets);
+
+    private static bool KeepsCallFrameOpen(CfgCodePartitionTransferKind kind) =>
+        kind is CfgCodePartitionTransferKind.DynamicReturn
+            or CfgCodePartitionTransferKind.CrossPartitionFlow
+            or CfgCodePartitionTransferKind.CyclicCrossPartitionFlow;
 }

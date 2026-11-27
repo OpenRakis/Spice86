@@ -322,6 +322,8 @@ s18_delay:
     mov bp, 0FFFFh
     mov ax, [bp]
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 s18_frame:

@@ -74,7 +74,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         if (normalizedArguments.Length == 0) {
             bool currentEcho = _batchFileContexts.Count > 0 ? _batchFileContexts.Peek().EchoEnabled : _echoEnabled;
-            WriteToStandardOutput(currentEcho ? "ECHO is ON.\r\n" : "ECHO is OFF.\r\n");
+            WriteToStandardOutput(currentEcho ? "ECHO is on.\r\n" : "ECHO is off.\r\n");
             return false;
         }
 
@@ -292,10 +292,18 @@ internal sealed partial class DosBatchExecutionEngine {
         }
     }
 
-    private static string BuildTemporaryPipeFilePath(int index) {
-        string suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
-        string fileName = $"P{index % 10}{suffix}.TMP";
-        return $"C:\\{fileName}";
+    private int _temporaryPipeFileCounter;
+
+    private string BuildTemporaryPipeFilePath(int index) {
+        while (true) {
+            string fileName = $"P{index % 10}{_temporaryPipeFileCounter:X6}.TMP";
+            _temporaryPipeFileCounter++;
+            string dosPath = $"C:\\{fileName}";
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(dosPath);
+            if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+                return dosPath;
+            }
+        }
     }
 
     private void WriteToStandardOutput(string text) {
@@ -514,13 +522,13 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.LogDebug("BATCH: REN {Args}", trimmed);
         }
         if (!TryExtractFirstToken(trimmed, out string source, out string tail)) {
-            WriteToStandardOutput("Insufficient parameters\r\n");
+            WriteToStandardOutput("Required parameter missing\r\n");
             return false;
         }
 
         string target = tail.Trim();
         if (target.Length == 0) {
-            WriteToStandardOutput("Insufficient parameters\r\n");
+            WriteToStandardOutput("Required parameter missing\r\n");
             return false;
         }
 

@@ -43,7 +43,7 @@ using System.Linq;
 /// and also crosses into callees, so nested calls reached from a known-safe entry point have their
 /// own continuations explored as well.</para>
 /// </summary>
-public class SpeculativeExplorer {
+public class SpeculativeExplorer : ICallTargetRegistry {
     /// <summary>
     /// Per-worklist-item data carrying the target address, predecessor, edge type, and trust flag.
     /// Trust (<see cref="FollowContinuations"/>) propagates along intra-routine successors (Normal edges)
@@ -98,6 +98,34 @@ public class SpeculativeExplorer {
         }
         Queue<ExploreItem> worklist = new();
         worklist.Enqueue(new ExploreItem(entry, null, InstructionSuccessorType.Normal, FollowContinuations: true));
+        Drain(worklist);
+    }
+
+    /// <summary>
+    /// Best-effort speculative link from the instruction at <paramref name="source"/> to
+    /// <paramref name="target"/>: a runtime-written pointer or operand is only known once written,
+    /// so the writer reports it here. The source instruction must already be in the index with
+    /// bytes matching memory (a stale variant at the same address is not reused) and the target
+    /// must decode to safe code; otherwise normal observed runtime discovery wires the edge when
+    /// the source executes.
+    /// </summary>
+    public void RegisterCallTarget(SegmentedAddress source, SegmentedAddress target) {
+        if (_nodeIndex.PoisonSet.Contains(source) || _nodeIndex.PoisonSet.Contains(target)) {
+            return;
+        }
+        CfgInstruction sourceCandidate = _instructionParser.ParseInstructionAt(source);
+        if (sourceCandidate.IsInvalid) {
+            return;
+        }
+        CfgInstruction? sourceNode = _nodeIndex.GetAtAddressMatchingFinalSignature(source, sourceCandidate.SignatureFinal);
+        if (sourceNode is null) {
+            return;
+        }
+        // Continuation-following, like known-safe seeding: the reported target is typically
+        // emulator-installed stub code whose callback instructions must be stepped over to reach
+        // the whole routine (and the next switchable call site) in one pass.
+        Queue<ExploreItem> worklist = new();
+        worklist.Enqueue(new ExploreItem(target, sourceNode, InstructionSuccessorType.Normal, FollowContinuations: true));
         Drain(worklist);
     }
 

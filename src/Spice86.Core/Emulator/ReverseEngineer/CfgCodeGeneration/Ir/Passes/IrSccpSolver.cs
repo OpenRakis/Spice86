@@ -130,9 +130,37 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
         }
     }
 
+    /// <summary>The meet of the cell's previous entry with a freshly computed one. A byte the
+    /// previous entry still has undetermined takes the computed state; a varying byte stays
+    /// varying; a known byte keeps its constant only when the computed entry knows the same
+    /// constant. Without it a byte could return from varying to known - when an operand's
+    /// constant flips to one the other operands already hold - which makes the lattice
+    /// non-monotone and the round loop unable to converge.</summary>
+    private static (uint Known, uint Undetermined, uint Value) MeetDown(
+        uint oldKnown, uint oldUndetermined, uint oldValue,
+        uint known, uint undetermined, uint value) {
+        for (int b = 0; b < ByteCount; b++) {
+            uint bit = 1U << b;
+            if ((oldUndetermined & bit) != 0) {
+                continue;
+            }
+            if ((oldKnown & bit) != 0 && (known & bit) != 0
+                && (((oldValue ^ value) >> (8 * b)) & 0xFF) == 0) {
+                continue;
+            }
+            known &= ~bit;
+            undetermined &= ~bit;
+            value &= ~(0xFFu << (8 * b));
+        }
+        return (known, undetermined, value);
+    }
+
     private void FillSite(DefinitionSite site) {
         (uint known, uint undetermined, uint packed) = FillDefinition(
             site.Block, site.Index, site.Statement, site.Value, site.Version);
+        (known, undetermined, packed) = MeetDown(facts.Known[site.Version],
+            facts.Undetermined[site.Version], facts.Value[site.Version],
+            known, undetermined, packed);
         if (known == facts.Known[site.Version] && undetermined == facts.Undetermined[site.Version]
             && packed == facts.Value[site.Version]) {
             return;
@@ -149,7 +177,14 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
         List<int> operandIds = [.. operands
             .Where(operand => operand.Edges.Any(_executableEdges.Contains))
             .Select(operand => operand.Version)];
+        if (operandIds.Count == 0 && !phi.HasEntryOperand) {
+            // No predecessor edge is executable yet: the phi stays undetermined until one is.
+            return;
+        }
         (uint known, uint undetermined, uint packed) = Meet(operandIds, phi.HasEntryOperand);
+        (known, undetermined, packed) = MeetDown(facts.Known[phi.Result],
+            facts.Undetermined[phi.Result], facts.Value[phi.Result],
+            known, undetermined, packed);
         if (known == facts.Known[phi.Result] && undetermined == facts.Undetermined[phi.Result]
             && packed == facts.Value[phi.Result]) {
             return;
@@ -196,7 +231,7 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
         while (_changed) {
             if (roundsLeft-- <= 0) {
                 throw new InvalidOperationException(
-                    $"{nameof(IrSccpSolver)}.{nameof(RunRounds)} did not converge on {method.Name}.");
+                    $"{nameof(IrSccpSolver)}.{nameof(RunRounds)} did not converge on {method.Name}");
             }
             _changed = false;
             EvaluateEdges();
@@ -248,7 +283,7 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
     }
 
     /// <summary>The versions a definition's lattice can depend on: the previous version its unwritten
-    /// bytes carry, and the version of every register its writer's right side reads.</summary>
+    /// bytes carry, and the version of every register the value it writes reads.</summary>
     private IEnumerable<int> Dependencies(IrBlock block, int index, IrStatement statement,
         IrSsaValue value, int version) {
         HashSet<int> dependencies = [];
@@ -263,12 +298,12 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
             }
             return dependencies;
         }
-        BinaryOperationNode? writer = writtenMask == 0 ? null
-            : WriterOf(statement.Node, (int)value, writtenMask);
-        if (writer is null) {
+        ValueNode? written = writtenMask == 0 ? null
+            : WrittenValueOf(statement.Node, (int)value, writtenMask);
+        if (written is null) {
             return dependencies;
         }
-        dependencies.UnionWith(Dependencies(block, index, writer.Right));
+        dependencies.UnionWith(Dependencies(block, index, written));
         return dependencies;
     }
 
@@ -326,9 +361,9 @@ internal sealed partial class IrSccpSolver(IrMethod method, IrSsa ssa, IrConstan
                 ? (known | 1, undetermined, (packed & ~1u) | (uint)direction & 1u)
                 : (known, undetermined, packed);
         }
-        BinaryOperationNode? writer = WriterOf(statement.Node, (int)value, writtenMask);
-        if (writer is null
-            || !facts.TryEvaluate(writer.Right, block, index, out ulong constant)) {
+        ValueNode? written = WrittenValueOf(statement.Node, (int)value, writtenMask);
+        if (written is null
+            || !facts.TryEvaluate(written, block, index, out ulong constant)) {
             return (known, undetermined, packed);
         }
         int firstByte = BitOperations.TrailingZeroCount(writtenMask);

@@ -171,6 +171,26 @@ public sealed class GraphTraversalTest {
     }
 
     [Fact]
+    public void StronglyConnectedComponents_Find_NumbersComponentsCalleesFirst() {
+        Dictionary<string, string[]> graph = new() {
+            ["A"] = ["B", "D"],
+            ["B"] = ["C"],
+            ["C"] = ["B"],
+            ["D"] = []
+        };
+        IEnumerable<string> GetNeighbors(string node) =>
+            graph.TryGetValue(node, out string[]? neighbors) ? neighbors : [];
+
+        Dictionary<string, int> componentByNode = StronglyConnectedComponents.Find(graph.Keys, GetNeighbors);
+
+        componentByNode["B"].Should().Be(componentByNode["C"], "B and C form one component");
+        componentByNode["B"].Should().BeLessThan(componentByNode["A"],
+            "a reached component completes before its caller");
+        componentByNode["D"].Should().BeLessThan(componentByNode["A"],
+            "a leaf component completes before its caller");
+    }
+
+    [Fact]
     public void StronglyConnectedComponents_Find_HandlesLargeLinearGraphWithoutRecursion() {
         const int nodeCount = 10_000;
         int[] nodes = Enumerable.Range(0, nodeCount).ToArray();

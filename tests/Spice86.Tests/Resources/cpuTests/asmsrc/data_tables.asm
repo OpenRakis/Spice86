@@ -109,6 +109,8 @@ start:
     mov bx, 1234h
     mov al, [ss:10000h]
 ss_fault_continuation:
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ss_fault_handler:

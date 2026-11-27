@@ -59,7 +59,7 @@ public class DosInt2aHandler : InterruptHandler {
             }
             // DOS convention: set Carry Flag and set AX to an error code. 0x01 = Invalid function.
             State.AX = 0x0001;
-            SetCarryFlag(true, setOnStack: true);
+            SetCarryFlag(true);
             return;
         }
 

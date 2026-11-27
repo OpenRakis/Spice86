@@ -45,6 +45,8 @@ start:
     cld
     call 0F000h:1000h
     call 0F100h:1000h
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 1000h-$

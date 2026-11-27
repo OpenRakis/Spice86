@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 using System.Reflection;
@@ -34,20 +35,20 @@ using System.Reflection;
 /// <para>Legality, in the effects model (<c>CpuValues</c>, <c>IrTokens</c>, <c>MayFault</c>,
 /// <c>DeliversInterrupts</c>; <c>IrSsa.SameVersions</c> for the moves it implies):</para>
 /// <list type="bullet">
-/// <item>IS-1: the site is typed only when every <c>int</c> site of the program on the vector
+/// <item>the site is typed only when every <c>int</c> site of the program on the vector
 /// observed only the installed stub; a program handler, a hook, an uninstalled-then-seen vector
 /// or a site with no observed target anywhere on the vector keeps the untyped call as
 /// <see cref="InterruptSiteKind.Hooked"/> (the direct call could not deliver the observed
 /// behaviour, and a vector check cannot repair a handler the program replaced).</item>
-/// <item>IS-2: the selector register's bytes must be known (not undetermined) at the site;
+/// <item>the selector register's bytes must be known (not undetermined) at the site;
 /// otherwise the call keeps <c>InterruptCall</c> as <see cref="InterruptSiteKind.SelectorUnknown"/>.</item>
-/// <item>IS-3: the selector value must have a precise contract bound to an implementation whose
+/// <item>the selector value must have a precise contract bound to an implementation whose
 /// restrictions the constant inputs satisfy; an <c>Unknown</c> contract or a missing entry keeps
 /// <c>InterruptCall</c> as <see cref="InterruptSiteKind.NoContract"/>, while a service without an
 /// implementation (or an unsatisfied binding restriction) keeps real dispatch as
 /// <see cref="InterruptSiteKind.BuiltInDispatch"/> with the precise contract's normal-return
 /// effects.</item>
-/// <item>IS-4: the typed call's effects are the contract's: reads are only the explicit
+/// <item>the typed call's effects are the contract's: reads are only the explicit
 /// input arguments (a conditionally-preserved output arrives as an explicit input binding
 /// the pre-call value); only the result targets are must-written;
 /// may-write is <c>Writes</c>; tokens are Memory always and Io when the service does I/O;
@@ -71,9 +72,14 @@ internal static class IrInterruptServiceCalls {
     /// a stale site even when no statement became typed.</summary>
     /// <param name="hasOnlyBuiltInTargets">Whether every <c>int</c> site of the program on a
     /// vector observed only the installed stub.</param>
-    public static int Apply(IrMethod method, IrSsa ssa, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets) {
-        int changed = 0;
+    /// <param name="programSetCurrentPsp">Whether the program set the current PSP itself through
+    /// DOS AH=50h/55h; then every typed service call keeps writing the interrupt frame.</param>
+    /// <param name="execChildEntries">The child program entries discovery observed the DOS
+    /// dispatch callback move CS:IP to: the resolver list a typed EXEC call prints.</param>
+    public static int Apply(IrMethod method, IrEditor editor, IrConstantFacts facts,
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        IReadOnlyList<SegmentedAddress> execChildEntries) {
+        List<(IrBlock Block, int Index, IrStatement Replacement)> typed = [];
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index < block.Statements.Count; index++) {
                 IrStatement statement = block.Statements[index];
@@ -83,24 +89,33 @@ internal static class IrInterruptServiceCalls {
                     continue;
                 }
                 IVisitableAstNode replacement = Classify(call, service, block, index, facts,
-                    hasOnlyBuiltInTargets);
+                    hasOnlyBuiltInTargets, programSetCurrentPsp, execChildEntries);
                 if (ReferenceEquals(replacement, call)) {
                     continue;
                 }
-                IrStatement typedStatement = IrStatement.Create(replacement, statement.Origin);
-                block.Statements[index] = typedStatement;
-                if (ssa.HasSite(statement)) {
-                    ssa.Replace(statement, typedStatement);
-                }
-                changed++;
+                typed.Add((block, index, IrStatement.Create(replacement, statement.Origin)));
             }
         }
-        return changed;
+        foreach ((IrBlock block, int index, IrStatement replacement) in typed) {
+            if (replacement.Node is InterruptServiceCallNode {
+                    Contract.Transfer: ServiceTransferKind.Terminates
+                } terminatingCall) {
+                // A terminate never reaches the code after the call site: the statement becomes
+                // the method's exit and the unobserved-return FailAsUntested it replaces is gone.
+                editor.Remove(block, index);
+                editor.SetTerminator(block,
+                    new IrExit(block.Terminator.Origin, new ReturnNode(terminatingCall)));
+                continue;
+            }
+            editor.Replace(block, index, replacement);
+        }
+        return typed.Count;
     }
 
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,
         InterruptServiceVector service, IrBlock block, int index, IrConstantFacts facts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool programSetCurrentPsp,
+        IReadOnlyList<SegmentedAddress> execChildEntries) {
         InterruptServiceEntry? entry;
         ServiceSelector? selector = null;
         int? selectorValue = null;
@@ -116,6 +131,13 @@ internal static class IrInterruptServiceCalls {
             selector = selected.Selector;
             selectorValue = value;
             entry = selected.Services.GetValueOrDefault(value);
+            if (entry is { Variants.Count: > 0 } baseEntry) {
+                RegisterNode al = (RegisterNode)IrValueSets.NodeOf(CpuValues.Al);
+                if (facts.TryGetBefore(block, index, al, out ulong alValue)) {
+                    entry = baseEntry.Variants
+                        .FirstOrDefault(variant => variant.Al == (int)alValue) ?? entry;
+                }
+            }
         }
         if (!hasOnlyBuiltInTargets(service)) {
             return new InterruptCallHelperNode(InterruptSiteKind.Hooked, service, selectorValue,
@@ -125,16 +147,44 @@ internal static class IrInterruptServiceCalls {
             return new InterruptCallHelperNode(InterruptSiteKind.NoContract, service,
                 selectorValue, [.. call.Arguments]);
         }
-        if (entry.Implementation is null
+        if (entry.Contract.Transfer is ServiceTransferKind.Terminates
+            && (programSetCurrentPsp
+                || index != block.Statements.Count - 1
+                || block.Terminator is not IrExit { Transfer: FailAsUntestedNode })) {
+            // A terminate only prints as a method exit when nothing after the call was observed
+            // and the resume is consumable by the override chain: a program that manages its own
+            // PSP (AH=50h/55h) can resume at the arbitrary address the recorded caller stack
+            // names, which generated control flow cannot express; and a site with observed code
+            // after it could fall through. Both keep the untyped call. A terminate that resumes
+            // a batch launch unwinds to the root entry's RunBatchPrograms loop.
+            return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
+                selectorValue, [.. call.Arguments]);
+        }
+        // A child-running service prints ExecChild and never invokes an implementation.
+        if ((entry.Implementation is null
+                && entry.Contract.Transfer is not ServiceTransferKind.RunsChild)
             || !BindingSupported(entry, block, index, facts)
             || ReceiverName(service.HandlerType) is not { } receiverName) {
             return new InterruptCallHelperNode(InterruptSiteKind.BuiltInDispatch, service,
                 selectorValue, [.. call.Arguments]);
         }
+        bool runsChild = entry.Contract.Transfer is ServiceTransferKind.RunsChild;
+        List<ValueNode> results = [.. ServiceCallSignature.Outputs(entry.Contract)
+            .Select(output => IrValueSets.NodeOf(output.Mask))];
+        if (runsChild) {
+            // A returned child restores the parent's DS/ES to its own PSP: the call reports them
+            // as outputs even though the contract only names AX and the carry flag.
+            results.Add(IrValueSets.NodeOf(CpuValues.Ds));
+            results.Add(IrValueSets.NodeOf(CpuValues.Es));
+        }
         return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
             receiverName, [.. entry.Inputs.Select(input => InputNodeOf(entry, input))]) {
-            Results = [.. ServiceCallSignature.Outputs(entry.Contract)
-                .Select(output => IrValueSets.NodeOf(output.Mask))]
+            RunsEntryHook = RunsEntryHook(entry),
+            WritesFrame = programSetCurrentPsp || entry.ReadsFrame || runsChild,
+            Results = results,
+            ChildEntries = runsChild ? execChildEntries : [],
+            ReturnSegment = call.Arguments[0],
+            ReturnOffset = call.Arguments[1]
         };
     }
 
@@ -172,6 +222,17 @@ internal static class IrInterruptServiceCalls {
         }
         return operation <= (byte)DosInt21Handler.AllocationStrategySubFunction
             .SetUpperMemoryBlockState;
+    }
+
+    /// <summary>Whether the typed call of <paramref name="entry"/> runs the handler's entry
+    /// bookkeeping: a DOS service saves the caller stack exactly when
+    /// <see cref="DosInt21Handler.SavesCallerStack"/> accepts its function number, every other
+    /// handler's hook is the base no-op and always runs.</summary>
+    private static bool RunsEntryHook(InterruptServiceEntry entry) {
+        if (entry.Implementation?.DeclaringType != typeof(DosInt21Handler)) {
+            return true;
+        }
+        return DosInt21Handler.SavesCallerStack((byte)entry.SelectorValue);
     }
 
     /// <summary>The name of the unique <see cref="CSharpOverrideHelper"/> property holding the

@@ -356,7 +356,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     ///     Gets (operation 0) or sets (operation 1) the display combination code.
     ///     Returns the AL result and the complete BX on a get, null BX on a set.
     /// </summary>
-    public (byte al, ushort? bx) GetSetDisplayCombinationCode(byte operation, byte displayCode) {
+    public (byte status, ushort? displayCode) GetSetDisplayCombinationCode(byte operation, byte displayCode) {
         switch (operation) {
             case 0x00: {
                     ushort bx = (ushort)((BiosConstants.NoSecondaryDisplay << 8) | _biosDataArea.DisplayCombinationCode);
@@ -395,7 +395,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     ///     Video subsystem configuration; BL selects the subfunction.
     ///     Unsupported subfunctions preserve AL and BX and return a null CX.
     /// </summary>
-    public (byte al, ushort? cx, ushort bx) VideoSubsystemConfiguration(byte al, ushort bx) {
+    public (byte al, ushort? configuration, ushort bx) VideoSubsystemConfiguration(byte al, ushort bx) {
         if (_logger.IsEnabled(LogLevel.Trace)) {
             _logger.LogTrace("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), (byte)bx);
@@ -622,7 +622,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <summary>
     ///     Returns the video mode in AL, the column count in AH and the active page in BH.
     /// </summary>
-    public (ushort ax, byte bh) ReadVideoState() {
+    public (ushort modeAndColumns, byte activePage) ReadVideoState() {
         byte bh = _biosDataArea.CurrentVideoPage;
         byte al = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
         byte ah = (byte)_biosDataArea.ScreenColumns;
@@ -811,7 +811,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <summary>
     ///     Returns the cursor position of page BH in DX and its shape in CX.
     /// </summary>
-    public (ushort cx, ushort dx) GetCursorPosition(ushort bx) {
+    public (ushort cursorShape, ushort position) GetCursorPosition(ushort bx) {
         byte page = (byte)(bx >> 8);
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(page);
         ushort cx = _biosDataArea.CursorType;
@@ -1085,7 +1085,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     [InterruptService(0x1B, Name = "GetFunctionalityInfo", Reads = CpuValues.Ah | CpuValues.Bx | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     private void FunctionalityInfoService() {
-        State.AL = GetFunctionalityInfo(State.BX, State.ES, State.DI).al;
+        State.AL = GetFunctionalityInfo(State.BX, State.ES, State.DI).status;
     }
 
     /// <summary>
@@ -1368,7 +1368,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     ///     <paramref name="segment"/>:<paramref name="offset"/> for function
     ///     <paramref name="function"/> and returns it with the AL status.
     /// </summary>
-    public (VideoFunctionalityInfo info, byte al) GetFunctionalityInfo(ushort function, ushort segment, ushort offset) {
+    public (VideoFunctionalityInfo info, byte status) GetFunctionalityInfo(ushort function, ushort segment, ushort offset) {
         byte al;
         switch (function) {
             case 0x0:

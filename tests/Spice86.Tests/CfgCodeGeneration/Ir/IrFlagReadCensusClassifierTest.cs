@@ -140,12 +140,12 @@ public sealed class IrFlagReadCensusClassifierTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock entry = Block(0);
         IrBlock readBlock = Block(1);
-        entry.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
+        IrEditor.WithoutSsa.Append(entry, AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
-        entry.Terminator = new IrJump(instruction, new IrEdge(readBlock, false));
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(instruction, new IrEdge(readBlock, false)));
         BinaryOperationNode read = FlagRead();
-        readBlock.Statements.Add(IrStatement.Create(read, instruction));
-        readBlock.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(readBlock, IrStatement.Create(read, instruction));
+        IrEditor.WithoutSsa.SetTerminator(readBlock, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction], entry, readBlock);
 
         // Act
@@ -177,17 +177,17 @@ public sealed class IrFlagReadCensusClassifierTest {
         IrBlock trueArm = Block(1);
         IrBlock falseArm = Block(2);
         IrBlock join = Block(3);
-        entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
-            new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
+            new IrEdge(trueArm, false), new IrEdge(falseArm, false)));
+        IrEditor.WithoutSsa.Append(trueArm, AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
-        falseArm.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
+        IrEditor.WithoutSsa.Append(falseArm, AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
-        trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
-        falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
+        IrEditor.WithoutSsa.SetTerminator(trueArm, new IrJump(instruction, new IrEdge(join, false)));
+        IrEditor.WithoutSsa.SetTerminator(falseArm, new IrJump(instruction, new IrEdge(join, false)));
         BinaryOperationNode read = FlagRead();
-        join.Statements.Add(IrStatement.Create(read, instruction));
-        join.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(join, IrStatement.Create(read, instruction));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, trueArm, falseArm, join);
 
@@ -204,10 +204,12 @@ public sealed class IrFlagReadCensusClassifierTest {
     private static (IrMethod, BlockNode) MethodWithFlagRead(params IrStatement[] setters) {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.AddRange(setters);
+        foreach (IrStatement setter in setters) {
+            IrEditor.WithoutSsa.Append(block, setter);
+        }
         BinaryOperationNode read = FlagRead();
-        block.Statements.Add(IrStatement.Create(read, instruction));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(read, instruction));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         return (method, new BlockNode(read));
     }

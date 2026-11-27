@@ -2,6 +2,13 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+
+using Spice86.Tests.AsmFixtures;
 using Spice86.Tests.Utility;
 
 using Xunit;
@@ -48,24 +55,29 @@ public sealed class GeneratedCodeCoverageReportTest {
         columns[5].Should().BeEmpty();
     }
 
-    /// <summary>A generated C# dump that compiles reports status ok with its method and line counts.</summary>
+    /// <summary>A generated C# dump that compiles reports status ok with the method and line counts of
+    /// its sources. The source is generated at test time from the add scenario.</summary>
     [Fact]
     public void CompilableProgramIsReportedAsOk() {
         // Arrange
         using TempFile folder = new("coverage");
         string exportFolder = folder.CreateDirectory("hash");
         string generatedDirectory = CreateGeneratedDirectory(exportFolder);
-        string source = File.ReadAllText(Path.Join("Resources", "cpuTests", "res", "GeneratedCode", "add.spec.cs.txt"));
-        WriteGoldenFiles(generatedDirectory, source);
+        GeneratedCSharpProgram program = new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmScenarioCatalog.CpuBin("add"));
+        WriteGeneratedFiles(generatedDirectory, program.SourceText);
 
         // Act
         string row = GeneratedCodeCoverageReport.BuildRow("fact", "/x/prog.com", folder.Path);
 
         // Assert
+        int expectedMethods = Directory.EnumerateFiles(generatedDirectory, "*.cs")
+            .Sum(file => CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetRoot()
+                .DescendantNodes().OfType<MethodDeclarationSyntax>().Count());
         string[] columns = row.Split('\t');
         columns[2].Should().Be("ok");
         columns[3].Should().BeEmpty();
-        columns[4].Should().Be("2");
+        columns[4].Should().Be(expectedMethods.ToString(),
+            "the method count is derived from the generated program's own method declarations");
         columns[5].Should().NotBeEmpty();
     }
 
@@ -91,9 +103,9 @@ public sealed class GeneratedCodeCoverageReportTest {
     private static string CreateGeneratedDirectory(string exportFolder) =>
         Directory.CreateDirectory(Path.Join(exportFolder, GeneratedCodeCoverageReport.GeneratedDirectoryName)).FullName;
 
-    /// <summary>Writes the files of a golden text (each section behind its
+    /// <summary>Writes the files of a generated-source text (each section behind its
     /// <c>// ==== file: &lt;name&gt; ====</c> marker) into <paramref name="directory"/>.</summary>
-    private static void WriteGoldenFiles(string directory, string goldenText) {
+    private static void WriteGeneratedFiles(string directory, string goldenText) {
         string[] lines = goldenText.Split('\n');
         string? name = null;
         List<string> content = [];

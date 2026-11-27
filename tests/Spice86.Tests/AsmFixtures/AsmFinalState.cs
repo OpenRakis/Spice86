@@ -1,36 +1,126 @@
 namespace Spice86.Tests.AsmFixtures;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 
-/// <summary>Registers and RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
-/// <param name="Registers">Registers and their values when the run ended.</param>
-/// <param name="Ram">RAM bytes when the run ended.</param>
-internal sealed record AsmFinalState(IReadOnlyList<(string Name, ushort Value)> Registers, byte[] Ram) {
+/// <summary>RAM captured when a run ends, to compare the emulated run with the generated run.</summary>
+/// <param name="Ram">The first megabyte of RAM when the run ended.</param>
+/// <param name="ExtendedRegions">Named byte regions beyond the first megabyte the settings enable:
+/// the high memory area with A20 or XMS. XMS memory and EMS logical pages are compared through the
+/// device state instead.</param>
+internal sealed record AsmFinalState(byte[] Ram,
+    IReadOnlyList<(string Name, byte[] Bytes)> ExtendedRegions) {
     /// <summary>Number of captured RAM bytes: the first megabyte.</summary>
     public const uint ComparedRamLength = 0x100000;
 
-    /// <summary>Captures the registers and the first megabyte of RAM of a finished run.</summary>
-    /// <param name="result">Result of the finished run.</param>
+    /// <summary>The <c>int</c> instruction address and pre-push caller SS:SP of every software
+    /// interrupt the run executed, recorded by <see cref="SoftwareInterruptRecorder"/>.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> SoftwareInterrupts { get; init; } = [];
+
+    /// <summary>The <c>call</c> instruction address and pre-call SS:SP of every call the run
+    /// executed, recorded by <see cref="StackCallRecorder"/>.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> Calls { get; init; } = [];
+
+    /// <summary>The <c>push</c> instruction address and pre-push SS:SP of every push the run
+    /// executed, recorded by <see cref="StackCallRecorder"/>.</summary>
+    public IReadOnlyList<(SegmentedAddress Address, SegmentedAddress StackPointer)> Pushes { get; init; } = [];
+
+    /// <summary>Every character written to the console during the run, recorded by
+    /// <see cref="ConsoleOutputRecorder"/>.</summary>
+    public string ConsoleOutput { get; init; } = "";
+
+    /// <summary>The '/'-separated relative path and content of every file the run created or
+    /// changed on its C: drive, recorded by <see cref="DriveFileRecorder"/>.</summary>
+    public IReadOnlyList<(string Path, byte[] Content)> DriveFiles { get; init; } = [];
+
+    /// <summary>The device, register name and value of every device register the run left behind,
+    /// captured by <see cref="DeviceRegisterSnapshot"/>.</summary>
+    public IReadOnlyList<(string Device, string Register, uint Value)> DeviceRegisters { get; init; } = [];
+
+    /// <summary>The device states the run left behind, captured by
+    /// <see cref="Machine.CaptureDeviceState"/>, with the fields that follow the emulated clock
+    /// cleared.</summary>
+    public MachineDeviceState? DeviceState { get; init; }
+
+    /// <summary>Captures the RAM of a finished run. Final registers are not compared: a terminal
+    /// <c>hlt</c> observes memory only, so the two runs may legitimately differ in registers.</summary>
+    /// <param name="run">The finished run.</param>
+    /// <param name="settings">Settings of the run, deciding which extended regions are compared.</param>
     /// <returns>The captured state.</returns>
-    public static AsmFinalState Capture(AsmFixtureResult result) {
-        State state = result.State;
-        (string Name, ushort Value)[] registers = [
-            ("AX", state.AX),
-            ("BX", state.BX),
-            ("CX", state.CX),
-            ("DX", state.DX),
-            ("SI", state.SI),
-            ("DI", state.DI),
-            ("BP", state.BP),
-            ("SP", state.SP),
-            ("DS", state.DS),
-            ("ES", state.ES),
-            ("SS", state.SS),
-            ("FS", state.FS),
-            ("GS", state.GS),
-            ("FLAGS", state.Flags.FlagRegister16)
-        ];
-        byte[] ram = result.Memory.ReadRam(ComparedRamLength, 0);
-        return new AsmFinalState(registers, ram);
+    public static AsmFinalState Capture(AsmFixtureRun run, AsmRunSettings settings) {
+        byte[] ram = run.Result.Memory.ReadRam(ComparedRamLength, 0);
+        List<(string Name, byte[] Bytes)> regions = [];
+        if (settings.EnableA20Gate || settings.EnableXms) {
+            regions.Add(("himem",
+                run.Result.Memory.ReadRam((uint)(run.Machine.Memory.Length - (int)ComparedRamLength),
+                    ComparedRamLength)));
+        }
+        return new AsmFinalState(ram, regions) {
+            SoftwareInterrupts = run.Result.Observations
+                .Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation).Interrupts,
+            Calls = run.Result.Observations
+                .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Calls,
+            Pushes = run.Result.Observations
+                .Get<StackCallRecorder>(AsmRunScope.StackCallsObservation).Pushes,
+            ConsoleOutput = run.Result.Observations
+                .Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text,
+            DriveFiles = run.Result.Observations
+                .Get<DriveFileRecorder>(AsmRunScope.DriveFilesObservation).WrittenFiles,
+            DeviceRegisters = DeviceRegisterSnapshot.Capture(run.Machine),
+            DeviceState = Normalize(run.Machine.CaptureDeviceState(MachineDevices.All))
+        };
+    }
+
+    /// <summary>Clears the fields that follow the emulated clock, which differs between the
+    /// interpreted and the generated run like it does in a timing-dependent execution: the capture
+    /// timestamps, the beam status the timing engine recomputes from the clock at every scheduler
+    /// pump. The PIC interrupt request bits go as well: the program cannot write them, they are
+    /// raised by device events (PIT tick, keyboard, mouse) whose landing before the run ends depends
+    /// on when the scheduler pump last ran, and a delivered interrupt still shows in the in-service
+    /// register and in RAM.</summary>
+    private static MachineDeviceState Normalize(MachineDeviceState state) {
+        if (state.Pic is { } pic) {
+            state = state with {
+                Pic = pic with {
+                    Primary = pic.Primary with { InterruptRequestRegister = 0 },
+                    Secondary = pic.Secondary with { InterruptRequestRegister = 0 }
+                }
+            };
+        }
+        if (state.Pit is { } pit) {
+            state = state with {
+                Pit = pit with {
+                    CapturedAtMs = 0,
+                    Channel0EventDelayMs = null,
+                    Channel0 = pit.Channel0 with { Start = 0, Delay = 0, ReadLatch = 0 },
+                    Channel1 = pit.Channel1 with { Start = 0, Delay = 0, ReadLatch = 0 },
+                    Channel2 = pit.Channel2 with { Start = 0, Delay = 0, ReadLatch = 0 }
+                }
+            };
+        }
+        if (state.MouseDevice is { } mouse) {
+            state = state with {
+                MouseDevice = mouse with {
+                    CapturedAtMs = 0,
+                    LastSampleTimeMs = null,
+                    PendingSampleDelayMs = null
+                }
+            };
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            state = state with {
+                SoundBlaster = soundBlaster with { CapturedAtMs = 0 }
+            };
+        }
+        if (state.Vga is { } vga) {
+            state = state with {
+                Vga = vga with {
+                    Registers = vga.Registers with { InputStatus1 = 0 }
+                }
+            };
+        }
+        return state;
     }
 }

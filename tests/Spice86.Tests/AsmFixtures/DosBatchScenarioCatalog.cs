@@ -177,10 +177,10 @@ internal static class DosBatchScenarioCatalog {
         EchoDotSeparator("batch_echo_dot_text", "ECHO.HELLO > OUT.TXT", "HELLO \r\n"),
         EchoDotSeparator("batch_echo_dot_leading_spaces", "ECHO.  HELLO > OUT.TXT", "  HELLO \r\n"),
         IfUnquotedComparisonExecutesCommand(),
-        ForMalformedSyntaxSkips("batch_for_malformed_single_percent", "FOR %C IN (ONE TWO) ECHO %C"),
-        ForMalformedSyntaxSkips("batch_for_malformed_no_in", "FOR %C (ONE TWO) DO ECHO %C"),
-        ForMalformedSyntaxSkips("batch_for_malformed_no_variable", "FOR IN (ONE TWO) DO ECHO %C"),
-        ForMalformedSyntaxSkips("batch_for_malformed_no_parentheses", "FOR %C IN ONE TWO DO ECHO %C"),
+        ForMalformedSyntaxSkips("batch_for_malformed_single_percent", "FOR %C IN (ONE TWO) CALL WRITE.COM"),
+        ForMalformedSyntaxSkips("batch_for_malformed_no_in", "FOR %C (ONE TWO) DO CALL WRITE.COM"),
+        ForMalformedSyntaxSkips("batch_for_malformed_no_variable", "FOR IN (ONE TWO) DO CALL WRITE.COM"),
+        ForMalformedSyntaxSkips("batch_for_malformed_no_parentheses", "FOR %C IN ONE TWO DO CALL WRITE.COM"),
         ForMalformedSyntaxSkips("batch_for_malformed_no_body", "FOR %C IN (ONE TWO) DO"),
         SetWithoutArgumentsEnumeratesEnvironment(),
         ErrorlevelPropagatesFromCalledProgram(),
@@ -343,7 +343,8 @@ internal static class DosBatchScenarioCatalog {
             .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "TOOL.COM")
             .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "TOOL.EXE")
             .StartBatch("CALL TOOL\r\n",
-                result => Cell(result, 0).Should().Be('C')));
+                result => Cell(result, 0).Should().Be('C')))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallNoextFallsBackToCom);
     }
 
     /// <summary>The same script as <see cref="CallWithoutExtensionFallsBackToCom"/>, prepared without
@@ -403,7 +404,11 @@ internal static class DosBatchScenarioCatalog {
                 "imgmount a \"C:\\DISK.IMG\" -t floppy\r\n" +
                 "if errorlevel 1 echo FAIL > C:\\RESULT.TXT\r\n" +
                 "if not errorlevel 1 echo OK > C:\\RESULT.TXT\r\n",
-                _ => run.HostFileExists("SHADOW.TXT").Should().BeFalse()));
+                _ => {
+                run.HostFileExists("SHADOW.TXT").Should().BeFalse();
+                run.TextFile("RESULT.TXT").Should().Be("OK \r\n",
+                    "imgmount succeeds, and ECHO keeps the space before the redirection operator");
+            }));
     }
 
     /// <summary>GOTO jumps over the commands between it and the label.</summary>
@@ -694,8 +699,10 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario InvalidRedirectionDoesNotExecuteCommand() {
         return Scenario("batch_invalid_redirect_no_file", run => run
-            .StartBatch("ECHO BAD > > OUT.TXT\r\n",
-                _ => run.HostFileExists("OUT.TXT").Should().BeFalse()));
+            .StartBatch("ECHO BAD > > OUT.TXT\r\n", result => {
+                run.HostFileExists("OUT.TXT").Should().BeFalse();
+                AssertNoScreenRowStartsWith(result, "BAD");
+            }));
     }
 
     /// <summary>Every invalid redirection operator combination executes nothing and creates no file.</summary>
@@ -704,8 +711,18 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario InvalidRedirectionCreatesNoOutput(string identity, string batchLine) {
         return Scenario(identity, run => run
-            .StartBatch(batchLine + "\r\n",
-                _ => run.HostFileExists("OUT.TXT").Should().BeFalse()));
+            .StartBatch(batchLine + "\r\n", result => {
+                run.HostFileExists("OUT.TXT").Should().BeFalse();
+                AssertNoScreenRowStartsWith(result, "BAD");
+            }));
+    }
+
+    private static void AssertNoScreenRowStartsWith(AsmFixtureResult result, string text) {
+        string screen = ScreenText(result);
+        for (int row = 0; row + 80 <= screen.Length; row += 80) {
+            screen.Substring(row, 80).Trim().Should().NotStartWith(text,
+                "the invalid line must not execute its command");
+        }
     }
 
     /// <summary>With several output redirections on one line only the last target receives the output.</summary>
@@ -765,7 +782,7 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario EchoOffSetsStatusOutput() {
         return Scenario("batch_echo_off_status", run => run
             .StartBatch("ECHO OFF\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is OFF.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is off.\r\n")));
     }
 
     /// <summary>ECHO ON after ECHO OFF restores the state report.</summary>
@@ -773,7 +790,7 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario EchoOnAfterOffRestoresStatusOutput() {
         return Scenario("batch_echo_on_status", run => run
             .StartBatch("ECHO OFF\r\nECHO ON\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is ON.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is on.\r\n")));
     }
 
     /// <summary>With ECHO ON every batch line is echoed before it executes, so both the command line and
@@ -785,6 +802,8 @@ internal static class DosBatchScenarioCatalog {
                 ScreenText(result).Should().Contain("ECHO HELLO",
                     "the ECHO command line itself must be echoed before execution when ECHO is ON");
                 ScreenText(result).Should().Contain("HELLO", "the ECHO command output must be displayed");
+                AssertHasTrimmedRow(result, "HELLO",
+                    "the bare ECHO output row must appear, distinct from the echoed command line");
             }));
     }
 
@@ -896,7 +915,8 @@ internal static class DosBatchScenarioCatalog {
                     Cell(result, 0).Should().Be('A');
                     Cell(result, 1).Should().Be('B');
                     Cell(result, 2).Should().Be('C');
-                }));
+                }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallLabelNested);
     }
 
     /// <summary>A label subroutine may CALL another batch file.</summary>
@@ -921,7 +941,8 @@ internal static class DosBatchScenarioCatalog {
             .StartBatch("CALL :NOTFOUND\r\nCALL W1.COM\r\nCALL W2.COM\r\n", result => {
                 Cell(result, 0).Should().Be('A');
                 Cell(result, 1).Should().Be('B');
-            }));
+            }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.BatchCallLabelUnknown);
     }
 
     /// <summary>FOR expands a wildcard to the matching files and calls the route batch once per match.</summary>
@@ -1031,8 +1052,9 @@ internal static class DosBatchScenarioCatalog {
                 result => Cell(result, 0).Should().Be('Y')));
     }
 
-    /// <summary>CHOICE maps N to ERRORLEVEL 2, which satisfies both ERRORLEVEL tests, so the first
-    /// matching command wins.</summary>
+    /// <summary>CHOICE maps N to ERRORLEVEL 2. MS-DOS IF ERRORLEVEL n tests >= n, so ERRORLEVEL 2
+    /// satisfies both following tests and both commands run; the check proves the W2.COM one because
+    /// later console output overwrites the early screen cells SKIP.COM writes to.</summary>
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceDefaultYnSelectsN() {
         return Scenario("batch_choice_default_yn_selects_n", run => run
@@ -1097,7 +1119,12 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_choice_n_flag_prompt", run => run
             .Text("KEY.TXT", "Y")
             .StartBatch("CHOICE /N /C:YN Choose: > PROMPT.TXT < KEY.TXT\r\n",
-                _ => run.TextFile("PROMPT.TXT").Should().NotContain("[Y,N]?")));
+                _ => {
+                string prompt = run.TextFile("PROMPT.TXT");
+                prompt.Should().NotContain("[Y,N]?");
+                prompt.Should().Contain("Choose:",
+                    "CHOICE /N suppresses the key list but still prints the prompt text (MS-DOS 6.22)");
+            }));
     }
 
     /// <summary>CHOICE writes its prompt text and the default [Y,N]? suffix into the redirected output.</summary>
@@ -1106,7 +1133,8 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_choice_prompt_text", run => run
             .Text("KEY.TXT", "Y")
             .StartBatch("CHOICE /C:YN Continue > PROMPT.TXT < KEY.TXT\r\n",
-                _ => run.TextFile("PROMPT.TXT").Should().Contain("[Y,N]?")));
+                _ => run.TextFile("PROMPT.TXT").Should().Contain("Continue[Y,N]?",
+                    "CHOICE prints the key list directly after the prompt text, without a space (MS-DOS 6.22)")));
     }
 
     /// <summary>CHOICE /T with no keypress selects the timeout default.</summary>
@@ -1163,8 +1191,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario TypeMissingFileWritesError() {
         return Scenario("batch_type_missing_file_error", run => run
             .StartBatch("TYPE NOFILE.TXT > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Should().Contain("not found",
-                    "TYPE on a missing file should report an error")));
+                _ => run.TextFile("OUT.TXT").Should().Contain("File not found",
+                    "TYPE on a missing file should report the MS-DOS \"File not found\" error")));
     }
 
     /// <summary>CD without arguments prints the current directory.</summary>
@@ -1272,7 +1300,7 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_echo_off_inner_batch", run => run
             .Text("INNER.BAT", "@ECHO OFF\r\n")
             .StartBatch("ECHO ON\r\nCALL INNER.BAT\r\nECHO > STATUS.TXT\r\n",
-                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is ON.\r\n")));
+                _ => run.TextFile("STATUS.TXT").Should().Be("ECHO is on.\r\n")));
     }
 
     /// <summary>The batch reader stops at the 0x1A marker, so the lines after it never run.</summary>
@@ -1395,8 +1423,8 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_md_existing_error", run => run
             .Folder("EXISTING")
             .StartBatch("MD EXISTING > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty(
-                    "MD on an existing directory should report an error")));
+                _ => run.TextFile("OUT.TXT").Should().Contain("Unable to create directory",
+                    "MD on an existing directory should report the MS-DOS \"Unable to create directory\" error")));
     }
 
     /// <summary>RD removes an empty directory.</summary>
@@ -1422,8 +1450,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario RdOnMissingDirectoryPrintsError() {
         return Scenario("batch_rd_missing_error", run => run
             .StartBatch("RD NOPE > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty(
-                    "RD on a non-existent directory should report an error")));
+                _ => run.TextFile("OUT.TXT").Should().Contain("Invalid path, not directory, or directory not empty",
+                    "RD on a non-existent directory should report the MS-DOS \"Invalid path, not directory, or directory not empty\" error")));
     }
 
     /// <summary>DEL removes a single file.</summary>
@@ -1463,8 +1491,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario DelOnMissingFilePrintsError() {
         return Scenario("batch_del_missing_error", run => run
             .StartBatch("DEL NOFILE.TXT > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().Contain("not found",
-                    "DEL on a missing file should report file not found")));
+                _ => run.TextFile("OUT.TXT").Trim().Should().Contain("File not found",
+                    "DEL on a missing file should report the MS-DOS \"File not found\" error")));
     }
 
     /// <summary>DEL with a wildcard removes the matching files and leaves directories alone.</summary>
@@ -1522,8 +1550,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario RenOnMissingFilePrintsError() {
         return Scenario("batch_ren_missing_error", run => run
             .StartBatch("REN NOFILE.TXT NEW.TXT > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty(
-                    "REN on a missing file should report an error")));
+                _ => run.TextFile("OUT.TXT").Should().Contain("File not found",
+                    "REN on a missing file should report the MS-DOS \"File not found\" error")));
     }
 
     /// <summary>REN without a target name reports a syntax error.</summary>
@@ -1532,8 +1560,8 @@ internal static class DosBatchScenarioCatalog {
         return Scenario("batch_ren_missing_target", run => run
             .Text("FILE.TXT", "data")
             .StartBatch("REN FILE.TXT > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty(
-                    "REN with missing target should report a syntax error")));
+                _ => run.TextFile("OUT.TXT").Should().Contain("Required parameter missing",
+                    "REN with missing target should report the MS-DOS \"Required parameter missing\" error")));
     }
 
     /// <summary>REN with wildcard source and target renames every matching file.</summary>
@@ -1568,7 +1596,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario VolWithDriveArgument() {
         return Scenario("batch_vol_drive_argument", run => run
             .StartBatch("VOL C: > VOL.TXT\r\n",
-                _ => run.TextFile("VOL.TXT").Should().NotBeEmpty("VOL C: should produce output")));
+                _ => run.TextFile("VOL.TXT").ToUpperInvariant().Should().Contain("VOLUME IN DRIVE C IS SPICE86",
+                    "VOL C: should print the Spice86 drive label of drive C")));
     }
 
     /// <summary>FOR over a wildcard deletes every matching file and keeps the others.</summary>
@@ -1606,8 +1635,9 @@ internal static class DosBatchScenarioCatalog {
             .Text("HELLO.TXT", "Hello World")
             .StartBatch("DIR > OUT.TXT\r\n", _ => {
                 string output = run.TextFile("OUT.TXT").ToUpperInvariant();
-                output.Should().Contain("HELLO");
-                output.Should().Contain("TXT");
+                OutputLines(output).Should().Contain(
+                    line => line.Contains("HELLO") && line.Contains("TXT"),
+                    "MS-DOS DIR prints the name and the extension in separate columns of one line");
             }));
     }
 
@@ -1682,8 +1712,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario CopyOfMissingSource() {
         return Scenario("batch_copy_missing_source", run => run
             .StartBatch("COPY NOSRC.TXT DST.TXT > OUT.TXT\r\n", _ => {
-                run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty(
-                    "COPY of missing file should produce an error message");
+                run.TextFile("OUT.TXT").Should().Contain("File not found",
+                    "COPY of missing file should report the MS-DOS \"File not found\" error");
                 run.HostFileExists("DST.TXT").Should().BeFalse();
             }));
     }
@@ -1755,7 +1785,10 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario TimeHostSyncProducesTimeOutput() {
         return Scenario("batch_time_host_sync", run => run
             .StartBatch("TIME /H\r\nTIME /T > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")));
+                _ => run.TextFile("OUT.TXT").Trim().Should().MatchRegex(@"\d{2}:\d{2}:\d{2}")))
+            .WithTimingDependentState("TIME /H synchronizes from the host clock, so the printed time differs between runs")
+            .WithUncomparedParts(FinalStateParts.VideoMemory,
+                "the screen shows the time TIME /H read from the host clock");
     }
 
     /// <summary>VER prints a version string.</summary>
@@ -1763,7 +1796,12 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario VerPrintsVersion() {
         return Scenario("batch_ver_prints", run => run
             .StartBatch("VER > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty()));
+                _ => {
+                string version = run.TextFile("OUT.TXT").Trim();
+                version.Should().MatchRegex(@"\d+\.\d+", "VER should print a DOS version number");
+                version.Should().Contain("5.00",
+                    "INT 21h AH=30h reports version 5.0 (DosInt21Handler.ReadDosVersion), formatted as major.minor with two digits");
+            }));
     }
 
     /// <summary>VOL prints the volume label of the current drive.</summary>
@@ -1771,7 +1809,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario VolPrintsVolumeLabel() {
         return Scenario("batch_vol_prints_label", run => run
             .StartBatch("VOL > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").Trim().Should().NotBeEmpty()));
+                _ => run.TextFile("OUT.TXT").ToUpperInvariant().Should().Contain("VOLUME IN DRIVE C IS SPICE86",
+                    "VOL should print the Spice86 drive label of the current drive")));
     }
 
     /// <summary>VOL on a mounted CD-ROM drive prints the label of the mounted media.</summary>
@@ -1797,7 +1836,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario DateHelpSwitchPrintsUsage() {
         return Scenario("batch_date_help", run => run
             .StartBatch("DATE /? > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").ToUpperInvariant().Should().Contain("DATE")));
+                _ => run.TextFile("OUT.TXT").ToUpperInvariant().Should().Contain("DATE [",
+                    "the MS-DOS usage syntax line starts with the command and its bracketed parameters")));
     }
 
     /// <summary>TIME /? prints its usage text.</summary>
@@ -1805,7 +1845,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario TimeHelpSwitchPrintsUsage() {
         return Scenario("batch_time_help", run => run
             .StartBatch("TIME /? > OUT.TXT\r\n",
-                _ => run.TextFile("OUT.TXT").ToUpperInvariant().Should().Contain("TIME")));
+                _ => run.TextFile("OUT.TXT").ToUpperInvariant().Should().Contain("TIME [",
+                    "the MS-DOS usage syntax line starts with the command and its bracketed parameters")));
     }
 
     /// <summary>DIR /B /AD lists the directories only.</summary>
@@ -1943,8 +1984,12 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario MoveOnMissingSourceContinues() {
         return Scenario("batch_move_missing_source", run => run
             .StartBatch("MOVE NOPE.TXT DEST.TXT\r\nECHO OK > DONE.TXT\r\n",
-                _ => run.HostFileExists("DONE.TXT").Should().BeTrue(
-                    "batch should continue after MOVE fails on a missing file")));
+                result => {
+                run.HostFileExists("DONE.TXT").Should().BeTrue(
+                    "batch should continue after MOVE fails on a missing file");
+                ScreenText(result).Should().Contain("File not found",
+                    "MOVE of a missing file reports the MS-DOS 6.22 error");
+            }));
     }
 
     /// <summary>COPY with a plus sign concatenates two files.</summary>
@@ -2136,7 +2181,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ShellRunsEchoCommand() {
         return Scenario("shell_runs_echo_command", run => run
-            .StartBatch("Z:\\COMMAND.COM /C ECHO HELLO\r\n",
+            .StartBatch("@echo off\r\nZ:\\COMMAND.COM /C ECHO HELLO\r\n",
                 result => ScreenText(result).Should().Contain("HELLO")));
     }
 
@@ -2153,7 +2198,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ShellMissingCommandDoesNotBreakBatch() {
         return Scenario("shell_missing_command_continues", run => run
-            .StartBatch("Z:\\COMMAND.COM /C NOSUCH.COM\r\nECHO MARKER\r\n",
+            .StartBatch("@echo off\r\nZ:\\COMMAND.COM /C NOSUCH.COM\r\nECHO MARKER\r\n",
                 result => ScreenText(result).Should().Contain("MARKER")));
     }
 
@@ -2164,6 +2209,17 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario ResourceScenario(string identity, IReadOnlyList<string> dependencies,
         Func<DosProgramRun, AsmFixture> build) {
         return new AsmScenario(identity, scope => build(new DosProgramRun(scope, identity)), dependencies);
+    }
+
+    private static void AssertHasTrimmedRow(AsmFixtureResult result, string text, string because) {
+        string screen = ScreenText(result);
+        bool found = false;
+        for (int row = 0; row + 80 <= screen.Length; row += 80) {
+            if (screen.Substring(row, 80).Trim() == text) {
+                found = true;
+            }
+        }
+        found.Should().BeTrue(because);
     }
 
     private static string[] OutputLines(string output) {

@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
@@ -42,7 +43,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -63,7 +64,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -88,7 +89,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -103,7 +104,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -119,7 +120,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -135,7 +136,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -153,7 +154,7 @@ public sealed class IrJoinedMemoryTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int joined = IrJoinedMemory.Apply(method, ssa);
+        int joined = IrJoinedMemory.Apply(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         joined.Should().Be(0);
@@ -182,14 +183,14 @@ public sealed class IrJoinedMemoryTest {
         CfgInstruction entryInstruction = Instruction(0);
         IrBlock entry = new(0);
         IrBlock sequence = new(1);
-        entry.Terminator = new IrJump(entryInstruction, new IrEdge(sequence, false));
-        sequence.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"),
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(entryInstruction, new IrEdge(sequence, false)));
+        IrEditor.WithoutSsa.Append(sequence, IrStatement.Create(new InstructionStartNode("nop"),
             Instruction(1)));
         foreach ((IVisitableAstNode node, int i) in nodes.Select((n, i) => (n, i))) {
-            sequence.Statements.Add(IrStatement.Create(node, Instruction((ushort)(i + 2))));
+            IrEditor.WithoutSsa.Append(sequence, IrStatement.Create(node, Instruction((ushort)(i + 2))));
         }
-        sequence.Terminator = new IrExit(Instruction((ushort)(nodes.Length + 2)),
-            new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(sequence, new IrExit(Instruction((ushort)(nodes.Length + 2)),
+            new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = new("M", [entry, sequence],
             [new IrEntry(entryInstruction, entry)],
             new HashSet<ICfgNode> { entryInstruction },

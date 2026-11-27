@@ -33,6 +33,29 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--A20Gate")]
     public bool A20Gate { get; init; }
 
+    /// <summary>Comma list selecting what generated overrides contain: entries applied left to
+    /// right, <c>+name</c> enables and <c>-name</c> disables (no sign enables). The valid names are
+    /// the rows of <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.GeneratedCodeSelection"/>:
+    /// AsmComments, CheckBuild (a preset for the service-call notifications, branch probes and
+    /// split port accesses of a check build; later entries may override it), BranchProbes,
+    /// ServiceCallNotifications, DeviceOperations, AssumeUnknownMemoryIsRam,
+    /// AssumeAccessesStayInSegment, AssumeAbandonedStackSlotsUnobserved and
+    /// AssumeSavedSlotsWrittenOnlyByPops. An unknown name fails parsing and lists them. Every dump
+    /// writes <c>manifest.json</c> next to the sources, whatever the selection.</summary>
+    [CommandOption("--GeneratedCode <LIST>")]
+    public string? GeneratedCode { get; init; }
+
+    /// <summary>Validates the <c>--GeneratedCode</c> list: every entry must be a valid sign and a
+    /// known name.</summary>
+    public override Spectre.Console.ValidationResult Validate() {
+        try {
+            Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.GeneratedCodeSelection.Resolve(GeneratedCode);
+        } catch (FormatException exception) {
+            return Spectre.Console.ValidationResult.Error(exception.Message);
+        }
+        return Spectre.Console.ValidationResult.Success();
+    }
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>
@@ -140,18 +163,6 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--ClockJitterSeed <CLOCKJITTERSEED>")]
     public int? ClockJitterSeed { get; init; }
 
-    /// <summary>
-    /// Generates the C# override project as a check build: generated code made to be compared with the
-    /// emulated original, not to be shipped. A check build prints a <c>ServiceCalled</c> statement before
-    /// each direct call of a DOS or BIOS service implementation, so an
-    /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
-    /// call. It wraps every branch condition and switch value in a probe that reports to an
-    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/>, prints every port access
-    /// on its own instead of as device operations, and writes <c>manifest.json</c> next to the sources.
-    /// Off by default.
-    /// </summary>
-    [CommandOption("--GeneratedCodeCheckBuild")]
-    public bool GeneratedCodeCheckBuild { get; init; }
 
     /// <summary>
     /// Optional fixed start date/time for the emulated clock. Accepts any value parseable by

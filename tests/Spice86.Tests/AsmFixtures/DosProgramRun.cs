@@ -35,6 +35,7 @@ internal sealed class DosProgramRun {
     /// <returns>This run, for further preparation.</returns>
     public DosProgramRun Binary(string fileName, byte[] content) {
         File.WriteAllBytes(PathOf(fileName), content);
+        DosTestFiles.SetFixedTimes(PathOf(fileName));
         return this;
     }
 
@@ -44,6 +45,7 @@ internal sealed class DosProgramRun {
     /// <returns>This run, for further preparation.</returns>
     public DosProgramRun Text(string fileName, string content) {
         File.WriteAllText(PathOf(fileName), content);
+        DosTestFiles.SetFixedTimes(PathOf(fileName));
         return this;
     }
 
@@ -54,6 +56,7 @@ internal sealed class DosProgramRun {
     /// <returns>This run, for further preparation.</returns>
     public DosProgramRun BinaryIn(string relativeDirectory, string fileName, byte[] content) {
         File.WriteAllBytes(Path.Join(FolderPath(relativeDirectory), fileName), content);
+        DosTestFiles.SetFixedTimes(Path.Join(FolderPath(relativeDirectory), fileName));
         return this;
     }
 
@@ -64,6 +67,7 @@ internal sealed class DosProgramRun {
     /// <returns>This run, for further preparation.</returns>
     public DosProgramRun TextIn(string relativeDirectory, string fileName, string content) {
         File.WriteAllText(Path.Join(FolderPath(relativeDirectory), fileName), content);
+        DosTestFiles.SetFixedTimes(Path.Join(FolderPath(relativeDirectory), fileName));
         return this;
     }
 
@@ -72,6 +76,7 @@ internal sealed class DosProgramRun {
     /// <returns>This run, for further preparation.</returns>
     public DosProgramRun Folder(string relativeDirectory) {
         Directory.CreateDirectory(PathOf(relativeDirectory));
+        DosTestFiles.SetFixedDirectoryTimes(PathOf(relativeDirectory));
         return this;
     }
 
@@ -90,6 +95,7 @@ internal sealed class DosProgramRun {
     public DosProgramRun ResourceCopy(string resourceSubDirectory, string fileName, string targetFileName) {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", resourceSubDirectory, fileName);
         File.Copy(source, PathOf(targetFileName), overwrite: true);
+        DosTestFiles.SetFixedTimes(PathOf(targetFileName));
         return this;
     }
 

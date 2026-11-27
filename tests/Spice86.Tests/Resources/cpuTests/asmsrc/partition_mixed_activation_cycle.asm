@@ -8,6 +8,10 @@ start:
     call partition_2
     mov cx, 2
     call partition_1
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:608h], cx
     hlt
 
 partition_1:

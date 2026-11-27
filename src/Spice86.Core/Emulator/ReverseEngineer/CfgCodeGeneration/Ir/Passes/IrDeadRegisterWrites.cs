@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using System.Linq;
@@ -19,31 +20,106 @@ using System.Linq;
 /// register version it defines has no live use. A use that only carries the bytes a later partial
 /// definition overwrites anyway does not keep the write alive. Entry statements and statements with
 /// unknown-like effects are never touched.
+/// A pop into a dead general register keeps its stack read, its access check and its SP step: only
+/// the dead register write goes, replaced by the bare pop statement.
 /// </summary>
 internal static class IrDeadRegisterWrites {
     /// <summary>Removes the dead plain register writes of <paramref name="method"/>.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
+    public static void Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         Dictionary<ICfgNode, List<IrOrigins.Located>> byOrigin = IrOrigins.ByOrigin(method);
         HashSet<IrBlock> observed = ObservingBlocks(method);
-        List<(IrBlock Block, int Index)> removals = [];
+        HashSet<IrStatement> frameStatements = FrameStatements(method, ssa);
+        List<(IrBlock Block, int Index, IrStatement? Replacement)> edits = [];
         foreach (IrBlock block in method.Blocks) {
             if (!observed.Contains(block)) {
                 continue;
             }
             for (int index = 0; index < block.Statements.Count; index++) {
                 IrStatement statement = block.Statements[index];
+                if (frameStatements.Contains(statement)) {
+                    continue;
+                }
                 if (Drops(statement, entryNodes, ssa)
                     && OriginIsJustTheWrite(byOrigin[statement.Origin], statement)) {
-                    removals.Add((block, index));
+                    edits.Add((block, index, null));
+                    continue;
+                }
+                if (DeadPopTarget(statement, entryNodes, ssa) is { } barePop) {
+                    edits.Add((block, index,
+                        IrStatement.Create(barePop, statement.Origin)));
                 }
             }
         }
-        foreach ((IrBlock block, int index) in removals.OrderByDescending(removal => removal.Index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+        foreach ((IrBlock block, int index, IrStatement? replacement)
+            in edits.OrderByDescending(edit => edit.Index)) {
+            if (replacement is null) {
+                editor.Remove(block, index);
+                continue;
+            }
+            editor.Replace(block, index, replacement);
         }
     }
+
+    /// <summary>The statements the frame recognition claims: the <c>mov bp,sp</c> of each
+    /// recognized frame and the <c>pop bp</c> of each pop epilogue. Their register writes stay so
+    /// <see cref="Memory.IrFrames"/> sees the same prologue and epilogue at emission; without them
+    /// no frame is recognized, the frame's arguments stop printing and the epilogue prints a bare
+    /// pop or a release.</summary>
+    private static HashSet<IrStatement> FrameStatements(IrMethod method, IrSsa ssa) {
+        HashSet<IrStatement> statements = [];
+        if (!method.Blocks.SelectMany(block => block.Statements).Any(IrFrames.IsPushBp)) {
+            return statements;
+        }
+        IrMemoryAliasAnalysis alias = new(method, ssa);
+        IrFrames frames = IrFrames.Compute(method, ssa,
+            IrStackSlots.Compute(method, alias, _ => null), _ => CpuValues.Registers);
+        foreach (IrEntry entry in method.Entries) {
+            if (frames.FrameAt(entry) is not { } frame) {
+                continue;
+            }
+            statements.Add(frame.SetBp);
+            statements.UnionWith(frame.Epilogues.Select(epilogue => epilogue.Restore)
+                .OfType<IrStatement>());
+        }
+        return statements;
+    }
+
+    /// <summary>The bare pop a dead register pop becomes: a statement
+    /// <c>R = Stack.Pop16()</c> / <c>Pop32()</c> whose target is a general register other than SP/ESP
+    /// and whose every defined version of that register has no live use, or <see langword="null"/>
+    /// when the pop's target is still observed. The stack read, the access check and the SP step
+    /// stay; only the dead register write goes.</summary>
+    private static StackCallNode? DeadPopTarget(IrStatement statement, HashSet<ICfgNode> entryNodes,
+        IrSsa ssa) {
+        if (entryNodes.Contains(statement.Origin)
+            || statement.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN,
+                Left: RegisterNode register,
+                Right: StackCallValueNode { Operation: StackOperation.Pop } pop }) {
+            return null;
+        }
+        if (IsStackPointerOrNotGeneral(register)) {
+            return null;
+        }
+        CpuValues target = IrValueSets.Of(register);
+        foreach ((IrSsaValue value, int version) in ssa.Definitions(statement)) {
+            if ((IrSsaValues.MaskOf(value) & target) == CpuValues.None) {
+                continue;
+            }
+            if (value > IrSsaValue.Gs || DefinedVersionsAreUsed(ssa, statement, value, version)) {
+                return null;
+            }
+        }
+        return new StackCallNode(StackOperation.Pop, pop.Width);
+    }
+
+    private static bool IsStackPointerOrNotGeneral(RegisterNode register) =>
+        register is SegmentRegisterNode
+        // UINT8 index 4 is AH, not SP; only word/dword index-4 stores are stack writes.
+        || (register.DataType != DataType.UINT8
+            && register.RegisterIndex == (int)RegisterIndex.SpIndex);
 
     /// <summary>The blocks that can reach an exit observing machine state or a
     /// statement or terminator that may fault. A fault observes the CPU state even

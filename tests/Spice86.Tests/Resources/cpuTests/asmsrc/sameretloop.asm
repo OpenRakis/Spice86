@@ -30,6 +30,9 @@ loop_body:
     ret                 ; pops its own entry address: CS:IP does not move
 
 loop_done:
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:612h], counter
     hlt
 
 counter db 0

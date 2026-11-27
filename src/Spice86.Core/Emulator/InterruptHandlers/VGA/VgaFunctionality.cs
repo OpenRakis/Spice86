@@ -46,6 +46,9 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
+    public IConsoleOutputObserver OutputObserver { get; set; } = new NullConsoleOutputObserver();
+
+    /// <inheritdoc />
     public void WriteString(string text) {
         CursorPosition cursorPosition = GetCursorPosition(_biosDataArea.CurrentVideoPage);
         foreach (char character in text) {
@@ -140,6 +143,7 @@ public class VgaFunctionality : IVgaFunctionality {
     public void WriteCharacterAtCursor(CharacterPlusAttribute character, byte page, int count = 1) {
         CursorPosition cursorPosition = GetCursorPosition(page);
         while (count-- > 0) {
+            OutputObserver.OnCharacter(character.Character);
             cursorPosition = WriteCharacter(cursorPosition, character);
         }
     }
@@ -641,6 +645,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public CursorPosition WriteTeletype(CursorPosition cursorPosition, CharacterPlusAttribute characterPlusAttribute) {
+        OutputObserver.OnCharacter(characterPlusAttribute.Character);
         switch (characterPlusAttribute.Character) {
             case (char)7:
                 //FIXME should beep

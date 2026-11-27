@@ -16,7 +16,19 @@ start:
     xor bx, bx
     xor si, si
 
-; AL-1: a word store at [0FFFFh] also touches offset 0, so the read must not move past it
+; A wrapped-offset trap: DS = 2000h and ES = 1FFFh, so es:[10h] is linear 20000h = DS:0.
+; The word store at [0FFFFh] puts its high byte 22h there through the offset
+; wrap, so the read sees 22h, not the 11h the es store left - a forwarding or
+; merge that treats the store's range as contiguous misses the wrapped byte.
+; Runs first so the wrap store below leaves [0] at its expected 12h.
+    mov ax, 1FFFh
+    mov es, ax
+    mov byte [es:10h], 11h
+    mov word [0FFFFh], 2233h
+    mov cl, [es:10h]
+    mov [bx+56h], cl
+
+; A word store at [0FFFFh] also touches offset 0 on the 16-bit ring, so the read must not move past it
 ; (each trap read is the last write of its register: a later write of the register would read
 ; the version the merge wants to move and refuse it)
     mov byte [0], 55h
@@ -26,7 +38,7 @@ start:
     shr di, 1
     mov [bx+40h], di
 
-; AL-2: a store overlapping the read range between the read and its reader blocks the merge
+; a store overlapping the read range between the read and its reader blocks the merge
     mov byte [si+2], 55h
     mov byte [si+3], 0
     mov bp, [si+2]
@@ -34,7 +46,7 @@ start:
     shr bp, 1
     mov [bx+42h], bp
 
-; AL-3 (A20 wrap): ES is set to 0, then to 0FFFFh, and the A20 gate is closed: the old es:[8000h]
+; A20 wrap: ES is set to 0, then to 0FFFFh, and the A20 gate is closed: the old es:[8000h]
 ; and the new es:[8010h] are the same linear bytes once the address wraps at 1MB
     xor ax, ax
     mov es, ax
@@ -46,7 +58,7 @@ start:
     mov word [es:8010h], 1234h
     mov [bx+54h], si
 
-; AL-4: a device read moved past a device store - planar memory at A000h: a read loads the 4
+; a device read moved past a device store - planar memory at A000h: a read loads the 4
 ; latches, a write-mode-1 write copies them back out. The read of es:[0] loads the latches with the
 ; plane bytes written below; the mode-1 store to es:[10h] copies them there. Moving the read past
 ; the store leaves stale latches for the copy, and the read-back of es:[10h] shows it.
@@ -112,7 +124,7 @@ start:
     mov dx, [8]
     mov [bx+4Ch], dx
 
-; AL-5: rep movsb is a full memory boundary for forwarding (it rewrites [6])
+; rep movsb is a full memory boundary for forwarding (it rewrites [6])
     mov word [6], 1111h
     mov word [70h], 2222h
     mov ax, ds
@@ -124,7 +136,7 @@ start:
     mov cx, [6]
     mov [bx+4Ah], cx
 
-; AL-3: DS = 2000h and ES = 2001h: [10h] and es:[0] are the same linear bytes
+; DS = 2000h and ES = 2001h: [10h] and es:[0] are the same linear bytes
     mov byte [10h], 55h
     mov byte [11h], 0
     mov ax, 2001h
@@ -136,6 +148,8 @@ start:
 ; kill the shift's flag results so the shr expands to a plain >> (a call reader cannot merge)
     xor ax, ax
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
     rb 65520-$

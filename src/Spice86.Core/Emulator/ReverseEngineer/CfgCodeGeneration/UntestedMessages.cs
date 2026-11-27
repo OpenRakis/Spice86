@@ -18,6 +18,9 @@ internal static class UntestedMessages {
     /// <summary>A direct call whose target was never observed.</summary>
     public static FailAsUntestedNode Call(SegmentedAddress at) => Plain($"Untested call at {at}");
 
+    /// <summary>An <c>int</c> whose delivery was never observed.</summary>
+    public static FailAsUntestedNode Interrupt(SegmentedAddress at) => Plain($"Untested interrupt at {at}");
+
     /// <summary>A conditional fallthrough arm that was never observed.</summary>
     public static FailAsUntestedNode ConditionalFallthrough(SegmentedAddress at) => Plain($"Untested fallthrough at {at}");
 

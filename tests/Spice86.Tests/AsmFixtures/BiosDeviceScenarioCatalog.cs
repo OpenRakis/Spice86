@@ -185,7 +185,9 @@ internal static class BiosDeviceScenarioCatalog {
             int readCount = ReportedWord(testHandler);
             readCount.Should().BeGreaterThanOrEqualTo(1,
                 "Real hardware reports 2 status reads before Timer 1 overflow");
-        });
+        }).WithTimingDependentState("the OPL timer poll count depends on the host-simulated hardware delay, which is timing-dependent")
+            .WithUncomparedParts(FinalStateParts.Console | FinalStateParts.VideoMemory,
+                "the console and the screen print a poll count that depends on how many cycles pass per loop iteration, which differs between the two runs");
     }
 
     /// <summary>The Sound Blaster DSP reset-delay program: the reset must answer 0xAA after the 20us
@@ -201,7 +203,9 @@ internal static class BiosDeviceScenarioCatalog {
                 "should report low and high byte of iteration count");
             ReportedWord(testHandler).Should().BeGreaterThan(0,
                 "reset delay should require multiple poll iterations (20us hardware delay)");
-        });
+        }).WithTimingDependentState("the DSP reset poll count depends on the host-simulated 20us hardware delay, which is timing-dependent")
+            .WithUncomparedParts(FinalStateParts.Console | FinalStateParts.VideoMemory,
+                "the console and the screen print a poll count that depends on how many cycles pass per loop iteration, which differs between the two runs");
     }
 
     /// <summary>The MPU-401 handshake program: every byte written to the command port 0x331 (reset,
@@ -331,6 +335,7 @@ internal static class BiosDeviceScenarioCatalog {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", resourceSubDirectory, fileName);
         string target = Path.Join(targetDirectory, fileName);
         File.Copy(source, target, overwrite: true);
+        DosTestFiles.SetFixedTimes(target);
         return target;
     }
 }

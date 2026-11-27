@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -39,6 +40,12 @@ using System.Text;
 /// </para>
 /// </summary>
 public class Stack {
+    /// <summary>Size in bytes of the frame a real-mode interrupt pushes (FLAGS, CS, IP).</summary>
+    public const int InterruptFrameSize = 6;
+
+    /// <summary>Byte offset of the pushed FLAGS word inside an interrupt frame, from the stack top.</summary>
+    public const int InterruptFrameFlagsOffset = 4;
+
     private readonly IMemory _memory;
 
     private readonly State _state;
@@ -286,7 +293,7 @@ public class Stack {
         // ESP: preserve high word from the slot, low word is the new SP
         _state.ESP = (espSlot & 0xFFFF0000u) | offset;
     }
-    
+
     /// <summary>
     /// Peeks a SegmentedAddress value from the stack
     /// </summary>
@@ -376,6 +383,37 @@ public class Stack {
     }
 
     /// <summary>
+    /// Pushes a 16-bit interrupt frame (FLAGS, then CS, then IP) like a real-mode <c>int</c>.
+    /// Does not change the interrupt flag: the caller clears it as interrupt entry requires.
+    /// </summary>
+    /// <param name="returnAddress">The CS:IP the frame returns to.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void PushInterruptFrame(SegmentedAddress returnAddress) {
+        Push16(_state.Flags.FlagRegister16);
+        Push16(returnAddress.Segment);
+        Push16(returnAddress.Offset);
+    }
+
+    /// <summary>
+    /// Pops a 16-bit interrupt frame (IP, CS, then FLAGS) like <c>iret</c>. The caller assigns
+    /// the returned flags word to its flag register.
+    /// </summary>
+    /// <returns>The return address and the FLAGS word the frame held.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public (SegmentedAddress ReturnAddress, ushort Flags) PopInterruptFrame() {
+        ushort ip = Pop16();
+        ushort cs = Pop16();
+        ushort flags = Pop16();
+        return (new SegmentedAddress(cs, ip), flags);
+    }
+
+    /// <summary>Reads the CS:IP return address of the interrupt frame on top of the stack.</summary>
+    public SegmentedAddress PeekInterruptFrameReturnAddress() => new(Peek16(2), Peek16(0));
+
+    /// <summary>Reads the pushed FLAGS word of the interrupt frame on top of the stack.</summary>
+    public ushort PeekInterruptFrameFlags() => Peek16(InterruptFrameFlagsOffset);
+
+    /// <summary>
     /// Sets the flag on the interrupt stack, which is at SS:SP+4 <br/>
     /// The interrupt stack is a special stack used to store the state of the processor when an interrupt occurs.<br/>
     /// In Real Mode, the CPU pushes FLAGS, CS, and IP onto the interrupt stack.<br/>
@@ -383,15 +421,15 @@ public class Stack {
     /// <param name="flagMask">The flag mask used to modify the uint value in memory</param>
     /// <param name="flagValue">A boolean that determines whether the bits specified by the flagMask should be set (if true) or cleared (if false).</param>
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
-        int value = Peek16(4);
-        
+        int value = Peek16(InterruptFrameFlagsOffset);
+
         if (flagValue) {
             value |= flagMask;
         } else {
             value &= ~flagMask;
         }
 
-        Poke16(4, (ushort)value);
+        Poke16(InterruptFrameFlagsOffset, (ushort)value);
     }
 
     /// <summary>

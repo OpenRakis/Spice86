@@ -1,7 +1,10 @@
 namespace Spice86.Tests.Dos;
 
+using FluentAssertions;
+
 using Spice86.Core.CLI;
 using Spice86.Tests.AsmFixtures;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -24,5 +27,36 @@ public class DosInt21IntegrationTests {
 
         // Act & Assert: the scenario's own oracle runs inside the shared runner
         AsmFixtureRunner.RunScenario(scenario, JitMode.InterpretedOnly);
+    }
+
+    /// <summary>
+    /// AH=50h/55h setting the current PSP is a recorded run fact: the CFG reload dump carries it
+    /// and the reloading run merges it before the program runs again.
+    /// </summary>
+    [Fact]
+    public void ProgramSetCurrentPspSurvivesCfgReload() {
+        // psp_switch_frame_reuse calls AH=55h and AH=50h during its run.
+        using TempFile recordedDataDirectory = new(nameof(ProgramSetCurrentPspSurvivesCfgReload));
+        AsmScenario scenario = AsmScenarioCatalog.DosScenario("psp_switch_frame_reuse")
+            .WithOracle(fixture => new AsmFixture(
+                fixture.Settings with { RecordedDataDirectory = recordedDataDirectory.Path },
+                fixture.ExpectedMemory, fixture.AssertResult));
+        using AsmRunScope scope = scenario.Prepare();
+        AsmRunSettings settings = scope.Fixture.Settings;
+
+        using (AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly)) {
+            run.DependencyInjection.GeneratorInputsCollector
+                .Capture(run.Machine.CfgCpu.ExecutionContextManager).HardwareInterrupts.ProgramSetCurrentPsp
+                .Should().BeTrue("the program called AH=50h/55h during the first run");
+        }
+
+        // AsmFixtureRun builds the emulator without running the program: the reload merged the
+        // dump's fact before the program runs again.
+        using AsmFixtureRun reloaded = new(
+            (settings with { ReloadCfgGraph = true }).CreateEmulatedCreator(JitMode.InterpretedOnly),
+            new AsmRunScope());
+        reloaded.DependencyInjection.GeneratorInputsCollector
+            .Capture(reloaded.Machine.CfgCpu.ExecutionContextManager).HardwareInterrupts.ProgramSetCurrentPsp
+            .Should().BeTrue("the reloading run merged the programSetCurrentPsp fact the dump recorded");
     }
 }

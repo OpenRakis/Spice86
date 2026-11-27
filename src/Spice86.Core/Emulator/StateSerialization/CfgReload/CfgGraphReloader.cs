@@ -6,9 +6,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using System.Globalization;
 using System.Linq;
 
 /// <summary>
@@ -35,14 +37,17 @@ internal sealed class CfgGraphReloader {
     private readonly SequentialIdAllocator _idAllocator;
     private readonly CfgNodeExecutionCompiler _executionCompiler;
     private readonly CfgNodeIndex _nodeIndex;
+    private readonly RecordedRunFacts _recordedRunFacts;
 
-    public CfgGraphReloader(CfgCpu cfgCpu, State state, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
+    public CfgGraphReloader(CfgCpu cfgCpu, State state, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
+        RecordedRunFacts recordedRunFacts) {
         _state = state;
         _executionCompiler = executionCompiler;
         _executionContextManager = cfgCpu.ExecutionContextManager;
         _previousInstructions = cfgCpu.CfgNodeFeeder.InstructionsFeeder.PreviousInstructions;
         _nodeIndex = cfgCpu.CfgNodeFeeder.NodeIndex;
         _idAllocator = idAllocator;
+        _recordedRunFacts = recordedRunFacts;
     }
 
     /// <summary>
@@ -65,10 +70,8 @@ internal sealed class CfgGraphReloader {
         //    eviction. This must run BEFORE blocks are built so each block's non-live counter
         //    initializes correctly (CfgBlock reads IsLive on Append). Selectors are always live and
         //    carry no breakpoints, so they are left as-is. Speculative nodes are already non-live.
-        foreach (ICfgNode node in nodesById.Values) {
-            if (node is CfgInstruction instruction) {
-                instruction.SetLive(false);
-            }
+        foreach (CfgInstruction instruction in nodesById.Values.OfType<CfgInstruction>()) {
+            instruction.SetLive(false);
         }
 
         // 3. Register all reconstructed instructions in the CfgNodeIndex (the index spans every node,
@@ -77,12 +80,10 @@ internal sealed class CfgGraphReloader {
         //    in PreviousInstructions (NOT CurrentInstructions) so resumed execution reuses reloaded
         //    nodes via memory matching instead of parsing anew. Speculative nodes stay out of both
         //    memory caches per the speculative invariant.
-        foreach (ICfgNode node in nodesById.Values) {
-            if (node is CfgInstruction instruction) {
-                _nodeIndex.Insert(instruction);
-                if (!instruction.IsSpeculative) {
-                    _previousInstructions.AddInstructionInPrevious(instruction);
-                }
+        foreach (CfgInstruction instruction in nodesById.Values.OfType<CfgInstruction>()) {
+            _nodeIndex.Insert(instruction);
+            if (!instruction.IsSpeculative) {
+                _previousInstructions.AddInstructionInPrevious(instruction);
             }
         }
 
@@ -101,7 +102,13 @@ internal sealed class CfgGraphReloader {
         // 8. Restore the poison set (addresses proven byte-unstable by prior runs).
         RestorePoisonSet(dump);
 
-        // 9. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
+        // 9. Restore the hardware interrupt deliveries recorded before the dump (absent in older dumps).
+        RestoreHardwareInterruptDeliveries(dump);
+
+        // 10. Merge the run facts the dump recorded into this run's record (absent in older dumps).
+        MergeRecordedRunFacts(dump);
+
+        // 11. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
     }
 
     private void RestoreEdges(CfgReloadDump dump, Dictionary<int, ICfgNode> nodesById) {
@@ -189,6 +196,34 @@ internal sealed class CfgGraphReloader {
         foreach (string addressStr in dump.PoisonedAddresses) {
             SegmentedAddress address = ReloadAddressParser.ParseOrThrow(addressStr, "poisoned address");
             _nodeIndex.PoisonSet.Add(address);
+        }
+    }
+
+    private void RestoreHardwareInterruptDeliveries(CfgReloadDump dump) {
+        if (dump.HardwareInterruptDeliveries is null) {
+            return;
+        }
+        foreach (string delivery in dump.HardwareInterruptDeliveries) {
+            string[] split = delivery.Split('=', 2);
+            if (split.Length != 2
+                || !byte.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte vector)) {
+                throw new InvalidOperationException($"Could not parse reload hardware interrupt delivery '{delivery}'");
+            }
+            SegmentedAddress target = ReloadAddressParser.ParseOrThrow(split[1], "hardware interrupt delivery target");
+            _executionContextManager.HardwareInterruptDeliveries.Add((vector, target));
+        }
+    }
+
+    private void MergeRecordedRunFacts(CfgReloadDump dump) {
+        foreach (string targetStr in dump.TerminateResumeTargets ?? []) {
+            _recordedRunFacts.RecordTerminateResume(
+                ReloadAddressParser.ParseOrThrow(targetStr, "terminate resume target"));
+        }
+        if (dump.ProgramSetCurrentPsp) {
+            _recordedRunFacts.RecordProgramSetCurrentPsp();
+        }
+        if (dump.MouseUserSubroutineRegistered) {
+            _recordedRunFacts.RecordMouseUserSubroutine();
         }
     }
 }

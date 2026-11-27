@@ -32,6 +32,7 @@ internal sealed class IrSegmentValues {
     private readonly IReadOnlySet<int> _callDefinedVersions;
     private readonly ushort? _codeSegment;
     private readonly HashSet<IrBlock> _entryBlocks;
+    private readonly IReadOnlyDictionary<IrTerminator, IrBlock> _blockByTerminator;
     private readonly Dictionary<int, (SegmentValue Value, bool FactDependent)> _values = new();
     private bool _resolvingDependent;
 
@@ -48,6 +49,11 @@ internal sealed class IrSegmentValues {
         _callDefinedVersions = callDefinedVersions;
         _codeSegment = UniformEntrySegment(method);
         _entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
+        // Two blocks can hold distinct IrExit instances with equal content (e.g. a branch whose arms
+        // tail-call the same method): key by reference so each terminator finds its own block.
+        _blockByTerminator = method.Blocks.Where(block => block.HasTerminator)
+            .ToDictionary(block => block.Terminator,
+                (IEqualityComparer<IrTerminator>)ReferenceEqualityComparer.Instance);
     }
 
     /// <summary>Replaces the cross-method facts and drops only the resolutions that could have read
@@ -111,8 +117,13 @@ internal sealed class IrSegmentValues {
 
     /// <summary>What the register <paramref name="value"/> holds at <paramref name="terminator"/>,
     /// for the version the terminator reads.</summary>
+    /// <summary>What <paramref name="value"/> holds just before <paramref name="terminator"/>: the
+    /// live version, whether or not the transfer itself reads it.</summary>
     internal SegmentValue ValueAt(IrTerminator terminator, IrSsaValue value) {
-        int version = _ssa.VersionUsed(terminator, value);
+        if (!_blockByTerminator.TryGetValue(terminator, out IrBlock? block)) {
+            return SegmentValue.Unknown.Instance;
+        }
+        int version = _ssa.VersionBefore(block, block.Statements.Count, value);
         return version < 0 ? SegmentValue.Unknown.Instance : Resolve(version);
     }
 
@@ -261,7 +272,7 @@ internal sealed class IrSegmentValues {
     private SegmentValue StackValue(IrStatement statement, HashSet<int> visiting) {
         SegmentValue? value = null;
         foreach (IrStackSlotRead read in _slots.ReadsOf(statement)) {
-            if (!read.Complete) {
+            if (!read.Complete || !read.ProvedRam) {
                 return SegmentValue.Unknown.Instance;
             }
             foreach (SegmentValue pushed in read.Definitions

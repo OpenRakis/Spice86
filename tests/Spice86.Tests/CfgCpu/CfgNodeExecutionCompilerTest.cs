@@ -32,7 +32,7 @@ public class CfgNodeExecutionCompilerTest {
     private static CfgNodeExecutionCompiler CreateCompiler() {
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.GeneratorIr);
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public class CfgNodeExecutionCompilerTest {
         // Inline monitor creation so we can observe TotalSwapped for reliable synchronisation.
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
+        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.Rewriter, TestJitSettings.GeneratorIr);
 
         // Act: first Compile() enqueues background task for ast1.
         compiler.Compile(node);

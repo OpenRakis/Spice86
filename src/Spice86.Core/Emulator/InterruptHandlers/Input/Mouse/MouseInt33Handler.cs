@@ -19,7 +19,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Returns the pointer position in CX/DX and the button status in BX.
     /// </summary>
-    public (ushort cx, ushort dx, ushort bx) GetMousePositionAndStatus() {
+    public (ushort x, ushort y, ushort buttonMask) GetMousePositionAndStatus() {
         MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
@@ -119,7 +119,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Returns the release counter of button <paramref name="buttonQuery"/> in BX,
     /// the button flags in AX and the last release position in CX/DX.</summary>
-    public (ushort ax, ushort bx, ushort cx, ushort dx) QueryButtonReleasedCounter(ushort buttonQuery) {
+    public (ushort buttonMask, ushort count, ushort x, ushort y) QueryButtonReleasedCounter(ushort buttonQuery) {
         if (!TryGetMouseButtonIndex(buttonQuery, out MouseButton button)) {
             return (0, 0, 0, 0);
         }
@@ -132,7 +132,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Resets the mouse driver; returns the installed flag in AX and the button
     /// count in BX.</summary>
-    public (ushort ax, ushort bx) MouseInstalledFlag() {
+    public (ushort installed, ushort buttonCount) MouseInstalledFlag() {
         ushort buttonCount = (ushort)_mouseDriver.ButtonCount;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, {ButtonCount} buttons",
@@ -247,7 +247,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Returns the press counter of button <paramref name="buttonQuery"/> in BX,
     /// the button flags in AX and the last press position in CX/DX.</summary>
-    public (ushort ax, ushort bx, ushort cx, ushort dx) QueryButtonPressedCounter(ushort buttonQuery) {
+    public (ushort buttonMask, ushort count, ushort x, ushort y) QueryButtonPressedCounter(ushort buttonQuery) {
         if (!TryGetMouseButtonIndex(buttonQuery, out MouseButton button)) {
             return (0, 0, 0, 0);
         }
@@ -526,7 +526,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Returns the mickeys-per-pixel ratios in BX/CX and the double-speed
     /// threshold in DX.</summary>
-    public (ushort bx, ushort cx, ushort dx) GetMouseSensitivity() {
+    public (ushort horizontalSensitivity, ushort verticalSensitivity, ushort threshold) GetMouseSensitivity() {
         int horizontal = _mouseDriver.HorizontalMickeysPerPixel;
         int vertical = _mouseDriver.VerticalMickeysPerPixel;
         int threshold = _mouseDriver.DoubleSpeedThreshold;
@@ -563,7 +563,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <paramref name="segment"/>:<paramref name="offset"/> for
     /// <paramref name="eventMask"/>; returns the previous mask in CX and address in
     /// ES:DX.</summary>
-    public (ushort cx, ushort dx, ushort es) SwapMouseUserDefinedSubroutine(
+    public (ushort previousTriggerMask, ushort previousOffset, ushort previousSegment) SwapMouseUserDefinedSubroutine(
         ushort eventMask, ushort segment, ushort offset) {
         MouseUserCallback newCallback = new((MouseEventMask)eventMask, segment, offset);
         MouseUserCallback oldCallback = _mouseDriver.GetRegisteredCallback();
@@ -634,7 +634,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <summary>Returns the driver version in BX and the mouse type/IRQ in CX; AX is
     /// 0xFFFF with BX/CX preserved when no mouse is installed, preserved with BX=0x805
     /// and the type byte in CH otherwise.</summary>
-    public (ushort? ax, ushort? cx, ushort? bx) ReadSoftwareVersionAndMouseType() {
+    public (ushort? status, ushort? typeAndIrq, ushort? version) ReadSoftwareVersionAndMouseType() {
         ushort? ax;
         ushort? cx;
         ushort? bx;
@@ -697,7 +697,7 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <summary>Software-resets the mouse driver; returns the installed flag in AX and the
     /// button count in BX.</summary>
-    public (ushort ax, ushort bx) Reset() {
+    public (ushort status, ushort buttonCount) Reset() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
         }

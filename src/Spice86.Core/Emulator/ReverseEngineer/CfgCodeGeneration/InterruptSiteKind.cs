@@ -37,7 +37,8 @@ internal enum InterruptSiteKind {
     /// code (or the setup is unknown).</summary>
     ProgramHandler,
 
-    /// <summary>The vector is not a constant or the <c>int</c> has no observed targets.</summary>
+    /// <summary>The vector is not a constant at a site that has observed targets (a site with no
+    /// observed target fails as untested instead).</summary>
     NotObserved,
 
     /// <summary>The call returns to an address that is not its expected return; it keeps the

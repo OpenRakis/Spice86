@@ -12,6 +12,9 @@ using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
 
 /// <summary>
 /// Refines assembled partition assignment into simpler single-entry synthetic regions when dominance permits it.
+/// When one entry reaches another, the internal graph is first cut at the edges into a different entry
+/// block so each entry dominates its own region, and the split is kept only when the graph of the
+/// replacement partitions is acyclic.
 /// </summary>
 internal sealed class CfgPartitionNormalizer {
     public CfgPartitionAssignment Normalize(CfgPartitionAssignment assignment, CfgPartitionEdgeIndex edgeIndex, SequentialIdAllocator idAllocator) {
@@ -41,14 +44,16 @@ internal sealed class CfgPartitionNormalizer {
 
     private List<CfgPartitionDraft> NormalizePartition(CfgPartitionDraft partition, CfgPartitionEdgeIndex edgeIndex, SequentialIdAllocator idAllocator) {
         List<CfgBlock> entryBlocks = GetEntryBlocks(partition);
-        // If one entry block can reach another via ownership-preserving edges, their relative
-        // ordering is load-bearing and splitting would break the activation flow, bail out.
-        if (HasEntryToEntryTransfer(entryBlocks, edgeIndex)) {
-            return [];
-        }
+        // When one entry reaches another via ownership-preserving edges, the internal graph is cut
+        // at the edges into a different entry block (self-loops on an entry stay) so each entry
+        // dominates its own region; the cut edges become cross-partition flows through the edge
+        // annotator. The split is kept only when the graph of the replacement partitions is
+        // acyclic - a cycle between split methods could only run through the cyclic-jump
+        // dispatcher or C# recursion - otherwise the partition keeps its switch.
+        bool cutEntryEdges = HasEntryToEntryTransfer(entryBlocks, edgeIndex);
 
         // Build a dominator tree restricted to this partition's internal edges.
-        Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = BuildInternalSuccessors(partition.Blocks, edgeIndex);
+        Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = BuildInternalSuccessors(partition.Blocks, edgeIndex, cutEntryEdges ? entryBlocks.ToHashSet() : []);
         DominatorTree<CfgBlock> dominatorTree = DominatorTreeBuilder.BuildFromEntries(partition.Blocks, entryBlocks, successorsByBlock, CfgBlockOrder.Instance);
         List<CfgPartitionDraft> replacements = new();
         HashSet<CfgBlock> assignedBlocks = new();
@@ -87,7 +92,49 @@ internal sealed class CfgPartitionNormalizer {
         if (replacements.Count <= 1) {
             return [];
         }
+        if (cutEntryEdges && !IsAcyclic(partition, replacements, edgeIndex)) {
+            return [];
+        }
         return replacements;
+    }
+
+    /// <summary>Whether the graph of <paramref name="replacements"/> is acyclic: every internal
+    /// ownership-preserving edge of the original partition whose source and target land in
+    /// different replacements is an edge between them, and no strongly connected component of that
+    /// graph may hold more than one replacement.</summary>
+    private static bool IsAcyclic(CfgPartitionDraft partition, List<CfgPartitionDraft> replacements,
+        CfgPartitionEdgeIndex edgeIndex) {
+        Dictionary<CfgBlock, CfgPartitionDraft> replacementByBlock = new();
+        foreach (CfgPartitionDraft replacement in replacements) {
+            foreach (CfgBlock block in replacement.Blocks) {
+                replacementByBlock[block] = replacement;
+            }
+        }
+        Dictionary<CfgPartitionDraft, List<CfgPartitionDraft>> edgesByReplacement =
+            new(ReferenceEqualityComparer.Instance);
+        foreach (CfgBlock block in partition.Blocks) {
+            CfgPartitionDraft source = replacementByBlock[block];
+            foreach (CfgPartitionDraft targetReplacement in edgeIndex.GetOutgoingEdges(block.Id)
+                    .Where(edge => edge.Kind.IsOwnershipPreserving()
+                        && partition.Blocks.Contains(edge.TargetBlock))
+                    .Select(edge => edge.TargetBlock)
+                    .Distinct()
+                    .Select(target => replacementByBlock[target])) {
+                if (ReferenceEquals(source, targetReplacement)) {
+                    continue;
+                }
+                if (!edgesByReplacement.TryGetValue(source, out List<CfgPartitionDraft>? targets)) {
+                    targets = new();
+                    edgesByReplacement[source] = targets;
+                }
+                if (!targets.Contains(targetReplacement)) {
+                    targets.Add(targetReplacement);
+                }
+            }
+        }
+        return StronglyConnectedComponents.Find(replacements,
+                replacement => edgesByReplacement.GetValueOrDefault(replacement) ?? [])
+            .Values.Distinct().Count() == replacements.Count;
     }
 
     private static List<CfgBlock> GetEntryBlocks(CfgPartitionDraft partition) => CfgPartitionOrdering
@@ -103,13 +150,15 @@ internal sealed class CfgPartitionNormalizer {
                 && entryBlockSet.Contains(edge.TargetBlock)));
     }
 
-    private static Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> BuildInternalSuccessors(HashSet<CfgBlock> blocks, CfgPartitionEdgeIndex edgeIndex) {
+    private static Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> BuildInternalSuccessors(HashSet<CfgBlock> blocks, CfgPartitionEdgeIndex edgeIndex, IReadOnlySet<CfgBlock> entryTargetsToCut) {
         Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = new();
         foreach (CfgBlock block in blocks) {
             IReadOnlyList<CfgBlock> successors = CfgPartitionOrdering
                 .BlocksByAddressAndId(
                     edgeIndex.GetOutgoingEdges(block.Id)
-                        .Where(edge => edge.Kind.IsOwnershipPreserving() && blocks.Contains(edge.TargetBlock))
+                        .Where(edge => edge.Kind.IsOwnershipPreserving() && blocks.Contains(edge.TargetBlock)
+                            && (!entryTargetsToCut.Contains(edge.TargetBlock)
+                                || edge.SourceBlock.Equals(edge.TargetBlock)))
                         .Select(edge => edge.TargetBlock)
                         .Distinct())
                 .ToArray();

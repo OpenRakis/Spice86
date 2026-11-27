@@ -149,7 +149,7 @@ public sealed class DosStateTests {
         using DosTestFixture fixture = new(directory.Path);
         ArrangeCapturedState(fixture);
         DosState unmountedDrive = fixture.Dos.CaptureState() with { CurrentDrive = 'Q' };
-        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).bx);
+        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).activeCodePage);
         ServiceAnswers beforeRestore = ReadServiceAnswers(fixture);
 
         // Act
@@ -168,7 +168,7 @@ public sealed class DosStateTests {
         using DosTestFixture fixture = new(directory.Path);
         ArrangeCapturedState(fixture);
         DosState refusedCodePage = fixture.Dos.CaptureState() with { ActiveCodePage = 1 };
-        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).bx);
+        ChangeStateThroughServices(fixture, fixture.DosInt21Handler.GetSetCodePage(QueryCodePage, 0, 0).activeCodePage);
         ServiceAnswers beforeRestore = ReadServiceAnswers(fixture);
 
         // Act
@@ -197,7 +197,7 @@ public sealed class DosStateTests {
         DosInt21Handler dos = fixture.DosInt21Handler;
         dos.SetDiskTransferAddress(CapturedDtaSegment, CapturedDtaOffset);
         dos.ChangeDirectory("SUB").IsError.Should().BeFalse();
-        dos.MemoryAllocationStrategy(0x5801, BestFit).carryFlag.Should().BeFalse();
+        dos.MemoryAllocationStrategy(0x5801, BestFit).failed.Should().BeFalse();
         dos.GetSetControlBreak(SetCtrlCFlag, 1, 0, 0);
         fixture.ProcessManager.LastChildReturnCode = ChildReturnCode;
         fixture.DosFileManager.FindFirstMatchingFile("*.TXT", 0).IsError.Should().BeFalse();
@@ -209,7 +209,7 @@ public sealed class DosStateTests {
         dos.SetDiskTransferAddress(OtherDtaSegment, OtherDtaOffset);
         dos.ChangeDirectory("\\").IsError.Should().BeFalse();
         dos.SelectDefaultDrive(DriveZ);
-        dos.MemoryAllocationStrategy(0x5801, LastFit).carryFlag.Should().BeFalse();
+        dos.MemoryAllocationStrategy(0x5801, LastFit).failed.Should().BeFalse();
         dos.GetSetControlBreak(SetCtrlCFlag, 0, 0, 0);
         dos.ReadReturnCode();
         ushort otherCodePage = capturedCodePage == UsCodePage ? MultilingualCodePage : UsCodePage;
@@ -229,7 +229,7 @@ public sealed class DosStateTests {
         string directory = fixture.Memory.GetZeroTerminatedString(DirectoryBufferAddress, 64);
         ushort strategy = dos.MemoryAllocationStrategy(0x5800, 0).ax;
         byte ctrlC = (byte)dos.GetSetControlBreak(GetCtrlCFlag, 0, 0, 0).dx;
-        ushort codePage = dos.GetSetCodePage(QueryCodePage, 0, 0).bx;
+        ushort codePage = dos.GetSetCodePage(QueryCodePage, 0, 0).activeCodePage;
         ushort returnCode = dos.ReadReturnCode();
         DosFileOperationResult next = fixture.DosFileManager.FindNextMatchingFile();
         string nextFile = next.IsError ? "" : fixture.DosFileManager.DiskTransferArea.FileName;

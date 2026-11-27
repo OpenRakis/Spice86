@@ -112,8 +112,8 @@ public class CfgNodeFeeder {
         // owned entirely by InstructionsFeeder (which holds the reconciler); we only ask it to
         // resolve this specific graph node.
         if (graphNodeAfterReconciliation is CfgInstruction speculativeInGraph && speculativeInGraph.IsSpeculative) {
-            if (InstructionsFeeder.TryPromoteStaleSpeculativeNode(speculativeInGraph, fromMemory)) {
-                return speculativeInGraph;
+            if (InstructionsFeeder.TryReconcileStaleSpeculativeNode(speculativeInGraph, fromMemory) is { } observed) {
+                return observed;
             }
             return fromMemory;
         }

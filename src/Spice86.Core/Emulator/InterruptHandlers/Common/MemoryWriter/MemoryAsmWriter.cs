@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -9,7 +10,15 @@ using Spice86.Shared.Emulator.Memory;
 /// Writes x86 ASM instructions to Memory bus
 /// </summary>
 public class MemoryAsmWriter : MemoryWriter {
+    /// <summary>The image name under which this writer's emitted code ranges are registered.</summary>
+    public const string RoutineImageName = "emulator routines";
+
     private readonly CallbackHandler? _callbackHandler;
+
+    /// <summary>The loaded-image registry the written code ranges are recorded into, or
+    /// <see langword="null"/> when the writer targets a byte array instead of emulated memory
+    /// (batch COM images, dump post-processing, tests).</summary>
+    public LoadedImageRegistry? ImageRegistry { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryAsmWriter"/> class with the specified memory as a data sink, beginningAddress and callbackHandler to register callbacks.
@@ -51,6 +60,12 @@ public class MemoryAsmWriter : MemoryWriter {
         Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
+    }
+
+    /// <inheritdoc />
+    protected override void TrackWrittenRange(SegmentedAddress start, uint length) {
+        ImageRegistry?.RegisterOrExtendContiguous(new LoadedImage(LoadedImageKind.EmulatorRoutines,
+            RoutineImageName, start.Segment, start.Linear, length));
     }
 
     /// <summary>
@@ -137,16 +152,50 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address. <br/>
+    /// Writes a <c>CALL FAR CS:[disp16]</c> instruction (<c>2E FF 1E</c>) whose target is read from a
+    /// 4-byte far pointer emitted later by <see cref="WriteSwitcherPointer"/> in the same segment,
+    /// outside any executable instruction path. The pointer holds the switcher's default address and
+    /// is what the switcher rewrites at run time; the instruction bytes never change. <br/>
     /// Throws UnrecoverableException if DefaultAddressValue is not initialized. <br/>
-    /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
+    /// The CS override is essential: callers cannot be assumed to keep DS on the stub's segment.
     /// </summary>
-    /// <returns>Returns the address of the call destination segmented address</returns>
-    public void WriteFarCallToSwitcherDefaultAddress(InMemoryAddressSwitcher inMemoryAddressSwitcher) {
+    public void WriteCsIndirectFarCallToSwitcherDefaultAddress(InMemoryAddressSwitcher inMemoryAddressSwitcher) {
         if (inMemoryAddressSwitcher.DefaultAddress is null) {
             throw new UnrecoverableException("Cannot write a FAR call to a null address.");
         }
-        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress.Value).Linear;
+        inMemoryAddressSwitcher.PatchedCallAddress = CurrentAddress;
+        WriteUInt8(0x2E);
+        WriteUInt8(0xFF);
+        WriteUInt8(0x1E);
+        inMemoryAddressSwitcher.CallDisplacementAddress = CurrentAddress;
+        // Placeholder displacement; WriteSwitcherPointer fixes it up once the pointer's offset is known.
+        WriteUInt16(0);
+    }
+
+    /// <summary>
+    /// Emits the 4-byte far pointer a <see cref="WriteCsIndirectFarCallToSwitcherDefaultAddress"/>
+    /// call reads, at the current address (expected right after the stub's terminating far ret /
+    /// iret so it is never executed), and fixes the call's displacement up to point here. Also sets
+    /// the switcher's <see cref="InMemoryAddressSwitcher.PhysicalLocation"/>, enabling
+    /// <see cref="InMemoryAddressSwitcher.SetAddress"/>.
+    /// </summary>
+    public void WriteSwitcherPointer(InMemoryAddressSwitcher inMemoryAddressSwitcher) {
+        if (inMemoryAddressSwitcher.PatchedCallAddress is not { } callSite
+            || inMemoryAddressSwitcher.CallDisplacementAddress is not { } displacementAddress
+            || inMemoryAddressSwitcher.DefaultAddress is not { } defaultAddress) {
+            throw new UnrecoverableException(
+                $"Cannot write a switcher pointer before {nameof(WriteCsIndirectFarCallToSwitcherDefaultAddress)}.");
+        }
+        if (CurrentAddress.Segment != callSite.Segment) {
+            throw new UnrecoverableException(
+                $"The switcher pointer must share the call's segment: call at {callSite}, pointer at {CurrentAddress}.");
+        }
+        SegmentedAddress pointerAddress = CurrentAddress;
+        CurrentAddress = displacementAddress;
+        WriteUInt16(pointerAddress.Offset);
+        CurrentAddress = pointerAddress;
+        inMemoryAddressSwitcher.PhysicalLocation = pointerAddress.Linear;
+        WriteSegmentedAddress(defaultAddress);
     }
 
     /// <summary>

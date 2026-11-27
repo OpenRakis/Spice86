@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
@@ -40,18 +41,45 @@ internal sealed class IrMethodEmitter(
     bool collectCensuses,
     bool verify,
     bool serviceCallNotifications,
+    bool printAsmComments,
     BranchProbeSites? branchProbes = null,
     bool deviceOperations = true) {
 
     private readonly IrLifter _lifter = new(context, lowerer, assemblyRenderer);
+    private readonly bool _printAsmComments = printAsmComments;
 
     /// <summary>Builds the AST of <paramref name="method"/> and times the lift, each IR pass and the
     /// lowering and structuring into <paramref name="timer"/>. Printing is deferred to
     /// <see cref="Print"/> so the generator can resolve global names over the accesses of the whole
     /// program before any method is printed.</summary>
     /// <returns>The prepared method to hand to <see cref="Print"/>.</returns>
-    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) {
-        IrMethod irMethod = timer.Measure("lift", () => _lifter.Lift(method));
+    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer) =>
+        Prepare(method, timer, IrLifter.NoEffects, IrLifter.NoEffects, IrLifter.NoFaultReads,
+            NoEntryFacts, typedSignatures: null);
+
+    /// <summary>No entry fact: the behaviour of a first-round prepare.</summary>
+    private static readonly IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> NoEntryFacts =
+        new Dictionary<ICfgNode, IrSegmentEntryFact>();
+
+    /// <inheritdoc cref="Prepare(MethodPlan, GenerationStepTimer)" />
+    /// <param name="exitEffects">Return-exit effects to apply at lift time, from the first
+    /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    /// <param name="callEffects">Resolved-call summaries to apply at lift time, from the first
+    /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    /// <param name="faultReads">Fault-path read sets to apply at lift time, from the first
+    /// <see cref="ProgramAnalysis"/> round of the calling conventions.</param>
+    /// <param name="entryFacts">The segment entry facts the previous analysis round proved at
+    /// each of the method's entries: the SSA's entry versions resolve through them.</param>
+    /// <param name="typedSignatures">The previous analysis round's typed signatures: a summarized
+    /// call to a typed target takes the callee's parameters as operand arguments.</param>
+    public PreparedMethod Prepare(MethodPlan method, GenerationStepTimer timer,
+        IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts,
+        TypedSignatures? typedSignatures) {
+        IrMethod irMethod = timer.Measure("lift",
+            () => _lifter.Lift(method, exitEffects, callEffects, faultReads, typedSignatures));
         int liftedBlocks = irMethod.Blocks.Count;
         int liftedStatements = irMethod.Blocks.Sum(block => block.Statements.Count);
         if (branchProbes is not null) {
@@ -63,7 +91,10 @@ internal sealed class IrMethodEmitter(
             ? context.Program.Inputs.IoPorts
             : new Dictionary<ushort, Type>();
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
-            deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+            deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets,
+            context.Program.Inputs.HardwareInterrupts.ProgramSetCurrentPsp,
+            context.ExecChildEntries, context.Policy,
+            timer);
         if (branchProbes is not null) {
             IrBranchOrigins.StampTerminators(irMethod);
         }
@@ -91,16 +122,32 @@ internal sealed class IrMethodEmitter(
                 return (dispatch, lowered, gotos, gotoTargets);
             });
         FrameSlotPlan? framePlan = timer.Measure("frame slots", () => BuildFramePlan(irMethod, pipeline.Ssa, method));
-        SaveRestorePairs.SavedPairPlan savedPairs = SaveRestorePairs.Plan(irMethod, pipeline.Ssa);
+        IrSegmentFacts entryFactSet = EntryFactsOf(irMethod, entryFacts);
+        SaveRestorePairs.SavedPairPlan savedPairs =
+            SaveRestorePairs.Plan(irMethod, pipeline.Ssa, entryFactSet, context.Policy);
         BlockNode body = structured.Body;
         if (savedPairs.Pairs.Count > 0) {
             body = SaveRestorePairs.Apply(body, savedPairs);
         }
         MethodEmission emission = BuildEmission(irMethod, pipeline, structured.Census,
             body, liftedBlocks, liftedStatements, constantMemoryAccesses, framePlan);
+        IrStackSlots stackSlots =
+            IrStackSlots.ComputeNeutral(irMethod, pipeline.Ssa, entryFactSet, context.Policy);
         return new PreparedMethod(method, irMethod, pipeline.Ssa, pipeline.DosCalls,
             structured.EntryDispatch, body,
-            structured.Targets, emission, framePlan, savedPairs);
+            structured.Targets, emission, framePlan, savedPairs, entryFactSet, stackSlots);
+    }
+
+    /// <summary>The entry facts of <paramref name="irMethod"/>'s own blocks: only entries the
+    /// consumed set covers carry a fact; every other stays symbolic.</summary>
+    private static IrSegmentFacts EntryFactsOf(IrMethod irMethod,
+        IReadOnlyDictionary<ICfgNode, IrSegmentEntryFact> entryFacts) {
+        IrSegmentFacts facts = new();
+        foreach (IrEntry entry in irMethod.Entries
+                .Where(entry => entryFacts.ContainsKey(entry.Node))) {
+            facts.SetEntry(entry.Block, entryFacts[entry.Node]);
+        }
+        return facts;
     }
 
     /// <summary>The frame slot plan of <paramref name="irMethod"/> when it accesses SS through a
@@ -115,7 +162,8 @@ internal sealed class IrMethodEmitter(
             return null;
         }
         IrFrames frames = IrFrames.Compute(irMethod, ssa,
-            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(ssa)),
+            IrStackSlots.Compute(irMethod, new IrMemoryAliasAnalysis(irMethod, ssa, context.Policy),
+                _ => null),
             statement => {
                 if (statement.Origin is CfgInstruction instruction) {
                     return effectBuilder.CallTargetWrites(instruction);
@@ -134,15 +182,33 @@ internal sealed class IrMethodEmitter(
         MethodPlan method = prepared.Method;
         return timer.Measure("register locals", () => {
             TypedSignature? signature = analysis.TypedSignatures.Of(method.MethodName);
-            RegisterLocalPlan? registerLocals = RegisterLocalPromotion.Plan(prepared.IrMethod, prepared.Ssa,
-                ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan),
-                UnprintedNodes(prepared.FramePlan),
+            BlockNode body = analysis.StackArguments.Apply(prepared.Body);
+            IrSsa ssa = prepared.Ssa;
+            IReadOnlyList<SaveRestorePairs.RemovedSave> removedSaves = [];
+            if (signature is not null && prepared.SavedPairs.RemovedSaves.Count > 0) {
+                // The pair is dropped before the register-local plan: its removal leaves the IR,
+                // so the return merge sees the block the printer will emit. A write of the saved
+                // register that survives into the printed body (the frame's bp = sp prints when BP
+                // is still read) would leave it without its entry value, so the pair stays.
+                (BlockNode withoutSaves, IReadOnlyList<SaveRestorePairs.RemovedSave> removed) =
+                    SaveRestorePairs.ApplyRemoved(body, prepared.SavedPairs.RemovedSaves);
+                if (removed.Count > 0 && !WritesSavedRegister(withoutSaves, removed)) {
+                    body = withoutSaves;
+                    removedSaves = removed;
+                    ssa = RemoveSavedStatements(prepared.IrMethod, ssa, removed, timer);
+                }
+            }
+            RegisterLocalPlan? registerLocals = RegisterLocalPromotion.Plan(prepared.IrMethod, ssa,
+                ReservedLocalNames(prepared.IrMethod, signature, prepared.FramePlan,
+                    analysis.StackArguments.PlanOf(method.MethodName)),
+                UnprintedNodes(prepared.FramePlan), signature, analysis.TypedSignatures,
                 (statement, mask) => CallPreserves(analysis.CallingConventions, method.MethodName,
-                    statement, mask));
-            BlockNode body = prepared.Body;
+                    statement, mask),
+                new RoleNames.RoleNameContext(analysis.TypedSignatures, prepared.FramePlan),
+                context.Policy);
             if (registerLocals.WriteBacks.Count > 0 || registerLocals.Dropped.Count > 0
                 || registerLocals.Replacements.Count > 0) {
-                if (RegisterLocalPromotion.ApplyToBody(prepared.Body, registerLocals)
+                if (RegisterLocalPromotion.ApplyToBody(body, registerLocals)
                         is { } rewrittenBody) {
                     body = rewrittenBody;
                 } else {
@@ -152,10 +218,52 @@ internal sealed class IrMethodEmitter(
             IReadOnlyDictionary<IVisitableAstNode, string>? parameterReads = null;
             if (signature is not null) {
                 parameterReads = analysis.TypedSignatures.BuildParameterReads(prepared.IrMethod,
-                    prepared.Ssa, signature);
+                    ssa, signature);
             }
-            return new AnalyzedMethod(prepared, signature, parameterReads, registerLocals, body);
+            body = StackRuns.Apply(body);
+            return new AnalyzedMethod(prepared, signature, parameterReads, registerLocals, body,
+                removedSaves, ssa);
         });
+    }
+
+    /// <summary>Whether <paramref name="body"/> still writes a register a removed save pair was
+    /// going to restore: dropping the pair is right only while the register holds its entry value
+    /// where the pop stood, so a surviving write - like the frame's <c>bp = sp</c> printing when BP
+    /// is still read - keeps the pair.</summary>
+    private static bool WritesSavedRegister(BlockNode body,
+        IReadOnlyList<SaveRestorePairs.RemovedSave> saves) {
+        HashSet<int> registers = [];
+        foreach (SaveRestorePairs.RemovedSave save in saves
+                .Where(save => save.Push.Arguments is [RegisterNode])) {
+            registers.Add(((RegisterNode)save.Push.Arguments[0]).RegisterIndex);
+        }
+        return IrAstChildren.Descendants(body).Any(node =>
+            node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                Left: RegisterNode target }
+                && registers.Contains(target.RegisterIndex));
+    }
+
+    /// <summary>Removes the push and pop statements of every applied <paramref name="removed"/>
+    /// pair from <paramref name="method"/> and returns the rebound SSA.</summary>
+    private static IrSsa RemoveSavedStatements(IrMethod method, IrSsa ssa,
+        IReadOnlyList<SaveRestorePairs.RemovedSave> removed, GenerationStepTimer timer) {
+        IrEditor editor = new(ssa, timer);
+        HashSet<IVisitableAstNode> nodes = new(ReferenceEqualityComparer.Instance);
+        foreach (SaveRestorePairs.RemovedSave save in removed) {
+            nodes.Add(save.Push);
+            nodes.Add(save.Pop);
+            if (save.SetBp is { } setBp) {
+                nodes.Add(setBp);
+            }
+        }
+        foreach (IrBlock block in method.Blocks) {
+            for (int index = block.Statements.Count - 1; index >= 0; index--) {
+                if (nodes.Remove(block.Statements[index].Node)) {
+                    editor.Remove(block, index);
+                }
+            }
+        }
+        return editor.Rebind(method, "removed save pair");
     }
 
     /// <summary>The node instances the frame plan replaces when it prints: every descendant of its
@@ -174,21 +282,33 @@ internal sealed class IrMethodEmitter(
 
     /// <summary>Prints an analyzed method as one C# method to <paramref name="writer"/>, timed into
     /// <paramref name="timer"/>.</summary>
-    public void Print(CSharpSourceWriter writer, AnalyzedMethod method, ProgramAnalysis analysis,
+    public List<MethodInstructionLine> Print(CSharpSourceWriter writer, AnalyzedMethod method, ProgramAnalysis analysis,
         GenerationStepTimer timer) {
+        List<MethodInstructionLine>? instructionLines = null;
         timer.Measure("printing", () => {
             PrintHeader(writer, method.Prepared.Method, analysis);
-            writer.OpenBlock(SignatureText(method.Prepared.Method, method.Signature));
-            PrintBody(writer, method, analysis);
-            PrintTail(writer, method.Prepared.Method, method.Signature, method.Prepared.FramePlan);
+            writer.OpenBlock(SignatureText(method.Prepared.Method, method.Signature,
+                analysis.StackArguments.PlanOf(method.Prepared.Method.MethodName)));
+            instructionLines = PrintBody(writer, method, analysis);
+            PrintTail(writer, method.Prepared.Method, method.Signature, method.Prepared.FramePlan,
+                analysis.StackArguments.PlanOf(method.Prepared.Method.MethodName));
         });
+        return instructionLines ?? [];
     }
 
     /// <summary>The <c>public virtual</c> line that opens the method: typed signature, entry
     /// dispatch, or parameterless.</summary>
-    private static string SignatureText(MethodPlan method, TypedSignature? signature) {
+    private static string SignatureText(MethodPlan method, TypedSignature? signature,
+        StackArguments.StackArgumentPlan? stackPlan) {
         if (signature is not null) {
-            return $"public virtual {signature.ReturnType} {method.MethodName}({signature.ParameterList})";
+            string parameterList = signature.ParameterList;
+            if (stackPlan is { } plan) {
+                string stackList = string.Join(", ", plan.Parameters
+                    .Select(parameter => $"{parameter.Type} {parameter.Name}"));
+                parameterList = parameterList.Length == 0
+                    ? stackList : $"{parameterList}, {stackList}";
+            }
+            return $"public virtual {signature.ReturnType} {method.MethodName}({parameterList})";
         }
         if (method.NeedsEntryDispatch) {
             return $"public virtual Action {method.MethodName}(int loadOffset)";
@@ -207,7 +327,7 @@ internal sealed class IrMethodEmitter(
 
     /// <summary>The parameter-to-register assignments, declarations, entry dispatch and structured
     /// body inside the method's block, followed by the closing brace.</summary>
-    private void PrintBody(CSharpSourceWriter writer, AnalyzedMethod analyzed,
+    private List<MethodInstructionLine> PrintBody(CSharpSourceWriter writer, AnalyzedMethod analyzed,
         ProgramAnalysis analysis) {
         PreparedMethod prepared = analyzed.Prepared;
         MethodPlan method = prepared.Method;
@@ -220,58 +340,83 @@ internal sealed class IrMethodEmitter(
             throw new InvalidOperationException(
                 $"Method {method.MethodName}: goto target {target} is not an IR block.");
         }
-        CSharpExpressionPrinter expressions = new(context.SegmentVariables,
-            context.Program.Inputs.IoPorts, analyzed, analysis);
-        CSharpStatementPrinter printer = new(writer, expressions, LabelOf, serviceCallNotifications);
-        // Every read the body makes of a register the signature declares must see the argument:
-        // the assignment sits before the entrydispatcher label so a cyclic jump to an entry
-        // does not reassign stale arguments.
-        if (analyzed.Signature is { } signature) {
-            foreach (TypedParameter parameter in signature.Parameters) {
-                writer.Line($"{parameter.Register} = {parameter.Name};");
-            }
+        (CSharpStatementPrinter Printer, CSharpExpressionPrinter Expressions) Printers(
+            CSharpSourceWriter target) {
+            CSharpExpressionPrinter expressions = new(context.SegmentVariables,
+                context.Program.Inputs.IoPorts, analyzed, analysis);
+            return (new CSharpStatementPrinter(target, expressions, LabelOf, _printAsmComments,
+                serviceCallNotifications), expressions);
         }
-        if (analyzed.RegisterLocals is { } promoted) {
-            foreach (LocalDeclarationNode declaration in promoted.Declarations) {
+        void PrintAfterCopyIns(CSharpSourceWriter target, CSharpStatementPrinter printer,
+            CSharpExpressionPrinter expressions, bool printFrame) {
+            if (analyzed.RegisterLocals is { } promoted) {
+                foreach (LocalDeclarationNode declaration in promoted.Declarations) {
+                    printer.Print(declaration);
+                }
+            }
+            foreach (LocalDeclarationNode declaration in SaveRestorePairs.Declarations(prepared.SavedPairs)) {
                 printer.Print(declaration);
             }
+            foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
+                printer.Print(variable);
+            }
+            if (prepared.Targets.EntryDispatcher) {
+                printer.Print(new EntryDispatcherLabelNode());
+            }
+            if (printFrame && prepared.FramePlan is { } framePlan) {
+                // The frame is declared after the entry dispatcher label, so a cyclic jump to an
+                // entry re-creates it with that entry's SP.
+                target.Line($"{framePlan.ClassName} {framePlan.VariableName} = new(Memory, "
+                    + "State.SegmentRegisters, SP);");
+            }
+            printer.Print(prepared.EntryDispatch);
+            if (!IsEmpty(prepared.EntryDispatch)) {
+                target.Line();
+            }
+            if (branchProbes is not null) {
+                // Only the body is probed: the entry dispatch above selects an entry, which is no
+                // branch of the program.
+                branchProbes.Method = method.MethodName;
+                expressions.BranchProbes = branchProbes;
+            }
+            printer.Print(analyzed.Body);
+            expressions.BranchProbes = null;
         }
-        foreach (LocalDeclarationNode declaration in SaveRestorePairs.Declarations(prepared.SavedPairs)) {
-            printer.Print(declaration);
+        bool printFrame = false;
+        if (analyzed.Signature is not null || prepared.FramePlan is not null) {
+            // A copy-in line is needed only while something can still read the register's entry
+            // value: a dry print on a scratch writer finds which reads the method makes. The
+            // assignment sits before the entrydispatcher label so a cyclic jump to an entry does
+            // not reassign stale arguments. The same dry print tells whether the body reads a
+            // frame property at all: the frame variable is not declared when nothing reads it.
+            CSharpSourceWriter scratch = new();
+            (CSharpStatementPrinter dryPrinter, CSharpExpressionPrinter dryExpressions) = Printers(scratch);
+            PrintAfterCopyIns(scratch, dryPrinter, dryExpressions, true);
+            printFrame = dryExpressions.PrintedFrameUse;
+            if (analyzed.Signature is { } signature) {
+                foreach (TypedParameter parameter in TypedSignatures.CopyInParameters(irMethod,
+                        analyzed.Ssa, signature, dryExpressions.PrintedParameterReads,
+                        dryExpressions.PrintedMachineRegisters, prepared.FramePlan is not null,
+                        analyzed.RegisterLocals?.EntryParameters
+                            ?? (IReadOnlySet<TypedParameter>)new HashSet<TypedParameter>())) {
+                    writer.Line($"{parameter.Register} = {parameter.Name};");
+                }
+            }
         }
-        foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
-            printer.Print(variable);
-        }
-        if (prepared.Targets.EntryDispatcher) {
-            printer.Print(new EntryDispatcherLabelNode());
-        }
-        if (prepared.FramePlan is { } framePlan) {
-            // The frame is declared after the entry dispatcher label, so a cyclic jump to an
-            // entry re-creates it with that entry's SP.
-            writer.Line($"{framePlan.ClassName} {framePlan.VariableName} = new(Memory, "
-                + "State.SegmentRegisters, SP);");
-        }
-        printer.Print(prepared.EntryDispatch);
-        if (!IsEmpty(prepared.EntryDispatch)) {
-            writer.Line();
-        }
-        if (branchProbes is not null) {
-            // Only the body is probed: the entry dispatch above selects an entry, which is no branch of
-            // the program.
-            branchProbes.Method = method.MethodName;
-            expressions.BranchProbes = branchProbes;
-        }
-        printer.Print(analyzed.Body);
-        expressions.BranchProbes = null;
+        (CSharpStatementPrinter printer, CSharpExpressionPrinter expressions) = Printers(writer);
+        PrintAfterCopyIns(writer, printer, expressions, printFrame);
+        printer.FinishInstructions();
         writer.CloseBlock();
+        return printer.InstructionLines;
     }
 
     /// <summary>What follows the method's closing brace: the <c>_Asm</c> wrapper of a typed method,
     /// the frame class, and the trailing blank line.</summary>
     private static void PrintTail(CSharpSourceWriter writer, MethodPlan method,
-        TypedSignature? signature, FrameSlotPlan? framePlan) {
+        TypedSignature? signature, FrameSlotPlan? framePlan,
+        StackArguments.StackArgumentPlan? stackPlan) {
         if (signature is not null) {
-            PrintAsmWrapper(writer, method, signature);
+            PrintAsmWrapper(writer, method, signature, stackPlan);
         }
         if (framePlan is not null) {
             writer.Line();
@@ -293,10 +438,10 @@ internal sealed class IrMethodEmitter(
     }
 
     /// <summary>Every local name a register local may not take in <paramref name="irMethod"/>: the
-    /// typed signature's parameters, the frame variable, the method variables and every temporary or
-    /// declared name appearing in the method.</summary>
-    private static HashSet<string> ReservedLocalNames(IrMethod irMethod, TypedSignature? signature,
-        FrameSlotPlan? framePlan) {
+    /// typed signature's parameters, the stack-argument plan's parameters, the frame variable, the
+    /// method variables and every temporary or declared name appearing in the method.</summary>
+    internal static HashSet<string> ReservedLocalNames(IrMethod irMethod, TypedSignature? signature,
+        FrameSlotPlan? framePlan, StackArguments.StackArgumentPlan? stackPlan) {
         HashSet<string> names = new(StringComparer.Ordinal);
         foreach (VariableDeclarationNode variable in irMethod.MethodVariables) {
             names.Add(variable.VariableName);
@@ -320,6 +465,12 @@ internal sealed class IrMethodEmitter(
         }
         if (signature is not null) {
             foreach (TypedParameter parameter in signature.Parameters) {
+                names.Add(parameter.Name);
+                names.Add(parameter.Register.ToLowerInvariant());
+            }
+        }
+        if (stackPlan is not null) {
+            foreach (StackArguments.StackParameter parameter in stackPlan.Parameters) {
                 names.Add(parameter.Name);
             }
         }
@@ -367,10 +518,18 @@ internal sealed class IrMethodEmitter(
     /// <summary>Writes the <c>Action</c> entry wrapper of a typed method right after it: it calls
     /// the typed method with the register arguments, stores the outputs back and returns
     /// <c>Returned</c>. Every delegate reference and partition return uses this name.</summary>
-    private static void PrintAsmWrapper(CSharpSourceWriter writer, MethodPlan method, TypedSignature signature) {
+    private static void PrintAsmWrapper(CSharpSourceWriter writer, MethodPlan method,
+        TypedSignature signature, StackArguments.StackArgumentPlan? stackPlan) {
         writer.Line();
         writer.OpenBlock($"public virtual Action {method.MethodName}_Asm()");
-        string invocation = $"{method.MethodName}({signature.ArgumentList});";
+        string argumentList = signature.ArgumentList;
+        if (stackPlan is { } plan) {
+            string stackList = string.Join(", ", plan.Parameters
+                .Select(parameter => parameter.WrapperRead));
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        string invocation = $"{method.MethodName}({argumentList});";
         writer.Line(signature.Outputs.Count switch {
             0 => invocation,
             1 => $"{signature.Outputs[0].Register} = {invocation}",
@@ -454,16 +613,15 @@ internal sealed class IrMethodEmitter(
         GotoCensus gotos, BlockNode body, int liftedBlocks, int liftedStatements,
         ConstantMemoryAccessTable constantMemoryAccesses, FrameSlotPlan? framePlan) {
         if (!collectCensuses) {
-            return new MethodEmission(new MethodCensus(gotos, new FlagReadCensus(),
+            return new MethodEmission(new MethodCensus(gotos,
                 new WebCensus(), liftedBlocks, liftedStatements), constantMemoryAccesses);
         }
         IrSsa ssa = pipeline.Ssa;
-        FlagReadCensus flagReads = IrFlagReadCensusClassifier.Classify(irMethod, ssa, body);
         HashSet<ICfgNode> midBlockEntryNodes = irMethod.Entries
             .Where(entry => !entry.Node.Equals(entry.Block.EntryOrigin))
             .Select(entry => entry.Node).ToHashSet();
         WebCensus webCensus = IrWebCensusClassifier.Classify(ssa, pipeline.Webs!, midBlockEntryNodes);
-        return new MethodEmission(new MethodCensus(gotos, flagReads, webCensus,
+        return new MethodEmission(new MethodCensus(gotos, webCensus,
             liftedBlocks, liftedStatements), constantMemoryAccesses);
     }
 

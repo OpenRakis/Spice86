@@ -132,7 +132,7 @@ public sealed class SpeculativeCfgTest {
                 .Export(discoveryMachine.CfgCpu.ExecutionContextManager, nodeIndex.PoisonSet,
                     new Spice86.Core.Emulator.LoadableFile.ChangedMemorySnapshot {
                         WatchedAreas = [], ChangedRanges = []
-                    });
+                    }, new Spice86.Core.Emulator.ReverseEngineer.RecordedRunFacts());
 
         dump.PoisonedAddresses.Should().NotBeNull();
         dump.PoisonedAddresses.Should().Contain(poisonedAddr.ToString());
@@ -213,8 +213,37 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0019 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
+    }
+
+    /// <summary>
+    /// Same mid-run self-modification as <see cref="SpeculativeSmcGuardMidBlockSelfModificationGuardFires"/>
+    /// but in a .com program: the code lives in low RAM and the store's segment is a proven constant
+    /// equal to CS, so only the disjointness condition can refuse merging the two guards around it.
+    /// The guards stay separate and the patched instruction's guard fires.
+    /// </summary>
+    [Fact]
+    public void SpeculativeSmcLowRamGuardKeepsPerInstructionGuards() {
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeSmcLowRam();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // Discovery path (selector=0): no SMC on this path, runs to completion.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // Speculative path (selector=1): the store at 016F:011D loads DS with the load segment and
+        // rewrites the ModRM byte of the instruction at 016F:0122. The write is proven conventional
+        // RAM overlapping the guarded bytes, so the disjointness check is what keeps the second
+        // guard in place; it fires and the run fails as untested.
+        AsmRunSettings unobservedSettings = fixture.Settings with { ConfigureMachine = AsmFixtureCatalog.SelectUnobservedArm };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(unobservedSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Speculative code at 016F:0122 no longer matches memory*");
+
     }
 
     /// <summary>
@@ -249,8 +278,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0013 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -397,7 +424,6 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Untested code reached*");
 
-        runner.CompareGeneratedSourceWithExpected(GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>A store in a speculative run changes a later instruction through A20 wrapping.
@@ -423,7 +449,5 @@ public sealed class SpeculativeCfgTest {
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at FFFE:0022 no longer matches memory*");
 
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 }

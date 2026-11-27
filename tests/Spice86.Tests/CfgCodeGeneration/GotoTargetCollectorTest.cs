@@ -35,7 +35,7 @@ public class GotoTargetCollectorTest {
             new WhileNode(Condition, new BlockNode(new GotoNode(nodes[3]))),
             new SwitchNode(new LoadOffsetParameterNode(), [new SwitchSection(1, new BlockNode(new GotoNode(nodes[4])))],
                 new BlockNode(new GotoNode(nodes[5]))),
-            new CpuFaultTryCatchNode(new BlockNode(new GotoNode(nodes[6])), new SegmentedAddress(0x1000, 0x0010), []));
+            new CpuFaultTryCatchNode(new BlockNode(new GotoNode(nodes[6])), new SegmentedAddress(0x1000, 0x0010), [], []));
 
         // Act
         GotoTargets targets = GotoTargetCollector.Collect(tree);

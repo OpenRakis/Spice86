@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
@@ -41,6 +42,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly Configuration _configuration;
     private readonly CfgNodeIndex _nodeIndex;
+    private readonly RecordedRunFacts _recordedRunFacts;
     private readonly DumpProgressReporter _progress;
     private readonly Lock _writeLock = new();
 
@@ -61,6 +63,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     /// <param name="serializableBreakpointsSource">Source for breakpoints to serialize</param>
     /// <param name="configuration">The emulator configuration, used to derive the program checksum baked into the generated project.</param>
     /// <param name="nodeIndex">The persistent graph index whose poison set is serialized with the CFG reload dump.</param>
+    /// <param name="recordedRunFacts">The recorded run facts serialized with the CFG reload dump.</param>
     /// <param name="progress">Reports dump phases and steps to the log and to UI subscribers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     internal EmulationStateDataWriter(State state,
@@ -77,6 +80,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         ISerializableBreakpointsSource serializableBreakpointsSource,
         Configuration configuration,
         CfgNodeIndex nodeIndex,
+        RecordedRunFacts recordedRunFacts,
         DumpProgressReporter progress,
         ILogger loggerService) : base(emulatorStateSerializationFolder, loggerService) {
         _executionAddressesExtractor = executionAddressesExtractor;
@@ -92,6 +96,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         _serializableBreakpointsSource = serializableBreakpointsSource;
         _configuration = configuration;
         _nodeIndex = nodeIndex;
+        _recordedRunFacts = recordedRunFacts;
         _progress = progress;
     }
 
@@ -179,7 +184,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
 
     private void WriteCfgReload(string filePath) {
         CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager, _nodeIndex.PoisonSet,
-            _changedMemoryMap.Snapshot());
+            _changedMemoryMap.Snapshot(), _recordedRunFacts);
         string jsonString = JsonSerializer.Serialize(dump, CfgReloadSerialization.Options);
         File.WriteAllText(filePath, jsonString);
     }
@@ -188,8 +193,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         SerializableUserBreakpointCollection serializedBreakpoints =
             _serializableBreakpointsSource.CreateSerializableBreakpoints();
 
-        string jsonString = JsonSerializer.Serialize(serializedBreakpoints,
-            new JsonSerializerOptions { WriteIndented = true });
+        string jsonString = JsonSerializer.Serialize(serializedBreakpoints);
         using FileStream fileStream = File.Open(filePath, FileMode.Create);
         fileStream.Write(Encoding.UTF8.GetBytes(jsonString));
     }

@@ -22,7 +22,9 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
@@ -575,7 +577,9 @@ public class DosProcessManagerTests {
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService, dosSysVars, false, false);
         DosTables dosTables = new(memory);
         DosCodePageState dosCodePageState = DosCodePageState.Create(850, CountryId.UnitedStates);
-        DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());
+        IEmulatedClock emulatedClock = Substitute.For<IEmulatedClock>();
+        emulatedClock.CurrentDateTime.Returns(new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>(), emulatedClock);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
         Mscdex mscdex = new(state, memory, loggerService, new DriveActivityNotifier());
         DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
@@ -608,6 +612,7 @@ public class DosProcessManagerTests {
             activityNotifier,
             batchDisplayCommandHandler,
             registry,
+            new RecordedRunFacts(),
             new Dictionary<string, string>(),
             loggerService);
 

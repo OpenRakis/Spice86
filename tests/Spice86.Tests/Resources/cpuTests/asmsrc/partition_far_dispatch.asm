@@ -4,7 +4,7 @@ start:
     mov ss, ax
     mov sp, 0100h
     xor dx, dx
-    mov cx, 2
+    mov cx, 4
 far_again:
     mov bx, cx
     dec bx
@@ -19,6 +19,10 @@ jump_again:
     jmp dword [cs:jump_table+bx]
 back:
     loop jump_again
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
+    mov word [ss:608h], cx
     hlt
 far_a:
     add dx, 1
@@ -26,6 +30,10 @@ far_a:
 far_b:
     add dx, 10h
     retf
+far_trampoline_a:
+    jmp far_a
+far_trampoline_b:
+    jmp far_b
 jump_a:
     add dx, 100h
     jmp back
@@ -34,6 +42,7 @@ jump_b:
     jmp back
 far_table:
     dw far_a, 0F000h, far_b, 0F000h
+    dw far_trampoline_a, 0F000h, far_trampoline_b, 0F000h
 jump_table:
     dw jump_a, 0F000h, jump_b, 0F000h
 

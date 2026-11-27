@@ -132,7 +132,7 @@ internal static class InternalBatchProgramBuilder {
         }
 
         return new ParsedChoiceArguments(suppressPrompt, caseSensitive,
-            choiceKeys, promptBuilder.ToString(), defaultChoice);
+            choiceKeys, promptBuilder.ToString().TrimEnd(), defaultChoice);
     }
 
     private static bool ConsumeFlagSwitch(ref string remaining, char optionLetter) {

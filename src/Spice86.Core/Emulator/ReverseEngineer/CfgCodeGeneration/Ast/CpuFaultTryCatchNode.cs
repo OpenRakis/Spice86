@@ -8,7 +8,9 @@ using Spice86.Shared.Emulator.Memory;
 /// <param name="Body">The faulting instruction body, run inside the <c>try</c>.</param>
 /// <param name="FaultingInstruction">The address of the faulting instruction, reported in the dispatch call.</param>
 /// <param name="Handlers">The CPU fault handlers the catch dispatches to, in print order.</param>
-internal sealed record CpuFaultTryCatchNode(BlockNode Body, SegmentedAddress FaultingInstruction, IReadOnlyList<CpuFaultHandler> Handlers) : IVisitableAstNode {
+/// <param name="ResumeTargets">The addresses discovery observed the fault resuming at, in print order.</param>
+internal sealed record CpuFaultTryCatchNode(BlockNode Body, SegmentedAddress FaultingInstruction,
+    IReadOnlyList<CpuFaultHandler> Handlers, IReadOnlyList<SegmentedAddress> ResumeTargets) : IVisitableAstNode {
     /// <inheritdoc />
     public T Accept<T>(IAstVisitor<T> astVisitor) => CodeGenerationNode.RequireVisitor(astVisitor, this).VisitCpuFaultTryCatchNode(this);
 }

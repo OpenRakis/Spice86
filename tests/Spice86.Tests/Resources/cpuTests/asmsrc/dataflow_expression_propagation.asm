@@ -167,6 +167,8 @@ read_next_iteration:
     add si, 8
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 set_ax_1111:

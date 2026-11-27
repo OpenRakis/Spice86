@@ -18,11 +18,13 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
+using Spice86.Core.Emulator.ReverseEngineer.Contracts;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -118,6 +120,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// as <c>frame.&lt;Name&gt;</c>.</summary>
     internal Ir.Memory.FrameSlotPlan? FramePlan => _method?.Prepared.FramePlan;
 
+    /// <summary>The stack argument plan of the method being printed: reads of a private argument
+    /// slot print as the parameter name instead of <c>frame.Arg…</c>.</summary>
+    internal Ir.StackArguments.StackArgumentPlan? StackPlan => _method is null
+        ? null : _analysis?.StackArguments.PlanOf(_method.Prepared.Method.MethodName);
+
     /// <summary>The signature of the typed method being printed, <see langword="null"/> for
     /// untyped methods: its <c>ret</c> / <c>retf</c> returns print the return value.</summary>
     internal Ir.TypedSignature? TypedSignature => _method?.Signature;
@@ -134,6 +141,18 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     internal IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? LocalReads =>
         _method?.RegisterLocals is { Reads.Count: > 0 } locals ? locals.Reads : null;
 
+    /// <summary>The printed elements of each typed <c>return</c> of the method being printed,
+    /// keyed by <see cref="ProcedureReturnHelperNode"/> reference; <see langword="null"/> when the
+    /// method promotes no web or no exit serves an output from a local.</summary>
+    internal IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<string?>>? ReturnOutputs =>
+        _method?.RegisterLocals?.ReturnOutputs;
+
+    /// <summary>The expression each typed <c>return</c> of the method being printed emits for an
+    /// output element, keyed by <see cref="ProcedureReturnHelperNode"/> reference; the merged
+    /// right side of a register assignment whose only live use was the exit's read of the output.</summary>
+    internal IReadOnlyDictionary<ProcedureReturnHelperNode, IReadOnlyList<ReturnExpression?>>?
+        ReturnExpressions => _method?.RegisterLocals?.ReturnExpressions;
+
     /// <summary>The goto targets of the whole method being printed. A <c>for</c> rewrite refuses
     /// a loop when any statement of the method - not only of the block being dispatched - jumps to
     /// its header or its step.</summary>
@@ -141,6 +160,19 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     /// <summary>Whether the current method dispatches between multiple entry points.</summary>
     internal bool NeedsEntryDispatch => _method?.Prepared.Method.NeedsEntryDispatch ?? false;
+
+    /// <summary>The nodes this printer has printed with their <see cref="ParameterReads"/> text.
+    /// <see cref="LocalReads"/> substitutions do not count.</summary>
+    internal HashSet<IVisitableAstNode> PrintedParameterReads { get; } = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The register, segment and flag nodes this printer has printed as the machine
+    /// name: neither a parameter nor a register local.</summary>
+    internal HashSet<IVisitableAstNode> PrintedMachineRegisters { get; } = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Whether the printer printed at least one <c>frame.&lt;Name&gt;</c> property read
+    /// or write: when it stayed false after a dry print the method does not declare the frame
+    /// variable.</summary>
+    internal bool PrintedFrameUse { get; private set; }
 
     /// <summary>Prints <paramref name="node"/>, which must be an expression.</summary>
     public CSharpFragment Print(IVisitableAstNode node) => node.Accept(this);
@@ -165,6 +197,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     // ----------------------------------------------------------------------------------------------------
 
     public CSharpFragment VisitMethodCallNode(MethodCallNode node) {
+        if (node is StackArgumentCallNode stackCall
+            && TypedSignatures?.TypedCallOf(stackCall.Call) is { } stackSignature
+            && stackCall.Call.Arguments[^1] is MethodGroupNode stackGroup) {
+            return StackArgumentCall(stackCall, stackSignature, stackGroup.MethodName);
+        }
         if (node is PortWriteCallNode port) {
             return PortWrite(port);
         }
@@ -188,14 +225,93 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// <c>AX = NearCall(retCs, retIp, () => f(AX, BX))</c>, the bare call for a void method.</summary>
     private CSharpFragment TypedCall(ProcedureCallHelperNode call, Ir.TypedSignature signature,
         string methodName) {
-        string prefix = string.Join(", ", call.Arguments.Take(call.Arguments.Count - 1)
+        int operandCount = TypedCallOperands(call, signature, out int prefixCount);
+        string prefix = string.Join(", ", call.Arguments.Take(prefixCount)
             .Select(argument => Expr(argument).Text));
-        string invocation = $"{call.MethodName}({prefix}, () => {methodName}({signature.ArgumentList}))";
-        return signature.Outputs.Count switch {
-            0 => invocation,
-            1 => $"{signature.Outputs[0].Register} = {invocation}",
-            _ => $"({string.Join(", ", signature.Outputs.Select(output => output.Register))}) = {invocation}"
-        };
+        string argumentList = operandCount == 0
+            ? signature.ArgumentList
+            : string.Join(", ", call.Arguments.Skip(prefixCount).Take(operandCount)
+                .Select(argument => Expr(argument).Text));
+        if (_analysis?.StackArguments.MergeFor(call) is { } merge) {
+            string stackList = string.Join(", ", merge.Arguments
+                .Select(argument => Expr(argument).Text));
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        string invocation = $"{call.MethodName}({prefix}, () => {methodName}({argumentList}))";
+        return CallResult(call, signature, invocation);
+    }
+
+    /// <summary>How many of <paramref name="call"/>'s arguments just before the
+    /// <see cref="MethodGroupNode"/> are the callee's operand nodes: the parameter count when the
+    /// call carries typed operands, zero otherwise. <paramref name="prefixCount"/> is the helper
+    /// argument count (segment, offset, ...).</summary>
+    private static int TypedCallOperands(ProcedureCallHelperNode call, Ir.TypedSignature signature,
+        out int prefixCount) {
+        int operandCount = call.TypedArgumentMask != CpuValues.None ? signature.Parameters.Count : 0;
+        prefixCount = call.Arguments.Count - 1 - operandCount;
+        return operandCount;
+    }
+
+    /// <summary>The merged form of a typed call whose pushes folded into the helper:
+    /// <c>AX = CallWithStackArguments(retCs, retIp, cleanup, () => f(AX, 0x2222), 0x2222)</c>.</summary>
+    private CSharpFragment StackArgumentCall(StackArgumentCallNode node,
+        Ir.TypedSignature signature, string methodName) {
+        ProcedureCallHelperNode call = node.Call;
+        int operandCount = TypedCallOperands(call, signature, out int prefixCount);
+        List<string> arguments = [.. call.Arguments.Take(prefixCount)
+            .Select(argument => Expr(argument).Text)];
+        if (node.CleanupBytes > 0) {
+            arguments.Add($"0x{node.CleanupBytes:X}");
+        }
+        string argumentList = operandCount == 0
+            ? signature.ArgumentList
+            : string.Join(", ", call.Arguments.Skip(prefixCount).Take(operandCount)
+                .Select(argument => Expr(argument).Text));
+        string stackList = string.Join(", ", node.StackArguments
+            .Select(argument => Expr(argument).Text));
+        if (stackList.Length > 0) {
+            argumentList = argumentList.Length == 0
+                ? stackList : $"{argumentList}, {stackList}";
+        }
+        if (_analysis?.StackArguments.Policy.AssumeAbandonedStackSlotsUnobserved == true) {
+            arguments.Add($"0x{node.StackArguments.Count * 2:X}");
+            arguments.Add($"() => {methodName}({argumentList})");
+            string spaceInvocation = $"CallWithStackSpace({string.Join(", ", arguments)})";
+            return CallResult(node.Call, signature, spaceInvocation);
+        }
+        arguments.Add($"() => {methodName}({argumentList})");
+        if (stackList.Length > 0) {
+            arguments.Add(stackList);
+        }
+        string invocation = $"CallWithStackArguments({string.Join(", ", arguments)})";
+        return CallResult(node.Call, signature, invocation);
+    }
+
+    /// <summary>The call with its outputs assigned: the register names of
+    /// <paramref name="signature"/>, unless the register-local plan prints an element as
+    /// <c>_</c> for an output nobody reads. A call whose outputs all print <c>_</c> keeps the
+    /// invocation alone.</summary>
+    private CSharpFragment CallResult(ProcedureCallHelperNode call,
+        Ir.TypedSignature signature, string invocation) {
+        if (signature.Outputs.Count == 0) {
+            return invocation;
+        }
+        List<string> elements = [.. signature.Outputs.Select(output => output.Register)];
+        if (_method?.RegisterLocals?.CallOutputs.TryGetValue(call,
+                out IReadOnlyList<string?>? outputs) == true) {
+            for (int index = 0; index < elements.Count && index < outputs.Count; index++) {
+                if (outputs[index] is { } name) {
+                    elements[index] = name;
+                }
+            }
+        }
+        if (elements.All(element => element == "_")) {
+            return invocation;
+        }
+        return elements.Count == 1
+            ? $"{elements[0]} = {invocation}"
+            : $"({string.Join(", ", elements)}) = {invocation}";
     }
 
     private static readonly
@@ -235,6 +351,39 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
 
         return node.Arguments.Select((argument, index) => Argument(parameters[index], argument));
+    }
+
+    /// <summary>The stacked-FLAGS writer of a typed service call
+    /// (<c>r => CarryOnInterruptStack(r.carryFlag)</c>), or
+    /// <see langword="null"/> when no output of the contract is a status flag. The interpreted
+    /// dispatch writes flag results into the stacked FLAGS word
+    /// (<c>SetFlagOnInterruptStack</c>); the typed call reproduces the same write into the frame
+    /// the helper pushed, so the popped FLAGS and the abandoned frame bytes match.</summary>
+    public string? ServiceCallStackedFlags(InterruptServiceCallNode call) {
+        IReadOnlyList<TypedParameter> outputs = ServiceCallSignature.Outputs(call.Contract);
+        MethodInfo implementation = call.Service.Implementation ?? throw new InvalidOperationException(
+            $"{call.Service.Name} has no implementation to call");
+        IList<string?> names = implementation.ReturnParameter
+            .GetCustomAttribute<TupleElementNamesAttribute>()?.TransformNames ?? [];
+        List<string> writes = [];
+        for (int index = 0; index < outputs.Count; index++) {
+            CpuValues mask = outputs[index].Mask;
+            if (!IsSingleFlag(mask)) {
+                continue;
+            }
+            string element = names.Count == 0 ? "r" : $"r.{names[index]}";
+            writes.Add($"{mask}OnInterruptStack({element})");
+        }
+        return writes.Count switch {
+            0 => null,
+            1 => $"r => {writes[0]}",
+            _ => $"r => {{ {string.Join(" ", writes.Select(write => write + ";"))} }}"
+        };
+    }
+
+    private static bool IsSingleFlag(CpuValues mask) {
+        ulong bits = (ulong)mask;
+        return (mask & ~CpuValues.StatusFlags) == 0 && bits != 0 && (bits & (bits - 1)) == 0;
     }
 
     /// <summary>An argument of a typed service call. A string parameter is the decoded DOS string
@@ -278,7 +427,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         CSharpFragment fragment = Expr(argument);
         if (fragment.Constant is ConstantNode constant && parameterDataType is not null && parameterDataType != DataType.BOOL) {
-            return parameter.Name == "count"
+            return Attribute.IsDefined(parameter, typeof(ShiftCountAttribute), inherit: true)
                 ? ArgumentConstant(constant, parameterDataType)
                 : ConstantLiteral(new ConstantNode(parameterDataType,
                     constant.ConvertAsCSharpCast(parameterDataType))).Text;
@@ -373,8 +522,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return Atomic(read.Text, read.Type ?? node.DataType);
         }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, node.DataType);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(_registerRenderer.ToStringRegister(node.DataType.BitWidth, node.RegisterIndex), node.DataType);
     }
 
@@ -383,14 +534,21 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return Atomic(read.Text, read.Type ?? node.DataType);
         }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, node.DataType);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(_registerRenderer.ToStringSegmentRegister(node.RegisterIndex), DataType.UINT16);
     }
 
     public CSharpFragment VisitSegmentedPointer(SegmentedPointerNode node) {
+        if (StackPlan is { } stackPlan
+            && stackPlan.ArgumentReads.TryGetValue(node, out string? argument)) {
+            return Atomic(argument, node.DataType);
+        }
         if (FramePlan is { } framePlan
             && framePlan.Names.TryGetValue(node, out string? frameSlot)) {
+            PrintedFrameUse = true;
             return Atomic($"{framePlan.VariableName}.{frameSlot}", node.DataType);
         }
         if (IrGlobalAccesses.TryAccess(node, out ConstantMemoryAccess global)) {
@@ -411,10 +569,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         CSharpFragment offset = Expr(node.Offset);
         if (node.Segment is SegmentRegisterNode
                 { RegisterIndex: (int)SegmentRegisterIndex.SsIndex }) {
-            return Atomic($"Ss{indexer}[{MemoryOffset(offset)}]", node.DataType);
+            return Atomic($"Ss{indexer}[{MemoryOffset(node.Offset, offset)}]", node.DataType);
         }
         string segment = Expr(node.Segment);
-        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset)}]", node.DataType);
+        return Atomic($"{indexer}[{segment}, {MemoryOffset(node.Offset, offset)}]", node.DataType);
     }
 
     public CSharpFragment VisitAbsolutePointerNode(AbsolutePointerNode node) =>
@@ -818,9 +976,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     public CSharpFragment VisitCpuFlagNode(CpuFlagNode node) {
+        if (LocalReads is not null && LocalReads.TryGetValue(node, out SubstitutedRead? read)) {
+            return Atomic(read.Text, read.Type ?? node.DataType);
+        }
         if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            PrintedParameterReads.Add(node);
             return Atomic(parameter, DataType.BOOL);
         }
+        PrintedMachineRegisters.Add(node);
         return Atomic(FlagName(node), DataType.BOOL);
     }
 
@@ -994,17 +1157,60 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     /// <summary>
     /// Renders a memory-indexer offset. An atomic offset (a constant or a single register/variable)
-    /// is emitted directly; a compound offset is wrapped in an explicit cast: <c>(ushort)(...)</c>
-    /// when it is 16-bit address arithmetic that must wrap at 64 KiB, <c>(uint)(...)</c> when its
-    /// type is wider than 16 bits so the offset keeps its full value and binds the indexer's
-    /// <c>uint</c> overload (which performs the CPU's segment-limit check).
+    /// is emitted directly so constants keep binding the indexer's <c>ushort</c>/<c>uint</c>
+    /// overloads. A compound offset is emitted bare when the node tree proves every leaf prints as
+    /// a C# type that promotes to <see cref="int"/> (byte, sbyte, short, ushort or int): the
+    /// result is <c>int</c>-typed and binds the wrapping <c>int</c> overload, which truncates to
+    /// 16 bits before the MMU access check. The offset keeps <c>(ushort)(...)</c> when any leaf
+    /// could make the expression <c>uint</c>-typed — otherwise it would bind the non-wrapping
+    /// <c>uint</c> overload — and <c>(uint)(...)</c> when its type is wider than 16 bits so the
+    /// offset keeps its full value and binds the <c>uint</c> overload (which performs the CPU's
+    /// segment-limit check). A 32-bit address-size offset therefore never prints as a
+    /// non-constant <c>int</c>.
     /// </summary>
-    private static string MemoryOffset(CSharpFragment offset) {
+    private static string MemoryOffset(ValueNode offsetNode, CSharpFragment offset) {
         if (offset.Precedence >= CSharpFragment.AtomicPrecedence) {
             return offset.Text;
         }
-        string type = offset.Type?.BitWidth > BitWidth.WORD_16 ? "uint" : "ushort";
-        return $"({type})({offset.Text})";
+        if (offset.Type?.BitWidth > BitWidth.WORD_16) {
+            return $"(uint)({offset.Text})";
+        }
+        if (OffsetPrintsAsInt(offsetNode)) {
+            return offset.Text;
+        }
+        return $"(ushort)({offset.Text})";
+    }
+
+    /// <summary>True when every leaf of the offset prints as a C# type that promotes to
+    /// <see cref="int"/>, making the whole expression <c>int</c>-typed.</summary>
+    private static bool OffsetPrintsAsInt(ValueNode node) {
+        return node switch {
+            BinaryOperationNode binary => OffsetPrintsAsInt(binary.Left) && OffsetPrintsAsInt(binary.Right),
+            UnaryOperationNode unary => OffsetPrintsAsInt(unary.Value),
+            InstructionFieldNode field => OffsetPrintsAsInt(field.ResolvedNode),
+            ConstantNode constant => ConstantPrintsAsInt(constant),
+            _ => LeafPromotesToInt(node.DataType)
+        };
+    }
+
+    /// <summary>True when the literal a constant prints is <see cref="int"/>-typed: no
+    /// <c>u</c>/<c>L</c> suffix and a value that fits.</summary>
+    private static bool ConstantPrintsAsInt(ConstantNode node) {
+        if (node.DataType == DataType.BOOL || node.DataType.BitWidth == BitWidth.QWORD_64) {
+            return false;
+        }
+        return node.DataType.Signed || node.DataType.BitWidth != BitWidth.DWORD_32
+            || node.Value <= int.MaxValue;
+    }
+
+    /// <summary>True when a node's printed C# type promotes to <see cref="int"/> in binary
+    /// arithmetic: every 8/16-bit type and signed 32-bit.</summary>
+    private static bool LeafPromotesToInt(DataType dataType) {
+        return dataType.BitWidth switch {
+            BitWidth.BYTE_8 or BitWidth.WORD_16 => true,
+            BitWidth.DWORD_32 => dataType.Signed,
+            _ => false
+        };
     }
 
     /// <summary>
@@ -1049,7 +1255,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (node.LoadOffset == 0) {
             return new CSharpFragment(node.MethodName);
         }
-        return new CSharpFragment($"_ => {node.MethodName}(0x{node.LoadOffset:X4})", null, AssignmentPrecedence);
+        return new CSharpFragment(GeneratedOverrideNames.EntryFieldNameOf(node.MethodName, node.LoadOffset));
     }
 
     public CSharpFragment VisitSignatureFieldNode(SignatureFieldNode node) => new(node.FieldName);
@@ -1091,6 +1297,8 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitWhileNode(WhileNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitWhileWithExitNode(WhileWithExitNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitThrowNode(ThrowNode node) => throw NotAnExpression(node);
+
+    public CSharpFragment VisitStackRangeCheckNode(StackRangeCheckNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionNode(InstructionNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitMoveIpNextNode(MoveIpNextNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCallNearNode(CallNearNode node) => throw NotAnExpression(node);
@@ -1121,6 +1329,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitCommentNode(CommentNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCheckExternalEventsNode(CheckExternalEventsNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSpeculativeGuardNode(SpeculativeGuardNode node) => throw NotAnExpression(node);
+
     public CSharpFragment VisitInstructionBoundaryNode(InstructionBoundaryNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitDivisionNode(DivisionNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitMultiplicationNode(MultiplicationNode node) => throw NotAnExpression(node);
@@ -1172,9 +1381,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
     public CSharpFragment VisitRegisterLocalNode(RegisterLocalNode node) =>
         Atomic(node.VariableName, node.DataType);
-    public CSharpFragment VisitRegisterWriteBackNode(RegisterWriteBackNode node) =>
-        new CSharpFragment($"{Expr(node.Register)} = {Cast(node.Register.DataType, Expr(node.Local))}",
+    public CSharpFragment VisitRegisterWriteBackNode(RegisterWriteBackNode node) {
+        CSharpFragment register = Expr(node.Register);
+        // The write-back target is a write of the register, not a read of it.
+        PrintedMachineRegisters.Remove(node.Register);
+        PrintedParameterReads.Remove(node.Register);
+        return new CSharpFragment($"{register.Text} = {Cast(node.Register.DataType, Expr(node.Local))}",
             node.Register.DataType, AssignmentPrecedence);
+    }
 
     private readonly record struct ClrTypeInfo(string Name, DataType? DataType);
 }

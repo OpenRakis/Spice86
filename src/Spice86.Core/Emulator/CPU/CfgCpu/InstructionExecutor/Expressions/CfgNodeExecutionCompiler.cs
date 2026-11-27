@@ -30,7 +30,7 @@ using System.Runtime.CompilerServices;
 public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
     private readonly IExecutionAstRewriter _rewriter;
-    private readonly bool _expandAluCalls;
+    private readonly bool _inlineAluAndStackCalls;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
         ICfgNode Node, long Generation)> _compilationQueue = new();
@@ -45,18 +45,19 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// <paramref name="jitMode"/> requires it, starts the background compiler threads.
     /// </summary>
     /// <param name="rewriter">Rewrites each node's execution AST before it is compiled.</param>
-    /// <param name="expandAluCalls">When true, ALU calls are compiled as their inline expansion instead of a call to
-    /// the ALU (see <see cref="AstExpressionBuilder(bool)"/>).</param>
+    /// <param name="inlineAluAndStackCalls">When true, ALU and stack calls are compiled as their inline
+    /// expansions instead of helper calls (see <see cref="AstExpressionBuilder(bool)"/>); PushAll keeps
+    /// its helper.</param>
     public CfgNodeExecutionCompiler(CfgNodeExecutionCompilerMonitor monitor, ILogger logger, JitMode jitMode,
-        IExecutionAstRewriter rewriter, bool expandAluCalls) {
+        IExecutionAstRewriter rewriter, bool inlineAluAndStackCalls) {
         _monitor = monitor;
         _logger = logger;
         _jitMode = jitMode;
         _rewriter = rewriter;
-        _expandAluCalls = expandAluCalls;
+        _inlineAluAndStackCalls = inlineAluAndStackCalls;
 
-        if (_expandAluCalls) {
-            _logger.LogInformation("CfgNodeExecutionCompiler: ALU calls are executed as inline expansions");
+        if (_inlineAluAndStackCalls) {
+            _logger.LogInformation("CfgNodeExecutionCompiler: ALU and stack calls are executed as inline expansions");
         }
 
         if (_jitMode == JitMode.InterpretedThenCompiled) {
@@ -123,7 +124,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// </summary>
     public void Compile(ICfgNode node) {
         IVisitableAstNode executionAst = _rewriter.Rewrite(node, node.ExecutionAst);
-        AstExpressionBuilder expressionBuilder = new(_expandAluCalls);
+        AstExpressionBuilder expressionBuilder = new(_inlineAluAndStackCalls);
         Expression expression = executionAst.Accept(expressionBuilder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper =
             expressionBuilder.ToActionWithHelper(expression);

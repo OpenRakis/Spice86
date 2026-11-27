@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Shared.Emulator.Memory;
 
@@ -27,7 +28,7 @@ internal sealed class CfgReloadExporter {
     /// monotonic persistence across runs.
     /// </summary>
     public CfgReloadDump Export(ExecutionContextManager contextManager, HashSet<SegmentedAddress>? poisonSet,
-        ChangedMemorySnapshot changedMemory) {
+        ChangedMemorySnapshot changedMemory, RecordedRunFacts recordedRunFacts) {
         HashSet<ICfgNode> reachable = TraverseReachableNodes(contextManager);
 
         List<CfgReloadNodeInfo> nodes = new();
@@ -69,6 +70,19 @@ internal sealed class CfgReloadExporter {
                 .ToArray()
             : null;
 
+        string[]? hardwareInterruptDeliveries = contextManager.HardwareInterruptDeliveries is { Count: > 0 } deliveries
+            ? deliveries
+                .Select(delivery => $"{delivery.Vector:X2}={delivery.Target}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray()
+            : null;
+
+        string[]? terminateResumeTargets = recordedRunFacts.TerminateResumeTargets is { Count: > 0 } targets
+            ? targets.Select(address => address.ToString())
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray()
+            : null;
+
         string[]? watchedAreas = ChangedMemorySnapshot.SerializeRanges(changedMemory.WatchedAreas);
         string[]? changedRanges = ChangedMemorySnapshot.SerializeRanges(changedMemory.ChangedRanges);
 
@@ -81,6 +95,10 @@ internal sealed class CfgReloadExporter {
                 .ToArray(),
             Blocks = blockInfos.OrderBy(b => b.Id).ToArray(),
             PoisonedAddresses = poisonedAddresses,
+            HardwareInterruptDeliveries = hardwareInterruptDeliveries,
+            TerminateResumeTargets = terminateResumeTargets,
+            ProgramSetCurrentPsp = recordedRunFacts.ProgramSetCurrentPsp,
+            MouseUserSubroutineRegistered = recordedRunFacts.MouseUserSubroutineRegistered,
             WatchedAreas = watchedAreas,
             ChangedRanges = changedRanges
         };

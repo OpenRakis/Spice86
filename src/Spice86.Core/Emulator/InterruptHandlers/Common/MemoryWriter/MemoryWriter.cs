@@ -24,11 +24,19 @@ public class MemoryWriter {
         CurrentAddress = beginningAddress;
     }
 
+    /// <summary>Called once per write with the address and byte count just written. Lets a writer
+    /// that produces machine code record the range it emitted.</summary>
+    /// <param name="start">Address the write began at.</param>
+    /// <param name="length">Number of bytes written.</param>
+    protected virtual void TrackWrittenRange(SegmentedAddress start, uint length) {
+    }
+
     /// <summary>
     /// Writes the given byte at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next byte.
     /// </summary>
     /// <param name="b">data to write</param>
     public void WriteUInt8(byte b) {
+        TrackWrittenRange(CurrentAddress, 1);
         _memory.UInt8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
         CurrentAddress += 1;
     }
@@ -38,6 +46,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="b">data to write</param>
     public void WriteInt8(sbyte b) {
+        TrackWrittenRange(CurrentAddress, 1);
         _memory.Int8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
         CurrentAddress += 1;
     }
@@ -47,6 +56,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="w">data to write</param>
     public void WriteUInt16(ushort w) {
+        TrackWrittenRange(CurrentAddress, 2);
         _memory.UInt16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
@@ -56,6 +66,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="w">data to write</param>
     public void WriteInt16(short w) {
+        TrackWrittenRange(CurrentAddress, 2);
         _memory.Int16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
@@ -65,6 +76,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="dw">data to write</param>
     public void WriteUInt32(uint dw) {
+        TrackWrittenRange(CurrentAddress, 4);
         _memory.UInt32[CurrentAddress.Segment, CurrentAddress.Offset] = dw;
         CurrentAddress += 4;
     }
@@ -75,6 +87,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="address">data to write</param>
     public void WriteSegmentedAddress(SegmentedAddress address) {
+        TrackWrittenRange(CurrentAddress, 4);
         _memory.SegmentedAddress16[CurrentAddress.Segment, CurrentAddress.Offset] = address;
         CurrentAddress += 4;
     }

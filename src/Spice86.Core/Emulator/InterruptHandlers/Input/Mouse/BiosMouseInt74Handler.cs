@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -20,9 +21,12 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// </summary>
     /// <param name="hardwareInterruptHandler">The two programmable interrupt controllers.</param>
     /// <param name="memory">The memory bus.</param>
-    public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory) {
+    /// <param name="callTargetRegistry">Registry notified with <c>(call site, target)</c> when
+    /// the switchable driver call's pointer is written, for CFG speculative linking.</param>
+    public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory,
+        ICallTargetRegistry callTargetRegistry) {
         _hardwareInterruptHandler = hardwareInterruptHandler;
-        _driverAddressSwitcher = new InMemoryAddressSwitcher(memory);
+        _driverAddressSwitcher = new InMemoryAddressSwitcher(memory, callTargetRegistry);
     }
 
     /// <inheritdoc />
@@ -34,13 +38,20 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <param name="driverAddress">The Segmented Address to use</param>
     public void SetMouseDriverAddress(SegmentedAddress driverAddress) => _driverAddressSwitcher.SetAddress(driverAddress.Segment, driverAddress.Offset);
 
+    /// <summary>
+    /// The switchable driver call: its emitted call site and the target the pointer holds now,
+    /// or null before the stub is installed.
+    /// </summary>
+    public SwitchableCall? CurrentCall => _driverAddressSwitcher.CurrentCall;
+
     /// <inheritdoc />
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         // Mouse driver implementation:
         //  - Create a Far ret, this is the default mouse driver called when nothing else is there :)
-        //  - Create a modifiable Far call instruction to the default mouse driver address
+        //  - Create a memory-indirect Far call CS:[disp16] reading a switchable pointer
         //  - Create a callback (0x74) that will prepare mouse driver call
         //  - Create an IRET
+        //  - Create the 4-byte far pointer the call reads, after the IRET so it is never executed
 
         // Write ASM
         // Default mouse driver: nothing, just a far ret
@@ -49,12 +60,14 @@ public class BiosMouseInt74Handler : IInterruptHandler {
 
         // Entry point to the interrupt handler
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.CurrentAddress;
-        // Far call to default driver, can be changed via _inMemoryAddressSwitcher
-        memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_driverAddressSwitcher);
+        // Far call through the switchable pointer, can be changed via _inMemoryAddressSwitcher
+        memoryAsmWriter.WriteCsIndirectFarCallToSwitcherDefaultAddress(_driverAddressSwitcher);
         // Write a callback that will EOI PIC after mouse driver execution
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, AfterMouseDriverExecution);
         // Write IRET
         memoryAsmWriter.WriteIret();
+        // The far pointer the call reads; sits after the IRET, outside any instruction path
+        memoryAsmWriter.WriteSwitcherPointer(_driverAddressSwitcher);
 
         return interruptHandlerAddress;
     }
@@ -62,7 +75,8 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Prepares execution before the Mouse handler is called.
     /// </summary>
-    /// <remarks>Far calls the user mouse driver, so its effects are not bounded.</remarks>
-    [InterruptService(Unknown = true)]
+    /// <remarks>The callback itself only acknowledges the PIC; the far call to the user driver
+    /// is the stub's own instruction, not an effect of this callback.</remarks>
+    [InterruptService(Io = true)]
     public void AfterMouseDriverExecution() => _hardwareInterruptHandler.AcknowledgeInterrupt(12);
 }

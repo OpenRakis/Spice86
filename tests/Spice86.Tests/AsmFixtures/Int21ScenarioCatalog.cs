@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Keyboard;
@@ -49,20 +50,31 @@ internal static class Int21ScenarioCatalog {
 
     /// <summary>Every INT 21h scenario, in the order of the resources they execute.</summary>
     public static IReadOnlyList<AsmScenario> Scenarios => [
-        Simple("dbcs_lead_byte_table_al0.com"),
+        Simple("dbcs_lead_byte_table_al0.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.DbcsLeadByteTableAl0),
         Simple("dbcs_lead_byte_table_invalid_al.com"),
         Simple("cds_initialized_known_location.com"),
         Simple("dbcs_table_private_area.com"),
         Simple("psp_parent_command_com.com"),
-        Simple("environment_block_not_corrupted.com"),
-        Simple("environment_block_contains_program_path.com"),
+        Simple("environment_block_not_corrupted.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.EnvironmentBlockNotCorrupted),
+        Simple("environment_block_contains_program_path.com").WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.EnvironmentBlockContainsProgramPath),
         Simple("child_return_code_initial.com"),
         Simple("child_return_code_subsequent_zero.com"),
-        Simple("int20_terminates.com"),
+        // The program writes success before int 20h, so a returning INT 20h would still pass:
+        // the engine assertion proves termination instead, through the instructions after int 20h
+        // never executing.
+        Simple("int20_terminates.com").WithOracle(fixture => fixture
+            .WithEngineAssertions(AsmScenarioEngineAssertions.Int20Terminates)),
         Simple("create_new_psp_valid_copy.com"),
         Simple("create_child_psp_valid.com"),
         Simple("program_arguments_access_argv.com"),
-        Simple("program_arguments_print_argv0.com"),
+        Simple("program_arguments_print_argv0.com")
+            .WithOracle(fixture => new AsmFixture(fixture.Settings, fixture.ExpectedMemory, result => {
+                fixture.AssertResult(result);
+                result.Observations.Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation)
+                    .Text.Should().Be("C",
+                        "the harness runs the program as C:\\TEST.COM, so argv[0] starts with 'C' and AH=02h prints it");
+            }))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ProgramArgumentsPrintArgv0),
         StandardFileHandlesInherited(),
         Simple("select_default_drive.com"),
         Simple("allocation_info_default_drive.com"),
@@ -118,9 +130,13 @@ internal static class Int21ScenarioCatalog {
                 AdditionalResourceDependencies = [
                     $"{ResourceSubDirectory}/child_opens_files_without_closing.com"
                 ]
-            }, NoDetailAssertions),
+            }, NoDetailAssertions).WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ChildExecTerminateReleasesHandles),
         Simple("terminate_after_create_child_psp_restores_parent_stack.com"),
         GetTrueName(),
+        PspSwitchFrameReuse(),
+        ExecCtrlCChildFrame(),
+        ExecNestedTerminate(),
+        DosEntryHookFunction(),
         WithHandleTestFiles("set_handle_count_relocates_jft.com"),
         ProgramScenario("bios_disk_parameters_hdd", "bios_disk_parameters.com",
             new Int21RunSetup { ExeArgs = "h" }, NoDetailAssertions),
@@ -137,6 +153,164 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario Simple(string programFileName) {
         return ProgramScenario(ProgramName(programFileName), programFileName, Int21RunSetup.None,
             NoDetailAssertions);
+    }
+
+    /// <summary>Runs dos_entry_hook_function.com: the program leaves AH = 62h set through an untyped
+    /// INT 2Fh, then calls the typed AH=30h (Get DOS version) at a deeper stack pointer. The typed
+    /// call's entry bookkeeping must save the caller stack under its own function number, so the PSP
+    /// caller-stack field ends at SS:FFF4; a stale-AH decision would keep the first record's value.</summary>
+    private static AsmScenario DosEntryHookFunction() {
+        const string identity = "dos_entry_hook_function";
+        const string programFileName = "dos_entry_hook_function.com";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory
+            };
+            return new AsmFixture(settings, [], result => {
+                result.Memory.UInt16[0x3000, 0].Should().Be(0xFFF4,
+                    "the AH=30h call at SP=FFFAh saves SS:FFF4 under its own function number, not stale AH=62h");
+                result.Memory.UInt16[0x3000, 2].Should().Be(result.Memory.UInt16[0x3000, 4],
+                    "the saved SS is the program's own PSP segment");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs psp_switch_frame_reuse.com: section 1 creates a child PSP with untyped AH=26h,
+    /// then a typed AH=50h at the same SP whose frame overwrites the 26h frame's FLAGS; the child's
+    /// terminate must pop the 50h FLAGS. Section 2 calls the stack-saving typed AH=30h at SP = Y,
+    /// seeds Y-6..Y-1, then keeps every later frame on a scratch stack; the child's terminate must
+    /// pop the 30h frame's FLAGS and land at SS:Y. Both resumes store pushf, SS and SP to
+    /// 5000:0000.</summary>
+    private static AsmScenario PspSwitchFrameReuse() {
+        const string identity = "psp_switch_frame_reuse";
+        const string programFileName = "psp_switch_frame_reuse.com";
+        const uint resultBase = 0x50000;
+        ushort expectedFlags = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E45 }.FlagRegister16;
+        ushort expectedFlags2 = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E11 }.FlagRegister16;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+
+                result.Memory.UInt16[resultBase + 0].Should().Be(expectedFlags,
+                    "the resume pops the FLAGS of the typed 50h frame that overwrote the 26h frame");
+                result.Memory.UInt16[resultBase + 2].Should().Be(result.Memory.UInt16[resultBase + 6],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 4].Should().Be(result.Memory.UInt16[resultBase + 8],
+                    "the resume restores the parent's SP at the 26h/50h call");
+                result.Memory.UInt16[resultBase + 10].Should().Be(expectedFlags2,
+                    "the resume pops the FLAGS of the stack-saving typed 30h frame at SS:Y-6");
+                result.Memory.UInt16[resultBase + 12].Should().Be(result.Memory.UInt16[resultBase + 16],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 14].Should().Be(result.Memory.UInt16[resultBase + 18],
+                    "the resume lands at SP = Y");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs exec_ctrl_c_child_frame.com: a program without 50h/55h EXECs CTRLCD.COM, which
+    /// stuffs a Ctrl-C keystroke into the BIOS keyboard buffer and calls the typed INT 21h/AH=09h
+    /// service. DOS terminates the child inside the typed call; the resume pops the parent's EXEC
+    /// frame, which is always written because EXEC is untyped, so the typed 09h call needs no frame.
+    /// The resume stores pushf, SS and SP to 5000:0000.</summary>
+    private static AsmScenario ExecCtrlCChildFrame() {
+        const string identity = "exec_ctrl_c_child_frame";
+        const string programFileName = "exec_ctrl_c_child_frame.com";
+        const string childFileName = "ctrl_c_print_child.com";
+        const uint resultBase = 0x50000;
+        ushort expectedFlags = new Flags(CpuModel.ZET_86) { FlagRegister16 = 0x0E45 }.FlagRegister16;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            CopyResourceFile(childFileName, directory, "CTRLCD.COM");
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+                result.Memory.UInt16[resultBase + 0].Should().Be(expectedFlags,
+                    "the resume pops the FLAGS of the parent's untyped EXEC frame");
+                result.Memory.UInt16[resultBase + 2].Should().Be(result.Memory.UInt16[resultBase + 6],
+                    "the resume restores the parent's SS");
+                result.Memory.UInt16[resultBase + 4].Should().Be(result.Memory.UInt16[resultBase + 8],
+                    "the resume restores the parent's SP at the EXEC call");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}", $"{ResourceSubDirectory}/{childFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
+    }
+
+    /// <summary>Runs exec_nested_parent.com: the parent EXECs CHILD.COM, which EXECs GRAND.COM.
+    /// The grandchild's terminate must land back in the child and the child's terminate back in
+    /// the parent: each level stores a marker to 5000:0030/34/38 so a terminate caught by the
+    /// wrong EXEC call skips the markers below it.</summary>
+    private static AsmScenario ExecNestedTerminate() {
+        const string identity = "exec_nested_terminate";
+        const string programFileName = "exec_nested_parent.com";
+        const string childFileName = "exec_nested_child.com";
+        const string grandFileName = "exec_nested_grand.com";
+        const uint resultBase = 0x50000;
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            CopyResourceFile(childFileName, directory, "CHILD.COM");
+            CopyResourceFile(grandFileName, directory, "GRAND.COM");
+            string programPath = CopyResourceFile(programFileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                MaxCycles = MaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], result => {
+                TestIoPortHandler testHandler = result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+                testHandler.Results.Should().Contain(TestPortSuccess,
+                    $"{programFileName} must report success (details: {string.Join(",", testHandler.Details)})");
+                result.Memory.UInt16[resultBase + 0x30].Should().Be((ushort)0xABCD,
+                    "the grandchild ran and stored its marker before terminating");
+                result.Memory.UInt16[resultBase + 0x34].Should().Be((ushort)0xCAFE,
+                    "the grandchild's terminate resumed the child, which stored its marker");
+                result.Memory.UInt16[resultBase + 0x38].Should().Be((ushort)0x1234,
+                    "the child's terminate resumed the parent, which stored its marker");
+            });
+        }, [$"{ResourceSubDirectory}/{programFileName}",
+            $"{ResourceSubDirectory}/{childFileName}",
+            $"{ResourceSubDirectory}/{grandFileName}"]) {
+            PrimaryResourceFileName = programFileName
+        };
     }
 
     /// <summary>The program exercises DOS upper memory blocks, so the run provides XMS.</summary>
@@ -187,6 +361,7 @@ internal static class Int21ScenarioCatalog {
                 CreateHostFiles = directory => {
                     byte[] testData = Enumerable.Range(0, 0x400).Select(i => (byte)i).ToArray();
                     File.WriteAllBytes(Path.Join(directory, "SEEKTEST.BIN"), testData);
+                    DosTestFiles.SetFixedTimes(Path.Join(directory, "SEEKTEST.BIN"));
                 }
             }, NoDetailAssertions);
     }
@@ -195,7 +370,11 @@ internal static class Int21ScenarioCatalog {
     /// denied, so every run needs the same read-only content file.</summary>
     private static AsmScenario WriteReadOnlyHandle() {
         return ProgramScenario("write_read_only_handle", "write_read_only_handle.com", new Int21RunSetup {
-            CreateHostFiles = directory => File.WriteAllText(Path.Join(directory, "RO.TXT"), "data")
+            CreateHostFiles = directory => {
+                string path = Path.Join(directory, "RO.TXT");
+                File.WriteAllText(path, "data");
+                DosTestFiles.SetFixedTimes(path);
+            }
         }, NoDetailAssertions);
     }
 
@@ -207,6 +386,7 @@ internal static class Int21ScenarioCatalog {
             CreateHostFiles = directory => {
                 string testFilePath = Path.Join(directory, "TESTATTR.TXT");
                 File.WriteAllText(testFilePath, "test");
+                DosTestFiles.SetFixedTimes(testFilePath);
                 File.SetAttributes(testFilePath, FileAttributes.ReadOnly | FileAttributes.Archive);
             }
         }, testHandler => {
@@ -226,9 +406,16 @@ internal static class Int21ScenarioCatalog {
                 CreateHostFiles = directory => {
                     string testFilePath = Path.Join(directory, "SETATR.TXT");
                     File.WriteAllText(testFilePath, "test");
+                    DosTestFiles.SetFixedTimes(testFilePath);
                     File.SetAttributes(testFilePath, FileAttributes.Archive);
                 }
-            }, NoDetailAssertions);
+            }, testHandler => {
+                testHandler.Details.Should().NotBeEmpty("the program reports the read-back attributes CL as a detail byte");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    (testHandler.Details[0] & 0x20).Should().Be(0x20,
+                        "the program sets readonly|archive (ASM line 15) and AH=43h AL=00h returns the attributes in CL; Windows hosts persist the DOS archive bit. On Linux the archive bit is not persisted, so the detail is not asserted there");
+                }
+            });
     }
 
     /// <summary>The program reads back the switch and availdev characters with INT 21h AH=37h and sets
@@ -245,14 +432,16 @@ internal static class Int21ScenarioCatalog {
     /// the headless GUI while the program runs, and the program must detect it and invoke INT 23h.</summary>
     private static AsmScenario StdinStatusDetectsCtrlC() {
         return ProgramScenario("check_stdin_status_ctrl_c", "check_stdin_status_ctrl_break.com",
-            KeyboardSetup(SimulateCtrlC), NoDetailAssertions);
+            KeyboardSetup(SimulateCtrlC), NoDetailAssertions)
+            .WithTimingDependentState("Ctrl-C is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>Same program as <see cref="StdinStatusDetectsCtrlC"/>, but the run presses Ctrl-Break, so it
     /// is a distinct scenario with its own identity and goldens.</summary>
     private static AsmScenario StdinStatusDetectsCtrlBreak() {
         return ProgramScenario("check_stdin_status_ctrl_break", "check_stdin_status_ctrl_break.com",
-            KeyboardSetup(SimulateCtrlBreak), NoDetailAssertions);
+            KeyboardSetup(SimulateCtrlBreak), NoDetailAssertions)
+            .WithTimingDependentState("Ctrl-Break is injected while the program polls standard input, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program reads a single character through its standard input handle, which the run
@@ -309,7 +498,8 @@ internal static class Int21ScenarioCatalog {
     private static AsmScenario FlushInputThenWaitForKey() {
         return ProgramScenario("flush_input_then_wait_key_ah01", "flush_input_then_wait_key_ah01.com",
             KeyboardSetup(SimulateKeyA), testHandler => testHandler.Details.Should().Equal(new byte[] { (byte)'a' },
-                "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"));
+                "AH=0Ch AL=01h should wait for the key pressed after the flush and return it in AL"))
+            .WithTimingDependentState("the key is injected asynchronously while the program waits, so the delivery point is timing-dependent");
     }
 
     /// <summary>The program positions the cursor and reads the Device Status Report bytes back through
@@ -455,7 +645,9 @@ internal static class Int21ScenarioCatalog {
     private static void CreateIsoImageFile(string directory) {
         string sourcePath = Path.Join(directory, "iso-source");
         Directory.CreateDirectory(sourcePath);
+        DosTestFiles.SetFixedDirectoryTimes(sourcePath);
         File.WriteAllText(Path.Join(sourcePath, "README.TXT"), "SPICE86!");
+        DosTestFiles.SetFixedTimes(Path.Join(sourcePath, "README.TXT"));
         using VirtualIsoImage image = new(sourcePath, "SPICE86");
         byte[] isoBytes = new byte[image.TotalSectors * 2048];
         for (int lba = 0; lba < image.TotalSectors; lba++) {
@@ -466,6 +658,7 @@ internal static class Int21ScenarioCatalog {
             }
         }
         File.WriteAllBytes(Path.Join(directory, "disc.iso"), isoBytes);
+        DosTestFiles.SetFixedTimes(Path.Join(directory, "disc.iso"));
     }
 
     private static void CreateFloppyImageFile(string directory) {
@@ -473,17 +666,20 @@ internal static class Int21ScenarioCatalog {
             .WithFile("SUBDIR\\HELLO.TXT", Encoding.ASCII.GetBytes("FLOPPY!"))
             .Build();
         File.WriteAllBytes(Path.Join(directory, "disk.img"), image);
+        DosTestFiles.SetFixedTimes(Path.Join(directory, "disk.img"));
     }
 
     private static void WriteTestFiles(string directory, IEnumerable<string> fileNames) {
-        foreach (string fileName in fileNames) {
-            File.WriteAllText(Path.Join(directory, fileName), "test");
+        foreach (string path in fileNames.Select(fileName => Path.Join(directory, fileName))) {
+            File.WriteAllText(path, "test");
+            DosTestFiles.SetFixedTimes(path);
         }
     }
 
     private static void CreateHandleTestFiles(string directory) {
         foreach (string name in new[] { "A", "B", "C", "D" }) {
             File.WriteAllText(Path.Join(directory, $"{name}.TXT"), name);
+            DosTestFiles.SetFixedTimes(Path.Join(directory, $"{name}.TXT"));
         }
     }
 
@@ -495,6 +691,7 @@ internal static class Int21ScenarioCatalog {
         string source = Path.Join(AppContext.BaseDirectory, "Resources", ResourceSubDirectory, resourceFileName);
         string target = Path.Join(targetDirectory, targetFileName);
         File.Copy(source, target, overwrite: true);
+        DosTestFiles.SetFixedTimes(target);
         return target;
     }
 

@@ -79,7 +79,16 @@ public class CSharpExpressionPrinterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("SsUInt16[(ushort)(BP - 0x80)]");
+        fragment.Text.Should().Be("SsUInt16[BP - 0x80]");
+    }
+
+    [Fact]
+    public void UintOperandInWordOffsetKeepsTheUshortCast() {
+        BinaryOperationNode offset = new(DataType.UINT16, new RegisterNode(DataType.UINT32, 3), BinaryOperation.PLUS, new ConstantNode(DataType.UINT16, 4));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("SsUInt16[(ushort)(EBX + 4)]");
     }
 
     [Fact]

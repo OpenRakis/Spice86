@@ -94,6 +94,8 @@ wait_pending:
     call timer_hook
     cli
     mov byte [completed], 0xA5
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 rb 0x0200-$

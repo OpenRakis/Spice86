@@ -46,6 +46,12 @@ using System.Linq;
 /// identities are shared with <see cref="IrBranchSimplification"/> so a condition simplifies the
 /// same way in both places.</para>
 ///
+/// <para>Method locals bound once to a constant substitute the same way: a name declared exactly
+/// once outside an inside-instruction loop block, with an initializer that evaluates, and never
+/// written again is a constant at every read. <see cref="ConstantLocals"/> computes the table and
+/// <see cref="IrConstantFacts.Locals"/> carries it to the branch pass, whose evaluations resolve a
+/// <see cref="VariableReferenceNode"/> leaf from it.</para>
+///
 /// <para>A declaration no statement reads anymore is removed only when the rewritten statement's
 /// stored effects say it is side-effect free: it writes no machine value (<see cref="CpuValues"/>),
 /// writes or reads no token (<see cref="IrTokens"/>) - a memory read can have a device side effect -
@@ -57,13 +63,87 @@ internal static class IrConstants {
     /// known, and returns the facts.</summary>
     /// <param name="graph">The structuring graph of <paramref name="method"/>, built once for its
     /// current block structure.</param>
-    public static IrConstantFacts Apply(IrMethod method, IrSsa ssa,
+    public static IrConstantFacts Apply(IrMethod method, IrEditor editor,
         BlockGraph<IrBlock> graph) {
-        IrConstantFacts facts = new(ssa);
+        IrSsa ssa = editor.Ssa;
+        HashSet<IrBlock> loopBlocks = LoopBlocks(method);
+        IrConstantFacts facts = new(ssa, ConstantLocals(method, loopBlocks));
         ComputeClean(facts, graph);
         new IrSccpSolver(method, ssa, facts).Compute();
-        Substitute(method, ssa, facts);
+        Substitute(method, editor, ssa, facts, loopBlocks);
         return facts;
+    }
+
+    /// <summary>The method locals a single declaration binds to a compile-time constant: exactly
+    /// one <see cref="VariableDeclarationNode"/> of the method declares the name, outside an
+    /// inside-instruction loop block, its initializer evaluates with no variable or register leaf,
+    /// and no statement or terminator writes the name - no assignment whose left side is a
+    /// <see cref="VariableReferenceNode"/> of it, and no occurrence under a
+    /// <see cref="TupleSwapNode"/>, <see cref="MultiplicationNode"/>, <see cref="DivisionNode"/>,
+    /// <see cref="RegisterWriteBackNode"/>, <see cref="OpaqueNode"/> or
+    /// <see cref="InstructionNode"/>, the shapes with write targets or verbatim children. The
+    /// printed C# compiles, so the single declaration is definitely assigned before every read;
+    /// with no other write, every read sees the constant.</summary>
+    private static IReadOnlyDictionary<string, ConstantNode> ConstantLocals(IrMethod method,
+        HashSet<IrBlock> loopBlocks) {
+        Dictionary<string, ConstantNode> locals = new();
+        HashSet<string> rejected = [];
+        foreach (IrBlock block in method.Blocks) {
+            foreach (IrStatement statement in block.Statements) {
+                CollectVariableWrites(statement.Node, rejected);
+                CollectConstantDeclarations(statement.Node, block, loopBlocks, locals, rejected);
+            }
+            foreach (IVisitableAstNode root in IrAstChildren.RootsOf(block.Terminator)) {
+                CollectVariableWrites(root, rejected);
+            }
+        }
+        foreach (string name in rejected) {
+            locals.Remove(name);
+        }
+        return locals;
+    }
+
+    /// <summary>Records every <see cref="VariableDeclarationNode"/> of <paramref name="node"/>
+    /// whose initializer is constant into <paramref name="locals"/>: a declaration inside an
+    /// inside-instruction loop block, one whose initializer does not evaluate, and a second
+    /// declaration of an already seen name all reject the name instead.</summary>
+    private static void CollectConstantDeclarations(IVisitableAstNode node, IrBlock block,
+        HashSet<IrBlock> loopBlocks, Dictionary<string, ConstantNode> locals,
+        HashSet<string> rejected) {
+        foreach (VariableDeclarationNode declaration in IrAstChildren.Descendants(node)
+                .OfType<VariableDeclarationNode>()) {
+            if (rejected.Contains(declaration.VariableName) || locals.ContainsKey(declaration.VariableName)
+                || loopBlocks.Contains(block)
+                || !ConstantEvaluation.TryEvaluate(declaration.Initializer, _ => null,
+                    out ulong initialValue)) {
+                rejected.Add(declaration.VariableName);
+                continue;
+            }
+            locals[declaration.VariableName] = new ConstantNode(declaration.DataType,
+                ConstantEvaluation.Bits(declaration.DataType, initialValue));
+        }
+    }
+
+    /// <summary>Records into <paramref name="writes"/> the name of every variable
+    /// <paramref name="node"/> writes: the target of an assignment, and any variable mentioned
+    /// under a shape with write targets or verbatim children.</summary>
+    private static void CollectVariableWrites(IVisitableAstNode node, HashSet<string> writes) {
+        foreach (IVisitableAstNode descendant in IrAstChildren.Descendants(node)) {
+            switch (descendant) {
+                case BinaryOperationNode {
+                    BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: VariableReferenceNode target }:
+                    writes.Add(target.VariableName);
+                    break;
+                case TupleSwapNode or MultiplicationNode or DivisionNode or RegisterWriteBackNode
+                    or OpaqueNode or InstructionNode:
+                    foreach (VariableReferenceNode reference in IrAstChildren
+                            .Descendants(descendant).OfType<VariableReferenceNode>()) {
+                        writes.Add(reference.VariableName);
+                    }
+                    break;
+            }
+        }
     }
 
     // Clean analysis: per position, the registers whose current version was defined with no interrupt
@@ -124,38 +204,27 @@ internal static class IrConstants {
         (CpuValues)((1UL << (IrConstantFacts.ByteCount * 8)) - 1);
 
     // Substitution: reads of known versions, in the substitutable places only.
-    private static void Substitute(IrMethod method, IrSsa ssa, IrConstantFacts facts) {
-        HashSet<IrBlock> loopBlocks = LoopBlocks(method);
+    private static void Substitute(IrMethod method, IrEditor editor, IrSsa ssa,
+        IrConstantFacts facts, HashSet<IrBlock> loopBlocks) {
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten = [];
         Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin = IrOrigins.ByOrigin(method);
         foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in statementsByOrigin) {
             bool rewritable = IrOrigins.Rewritable(statements, origin);
             bool repCompare = method.Shapes.GetValueOrDefault(origin)
                 is IrInstructionShape.RepCompare;
-            Dictionary<string, ConstantNode> variableConstants = new();
             foreach (IrOrigins.Located located in statements) {
                 IVisitableAstNode node = located.Statement.Node;
                 bool inLoop = loopBlocks.Contains(located.Block);
                 if (rewritable) {
                     node = IrConstantFolder.Fold(Rewrite(node, located.Block, located.Index, facts,
                         !inLoop && !repCompare),
-                        inLoop ? IrConstantFolder.NoVariableConstants : variableConstants);
+                        inLoop ? IrConstantFolder.NoVariableConstants : facts.Locals);
                 }
                 rewritten.Add((located.Block, located.Index, located.Statement, node));
-                if (!inLoop && node is VariableDeclarationNode declaration) {
-                    if (ConstantEvaluation.TryEvaluate(declaration.Initializer, _ => null,
-                            out ulong variableValue)) {
-                        variableConstants[declaration.VariableName] = new ConstantNode(
-                            declaration.DataType,
-                            ConstantEvaluation.Bits(declaration.DataType, variableValue));
-                    } else {
-                        variableConstants.Remove(declaration.VariableName);
-                    }
-                }
             }
         }
-        ApplySubstitutions(method, ssa, rewritten);
-        SubstituteTerminators(method, ssa, loopBlocks, statementsByOrigin, facts);
+        ApplySubstitutions(method, editor, rewritten);
+        SubstituteTerminators(method, editor, ssa, loopBlocks, statementsByOrigin, facts);
     }
 
     /// <summary>Substitutes the reads a terminator makes: the condition of an <see cref="IrBranch"/>
@@ -164,7 +233,7 @@ internal static class IrConstants {
     /// rewritability - a jump cannot fault, but an edge inside a faulting instruction's body can
     /// still land here through its origin - and inside-instruction loop blocks keep the same
     /// flags-only rule their statements follow.</summary>
-    private static void SubstituteTerminators(IrMethod method, IrSsa ssa,
+    private static void SubstituteTerminators(IrMethod method, IrEditor editor, IrSsa ssa,
         HashSet<IrBlock> loopBlocks,
         Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin, IrConstantFacts facts) {
         foreach (IrBlock block in method.Blocks) {
@@ -191,19 +260,19 @@ internal static class IrConstants {
                 _ => null
             };
             if (replacement is not null) {
-                if (ssa.HasSite(block.Terminator)) {
-                    ssa.ReplaceTerminator(block.Terminator, replacement);
-                }
-                block.Terminator = replacement;
+                editor.SetTerminator(block, replacement);
             }
         }
     }
 
     /// <summary>Applies <paramref name="rewritten"/>: a declaration nothing reads is removed when its
-    /// rewritten statement has no side effect; every other changed statement replaces its site. A
-    /// method variable can be declared by one instruction's statements and read by another's, so the
-    /// reference census covers the whole method.</summary>
-    private static void ApplySubstitutions(IrMethod method, IrSsa ssa,
+    /// rewritten statement has no side effect, or when its initializer evaluates to a compile-time
+    /// constant - the constant reads nothing and cannot fault, so the removal is safe even inside an
+    /// instruction with an observed fault edge, where <see cref="IrStatement.IsRemovable"/> refuses.
+    /// Every other changed statement replaces its site. A method variable can be declared by one
+    /// instruction's statements and read by another's, so the reference census covers the whole
+    /// method.</summary>
+    private static void ApplySubstitutions(IrMethod method, IrEditor editor,
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten) {
         Dictionary<string, int> references = new();
         foreach ((_, _, _, IVisitableAstNode node) in rewritten) {
@@ -217,7 +286,8 @@ internal static class IrConstants {
             in rewritten) {
             if (node is VariableDeclarationNode declaration
                 && references.GetValueOrDefault(declaration.VariableName) == 0
-                && IrStatement.Create(node, original.Origin).IsRemovable) {
+                && (IrStatement.Create(node, original.Origin).IsRemovable
+                    || ConstantEvaluation.TryEvaluate(declaration.Initializer, _ => null, out _))) {
                 edits.Add((block, index, null));
                 continue;
             }
@@ -227,16 +297,11 @@ internal static class IrConstants {
         }
         foreach ((IrBlock block, int index, IrStatement? replacement)
             in edits.OrderByDescending(edit => edit.Index)) {
-            IrStatement old = block.Statements[index];
-            block.Statements.RemoveAt(index);
             if (replacement is null) {
-                ssa.Remove(old);
+                editor.Remove(block, index);
                 continue;
             }
-            block.Statements.Insert(index, replacement);
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+            editor.Replace(block, index, replacement);
         }
     }
 
