@@ -40,7 +40,7 @@ public class GeneratorProgressTest {
         List<string> messages = new();
         reporter.MessageLogged += messages.Add;
 
-        new CfgCSharpGenerator().Generate(program, reporter);
+        new CfgCSharpGenerator(new GeneratorOptions { MaxDegreeOfParallelism = 1 }).Generate(program, reporter);
 
         List<(DumpPhase Phase, int Current, int Total, string Item)> methodsSteps =
             steps.Where(s => s.Phase == DumpPhase.CodeMethods).ToList();
@@ -69,7 +69,7 @@ public class GeneratorProgressTest {
     }
 
     [Fact]
-    public void GenerateReportsTheMethodStepBeforeEmittingIt() {
+    public void GenerateReportsNoMethodStepWhenEmittingItThrows() {
         // Arrange: the first method's block jumps into the second partition, which has no transfer
         // metadata; the transfer emitter throws while lifting that method.
         TestInstructionHelper helper = new();
@@ -91,12 +91,13 @@ public class GeneratorProgressTest {
         reporter.StepReported += (phase, current, total, item) => steps.Add((phase, current, total, item));
 
         // Act
-        Action generate = () => new CfgCSharpGenerator().Generate(program, reporter);
+        Action generate = () => new CfgCSharpGenerator(new GeneratorOptions { MaxDegreeOfParallelism = 1 }).Generate(program, reporter);
 
-        // Assert: the step for the first method was already reported when its emission threw.
+        // Assert: preparation steps are completion events in the parallel rounds, so a method
+        // whose emission throws has no completed-step event.
         generate.Should().Throw<NotSupportedException>()
             .WithMessage("Missing partition transfer metadata*");
-        steps.Should().Equal((DumpPhase.CodeMethods, 1, 2, "test_F000_0000_F0000"));
+        steps.Should().BeEmpty();
     }
 
     [Fact]
