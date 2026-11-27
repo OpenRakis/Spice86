@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -18,7 +19,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         ByteReaderWriter = byteReaderWriter;
         ByteReaderWriterShiftedToBaseAddress = new ByteReaderWriterWithBaseAddress(byteReaderWriter, this);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) =
-            InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress, new RealModeMmu8086());
+            InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress, new RealModeMmu8086(),
+                MemoryWriteEvents.Unobserved);
     }
 
 

@@ -41,9 +41,12 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         Ram = baseMemory;
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) =
-            InstantiateIndexersFromByteReaderWriter(this, Mmu);
+            InstantiateIndexersFromByteReaderWriter(this, Mmu, WriteEvents);
         A20Gate = a20gate;
     }
+
+    /// <inheritdoc />
+    public MemoryWriteEvents WriteEvents { get; } = new();
 
     /// <inheritdoc />
     public byte[] ReadRam(uint length = 0, uint offset = 0) {
@@ -80,16 +83,12 @@ public sealed class Memory : Indexable.Indexable, IMemory {
 
     /// <inheritdoc />
     public void WriteUInt16Segmented(ushort segment, ushort offset, ushort value) {
-        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
-        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
+        UInt16.WriteSegmented(segment, offset, value);
     }
 
     /// <inheritdoc />
     public void WriteUInt32Segmented(ushort segment, ushort offset, uint value) {
-        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
-        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
-        this[Mmu.TranslateAddress(segment, (uint)offset + 2u)] = (byte)(value >> 16);
-        this[Mmu.TranslateAddress(segment, (uint)offset + 3u)] = (byte)(value >> 24);
+        UInt32.WriteSegmented(segment, offset, value);
     }
 
     /// <inheritdoc/>

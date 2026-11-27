@@ -12,6 +12,7 @@ public sealed record GeneratorOptions {
     /// every instrumentation option on.</summary>
     public static GeneratorOptions CheckBuild { get; } = new() {
         ServiceCallNotifications = true,
+        KeepStoreWidths = true,
         BranchProbes = true,
         DeviceOperations = false,
         Manifest = true
@@ -30,6 +31,13 @@ public sealed record GeneratorOptions {
     /// call through the handler's stub. Off by default: the statement costs a call per service call, and the
     /// default output has none.</summary>
     public bool ServiceCallNotifications { get; init; }
+
+    /// <summary>Whether each memory store keeps the width of the instruction it comes from. The joined-memory
+    /// pass then leaves two adjacent word stores as they are, where it otherwise stores both words as one
+    /// dword at the second store. Off by default: a check build turns it on so that an
+    /// <see cref="Spice86.Core.Emulator.Memory.IMemoryWriteObserver"/> sees the same writes, with the same
+    /// widths and in the same order, from the generated code as from the emulated original.</summary>
+    public bool KeepStoreWidths { get; init; }
 
     /// <summary>Whether the condition of each <c>if</c>, loop and conditional expression of a method body is
     /// printed as <c>Branch(site, condition)</c> and the value of each <c>switch</c> as

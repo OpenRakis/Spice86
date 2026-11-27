@@ -83,19 +83,20 @@ internal static class IrPassPipeline {
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        RunAll(method, verify, buildWebs, ioPorts, _ => false, timer);
+        RunAll(method, verify, buildWebs, ioPorts, _ => false, true, timer);
 
     /// <summary>Runs the whole pipeline on <paramref name="method"/> with
     /// <paramref name="ioPorts"/> and <paramref name="hasOnlyBuiltInTargets"/> the
     /// built-in-targets check <see cref="IrPass.InterruptServiceCalls"/> gates direct service
     /// calls on, measuring each pass, each SSA build, the web build and the verification into
-    /// <paramref name="timer"/>. The result always has an SSA, and webs when
+    /// <paramref name="timer"/>. <paramref name="joinStores"/> tells <see cref="IrPass.JoinedMemory"/>
+    /// whether to join adjacent word stores. The result always has an SSA, and webs when
     /// <paramref name="buildWebs"/> is true; a missing either is a bug and throws.</summary>
     public static IrFullPipelineResult RunAll(IrMethod method, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool joinStores, GenerationStepTimer timer) {
         IrPipelineResult result = Run(method, IrPass.SpeculativeGuardMerge, verify, buildWebs,
-            ioPorts, hasOnlyBuiltInTargets, timer);
+            ioPorts, hasOnlyBuiltInTargets, joinStores, timer);
         if (result.Ssa is not { } ssa || (buildWebs && result.Webs is null)) {
             throw new InvalidOperationException(
                 $"A full IR pipeline run of {method.Name} must produce an SSA and webs.");
@@ -119,17 +120,18 @@ internal static class IrPassPipeline {
     /// becomes a direct service call.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts, GenerationStepTimer timer) =>
-        Run(method, last, verify, buildWebs, ioPorts, _ => false, timer);
+        Run(method, last, verify, buildWebs, ioPorts, _ => false, true, timer);
 
     /// <summary>Runs every pass up to and including <paramref name="last"/> on
     /// <paramref name="method"/> with <paramref name="ioPorts"/> and
     /// <paramref name="hasOnlyBuiltInTargets"/> the built-in-targets check
     /// <see cref="IrPass.InterruptServiceCalls"/> gates direct service calls on, measuring each
     /// pass, each SSA build, the web build when <paramref name="buildWebs"/> is true, and the
-    /// verification into <paramref name="timer"/>.</summary>
+    /// verification into <paramref name="timer"/>. <paramref name="joinStores"/> tells
+    /// <see cref="IrPass.JoinedMemory"/> whether to join adjacent word stores.</summary>
     public static IrPipelineResult Run(IrMethod method, IrPass last, bool verify, bool buildWebs,
         IReadOnlyDictionary<ushort, Type> ioPorts,
-        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, GenerationStepTimer timer) {
+        Func<InterruptServiceVector, bool> hasOnlyBuiltInTargets, bool joinStores, GenerationStepTimer timer) {
         IrSsa? ssa = null;
         IrSsaWebs? webs = null;
         IReadOnlyDictionary<ICfgNode, DosCallRecord> dosCalls = new Dictionary<ICfgNode, DosCallRecord>();
@@ -296,7 +298,7 @@ internal static class IrPassPipeline {
             return Finish();
         }
         int joinedAccesses = timer.Measure(IrPass.JoinedMemory.ToString(),
-            () => IrJoinedMemory.Apply(method, ssa2));
+            () => IrJoinedMemory.Apply(method, ssa2, joinStores));
         if (joinedAccesses != 0) {
             // Joined statements changed the SSA's reads and writes: rebuild it and its webs for
             // the pass, the census and the verify that follow.

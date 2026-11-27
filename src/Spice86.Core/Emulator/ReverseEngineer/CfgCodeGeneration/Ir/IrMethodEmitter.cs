@@ -40,6 +40,7 @@ internal sealed class IrMethodEmitter(
     bool collectCensuses,
     bool verify,
     bool serviceCallNotifications,
+    bool keepStoreWidths,
     BranchProbeSites? branchProbes = null,
     bool deviceOperations = true) {
 
@@ -63,7 +64,7 @@ internal sealed class IrMethodEmitter(
             ? context.Program.Inputs.IoPorts
             : new Dictionary<ushort, Type>();
         IrFullPipelineResult pipeline = IrPassPipeline.RunAll(irMethod, verify, collectCensuses,
-            deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets, timer);
+            deviceOperationPorts, effectBuilder.HasOnlyBuiltInTargets, !keepStoreWidths, timer);
         if (branchProbes is not null) {
             IrBranchOrigins.StampTerminators(irMethod);
         }

@@ -145,7 +145,9 @@ public sealed class Configuration : CommandSettings {
     /// emulated original, not to be shipped. A check build prints a <c>ServiceCalled</c> statement before
     /// each direct call of a DOS or BIOS service implementation, so an
     /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
-    /// call. It wraps every branch condition and switch value in a probe that reports to an
+    /// call, and keeps each memory store at the width of its instruction, so an
+    /// <see cref="Spice86.Core.Emulator.Memory.IMemoryWriteObserver"/> sees the same writes as from the
+    /// emulated original. It wraps every branch condition and switch value in a probe that reports to an
     /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/>, prints every port access
     /// on its own instead of as device operations, and writes <c>manifest.json</c> next to the sources.
     /// Off by default.

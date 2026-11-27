@@ -9,13 +9,17 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class UInt32Indexer : MemoryIndexer<uint> {
     private readonly IByteReaderWriter _byteReaderWriter;
+    private readonly MemoryWriteEvents _writeEvents;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt32Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
-    public UInt32Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, 4) {
+    /// <param name="mmu">The MMU for segmented access checks.</param>
+    /// <param name="writeEvents">Where each write is reported.</param>
+    public UInt32Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu, MemoryWriteEvents writeEvents) : base(mmu, 4) {
         _byteReaderWriter = byteReaderWriter;
+        _writeEvents = writeEvents;
     }
 
     /// <inheritdoc/>
@@ -23,6 +27,7 @@ public class UInt32Indexer : MemoryIndexer<uint> {
         get => (uint)(_byteReaderWriter[address] | _byteReaderWriter[address + 1] << 8 |
                       _byteReaderWriter[address + 2] << 16 | _byteReaderWriter[address + 3] << 24);
         set {
+            _writeEvents.Raise(address, BitWidth.DWORD_32, value);
             _byteReaderWriter[address] = (byte)value;
             _byteReaderWriter[address + 1] = (byte)(value >> 8);
             _byteReaderWriter[address + 2] = (byte)(value >> 16);
@@ -46,6 +51,7 @@ public class UInt32Indexer : MemoryIndexer<uint> {
         uint address2 = Mmu.TranslateAddress(segment, offset + 1);
         uint address3 = Mmu.TranslateAddress(segment, offset + 2);
         uint address4 = Mmu.TranslateAddress(segment, offset + 3);
+        _writeEvents.Raise(address1, BitWidth.DWORD_32, value);
         _byteReaderWriter[address1] = (byte)value;
         _byteReaderWriter[address2] = (byte)(value >> 8);
         _byteReaderWriter[address3] = (byte)(value >> 16);

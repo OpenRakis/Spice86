@@ -42,6 +42,7 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _collectCensuses;
     private readonly bool _verify;
     private readonly bool _serviceCallNotifications;
+    private readonly bool _keepStoreWidths;
     private readonly bool _branchProbes;
     private readonly bool _deviceOperations;
     private readonly bool _manifest;
@@ -75,6 +76,7 @@ internal sealed class CfgCSharpGenerator {
         _collectCensuses = options.CollectCensuses;
         _verify = options.Verify;
         _serviceCallNotifications = options.ServiceCallNotifications;
+        _keepStoreWidths = options.KeepStoreWidths;
         _branchProbes = options.BranchProbes;
         _deviceOperations = options.DeviceOperations;
         _manifest = options.Manifest;
@@ -110,8 +112,8 @@ internal sealed class CfgCSharpGenerator {
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
         BranchProbeSites? branchProbes = _branchProbes ? new BranchProbeSites() : null;
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, branchProbes,
-            _deviceOperations);
+            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, _keepStoreWidths,
+            branchProbes, _deviceOperations);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 

@@ -95,6 +95,12 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     byte CurrentlyWritingByte { get; }
 
     /// <summary>
+    ///     Reports each write with the width it was issued with, before its bytes reach the bus. See
+    ///     <see cref="IMemoryWriteObserver"/> for which writes are reported.
+    /// </summary>
+    MemoryWriteEvents WriteEvents { get; }
+
+    /// <summary>
     ///     Allow a memory mapped device to register for a certain memory range.
     /// </summary>
     /// <param name="baseAddress">The start of the frame</param>B

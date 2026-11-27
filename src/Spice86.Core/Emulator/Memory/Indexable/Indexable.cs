@@ -74,11 +74,11 @@ public abstract class Indexable : IIndexable {
     }
     
     internal static (UInt8Indexer, UInt16Indexer, UInt16BigEndianIndexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddress16Indexer, SegmentedAddress32Indexer) InstantiateIndexersFromByteReaderWriter(
-            IByteReaderWriter byteReaderWriter, IMmu mmu) {
-        UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter, mmu);
-        UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter, mmu);
-        UInt16BigEndianIndexer uInt16BigEndian = new UInt16BigEndianIndexer(byteReaderWriter, mmu);
-        UInt32Indexer uInt32 = new UInt32Indexer(byteReaderWriter, mmu);
+            IByteReaderWriter byteReaderWriter, IMmu mmu, MemoryWriteEvents writeEvents) {
+        UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter, mmu, writeEvents);
+        UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter, mmu, writeEvents);
+        UInt16BigEndianIndexer uInt16BigEndian = new UInt16BigEndianIndexer(byteReaderWriter, mmu, writeEvents);
+        UInt32Indexer uInt32 = new UInt32Indexer(byteReaderWriter, mmu, writeEvents);
         Int8Indexer int8 = new Int8Indexer(uInt8, mmu);
         Int16Indexer int16 = new Int16Indexer(uInt16, mmu);
         Int32Indexer int32 = new Int32Indexer(uInt32, mmu);

@@ -32,20 +32,21 @@ using System.Linq;
 /// never touched.</para>
 /// </summary>
 internal static class IrJoinedMemory {
-    /// <summary>Applies both forms over <paramref name="method"/>; returns the number of joined
-    /// statements. The SSA must be rebuilt by the caller when the result is not zero.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
+    /// <summary>Applies the load form over <paramref name="method"/>, and the store form when
+    /// <paramref name="joinStores"/> is true; returns the number of joined statements. The SSA must
+    /// be rebuilt by the caller when the result is not zero.</summary>
+    public static int Apply(IrMethod method, IrSsa ssa, bool joinStores) {
         IrMemoryAliasAnalysis alias = new(ssa);
         HashSet<ICfgNode> pinnedOrigins = IrInstructionIdioms.PinnedOriginsOf(method);
         int joined = 0;
         foreach (IrBlock block in method.Blocks) {
-            joined += JoinBlock(block, alias, ssa, pinnedOrigins);
+            joined += JoinBlock(block, alias, ssa, pinnedOrigins, joinStores);
         }
         return joined;
     }
 
     private static int JoinBlock(IrBlock block, IrMemoryAliasAnalysis alias, IrSsa ssa,
-            HashSet<ICfgNode> pinnedOrigins) {
+            HashSet<ICfgNode> pinnedOrigins, bool joinStores) {
         List<IrStatement> statements = block.Statements;
         int joined = 0;
         for (int i = 0; i < statements.Count; i++) {
@@ -59,7 +60,7 @@ internal static class IrJoinedMemory {
                 }
                 joined++;
             }
-            if (!IsWordStore(statements[i])) {
+            if (!joinStores || !IsWordStore(statements[i])) {
                 continue;
             }
             int second = IrInstructionIdioms.NextEffective(statements, i + 1);

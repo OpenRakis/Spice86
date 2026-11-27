@@ -9,19 +9,26 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class UInt8Indexer : MemoryIndexer<byte> {
     private readonly IByteReaderWriter _byteReaderWriter;
+    private readonly MemoryWriteEvents _writeEvents;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt8Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
-    public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, 1) {
+    /// <param name="mmu">The MMU for segmented access checks.</param>
+    /// <param name="writeEvents">Where each write is reported.</param>
+    public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu, MemoryWriteEvents writeEvents) : base(mmu, 1) {
         _byteReaderWriter = byteReaderWriter;
+        _writeEvents = writeEvents;
     }
 
     /// <inheritdoc/>
     public override byte this[uint address] {
         get => _byteReaderWriter[address];
-        set => _byteReaderWriter[address] = value;
+        set {
+            _writeEvents.Raise(address, BitWidth.BYTE_8, value);
+            _byteReaderWriter[address] = value;
+        }
     }
 
     /// <inheritdoc />
@@ -31,7 +38,9 @@ public class UInt8Indexer : MemoryIndexer<byte> {
 
     /// <inheritdoc />
     internal override void WriteSegmented(ushort segment, uint offset, byte value) {
-        _byteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
+        uint address = Mmu.TranslateAddress(segment, offset);
+        _writeEvents.Raise(address, BitWidth.BYTE_8, value);
+        _byteReaderWriter[address] = value;
     }
 
     /// <inheritdoc/>

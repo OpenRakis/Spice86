@@ -177,7 +177,7 @@ public sealed class IrInterruptServiceCallsTest {
         List<IrMethod> methods = new(plan.Methods.Count);
         foreach (IrMethod method in plan.Methods.Select(lifter.Lift)) {
             IrPassPipeline.Run(method, IrPass.InterruptServiceCalls, verify: true, buildWebs: false,
-                program.Inputs.IoPorts, effects.HasOnlyBuiltInTargets, new GenerationStepTimer());
+                program.Inputs.IoPorts, effects.HasOnlyBuiltInTargets, true, new GenerationStepTimer());
             methods.Add(method);
         }
         return methods;
