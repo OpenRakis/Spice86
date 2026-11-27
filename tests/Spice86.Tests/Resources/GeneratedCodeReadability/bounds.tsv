@@ -455,9 +455,9 @@ cc_stack_argument_push_memory_alias.spec	program	0	0	0	0	6	9	8	3	6	5	1	0	27	3	-
 cc_stack_argument_push_memory_alias.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	7	0	-
 cc_stack_argument_timer_write.pit.spec	program	0	0	3	0	15	15	12	10	14	19	1	0	74	2	deviceCalls.Pit>=1
 cc_stack_argument_timer_write.pit.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	11	0	-
-cc_stack_frames.spec	program	0	0	0	0	111	109	78	27	54	44	7	0	315	28	-
+cc_stack_frames.spec	program	0	0	0	0	111	113	78	27	54	44	7	0	315	28	-
 cc_stack_frames.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	49	0	-
-cc_stack_frames.spec.stk	program	0	0	0	0	100	99	68	27	54	44	7	0	300	28	-
+cc_stack_frames.spec.stk	program	0	0	0	0	100	103	68	27	54	44	7	0	300	28	-
 cc_stack_frames.spec.stk	support	0	0	0	0	0	0	0	0	0	0	0	0	49	0	-
 cc_stack_frames_read_after_pop.spec	program	0	0	0	0	7	9	9	2	2	3	0	0	25	4	-
 cc_stack_frames_read_after_pop.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	7	0	-
@@ -557,9 +557,9 @@ control_break_roundtrip.a20.ivt.spec	program	0	0	0	1	9	14	6	4	4	10	0	0	28	1	serv
 control_break_roundtrip.a20.ivt.spec	support	0	0	0	0	9	0	0	5	10	6	0	0	136	1	-
 convention_conditional_flag_input.spec	program	0	0	0	0	9	13	7	1	1	2	0	0	30	2	-
 convention_conditional_flag_input.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	7	0	-
-convention_landing_outputs.spec	program	0	0	0	0	10	26	17	2	2	4	0	0	67	0	AluCalls<=0 AluCalls+Casts<=0 AluCalls+StatusFlagReads<=0 BreakStatements<=0 CheckExternalEvents<=9 CompoundAssignments<=0 ContinueStatements<=0 DistinctGotoTargets<=0 DoLoops<=0 FailAsUntested<=0 FlagAssignments<=0 ForLoops<=0 GlobalAccesses>=8 GotoStatements<=0 IfStatements<=0 Labels<=0 Lines<=171 LocationAccesses>=8 MemoryAccesses<=8 MethodVariables<=2 Methods<=15 RawMemoryAccesses<=0 SavedPairs<=0 StackCalls<=0 StatusFlagReads<=0 TryStatements<=0 TupleSwaps<=0 UncheckedExpressions<=0 VerifySpeculativeEntryOrFail<=0 Warnings<=0 WhileTrueLoops<=0
+convention_landing_outputs.spec	program	0	0	0	0	10	27	18	2	2	4	0	0	67	0	AluCalls<=0 AluCalls+Casts<=0 AluCalls+StatusFlagReads<=0 BreakStatements<=0 CheckExternalEvents<=9 CompoundAssignments<=0 ContinueStatements<=0 DistinctGotoTargets<=0 DoLoops<=0 FailAsUntested<=0 FlagAssignments<=0 ForLoops<=0 GlobalAccesses>=8 GotoStatements<=0 IfStatements<=0 Labels<=0 Lines<=171 LocationAccesses>=8 MemoryAccesses<=8 MethodVariables<=2 Methods<=15 RawMemoryAccesses<=0 SavedPairs<=0 StackCalls<=0 StatusFlagReads<=0 TryStatements<=0 TupleSwaps<=0 UncheckedExpressions<=0 VerifySpeculativeEntryOrFail<=0 Warnings<=0 WhileTrueLoops<=0
 convention_landing_outputs.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	24	0	AluCalls<=0 AluCalls+Casts<=0 AluCalls+StatusFlagReads<=0 BreakStatements<=0 CheckExternalEvents<=0 CompoundAssignments<=0 ContinueStatements<=0 DistinctGotoTargets<=0 DoLoops<=0 FailAsUntested<=0 FlagAssignments<=0 ForLoops<=0 GotoStatements<=0 IfStatements<=0 Labels<=0 Lines<=93 MemoryAccesses<=0 MethodVariables<=0 Methods<=1 RawMemoryAccesses<=0 SavedPairs<=0 StackCalls<=0 StatusFlagReads<=0 TryStatements<=0 TupleSwaps<=0 UncheckedExpressions<=0 VerifySpeculativeEntryOrFail<=0 Warnings<=0 WhileTrueLoops<=0
-convention_resolved_calls.pit.spec	program	0	0	4	0	56	66	49	4	5	7	0	0	229	3	deviceCalls.Pit>=1
+convention_resolved_calls.pit.spec	program	0	0	4	0	56	68	51	4	5	7	0	0	229	3	deviceCalls.Pit>=1
 convention_resolved_calls.pit.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	62	0	-
 convention_return_outputs.spec	program	0	0	0	0	26	32	28	3	4	4	1	0	107	2	-
 convention_return_outputs.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	27	0	-
@@ -873,7 +873,7 @@ partition_far_jump_segment_change.spec	program	0	0	0	0	11	14	14	5	8	7	0	0	52	3	-
 partition_far_jump_segment_change.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	10	0	-
 partition_indirect_call_jump.spec	program	0	0	0	0	18	21	13	0	0	0	0	0	49	3	-
 partition_indirect_call_jump.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	16	0	-
-partition_jump_into_function_middle.spec	program	0	0	0	0	5	7	7	0	0	0	0	0	22	4	-
+partition_jump_into_function_middle.spec	program	0	0	0	0	5	7	7	1	1	2	0	0	23	4	-
 partition_jump_into_function_middle.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	12	0	-
 partition_jump_table.spec	program	0	0	0	0	7	3	3	2	8	8	0	0	24	3	-
 partition_jump_table.spec	support	0	0	0	0	0	0	0	0	0	0	0	0	4	0	-

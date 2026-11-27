@@ -356,16 +356,29 @@ public sealed class GeneratedCodeMachineTest {
             .WithMessage("*Untested far call target F000:002D*");
     }
 
-    /// <summary>One indirect far-call dispatch line arms the shared landing list of every observed target.</summary>
+    /// <summary>A landing reached only through a direct cross-partition flow runs inside the callee's C# call.
+    /// The wiring does not arm it unless fault dispatch can return control to the call's landing loop there.</summary>
     [Fact]
-    public void IndirectFarCallSharesOneLandingLineAcrossTargets() {
+    public void CallLandingsSkipDirectCrossPartitionFlows() {
         AsmFixture fixture = AsmFixtureCatalog.Partition("partition_far_dispatch");
         GeneratedCSharpProgram generatedProgram = new GeneratedCodeMachineTestRunner().GenerateProgramAndSource(new AsmRunScope(fixture));
         GeneratedSourceFile wiring = generatedProgram.Files.Single(file => file.Name == GeneratedOverrideNames.SupportWiringFileName);
 
-        wiring.Text.Should().Contain("DefineCallLandings(new(biosSegment, 0x0017), [unknown_F000_003D_F003D_AsmEntry, unknown_F000_0041_F0041_AsmEntry, unknown_F000_0045_F0045_AsmEntry, unknown_F000_0047_F0047_AsmEntry], new CallLanding(new(biosSegment, 0x003D), unknown_F000_003D_F003D_AsmEntry), new CallLanding(new(biosSegment, 0x0041), unknown_F000_0041_F0041_AsmEntry));");
-        int defineCallLandingsCount = wiring.Text.Split("DefineCallLandings(", StringSplitOptions.None).Length - 1;
-        defineCallLandingsCount.Should().Be(1);
+        wiring.Text.Should().NotContain("DefineCallLandings(");
+
+        AsmFixture conventionFixture = AsmFixtureCatalog.ConventionLandingOutputs();
+        GeneratedCSharpProgram conventionProgram = new GeneratedCodeMachineTestRunner().GenerateProgramAndSource(new AsmRunScope(conventionFixture));
+        GeneratedSourceFile conventionWiring = conventionProgram.Files.Single(file => file.Name == GeneratedOverrideNames.SupportWiringFileName);
+        GeneratedSourceFile conventionProgramFile = conventionProgram.Files.Single(file => file.Name == "CfgGeneratedOverrides.F000.cs");
+
+        conventionProgramFile.Text.Should().Contain("AX = NearCall(biosSegment, 0x001F, () => unknown_F000_0057_F0057());");
+        conventionWiring.Text.Should().NotContain("DefineCallLandings(new(biosSegment, 0x001F)");
+
+        AsmFixture faultFixture = AsmFixtureCatalog.ConventionResolvedCalls();
+        GeneratedCSharpProgram faultProgram = new GeneratedCodeMachineTestRunner().GenerateProgramAndSource(new AsmRunScope(faultFixture));
+        GeneratedSourceFile faultWiring = faultProgram.Files.Single(file => file.Name == GeneratedOverrideNames.SupportWiringFileName);
+
+        faultWiring.Text.Should().Contain("DefineCallLandings(new(biosSegment, 0x0078), [unknown_F000_014A_F014AEntry], new CallLanding(new(biosSegment, 0x014E), unknown_F000_014E_F014EEntry), new CallLanding(new(biosSegment, 0x0150), unknown_F000_0150_F0150_AsmEntry));");
     }
 
     /// <summary>

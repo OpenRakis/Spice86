@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Collections.Concurrent;
 using System.Linq;
 
 /// <summary>
@@ -26,6 +27,9 @@ internal sealed class CfgGeneratorContext {
     private readonly Dictionary<(ICfgNode Source, ICfgNode Target, InstructionSuccessorType SuccessorType), List<CfgCodePartitionTransfer>> _transfersByNodes;
     private readonly Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> _entriesByPartition;
     private readonly Dictionary<CfgInstruction, string> _signatureFieldByInstruction;
+    private readonly ILookup<CfgCodePartition, CfgCodePartitionTransfer> _frameOpenTransfersByFromPartition;
+    private readonly ConcurrentDictionary<(CfgCodePartition Partition, SegmentedAddress? ExcludeTarget, bool SkipDirectFlows), LandingResolution> _landingResolutionCache = new();
+    private readonly Lazy<HashSet<SegmentedAddress>> _faultResumeAddresses;
 
     public CfgGeneratorContext(
         CfgPartitionedProgram program,
@@ -59,6 +63,10 @@ internal sealed class CfgGeneratorContext {
         _signatureFieldByInstruction = signatureFields.ToDictionary(
             field => field.Instruction,
             field => field.FieldName);
+        _frameOpenTransfersByFromPartition = program.Transfers
+            .Where(transfer => KeepsCallFrameOpen(transfer.Kind))
+            .ToLookup(transfer => transfer.FromPartition);
+        _faultResumeAddresses = new Lazy<HashSet<SegmentedAddress>>(CollectFaultResumeAddresses);
         ExecChildEntries = CollectExecChildEntries();
     }
 
@@ -225,32 +233,50 @@ internal sealed class CfgGeneratorContext {
 
     /// <summary>
     /// The partition entries discovery observed the call's callee transferring control to while the call's
-    /// frame was still open: the targets of the callee partition's dynamic returns and same-activation
-    /// flows that land on an entry, over every partition reachable through transfers that keep the frame
-    /// open. A landing's own partition runs inside the same open frame, so its transfers are collected
-    /// too. Calls and CPU faults cross an activation boundary - the nested call dispatches its own
-    /// landings and a fault runs in its own execution context - so they are not traversed. The expected
-    /// return address is not a landing: the call's dispatch recognizes it before consulting this list.
+    /// frame was still open, excluding the expected return. Dynamic returns and cyclic flows are armed;
+    /// direct flows run inside the callee's C# call and are not armed, except at CPU-fault resume addresses,
+    /// where fault dispatch returns control to the call's landing loop.
     /// </summary>
     /// <param name="calleePartition">The partition the call site transfers to.</param>
     /// <param name="expectedReturn">The address the call expects to return to.</param>
     public IReadOnlyList<(CfgCodePartition Partition, CfgCodePartitionEntry Entry)> ResolveCallLandings(
         CfgCodePartition calleePartition, SegmentedAddress expectedReturn) =>
-        ResolveLandings(calleePartition, expectedReturn).Entries;
+        ResolveLandings(calleePartition, expectedReturn, skipDirectFlows: true).Entries;
 
     /// <summary>The landings of a CPU fault handler's activation: every frame-open transfer target
     /// reachable from <paramref name="handlerPartition"/> - the addresses discovery observed the
     /// fault resuming at, whether or not a partition entry sits there.</summary>
     /// <param name="handlerPartition">The partition the fault edge transfers to.</param>
     internal LandingResolution ResolveFaultResumeTargets(CfgCodePartition handlerPartition) =>
-        ResolveLandings(handlerPartition, null);
+        ResolveLandings(handlerPartition, null, skipDirectFlows: false);
+
+    private HashSet<SegmentedAddress> CollectFaultResumeAddresses() {
+        HashSet<SegmentedAddress> addresses = [];
+        foreach (CfgCodePartitionTransfer transfer in Program.Transfers) {
+            if (transfer.Kind != CfgCodePartitionTransferKind.CpuFault) {
+                continue;
+            }
+            LandingResolution resolution = ResolveFaultResumeTargets(transfer.ToPartition);
+            foreach ((CfgCodePartition _, CfgCodePartitionEntry entry) in resolution.Entries) {
+                addresses.Add(entry.Address);
+            }
+            foreach (SegmentedAddress target in resolution.UnresolvedTargets) {
+                addresses.Add(target);
+            }
+        }
+        return addresses;
+    }
 
     /// <summary>The frame-open landings of an activation started at <paramref name="partition"/>,
     /// split into targets that are partition entries and those that are not.</summary>
     /// <param name="partition">The partition the activation transfers to.</param>
     /// <param name="excludeTarget">An address that is not a landing (the call's expected return, which
     /// its dispatch recognizes before consulting the list), or <see langword="null"/> to list every target.</param>
-    private LandingResolution ResolveLandings(CfgCodePartition partition, SegmentedAddress? excludeTarget) {
+    private LandingResolution ResolveLandings(CfgCodePartition partition, SegmentedAddress? excludeTarget, bool skipDirectFlows) =>
+        _landingResolutionCache.GetOrAdd((partition, excludeTarget, skipDirectFlows),
+            key => ComputeLandings(key.Partition, key.ExcludeTarget, key.SkipDirectFlows));
+
+    private LandingResolution ComputeLandings(CfgCodePartition partition, SegmentedAddress? excludeTarget, bool skipDirectFlows) {
         List<(CfgCodePartition, CfgCodePartitionEntry)> entries = [];
         List<SegmentedAddress> unresolved = [];
         HashSet<SegmentedAddress> armed = [];
@@ -259,14 +285,14 @@ internal sealed class CfgGeneratorContext {
         pending.Enqueue(partition);
         while (pending.Count > 0) {
             CfgCodePartition current = pending.Dequeue();
-            foreach (CfgCodePartitionTransfer transfer in Program.Transfers) {
-                if (!ReferenceEquals(current, transfer.FromPartition) || !KeepsCallFrameOpen(transfer.Kind)) {
-                    continue;
-                }
+            foreach (CfgCodePartitionTransfer transfer in _frameOpenTransfersByFromPartition[current]) {
                 if (visited.Add(transfer.ToPartition)) {
                     pending.Enqueue(transfer.ToPartition);
                 }
-                if (transfer.Target == excludeTarget || !armed.Add(transfer.Target)) {
+                if (transfer.Target == excludeTarget
+                    || (skipDirectFlows && transfer.Kind == CfgCodePartitionTransferKind.CrossPartitionFlow
+                        && !_faultResumeAddresses.Value.Contains(transfer.Target))
+                    || !armed.Add(transfer.Target)) {
                     continue;
                 }
                 CfgCodePartitionEntry? entry = GetEntries(transfer.ToPartition)
