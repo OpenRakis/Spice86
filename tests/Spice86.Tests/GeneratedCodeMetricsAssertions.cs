@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -58,12 +57,7 @@ internal static class GeneratedCodeMetricsAssertions {
     internal static IReadOnlyDictionary<string, ReadabilityBaseline> LoadBaseline() => Baseline.Value;
 
     private static IReadOnlyDictionary<string, ReadabilityBaseline> ReadBaseline() {
-        string metadata = File.ReadAllText(Path.Join(BaselineDirectory, "metadata.json"));
-        Dictionary<string, string> fixtures = Directory.EnumerateFiles(BaselineDirectory, "*.json")
-            .Where(path => Path.GetFileName(path) != "metadata.json")
-            .Order(StringComparer.Ordinal)
-            .ToDictionary(path => Path.GetFileNameWithoutExtension(path), File.ReadAllText, StringComparer.Ordinal);
-        return ParseBaseline(metadata, fixtures);
+        return ParseBaseline(File.ReadAllText(Path.Join(BaselineDirectory, "bounds.tsv")));
     }
 
     internal static ReadabilityBaseline GetBaseline(string fixture,
@@ -74,80 +68,89 @@ internal static class GeneratedCodeMetricsAssertions {
         return baseline;
     }
 
-    internal static IReadOnlyDictionary<string, ReadabilityBaseline> ParseBaseline(
-        string metadataJson, IReadOnlyDictionary<string, string> fixtureSources) {
-        using JsonDocument document = JsonDocument.Parse(metadataJson);
-        JsonElement root = document.RootElement;
-        RequireFields(root, "schemaVersion", "referenceRevision");
-        if (root.GetProperty("schemaVersion").ValueKind != JsonValueKind.Number
-            || !root.GetProperty("schemaVersion").TryGetInt32(out int schemaVersion) || schemaVersion != 3) {
-            throw new InvalidDataException("Readability baseline schemaVersion must be 3.");
+    private static string HeaderLine => string.Join('\t',
+        new[] { "key", "part" }.Concat(MandatoryMaximumMetrics).Append("other"));
+
+    internal static IReadOnlyDictionary<string, ReadabilityBaseline> ParseBaseline(string table) {
+        string[] lines = table.Replace("\r\n", "\n").Split('\n');
+        if (lines.Length != 0 && lines[^1].Length == 0) {
+            lines = lines[..^1];
         }
-        RequireHash(root.GetProperty("referenceRevision"), 40, "referenceRevision");
-        SortedDictionary<string, ReadabilityBaseline> baselines = new(StringComparer.Ordinal);
-        foreach ((string fixture, string source) in fixtureSources) {
-            if (string.IsNullOrWhiteSpace(fixture)) {
-                throw new InvalidDataException("A readability fixture key must not be empty.");
+        if (lines.Length == 0 || lines[0] != HeaderLine) {
+            throw new InvalidDataException("Readability baseline table header does not match the expected columns.");
+        }
+        int fieldCount = 2 + MandatoryMaximumMetrics.Count + 1;
+        Dictionary<string, Dictionary<string, PartBounds>> rows = new(StringComparer.Ordinal);
+        for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++) {
+            string[] fields = lines[lineIndex].Split('\t');
+            if (fields.Length != fieldCount) {
+                throw new InvalidDataException($"Readability baseline row {lineIndex + 1} has the wrong field count.");
             }
-            using JsonDocument fixtureDocument = JsonDocument.Parse(source);
-            JsonElement entry = fixtureDocument.RootElement;
-            RequireFields(entry, "program", "support");
-            PartBounds program = ReadPartBounds(entry.GetProperty("program"), fixture);
-            PartBounds support = ReadPartBounds(entry.GetProperty("support"), fixture);
-            baselines.Add(fixture, new(program, support));
+            string key = fields[0];
+            string part = fields[1];
+            if (key.Length == 0) {
+                throw new InvalidDataException("A readability baseline key must not be empty.");
+            }
+            if (part is not ("program" or "support")) {
+                throw new InvalidDataException($"{key}: readability baseline part must be program or support.");
+            }
+            Dictionary<string, int> maximum = new(StringComparer.Ordinal);
+            for (int column = 0; column < MandatoryMaximumMetrics.Count; column++) {
+                maximum.Add(MandatoryMaximumMetrics[column], ParseCount(fields[2 + column], key));
+            }
+            Dictionary<string, int> minimum = new(StringComparer.Ordinal);
+            ReadOther(fields[^1], key, minimum, maximum);
+            if (!rows.TryGetValue(key, out Dictionary<string, PartBounds>? parts)) {
+                parts = new Dictionary<string, PartBounds>(StringComparer.Ordinal);
+                rows.Add(key, parts);
+            }
+            if (!parts.TryAdd(part, new PartBounds(minimum, maximum))) {
+                throw new InvalidDataException($"{key}: duplicate readability baseline row for {part}.");
+            }
+        }
+        SortedDictionary<string, ReadabilityBaseline> baselines = new(StringComparer.Ordinal);
+        foreach ((string key, Dictionary<string, PartBounds> parts) in rows) {
+            if (!parts.TryGetValue("program", out PartBounds? program)
+                || !parts.TryGetValue("support", out PartBounds? support) || parts.Count != 2) {
+                throw new InvalidDataException($"{key}: readability baseline requires one program row and one support row.");
+            }
+            baselines.Add(key, new ReadabilityBaseline(program, support));
         }
         return baselines;
     }
 
-    private static PartBounds ReadPartBounds(JsonElement element, string fixture) {
-        RequireFields(element, "minimum", "maximum");
-        IReadOnlyDictionary<string, int> minimum = ReadBounds(element.GetProperty("minimum"), true, fixture);
-        IReadOnlyDictionary<string, int> maximum = ReadBounds(element.GetProperty("maximum"), false, fixture);
-        RequireMetrics(minimum, MandatoryMinimumMetrics, fixture);
-        RequireMetrics(maximum, MandatoryMaximumMetrics, fixture);
-        return new PartBounds(minimum, maximum);
-    }
-
-    private static void RequireObject(JsonElement element, string name) {
-        if (element.ValueKind != JsonValueKind.Object) {
-            throw new InvalidDataException($"Readability baseline '{name}' must be an object.");
+    private static int ParseCount(string text, string key) {
+        if (text.Length == 0 || !text.All(char.IsDigit) || !int.TryParse(text, out int value)) {
+            throw new InvalidDataException($"{key}: readability bound '{text}' is not a non-negative integer.");
         }
+        return value;
     }
 
-    private static void RequireFields(JsonElement element, params string[] names) {
-        RequireObject(element, string.Join("/", names));
-        string[] actual = element.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal).ToArray();
-        if (!actual.SequenceEqual(names.Order(StringComparer.Ordinal))) {
-            throw new InvalidDataException($"Readability baseline requires exactly: {string.Join(", ", names)}.");
+    private static void ReadOther(string text, string key,
+        Dictionary<string, int> minimum, Dictionary<string, int> maximum) {
+        if (text == "-") {
+            return;
         }
-    }
-
-    private static string RequireHash(JsonElement element, int length, string name) {
-        if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } hash
-            || hash.Length != length || !hash.All(char.IsAsciiHexDigit)) {
-            throw new InvalidDataException($"Readability baseline '{name}' requires a {length}-digit hexadecimal hash.");
+        if (text.Length == 0) {
+            throw new InvalidDataException($"{key}: malformed readability bounds in other.");
         }
-        return hash;
-    }
-
-    private static void RequireMetrics(IReadOnlyDictionary<string, int> bounds, IReadOnlyList<string> required, string fixture) {
-        string[] missing = required.Where(key => !bounds.ContainsKey(key)).ToArray();
-        if (missing.Length != 0) {
-            throw new InvalidDataException($"{fixture}: missing readability metrics: {string.Join(", ", missing)}.");
-        }
-    }
-
-    private static IReadOnlyDictionary<string, int> ReadBounds(JsonElement element, bool minimum, string fixture) {
-        RequireObject(element, fixture);
-        SortedDictionary<string, int> bounds = new(StringComparer.Ordinal);
-        foreach (JsonProperty property in element.EnumerateObject()) {
-            ValidateMetric(property.Name, minimum);
-            if (property.Value.ValueKind != JsonValueKind.Number || !property.Value.TryGetInt32(out int value)
-                || value < 0 || !bounds.TryAdd(property.Name, value)) {
-                throw new InvalidDataException($"{fixture}: invalid or duplicate readability bound '{property.Name}'.");
+        foreach (string item in text.Split(' ')) {
+            int separator = item.IndexOfAny(['<', '>']);
+            if (separator <= 0 || separator + 1 >= item.Length || item[separator + 1] != '=') {
+                throw new InvalidDataException($"{key}: malformed readability bound '{item}'.");
+            }
+            string name = item[..separator];
+            bool minimumDirection = item[separator] == '>';
+            int value = ParseCount(item[(separator + 2)..], key);
+            ValidateMetric(name, minimumDirection);
+            if (!minimumDirection && MandatoryMaximumMetrics.Contains(name, StringComparer.Ordinal)) {
+                throw new InvalidDataException($"{key}: mandatory maximum '{name}' must use its table column.");
+            }
+            Dictionary<string, int> target = minimumDirection ? minimum : maximum;
+            if (!target.TryAdd(name, value)) {
+                throw new InvalidDataException($"{key}: duplicate readability bound '{name}'.");
             }
         }
-        return bounds;
     }
 
     private static void ValidateMetric(string key, bool minimum) {
@@ -164,49 +167,45 @@ internal static class GeneratedCodeMetricsAssertions {
         }
     }
 
-    internal static int MetricValue(GeneratedCodeMetrics metrics, string key) {
-        if (key.StartsWith("serviceCalls.", StringComparison.Ordinal)) {
-            return metrics.ServiceCallsByReceiver.GetValueOrDefault(key["serviceCalls.".Length..]);
-        }
-        if (key.StartsWith("deviceCalls.", StringComparison.Ordinal)) {
-            return metrics.DeviceCallsByReceiver.GetValueOrDefault(key["deviceCalls.".Length..]);
-        }
-        return key switch {
-            "RawMemoryAccesses" => metrics.MemoryAccesses - metrics.GlobalAccesses - metrics.TableAccesses,
-            "AluCalls+StatusFlagReads" => metrics.AluCalls + metrics.StatusFlagReads,
-            "AluCalls+Casts" => metrics.AluCalls + metrics.Casts,
-            _ => typeof(GeneratedCodeMetrics).GetProperty(key)?.GetValue(metrics) as int?
-                ?? throw new InvalidDataException($"Unknown readability metric '{key}'.")
-        };
-    }
-
     private static readonly object TighteningGate = new();
     private static readonly Dictionary<(string Fixture, string Part, bool Minimum, string Key), int>
         LoosestMeasured = new();
+    private static readonly Dictionary<string, ReadabilityBaseline> SeededBaselines = new(StringComparer.Ordinal);
 
-    /// <summary>Tightens the fixture's bound file toward the values this run measured: a maximum goes
-    /// down to the largest measured value, a minimum up to the smallest, never past the baseline.</summary>
+    /// <summary>Tightens the bounds table toward the values this run measured: a maximum goes down to
+    /// the largest measured value, a minimum up to the smallest, never past the baseline.</summary>
     internal static void WriteTightenedBounds(
         GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
         string fixture = parts.Program.Fixture;
         lock (TighteningGate) {
-            ReadabilityBaseline baseline;
-            if (LoadBaseline().TryGetValue(fixture, out ReadabilityBaseline? existing)) {
-                Accumulate(parts.Program, "program", fixture);
-                Accumulate(parts.Support, "support", fixture);
-                baseline = existing;
-            } else {
-                baseline = SeedBaseline(parts);
+            IReadOnlyDictionary<string, ReadabilityBaseline> baselines = LoadBaseline();
+            if (!baselines.TryGetValue(fixture, out ReadabilityBaseline? baseline)
+                && !SeededBaselines.TryGetValue(fixture, out baseline)) {
+                baseline = new ReadabilityBaseline(UnboundedPart(), UnboundedPart());
+                SeededBaselines.Add(fixture, baseline);
             }
-            string path = Path.Join(BaselineDirectory, fixture + ".json");
-            File.WriteAllText(path, FormatBaseline(baseline, fixture));
+            Accumulate(parts.Program, "program", fixture, baseline.Program);
+            Accumulate(parts.Support, "support", fixture, baseline.Support);
+            Dictionary<string, ReadabilityBaseline> rows = new(StringComparer.Ordinal);
+            foreach ((string key, ReadabilityBaseline row) in baselines) {
+                rows[key] = TightenedBaseline(key, row);
+            }
+            foreach ((string key, ReadabilityBaseline row) in SeededBaselines) {
+                rows[key] = TightenedBaseline(key, row);
+            }
+            File.WriteAllText(Path.Join(BaselineDirectory, "bounds.tsv"), FormatBaseline(rows));
         }
     }
 
-    private static void Accumulate(GeneratedCodeMetrics metrics, string part, string fixture) {
-        ReadabilityBaseline baseline = GetBaseline(fixture, LoadBaseline());
-        PartBounds bounds = part == "program" ? baseline.Program : baseline.Support;
-        Record(metrics, part, fixture, bounds.Minimum.Keys, true);
+    private static PartBounds UnboundedPart() {
+        Dictionary<string, int> maximum = MandatoryMaximumMetrics
+            .ToDictionary(key => key, _ => int.MaxValue, StringComparer.Ordinal);
+        return new PartBounds(new Dictionary<string, int>(StringComparer.Ordinal), maximum);
+    }
+
+    private static void Accumulate(GeneratedCodeMetrics metrics, string part, string fixture, PartBounds bounds) {
+        IEnumerable<string> minimumKeys = MandatoryMinimumMetrics.Concat(bounds.Minimum.Keys).Distinct(StringComparer.Ordinal);
+        Record(metrics, part, fixture, minimumKeys, true);
         Record(metrics, part, fixture, bounds.Maximum.Keys, false);
     }
 
@@ -223,49 +222,72 @@ internal static class GeneratedCodeMetricsAssertions {
         }
     }
 
-    private static ReadabilityBaseline SeedBaseline(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
-        ReadabilityBaseline reference = LoadBaseline().Values.First();
-        return new ReadabilityBaseline(SeedPart(parts.Program, reference.Program),
-            SeedPart(parts.Support, reference.Support));
+    private static ReadabilityBaseline TightenedBaseline(string fixture, ReadabilityBaseline baseline) {
+        return new ReadabilityBaseline(TightenedPart(fixture, "program", baseline.Program),
+            TightenedPart(fixture, "support", baseline.Support));
     }
 
-    private static PartBounds SeedPart(GeneratedCodeMetrics metrics, PartBounds reference) {
-        Dictionary<string, int> minimum = reference.Minimum.Keys
-            .ToDictionary(key => key, key => MetricValue(metrics, key), StringComparer.Ordinal);
-        Dictionary<string, int> maximum = reference.Maximum.Keys
-            .ToDictionary(key => key, key => MetricValue(metrics, key), StringComparer.Ordinal);
+    private static PartBounds TightenedPart(string fixture, string part, PartBounds bounds) {
+        Dictionary<string, int> minimum = new(StringComparer.Ordinal);
+        foreach (string key in MandatoryMinimumMetrics.Concat(bounds.Minimum.Keys).Distinct(StringComparer.Ordinal)) {
+            int baseline = bounds.Minimum.GetValueOrDefault(key, 0);
+            int measured = LoosestMeasured.GetValueOrDefault((fixture, part, true, key), int.MinValue);
+            minimum[key] = Math.Max(baseline, measured);
+        }
+        Dictionary<string, int> maximum = new(StringComparer.Ordinal);
+        foreach ((string key, int baseline) in bounds.Maximum) {
+            int measured = LoosestMeasured.GetValueOrDefault((fixture, part, false, key), int.MaxValue);
+            maximum[key] = Math.Min(baseline, measured);
+        }
         return new PartBounds(minimum, maximum);
     }
 
-    private static string FormatBaseline(ReadabilityBaseline baseline, string fixture) {
-        using MemoryStream stream = new();
-        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true })) {
-            writer.WriteStartObject();
-            WritePart(writer, "program", baseline.Program, fixture);
-            WritePart(writer, "support", baseline.Support, fixture);
-            writer.WriteEndObject();
+    internal static string FormatBaseline(IReadOnlyDictionary<string, ReadabilityBaseline> baselines) {
+        StringBuilder builder = new();
+        builder.Append(HeaderLine).Append('\n');
+        foreach ((string key, ReadabilityBaseline baseline) in baselines.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
+            AppendRow(builder, key, "program", baseline.Program);
+            AppendRow(builder, key, "support", baseline.Support);
         }
-        return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+        return builder.ToString();
     }
 
-    private static void WritePart(Utf8JsonWriter writer, string name, PartBounds part, string fixture) {
-        writer.WritePropertyName(name);
-        writer.WriteStartObject();
-        WriteBounds(writer, "minimum", part.Minimum, fixture, name, true);
-        WriteBounds(writer, "maximum", part.Maximum, fixture, name, false);
-        writer.WriteEndObject();
+    private static void AppendRow(StringBuilder builder, string key, string part, PartBounds bounds) {
+        builder.Append(key).Append('\t').Append(part);
+        foreach (string metric in MandatoryMaximumMetrics) {
+            if (!bounds.Maximum.TryGetValue(metric, out int value)) {
+                throw new InvalidDataException($"{key}: missing mandatory readability maximum '{metric}'.");
+            }
+            builder.Append('\t').Append(value);
+        }
+        SortedDictionary<string, string> other = new(StringComparer.Ordinal);
+        foreach ((string metric, int value) in bounds.Minimum) {
+            if (value > 0) {
+                other[metric] = $"{metric}>={value}";
+            }
+        }
+        foreach ((string metric, int value) in bounds.Maximum) {
+            if (!MandatoryMaximumMetrics.Contains(metric, StringComparer.Ordinal)) {
+                other[metric] = $"{metric}<={value}";
+            }
+        }
+        builder.Append('\t').Append(other.Count == 0 ? "-" : string.Join(' ', other.Values)).Append('\n');
     }
 
-    private static void WriteBounds(Utf8JsonWriter writer, string name,
-        IReadOnlyDictionary<string, int> bounds, string fixture, string part, bool minimum) {
-        writer.WritePropertyName(name);
-        writer.WriteStartObject();
-        foreach ((string key, int baseline) in bounds.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
-            writer.WriteNumber(key, minimum
-                ? Math.Max(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, true, key), int.MinValue))
-                : Math.Min(baseline, LoosestMeasured.GetValueOrDefault((fixture, part, false, key), int.MaxValue)));
+    internal static int MetricValue(GeneratedCodeMetrics metrics, string key) {
+        if (key.StartsWith("serviceCalls.", StringComparison.Ordinal)) {
+            return metrics.ServiceCallsByReceiver.GetValueOrDefault(key["serviceCalls.".Length..]);
         }
-        writer.WriteEndObject();
+        if (key.StartsWith("deviceCalls.", StringComparison.Ordinal)) {
+            return metrics.DeviceCallsByReceiver.GetValueOrDefault(key["deviceCalls.".Length..]);
+        }
+        return key switch {
+            "RawMemoryAccesses" => metrics.MemoryAccesses - metrics.GlobalAccesses - metrics.TableAccesses,
+            "AluCalls+StatusFlagReads" => metrics.AluCalls + metrics.StatusFlagReads,
+            "AluCalls+Casts" => metrics.AluCalls + metrics.Casts,
+            _ => typeof(GeneratedCodeMetrics).GetProperty(key)?.GetValue(metrics) as int?
+                ?? throw new InvalidDataException($"Unknown readability metric '{key}'.")
+        };
     }
 
     internal static IReadOnlyList<string> FindReadabilityRegressions(GeneratedCodeMetrics actual,

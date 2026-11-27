@@ -8,9 +8,6 @@ using Microsoft.CodeAnalysis.CSharp;
 
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
-
 using Xunit;
 
 public class GeneratedCodeMetricsCollectorTest {
@@ -556,8 +553,7 @@ public class GeneratedCodeMetricsCollectorTest {
     public void MissingBaselineEntryIsAnError() {
         // Arrange
         IReadOnlyDictionary<string, GeneratedCodeMetricsAssertions.ReadabilityBaseline> entries =
-            GeneratedCodeMetricsAssertions.ParseBaseline(ValidBaselineMetadataJson(),
-                new Dictionary<string, string> { ["test"] = ValidBaselineJson() });
+            GeneratedCodeMetricsAssertions.ParseBaseline(ValidBaselineTable());
 
         // Act
         Action read = () => GeneratedCodeMetricsAssertions.GetBaseline("missing", entries);
@@ -567,36 +563,82 @@ public class GeneratedCodeMetricsCollectorTest {
     }
 
     [Theory]
-    [InlineData("missingMetric")]
-    [InlineData("unknownMetric")]
+    [InlineData("missingColumn")]
+    [InlineData("unknownColumn")]
+    [InlineData("wrongFieldCount")]
+    [InlineData("missingRow")]
+    [InlineData("duplicateRow")]
     [InlineData("negative")]
-    [InlineData("schema")]
-    [InlineData("missingField")]
+    [InlineData("notANumber")]
+    [InlineData("unknownMetric")]
     [InlineData("direction")]
-    [InlineData("referenceRevision")]
-    [InlineData("missingMetadataField")]
+    [InlineData("mandatoryMaximumInOther")]
+    [InlineData("malformedOther")]
     public void RejectsInvalidBaseline(string defect) {
         // Arrange
-        JsonObject metadata = JsonNode.Parse(ValidBaselineMetadataJson())?.AsObject() ?? throw new InvalidOperationException();
-        JsonObject fixture = JsonNode.Parse(ValidBaselineJson())?.AsObject() ?? throw new InvalidOperationException();
-        JsonObject maximum = fixture["program"]?["maximum"]?.AsObject() ?? throw new InvalidOperationException();
+        string table = ValidBaselineTable();
+        string[] lines = table.Split('\n');
         switch (defect) {
-            case "missingMetric": maximum.Remove("RegisterReads"); break;
-            case "unknownMetric": maximum["MadeUpCount"] = 0; break;
-            case "negative": maximum["RegisterReads"] = -1; break;
-            case "schema": metadata["schemaVersion"] = 1; break;
-            case "referenceRevision": metadata["referenceRevision"] = "invalid"; break;
-            case "missingMetadataField": metadata.Remove("referenceRevision"); break;
-            case "missingField": fixture.Remove("program"); break;
-            case "direction": maximum["serviceCalls.Dos"] = 0; break;
+            case "missingColumn":
+                table = table.Replace("\tCasts\tother", "\tother", StringComparison.Ordinal);
+                break;
+            case "unknownColumn":
+                table = table.Replace("\tCasts\tother", "\tMadeUpCount\tother", StringComparison.Ordinal);
+                break;
+            case "wrongFieldCount":
+                lines[1] = string.Join('\t', lines[1].Split('\t').SkipLast(1));
+                table = string.Join('\n', lines);
+                break;
+            case "missingRow":
+                table = string.Join('\n', lines.Where((_, index) => index != 2));
+                break;
+            case "duplicateRow":
+                table = string.Join('\n', [lines[0], lines[1], lines[1], lines[2], lines[3]]);
+                break;
+            case "negative":
+                table = table.Replace("test\tprogram\t0\t", "test\tprogram\t-1\t", StringComparison.Ordinal);
+                break;
+            case "notANumber":
+                table = table.Replace("test\tprogram\t0\t", "test\tprogram\tx\t", StringComparison.Ordinal);
+                break;
+            case "unknownMetric":
+                table = ReplaceFirst(table, "\t-\n", "\tMadeUpCount<=0\n");
+                break;
+            case "direction":
+                table = ReplaceFirst(table, "\t-\n", "\tserviceCalls.Dos<=0\n");
+                break;
+            case "mandatoryMaximumInOther":
+                table = ReplaceFirst(table, "\t-\n", "\tRegisterReads<=0\n");
+                break;
+            case "malformedOther":
+                table = ReplaceFirst(table, "\t-\n", "\tserviceCalls.Dos>1\n");
+                break;
         }
 
         // Act
-        Action read = () => GeneratedCodeMetricsAssertions.ParseBaseline(metadata.ToJsonString(),
-            new Dictionary<string, string> { ["test"] = fixture.ToJsonString() });
+        Action read = () => GeneratedCodeMetricsAssertions.ParseBaseline(table);
 
         // Assert
         read.Should().Throw<InvalidDataException>();
+    }
+
+    [Fact]
+    public void ParsedTableKeepsMinimumsAndOptionalBounds() {
+        // Arrange
+        string table = ValidBaselineTable("Labels<=0 serviceCalls.Dos>=1");
+        IReadOnlyDictionary<string, GeneratedCodeMetricsAssertions.ReadabilityBaseline> parsed =
+            GeneratedCodeMetricsAssertions.ParseBaseline(table);
+        GeneratedCodeMetrics metrics = CollectFromMethodBody("AX = BX;") with { Fixture = "test" };
+
+        // Act
+        IReadOnlyList<string> supportFailures = GeneratedCodeMetricsAssertions.FindReadabilityRegressions(
+            metrics, "support", parsed["test"].Support.Minimum, new Dictionary<string, int>());
+
+        // Assert
+        parsed["test"].Program.Minimum["serviceCalls.Dos"].Should().Be(1);
+        parsed["test"].Program.Maximum["Labels"].Should().Be(0);
+        supportFailures.Should().BeEmpty();
+        GeneratedCodeMetricsAssertions.FormatBaseline(parsed).Should().Be(table);
     }
 
     [Fact]
@@ -765,21 +807,17 @@ public class GeneratedCodeMetricsCollectorTest {
         return compilation;
     }
 
-    private static string ValidBaselineMetadataJson() => JsonSerializer.Serialize(new {
-        schemaVersion = 3,
-        referenceRevision = new string('a', 40)
-    });
+    private static string ReplaceFirst(string text, string oldValue, string newValue) {
+        int index = text.IndexOf(oldValue, StringComparison.Ordinal);
+        return text[..index] + newValue + text[(index + oldValue.Length)..];
+    }
 
-    private static string ValidBaselineJson() => JsonSerializer.Serialize(new {
-        program = new {
-            minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
-            maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)
-        },
-        support = new {
-            minimum = GeneratedCodeMetricsAssertions.MandatoryMinimumMetrics.ToDictionary(key => key, _ => 0),
-            maximum = GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.ToDictionary(key => key, _ => 0)
-        }
-    });
+    private static string ValidBaselineTable(string programOther = "-") {
+        string header = string.Join('\t', new[] { "key", "part" }
+            .Concat(GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics).Append("other"));
+        string zeros = string.Join('\t', Enumerable.Repeat("0", GeneratedCodeMetricsAssertions.MandatoryMaximumMetrics.Count));
+        return $"{header}\ntest\tprogram\t{zeros}\t{programOther}\ntest\tsupport\t{zeros}\t-\n";
+    }
 
     private static GeneratedCompilation CompileMethodBody(string body) => CompileMethodBody(body, "");
 

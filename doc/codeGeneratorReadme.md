@@ -178,8 +178,10 @@ doc: the condition and what goes wrong without it.
 - **Check lines**: scenarios carry `Contains`/`DoesNotContain` assertions on the program-only
   generated text, each proved to fail when the feature line is wrong.
 - **Readability bounds**: per-scenario bounds on generated-code metrics (statement counts, goto
-  counts, expression sizes) live under `Resources/GeneratedCodeReadability/`; a regression past the
-  bound fails. The bounds tighten only through the deliberate writer pass described in AGENTS.md.
+  counts, expression sizes) live in `Resources/GeneratedCodeReadability/bounds.tsv`, one row per
+  scenario key and part. A missing minimum means 0, a missing optional maximum means no bound, and a
+  regression past a present bound fails. The bounds tighten only through the deliberate writer pass
+  described in AGENTS.md.
 - `doc/codegenIdioms.md` is rendered by a test from the idiom fixtures; the committed document must
   match the rendering.
 
