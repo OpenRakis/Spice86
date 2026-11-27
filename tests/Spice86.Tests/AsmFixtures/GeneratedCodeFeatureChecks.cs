@@ -128,12 +128,10 @@ internal static class GeneratedCodeFeatureChecks {
         new(DoesNotContain, "/// <summary>Inputs: AL. Outputs: none. Changes: none.</summary>")
     ];
 
-
     public static readonly GeneratedCodeCheck[] IdiomRelaxationSaved = [
         new(Contains, "// Relaxations: SavedSlotsWrittenOnlyByPops"),
         new(Contains, "/// <summary>Inputs: AL. Outputs: none. Changes: none.</summary>")
     ];
-
 
     public static readonly GeneratedCodeCheck[] BatchCallLabelNested = [
         new(Contains, "return TerminateCall(cs1, 0x0112, () => Dos.Terminate(AL));")
