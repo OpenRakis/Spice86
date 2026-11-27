@@ -193,6 +193,21 @@ public sealed class DmaChannel {
     }
 
     /// <summary>
+    ///     Callback registered with <see cref="RegisterCallback" />, or <see langword="null" /> when none is.
+    /// </summary>
+    internal DmaCallback? Callback => _callback;
+
+    /// <summary>
+    ///     Puts back a callback captured with the owning device's state. Unlike <see cref="RegisterCallback" />,
+    ///     this does not call the callback with the channel's mask state and does not change the request line,
+    ///     which is part of the channel's registers.
+    /// </summary>
+    /// <param name="callback">Callback to register, or <see langword="null" /> to clear it.</param>
+    internal void RestoreCallback(DmaCallback? callback) {
+        _callback = callback;
+    }
+
+    /// <summary>
     ///     Sets the terminal-count flag and informs listeners that the programmed length was completed.
     /// </summary>
     private void ReachedTerminalCount() {
@@ -455,6 +470,31 @@ public sealed class DmaChannel {
 
         _evictCallback = null;
         _reservationOwnerName = null;
+    }
+
+    /// <summary>
+    ///     Captures the registers of the channel.
+    /// </summary>
+    internal DmaChannelState CaptureState() {
+        return new DmaChannelState(BaseAddress, BaseCount, CurrentAddress, CurrentCount, PageRegisterValue,
+            IsAutoiniting, IsIncremented, IsMasked, HasReachedTerminalCount, HasRaisedRequest);
+    }
+
+    /// <summary>
+    ///     Puts the registers of the channel back. The registered callback is not called, and the reservation
+    ///     stays as it is.
+    /// </summary>
+    internal void RestoreState(DmaChannelState state) {
+        BaseAddress = state.BaseAddress;
+        BaseCount = state.BaseCount;
+        CurrentAddress = state.CurrentAddress;
+        CurrentCount = state.CurrentCount;
+        SetPage(state.PageRegisterValue);
+        IsAutoiniting = state.IsAutoiniting;
+        IsIncremented = state.IsIncremented;
+        IsMasked = state.IsMasked;
+        HasReachedTerminalCount = state.HasReachedTerminalCount;
+        HasRaisedRequest = state.HasRaisedRequest;
     }
 
     public void SetMode(byte value) {

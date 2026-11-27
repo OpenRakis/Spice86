@@ -1,12 +1,13 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
 
 /// <summary>
 ///     Interface for mouse devices.
 /// </summary>
-public interface IMouseDevice : IIOPortHandler {
+public interface IMouseDevice : IIOPortHandler, IStatefulDevice<MouseDeviceState> {
     /// <summary>
     ///     The type of mouse.
     /// </summary>

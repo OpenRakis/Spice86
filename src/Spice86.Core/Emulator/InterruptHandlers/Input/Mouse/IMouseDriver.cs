@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Shared.Emulator.Mouse;
@@ -7,7 +8,7 @@ using Spice86.Shared.Emulator.Mouse;
 /// <summary>
 ///     Mouse driver interface.
 /// </summary>
-public interface IMouseDriver : IAssemblyRoutineWriter {
+public interface IMouseDriver : IAssemblyRoutineWriter, IStatefulDevice<MouseDriverState> {
     /// <summary>
     ///     Get the amount of buttons the mouse reports.
     /// </summary>

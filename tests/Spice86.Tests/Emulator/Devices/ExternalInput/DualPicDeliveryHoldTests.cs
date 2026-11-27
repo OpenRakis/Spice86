@@ -13,7 +13,7 @@ using Spice86.Shared.Emulator.Memory;
 using Xunit;
 
 /// <summary>
-/// Checks <see cref="DualPic.HoldDelivery" /> on a controller pair with no machine around it.
+/// Checks <see cref="DualPic.HoldDelivery()" /> on a controller pair with no machine around it.
 /// </summary>
 public sealed class DualPicDeliveryHoldTests {
     private const byte TimerVector = 0x08;

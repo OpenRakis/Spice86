@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -12,8 +13,10 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 
 /// <summary>
 /// DOS CON device — the console driver with ANSI.SYS escape sequence support.
@@ -28,7 +31,7 @@ using System.IO;
 /// backspace editing, and extended key encoding, matching real ANSI.SYS / CON behavior.
 /// </para>
 /// </summary>
-public class ConsoleDevice : CharacterDevice {
+public class ConsoleDevice : CharacterDevice, IStatefulDevice<ConsoleDeviceState> {
     private const string CON = "CON";
 
     /// <summary>
@@ -119,6 +122,42 @@ public class ConsoleDevice : CharacterDevice {
 
     /// <inheritdoc />
     public override bool CanWrite => true;
+
+    /// <inheritdoc />
+    public ConsoleDeviceState CaptureState() {
+        ImmutableArray<AnsiKeyRedefinition> keyRedefinitions = _ansiState.KeyRedefinitions
+            .OrderBy(static pair => pair.Key)
+            .Select(static pair => new AnsiKeyRedefinition(pair.Key, pair.Value.ToArray()))
+            .ToImmutableArray();
+        return new ConsoleDeviceState(_ansiState.Attribute, _ansiState.SavedColumn, _ansiState.SavedRow,
+            _ansiState.Phase, _ansiState.Parameters.ToArray(), _ansiState.ParameterCount, _ansiState.PrefixAllowed,
+            _ansiState.EatNextSemicolon, _ansiState.WrapFlag, _ansiState.StringTerminator, keyRedefinitions,
+            _stuffAheadBuffer.ToArray(), _extendedKeyScanCodeCache);
+    }
+
+    /// <inheritdoc />
+    public void RestoreState(ConsoleDeviceState state) {
+        _ansiState.Attribute = state.Attribute;
+        _ansiState.SavedColumn = state.SavedColumn;
+        _ansiState.SavedRow = state.SavedRow;
+        _ansiState.Phase = state.Phase;
+        Array.Clear(_ansiState.Parameters);
+        state.Parameters.Span.CopyTo(_ansiState.Parameters);
+        _ansiState.ParameterCount = state.ParameterCount;
+        _ansiState.PrefixAllowed = state.PrefixAllowed;
+        _ansiState.EatNextSemicolon = state.EatNextSemicolon;
+        _ansiState.WrapFlag = state.WrapFlag;
+        _ansiState.StringTerminator = state.StringTerminator;
+        _ansiState.KeyRedefinitions.Clear();
+        foreach (AnsiKeyRedefinition redefinition in state.KeyRedefinitions) {
+            _ansiState.KeyRedefinitions[redefinition.KeyCode] = redefinition.Replacement.ToArray();
+        }
+        _stuffAheadBuffer.Clear();
+        foreach (byte value in state.StuffAheadBuffer.Span) {
+            _stuffAheadBuffer.Enqueue(value);
+        }
+        _extendedKeyScanCodeCache = state.ExtendedKeyScanCode;
+    }
 
     /// <inheritdoc />
     public override void Flush() {

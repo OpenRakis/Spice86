@@ -51,6 +51,18 @@ internal sealed class CfgCSharpDumper {
         foreach (GeneratedSourceFile file in generated.Files) {
             File.WriteAllText(Path.Join(directory, file.Name), file.Text);
         }
+        WriteManifest(generated, directory);
+    }
+
+    /// <summary>Writes the program's manifest into <paramref name="directory"/>, or deletes the manifest a
+    /// previous dump left there when the program has none.</summary>
+    private static void WriteManifest(GeneratedCSharpProgram generated, string directory) {
+        string path = Path.Join(directory, GeneratedCodeManifest.FileName);
+        if (generated.Manifest is { } manifest) {
+            File.WriteAllText(path, manifest.ToJson());
+        } else if (File.Exists(path)) {
+            File.Delete(path);
+        }
     }
 
     /// <summary>Deletes the generated source files an earlier dump left directly in
@@ -95,6 +107,7 @@ internal sealed class CfgCSharpDumper {
         foreach (GeneratedSourceFile file in generated.Files) {
             File.WriteAllText(Path.Join(projectDirectory, file.Name), file.Text);
         }
+        WriteManifest(generated, projectDirectory);
     }
 
     /// <summary>

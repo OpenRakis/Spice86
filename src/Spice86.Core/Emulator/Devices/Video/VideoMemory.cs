@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
 /// </summary>
-public class VideoMemory : IVideoMemory {
+public class VideoMemory : IVideoMemory, IStatefulDevice<VideoMemoryState> {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
     private readonly ILogger _logger;
@@ -155,6 +155,25 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public ReadOnlySpan<byte> GetLinearSpan(int linearByteOffset, int length) {
         return VRam.AsSpan(linearByteOffset, length);
+    }
+
+    /// <summary>
+    ///     Captures the four planes and the four latches.
+    /// </summary>
+    /// <returns>The state of the video memory.</returns>
+    public VideoMemoryState CaptureState() {
+        return new VideoMemoryState(VRam.AsSpan().ToArray(), _latches.AsSpan().ToArray());
+    }
+
+    /// <summary>
+    ///     Puts the planes and the latches back in a captured state and marks the memory as changed, so the next
+    ///     frame is drawn again.
+    /// </summary>
+    /// <param name="state">State captured by <see cref="CaptureState" />.</param>
+    public void RestoreState(VideoMemoryState state) {
+        state.VRam.Span.CopyTo(VRam);
+        state.Latches.Span.CopyTo(_latches);
+        Volatile.Write(ref _hasChanged, 1);
     }
 
     /// <summary>

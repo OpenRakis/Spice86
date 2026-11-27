@@ -147,7 +147,10 @@ public sealed class Configuration : CommandSettings {
     /// <see cref="Spice86.Core.Emulator.InterruptHandlers.Common.Contracts.IServiceCallObserver"/> sees the
     /// call, and keeps each memory store at the width of its instruction, so an
     /// <see cref="Spice86.Core.Emulator.Memory.IMemoryWriteObserver"/> sees the same writes as from the
-    /// emulated original. Off by default.
+    /// emulated original. It wraps every branch condition and switch value in a probe that reports to an
+    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver"/>, prints every port access
+    /// on its own instead of as device operations, and writes <c>manifest.json</c> next to the sources.
+    /// Off by default.
     /// </summary>
     [CommandOption("--GeneratedCodeCheckBuild")]
     public bool GeneratedCodeCheckBuild { get; init; }

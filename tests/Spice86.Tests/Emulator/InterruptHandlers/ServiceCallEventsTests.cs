@@ -119,6 +119,16 @@ public sealed class ServiceCallEventsTests {
         ServiceCall open = generated.Calls.Single(call => call.Selector == 0x3D);
         open.Inputs.Select(input => input.Binding).Should().Equal(CpuValues.Al, CpuValues.Ds | CpuValues.Dx);
         (open.Inputs[1].Value >> 16).Should().Be(write.Inputs[2].Value, "the name is addressed through DS");
+
+        // Assert: with the branch probes of a check build too, each notification follows the caller stack save
+        string notification = nameof(CSharpOverrideHelper.ServiceCalled) + "(";
+        List<string> checkLines = checkBuild.SourceText.Split('\n').ToList();
+        checkLines.Should().Contain(line => line.TrimStart().StartsWith(notification));
+        for (int index = 0; index < checkLines.Count; index++) {
+            if (checkLines[index].TrimStart().StartsWith(notification)) {
+                checkLines[index - 1].Should().Contain(nameof(DosInt21Handler.RecordCallerStack) + "(");
+            }
+        }
     }
 
     [Fact]
@@ -128,7 +138,8 @@ public sealed class ServiceCallEventsTests {
         AsmRunSettings settings = discovery.Fixture.Settings;
         CfgPartitionedProgram program = GeneratedCodeMachineTestRunner.GenerateProgram(discovery).Program;
         GeneratedCSharpProgram defaultBuild = Generate(program, GeneratorOptions.Default);
-        GeneratedCSharpProgram checkBuild = Generate(program, GeneratorOptions.CheckBuild);
+        GeneratedCSharpProgram checkBuild =
+            Generate(program, GeneratorOptions.Default with { ServiceCallNotifications = true });
         using CompiledGeneratedOverride compiled = new GeneratedOverrideCompiler().CompileSupplier(defaultBuild);
         Recorder generated = new();
 
@@ -136,7 +147,7 @@ public sealed class ServiceCallEventsTests {
         using AsmFixtureRun generatedRun =
             AsmFixtureRunner.RunSettingsWithOverride(Observed(settings, generated), compiled.Supplier);
 
-        // Assert: the check build is the default build plus one ServiceCalled line per direct call
+        // Assert: with the option on, the source is the default source plus one ServiceCalled line per direct call
         string notification = nameof(CSharpOverrideHelper.ServiceCalled) + "(";
         defaultBuild.SourceText.Should().NotContain(notification);
         List<string> checkLines = checkBuild.SourceText.Split('\n').ToList();

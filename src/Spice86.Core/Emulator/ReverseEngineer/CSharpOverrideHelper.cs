@@ -1175,6 +1175,34 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// A branch probe: reports the value of a condition to <see cref="Machine.BranchProbeObserver"/> and
+    /// returns it. Generated code produced with the branch probe option wraps the condition of each
+    /// <c>if</c>, loop and conditional expression in a call of this method.
+    /// </summary>
+    /// <param name="site">The site number of the probe, as listed in the manifest of the generated program.
+    /// </param>
+    /// <param name="condition">The value of the condition.</param>
+    /// <returns><paramref name="condition"/>.</returns>
+    public bool Branch(int site, bool condition) {
+        Machine.BranchProbeObserver?.OnBranch(site, condition);
+        return condition;
+    }
+
+    /// <summary>
+    /// A switch probe: reports the value a <c>switch</c> selects on to
+    /// <see cref="Machine.BranchProbeObserver"/> and returns it with its type unchanged.
+    /// </summary>
+    /// <typeparam name="T">The integer type of the value.</typeparam>
+    /// <param name="site">The site number of the probe, as listed in the manifest of the generated program.
+    /// </param>
+    /// <param name="value">The value of the <c>switch</c>.</param>
+    /// <returns><paramref name="value"/>.</returns>
+    public T Selector<T>(int site, T value) where T : struct, IBinaryInteger<T> {
+        Machine.BranchProbeObserver?.OnSelector(site, uint.CreateTruncating(value));
+        return value;
+    }
+
+    /// <summary>
     /// Tells the service call observer that the statement after this one calls the implementation of an
     /// interrupt service directly. Generated code produced with the check build option calls it before each
     /// such call, because a direct call passes no handler code that could raise the event. The event equals
@@ -1590,7 +1618,7 @@ public class CSharpOverrideHelper {
         if (!InterruptFlag) {
             return;
         }
-        byte? vectorNumber = _dualPic.ComputeVectorNumber();
+        byte? vectorNumber = _dualPic.ComputeVectorNumber(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
         if (vectorNumber != null) {
             State.IsHalted = false;
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);

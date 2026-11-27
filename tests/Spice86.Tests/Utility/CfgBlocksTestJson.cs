@@ -29,9 +29,13 @@ using System.Text.Json.Serialization;
 /// its JSON options live in one place instead of being duplicated across test classes.
 /// </summary>
 internal static class CfgBlocksTestJson {
-    /// <summary>Serializer options matching the on-disk DumpedCfgBlocks fixtures.</summary>
+    /// <summary>
+    /// Serializer options matching the on-disk DumpedCfgBlocks fixtures. The goldens use LF line endings on every
+    /// OS, so the new line is fixed instead of taken from the host.
+    /// </summary>
     public static readonly JsonSerializerOptions Options = new() {
         WriteIndented = true,
+        NewLine = "\n",
         Converters = { new JsonStringEnumConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };

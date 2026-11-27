@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -16,6 +17,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -105,6 +108,13 @@ public sealed class Machine : IDisposable {
     /// installed stub addresses.
     /// </summary>
     public InstalledInterruptHandlers InstalledInterruptHandlers { get; }
+
+    /// <summary>
+    /// The observer told about the outcome of every branch probe generated code runs, or
+    /// <see langword="null"/> (the default) for none. Only generated code produced as a check build contains
+    /// probes. Set it on the emulation thread, or while the emulation is paused.
+    /// </summary>
+    public Spice86.Core.Emulator.ReverseEngineer.IBranchProbeObserver? BranchProbeObserver { get; set; }
 
     /// <summary>
     /// INT16H handler.
@@ -346,15 +356,18 @@ public sealed class Machine : IDisposable {
 
     /// <summary>
     /// Captures the state of the chosen devices, so that <see cref="RestoreDeviceState"/> can put them back
-    /// later. Registers and memory are not part of it.
+    /// later. The CPU registers and the main memory are not part of it.
     /// </summary>
     /// <remarks>
-    /// Covered devices: the interrupt controllers and the programmable interval timer. DMA, VGA, Sound Blaster
-    /// and the other devices are not covered. Call this on the emulation thread between two instructions, or
-    /// while the emulation is paused.
+    /// Covered devices: the interrupt controllers, the programmable interval timer, the VGA card (registers, DAC,
+    /// video memory planes and latches), the mouse device with the INT 33h mouse driver, the DMA controllers, the
+    /// Sound Blaster, the A20 line, the XMS and EMS drivers when DOS loaded them, and the state the DOS kernel keeps
+    /// outside emulated memory. The other devices are not covered. Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="devices">Devices to capture.</param>
-    /// <returns>The captured state, with a <c>null</c> member for each device left out.</returns>
+    /// <returns>
+    /// The captured state, with a <c>null</c> member for each device left out or not present in the machine.
+    /// </returns>
     public MachineDeviceState CaptureDeviceState(MachineDevices devices = MachineDevices.All) {
         DualPicState? pic = null;
         if ((devices & MachineDevices.Pic) != 0) {
@@ -364,7 +377,42 @@ public sealed class Machine : IDisposable {
         if ((devices & MachineDevices.Pit) != 0) {
             pit = Timer.CaptureState();
         }
-        return new MachineDeviceState(pic, pit);
+        VgaState? vga = null;
+        if ((devices & MachineDevices.Vga) != 0) {
+            vga = VgaCard.CaptureState();
+        }
+        DosState? dos = null;
+        if ((devices & MachineDevices.Dos) != 0) {
+            dos = Dos.CaptureState();
+        }
+        MouseDeviceState? mouseDevice = null;
+        MouseDriverState? mouseDriver = null;
+        if ((devices & MachineDevices.Mouse) != 0) {
+            mouseDevice = MouseDevice.CaptureState();
+            mouseDriver = MouseDriver.CaptureState();
+        }
+        DmaBusState? dma = null;
+        if ((devices & MachineDevices.Dma) != 0) {
+            dma = DmaSystem.CaptureState();
+        }
+        SoundBlasterState? soundBlaster = null;
+        if ((devices & MachineDevices.SoundBlaster) != 0) {
+            soundBlaster = SoundBlaster.CaptureState();
+        }
+        A20GateState? a20Gate = null;
+        if ((devices & MachineDevices.A20Gate) != 0) {
+            a20Gate = Memory.A20Gate.CaptureState();
+        }
+        XmsState? xms = null;
+        if ((devices & MachineDevices.Xms) != 0) {
+            xms = Dos.Xms?.CaptureState();
+        }
+        EmsState? ems = null;
+        if ((devices & MachineDevices.Ems) != 0) {
+            ems = Dos.Ems?.CaptureState();
+        }
+        return new MachineDeviceState(pic, pit, vga, dos, mouseDevice, mouseDriver, dma, soundBlaster, a20Gate,
+            xms, ems);
     }
 
     /// <summary>
@@ -374,12 +422,46 @@ public sealed class Machine : IDisposable {
     /// Call this on the emulation thread between two instructions, or while the emulation is paused.
     /// </remarks>
     /// <param name="state">State captured by <see cref="CaptureDeviceState"/>.</param>
+    /// <exception cref="InvalidOperationException">
+    /// The state holds an XMS or EMS driver state and this machine's DOS did not load that driver.
+    /// </exception>
     public void RestoreDeviceState(MachineDeviceState state) {
         if (state.Pic is { } pic) {
             DualPic.RestoreState(pic);
         }
         if (state.Pit is { } pit) {
             Timer.RestoreState(pit);
+        }
+        if (state.Vga is { } vga) {
+            VgaCard.RestoreState(vga);
+        }
+        if (state.Dos is { } dos) {
+            Dos.RestoreState(dos);
+        }
+        if (state.MouseDevice is { } mouseDevice) {
+            MouseDevice.RestoreState(mouseDevice);
+        }
+        if (state.MouseDriver is { } mouseDriver) {
+            MouseDriver.RestoreState(mouseDriver);
+        }
+        if (state.Dma is { } dma) {
+            DmaSystem.RestoreState(dma);
+        }
+        if (state.SoundBlaster is { } soundBlaster) {
+            SoundBlaster.RestoreState(soundBlaster);
+        }
+        if (state.A20Gate is { } a20Gate) {
+            Memory.A20Gate.RestoreState(a20Gate);
+        }
+        if (state.Xms is { } xms) {
+            ExtendedMemoryManager driver = Dos.Xms ?? throw new InvalidOperationException(
+                "The state holds an XMS driver state and this machine has no XMS driver.");
+            driver.RestoreState(xms);
+        }
+        if (state.Ems is { } ems) {
+            ExpandedMemoryManager driver = Dos.Ems ?? throw new InvalidOperationException(
+                "The state holds an EMS driver state and this machine has no EMS driver.");
+            driver.RestoreState(ems);
         }
     }
 
