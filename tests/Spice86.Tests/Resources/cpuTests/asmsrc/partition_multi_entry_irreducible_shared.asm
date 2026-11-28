@@ -33,6 +33,13 @@ start:
     pushf
     push cs
     call jump_caller
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:604h], ax
+    mov word [ss:606h], bx
+    mov word [ss:608h], cx
+    mov word [ss:60Ah], dx
+    mov word [ss:60Ch], si
     hlt
 
 root_a:

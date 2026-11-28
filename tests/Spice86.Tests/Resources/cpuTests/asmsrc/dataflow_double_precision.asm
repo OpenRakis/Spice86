@@ -84,7 +84,7 @@ pass_loop:
     mov [bx+16h], eax
     mov [bx+1Ah], edx
 
-; DP-4: the high half reads the low result (adc dx,ax), stays two statements
+; the high half reads the low result (adc dx,ax), stays two statements
     mov ax, [cs:si+6]
     mov dx, [cs:si+2]
     mov cx, [cs:si+4]
@@ -93,7 +93,7 @@ pass_loop:
     mov [bx+1Eh], ax
     mov [bx+20h], dx
 
-; DP-1: the carry out of adc is live, stays two statements
+; the carry out of adc is live, stays two statements
     mov ax, [cs:si]
     mov dx, [cs:si+2]
     mov di, [cs:si+6]
@@ -102,7 +102,7 @@ pass_loop:
     setc byte [bx+22h]
     mov [bx+23h], dx
 
-; DP-1: the carry out of the last neg is live, stays three statements
+; the carry out of the last neg is live, stays three statements
     mov ax, [cs:si]
     mov dx, [cs:si+2]
     neg ax
@@ -165,6 +165,8 @@ pass_loop:
     add si, 8
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; per pass: X, Y (32 bits each)

@@ -69,7 +69,8 @@ public enum DumpPhase {
 /// <summary>
 /// Reports dump progress to the console log and to UI subscribers. Every emitted text is logged once at
 /// Information level and raised through <see cref="MessageLogged"/> with the same text, so the console
-/// log and the progress window always show identical lines.
+/// log and the progress window always show identical lines. It is safe to call from several
+/// threads.
 /// </summary>
 public sealed class DumpProgressReporter {
     private static readonly IReadOnlyDictionary<DumpPhase, string> PhaseLabels =
@@ -108,6 +109,7 @@ public sealed class DumpProgressReporter {
             [DumpPhase.CodePrinting] = (0.9, 0.1)
         };
 
+    private readonly object _lock = new();
     private readonly ITimeProvider _timeProvider;
     private readonly Stopwatch _dumpWatch = new();
     private readonly Stopwatch _phaseWatch = new();
@@ -168,10 +170,12 @@ public sealed class DumpProgressReporter {
 
     /// <summary>Starts a dump into <paramref name="directory"/>.</summary>
     public void BeginDump(string directory) {
-        _directory = directory;
-        _dumpWatch.Restart();
-        DumpStarted?.Invoke();
-        Emit($"Saving recorded data to {directory}");
+        lock (_lock) {
+            _directory = directory;
+            _dumpWatch.Restart();
+            DumpStarted?.Invoke();
+            Emit($"Saving recorded data to {directory}");
+        }
     }
 
     /// <summary>Begins <paramref name="phase"/>: logs its label and restarts the phase timer.</summary>
@@ -185,51 +189,63 @@ public sealed class DumpProgressReporter {
         BeginPhaseCore(phase, $"{LabelFor(phase)} ({fileName})");
 
     private void BeginPhaseCore(DumpPhase phase, string label) {
-        _currentPhase = phase;
-        _phaseLabel = label;
-        _lastLoggedTenth = -1;
-        _phaseWatch.Restart();
-        _lastStepLineTime = DateTime.MinValue;
-        PhaseBegan?.Invoke(phase);
-        Emit($"{label}: started");
+        lock (_lock) {
+            _currentPhase = phase;
+            _phaseLabel = label;
+            _lastLoggedTenth = -1;
+            _phaseWatch.Restart();
+            _lastStepLineTime = DateTime.MinValue;
+            PhaseBegan?.Invoke(phase);
+            Emit($"{label}: started");
+        }
     }
 
     /// <summary>
     /// Reports step <paramref name="current"/> of <paramref name="total"/> in the current phase, naming
-    /// <paramref name="item"/> as the work being done.
+    /// <paramref name="item"/>; a code-method step reports the method just completed.
     /// <see cref="StepReported"/> is raised for every step; a line is logged only when the tenth of
     /// progress increases, when at least one second passed since the last step line of the current
     /// phase, plus always on the last step.
     /// </summary>
     public void Step(int current, int total, string item) {
-        StepReported?.Invoke(_currentPhase, current, total, item);
-        int tenth = current * 10 / total;
-        DateTime now = _timeProvider.Now;
-        bool secondPassed = now - _lastStepLineTime >= TimeSpan.FromSeconds(1);
-        if (tenth <= _lastLoggedTenth && !secondPassed && current != total) {
-            return;
+        lock (_lock) {
+            StepReported?.Invoke(_currentPhase, current, total, item);
+            int tenth = current * 10 / total;
+            DateTime now = _timeProvider.Now;
+            bool secondPassed = now - _lastStepLineTime >= TimeSpan.FromSeconds(1);
+            if (tenth <= _lastLoggedTenth && !secondPassed && current != total) {
+                return;
+            }
+            _lastLoggedTenth = tenth;
+            _lastStepLineTime = now;
+            Emit(StepText(_currentPhase, current, total, item));
         }
-        _lastLoggedTenth = tenth;
-        _lastStepLineTime = now;
-        Emit(StepText(_currentPhase, current, total, item));
     }
 
     /// <summary>Logs <paramref name="message"/> at Information level and raises it through
     /// <see cref="MessageLogged"/>.</summary>
-    public void Detail(string message) => Emit(message);
+    public void Detail(string message) {
+        lock (_lock) {
+            Emit(message);
+        }
+    }
 
     /// <summary>Ends the current phase and logs its elapsed time.</summary>
     public void EndPhase() {
-        Emit($"{_phaseLabel}: finished in {_phaseWatch.ElapsedMilliseconds} ms");
-        PhaseEnded?.Invoke(_currentPhase);
+        lock (_lock) {
+            Emit($"{_phaseLabel}: finished in {_phaseWatch.ElapsedMilliseconds} ms");
+            PhaseEnded?.Invoke(_currentPhase);
+        }
     }
 
     /// <summary>Ends the dump and logs the total elapsed time.</summary>
     public void EndDump(bool succeeded) {
-        Emit(succeeded
-            ? $"Recorded data saved to {_directory} in {_dumpWatch.ElapsedMilliseconds} ms"
-            : $"Saving recorded data to {_directory} failed after {_dumpWatch.ElapsedMilliseconds} ms");
-        DumpFinished?.Invoke();
+        lock (_lock) {
+            Emit(succeeded
+                ? $"Recorded data saved to {_directory} in {_dumpWatch.ElapsedMilliseconds} ms"
+                : $"Saving recorded data to {_directory} failed after {_dumpWatch.ElapsedMilliseconds} ms");
+            DumpFinished?.Invoke();
+        }
     }
 
     private static string StepLabelFor(DumpPhase phase) =>

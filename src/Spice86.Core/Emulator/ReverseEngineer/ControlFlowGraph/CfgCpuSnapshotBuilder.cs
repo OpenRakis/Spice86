@@ -51,7 +51,7 @@ internal sealed class CfgCpuSnapshotBuilder {
     private CfgPartitionedProgram? TryPartition(CfgExecutionContextGraph exported, ExecutionContextManager contextManager) {
         try {
             return _functionPartitioner.Partition(exported.Graph, contextManager, _functionCatalogue,
-                _inputsCollector.Capture());
+                _inputsCollector.Capture(contextManager));
         } catch (InvalidOperationException partitioningFailure) {
             if (_loggerService.IsEnabled(LogLevel.Error)) {
                 _loggerService.LogError(partitioningFailure,

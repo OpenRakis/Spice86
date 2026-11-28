@@ -16,10 +16,16 @@ using System.Linq;
 /// </summary>
 internal sealed class IrSegmentValueResolver {
     private readonly IrSsa _ssa;
+    private readonly IrSegmentFacts _facts;
     private readonly Dictionary<int, ushort?> _knownValues = new();
 
-    /// <summary>Builds the resolver over the SSA of one method.</summary>
-    public IrSegmentValueResolver(IrSsa ssa) => _ssa = ssa;
+    /// <summary>Builds the resolver over the SSA of one method, with the entry facts a prepare
+    /// round consumed: an entry version resolves to the known value every way in proved, or
+    /// through the entry version of its equality class's canonical member.</summary>
+    public IrSegmentValueResolver(IrSsa ssa, IrSegmentFacts facts) {
+        _ssa = ssa;
+        _facts = facts;
+    }
 
     /// <summary>The known value of a segment register <paramref name="version"/>: a full definition
     /// assigning a constant, or a phi without an entry operand whose operands all resolve to the
@@ -47,10 +53,29 @@ internal sealed class IrSegmentValueResolver {
             IrSsaDefinitionKind.Definition or IrSsaDefinitionKind.PartialDefinition
                 => DefinitionValue(version, info, visiting),
             IrSsaDefinitionKind.Phi => PhiValue(version, visiting),
+            IrSsaDefinitionKind.MethodEntry => EntryValue(info, visiting),
             _ => null
         };
         visiting.Remove(version);
         return value;
+    }
+
+    /// <summary>The entry fact of the version's block: the known value every way in gives the
+    /// register, or the resolution of the entry version of its equality class's canonical
+    /// member.</summary>
+    private ushort? EntryValue(IrSsaVersionInfo info, HashSet<int> visiting) {
+        IrSegmentEntryFact? fact = _facts.EntryFactOf(info.Block);
+        if (fact is null) {
+            return null;
+        }
+        if (fact.KnownValues.TryGetValue(info.Value, out ushort known)) {
+            return known;
+        }
+        if (fact.EqualTo.TryGetValue(info.Value, out IrSsaValue canonical)) {
+            int root = _ssa.VersionBefore(info.Block, 0, canonical);
+            return KnownSegmentValue(root, visiting);
+        }
+        return null;
     }
 
     /// <summary>The constant the defining statement of <paramref name="info"/> assigns to the

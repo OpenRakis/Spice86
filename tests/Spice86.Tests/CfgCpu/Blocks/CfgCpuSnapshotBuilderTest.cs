@@ -13,10 +13,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -70,7 +70,7 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
             _functionCatalogue,
             new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
                 new InterruptVectorTable(memory), new CallbackHandler(state, _loggerService),
-                loadedImageRegistry, new SharedMouseData(),
+                loadedImageRegistry, new RecordedRunFacts(),
                 new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),
                 memory, new IOPortDispatcher(new AddressReadWriteBreakpoints(), state,
                     _loggerService, false), Seg),

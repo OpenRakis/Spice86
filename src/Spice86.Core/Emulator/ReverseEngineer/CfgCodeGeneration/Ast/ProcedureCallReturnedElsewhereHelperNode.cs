@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -28,7 +29,13 @@ internal sealed record ProcedureCallReturnedElsewhereHelperNode : MethodCallValu
     /// <summary>The call width.</summary>
     public BitWidth Width { get; }
 
+    /// <summary>The callee-convention summary the call provably has, or
+    /// <see langword="null"/> when the call must keep <see cref="IrEffects.Unknown"/>.</summary>
+    public IrEffects? Summary { get; init; }
+
     /// <inheritdoc />
     public override MethodCallValueNode WithArguments(IVisitableAstNode[] arguments) =>
-        new ProcedureCallReturnedElsewhereHelperNode(Distance, Width, arguments);
+        new ProcedureCallReturnedElsewhereHelperNode(Distance, Width, arguments) {
+            Summary = Summary
+        };
 }

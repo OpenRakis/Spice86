@@ -9,19 +9,24 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Core.CLI;
+using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
+using Spice86.ViewModels.Services;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
 internal static class AsmFixtureCatalog {
     /// <summary>Runs 8087 startup detection and control-word load, store and reset checks.</summary>
     public static AsmFixture FpuInit() {
         return ResultFixture(new AsmRunSettings { BinName = "fpuinit", MaxCycles = 1000 }, result => {
-            result.State.AX.Should().Be(0x600D);
-            result.State.BX.Should().Be(1);
+            result.Memory.UInt16[0x1000, 0x604].Should().Be(0x600D);
+            result.Memory.UInt16[0x1000, 0x606].Should().Be(1);
         });
     }
 
@@ -38,12 +43,12 @@ internal static class AsmFixtureCatalog {
         };
         return ResultFixture(settings, result => {
             result.Memory.ReadRam((uint)originalRom.Length, VgaRom.Segment << 4).Should().Equal(originalRom);
-            result.State.SI.Should().Be(0x0104);
-            result.State.DI.Should().Be(0x9194);
-            result.State.CX.Should().Be(0);
-            result.State.DS.Should().Be(0x1000);
-            result.State.ES.Should().Be(0xB800);
-            result.State.AX.Should().Be(0x600D);
+            result.Memory.UInt16[0xF000, 0x60C].Should().Be(0x0104);
+            result.Memory.UInt16[0xF000, 0x60E].Should().Be(0x9194);
+            result.Memory.UInt16[0xF000, 0x608].Should().Be(0);
+            result.Memory.UInt16[0xF000, 0x610].Should().Be(0x1000);
+            result.Memory.UInt16[0xF000, 0x612].Should().Be(0xB800);
+            result.Memory.UInt16[0xF000, 0x604].Should().Be(0x600D);
         });
     }
 
@@ -209,7 +214,8 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x03] = 0x00;
         expectedMemory[0x04] = 0x01;
         expectedMemory[0x05] = 0x00;
-        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyinstructions" }, expectedMemory);
+        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyinstructions" }, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyInstructions);
     }
 
     /// <summary>Runs selfmodifyrep: the 0x21 bytes of the rep-patched buffer.</summary>
@@ -219,7 +225,8 @@ internal static class AsmFixtureCatalog {
             expectedMemory[i] = 0xAB;
         }
         expectedMemory[0x20] = 0x02;
-        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyrep" }, expectedMemory);
+        return MemoryFixture(new AsmRunSettings { BinName = "selfmodifyrep" }, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyRep);
     }
 
     /// <summary>Runs selfmodifyterminator: the stack holds both the first-pass and the patched marker.</summary>
@@ -234,17 +241,19 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs selfmodifyje: the patched immediate landed in AX and the loop ran once more.</summary>
     public static AsmFixture SelfModifyJe() {
         return ResultFixture(new AsmRunSettings { BinName = "selfmodifyje" }, result => {
-            result.State.AX.Should().Be(5678, "selfmodifyje: mov ax, 1234 was patched to mov ax, 5678");
-            result.State.CX.Should().Be(1, "selfmodifyje: CX is 1 after the patched comparison ends the loop");
+            result.Memory.UInt16[0xF000, 0x604].Should().Be(5678, "selfmodifyje: mov ax, 1234 was patched to mov ax, 5678");
+            result.Memory.UInt16[0xF000, 0x608].Should().Be(1, "selfmodifyje: CX is 1 after the patched comparison ends the loop");
         });
     }
 
     /// <summary>Runs selfmodifycall: the counter was bumped once and the stack is back where start set it.</summary>
     public static AsmFixture SelfModifyCall() {
         return ResultFixture(new AsmRunSettings { BinName = "selfmodifycall" }, result => {
-            result.Memory.UInt8[result.State.DS, 0x002B].Should().Be(1, "selfmodifycall: the counter byte was incremented once");
-            result.State.SS.Should().Be(0, "selfmodifycall: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "selfmodifycall: start sets SP to 0x0100");
+            ushort counterSegment = result.Memory.UInt16[0, 0x610];
+            ushort counterOffset = result.Memory.UInt16[0, 0x612];
+            result.Memory.UInt8[counterSegment, counterOffset].Should().Be(1, "selfmodifycall: the counter byte was incremented once");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "selfmodifycall: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "selfmodifycall: start sets SP to 0x0100");
         });
     }
 
@@ -295,8 +304,8 @@ internal static class AsmFixtureCatalog {
         };
         return ResultFixture(settings, result => {
             result.Memory.UInt8[0, 0x0002].Should().Be(0xAA, "hlt: the program reached the wait marker before the HLT");
-            result.State.DX.Should().Be(0, "hlt: the run ended at the HLT, so the IRQ0 handler never ran");
-        });
+        }).WithEngineAssertions((_, machine) =>
+            machine.CpuState.DX.Should().Be(0, "hlt: the run ended at the HLT, so the IRQ0 handler never ran"));
     }
 
     /// <summary>Runs hlt with the real-hardware HLT: the STI; HLT pair waits for the timer tick, the IRQ0
@@ -309,9 +318,9 @@ internal static class AsmFixtureCatalog {
         };
         return ResultFixture(settings, result => {
             result.Memory.UInt8[0, 0x0002].Should().Be(0xAA, "hlt wait: the program reached the wait marker before the HLT");
-            result.State.DX.Should().Be(1, "hlt wait: the IRQ0 handler ran while the CPU was halted");
             result.Memory.UInt8[0, 0x0000].Should().Be(1, "hlt wait: the program stored DX after resuming past the HLT");
-        });
+        }).WithEngineAssertions((_, machine) =>
+            machine.CpuState.DX.Should().Be(1, "hlt wait: the IRQ0 handler ran while the CPU was halted"));
     }
 
     /// <summary>Runs hltmask: every PIC line is masked, so the HLT waits forever; the run ends only when
@@ -426,7 +435,8 @@ internal static class AsmFixtureCatalog {
             MaxCycles = 100000,
             EnablePit = true
         };
-        return ResultFixture(settings, AssertInteriorEntryCompleted);
+        return ResultFixture(settings, AssertInteriorEntryCompleted)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.InteriorEntry);
     }
 
     /// <summary>Runs interrupt_handler_changes_register: a timer handler writes AX through a call that
@@ -440,13 +450,190 @@ internal static class AsmFixtureCatalog {
         return ResultFixture(settings, AssertInterruptHandlerChangesRegisterCompleted);
     }
 
+    /// <summary>Runs interrupt_handler_chain_preserves_ax: a chained timer handler must restore AX before
+    /// jumping to the previous handler.</summary>
+    public static AsmFixture InterruptHandlerChainPreservesAx() {
+        AsmRunSettings settings = new() {
+            BinName = "interrupt_handler_chain_preserves_ax",
+            MaxCycles = 0x400000,
+            EnablePit = true
+        };
+        return ResultFixture(settings, AssertInterruptHandlerChainPreservesAxCompleted);
+    }
+
+    /// <summary>Unmasks IRQ 12 and posts a mouse move so the machine raises IRQ 12 while the
+    /// program waits; the delivery runs the int 74h stub and its user-routine callbacks.</summary>
+    private static void RaiseMouseIrq12(Machine machine) {
+        machine.DualPic.SetIrqMask(12, false);
+        machine.InputEventHub.PostMouseMoveEvent(new MouseMoveEventArgs(1, 1));
+        machine.InputEventHub.ProcessAllPendingInputEvents();
+    }
+
+    /// <summary>Runs mouse_irq12 with no user routine registered: IRQ 12 is delivered during the
+    /// wait loop, the driver's before/after callbacks take their no-routine path, and the word the
+    /// registered routine would have written stays 0.</summary>
+    public static AsmFixture MouseIrq12NoRoutine() {
+        AsmRunSettings settings = new() {
+            BinName = "mouse_irq12",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            // The program is a BIOS image at F000: the BIOS handlers go to D000 so the
+            // installed stubs do not overwrite it.
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = RaiseMouseIrq12
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20080].Should().Be(0,
+                "no user routine is registered, so nothing writes the result word");
+        });
+    }
+
+    /// <summary>Runs cc_irq_delivered_flags with the frame_reader handler installed at int 74h:
+    /// the IRQ 12 delivery pushes the interrupted code's FLAGS image, the handler reads it through
+    /// [bp+6] and stores CF|ZF. The flag pattern was dead work generated code would drop while no
+    /// event check reads the flags.</summary>
+    public static AsmFixture IrqDeliveredFlags() {
+        AsmRunSettings settings = new() {
+            BinName = "cc_irq_delivered_flags",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = RaiseMouseIrq12
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20080].Should().Be(0x0041,
+                "the delivered FLAGS image carries the interrupted code's CF and ZF");
+        });
+    }
+
+    /// <summary>Runs cc_irq_delivered_flags with the flag_patcher handler installed at int 74h:
+    /// the handler sets CF in the pushed FLAGS image its iret restores, and the interrupted code's
+    /// post-delivery jc reads the patched carry.</summary>
+    public static AsmFixture IrqDeliveredFlagsPatch() {
+        AsmRunSettings settings = new() {
+            BinName = "cc_irq_delivered_flags",
+            ScenarioName = "cc_irq_delivered_flags.patch",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = 0x02;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20084].Should().Be(1,
+                "the patched CF in the restored FLAGS image took the interrupted code's carry arm");
+        });
+    }
+
+    /// <summary>Runs cc_irq_delivered_flags with the flag_branch handler installed at int 74h:
+    /// the handler's entry jnc reads the delivered CF and stores which arm it took.</summary>
+    public static AsmFixture IrqDeliveredFlagsBranch() {
+        AsmRunSettings settings = new() {
+            BinName = "cc_irq_delivered_flags",
+            ScenarioName = "cc_irq_delivered_flags.branch",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = 0x01;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20082].Should().Be(1,
+                "the handler's entry jnc took the carry-set arm of the delivered FLAGS");
+        });
+    }
+
+    /// <summary>Runs mouse_irq12 with the routine registered through INT 33h AX=000Ch before the
+    /// wait loop: the IRQ 12 delivery calls it through the stub's patched far call and it stores
+    /// 0xCAFE. The registration makes the callback contracts stay Unknown.</summary>
+    public static AsmFixture MouseIrq12RegisteredRoutine() {
+        AsmRunSettings settings = new() {
+            BinName = "mouse_irq12",
+            ScenarioName = "mouse_irq12.registered",
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = 0x01;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20080].Should().Be(0xCAFE,
+                "the registered routine ran when IRQ 12 was delivered and stored its marker");
+        });
+    }
+
+    /// <summary>Runs cc_irq_delivered_flags with the delivery_counter handler installed at int 74h:
+    /// the program does sti right before a wait hlt; the delivery the hlt takes counts one, then a
+    /// cli; hlt pair ends the run.</summary>
+    public static AsmFixture IrqDeliveredFlagsHlt() {
+        AsmRunSettings settings = new() {
+            BinName = "cc_irq_delivered_flags",
+            ScenarioName = "cc_irq_delivered_flags.hlt",
+            MaxCycles = 0x400000,
+            HltStopsEmulation = false,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = 0x03;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x20086].Should().Be(1,
+                "the posted IRQ 12 was delivered once around the hlt");
+        });
+    }
+
+    /// <summary>Runs cc_irq_shadow with the interrupt shadow sti then mov ss: the IRQ 12 posted
+    /// before the run is delivered after mov sp, on the new stack.</summary>
+    public static AsmFixture IrqShadowSsLoad() => IrqShadow("", 0x00);
+
+    /// <summary>Runs cc_irq_shadow with sti, mov ss, then a loop headed by mov sp: the delivery
+    /// still comes after mov sp.</summary>
+    public static AsmFixture IrqShadowSsLoop() => IrqShadow("cc_irq_shadow.ss_loop", 0x01);
+
+    /// <summary>Runs cc_irq_shadow with sti right before a loop header: the delivery comes after
+    /// the header's first instruction.</summary>
+    public static AsmFixture IrqShadowStiLoop() => IrqShadow("cc_irq_shadow.sti_loop", 0x02);
+
+    private static AsmFixture IrqShadow(string scenarioName, byte variantFlag) {
+        AsmRunSettings settings = new() {
+            BinName = "cc_irq_shadow",
+            ScenarioName = scenarioName,
+            MaxCycles = 0x400000,
+            InstallInterruptVectors = true,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = variantFlag;
+                RaiseMouseIrq12(machine);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt16[0x30000].Should().Be(1, "the posted IRQ 12 was delivered once");
+            result.Memory.UInt16[0x30002].Should().Be(result.Memory.UInt16[0x30008],
+                "the delivery comes after the instruction the interrupt shadow covers, so SS is the expected one");
+            result.Memory.UInt16[0x30004].Should().Be(result.Memory.UInt16[0x3000A],
+                "the delivery comes after the instruction the interrupt shadow covers, so the frame is on the expected stack");
+            result.Memory.UInt16[0x30006].Should().Be(result.Memory.UInt16[0x3000C],
+                "the delivery pushes the address after the instruction the interrupt shadow covers");
+        });
+    }
+
     /// <summary>Runs divfaultloop: the fault handler retried once and the division produced 2.</summary>
     public static AsmFixture DivFaultLoop() {
-        byte[] expectedMemory = new byte[4];
+        byte[] expectedMemory = new byte[10];
         expectedMemory[0x00] = 0x03; // retrycount low
         expectedMemory[0x01] = 0x00; // retrycount high
         expectedMemory[0x02] = 0x02; // quotient low (10 / 5 = 2)
         expectedMemory[0x03] = 0x00; // quotient high
+        expectedMemory[0x08] = 0x78; // BP low the handler observed and stored
+        expectedMemory[0x09] = 0x56; // BP high
         return MemoryFixture(new AsmRunSettings { BinName = "divfaultloop" }, expectedMemory);
     }
 
@@ -467,28 +654,56 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs int9_keeps_interrupted_flags: the run presses a key while the program spins on
+    /// the BIOS keyboard buffer head/tail with flag-free instructions only, so the FLAGS word it
+    /// stores at 2000h:40h is the interrupted code's flags as the keyboard interrupt left them.</summary>
+    public static AsmFixture Int9KeepsInterruptedFlags() {
+        return ResultFixture(new AsmRunSettings {
+                BinName = "int9_keeps_interrupted_flags",
+                InstallInterruptVectors = true,
+                // The program is a BIOS image at F000: the BIOS callbacks go to D000 so the
+                // installed int9 stub does not overwrite the program's own code.
+                AsmHandlersSegment = 0xD000,
+                MaxCycles = 10000,
+                InstructionTimeScale = 1000,
+                HeadlessKeyInjections = [new HeadlessKeyInjection(50,
+                    gui => gui.SimulateKeyPress(PhysicalKey.A))]
+            }, result => {
+                result.Memory.UInt16[0x2000, 0x42].Should().Be(1,
+                    "int9_keeps_interrupted_flags: a key arrived in the BIOS keyboard buffer");
+                (result.Memory.UInt16[0x2000, 0x40] & 1).Should().Be(0,
+                    "int9_keeps_interrupted_flags: the keyboard interrupt must not change the interrupted code's CF");
+            });
+    }
+
     /// <summary>Runs speculative_branch on the observed or unobserved arm and checks the arm's result bytes.</summary>
     public static AsmFixture SpeculativeBranch(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xEE, 0xAA), arm);
+            return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xEE, 0xAA), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchUnobserved);
         }
-        return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xDD, 0xAA), arm);
+        return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xDD, 0xAA), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchObserved);
     }
 
     /// <summary>Runs speculative arms at the same offset in two segments and checks both results.</summary>
     public static AsmFixture SpeculativeRunSameOffset(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xEE, 0xCC), arm);
+            return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xEE, 0xCC), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeRunSameOffsetUnobserved);
         }
-        return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xDD, 0xBB), arm);
+        return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xDD, 0xBB), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeRunSameOffsetObserved);
     }
 
     /// <summary>Runs speculative_closure on the given arm: the unobserved arm loops once more.</summary>
     public static AsmFixture SpeculativeClosure(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0x03, 0xBB), arm);
+            return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0x03, 0xBB), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeClosureUnobserved);
         }
-        return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0xDD, 0xBB), arm);
+        return SpeculativeFixture("speculative_closure", SpeculativeMemory(0x01, 0xDD, 0xBB), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeClosureObserved);
     }
 
     /// <summary>Runs speculative_convergence on the given arm: both arms converge on the same merge point.</summary>
@@ -498,45 +713,76 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0xBB : (byte)0xAA;
         expectedMemory[0x402] = 0xCC;
         expectedMemory[0x403] = 0xFF;
-        return SpeculativeFixture("speculative_convergence", expectedMemory, arm);
+        AsmFixture fixture = SpeculativeFixture("speculative_convergence", expectedMemory, arm);
+        if (arm == SpeculativeArm.Unobserved) {
+            return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeConvergenceUnobserved);
+        }
+        return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeConvergenceObserved);
     }
 
     /// <summary>Runs speculative_mixed_block on the given arm: the unobserved arm falls through to 0xEE.</summary>
     public static AsmFixture SpeculativeMixedBlock(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {
-            return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xEE, 0xAA), arm);
+            return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xEE, 0xAA), arm)
+                .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeMixedBlockUnobserved);
         }
-        return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xDD, 0xAA), arm);
+        return SpeculativeFixture("speculative_mixed_block", SpeculativeMemory(0x01, 0xDD, 0xAA), arm)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeMixedBlockObserved);
     }
 
     /// <summary>Runs speculative_call_entry on its observed arm: the call target wrote the observed bytes.</summary>
     public static AsmFixture SpeculativeCallEntry() {
-        return SpeculativeFixture("speculative_call_entry", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_call_entry", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeCallEntry);
     }
+
 
     /// <summary>Runs speculative_invalid_opcode on its observed arm: the observed bytes were written.</summary>
     public static AsmFixture SpeculativeInvalidOpcode() {
-        return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeInvalidOpcode);
     }
 
     /// <summary>Runs speculative_zero_memory on its observed arm: the code patched over the zero region ran.</summary>
     public static AsmFixture SpeculativeZeroMemory() {
-        return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeZeroMemory);
     }
 
     /// <summary>Runs speculative_transfer_into_data on its observed arm: none of the four transfers into data is taken.</summary>
     public static AsmFixture SpeculativeTransferIntoData() {
-        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeTransferIntoData);
     }
 
     /// <summary>Runs speculative_smc_guard on its observed arm: the run completes without self-modification.</summary>
     public static AsmFixture SpeculativeSmcGuard() {
-        return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeSmcGuard);
+    }
+
+    /// <summary>Runs speculative_smc_lowram on its observed arm: the .com code lives in low RAM, the
+    /// self-modifying store's segment is a proven constant, and only disjointness keeps the two
+    /// guards around it unmerged.</summary>
+    public static AsmFixture SpeculativeSmcLowRam() {
+        AsmRunSettings settings = new() {
+            BinName = Path.GetFullPath("Resources/cpuTests/speculative_smc_lowram.com"),
+            MaxCycles = 1000
+        };
+        return MemoryFixture(settings, SpeculativeMemory(0x01, 0xDD, 0xAA))
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeSmcLowRam);
     }
 
     /// <summary>Runs speculative_discard on its observed arm: the run completes without divergence.</summary>
     public static AsmFixture SpeculativeDiscard() {
-        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeDiscard);
+    }
+
+    /// <summary>Runs speculative_discard on its unobserved arm: the alternative path writes 0xEE
+    /// to [0x0401] before the done marker.</summary>
+    public static AsmFixture SpeculativeDiscardUnobserved() {
+        return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xEE, 0xAA), SpeculativeArm.Unobserved);
     }
 
     /// <summary>Runs speculative_a20_smc_guard on its observed arm: the selector jumps to the
@@ -548,7 +794,7 @@ internal static class AsmFixtureCatalog {
                 "speculative_a20_smc_guard: the init marker was written");
             result.Memory.UInt8[0x0401].Should().Be(0xDD,
                 "speculative_a20_smc_guard: the observed arm wrote its result byte");
-        });
+        }).WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeA20SmcGuard);
     }
 
     /// <summary>Runs callstackunwind on the given arm: the observed arm returns leaf to recovery, while the
@@ -560,7 +806,11 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x10] = 0xAA;
         expectedMemory[0x11] = 0xBB;
         expectedMemory[0x12] = arm == SpeculativeArm.Unobserved ? (byte)0xEE : (byte)0xDD;
-        return SpeculativeFixture("callstackunwind", expectedMemory, arm);
+        AsmFixture fixture = SpeculativeFixture("callstackunwind", expectedMemory, arm);
+        if (arm == SpeculativeArm.Unobserved) {
+            return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.CallStackUnwindUnobserved);
+        }
+        return fixture.WithEngineAssertions(AsmScenarioEngineAssertions.CallStackUnwindObserved);
     }
 
     /// <summary>Returns the register oracle of the given partition fixture bin.</summary>
@@ -571,94 +821,100 @@ internal static class AsmFixtureCatalog {
         switch (binName) {
             case "partition_jump_into_function_middle":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: routine sets AX");
-                    result.State.BX.Should().Be(0x2222, $"{binName}: routine_middle sets BX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: routine sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x2222, $"{binName}: routine_middle sets BX");
                 });
             case "partition_shared_tail":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: function_a sets AX");
-                    result.State.BX.Should().Be(0x2222, $"{binName}: function_b sets BX");
-                    result.State.CX.Should().Be(0x3333, $"{binName}: shared_tail sets CX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: function_a sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x2222, $"{binName}: function_b sets BX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x3333, $"{binName}: shared_tail sets CX");
                 });
             case "partition_multi_entry_dominated_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
-                    result.State.BX.Should().Be(0xB222, $"{binName}: the shared region sets BX");
-                    result.State.CX.Should().Be(0xC333, $"{binName}: the shared region sets CX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0xB222, $"{binName}: the shared region sets BX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0xC333, $"{binName}: the shared region sets CX");
                 });
             case "partition_multi_entry_irreducible_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.BX.Should().Be(0x0001, $"{binName}: the cycle resumes at the secondary shared entry");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the cycle uses neither original return path");
-                    result.State.DX.Should().Be(0x0000, $"{binName}: the cycle finishes all three iterations");
-                    result.State.SI.Should().Be(0x0004, $"{binName}: the shared handler runs through an interrupt, a return, a call and a tail jump");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0001, $"{binName}: the cycle resumes at the secondary shared entry");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the cycle uses neither original return path");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0000, $"{binName}: the cycle finishes all three iterations");
+                    result.Memory.UInt16[0x1000, 0x60C].Should().Be(0x0004, $"{binName}: the shared handler runs through an interrupt, a return, a call and a tail jump");
                 });
             case "partition_multi_entry_disconnected_shared":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
-                    result.State.BX.Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
-                    result.State.CX.Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
                 });
             case "partition_cross_function_loop":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the cross-function loop burns CX down to 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the cross-function loop burns CX down to 0");
                 });
             case "partition_mixed_activation_cycle":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the activation cycle burns CX down to 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the activation cycle burns CX down to 0");
                 });
             case "partition_indirect_call_jump":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.AX.Should().Be(0x1111, $"{binName}: indirect_target sets AX");
-                    result.State.BX.Should().Be(0x0016, $"{binName}: BX holds the address of jump_target");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x1111, $"{binName}: landing_a sets AX");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0031, $"{binName}: BX holds the address of jump_target");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0022, $"{binName}: both direct and indirect calls reached both landings");
                 });
             case "partition_jump_table":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
-                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
                 });
             case "partition_untested_indirect":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
                 });
             case "partition_jump_table_mixed":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
-                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
                 });
             case "partition_far_dispatch":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: both loops run their two table entries");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x1122, $"{binName}: the four far calls and two far jumps reached their targets");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the far loop visits four entries and the jump loop visits two");
+                });
+            case "partition_shared_return_landings":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.Memory.UInt16[0, 0x600].Should().Be(0x0100, $"{binName}: nested calls restored SP");
+                    result.Memory.UInt16[0, 0x602].Should().Be(0x0022, $"{binName}: each distinct landing ran directly and through its trampoline");
                 });
             case "partition_far_call_chain":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 2000 }, result => {
@@ -667,8 +923,8 @@ internal static class AsmFixtureCatalog {
                         (0x04, 2, 0xF000), (0x06, 2, 0x3000),
                         (0x08, 2, 0xF010), (0x0A, 2, 0x2000),
                         (0x0C, 2, 0xF000), (0x0E, 2, 0x1000)));
-                    result.State.DX.Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
+                    result.Memory.UInt16[0x2000, 0x60A].Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
+                    result.Memory.UInt16[0x2000, 0x608].Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
                 });
             case "partition_far_jump_segment_change":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x40,
@@ -677,68 +933,187 @@ internal static class AsmFixtureCatalog {
                     (0x0C, 2, 0xF100)));
             case "partition_sign_conditions":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
                 });
             case "partition_untested_far_indirect":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
                 });
             case "partition_untaken_cpuid":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.CX.Should().Be(0x0002, $"{binName}: cpuid is never executed");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0002, $"{binName}: cpuid is never executed");
                 });
             case "partition_signed_min_compare":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
-                    result.State.AX.Should().Be(0x0000, $"{binName}: the end clears AX");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x0000, $"{binName}: the end clears AX");
                 });
             case "partition_back_edge_fallthrough":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0003, $"{binName}: the loop body runs three times");
-                    result.State.CX.Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0003, $"{binName}: the loop body runs three times");
+                    result.Memory.UInt16[0x1000, 0x608].Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
                 });
             case "partition_jump_to_next":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
-                    result.State.DX.Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.Memory.UInt16[0x1000, 0x60A].Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
                 });
             case "partition_two_fault_handlers":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
-                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
-                    result.State.SP.Should().Be(0x0100, $"{binName}: each handler returns with iret");
-                    result.State.SI.Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
-                    result.State.AX.Should().Be(0x0002, $"{binName}: the third division succeeds");
-                    result.State.BX.Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x0100, $"{binName}: each handler returns with iret");
+                    result.Memory.UInt16[0x1000, 0x60C].Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
+                    result.Memory.UInt16[0x1000, 0x604].Should().Be(0x0002, $"{binName}: the third division succeeds");
+                    result.Memory.UInt16[0x1000, 0x606].Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
                 });
+            case "cc_copy_in_observers":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x82,
+                    (0x40, 2, 0x000E), (0x42, 2, 0x000B), (0x44, 2, 0x000B), (0x48, 2, 0x3000),
+                    (0x50, 2, 0x0003), (0x58, 2, 0x0011), (0x5A, 2, 0x0011), (0x5C, 2, 0x0011),
+                    (0x70, 2, 0xAB00), (0x74, 2, 0xAB05), (0x80, 2, 0x7777)));
+            case "cc_recursive_summary":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4A,
+                    (0x40, 2, 0x0018), (0x42, 2, 0x0009), (0x44, 2, 0x0009),
+                    (0x46, 2, 0x0005), (0x48, 2, 0x0001)));
             case "cc_register_leaf":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x52,
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x56,
                     (0x40, 2, 0x0007), (0x42, 2, 0x0030), (0x44, 1, 0x11), (0x45, 1, 0x22),
                     (0x46, 2, 0x0000), (0x48, 2, 0x0002), (0x4A, 1, 0x5A),
-                    (0x4C, 2, 0x1111), (0x4E, 2, 0x2222), (0x50, 2, 0x3333)));
+                    (0x4C, 2, 0x1111), (0x4E, 2, 0x2222), (0x50, 2, 0x3333),
+                    (0x52, 2, 0x0002), (0x54, 2, 0x0006)));
+            case "cc_dispatch_targets":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4C,
+                    (0x40, 2, 0xAAAF), (0x42, 2, 0x1111), (0x44, 2, 0xAAAA), (0x46, 2, 0x1118),
+                    (0x48, 2, 0xAAAA), (0x4A, 2, 0x1111)));
+            case "cc_call_32bit":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x48,
+                    (0x40, 4, 0x11115555), (0x44, 4, 0xABCD123B)));
             case "cc_stack_frames":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x64,
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x74,
                     (0x40, 2, 0x3333), (0x42, 2, 0x5A5A), (0x44, 2, 0x0003), (0x46, 2, 0x0120),
                     (0x48, 2, 0x0033), (0x4A, 2, 0x7777), (0x4C, 2, 0x4321), (0x4E, 2, 0x0013),
                     (0x50, 2, 0x1234), (0x52, 2, 0x1234), (0x54, 2, 0x0FFD), (0x56, 2, 0x0FFD),
                     (0x58, 2, 0x7777), (0x5A, 2, 0x7777), (0x5C, 2, 0x7777),
-                    (0x5E, 2, 0x7777), (0x60, 2, 0x7777), (0x62, 2, 0x0012)));
+                    (0x5E, 2, 0x7777), (0x60, 2, 0x7777), (0x62, 2, 0x0012),
+                    (0x64, 2, 0x8887), (0x66, 2, 0xBEEF), (0x68, 2, 0xF00D), (0x6A, 2, 0x1357),
+                    (0x6C, 2, 0x000A), (0x6E, 2, 0x000C), (0x70, 2, 0x1000), (0x72, 2, 0x5A5A)));
+            case "cc_push_sp_arguments":
+                return ResultFixture(new AsmRunSettings { BinName = binName }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0xFFFA,
+                        "each push SP must use SP at its own instruction");
+                    result.Memory.UInt16[0x2000, 0x0204].Should().Be(0xFFFE);
+                });
+            case "cc_argument_mutation_between_reads":
+                return ResultFixture(new AsmRunSettings { BinName = binName }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0xAAAA,
+                        "the second argument read sees the nested call's stack write");
+                    result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x9999);
+                    result.Memory.UInt16[0x2000, 0x0204].Should().Be(0x1000);
+                });
+            case "cc_stack_argument_push_memory_alias":
+                return ResultFixture(new AsmRunSettings { BinName = binName }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0x4444,
+                        "the second push reads the memory slot the first push already overwrote");
+                    result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x1000);
+                });
+            case "cc_stack_argument_loop_write":
+                return ResultFixture(new AsmRunSettings { BinName = binName }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0xAAAA,
+                        "the loop back edge reaches another argument read after the nested call writes the slot");
+                    result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x9999);
+                    result.Memory.UInt16[0x2000, 0x0204].Should().Be(0x1000);
+                });
+            case "cc_stack_argument_interrupt_write":
+                return ResultFixture(new AsmRunSettings { BinName = binName }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0xAAAA,
+                        "the second argument read sees the interrupt handler's stack write");
+                    result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x9999);
+                    result.Memory.UInt16[0x2000, 0x0204].Should().Be(0x1000);
+                });
+            case "cc_stack_argument_timer_write":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0x400000, EnablePit = true }, result => {
+                    result.Memory.UInt16[0x2000, 0x0200].Should().Be(0xAAAA,
+                        "the second argument read sees the IRQ0 handler's stack write");
+                    result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x9999);
+                    result.Memory.UInt16[0x2000, 0x0204].Should().Be(0x1000);
+                    result.Memory.UInt8[0x2000, 0x0302].Should().Be(1,
+                        "the timer tick must have been delivered while the callee waited");
+                });
+            case "cc_saved_registers":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x58,
+                    (0x40, 2, 0x0A0A), (0x42, 2, 0x0B0B), (0x44, 2, 0xE1E1), (0x46, 2, 0xF1F1),
+                    (0x48, 2, 0x0FFC), (0x4A, 2, 0xFFFF), (0x4C, 2, 0xA1A1), (0x4E, 2, 0xB1B1),
+                    (0x50, 2, 0x0007), (0x52, 2, 0xA2A2), (0x54, 2, 0xB2B2), (0x56, 2, 0x5A5A)));
+            case "cc_saved_registers_xchg_escape":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = Path.GetFullPath("Resources/cpuTests/cc_saved_registers_xchg_escape.com")
+                    }, ResultRegion(0x44, (0x40, 2, 0xBEEF), (0x42, 2, 0xBEEF)));
+            case "cc_mov_sp_bp_epilogue":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x56,
+                    (0x40, 2, 0x1234), (0x42, 2, 0x6789), (0x44, 2, 0x7777), (0x46, 2, 0x5555),
+                    (0x48, 2, 0x5A5A), (0x4A, 2, 0x000B), (0x4C, 2, 0x000C), (0x4E, 2, 0x0104),
+                    (0x50, 2, 0x0108), (0x52, 2, 0x0108), (0x54, 2, 0x1000)));
+            case "cc_stack_frames_read_after_pop":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x44, (0x40, 2, 0x1111), (0x42, 2, 0x1111)));
+            case "cc_frame_web_typed_return":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.Memory.UInt16[0x1000, 0x600].Should().Be(0x00FE,
+                        $"{binName}: the caller's BP is the SP g's mov bp,sp left");
+                    result.Memory.UInt16[0x1000, 0x602].Should().Be(0x0100,
+                        $"{binName}: SP is back at its start value");
+                });
+            case "cc_calls_keep_stack_offset":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x44,
+                    (0x40, 2, 0x1234), (0x42, 2, 0x5678)));
             case "cc_call_shapes":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x59,
                     (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 2, 0xAAAA), (0x46, 2, 0xBBBB),
                     (0x48, 2, 0x000A), (0x4A, 2, 0x3456), (0x4C, 2, 0x1234),
                     (0x4E, 2, 0x0007), (0x50, 2, 0x7777), (0x52, 2, 0x0041), (0x54, 2, 0x8888),
                     (0x56, 2, 0xCAFE), (0x58, 1, 0x01)));
+            case "cc_stack_offset_joins":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.Memory.UInt16[0x2000, 0x40].Should().Be(0x000C,
+                        $"{binName}: section 1, the non-negative arm");
+                    result.Memory.UInt16[0x2000, 0x42].Should().Be(0xFDFE,
+                        $"{binName}: section 1, the negative arm");
+                    result.Memory.UInt16[0x2000, 0x44].Should().Be(0x0003,
+                        $"{binName}: section 2, three leaf calls in a loop");
+                    result.Memory.UInt16[0x2000, 0x46].Should().Be(0x1234,
+                        $"{binName}: section 3, the argument read after a pushing loop");
+                    result.Memory.UInt16[0x2000, 0x48].Should().Be(0x5678,
+                        $"{binName}: section 4, the local read after a callee that pops its argument");
+                    result.Memory.UInt16[0x2000, 0x4A].Should().Be(0xDDDD,
+                        $"{binName}: section 5, a store through the BP the callee changed overwrites the slot pushed after the call");
+                    result.Memory.UInt16[0x2000, 0x4C].Should().Be(0x0006,
+                        $"{binName}: section 6, the saver doubles AX");
+                    result.Memory.UInt16[0x2000, 0x4E].Should().Be(0x7777,
+                        $"{binName}: section 6, the caller's BX reaches the callee's saved slot");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                });
+            case "cc_untyped_call_passthrough":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.Memory.UInt16[0x2000, 0x40].Should().Be(0x000C,
+                        $"{binName}: the handler's sum reaches the caller through the untyped call");
+                    result.Memory.UInt16[0x2000, 0x42].Should().Be(0x0018,
+                        $"{binName}: the typed method doubles it into CX");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                });
             case "dataflow_stack_save_restore":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x1234), (0x02, 2, 0x3000), (0x04, 2, 0x0002), (0x06, 2, 0x0103), (0x08, 2, 0x0100),
@@ -842,6 +1217,15 @@ internal static class AsmFixtureCatalog {
                     (0x54, 2, 0x7FFF), (0x56, 2, 0x7777), (0x58, 2, 0x1111), (0x5A, 2, 0x2222), (0x5C, 2, 0x80FD),
                     (0x5E, 2, 0x80FD), (0x60, 2, 0x0005), (0x62, 2, 0x0001), (0x64, 2, 0x7FFF), (0x66, 2, 0x2200),
                     (0x68, 1, 1), (0x6A, 2, 0x007F), (0x6C, 2, 0x8001), (0x6E, 2, 0x0005), (0x70, 2, 0x0001)));
+            case "dataflow_forwarded_register_read":
+                // The input lives in RAM the oracle seeds, so the generator cannot fold it: EAX is
+                // stored, the store is forwarded into the EBX reload and the result still must hold
+                // the input after both registers are overwritten.
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    ConfigureMachine = machine =>
+                        machine.Memory.UInt32[0x2000, 0x0800] = 0x12345678
+                }, ResultRegion(0x104, (0x100, 4, 0x12345678)));
             case "dataflow_interrupt_boundaries":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0xFFFFFFF, EnablePit = true }, ResultRegion(0x80,
                     (0x00, 2, 0x0010), (0x02, 2, 0x0004), (0x04, 2, 0x0007), (0x06, 2, 0x0064), (0x08, 2, 0x0E16),
@@ -864,7 +1248,64 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x002A), (0x42, 2, 0x002A), (0x44, 2, 0x002A),
                     (0x4A, 2, 0x2222), (0x4C, 2, 0x3333), (0x4E, 1, 0x11),
                     (0x50, 1, 0x11), (0x51, 1, 0x22), (0x52, 1, 0x44), (0x53, 1, 0x88),
-                    (0x54, 2, 0x0055)));
+                    (0x54, 2, 0x0055),
+                    (0x56, 1, 0x22), (0x57, 1, 0x00)));
+            case "dataflow_alias_traps_286":
+                return DataflowAliasTraps286(binName);
+            case "dataflow_io_barrier":
+                // The Sound Blaster's DSP E2h command registers a DMA callback that writes the
+                // computed E2 value into the channel's buffer when the program unmasks channel 1,
+                // synchronously inside the mask-register port write. 22h at ds:[301h] is the value
+                // the IOB-2 compare must see before that port call.
+                return ResultRegionFixture(new AsmRunSettings {
+                    BinName = binName,
+                    SbType = SbType.SBPro2,
+                    ConfigureMachine = machine =>
+                        machine.Memory.UInt8[0x2000, 0x0301] = 0x22
+                }, ResultRegion(0x48,
+                    (0x40, 1, 0x40), (0x41, 1, 0x33), (0x42, 1, 0x40), (0x43, 1, 0xE5)));
+            case "dataflow_device_order":
+                // The mode-1 write at es:[2] copies the latches the last device read loaded:
+                // es:[1]'s planes 55h/66h/77h/99h, not es:[0]'s 11h/22h/44h/88h. A merge that
+                // moves the read of es:[0] past the read of es:[1] leaves the wrong latches.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x4C,
+                        (0x40, 4, 0x00005511), (0x44, 1, 0x55),
+                        (0x48, 1, 0x55), (0x49, 1, 0x66), (0x4A, 1, 0x77), (0x4B, 1, 0x99)));
+            case "dataflow_stack_vram":
+                // With SS = A000h under write mode 1, push ax stores the latches and pop bx
+                // reads the planes: BX is 5555h, not the pushed 1234h. A pair printed as an
+                // assignment would deliver AX and drop the write's plane effect.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x45,
+                        (0x40, 1, 0x55),
+                        (0x41, 1, 0x55), (0x42, 1, 0x66), (0x43, 1, 0x77), (0x44, 1, 0x99)));
+            case "dataflow_ram_policy":
+                // The proved-RAM read forwards in both modes; the unknown-segment stores and
+                // reads (20h-23h) keep their runtime bytes under the relaxation because es = 2000h
+                // is real RAM; the proved device overwrite stays exact.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x64,
+                        (0x20, 1, 0xAA), (0x21, 1, 0xBB), (0x22, 1, 0x77), (0x23, 1, 0x88),
+                        (0x40, 2, 0x1234), (0x42, 2, 0xBBAA), (0x44, 2, 0x8877),
+                        (0x62, 2, 0x2000)));
+            case "dataflow_overwritten_stores":
+                // The first stores of the kept sections each leave a byte an observer reads:
+                // the aliased read (46h), the callee (48h), the int 0 handler (4Ah). A removal
+                // that misses its condition shows as 0x2222 or 0x0000 there instead.
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x66,
+                        (0x20, 2, 0x2222), (0x22, 2, 0x3333), (0x24, 2, 0x1155),
+                        (0x26, 2, 0x2222), (0x28, 2, 0x2222), (0x2A, 2, 0x2222),
+                        (0x32, 2, 0x2222),
+                        (0x34, 2, 0x2222), (0x36, 2, 0x2222), (0x38, 2, 0x2222),
+                        (0x3A, 2, 0x1111), (0x3C, 2, 0x2222), (0x3E, 2, 0x2222),
+                        (0x40, 2, 0x2222), (0x42, 2, 0x3333), (0x44, 2, 0x1155),
+                        (0x46, 2, 0x1111), (0x48, 2, 0x1111), (0x4A, 2, 0x1111),
+                        (0x4C, 2, 0x2222), (0x4E, 2, 0x2222), (0x50, 2, 0x2222),
+                        (0x52, 2, 0x2222), (0x54, 2, 0x2222), (0x56, 2, 0x1111),
+                        (0x58, 2, 0x2222), (0x5A, 2, 0x1111), (0x5C, 2, 0x1111),
+                        (0x60, 2, 0x2222), (0x62, 2, 0x2222), (0x64, 2, 0x1111)));
             case "dataflow_compiler_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName },
                     CompilerIdiomsRegion());
@@ -893,7 +1334,7 @@ internal static class AsmFixtureCatalog {
                         machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286
                 }, WideOperationsRegion());
             case "dataflow_legality_traps":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x96,
                     (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
                     (0x0A, 1, 0x97), (0x0C, 2, 0x0001), (0x0E, 2, 0x0002), (0x10, 2, 0x0001),
                     (0x12, 2, 0xBEEF), (0x14, 2, 0x0000), (0x16, 1, 0x11), (0x18, 2, 0x0012),
@@ -914,7 +1355,11 @@ internal static class AsmFixtureCatalog {
                     (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077),
                     (0x49, 1, 0x55), (0x4B, 1, 0x66), (0x57, 1, 0x77), (0x5C, 1, 0xAA),
                     (0x4D, 1, 0x11),
-                    (0x60, 2, 0x0000), (0x64, 2, 0x0000)));
+                    (0x60, 2, 0x0000), (0x64, 2, 0x0000),
+                    (0x80, 2, 0x1234), (0x82, 2, 0x7856), (0x84, 2, 0x009E),
+                    (0x86, 2, 0x0107), (0x88, 2, 0x0407), (0x8A, 2, 0x0000),
+                    (0x8C, 2, 0x0007), (0x8E, 2, 0x009A), (0x90, 2, 0x009A),
+                    (0x92, 2, 0x0077), (0x94, 1, 0x77)));
             case "data_globals":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x53,
                     (0x10, 1, 0x11), (0x11, 1, 0x22), (0x12, 1, 0x33),
@@ -970,6 +1415,20 @@ internal static class AsmFixtureCatalog {
                     ResultRegion(0x51,
                     (0x40, 1, 0x5A), (0x41, 1, 0x6B), (0x42, 1, 0x01),
                     (0x50, 1, 0x01)));
+            case "interrupt_call_pushed_flags":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    (result.Memory.UInt16[0x2000, 0x40] & 0x0FD5).Should().Be(0x0445,
+                        $"{binName}: section 1 pushes ZF and PF from sub, CF from stc, DF from std");
+                    (result.Memory.UInt16[0x2000, 0x42] & 0x0FD5).Should().Be(0x0091,
+                        $"{binName}: section 2 pushes CF, SF, AF from cmp");
+                    (result.Memory.UInt16[0x2000, 0x44] & 0x0FD5).Should().Be(0x0894,
+                        $"{binName}: section 3 pushes OF, SF, AF, PF from add inside a near call");
+                    (result.Memory.UInt16[0x2000, 0x46] & 0x0FD5).Should().Be(0x0495,
+                        $"{binName}: section 4 pushes CF, PF, AF, SF from the caller's sub and DF from std into an int inside the called method");
+                    result.Memory.UInt16[0x2000, 0x50].Should().Be(0x48, $"{binName}: four handler stores advance the result offset");
+                    result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{binName}: start sets SS to 0x2000");
+                    result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{binName}: the stack is balanced at the end");
+                });
             case "data_global_offset_fault":
                 return ResultRegionFixture(new AsmRunSettings {
                         BinName = binName, CpuModel = CpuModel.INTEL_80386 },
@@ -1078,7 +1537,8 @@ internal static class AsmFixtureCatalog {
             BinName = "partition_mutual_recursion_unwind",
             MaxCycles = 10000
         };
-        return MemoryFixture(settings, expectedMemory);
+        return MemoryFixture(settings, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.PartitionMutualRecursionUnwind);
     }
 
     /// <summary>Runs selfmodifycalltarget: every self-modified call-target variant reached its marker.</summary>
@@ -1091,7 +1551,8 @@ internal static class AsmFixtureCatalog {
             BinName = "selfmodifycalltarget",
             MaxCycles = 20000
         };
-        return MemoryFixture(settings, expectedMemory);
+        return MemoryFixture(settings, expectedMemory)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SelfModifyCallTarget);
     }
 
     /// <summary>Runs multimisalignedcall: the dispatcher ran three times and every continuation wrote its marker.</summary>
@@ -1136,6 +1597,117 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs convention_conditional_flag_input: the four stored DL bytes prove the callee's
+    /// <c>setc</c> sees the caller's CF when <c>shl ax,cl</c> leaves it unchanged (CL=0).</summary>
+    public static AsmFixture ConventionConditionalFlagInput() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_conditional_flag_input", MaxCycles = 1000 }, result => {
+            result.Memory.UInt8[0x2000, 0x0200].Should().Be(1, "cl=0: shl keeps CF, setc reads the caller's stc");
+            result.Memory.UInt8[0x2000, 0x0201].Should().Be(0, "cl=0: shl keeps CF, setc reads the caller's clc");
+            result.Memory.UInt8[0x2000, 0x0202].Should().Be(1, "cl=1: shl shifts out the top bit of 8000h");
+            result.Memory.UInt8[0x2000, 0x0203].Should().Be(0, "cl=1: shl shifts out the top bit of 1");
+        });
+    }
+
+    /// <summary>Runs convention_return_outputs: the stored results prove a return exit keeps the
+    /// flags and writes callers (and redirected-return landings) observe and drops the rest. The
+    /// strict gate proves s6_si_dead's promoted SI local is still written back at its ret: no
+    /// caller reads SI, but the terminal hlt observes it.</summary>
+    public static AsmFixture ConventionReturnOutputs() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_return_outputs", MaxCycles = 1000 }, result => {
+            result.Memory.UInt16[0x2000, 0x0200].Should().Be(0x0101, "add ax,[0400h] runs even when its flags are dead");
+            result.Memory.UInt8[0x2000, 0x0202].Should().Be(1, "the caller reads CF after the call, so the callee's stc survives");
+            result.Memory.UInt16[0x2000, 0x0204].Should().Be(5, "the caller stores DX, so the callee's DX write survives");
+            result.Memory.UInt16[0x2000, 0x0206].Should().Be(9, "the caller overwrites DX without reading it, so the earlier write is dead");
+            result.Memory.UInt16[0x2000, 0x0208].Should().Be(0x1234, "call way in: CX survives");
+            result.Memory.UInt16[0x2000, 0x020A].Should().Be(0x1234, "jump way in: CX survives too (non-call way keeps all outputs)");
+            result.Memory.UInt16[0x2000, 0x0214].Should().Be(0x55AA,
+                "the redirected ret lands on an entry that reads BX, so the callee's BX write survives");
+            result.Memory.UInt16[0x2000, 0x0216].Should().Be(0x0101,
+                "AX = DX is read by the return but DX is redefined before the ret: the merge is refused and AX keeps the popped value");
+            result.Memory.UInt16[0x2000, 0x021E].Should().Be(9,
+                "the caller reads DX, so the callee's DX redefinition stays live and still re-versions the operand");
+            result.Memory.UInt16[0x2000, 0x0218].Should().Be(0x0100,
+                "AX = [si] is read by the return but a store to [si] lies between: the merge is refused and AX keeps the loaded value");
+        });
+    }
+
+    /// <summary>Runs convention_resolved_calls: the stored results prove a resolved call gets the
+    /// callee's convention as its summary - needed reads and flag writes survive, dead writes go -
+    /// while a call that can reach a fault edge stays conservative, and the hardware contract
+    /// keeps a register the callee's event checks read for the interrupt handler.</summary>
+    public static AsmFixture ConventionResolvedCalls() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_resolved_calls", MaxCycles = 1000000, EnablePit = true }, result => {
+            result.Memory.UInt16[0x2000, 0x0300].Should().Be(0x1111, "the callee reads BX, so the caller's write survives");
+            result.Memory.UInt16[0x2000, 0x0302].Should().Be(9, "the callee does not read CX and the caller overwrites it: the earlier write is dead");
+            result.Memory.UInt8[0x2000, 0x030A].Should().Be(1, "the callee's stc stays observable through the call's may-write, so jc sees it");
+            result.Memory.UInt16[0x2000, 0x0306].Should().Be(0xBEEF,
+                "the faulting callee keeps the call Unknown, so the caller's BP write reaches the divide-error handler");
+            result.Memory.UInt16[0x2000, 0x0304].Should().Be(1,
+                "the faulting callee keeps the call Unknown, so the divide-error handler's CX write reaches the caller");
+            result.Memory.UInt16[0x2000, 0x0308].Should().Be(0x5555,
+                "the timer handler reads SI through the callee's event checks, so the caller's SI write survives");
+            result.Memory.UInt8[0x2000, 0x030C].Should().Be(1,
+                "the transfer target reads CF, so the caller's stc survives the partition exit");
+            result.Memory.UInt8[0x2000, 0x0312].Should().Be(7,
+                "the transfer target overwrites the flags, so the jne arm is the stored result");
+            result.Memory.UInt8[0x2000, 0x0311].Should().Be(0, "the untaken jne arm never runs");
+            result.Memory.UInt16[0x2000, 0x0314].Should().Be(0xABCD,
+                "the transfer target reads DX, so the write before the jmp survives the partition exit");
+            result.Memory.UInt16[0x2000, 0x0316].Should().Be(0x5678,
+                "the leaf does not touch AX, so the caller's AX survives the calls and the loop");
+            result.Memory.UInt16[0x2000, 0x0318].Should().Be(0x0400,
+                "the leaf does not touch DF, so the caller's std survives the calls and the loop");
+            result.Memory.UInt16[0x2000, 0x031A].Should().Be(0xDEAD,
+                "the loop's .write path clobbers AX before the last pass leaves through .call");
+        });
+    }
+
+    /// <summary>Runs convention_landing_outputs: the stored results prove an entry reached by a
+    /// tail jump still outputs what the landings of its returns read - the call continuations its
+    /// ret was observed to reach - so a wrongly narrowed outputs set drops a write the landing
+    /// observes.</summary>
+    public static AsmFixture ConventionLandingOutputs() {
+        return ResultFixture(new AsmRunSettings { BinName = "convention_landing_outputs", MaxCycles = 1000 }, result => {
+            result.Memory.UInt16[0x2000, 0x0200].Should().Be(0x0111, "call way: AX is read after the call, so it stays an output");
+            result.Memory.UInt16[0x2000, 0x0202].Should().Be(0x0111, "tail-jump way: AX is read at the call's landing, so it stays an output");
+            result.Memory.UInt16[0x2000, 0x0204].Should().Be(0xAAA0, "first call site reads AX");
+            result.Memory.UInt16[0x2000, 0x0206].Should().Be(0xBBB0, "second call site reads BX, so BX is an output too");
+            result.Memory.UInt16[0x2000, 0x0208].Should().Be(0xAAA0, "the tail-jump landing reads AX");
+            result.Memory.UInt16[0x2000, 0x020A].Should().Be(0xDDD0,
+                "the callee returns to the call's continuation, which reads BX, so BX stays an output");
+            result.Memory.UInt16[0x2000, 0x020C].Should().Be(0xCCC0, "the direct call site reads AX");
+            result.Memory.UInt16[0x2000, 0x020E].Should().Be(0xEEE0,
+                "nested: the landing is the call continuation inside s4_m, which itself returns to a BX reader, so BX stays an output");
+        });
+    }
+
+    /// <summary>Runs stack_esp_high_bits: the dwords stored at 2000:0200/0204/0208 keep the ESP
+    /// high half <c>mov esp</c> set, with the low half back where the balanced stack ops left it,
+    /// and a 16-bit / 32-bit <c>enter</c> of nesting level 2 push the frame pointer plus one
+    /// copied caller frame word.</summary>
+    public static AsmFixture StackEspHighBits() {
+        return ResultFixture(new AsmRunSettings { BinName = "stack_esp_high_bits", MaxCycles = 1000 }, result => {
+            result.Memory.UInt32[0x2000, 0x0200].Should().Be(0x12341000,
+                "stack_esp_high_bits: 32-bit push/pop/leave change only the low 16 bits of ESP");
+            result.Memory.UInt32[0x2000, 0x0204].Should().Be(0x12345000,
+                "stack_esp_high_bits: 16-bit enter 0,0 / leave change only the low 16 bits of ESP");
+            result.Memory.UInt32[0x2000, 0x0208].Should().Be(0x12347000,
+                "stack_esp_high_bits: 32-bit enter 0,0 / leave change only the low 16 bits of ESP");
+            result.Memory.UInt16[0x2000, 0x8FFE].Should().Be(0x0500,
+                "stack_esp_high_bits: enter 2,2 pushes the old BP");
+            result.Memory.UInt16[0x2000, 0x8FFC].Should().Be(0xBEEF,
+                "stack_esp_high_bits: enter 2,2 copies the caller frame word at [bp-2]");
+            result.Memory.UInt16[0x2000, 0x8FFA].Should().Be(0x8FFE,
+                "stack_esp_high_bits: enter 2,2 pushes the new frame pointer");
+            result.Memory.UInt32[0x2000, 0x9FFC].Should().Be(0x12340600,
+                "stack_esp_high_bits: enter 4,2 pushes the old EBP");
+            result.Memory.UInt32[0x2000, 0x9FF8].Should().Be(0xCAFEF00D,
+                "stack_esp_high_bits: enter 4,2 copies the caller frame dword at [ebp-4]");
+            result.Memory.UInt32[0x2000, 0x9FF4].Should().Be(0x00009FFC,
+                "stack_esp_high_bits: enter 4,2 pushes the new frame pointer");
+        });
+    }
+
     /// <summary>Runs pushcs_callnear_retfar: AX holds the value the program stored.</summary>
     public static AsmFixture PushCsCallNearRetFar() {
         byte[] expectedMemory = new byte[2];
@@ -1152,14 +1724,16 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture Jump1WithoutSpeculation() {
         AsmFixture fixture = Dump("jump1");
         AsmRunSettings settings = fixture.Settings with { EnableSpeculativeCfgExploration = false };
-        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult);
+        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.Jump1NoSpec);
     }
 
     /// <summary>Runs the observed arm of speculative_branch with speculative exploration off: 01 DD AA.</summary>
     public static AsmFixture SpeculativeBranchWithoutSpeculation() {
         AsmFixture fixture = SpeculativeBranch(SpeculativeArm.Observed);
         AsmRunSettings settings = fixture.Settings with { EnableSpeculativeCfgExploration = false };
-        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult);
+        return new AsmFixture(settings, fixture.ExpectedMemory, fixture.AssertResult)
+            .WithEngineAssertions(AsmScenarioEngineAssertions.SpeculativeBranchNoSpec);
     }
 
     /// <summary>Runs intchain with interrupt vectors installed: the INT 8 handler increments the BIOS tick counter once.</summary>
@@ -1176,19 +1750,21 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs ownerlesscallcycle: the rescued cycle turned the counter byte and AL to 3.</summary>
     public static AsmFixture OwnerlessCallCycle() {
         return ResultFixture(new AsmRunSettings { BinName = "ownerlesscallcycle", MaxCycles = 1000 }, result => {
-            result.Memory.UInt8[0xF000, 0x0025].Should().Be(3, "ownerlesscallcycle: the counter byte in the code segment counts the loop runs");
-            result.State.AL.Should().Be(3, "ownerlesscallcycle: AL holds the last counter value read");
-            result.State.SS.Should().Be(0, "ownerlesscallcycle: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "ownerlesscallcycle: start sets SP to 0x0100");
+            result.Memory.UInt8[0xF000, result.Memory.UInt16[0, 0x612]].Should().Be(3,
+                "ownerlesscallcycle: the counter byte in the code segment counts the loop runs");
+            result.Memory.UInt8[0, 0x604].Should().Be(3, "ownerlesscallcycle: AL holds the last counter value read");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "ownerlesscallcycle: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "ownerlesscallcycle: start sets SP to 0x0100");
         });
     }
 
     /// <summary>Runs sameretloop: the same-address return loop ran four times and the hlt ended the run.</summary>
     public static AsmFixture SameretLoop() {
         return ResultFixture(new AsmRunSettings { BinName = "sameretloop", MaxCycles = 1000 }, result => {
-            result.Memory.UInt8[0xF000, 0x0024].Should().Be(4, "sameretloop: the counter byte counts the same-address returns");
-            result.State.SS.Should().Be(0, "sameretloop: start sets SS to 0");
-            result.State.SP.Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
+            result.Memory.UInt8[0xF000, result.Memory.UInt16[0, 0x612]].Should().Be(4,
+                "sameretloop: the counter byte counts the same-address returns");
+            result.Memory.UInt16[0, 0x602].Should().Be(0, "sameretloop: start sets SS to 0");
+            result.Memory.UInt16[0, 0x600].Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
         });
     }
 
@@ -1230,13 +1806,19 @@ internal static class AsmFixtureCatalog {
             "the handler sets AX = 5 before a call that does not touch AX, and the main loop stores it");
     }
 
+    /// <summary>Asserts the chained timer handler restored the interrupted AX.</summary>
+    private static void AssertInterruptHandlerChainPreservesAxCompleted(AsmFixtureResult result) {
+        result.Memory.UInt16[0x20080].Should().Be(0x1234,
+            "the chained handler must restore the interrupted AX before jumping to the old handler");
+    }
+
     private static void AssertInteriorEntryCompleted(AsmFixtureResult result) {
         result.Memory.UInt8[HookCountAddress].Should().Be(2);
         result.Memory.UInt8[TailCountAddress].Should().Be(3);
         result.Memory.UInt8[ObserverCountAddress].Should().Be(1);
         result.Memory.UInt8[CompletedAddress].Should().Be(0xA5);
-        result.State.SS.Should().Be(0);
-        result.State.SP.Should().Be(0x8000);
+        result.Memory.UInt16[0, 0x602].Should().Be(0);
+        result.Memory.UInt16[0, 0x600].Should().Be(0x8000);
         result.Memory.UInt8[BadStackAddress].Should().Be(0,
             $"the IRQ must see a complete stack; observed SS:SP was {result.Memory.UInt16[ObservedSsAddress]:X4}:{result.Memory.UInt16[ObservedSpAddress]:X4}");
     }
@@ -1258,8 +1840,8 @@ internal static class AsmFixtureCatalog {
     private static AsmFixture ResultRegionFixture(AsmRunSettings settings, byte[] expectedRegion) {
         return ResultFixture(settings, result => {
             AssertResultRegion(result, settings.BinName, expectedRegion);
-            result.State.SS.Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
-            result.State.SP.Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
+            result.Memory.UInt16[0x2000, 0x602].Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
+            result.Memory.UInt16[0x2000, 0x600].Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
         });
     }
 
@@ -1293,7 +1875,13 @@ internal static class AsmFixtureCatalog {
                 (at + 0x22, 2, 0xAB00 | low), (at + 0x24, 2, low),
                 (at + 0x26, 2, (x & 0xFF00) | 0x34),
                 (at + 0x28, 2, x), (at + 0x2A, 2, 0x5678),
-                (at + 0x2C, 2, 0x5678), (at + 0x2E, 2, x)]);
+                (at + 0x2C, 2, 0x5678), (at + 0x2E, 2, x),
+                (at + 0x30, 2, x / 0x5678), (at + 0x32, 2, x % 0x5678),
+                (at + 0x34, 2, ((x << 1) + 0x5678) & 0xFFFF),
+                (at + 0x36, 2, (0xACF0 | (x >> 15)) + ((((x << 1) & 0xFFFF) + 0x5678) >> 16)),
+                (at + 0x38, 2, 0xACF0 | (x >> 15)),
+                (at + 0x3A, 2, ((x << 1) + 1 + 0x5678) & 0xFFFF),
+                (at + 0x3C, 2, (0xACF0 | (x >> 15)) + ((((x << 1) & 0xFFFF) + 1 + 0x5678) >> 16))]);
         }
         return ResultRegion(0x100, [.. values]);
     }
@@ -1358,6 +1946,9 @@ internal static class AsmFixtureCatalog {
                 (at + 0x18, 2, (0xA55A + x) & 0xFFFF), (at + 0x1A, 2, (0xCAFE + y + carryB) & 0xFFFF),
                 (at + 0x1C, 2, 0xCDEF), (at + 0x1E, 2, 0x89AB), (at + 0x22, 2, 0x1234)]);
         }
+        // J1 stores the loaded dword at the bounded index (di = bx & 0Fh = 0 -> 60h); J2's and
+        // J3's second word stores each wrap to offset 0, J3's 4444h landing last.
+        values.AddRange([(0x60, 2, 0xCDEF), (0x62, 2, 0x89AB), (0x00, 2, 0x4444)]);
         return ResultRegion(0x200, [.. values]);
     }
 
@@ -1473,10 +2064,25 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture DataJumpTablesPatched() {
         AsmRunSettings settings = new() {
             BinName = "data_jump_tables",
-            ConfigureMachine = machine => machine.Memory.UInt16[0xF000, 0x02FF] = 0x0264,
+            // The image's anchor words at F000:FFEC/FFEE hold j2_table's and j2_h1's addresses.
+            ConfigureMachine = machine =>
+                machine.Memory.UInt16[0xF000, machine.Memory.UInt16[0xF000, 0xFFEC]] =
+                    machine.Memory.UInt16[0xF000, 0xFFEE],
             VariantName = "patched"
         };
         return ResultRegionFixture(settings, DataJumpTablesRegion(true));
+    }
+
+    /// <summary>Runs the wrapped-offset trap on the 286 memory model, which raises segment faults:
+    /// the word store at offset 0FFFFh faults instead of wrapping, so the read back of es:[10h]
+    /// keeps the 0x11 the es store left and the #GP handler counts one fault.</summary>
+    private static AsmFixture DataflowAliasTraps286(string binName) {
+        AsmRunSettings settings = new() {
+            BinName = binName,
+            CpuModel = CpuModel.INTEL_80286
+        };
+        return ResultRegionFixture(settings, ResultRegion(0x58,
+            (0x00, 1, 0x11), (0x56, 1, 0x11), (0x57, 1, 0x01)));
     }
 
     /// <summary>Runs dataflow_double_precision on the 286 memory model, which raises segment faults:
@@ -1550,6 +2156,22 @@ internal static class AsmFixtureCatalog {
             region[0x60] = 0x02;
         }
         return region;
+    }
+
+    /// <summary>Runs an idiom showcase fixture, a small flat binary writing its result bytes in low
+    /// memory at 0x0400 and up.</summary>
+    public static AsmFixture Idiom(string binName, params (int Offset, byte Value)[] expectedBytes) {
+        return Idiom(binName, "", expectedBytes);
+    }
+
+    /// <summary>Same, with an explicit scenario name when the scenario differs from the binary name
+    /// (the relaxation variants share one binary under their own names).</summary>
+    public static AsmFixture Idiom(string binName, string scenarioName, params (int Offset, byte Value)[] expectedBytes) {
+        return ResultFixture(new AsmRunSettings { BinName = binName, ScenarioName = scenarioName, MaxCycles = 1000 }, result => {
+            foreach ((int offset, byte value) in expectedBytes) {
+                result.Memory.UInt8[0, offset].Should().Be(value, $"{binName}: result byte at {offset:X4}");
+            }
+        });
     }
 
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {

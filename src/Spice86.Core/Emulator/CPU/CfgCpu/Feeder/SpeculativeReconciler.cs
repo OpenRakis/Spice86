@@ -34,17 +34,17 @@ public class SpeculativeReconciler {
 
     /// <summary>
     /// Reconciles a pre-existing speculative node with the live memory state.
-    /// Returns <c>true</c> if the node was promoted (caller should use it directly).
-    /// Returns <c>false</c> if the node was swept (caller should use the live replacement node
+    /// Returns the actual observed survivor the caller must execute: the promoted speculative node
+    /// on a signature match, or the promoted reduction survivor when reduction replaced it.
+    /// Returns <c>null</c> if the node was swept (caller should use the live replacement node
     /// instead). On a genuine divergence the address is also poisoned to stop future speculation.
     /// </summary>
     /// <param name="speculativeNode">The speculative node currently in the graph at the address.</param>
     /// <param name="liveInstruction">The live (parsed/observed) instruction at the same address.</param>
     /// <param name="address">The segmented address being reconciled.</param>
-    public bool Reconcile(CfgInstruction speculativeNode, CfgInstruction liveInstruction, SegmentedAddress address) {
+    public CfgInstruction? Reconcile(CfgInstruction speculativeNode, CfgInstruction liveInstruction, SegmentedAddress address) {
         if (speculativeNode.Signature.ListEquivalent(liveInstruction.Signature.SignatureValue)) {
-            _promoter.Promote(speculativeNode);
-            return true;
+            return _promoter.Promote(speculativeNode);
         }
         // Same opcode/grammar, only a non-final field diverges (e.g. a self-modified immediate):
         // reducible. Merge instead of sweeping so the speculatively-explored subgraph survives.
@@ -56,8 +56,7 @@ public class SpeculativeReconciler {
         if (sameFinalSignature) {
             CfgInstruction? reduced = _signatureReducer.ReduceToOne(speculativeNode, liveInstruction);
             if (reduced is not null) {
-                _promoter.Promote(reduced);
-                return true;
+                return _promoter.Promote(reduced);
             }
         }
         // A genuine divergence: the speculative decode is wrong for the live bytes. Sweep the node
@@ -72,6 +71,6 @@ public class SpeculativeReconciler {
         if (!sameFinalSignature) {
             _nodeIndex.PoisonSet.Add(address);
         }
-        return false;
+        return null;
     }
 }

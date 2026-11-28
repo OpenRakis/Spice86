@@ -36,6 +36,27 @@ internal sealed record CfgReloadDump {
     [JsonPropertyName("poisonedAddresses")] public string[]? PoisonedAddresses { get; init; }
 
     /// <summary>
+    /// The <c>(vector, handler)</c> pair of every hardware interrupt delivered during the run,
+    /// serialized as <c>"VV=SEG:OFF"</c> entries. Optional: dumps written before this field
+    /// existed carry no deliveries.
+    /// </summary>
+    [JsonPropertyName("hardwareInterruptDeliveries")] public string[]? HardwareInterruptDeliveries { get; init; }
+
+    /// <summary>
+    /// The entry addresses a terminate resumed at through a batch launch, as
+    /// <c>segment:offset</c> strings sorted ordinally; omitted when empty. Optional: dumps
+    /// written before this field existed carry none.
+    /// </summary>
+    [JsonPropertyName("terminateResumeTargets")] public string[]? TerminateResumeTargets { get; init; }
+
+    /// <summary>Whether the program set or created the current PSP itself during the run.</summary>
+    [JsonPropertyName("programSetCurrentPsp")] public bool ProgramSetCurrentPsp { get; init; }
+
+    /// <summary>Whether a mouse user subroutine with a non-zero address was registered during
+    /// the run.</summary>
+    [JsonPropertyName("mouseUserSubroutineRegistered")] public bool MouseUserSubroutineRegistered { get; init; }
+
+    /// <summary>
     /// Merged <c>[start, end)</c> physical-address ranges the loaded images occupied, as
     /// <c>"0xSTART-0xEND"</c> pairs; omitted when nothing was watched.
     /// </summary>

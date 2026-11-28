@@ -16,28 +16,32 @@ using System.Linq;
 /// accesses the same bytes: <c>mov [si],ax</c> followed by <c>mov bx,[si]</c> emits
 /// <c>UInt16[DS, SI] = AX; BX = AX;</c>. The store stays; no store is removed.
 /// Legality rows, all through <see cref="IrMemoryAliasAnalysis"/> and <see cref="IrSsa.SameVersions"/>:
-/// SF-1: <see cref="IrAliasRelation.Equal"/> between the store target and the read, the same
-/// <see cref="DataType"/>, both known RAM (<see cref="IrMemoryAliasAnalysis.IsKnownRam"/>);
-/// SF-2: the stored value is pure - registers, constants, conversions, unary and non-assignment
+/// <see cref="IrAliasRelation.Equal"/> between the store target and the read, the same
+/// <see cref="DataType"/>, both known RAM (<see cref="IrMemoryAliasAnalysis.AllowsRam"/>);
+/// the stored value is pure - registers, constants, conversions, unary and non-assignment
 /// binary operations, no token read, no call, no temporary;
-/// SF-3: no statement strictly between is a <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
+/// no statement strictly between is a <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
 /// or <see cref="IrEffects.MayFault"/>, and every write of a statement between is
 /// <see cref="IrAliasRelation.Disjoint"/> from the store, known RAM;
-/// SF-4: <see cref="IrSsa.SameVersions"/> of the stored value's reads between the store and the
+/// <see cref="IrSsa.SameVersions"/> of the stored value's reads between the store and the
 /// reader;
-/// SF-5: the reader's origin carries no <see cref="IrInstructionShape"/> tag.
+/// the reader's origin carries no <see cref="IrInstructionShape"/> tag.
 /// </summary>
 internal static class IrStoreForwarding {
     /// <summary>Forwards provably equal stores into their readers, block by block.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
-        IrMemoryAliasAnalysis alias = new(ssa);
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
+        IrSsa ssa = editor.Ssa;
         foreach (IrBlock block in method.Blocks) {
-            ForwardBlock(block, method, ssa, alias);
+            ForwardBlock(block, method, ssa, editor, new IrMemoryAliasAnalysis(method, ssa, policy));
         }
     }
 
     private static void ForwardBlock(IrBlock block, IrMethod method, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+        IrEditor editor, IrMemoryAliasAnalysis alias) {
         for (int s = 0; s < block.Statements.Count; s++) {
             if (block.Statements[s].Node is not BinaryOperationNode {
                     BinaryOperation: BinaryOperation.ASSIGN,
@@ -45,7 +49,7 @@ internal static class IrStoreForwarding {
                 || target is not (SegmentedPointerNode or AbsolutePointerNode)
                 || !Pure(stored)
                 || alias.Writes(block, s) is not [IrMemoryAccess storeAccess]
-                || !alias.IsKnownRam(storeAccess)) {
+                || !alias.AllowsRam(storeAccess)) {
                 continue;
             }
             IrEffects storedEffects = IrEffectsVisitor.Of(stored, false);
@@ -54,7 +58,7 @@ internal static class IrStoreForwarding {
                         != IrInstructionShape.None) {
                     continue;
                 }
-                while (TryForward(block, s, l, target, storeAccess, storedEffects, ssa, alias)) {
+                while (TryForward(block, s, l, target, storedEffects, ssa, editor, alias)) {
                     // Rescan until no more reads of the stored value fold in.
                 }
             }
@@ -65,13 +69,16 @@ internal static class IrStoreForwarding {
     /// statement at <paramref name="l"/> it is proved equal to; returns whether a read was
     /// replaced so the caller can rescan the rewritten statement.</summary>
     private static bool TryForward(IrBlock block, int s, int l, ValueNode target,
-        IrMemoryAccess storeAccess, IrEffects storedEffects, IrSsa ssa,
-        IrMemoryAliasAnalysis alias) {
+        IrEffects storedEffects, IrSsa ssa,
+        IrEditor editor, IrMemoryAliasAnalysis alias) {
         IrStatement reader = block.Statements[l];
+        if (alias.Writes(block, s) is not [IrMemoryAccess storeAccess]) {
+            return false;
+        }
         foreach (ValueNode pointer in ReadPointersOf(reader)) {
-            IrMemoryAccess read = alias.OfPointer(pointer, reader);
+            IrMemoryAccess read = alias.OfPointer(pointer, reader, block, l);
             IrAliasRelation relation = alias.Relation(storeAccess, read);
-            bool ram = alias.IsKnownRam(read);
+            bool ram = alias.AllowsRam(read);
             bool clear = ClearBetween(block, s, l, storeAccess, alias);
             bool same = ssa.SameVersions(storedEffects.Reads, IrTokens.None,
                 (block, s + 1), (block, l));
@@ -91,8 +98,7 @@ internal static class IrStoreForwarding {
                 continue;
             }
             IrStatement replacement = IrStatement.Create(candidate, reader.Origin);
-            ssa.Replace(reader, replacement);
-            block.Statements[l] = replacement;
+            editor.Replace(block, l, replacement);
             return true;
         }
         return false;
@@ -109,7 +115,7 @@ internal static class IrStoreForwarding {
                 return false;
             }
             foreach (IrMemoryAccess write in alias.Writes(block, k)) {
-                if (!alias.IsKnownRam(write)
+                if (!alias.AllowsRam(write)
                     || alias.Relation(write, storeAccess) != IrAliasRelation.Disjoint) {
                     return false;
                 }

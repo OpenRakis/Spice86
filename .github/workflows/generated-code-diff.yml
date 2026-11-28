@@ -1,0 +1,112 @@
+name: Generated code diff
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - '.github/workflows/generated-code-diff.yml'
+      - '.github/workflows/generated-code-diff-comment.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generated-code-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Check out the merge base
+        run: |
+          merge_base="$(git merge-base ${{ github.event.pull_request.base.sha }} HEAD)"
+          echo "MERGE_BASE=$merge_base" >> "$GITHUB_ENV"
+          git worktree add ../base "$merge_base"
+
+      - name: Build head
+        run: dotnet build src/Spice86.sln -c Release
+
+      - name: Dump head generated code
+        id: dump-head
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/head"
+          SPICE86_DUMPS_FOLDER="$RUNNER_TEMP/head" dotnet test --project tests/Spice86.Tests -c Release --no-build -- --filter-class '*AsmScenarioTest*'
+
+      - name: Build base
+        working-directory: ../base
+        run: dotnet build src/Spice86.sln -c Release
+
+      - name: Dump base generated code
+        id: dump-base
+        continue-on-error: true
+        working-directory: ../base
+        run: |
+          mkdir -p "$RUNNER_TEMP/base"
+          SPICE86_DUMPS_FOLDER="$RUNNER_TEMP/base" dotnet test --project tests/Spice86.Tests -c Release --no-build -- --filter-class '*AsmScenarioTest*'
+
+      - name: Diff the dumps
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir -p base head
+          git diff --no-index base head > generated-code.diff || [ $? -eq 1 ]
+
+      - name: Upload the diff artifact
+        id: diff-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-code-diff
+          path: |
+            ${{ runner.temp }}/base
+            ${{ runner.temp }}/head
+            ${{ runner.temp }}/generated-code.diff
+          retention-days: 14
+
+      - name: Compute the comment variables
+        id: vars
+        env:
+          HEAD_SHA_FULL: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "base_sha=$(git rev-parse --short "$MERGE_BASE")" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(git rev-parse --short "$HEAD_SHA_FULL")" >> "$GITHUB_OUTPUT"
+
+      - name: Write the comment body
+        env:
+          BASE_SHA: ${{ steps.vars.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.vars.outputs.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.diff-artifact.outputs.artifact-url }}
+          BASE_DUMP_OUTCOME: ${{ steps.dump-base.outcome }}
+          HEAD_DUMP_OUTCOME: ${{ steps.dump-head.outcome }}
+        run: |
+          bash .github/scripts/generated-code-diff-comment.sh "$RUNNER_TEMP" > "$RUNNER_TEMP/comment.md"
+          head -c 60000 "$RUNNER_TEMP/comment.md" > "$RUNNER_TEMP/comment.md.tmp" && mv "$RUNNER_TEMP/comment.md.tmp" "$RUNNER_TEMP/comment.md"
+          echo "${{ github.event.pull_request.number }}" > "$RUNNER_TEMP/pr-number.txt"
+
+      - name: Write the step summary
+        run: cat "$RUNNER_TEMP/comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the comment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-code-comment
+          path: |
+            ${{ runner.temp }}/comment.md
+            ${{ runner.temp }}/pr-number.txt
+          retention-days: 14

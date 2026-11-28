@@ -29,28 +29,28 @@ using System.Linq;
 /// folded the register writes into the port arguments and before double precision.
 /// <para>Legality, in the effects model:</para>
 /// <list type="bullet">
-/// <item>DO-1: the combined statement replaces the sequence's LAST access and keeps its origin, so
+/// <item>the combined statement replaces the sequence's LAST access and keeps its origin, so
 /// the I/O token advances by the consumed accesses only and the instruction the sequence ends on
 /// keeps its boundary. The earlier accesses' statements are removed; their instruction-start
 /// markers and comments stay.</item>
-/// <item>DO-2: nothing between two accesses of a sequence may reach the device or change the
+/// <item>nothing between two accesses of a sequence may reach the device or change the
 /// machine in a way the merge could hide: no other port access of any device, no memory effect, no
 /// call, no interrupt, no event check (<see cref="IrEffects.DeliversInterrupts"/>), no fault
 /// (<see cref="IrEffects.MayFault"/>), no speculative guard or transfer. Only instruction markers,
 /// comments and effect-free register or temporary assignments may sit between the accesses.</item>
-/// <item>DO-3: a value a consumed access moves to the last access must still read the same: every
+/// <item>a value a consumed access moves to the last access must still read the same: every
 /// register it reads keeps its SSA version from its own access to the last
 /// (<see cref="IrSsa.SameVersions"/>), it reads no memory or I/O token, contains no call and no
 /// division (side-effect-free), and no statement in between rewrites a temporary it reads (SSA
 /// does not cover temporaries, so their names are checked directly).</item>
-/// <item>DO-4: matching stays inside one basic block; a sequence that does not match completely
+/// <item>matching stays inside one basic block; a sequence that does not match completely
 /// keeps its single-port calls, which remain correct.</item>
-/// <item>DO-5: port and control-word constants are evaluated at their final width, so a
+/// <item>port and control-word constants are evaluated at their final width, so a
 /// narrowing cast such as <c>(ushort)(byte)0x3C4</c> evaluates to 0xC4 and matches nothing.</item>
-/// <item>DO-6: every access of the sequence - the last included - may neither fault nor deliver
+/// <item>every access of the sequence - the last included - may neither fault nor deliver
 /// an interrupt, and every value a write moves is pure: it writes nothing, reads no memory or I/O
 /// token, and holds no call (an ALU call writes flags) or division.</item>
-/// <item>DO-7: every consumed port must be registered in the dumped machine's port map to the
+/// <item>every consumed port must be registered in the dumped machine's port map to the
 /// exact handler type the generated call drives (<see cref="RealTimeClock"/>,
 /// <see cref="PitTimer"/>, <see cref="VgaIoPortHandler"/> or <see cref="Opl3Fm"/>): an unmapped or
 /// differently handled port never reaches the device the operation writes.</item>
@@ -84,45 +84,34 @@ internal static class IrDeviceOperations {
 
     /// <summary>Combines the recognized port sequences of <paramref name="method"/>'s blocks;
     /// <paramref name="ioPorts"/> is the dumped machine's port-to-handler-type map and a sequence
-    /// only combines when every port it touches is owned by the device the operation calls (DO-7).
+    /// only combines when every port it touches is owned by the device the operation calls (see the port-ownership condition in the class summary).
     /// Returns the number of combined sequences. A nonzero count means the caller must rebuild the
     /// SSA and its webs, as every rewriting pass does.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa, IReadOnlyDictionary<ushort, Type> ioPorts) {
-        int combined = 0;
-        foreach (IrBlock block in method.Blocks) {
-            combined += ApplyBlock(block, ssa, ioPorts);
-        }
-        return combined;
-    }
-
-    private static int ApplyBlock(IrBlock block, IrSsa ssa,
+    public static int Apply(IrMethod method, IrEditor editor,
         IReadOnlyDictionary<ushort, Type> ioPorts) {
-        List<Access> accesses = AccessesOf(block);
-        if (accesses.Count == 0) {
-            return 0;
-        }
-        List<Rewrite> rewrites = [];
-        int m = 0;
-        while (m < accesses.Count) {
-            if (TryMatch(block, accesses, m, ssa, ioPorts, out Rewrite? rewrite)) {
-                rewrites.Add(rewrite);
-                m += rewrite.RemovedIndices.Count + 1;
-            } else {
-                m++;
+        IrSsa ssa = editor.Ssa;
+        List<(IrBlock Block, Rewrite Rewrite)> rewrites = [];
+        foreach (IrBlock block in method.Blocks) {
+            List<Access> accesses = AccessesOf(block);
+            int m = 0;
+            while (m < accesses.Count) {
+                if (TryMatch(block, accesses, m, ssa, ioPorts, out Rewrite? rewrite)) {
+                    rewrites.Add((block, rewrite));
+                    m += rewrite.RemovedIndices.Count + 1;
+                } else {
+                    m++;
+                }
             }
         }
-        foreach (Rewrite rewrite in rewrites) {
-            IrStatement old = block.Statements[rewrite.LastIndex];
-            IrStatement replacement = IrStatement.Create(rewrite.Node, old.Origin);
-            block.Statements[rewrite.LastIndex] = replacement;
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+        foreach ((IrBlock block, Rewrite rewrite) in rewrites) {
+            IrStatement replacement = IrStatement.Create(rewrite.Node,
+                block.Statements[rewrite.LastIndex].Origin);
+            editor.Replace(block, rewrite.LastIndex, replacement);
         }
-        foreach (int index in rewrites.SelectMany(rewrite => rewrite.RemovedIndices)
-                .OrderByDescending(index => index)) {
-            ssa.Remove(block.Statements[index]);
-            block.Statements.RemoveAt(index);
+        foreach ((IrBlock block, int index) in rewrites
+                .SelectMany(pair => pair.Rewrite.RemovedIndices.Select(index => (pair.Block, index)))
+                .OrderByDescending(pair => pair.index)) {
+            editor.Remove(block, index);
         }
         return rewrites.Count;
     }
@@ -189,7 +178,7 @@ internal static class IrDeviceOperations {
     };
 
     /// <summary>Whether every statement strictly between <paramref name="from"/> and
-    /// <paramref name="to"/> can sit inside a merged sequence (DO-2): no I/O of any device, no
+    /// <paramref name="to"/> can sit inside a merged sequence (the crossability condition of the class summary): no I/O of any device, no
     /// memory effect, no call, no interrupt delivery, no fault, no speculative guard.</summary>
     private static bool BetweenIsCrossable(IrBlock block, int from, int to) {
         for (int i = from + 1; i < to; i++) {
@@ -213,7 +202,7 @@ internal static class IrDeviceOperations {
             || descendant is MethodCallValueNode and not AluCallValueNode);
 
     /// <summary>Whether <paramref name="expression"/> is safe to evaluate at another access than
-    /// its own (DO-6): it writes nothing, reads no memory or I/O token, cannot fault or deliver an
+    /// its own (the moved-value purity condition of the class summary): it writes nothing, reads no memory or I/O token, cannot fault or deliver an
     /// interrupt, and holds no call - an ALU call changes flags, so it cannot move either - and no
     /// possibly faulting division.</summary>
     private static bool IsMovableValue(IVisitableAstNode expression) {
@@ -291,7 +280,7 @@ internal static class IrDeviceOperations {
     }
 
     /// <summary>Whether <paramref name="access"/>'s port is registered in the dumped machine's port
-    /// map to exactly <paramref name="type"/> (DO-7): a subclass could override the port
+    /// map to exactly <paramref name="type"/> (the port-ownership condition): a subclass could override the port
     /// semantics, so only the concrete handler type qualifies.</summary>
     private static bool OwnedBy(Access access, Type type,
         IReadOnlyDictionary<ushort, Type> ioPorts) =>
@@ -307,7 +296,7 @@ internal static class IrDeviceOperations {
         Access first = accesses[m];
         if (first.Kind == AccessKind.WriteWord) {
             // A word write at an index port packs index and data in one instruction and becomes the
-            // register write on its own (DO-1: the single access keeps its origin). WriteWord
+            // register write on its own (the single access keeps its origin). WriteWord
             // routes the second byte inside the handler, so only the start port is matched.
             if (first.Port is Ports.SequencerAddress or Ports.GraphicsControllerAddress) {
                 rewrite = IndexedWordWrite(block, first, ioPorts);

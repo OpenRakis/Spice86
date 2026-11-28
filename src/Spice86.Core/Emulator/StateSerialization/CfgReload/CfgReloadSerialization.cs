@@ -10,7 +10,6 @@ using System.Text.Json.Serialization;
 internal static class CfgReloadSerialization {
     /// <summary>Options shared by the reload writer and reader.</summary>
     public static readonly JsonSerializerOptions Options = new() {
-        WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 }

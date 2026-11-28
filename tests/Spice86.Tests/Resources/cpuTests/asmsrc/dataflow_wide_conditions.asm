@@ -220,6 +220,8 @@ pass_loop:
     add di, 1
     cmp bx, 7 * 40h
     jb pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 align 8

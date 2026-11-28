@@ -39,14 +39,6 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     }
 
     /// <summary>
-    /// Runs the callback from C# code that overrides the target program's machine code.
-    /// </summary>
-    /// <param name="index">The index at which the callback is supposed to be available.</param>
-    public void RunFromOverriden(int index) {
-        GetRunnable(index).RunFromOverriden();
-    }
-
-    /// <summary>
     /// Remove Spice86 machine code for callbacks from the memory dump, so it has less "noise".
     /// </summary>
     /// <param name="memory">The memory bus.</param>

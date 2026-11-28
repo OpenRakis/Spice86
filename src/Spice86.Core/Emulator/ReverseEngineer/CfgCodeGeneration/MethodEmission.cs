@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 
@@ -24,4 +25,6 @@ internal sealed record PreparedMethod(
     GotoTargets Targets,
     MethodEmission Emission,
     Ir.Memory.FrameSlotPlan? FramePlan,
-    SaveRestorePairs.SavedPairPlan SavedPairs);
+    SaveRestorePairs.SavedPairPlan SavedPairs,
+    Ir.Memory.IrSegmentFacts EntryFacts,
+    IrStackSlots StackSlots);

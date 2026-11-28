@@ -25,10 +25,10 @@ public sealed class IrMethodTest {
         IrBlock entry = new(0);
         IrBlock whenTrue = new(1);
         IrBlock join = new(2);
-        entry.Terminator = new IrBranch(origin, new CpuFlagNode(Flags.Carry),
-            new IrEdge(whenTrue, true), new IrEdge(join, true));
-        whenTrue.Terminator = new IrJump(origin, new IrEdge(join, true));
-        join.Terminator = new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(origin, new CpuFlagNode(Flags.Carry),
+            new IrEdge(whenTrue, true), new IrEdge(join, true)));
+        IrEditor.WithoutSsa.SetTerminator(whenTrue, new IrJump(origin, new IrEdge(join, true)));
+        IrEditor.WithoutSsa.SetTerminator(join, new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = new("M", [entry, whenTrue, join],
             [new IrEntry(origin, entry)], new HashSet<ICfgNode> { origin },
             new Dictionary<ICfgNode, IrInstructionShape>());
@@ -53,9 +53,9 @@ public sealed class IrMethodTest {
         CfgInstruction origin = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0));
         IrBlock entry = new(0);
         IrBlock target = new(1);
-        entry.Terminator = new IrBranch(origin, new CpuFlagNode(Flags.Carry),
-            new IrEdge(target, true), new IrEdge(target, true));
-        target.Terminator = new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrBranch(origin, new CpuFlagNode(Flags.Carry),
+            new IrEdge(target, true), new IrEdge(target, true)));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = new("M", [entry, target],
             [new IrEntry(origin, entry), new IrEntry(origin, entry)], new HashSet<ICfgNode> { origin },
             new Dictionary<ICfgNode, IrInstructionShape>());

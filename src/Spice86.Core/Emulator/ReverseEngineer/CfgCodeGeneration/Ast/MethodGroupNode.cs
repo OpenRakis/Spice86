@@ -2,7 +2,8 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
-/// <summary>A generated method passed as a delegate: its name when entered at load offset 0, else a lambda applying the offset.</summary>
+/// <summary>A generated method passed as a delegate: its name when entered at load offset 0, else the cached
+/// delegate field applying the offset so every site shares the same identity.</summary>
 /// <param name="MethodName">The name of the generated method.</param>
 /// <param name="LoadOffset">The load offset the callee is entered with.</param>
 /// <param name="SingleEntry"><c>true</c> when the method has one entry and takes no <c>loadOffset</c>: the delegate

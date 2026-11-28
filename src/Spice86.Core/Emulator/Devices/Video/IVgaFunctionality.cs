@@ -10,6 +10,13 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public interface IVgaFunctionality {
     /// <summary>
+    ///     Observer notified of every character written to the console through any character
+    ///     output service. Defaults to a <see cref="NullConsoleOutputObserver"/> that records
+    ///     nothing.
+    /// </summary>
+    IConsoleOutputObserver OutputObserver { get; set; }
+
+    /// <summary>
     ///     Write a text string to the screen at the current cursor position and page.
     /// </summary>
     /// <param name="text">The text string to print on the screen.</param>

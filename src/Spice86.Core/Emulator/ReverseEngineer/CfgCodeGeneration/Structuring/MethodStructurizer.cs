@@ -42,7 +42,7 @@ internal static class MethodStructurizer {
     /// a variable declared by a statement of a block that dominates the branch's block in the block graph counts as
     /// declared for the branch's condition: the branch's blocks nest inside that block's region, so the declaration
     /// stays in scope where the condition ends up.</param>
-    /// <exception cref="InvalidOperationException">A natural loop header needs but does not start with <c>CheckExternalEvents</c>.</exception>
+    /// <exception cref="InvalidOperationException">A natural loop header needs but has no <c>CheckExternalEvents</c> at its first instruction.</exception>
     /// <exception cref="InvalidOperationException">A loop header or an arm head is not the first block of its loop or arm in the layout.</exception>
     public static BlockNode Structure<TBlock>(IReadOnlyList<LoweredBlock<TBlock>> blocks, NaturalLoopForest<TBlock> loops,
         string methodName, IReadOnlySet<IGotoTarget> entryTargets, Dictionary<GotoNode, GotoKeepReason> refusals,
@@ -251,9 +251,9 @@ internal static class MethodStructurizer {
         Dictionary<TBlock, LoweredBlock<TBlock>> memberByBlock = blocks.ToDictionary(block => block.Block);
         foreach (NaturalLoop<TBlock> loop in loops.Loops) {
             if (memberByBlock.TryGetValue(loop.Header, out LoweredBlock<TBlock>? header)
-                && header.LoopHeaderNeedsCheck && !header.HasEntryCheck) {
+                && header.LoopHeaderNeedsCheck && !header.ChecksAtFirstInstruction) {
                 throw new InvalidOperationException(
-                    $"Generated method {methodName}: loop header {header.Entry} has no CheckExternalEvents at its entry.");
+                    $"Generated method {methodName}: loop header {header.Entry} has no CheckExternalEvents at its first instruction.");
             }
         }
     }

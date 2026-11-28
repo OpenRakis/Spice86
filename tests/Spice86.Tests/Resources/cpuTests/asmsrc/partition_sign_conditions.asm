@@ -24,6 +24,9 @@ pos3:
     jns pos4
     add dx, 1000h
 pos4:
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
+    mov word [ss:60Ah], dx
     hlt
 
 rb 65520-$

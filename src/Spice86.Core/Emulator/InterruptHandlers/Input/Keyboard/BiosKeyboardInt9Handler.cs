@@ -73,7 +73,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     public override byte VectorNumber => 0x9;
 
     /// <inheritdoc />
-    [InterruptService(Unknown = true)]
+    [InterruptService(Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public override void Run() {
         // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
@@ -93,22 +93,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
             LoggerService.LogDebug("INT09: read scan=0x{Scan:X2} ST(after)=0x{St:X2}", scancode, stAfter);
         }
 
-        bool savedCf = State.CarryFlag;
-        byte savedAl = State.AL;
-
-        // INT 15h keyboard intercept: CF set => process, CF clear => ignore
-        State.AL = scancode;
-        _systemBiosInt15Handler.KeyboardIntercept(calledFromVm: true);
-
-        if (!State.CarryFlag) {
+        // INT 15h keyboard intercept: false => ignore
+        if (!_systemBiosInt15Handler.KeyboardIntercept(scancode)) {
             _dualPic.AcknowledgeInterrupt(1);
             return;
         }
-
-        scancode = State.AL;
-
-        State.AL = savedAl;
-        State.CarryFlag = savedCf;
 
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT09: process scan=0x{Scan:X2}", scancode);

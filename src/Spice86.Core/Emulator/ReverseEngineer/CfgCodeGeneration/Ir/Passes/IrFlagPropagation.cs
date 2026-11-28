@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Relations;
@@ -29,8 +30,8 @@ using System.Linq;
 /// </summary>
 internal static class IrFlagPropagation {
     /// <summary>Rewrites the flag conditions and carry readers of <paramref name="method"/>.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
-        Rewrite rewrite = new(method, ssa);
+    public static void Apply(IrMethod method, IrEditor editor) {
+        Rewrite rewrite = new(method, editor, editor.Ssa);
         foreach (IrBlock block in method.Blocks) {
             rewrite.TryJump(block);
         }
@@ -44,6 +45,7 @@ internal static class IrFlagPropagation {
 
     private sealed class Rewrite {
         private readonly IrMethod _method;
+        private readonly IrEditor _editor;
         private readonly IrSsa _ssa;
         private readonly Dictionary<ICfgNode, List<IrOrigins.Located>> _byOrigin;
         private readonly HashSet<IrBlock> _entryBlocks;
@@ -55,10 +57,13 @@ internal static class IrFlagPropagation {
         private readonly Dictionary<IrStatement, Candidate> _candidates = [];
         private readonly Dictionary<IrStatement, MemoryOperandTemp> _tempsBySetter = [];
         private readonly HashSet<IrStatement> _tempRegistered = [];
+        private readonly IrMemoryAliasAnalysis _alias;
 
-        public Rewrite(IrMethod method, IrSsa ssa) {
+        public Rewrite(IrMethod method, IrEditor editor, IrSsa ssa) {
             _method = method;
+            _editor = editor;
             _ssa = ssa;
+            _alias = new IrMemoryAliasAnalysis(method, ssa);
             _byOrigin = IrOrigins.ByOrigin(method);
             _entryBlocks = method.Entries.Select(entry => entry.Block).ToHashSet();
             _entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
@@ -116,13 +121,14 @@ internal static class IrFlagPropagation {
                 return;
             }
             IVisitableAstNode untyped = IrAluLowering.Untype(statement.Node);
-            IrSsaVersionInfo info = _ssa.Info(_ssa.VersionBefore(block, index, IrSsaValue.Carry));
-            if (info.Kind != IrSsaDefinitionKind.Definition
-                || info.StatementIndex < 0 || info.StatementIndex >= info.Block.Statements.Count) {
+            int carryVersion = _ssa.VersionBefore(block, index, IrSsaValue.Carry);
+            if (_ssa.Info(carryVersion).Kind != IrSsaDefinitionKind.Definition
+                || _ssa.DefinitionSite(carryVersion) is not IrStatement carryStatement) {
                 return;
             }
             (IrBlock Block, int Index, IrStatement Statement) site =
-                (info.Block, info.StatementIndex, info.Block.Statements[info.StatementIndex]);
+                (_ssa.Info(carryVersion).Block,
+                    _ssa.Info(carryVersion).Block.IndexOfStatement(carryStatement), carryStatement);
             if (!LegalSite(site)) {
                 return;
             }
@@ -205,19 +211,10 @@ internal static class IrFlagPropagation {
             }
             foreach ((IrBlock block, int index, IReadOnlyList<IrStatement>? nodes)
                 in _edits.OrderByDescending(edit => edit.Index)) {
-                IrStatement old = block.Statements[index];
-                block.Statements.RemoveAt(index);
-                if (nodes is null) {
-                    _ssa.Remove(old);
-                    continue;
-                }
-                for (int i = nodes.Count - 1; i >= 0; i--) {
-                    block.Statements.Insert(index, nodes[i]);
-                }
-                _ssa.Replace(old, nodes);
+                _editor.Replace(block, index, nodes ?? []);
             }
             foreach ((IrBlock block, IrBranch branch) in _branchEdits) {
-                block.Terminator = branch;
+                _editor.SetTerminator(block, branch);
             }
         }
 
@@ -231,16 +228,18 @@ internal static class IrFlagPropagation {
                 if ((flagReads & IrSsaValues.MaskOf(value)) == CpuValues.None) {
                     continue;
                 }
-                IrSsaVersionInfo info = _ssa.Info(_ssa.VersionBefore(block, index, value));
-                if (info.Kind != IrSsaDefinitionKind.Definition || info.StatementIndex < 0
-                    || info.StatementIndex >= info.Block.Statements.Count) {
+                int version = _ssa.VersionBefore(block, index, value);
+                IrSsaVersionInfo info = _ssa.Info(version);
+                if (info.Kind != IrSsaDefinitionKind.Definition
+                    || _ssa.DefinitionSite(version) is not IrStatement defStatement) {
                     return null;
                 }
+                int defIndex = info.Block.IndexOfStatement(defStatement);
                 if (site is { } found
-                    && (found.Item1 != info.Block || found.Item2 != info.StatementIndex)) {
+                    && (found.Item1 != info.Block || found.Item2 != defIndex)) {
                     return null;
                 }
-                site = (info.Block, info.StatementIndex, info.Block.Statements[info.StatementIndex]);
+                site = (info.Block, defIndex, defStatement);
             }
             return site;
         }
@@ -294,7 +293,8 @@ internal static class IrFlagPropagation {
 
         /// <summary>A memory operand can be re-read at the reader only when the setter is dropped (its
         /// own read is gone) and every statement between them stays inside the same block without an
-        /// entry node, a boundary node or a statement whose effects touch memory. An event check needs
+        /// entry node, a boundary node, a statement whose effects touch memory or a full memory
+        /// boundary (a port write can store to RAM synchronously). An event check needs
         /// no refusal of its own: its may-write re-versions the registers a handler can observe.</summary>
         private bool MemoryOperandAvailable(
             (IrBlock Block, int Index, IrStatement Statement) site, (IrBlock Block, int Index) reader,
@@ -310,7 +310,8 @@ internal static class IrFlagPropagation {
                 if (between.Node is InstructionStartNode or CommentNode) {
                     continue;
                 }
-                if (between.Node is SpeculativeGuardNode || between.Effects.TouchesMemory) {
+                if (between.Node is SpeculativeGuardNode || between.Effects.TouchesMemory
+                    || _alias.IsFullMemoryBoundary(site.Block, index)) {
                     return false;
                 }
             }

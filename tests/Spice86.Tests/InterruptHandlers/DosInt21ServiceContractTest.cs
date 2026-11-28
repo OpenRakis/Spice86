@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -18,6 +19,8 @@ public class DosInt21ServiceContractTest {
     private const uint BufferAddress = 0x8000;
     private const uint FcbAddress = 0x8100;
     private const uint StringAddress = 0x8200;
+    private const uint ExecBlockAddress = 0x8300;
+    private const ushort ExecBlockSegment = 0x830;
 
     /// <summary>One case per declared non-Unknown INT 21h service.</summary>
     public static IEnumerable<ServiceContractCase> ContractCases {
@@ -31,6 +34,10 @@ public class DosInt21ServiceContractTest {
             foreach (int selector in selectors) {
                 yield return new ServiceContractCase { Vector = 0x21, SelectorValue = selector };
             }
+            // Get DBCS lead-byte table pointer (AL=00h): the only 63h sub-service.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x63, Al = 0x00
+            };
             // Commit an open file without closing it, or reject an invalid DOS handle.
             yield return new ServiceContractCase {
                 Vector = 0x21, SelectorValue = 0x68,
@@ -544,6 +551,47 @@ public class DosInt21ServiceContractTest {
                     machine.Spice86.Machine.CpuState.BX = 0x14;
                 }
             };
+            // EXEC load-only (AL=01h) loads a COM image into a fresh segment and fills
+            // the caller's EXEC parameter block with the child entry state.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x4B, Al = 0x01,
+                Setup = machine => {
+                    File.WriteAllBytes(Path.Join(machine.CDrivePath, "LOAD.COM"), new byte[0x40]);
+                    WriteBytes(machine, StringAddress, "LOAD.COM\0"u8.ToArray());
+                    SetDsDx(machine, StringAddress);
+                    // EXEC parameter block: inherit the environment, empty command tail,
+                    // zeroed FCBs; the block's output fields stay zeroed.
+                    WriteBytes(machine, BufferAddress, [0x00, 0x0D]);
+                    WriteBytes(machine, ExecBlockAddress,
+                        [0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                         0x00, 0x00, 0x00, 0x00]);
+                    machine.Spice86.Machine.CpuState.ES = ExecBlockSegment;
+                    machine.Spice86.Machine.CpuState.BX = 0;
+                }
+            };
+            // EXEC load-overlay (AL=03h) loads an EXE image at the segment the overlay
+            // parameter block names and returns AX=0, DX=0.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x4B, Al = 0x03,
+                Setup = machine => {
+                    byte[] exe = new byte[0x30];
+                    exe[0x00] = (byte)'M';
+                    exe[0x01] = (byte)'Z';
+                    exe[0x02] = 0x10; // LenFinalPage: 16 bytes on the last page
+                    exe[0x04] = 0x01; // Pages: one 512-byte page
+                    exe[0x08] = 0x02; // HeaderSizeInParagraphs: 32 bytes
+                    exe[0x0C] = 0x10; // MaxAlloc
+                    exe[0x10] = 0x01; // InitSP
+                    File.WriteAllBytes(Path.Join(machine.CDrivePath, "OVL.EXE"), exe);
+                    WriteBytes(machine, StringAddress, "OVL.EXE\0"u8.ToArray());
+                    SetDsDx(machine, StringAddress);
+                    // Overlay parameter block: load segment and relocation factor.
+                    WriteBytes(machine, ExecBlockAddress, [0x00, 0x50, 0x00, 0x50]);
+                    machine.Spice86.Machine.CpuState.ES = ExecBlockSegment;
+                    machine.Spice86.Machine.CpuState.BX = 0;
+                }
+            };
         }
     }
 
@@ -630,8 +678,8 @@ public class DosInt21ServiceContractTest {
         (ushort created, bool carryFlag) = handler.CreateFile("RAW.DAT", 0);
         carryFlag.Should().BeFalse();
         ushort originalHandle = created;
-        handler.ForceDuplicateHandle(originalHandle, 19).carryFlag.Should().BeFalse();
-        handler.CloseFile(originalHandle, 0).carryFlag.Should().BeFalse();
+        handler.ForceDuplicateHandle(originalHandle, 19).failed.Should().BeFalse();
+        handler.CloseFile(originalHandle, 0).failed.Should().BeFalse();
         StateSnapshot before = new(machine.Spice86.Machine.CpuState);
 
         // Act
@@ -644,7 +692,7 @@ public class DosInt21ServiceContractTest {
         closedError.Should().BeTrue();
         closed.Should().Be((ushort)DosErrorCode.InvalidHandle);
         before.AssertUnchanged(machine.Spice86.Machine.CpuState);
-        handler.CloseFile(19, 0).carryFlag.Should().BeFalse();
+        handler.CloseFile(19, 0).failed.Should().BeFalse();
     }
 
     /// <summary>An invalid get/set-attribute operation reports the error through the raw core
@@ -671,10 +719,60 @@ public class DosInt21ServiceContractTest {
         ax.Should().Be((ushort)DosErrorCode.FunctionNumberInvalid);
         cx.Should().Be(0);
         before.AssertUnchanged(state);
-        Action interrupt = () => handler.GetSetFileAttributes(false);
+        Action interrupt = () => handler.GetSetFileAttributes();
         interrupt.Should().Throw<UnhandledOperationException>();
         state.CarryFlag.Should().BeFalse();
         state.AX.Should().Be(0x4302);
+    }
+
+    /// <summary>The terminating INT 21h services declare <see cref="ServiceTransferKind.Terminates"/>
+    /// and running them through the installed stub never reaches the <c>int</c>'s return
+    /// address: terminating the harness's root program stops the machine instead.</summary>
+    [Theory]
+    [InlineData(0x00)]
+    [InlineData(0x31)]
+    [InlineData(0x4C)]
+    public void TerminatingServicesNeverReturnToCaller(int selector) {
+        // Arrange / Act / Assert
+        ServiceContractHarness.AssertTerminatesThroughStub(0x21, selector);
+    }
+
+    /// <summary>Every Ctrl-C-checking service with a declared contract is
+    /// <see cref="ServiceTransferKind.MayTerminate"/>: it normally returns but can leave through
+    /// process termination instead.</summary>
+    [Fact]
+    public void CtrlCCheckingServicesDeclareMayTerminate() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        IInterruptHandler handler = machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+
+        // Act / Assert
+        foreach (int selector in new[] { 0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x0B }) {
+            InterruptServiceEntry entry = ServiceContractHarness.EntryOf(handler, selector)
+                ?? throw new InvalidOperationException(
+                    $"int 0x21 selector 0x{selector:X2} has no service entry");
+            entry.Contract.Transfer.Should().Be(ServiceTransferKind.MayTerminate,
+                "service 0x{0:X2} checks the keyboard buffer for Ctrl-C", selector);
+        }
+    }
+
+    /// <summary>The AL=00h EXEC variant declares <see cref="ServiceTransferKind.RunsChild"/>;
+    /// the AL=01h and AL=03h load-only variants stay ordinary returning services.</summary>
+    [Fact]
+    public void ExecAlVariantsDeclareTheirTransferKinds() {
+        // Arrange
+        using ServiceContractMachine machine = new(enableEms: false, enableXms: false);
+        IInterruptHandler handler = machine.Spice86.Machine.InstalledInterruptHandlers.Handlers[0x21];
+        InterruptServiceEntry exec = ServiceContractHarness.EntryOf(handler, 0x4B)
+            ?? throw new InvalidOperationException("int 0x21 selector 0x4B has no service entry");
+
+        // Act / Assert
+        exec.Variants.Single(variant => variant.Al == 0x00).Contract.Transfer
+            .Should().Be(ServiceTransferKind.RunsChild);
+        exec.Variants.Single(variant => variant.Al == 0x01).Contract.Transfer
+            .Should().Be(ServiceTransferKind.Returns);
+        exec.Variants.Single(variant => variant.Al == 0x03).Contract.Transfer
+            .Should().Be(ServiceTransferKind.Returns);
     }
 
     private sealed class StateSnapshot {

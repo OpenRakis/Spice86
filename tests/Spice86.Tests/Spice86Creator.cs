@@ -15,10 +15,16 @@ using Xunit;
 using Spice86.Audio.Filters;
 
 public sealed class Spice86Creator : IDisposable {
+    /// <summary>Environment variable that asks every discovery run to copy its standard dump (the
+    /// listing and the program files of the generated C#) into <c>&lt;value&gt;/&lt;golden key&gt;/</c>
+    /// before the run's export folder is deleted. Used by the generated-code diff workflow.</summary>
+    internal const string DumpsFolderEnvironmentVariable = "SPICE86_DUMPS_FOLDER";
+
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
     private readonly string _exportFolder;
     private readonly bool _ownsExportFolder;
+    private readonly AsmFixtures.AsmRunSettings? _settings;
 
     public bool EnableUmb { get; set; } = true;
 
@@ -38,13 +44,14 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null)
+        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null,
+        bool checkBuild = false)
         : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
             recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
-            enableSpeculativeCfgExploration, clockStartTime) {
+            enableSpeculativeCfgExploration, clockStartTime, checkBuild) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
@@ -52,12 +59,19 @@ public sealed class Spice86Creator : IDisposable {
             settings.FailOnUnhandledPort, settings.EnableA20Gate, settings.EnableXms, settings.EnableEms,
             null, settings.CDrive, overrideSupplier,
             ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
-            settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
+            settings.ExeArgs, settings.InstructionTimeScale, jitMode, false,
+            settings.RecordedDataDirectory, settings.ReloadCfgGraph,
             settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
-            settings.EnableSpeculativeCfgExploration, null) {
+            settings.EnableSpeculativeCfgExploration, TestClockStartTime,
+            settings.CheckBuild) {
         EnableUmb = settings.EnableUmb;
         HltStopsEmulation = settings.HltStopsEmulation;
+        _settings = settings;
     }
+
+    /// <summary>The fixed emulated start time of fixture runs: every machine reports the same DOS
+    /// date and time, so timestamps written to emulated RAM are reproducible between runs.</summary>
+    private static readonly DateTimeOffset TestClockStartTime = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
         bool failOnUnhandledPort, bool enableA20Gate, bool enableXms, bool enableEms,
@@ -66,7 +80,8 @@ public sealed class Spice86Creator : IDisposable {
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
         RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
-        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
+        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime,
+        bool checkBuild) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -126,6 +141,7 @@ public sealed class Spice86Creator : IDisposable {
             RenderingMode = renderingMode,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
             ClockStartTime = clockStartTime,
+            GeneratedCode = checkBuild ? "CheckBuild" : null,
         };
 
         _maxCycles = maxCycles;
@@ -152,8 +168,94 @@ public sealed class Spice86Creator : IDisposable {
         if (_configuration.OverrideSupplier is null) {
             GeneratedCodeCoverageReport.RecordIfEnabled(_exportFolder, _configuration.Exe);
         }
+        CopyDumpIfEnabled();
         if (_ownsExportFolder && Directory.Exists(_exportFolder)) {
             Directory.Delete(_exportFolder, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// When <see cref="DumpsFolderEnvironmentVariable"/> is set and this run is a discovery run (no
+    /// override supplier, interpreted JIT), copies the listing and the program files of the generated
+    /// C# into <c>&lt;folder&gt;/&lt;golden key&gt;/</c>. The copy is built in a sibling temporary
+    /// directory and moved into place; when the target already exists the copies are compared file by
+    /// file and the new one deleted, and a difference means two runs of one key produced different
+    /// dumps.
+    /// </summary>
+    /// <summary>The machine golden keys of the catalogue scenarios, built once: only those keys
+    /// are copied, so ad-hoc runs never collide with another program's dump.</summary>
+    private static readonly Lazy<HashSet<string>> CatalogueKeys = new(() =>
+        AsmFixtures.AsmScenarioInventory.Catalogue().Select(entry => entry.MachineGoldenKey).ToHashSet());
+
+    private void CopyDumpIfEnabled() {
+        string? dumpsFolder = Environment.GetEnvironmentVariable(DumpsFolderEnvironmentVariable);
+        if (dumpsFolder == null || _configuration.OverrideSupplier != null
+            || _configuration.JitMode != JitMode.InterpretedOnly || !Directory.Exists(_exportFolder)
+            || _settings is not { } settings) {
+            return;
+        }
+        string goldenKey = MachineGoldens.GoldenKey(settings);
+        if (!CatalogueKeys.Value.Contains(goldenKey)) {
+            // Ad-hoc runs (the machine tests' own programs) share keys across different programs,
+            // so a copy would collide with an unrelated dump under the same key.
+            return;
+        }
+        string targetDirectory = Path.Join(dumpsFolder, goldenKey);
+        string stagingDirectory = Path.Join(dumpsFolder, "." + goldenKey + "." + Guid.NewGuid().ToString("N"));
+        StageDump(stagingDirectory, settings);
+        if (!Directory.Exists(targetDirectory)) {
+            Directory.Move(stagingDirectory, targetDirectory);
+            return;
+        }
+        string? difference = FirstDifference(stagingDirectory, targetDirectory);
+        Directory.Delete(stagingDirectory, recursive: true);
+        if (difference != null) {
+            throw new InvalidOperationException(
+                $"Two runs of '{goldenKey}' produced different dumps: {difference}");
+        }
+    }
+
+    private void StageDump(string stagingDirectory, AsmFixtures.AsmRunSettings settings) {
+        // The dump lives in a program-hash subdirectory of the export folder
+        // (EmulatorStateSerializationFolderFactory).
+        string dumpRoot = Directory.GetDirectories(_exportFolder)
+            .FirstOrDefault(directory => Directory.GetFiles(directory, "spice86dump*").Length > 0)
+            ?? _exportFolder;
+        Directory.CreateDirectory(stagingDirectory);
+        string listingPath = Path.Join(dumpRoot, "spice86dumpListing.asm");
+        if (File.Exists(listingPath)) {
+            string target = Path.Join(stagingDirectory, "spice86dumpListing.asm");
+            IEnumerable<string> lines = File.ReadLines(listingPath);
+            if (settings.InstallInterruptVectors) {
+                string emulatorSegmentPrefix = settings.AsmHandlersSegment.ToString("X4") + ":";
+                lines = lines.Where(line => !line.StartsWith(emulatorSegmentPrefix, StringComparison.Ordinal));
+            }
+            File.WriteAllLines(target, lines);
+        }
+        string generatedDirectory = Path.Join(dumpRoot, "spice86dumpCfgGeneratedOverrides");
+        if (!Directory.Exists(generatedDirectory)) {
+            return;
+        }
+        foreach (string file in Directory.GetFiles(generatedDirectory, "*.cs")) {
+            string name = Path.GetFileName(file);
+            if (AsmFixtures.GeneratedCodeChecks.IsProgramFile(name)) {
+                File.Copy(file, Path.Join(stagingDirectory, name));
+            }
+        }
+    }
+
+    private static string? FirstDifference(string leftDirectory, string rightDirectory) {
+        string[] leftFiles = Directory.GetFiles(leftDirectory).Select(Path.GetFileName).Order().ToArray()!;
+        string[] rightFiles = Directory.GetFiles(rightDirectory).Select(Path.GetFileName).Order().ToArray()!;
+        if (!leftFiles.SequenceEqual(rightFiles)) {
+            return $"file sets differ ({string.Join(',', leftFiles)} vs {string.Join(',', rightFiles)})";
+        }
+        foreach (string name in leftFiles) {
+            if (!File.ReadAllBytes(Path.Join(leftDirectory, name))
+                    .SequenceEqual(File.ReadAllBytes(Path.Join(rightDirectory, name)))) {
+                return $"file {name} differs";
+            }
+        }
+        return null;
     }
 }

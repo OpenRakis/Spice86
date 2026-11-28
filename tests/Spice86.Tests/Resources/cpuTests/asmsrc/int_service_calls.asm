@@ -301,6 +301,8 @@ int_a5_continuation:
 
     call preserved_output
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; int 21h subroutine: the site sees AH=30h, AH=02h and later the program handler

@@ -464,28 +464,34 @@ internal sealed partial class DosBatchExecutionEngine {
         return new CommandRedirection(inputPath, outputPath, appendOutput, errorPath, appendError);
     }
 
+    private static void AppendSeparatorSpace(StringBuilder builder) {
+        if (builder.Length > 0 && !char.IsWhiteSpace(builder[^1])) {
+            builder.Append(' ');
+        }
+    }
+
     internal static string AppendRedirection(string command, CommandRedirection redirection) {
         if (!redirection.HasAny) {
             return command;
         }
 
         StringBuilder builder = new(command);
+        AppendSeparatorSpace(builder);
         if (!string.IsNullOrWhiteSpace(redirection.InputPath)) {
-            builder.Append(' ');
             builder.Append('<');
             builder.Append(' ');
             builder.Append(EscapeIfNeeded(redirection.InputPath));
         }
 
         if (!string.IsNullOrWhiteSpace(redirection.OutputPath)) {
-            builder.Append(' ');
+            AppendSeparatorSpace(builder);
             builder.Append(redirection.AppendOutput ? ">>" : ">");
             builder.Append(' ');
             builder.Append(EscapeIfNeeded(redirection.OutputPath));
         }
 
         if (!string.IsNullOrWhiteSpace(redirection.ErrorPath)) {
-            builder.Append(' ');
+            AppendSeparatorSpace(builder);
             builder.Append('2');
             builder.Append(redirection.AppendError ? ">>" : ">");
             builder.Append(' ');

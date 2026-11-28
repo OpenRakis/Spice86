@@ -17,18 +17,24 @@ start:
     mov ss, ax
     mov sp, 1000h
     cld
+; A nonzero BP makes every `push bp` write observable bytes: under the abandoned
+; stack slots relaxation the dropped private saves must then be excluded exactly,
+; or the RAM gate sees the word the generated run never wrote.
+    mov bp, 5A5Ah
     mov word [80h], 1234h
 
 ; F1: push a; push b; call f; add sp,4. f reads [bp+4] and [bp+6], returns AX = a + b.
 ; The pushed register is overwritten between the pushes and the call.
 ; Catches: a parameter taken from the register instead of its stack slot (read too
-; early), a push considered dead.
+; early), a push considered dead; also a dropped pair that leaves BP = SP: BP
+; after the return is stored.
     mov ax, 1111h
     push ax
     mov ax, 2222h
     push ax
     mov ax, 0FFFFh
     call f1_callee
+    mov [72h], bp
     add sp, 4
     mov [40h], ax
 
@@ -182,6 +188,65 @@ start:
     mov [90h], si
     mov byte [63h], 0
 
+; F15: the caller stores through an SS alias onto the first pushed word between the
+; pushes and the call; a helper that evaluated the arguments before the pushes
+; would pass the pre-store value.
+; Catches: a store into the argument area between the pushes folded anyway.
+    mov bp, sp
+    push 0AAAAh
+    mov word [ss:bp-2], 0BBBBh
+    push 0CCCCh
+    call f15_callee
+    add sp, 4
+    mov [64h], ax
+
+; F16: f16_callee reads the word above its return address; its entry is also a
+; jump target of f16_outer (a tail call), so the slot is not a private call
+; argument. The normal call site keeps the memory form.
+; Catches: an entry reached another way than a call still taking parameters.
+    push 0BEEFh
+    call f16_outer
+    add sp, 2
+    mov [66h], ax
+    push 0F00Dh
+    call f16_callee
+    add sp, 2
+    mov [68h], ax
+
+; F17: f17 copies SS into DS and reads its parameter through DS: an SS value used
+; as a data segment keeps the memory form.
+; Catches: SS passed on as a data segment not refusing.
+    push 1357h
+    call f17_callee
+    add sp, 2
+    mov [6Ah], ax
+
+; F18: f18 sums its parameter down to zero in a loop; the back-edge event check sits
+; between the push bp and the pop bp, so the pair stays under the abandoned-slots
+; relaxation.
+; Catches: an event check treated as invisible while dropping the saved slot.
+    mov ax, 4
+    push ax
+    call f18_callee
+    add sp, 2
+    mov [6Ch], ax
+
+; F19: same private push bp / pop bp shape as F1, but called last so no later
+; stack traffic overwrites the saved word before the RAM compare.
+; Catches: the differential exclusion of the dropped slot is load-bearing here -
+; without it the interpreted run's pushed BP bytes surface in the comparison;
+; also a dropped pair that leaves BP = SP: BP after the return is stored.
+    mov ax, 5
+    push ax
+    mov ax, 7
+    push ax
+    call f19_callee
+    mov [70h], bp
+    add sp, 4
+    mov [6Eh], ax
+
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 f1_callee:
@@ -305,6 +370,59 @@ changed_bp_slot:
     mov sp, bp
     pop si
     dec sp
+    ret
+
+f15_callee:
+    push bp
+    mov bp, sp
+    mov ax, [bp+4]
+    add ax, [bp+6]
+    pop bp
+    ret
+
+f16_outer:
+    push bp
+    mov bp, sp
+    jmp f16_mid
+
+f16_callee:
+    push bp
+    mov bp, sp
+f16_mid:
+    mov ax, [bp+4]
+    pop bp
+    ret
+
+f17_callee:
+    push bp
+    mov bp, sp
+    push ds
+    mov ax, ss
+    mov ds, ax
+    mov bx, bp
+    mov ax, [bx+4]
+    pop ds
+    pop bp
+    ret
+
+f18_callee:
+    push bp
+    mov bp, sp
+    mov cx, [bp+4]
+    xor ax, ax
+f18_loop:
+    add ax, cx
+    dec cx
+    jnz f18_loop
+    pop bp
+    ret
+
+f19_callee:
+    push bp
+    mov bp, sp
+    mov ax, [bp+4]
+    add ax, [bp+6]
+    pop bp
     ret
 
 rb 65520-$

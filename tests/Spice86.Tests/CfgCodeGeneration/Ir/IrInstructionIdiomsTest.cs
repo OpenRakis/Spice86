@@ -45,7 +45,7 @@ public sealed class IrInstructionIdiomsTest {
         IrMethod method = Method(instruction, IrInstructionShape.Exchange, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(2);
@@ -61,7 +61,7 @@ public sealed class IrInstructionIdiomsTest {
         IrMethod method = Method(instruction, IrInstructionShape.None, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(4);
@@ -76,7 +76,7 @@ public sealed class IrInstructionIdiomsTest {
         IrMethod method = Method(instruction, IrInstructionShape.Exchange, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(4);
@@ -95,7 +95,7 @@ public sealed class IrInstructionIdiomsTest {
         IrMethod method = Method(instruction, IrInstructionShape.LoadFarPointer, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(3);
@@ -114,7 +114,7 @@ public sealed class IrInstructionIdiomsTest {
         IrMethod method = Method(instruction, IrInstructionShape.LoadFarPointer, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(5);
@@ -127,11 +127,11 @@ public sealed class IrInstructionIdiomsTest {
         CfgInstruction first = Instruction(0);
         CfgInstruction second = Instruction(1);
         IrBlock block = Block(first, Declaration("tmp", Ax), Assign(Ax, Bx));
-        block.Statements.Add(IrStatement.Create(Assign(Bx, Reference("tmp")), second));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(Assign(Bx, Reference("tmp")), second));
         IrMethod method = Method(first, IrInstructionShape.Exchange, block);
 
         // Act
-        IrInstructionIdioms.Apply(method);
+        IrInstructionIdioms.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         block.Statements.Should().HaveCount(4);
@@ -145,19 +145,19 @@ public sealed class IrInstructionIdiomsTest {
         RegisterNode dl = new(DataType.UINT8, 2);
         RegisterNode dh = new(DataType.UINT8, 6);
         RegisterNode al = new(DataType.UINT8, 0);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), entryInstruction));
-        block.Statements.Add(IrStatement.Create(ByteAssign(dl, al), Instruction(1)));
-        block.Statements.Add(IrStatement.Create(
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"), entryInstruction));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(ByteAssign(dl, al), Instruction(1)));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(
             ByteAssign(dh, new ConstantNode(DataType.UINT8, 0)), Instruction(2)));
-        block.Terminator = new IrExit(Instruction(2),
-            new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(Instruction(2),
+            new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrMethod method = new("M", [block], [new IrEntry(entryInstruction, block)],
             new HashSet<ICfgNode> { entryInstruction },
             new Dictionary<ICfgNode, IrInstructionShape>());
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(1);
@@ -179,7 +179,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -200,7 +200,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -222,7 +222,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: the printed composed word evaluates to the byte-truncated value.
         combined.Should().Be(1);
@@ -263,7 +263,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -281,7 +281,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -296,7 +296,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -316,7 +316,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -348,14 +348,14 @@ public sealed class IrInstructionIdiomsTest {
         CfgInstruction entryInstruction = Instruction(0);
         IrBlock entry = new(0);
         IrBlock sequence = new(1);
-        entry.Terminator = new IrJump(entryInstruction, new IrEdge(sequence, false));
-        sequence.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"),
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(entryInstruction, new IrEdge(sequence, false)));
+        IrEditor.WithoutSsa.Append(sequence, IrStatement.Create(new InstructionStartNode("nop"),
             Instruction(1)));
         foreach ((IVisitableAstNode node, CfgInstruction origin) in statements) {
-            sequence.Statements.Add(IrStatement.Create(node, origin));
+            IrEditor.WithoutSsa.Append(sequence, IrStatement.Create(node, origin));
         }
-        sequence.Terminator = new IrExit(Instruction((ushort)(statements.Count + 1)),
-            new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(sequence, new IrExit(Instruction((ushort)(statements.Count + 1)),
+            new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         IrEntry[] entries = [new IrEntry(entryInstruction, entry),
             .. midEntries.Select(node => new IrEntry(node, sequence))];
         IrMethod method = new("M", [entry, sequence], entries,
@@ -381,11 +381,11 @@ public sealed class IrInstructionIdiomsTest {
 
     private static IrBlock Block(ICfgNode origin, params IVisitableAstNode[] nodes) {
         IrBlock block = new(0);
-        block.Statements.Add(IrStatement.Create(new InstructionStartNode("nop"), origin));
+        IrEditor.WithoutSsa.Append(block, IrStatement.Create(new InstructionStartNode("nop"), origin));
         foreach (IVisitableAstNode node in nodes) {
-            block.Statements.Add(IrStatement.Create(node, origin));
+            IrEditor.WithoutSsa.Append(block, IrStatement.Create(node, origin));
         }
-        block.Terminator = new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0)));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(origin, new ReturnNode(new ConstantNode(DataType.UINT16, 0))));
         return block;
     }
 
@@ -403,7 +403,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert: the MUL+SHR pair is one DX = (ushort)(AX / divisor) assignment whose printed
         // form equals x / divisor on the whole ushort domain.
@@ -440,7 +440,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -454,7 +454,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -469,7 +469,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);
@@ -487,7 +487,7 @@ public sealed class IrInstructionIdiomsTest {
         IrSsa ssa = IrSsa.Build(method);
 
         // Act
-        int combined = IrInstructionIdioms.ApplyValueSequences(method, ssa);
+        int combined = IrInstructionIdioms.ApplyValueSequences(method, new IrEditor(ssa, new GenerationStepTimer()));
 
         // Assert
         combined.Should().Be(0);

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.LoadableFile;
@@ -40,7 +41,14 @@ public class CfgCSharpGeneratorLocationsTest {
     };
 
     private static GeneratedCSharpProgram Generate(params (ushort Offset, byte[] Bytes)[] instructions) {
-        CfgCodePartition partition = PartitionOf(Linear(new TestInstructionHelper(), instructions));
+        // The stack value proofs behind pushed segment values need a known RAM SS; give the
+        // method one in code rather than relying on a loader entry fact it does not get here.
+        (ushort Offset, byte[] Bytes)[] rebased = [
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            .. instructions.Select(pair => ((ushort)(pair.Offset + 5), pair.Bytes))
+        ];
+        CfgCodePartition partition = PartitionOf(Linear(new TestInstructionHelper(), rebased));
         CfgPartitionedProgram program = new() {
             Partitions = [partition],
             Transfers = [],
@@ -88,17 +96,19 @@ public class CfgCSharpGeneratorLocationsTest {
         // Arrange: entry 0x170, a DOS image [0x160, 0x190), DS proven 0x180 = entry + 0x0010.
         TestInstructionHelper helper = new();
         CfgBlock block = Linear(helper,
-            (0x0000, [0xB8, 0x80, 0x01]),     // mov ax, 0x0180
-            (0x0003, [0x50]),               // push ax
-            (0x0004, [0x1F]),               // pop ds
-            (0x0005, [0xA1, 0x30, 0x00]),   // mov ax, [0x0030]
-            (0x0008, [0xC3]));              // ret
+            (0x0000, [0xBE, 0x00, 0x20]),   // mov si, 0x2000 - a known RAM SS for the pop proof
+            (0x0003, [0x8E, 0xD6]),         // mov ss, si
+            (0x0005, [0xB8, 0x80, 0x01]),   // mov ax, 0x0180
+            (0x0008, [0x50]),               // push ax
+            (0x0009, [0x1F]),               // pop ds
+            (0x000A, [0xA1, 0x30, 0x00]),   // mov ax, [0x0030]
+            (0x000D, [0xC3]));              // ret
         CfgPartitionedProgram partitioned = new() {
             Partitions = [PartitionOf(block)],
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200, null)])
             }
         };
 
@@ -130,7 +140,7 @@ public class CfgCSharpGeneratorLocationsTest {
             Transfers = [],
             Inputs = GeneratorInputs.Empty with {
                 ProgramImages = ProgramImages.Create(0x170,
-                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200)])
+                    [new LoadedImage(LoadedImageKind.DosProgram, "program.com", 0x160, 0x1700, 0x200, null)])
             }
         };
 
@@ -173,7 +183,7 @@ public class CfgCSharpGeneratorLocationsTest {
             (0x0010, [0xC3])));           // ret
         IrSsa ssa = IrPassPipeline.Run(method, IrPass.Constants, verify: true).Ssa
             ?? throw new InvalidOperationException("The pipeline built no SSA.");
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, ssa), _ => null);
         List<(IrBlock Block, int Index, SegmentedPointerNode Pointer)> reads = method.Blocks
             .SelectMany(block => block.Statements.SelectMany((statement, index) =>
                 IrAstChildren.Descendants(statement.Node).OfType<SegmentedPointerNode>()
@@ -184,7 +194,8 @@ public class CfgCSharpGeneratorLocationsTest {
         IrStatement second = reads[1].Block.Statements[reads[1].Index];
         IVisitableAstNode Rewrite(IVisitableAstNode node) =>
             ReferenceEquals(node, reads[1].Pointer) ? shared : IrAstChildren.MapChildren(node, Rewrite);
-        reads[1].Block.Statements[reads[1].Index] = IrStatement.Create(Rewrite(second.Node), second.Origin);
+        IrEditor.WithoutSsa.Replace(reads[1].Block, reads[1].Index,
+            IrStatement.Create(Rewrite(second.Node), second.Origin));
         IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());
 
         // Act
@@ -206,11 +217,16 @@ public class CfgCSharpGeneratorLocationsTest {
         // Arrange: an AX-selected service (selector 0) whose result target is AX itself.
         // Checking the selector before the result overlap would resolve the value AX holds
         // after the call to the selector constant 0.
-        IrMethod method = Lift(Linear(new TestInstructionHelper(),
-            (0x0000, [0xCD, 0x33]),       // int 0x33
-            (0x0002, [0x8E, 0xD8]),       // mov ds, ax
-            (0x0004, [0xA1, 0x20, 0x00]), // mov ax, [0x0020]
-            (0x0007, [0xC3])));           // ret
+        TestInstructionHelper helper = new();
+        CfgInstruction int33 = Parse(helper, 0x0000, 0xCD, 0x33);
+        CfgInstruction movDs = Parse(helper, 0x0002, 0x8E, 0xD8);
+        CfgInstruction movAx = Parse(helper, 0x0004, 0xA1, 0x20, 0x00);
+        CfgInstruction ret = Parse(helper, 0x0007, 0xC3);
+        Chain(int33, movDs, movAx, ret);
+        // The site needs an observed target to stay an InterruptCall.
+        CfgInstruction stub = Parse(helper, 0x9000, 0xCF);
+        int33.SuccessorsPerType[InstructionSuccessorType.Normal].Add(stub);
+        IrMethod method = Lift(Block(1, int33, movDs, movAx, ret), Block(2, stub));
         InterruptServiceEntry entry = new(0x00, "ResetMouseDriver",
             new ServiceContract(
                 new CallEffect(CpuValues.Ax | CpuValues.Ss | CpuValues.Sp, CpuValues.Ax),
@@ -226,12 +242,14 @@ public class CfgCSharpGeneratorLocationsTest {
             .FindIndex(statement => statement.Node is InterruptCallHelperNode);
         callIndex.Should().BeGreaterThanOrEqualTo(0);
         InterruptServiceCallNode callNode = new(0x33, ServiceSelector.Ax, entry, "Mouse") {
-            Results = [new RegisterNode(DataType.UINT16, 0)]
+            Results = [new RegisterNode(DataType.UINT16, 0)],
+            ReturnSegment = new SegmentVariableNode(0x1000),
+            ReturnOffset = new OffsetLiteralNode(0x1234)
         };
-        block.Statements[callIndex] = IrStatement.Create(callNode,
-            block.Statements[callIndex].Origin);
+        IrEditor.WithoutSsa.Replace(block, callIndex, IrStatement.Create(callNode,
+            block.Statements[callIndex].Origin));
         IrSsa ssa = IrSsa.Build(method);
-        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(ssa));
+        IrStackSlots slots = IrStackSlots.Compute(method, new IrMemoryAliasAnalysis(method, ssa), _ => null);
         IrSegmentValues values = new(method, ssa, slots, IrSegmentFacts.None, new HashSet<int>());
 
         // Act: DS after `mov ds, ax` follows the call-defined AX version.

@@ -151,8 +151,7 @@ public class InstructionExecutionHelper {
                 $"Interrupt vector 0x{vectorNumber:X2} points to 0:0 (uninitialized). Use --AllowIvtAddress0 to permit this.");
         }
         SegmentedAddress expectedReturn = State.IpSegmentedAddress;
-        Stack.Push16(State.Flags.FlagRegister16);
-        Stack.PushSegmentedAddress(expectedReturn);
+        Stack.PushInterruptFrame(expectedReturn);
         State.InterruptFlag = false;
         State.IP = target.Offset;
         State.CS = target.Segment;

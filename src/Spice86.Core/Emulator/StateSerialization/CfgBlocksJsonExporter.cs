@@ -24,7 +24,6 @@ using System.Text.Json.Serialization;
 /// </summary>
 public class CfgBlocksJsonExporter {
     private static readonly JsonSerializerOptions SerializerOptions = new() {
-        WriteIndented = true,
         Converters = { new JsonStringEnumConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };

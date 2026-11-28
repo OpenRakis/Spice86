@@ -10,12 +10,7 @@ public sealed record GeneratorOptions {
 
     /// <summary>The options of a check build, generated code made to be compared with the emulated original:
     /// every instrumentation option on.</summary>
-    public static GeneratorOptions CheckBuild { get; } = new() {
-        ServiceCallNotifications = true,
-        BranchProbes = true,
-        DeviceOperations = false,
-        Manifest = true
-    };
+    public static GeneratorOptions CheckBuild { get; } = GeneratedCodeSelection.CheckBuild.ToOptions();
 
     /// <summary>Whether each emitted method runs the census classifiers the generated-program diagnostics
     /// read. Production skips them.</summary>
@@ -44,8 +39,14 @@ public sealed record GeneratorOptions {
     /// intercepts ports sees the same accesses from generated code as from the emulated original.</summary>
     public bool DeviceOperations { get; init; } = true;
 
-    /// <summary>Whether the generated program carries a
-    /// <see cref="Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.GeneratedCodeManifest"/>,
-    /// which the dumper writes next to the sources. Off by default.</summary>
-    public bool Manifest { get; init; }
+    /// <summary>Whether every instruction keeps its <c>// SSSS:OOOO asm</c> comment; the address map
+    /// records the address either way.</summary>
+    public bool PrintAsmComments { get; init; }
+
+    /// <summary>The generation policy: the strict generation plus the relaxations it enables.</summary>
+    internal GenerationPolicy Policy { get; init; } = GenerationPolicy.Strict;
+
+    /// <summary>How many worker threads the independent per-method preparation rounds may use.
+    /// Branch probe generation always uses one worker because probe numbering is ordered.</summary>
+    internal int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
 }

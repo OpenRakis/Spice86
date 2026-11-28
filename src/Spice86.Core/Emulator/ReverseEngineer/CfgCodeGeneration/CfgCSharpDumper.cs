@@ -29,7 +29,7 @@ internal sealed class CfgCSharpDumper {
     /// </summary>
     public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
-            return new GeneratedCSharpProgram { Files = [] };
+            return new GeneratedCSharpProgram { Files = [], Manifest = new GeneratedCodeManifest([]) };
         }
 
         return _generator.Generate(program, progress);
@@ -54,16 +54,11 @@ internal sealed class CfgCSharpDumper {
         WriteManifest(generated, directory);
     }
 
-    /// <summary>Writes the program's manifest into <paramref name="directory"/>, or deletes the manifest a
-    /// previous dump left there when the program has none.</summary>
+    /// <summary>Writes the program's manifest into <paramref name="directory"/>.</summary>
     private static void WriteManifest(GeneratedCSharpProgram generated, string directory) {
-        string path = Path.Join(directory, GeneratedCodeManifest.FileName);
-        if (generated.Manifest is { } manifest) {
-            File.WriteAllText(path, manifest.ToJson());
-        } else if (File.Exists(path)) {
-            File.Delete(path);
-        }
+        File.WriteAllText(Path.Join(directory, GeneratedCodeManifest.FileName), generated.Manifest.ToJson());
     }
+
 
     /// <summary>Deletes the generated source files an earlier dump left directly in
     /// <paramref name="directory"/> that <paramref name="generated"/> does not rewrite: a re-dump

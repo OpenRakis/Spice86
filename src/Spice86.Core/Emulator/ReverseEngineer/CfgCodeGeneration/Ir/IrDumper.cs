@@ -69,7 +69,7 @@ internal static class IrDumper {
             CfgNodeGotoTarget cfgTarget => cfgTarget.Node.Address.ToString(),
             IrBlock block => $"b{block.Id}",
             _ => target.ToString() ?? "target"
-        }).Print(node);
+        }, printAsmComments: true).Print(node);
         return writer.ToString().Trim();
     }
 

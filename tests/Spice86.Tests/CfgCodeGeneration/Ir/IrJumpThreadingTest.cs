@@ -29,15 +29,15 @@ public sealed class IrJumpThreadingTest {
         IrBlock source = Block(0);
         IrBlock trampoline = Block(1);
         IrBlock target = Block(2);
-        source.Terminator = new IrJump(instruction, new IrEdge(trampoline, false));
-        trampoline.Terminator = new IrJump(instruction, new IrEdge(target, false));
-        target.Statements.Add(Comment(instruction));
-        target.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(source, new IrJump(instruction, new IrEdge(trampoline, false)));
+        IrEditor.WithoutSsa.SetTerminator(trampoline, new IrJump(instruction, new IrEdge(target, false)));
+        IrEditor.WithoutSsa.Append(target, Comment(instruction));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, source)], [instruction],
             source, trampoline, target);
 
         // Act
-        IrJumpThreading.Apply(method);
+        IrJumpThreading.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         method.Blocks.Should().NotContain(trampoline);
@@ -53,16 +53,16 @@ public sealed class IrJumpThreadingTest {
         IrBlock first = Block(1);
         IrBlock second = Block(2);
         IrBlock target = Block(3);
-        source.Terminator = new IrJump(instruction, new IrEdge(first, false));
-        first.Terminator = new IrJump(instruction, new IrEdge(second, false));
-        second.Terminator = new IrJump(instruction, new IrEdge(target, false));
-        target.Statements.Add(Comment(instruction));
-        target.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(source, new IrJump(instruction, new IrEdge(first, false)));
+        IrEditor.WithoutSsa.SetTerminator(first, new IrJump(instruction, new IrEdge(second, false)));
+        IrEditor.WithoutSsa.SetTerminator(second, new IrJump(instruction, new IrEdge(target, false)));
+        IrEditor.WithoutSsa.Append(target, Comment(instruction));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, source)], [instruction],
             source, first, second, target);
 
         // Act
-        IrJumpThreading.Apply(method);
+        IrJumpThreading.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         method.Blocks.Should().HaveCount(2);
@@ -76,15 +76,15 @@ public sealed class IrJumpThreadingTest {
         IrBlock entry = Block(0);
         IrBlock self = Block(1);
         IrBlock target = Block(2);
-        entry.Terminator = new IrJump(instruction, new IrEdge(self, false));
-        self.Terminator = new IrJump(instruction, new IrEdge(self, false));
-        target.Statements.Add(Comment(instruction));
-        target.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(entry, new IrJump(instruction, new IrEdge(self, false)));
+        IrEditor.WithoutSsa.SetTerminator(self, new IrJump(instruction, new IrEdge(self, false)));
+        IrEditor.WithoutSsa.Append(target, Comment(instruction));
+        IrEditor.WithoutSsa.SetTerminator(target, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, entry)], [instruction],
             entry, self, target);
 
         // Act
-        IrJumpThreading.Apply(method);
+        IrJumpThreading.Apply(method, IrEditor.WithoutSsa);
 
         // Assert
         method.Blocks.Should().Contain(entry);
@@ -100,29 +100,29 @@ public sealed class IrJumpThreadingTest {
         IrBlock sourceInside = Block(0);
         IrBlock trampolineInside = Block(1);
         IrBlock insideTarget = Block(2);
-        sourceInside.Terminator = new IrJump(first, new IrEdge(trampolineInside, true));
-        trampolineInside.Terminator = new IrJump(first, new IrEdge(insideTarget, true));
-        insideTarget.Statements.Add(Comment(first));
-        insideTarget.Terminator = new IrExit(first, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(sourceInside, new IrJump(first, new IrEdge(trampolineInside, true)));
+        IrEditor.WithoutSsa.SetTerminator(trampolineInside, new IrJump(first, new IrEdge(insideTarget, true)));
+        IrEditor.WithoutSsa.Append(insideTarget, Comment(first));
+        IrEditor.WithoutSsa.SetTerminator(insideTarget, new IrExit(first, ReturnValue()));
         IrMethod inside = Method([Entry(first, sourceInside)], [first],
             sourceInside, trampolineInside, insideTarget);
 
         IrBlock sourceOutside = Block(0);
         IrBlock trampolineOutside = Block(1);
         IrBlock outsideTarget = Block(2);
-        sourceOutside.Terminator = new IrJump(first, new IrEdge(trampolineOutside, false));
-        trampolineOutside.Terminator = new IrJump(first, new IrEdge(outsideTarget, false));
-        outsideTarget.Statements.Add(new IrStatement(new InstructionStartNode("start"),
+        IrEditor.WithoutSsa.SetTerminator(sourceOutside, new IrJump(first, new IrEdge(trampolineOutside, false)));
+        IrEditor.WithoutSsa.SetTerminator(trampolineOutside, new IrJump(first, new IrEdge(outsideTarget, false)));
+        IrEditor.WithoutSsa.Append(outsideTarget, new IrStatement(new InstructionStartNode("start"),
             second,
             new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None,
                 IrTokens.None, false, false)));
-        outsideTarget.Terminator = new IrExit(second, ReturnValue());
+        IrEditor.WithoutSsa.SetTerminator(outsideTarget, new IrExit(second, ReturnValue()));
         IrMethod outside = Method([Entry(first, sourceOutside)], [first, second],
             sourceOutside, trampolineOutside, outsideTarget);
 
         // Act
-        IrJumpThreading.Apply(inside);
-        IrJumpThreading.Apply(outside);
+        IrJumpThreading.Apply(inside, IrEditor.WithoutSsa);
+        IrJumpThreading.Apply(outside, IrEditor.WithoutSsa);
 
         // Assert
         ((IrJump)inside.Blocks[0].Terminator).Edge.InsideInstruction.Should().BeTrue();

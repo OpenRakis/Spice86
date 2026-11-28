@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
@@ -43,7 +44,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushAx, movCx, popAx, pushBx, popBx, ret);
         CfgBlock block = Block(1, pushAx, movCx, popAx, pushBx, popBx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("ushort savedAx_0000 = 0;");
@@ -66,7 +67,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0004, 0xC3);
         Chain(pushAx, popBx, pushCx, popCx, ret);
         CfgBlock block = Block(1, pushAx, popBx, pushCx, popCx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert  -  the trailing cx pair keeps its stack forms (ret follows it, so its own
         // abandoned word is never covered), while ax / bx print directly.
@@ -89,7 +90,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushAx, movCx, popBx, pushDx, popDx, ret);
         CfgBlock block = Block(1, pushAx, movCx, popBx, pushDx, popDx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("ushort savedBx_0000 = 0;");
@@ -111,7 +112,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0007, 0xC3);
         Chain(pushAx, movAx, popBx, pushCx, popCx, ret);
         CfgBlock block = Block(1, pushAx, movAx, popBx, pushCx, popCx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("savedBx_0000 = AX;");
@@ -132,7 +133,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0004, 0xC3);
         Chain(pushEs, popDs, pushCx, popCx, ret);
         CfgBlock block = Block(1, pushEs, popDs, pushCx, popCx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("DS = ES;");
@@ -154,7 +155,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushEs, movCx, popDs, pushBx, popBx, ret);
         CfgBlock block = Block(1, pushEs, movCx, popDs, pushBx, popBx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("ushort savedDs_0000 = 0;");
@@ -176,7 +177,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0004, 0xC3);
         Chain(pushF, popAx, pushCx, popCx, ret);
         CfgBlock block = Block(1, pushF, popAx, pushCx, popCx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("AX = FlagRegister16;");
@@ -196,7 +197,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushF, movCx, popBx, pushDx, popDx, ret);
         CfgBlock block = Block(1, pushF, movCx, popBx, pushDx, popDx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("ushort savedBx_0000 = 0;");
@@ -216,7 +217,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0004, 0xC3);
         Chain(pushEs, popF, loadDi, ret);
         CfgBlock[] blocks = [Block(1, pushEs, popF), Block(2, loadDi, ret)];
-        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
+        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), StackProgram, blocks);
 
         // Assert
         program.SourceText.Should().Contain("FlagRegister16 = Stack.Pop16();");
@@ -262,7 +263,7 @@ public sealed class SaveRestorePairTest {
         jz.Successors.Add(ret);
         jz.SuccessorsPerType[InstructionSuccessorType.Normal] = new HashSet<ICfgNode> { nop, ret };
         CfgBlock[] blocks = [Block(1, pushAx, jz), Block(2, nop, popAx, pushBx, popBx), Block(3, ret)];
-        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), blocks);
+        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), StackProgram, blocks);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
@@ -292,7 +293,7 @@ public sealed class SaveRestorePairTest {
         Chain(leafMov, leafRet);
         CfgBlock[] blocks = [Block(1, pushAx, call, popAx, pushBx, popBx, ret)];
         CfgCodePartition leaf = Partition(2, Block(2, leafMov, leafRet));
-        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), [leaf], blocks);
+        GeneratedCSharpProgram program = Generate(SingleEntry(blocks[0]), [leaf], StackProgram, blocks);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
@@ -340,7 +341,8 @@ public sealed class SaveRestorePairTest {
         };
 
         // Act
-        GeneratedCSharpProgram program = GenerateProgram([mainPartition, handler], [faultTransfer]);
+        GeneratedCSharpProgram program = GenerateProgram([mainPartition, handler], [faultTransfer],
+            StackProgram);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
@@ -362,7 +364,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushAx, movBxSp, popAx, pushBx, popBx, ret);
         CfgBlock block = Block(1, pushAx, movBxSp, popAx, pushBx, popBx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
@@ -398,34 +400,42 @@ public sealed class SaveRestorePairTest {
         // Arrange: two push ax / pop ax pairs in one method  -  the pushes sit at the same
         // offset in different segments, so their save locals share a stem and get numbered.
         TestInstructionHelper helper = new();
-        CfgInstruction pushA1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0010),
+        CfgInstruction movSi1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0010),
+            writer => writer.WriteBytes(new byte[] { 0xBE, 0x00, 0x20 }));
+        CfgInstruction movSs1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0013),
+            writer => writer.WriteBytes(new byte[] { 0x8E, 0xD6 }));
+        CfgInstruction pushA1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0015),
             writer => writer.WriteBytes(new byte[] { 0x50 }));
-        CfgInstruction movCx = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0011),
+        CfgInstruction movCx = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0016),
             writer => writer.WriteBytes(new byte[] { 0x89, 0xC1 }));
-        CfgInstruction popA1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0013),
+        CfgInstruction popA1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0018),
             writer => writer.WriteBytes(new byte[] { 0x58 }));
-        CfgInstruction pushC1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0014),
+        CfgInstruction pushC1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0019),
             writer => writer.WriteBytes(new byte[] { 0x51 }));
-        CfgInstruction popC1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0015),
+        CfgInstruction popC1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x001A),
             writer => writer.WriteBytes(new byte[] { 0x59 }));
-        CfgInstruction ret1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x0016),
+        CfgInstruction ret1 = helper.WriteAndParse(new SegmentedAddress(0xF000, 0x001B),
             writer => writer.WriteBytes(new byte[] { 0xC3 }));
-        CfgInstruction pushA2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0010),
+        CfgInstruction movSi2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0010),
+            writer => writer.WriteBytes(new byte[] { 0xBE, 0x00, 0x20 }));
+        CfgInstruction movSs2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0013),
+            writer => writer.WriteBytes(new byte[] { 0x8E, 0xD6 }));
+        CfgInstruction pushA2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0015),
             writer => writer.WriteBytes(new byte[] { 0x50 }));
-        CfgInstruction movDx = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0011),
+        CfgInstruction movDx = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0016),
             writer => writer.WriteBytes(new byte[] { 0x89, 0xC2 }));
-        CfgInstruction popA2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0013),
+        CfgInstruction popA2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0018),
             writer => writer.WriteBytes(new byte[] { 0x58 }));
-        CfgInstruction pushD2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0014),
+        CfgInstruction pushD2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0019),
             writer => writer.WriteBytes(new byte[] { 0x52 }));
-        CfgInstruction popD2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0015),
+        CfgInstruction popD2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x001A),
             writer => writer.WriteBytes(new byte[] { 0x5A }));
-        CfgInstruction ret2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x0016),
+        CfgInstruction ret2 = helper.WriteAndParse(new SegmentedAddress(0x2000, 0x001B),
             writer => writer.WriteBytes(new byte[] { 0xC3 }));
-        Chain(pushA1, movCx, popA1, pushC1, popC1, ret1);
-        Chain(pushA2, movDx, popA2, pushD2, popD2, ret2);
-        CfgBlock first = Block(1, pushA1, movCx, popA1, pushC1, popC1, ret1);
-        CfgBlock second = Block(2, pushA2, movDx, popA2, pushD2, popD2, ret2);
+        Chain(movSi1, movSs1, pushA1, movCx, popA1, pushC1, popC1, ret1);
+        Chain(movSi2, movSs2, pushA2, movDx, popA2, pushD2, popD2, ret2);
+        CfgBlock first = Block(1, movSi1, movSs1, pushA1, movCx, popA1, pushC1, popC1, ret1);
+        CfgBlock second = Block(2, movSi2, movSs2, pushA2, movDx, popA2, pushD2, popD2, ret2);
         CfgCodePartition partition = new() {
             Id = 1, Kind = CfgCodePartitionKind.Observed, Name = "main",
             Blocks = [first, second],
@@ -435,14 +445,15 @@ public sealed class SaveRestorePairTest {
             ]
         };
 
-        // Act
+        // Act: each method loads its own known-RAM SS (mov si,2000h / mov ss,si), so the pushes
+        // sit on proved ordinary memory even though neither entry has a way in.
         GeneratedCSharpProgram program = GenerateProgram([partition], []);
 
         // Assert: both pairs print  -  the second save local is numbered.
-        program.SourceText.Should().Contain("savedAx_0010 = AX;");
-        program.SourceText.Should().Contain("savedAx_0010_2 = AX;");
-        program.SourceText.Should().Contain("AX = savedAx_0010;");
-        program.SourceText.Should().Contain("AX = savedAx_0010_2;");
+        program.SourceText.Should().Contain("savedAx_0015 = AX;");
+        program.SourceText.Should().Contain("savedAx_0015_2 = AX;");
+        program.SourceText.Should().Contain("AX = savedAx_0015;");
+        program.SourceText.Should().Contain("AX = savedAx_0015_2;");
         AssertCompiles(program);
     }
 
@@ -459,7 +470,7 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0009, 0xC3);
         Chain(pushAx, movCx, popAx, movBpSp, read, ret);
         CfgBlock block = Block(1, pushAx, movCx, popAx, movBpSp, read, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
@@ -491,12 +502,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushSi, cmp, je),
             Block(2, incAx), Block(3, popSi, pushCx, subDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock pushBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0005 }));
@@ -510,7 +521,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert: the read in the terminator may observe the pushed word, so no pair can form.
         plan.Pairs.Should().BeEmpty(
@@ -538,16 +549,16 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushSi, cmp, je),
             Block(2, incAx), Block(3, popSi, pushCx, subDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert
         plan.Pairs.Should().ContainSingle(
@@ -579,18 +590,18 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, movCx, popEs, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode
                 { Left: SegmentRegisterNode }
                 && statement.Origin is CfgInstruction { Address.Offset: 0x0008 }));
-        int popIndex = popBlock.Statements.FindIndex(statement =>
+        int popIndex = popBlock.IndexOfStatement(statement =>
             statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
             && statement.Origin is CfgInstruction { Address.Offset: 0x0008 });
 
@@ -607,7 +618,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert: the read in the terminator may observe the abandoned word, so no pair can form.
         plan.Pairs.Should().BeEmpty(
@@ -636,12 +647,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, movCx, popf, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0008 }));
@@ -654,7 +665,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert
         plan.Pairs.Should().BeEmpty(
@@ -685,12 +696,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popDx, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode
@@ -706,7 +717,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert: the read in the terminator may observe the abandoned word, so no pair can form.
         plan.Pairs.Should().BeEmpty(
@@ -734,17 +745,17 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popEs, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
                 && statement.Origin is CfgInstruction { Address.Offset: 0x0006 }));
-        int popIndex = popBlock.Statements.FindIndex(statement =>
+        int popIndex = popBlock.IndexOfStatement(statement =>
             statement.Node is BinaryOperationNode { Left: SegmentRegisterNode }
             && statement.Origin is CfgInstruction { Address.Offset: 0x0006 });
 
@@ -761,7 +772,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert
         plan.Pairs.Should().BeEmpty(
@@ -789,12 +800,12 @@ public sealed class SaveRestorePairTest {
         IrMethod method = Lift(Block(1, movBxSp, subBx, pushAx, popf, cmp, je),
             Block(2, incAx), Block(3, pushCx, popCx, xorDx, ret));
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrFullPipelineResult pipeline =
             IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
         foreach (IrBlock block in method.Blocks) {
-            block.Statements.RemoveAll(statement => statement.Node is CheckExternalEventsNode);
+            IrEditor.WithoutSsa.ReplaceAll(block, block.Statements.Where(statement => statement.Node is not CheckExternalEventsNode).ToList(), block.Terminator);
         }
         IrBlock popBlock = method.Blocks.Single(block => block.Statements
             .Any(statement => statement.Origin is CfgInstruction { Address.Offset: 0x0006 }));
@@ -809,7 +820,7 @@ public sealed class SaveRestorePairTest {
                 "the cmp's [bx] read must sit in the branch condition, not in a statement");
 
         // Act
-        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa);
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa, RamFacts(method));
 
         // Assert
         plan.Pairs.Should().BeEmpty(
@@ -830,12 +841,62 @@ public sealed class SaveRestorePairTest {
         CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
         Chain(pushAx, movCx, popSs, pushCx, popCx, ret);
         CfgBlock block = Block(1, pushAx, movCx, popSs, pushCx, popCx, ret);
-        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), StackProgram, block);
 
         // Assert
         program.SourceText.Should().Contain("Stack.Push16(AX);");
         program.SourceText.Should().NotContain("savedAx_0000");
         AssertCompiles(program);
+    }
+
+    [Fact]
+    public void FramePushBpPopBp_RemovesThePairAndItsSetBp() {
+        // Arrange: push bp / mov bp,sp / mov ax,[bp+4] / pop bp / ret - a frame with no local
+        // bytes; the [bp+4] read is a proven frame access the pair may cross.
+        TestInstructionHelper helper = new();
+        CfgInstruction pushBp = Parse(helper, 0x0000, 0x55);
+        CfgInstruction movBpSp = Parse(helper, 0x0001, 0x89, 0xE5);
+        CfgInstruction movAx = Parse(helper, 0x0003, 0x8B, 0x46, 0x04);
+        CfgInstruction popBp = Parse(helper, 0x0006, 0x5D);
+        CfgInstruction ret = Parse(helper, 0x0007, 0xC3);
+        IrMethod method = Lift(Linear(pushBp, movBpSp, movAx, popBp, ret));
+        IrFullPipelineResult pipeline =
+            IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
+
+        // Act
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa,
+            RamFacts(method), new GenerationPolicy(GenerationRelaxation.AbandonedStackSlotsUnobserved));
+
+        // Assert: the push is the frame's, so the removal carries its bp = sp - dropping only
+        // the pair would let the write SetBp made reach the exit with a BP that is not the
+        // entry value.
+        SaveRestorePairs.RemovedSave save = plan.RemovedSaves.Should().ContainSingle().Which;
+        save.SetBp.Should().BeOfType<BinaryOperationNode>()
+            .Which.Left.Should().BeOfType<RegisterNode>()
+            .Which.RegisterIndex.Should().Be((int)RegisterIndex.BpIndex);
+    }
+
+    [Fact]
+    public void NonFrameBpWriteBetween_KeepsThePair() {
+        // Arrange: push bp / mov bp,sp / xor bp,bp / pop bp / ret - the xor writes BP between
+        // the pair and is not the frame's own bp = sp, so BP at the pop is not the entry value.
+        TestInstructionHelper helper = new();
+        CfgInstruction pushBp = Parse(helper, 0x0000, 0x55);
+        CfgInstruction movBpSp = Parse(helper, 0x0001, 0x89, 0xE5);
+        CfgInstruction xorBp = Parse(helper, 0x0003, 0x31, 0xED);
+        CfgInstruction popBp = Parse(helper, 0x0005, 0x5D);
+        CfgInstruction ret = Parse(helper, 0x0006, 0xC3);
+        IrMethod method = Lift(Linear(pushBp, movBpSp, xorBp, popBp, ret));
+        IrFullPipelineResult pipeline =
+            IrPassPipeline.RunAll(method, verify: true, buildWebs: false, new GenerationStepTimer());
+
+        // Act
+        SaveRestorePairs.SavedPairPlan plan = SaveRestorePairs.Plan(method, pipeline.Ssa,
+            RamFacts(method), new GenerationPolicy(GenerationRelaxation.AbandonedStackSlotsUnobserved));
+
+        // Assert
+        plan.RemovedSaves.Should().BeEmpty(
+            "xor bp,bp between the pair means BP at the pop is no longer the entry value");
     }
 
     [Fact]
@@ -853,9 +914,21 @@ public sealed class SaveRestorePairTest {
         BlockNode body = new([wrapper]);
 
         // Act
-        Action apply = () => SaveRestorePairs.Apply(body, new SaveRestorePairs.SavedPairPlan([pair]));
+        Action apply = () => SaveRestorePairs.Apply(body, new SaveRestorePairs.SavedPairPlan([pair], []));
 
         // Assert
         apply.Should().Throw<InvalidOperationException>();
+    }
+
+    /// <summary>Entry facts giving every way in of <paramref name="method"/> a 0x2000 SS: an
+    /// ordinary-RAM stack the slot value proofs may rely on.</summary>
+    private static IrSegmentFacts RamFacts(IrMethod method) {
+        IrSegmentFacts facts = new();
+        foreach (IrEntry entry in method.Entries) {
+            facts.SetEntry(entry.Block, new IrSegmentEntryFact(
+                new Dictionary<IrSsaValue, ushort> { [IrSsaValue.Ss] = 0x2000 },
+                new Dictionary<IrSsaValue, IrSsaValue>()));
+        }
+        return facts;
     }
 }

@@ -132,7 +132,7 @@ Spice86 -e program.exe --CpuHeavyLog \
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
   -i, --InstructionTimeScale        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   --ClockJitterSeed <CLOCKJITTERSEED> Optional integer seed enabling small deterministic clock jitter (±0.01 ms). Omit to disable.
-  --GeneratedCodeCheckBuild          Generates the C# override project as a check build: a ServiceCalled statement is printed before each direct call of a DOS or BIOS service, every branch condition and switch value is wrapped in a probe, port accesses are not merged into device operations, and manifest.json is written next to the sources. Off by default.
+  --GeneratedCode <LIST>             Comma list selecting what generated overrides contain: +name enables, -name disables (no sign enables), applied left to right. Names: AsmComments, CheckBuild (a preset for the service-call notifications, branch probes and split port accesses of a check build), BranchProbes, ServiceCallNotifications, DeviceOperations, AssumeUnknownMemoryIsRam, AssumeAccessesStayInSegment, AssumeAbandonedStackSlotsUnobserved, AssumeSavedSlotsWrittenOnlyByPops. Every dump writes manifest.json next to the sources, whatever the selection.
   --ClockStartTime <CLOCKSTARTTIME> Optional UTC start date/time for the emulated clock (parseable by DateTime.Parse, e.g. 1993-06-01T00:00:00Z). When omitted defaults to the current UTC time.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
   -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.
@@ -323,7 +323,7 @@ When Spice86 exits, it dumps its data (memory dump, execution flow, CFG) and gen
 
 The generated project under `GeneratedProject/` is immediately runnable and already overrides the explored assembly with equivalent C#. From there you rewrite the generated functions, function by function, to discover and document the program's intent. This is well suited to LLM assistance.
 
-See [Generated C# override project](#generated-c-override-project) for how to run it and [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code) for the override API.
+See [Generated C# override project](#generated-c-override-project) for how to run it and [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code) for the override API. [doc/codegenIdioms.md](doc/codegenIdioms.md) shows small examples of the code the generator produces.
 
 Optionally, you can also open the memory dump in [Ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) for additional static analysis (see [Ghidra plugin](#ghidra-plugin)).
 

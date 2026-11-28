@@ -28,6 +28,8 @@ fill_loop:
     loop fill_loop
 ; one more store after the loop with BX still live across the loop's last check
     mov [di], bx
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; never reached: no PIT tick is ever delivered before the hlt

@@ -61,6 +61,12 @@ internal sealed class CfgPartitionRootCollector {
             } else if (edge.Kind == ClassifiedEdgeKind.CpuFault) {
                 CfgPartitionRoot root = GetOrAddRoot(rootsByBlockId, edge.TargetBlock, CfgCodePartitionKind.Observed, functionCatalogue);
                 root.AddEntry(edge.TargetNode, CfgCodePartitionEntryKind.ExecutionContextEntry);
+            } else if (edge.Kind == ClassifiedEdgeKind.CallbackMovedTarget) {
+                // A stub callback moved CS:IP to a fresh execution context (an EXEC child's
+                // entry, a terminate's resume landing): the target is its own partition's entry,
+                // not code inlined in the stub's activation.
+                CfgPartitionRoot root = GetOrAddRoot(rootsByBlockId, edge.TargetBlock, CfgCodePartitionKind.Observed, functionCatalogue);
+                root.AddEntry(edge.TargetNode, CfgCodePartitionEntryKind.ExecChildEntry);
             } else if (edge.Kind == ClassifiedEdgeKind.RetTarget && !callContinuationTargets.Contains(edge.TargetBlock.Id)) {
                 CfgPartitionRoot root = GetOrAddRoot(rootsByBlockId, edge.TargetBlock, CfgCodePartitionKind.Observed, functionCatalogue);
                 root.AddEntry(edge.TargetNode, CfgCodePartitionEntryKind.ReturnTargetEntry);

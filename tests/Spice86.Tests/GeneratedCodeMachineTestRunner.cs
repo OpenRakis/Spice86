@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -12,6 +13,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Tests.AsmFixtures;
@@ -43,11 +45,21 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmFixture discovery, IReadOnlyList<AsmFixture> executions) {
         using AsmRunScope discoveryScope = new(discovery);
+        AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
+        foreach (AsmFixture execution in executions.Where(execution =>
+                !IsEquivalentScenarioVariant(discoverySettings, execution.Settings))) {
+            using AsmRunScope scope = new(execution);
+            using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly);
+            interpretedStates.Add((execution.Settings, AsmFinalState.Capture(run, execution.Settings)));
+        }
         using OwnedRunScopes executionScopes = new();
         foreach (AsmFixture execution in executions) {
             executionScopes.Add(new AsmRunScope(execution));
         }
-        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+        return TestGeneratedCodeCore(discoveryScope,
+            executionScopes.Scopes.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates, []);
     }
 
     /// <summary>
@@ -78,19 +90,23 @@ internal sealed class GeneratedCodeMachineTestRunner {
     public GeneratedCSharpProgram TestGeneratedCode(AsmScenario discovery, IReadOnlyList<AsmScenario> executions) {
         using AsmRunScope discoveryScope = discovery.Prepare();
         AsmRunSettings discoverySettings = discoveryScope.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
+        List<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executionEntries = new();
         foreach (AsmScenario execution in executions) {
+            string baselineKey = discoveryScope.RunKey;
             if (!IsSameVariantAsDiscovery(execution, discoverySettings)) {
-                RunEmulatedAndCheckMachineGoldens(execution, JitMode.InterpretedOnly);
+                (AsmRunSettings settings, AsmFinalState state, string runKey) =
+                    RunEmulatedAndCheckMachineGoldens(execution, JitMode.InterpretedOnly);
+                interpretedStates.Add((settings, state));
+                baselineKey = runKey;
             }
             if (TestJitSettings.CompiledRun) {
                 RunEmulatedAndCheckMachineGoldens(execution, JitMode.CompiledOnly);
             }
+            executionEntries.Add((() => execution.Prepare(baselineKey), FinalStateComparison.Of(execution)));
         }
-        using OwnedRunScopes executionScopes = new();
-        foreach (AsmScenario execution in executions) {
-            executionScopes.Add(execution.Prepare());
-        }
-        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+        return TestGeneratedCodeCore(discoveryScope, executionEntries, interpretedStates,
+            discovery.GeneratedCodeChecks);
     }
 
     /// <summary>Whether an execution scenario is another run of the same scenario variant as the
@@ -103,12 +119,14 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <summary>Runs one scenario emulated and checks its oracle, engine assertions and machine goldens:
     /// the interpreted run of every non-discovery variant, and the compiled-JIT run of every variant
     /// when <see cref="TestJitSettings.CompiledRun"/> opts in.</summary>
-    private static void RunEmulatedAndCheckMachineGoldens(AsmScenario scenario, JitMode jitMode) {
+    /// <returns>The settings and interpreted final state of the run, the strict gate's baseline.</returns>
+    private static (AsmRunSettings Settings, AsmFinalState State, string RunKey) RunEmulatedAndCheckMachineGoldens(
+        AsmScenario scenario, JitMode jitMode) {
         using AsmRunScope scope = scenario.Prepare();
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
         string goldenKey = MachineGoldens.GoldenKey(scope.Fixture);
-        MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
-        MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
+        CfgInvariants.AssertValid(goldenKey, run.Machine.CfgCpu.ExecutionContextManager);
+        return (scope.Fixture.Settings, AsmFinalState.Capture(run, scope.Fixture.Settings), scope.RunKey);
     }
 
     /// <summary>
@@ -121,57 +139,107 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <returns>The generated program.</returns>
     /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
-        return TestGeneratedCodeCore(discovery, executions);
+        AsmRunSettings discoverySettings = discovery.Fixture.Settings;
+        List<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates = new();
+        foreach (AsmRunScope execution in executions.Where(execution =>
+                !IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings))) {
+            using AsmRunScope scope = new(execution.Fixture);
+            using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly);
+            interpretedStates.Add((execution.Fixture.Settings,
+                AsmFinalState.Capture(run, execution.Fixture.Settings)));
+        }
+        return TestGeneratedCodeCore(discovery,
+            executions.Select<AsmRunScope, (Func<AsmRunScope> Prepare, FinalStateComparison Comparison)>(
+                scope => (() => scope, FinalStateComparison.Strict)).ToList(), interpretedStates, []);
     }
 
-    private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+    private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery,
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
+        IReadOnlyList<GeneratedCodeCheck> checks) {
         string goldenKey = GoldenKey(discovery.Fixture.Settings);
-        GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions);
-        // Compared last: a behavioural regression (memory dump or caller assertion) is the more
-        // important failure and must be the one xunit reports when both a behavioural and a golden
-        // mismatch occur on the same run.
-        CompareGeneratedSourceWithExpected(goldenKey, generatedProgram);
-
+        GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions, interpretedStates);
+        GeneratedCodeChecks.Assert(goldenKey, generatedProgram, checks);
         return generatedProgram;
     }
 
-    private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+    private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery,
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
         AsmRunSettings discoverySettings = discovery.Fixture.Settings;
         string goldenKey = GoldenKey(discoverySettings);
-        foreach (string executionKey in executions.Select(execution => GoldenKey(execution.Fixture.Settings))) {
-            if (executionKey != goldenKey) {
-                throw new ArgumentException(
-                    $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
-            }
-        }
 
         (GeneratedCSharpProgram generatedProgram, AsmFinalState discoveryFinalState) =
             GenerateSourceAndFinalState(discovery);
         using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
         string? probeReportPath = GeneratedCodeProbes.ReportPath;
         if (probeReportPath is null) {
-            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey,
+                discoveryFinalState, interpretedStates,
+                new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites),
+                generatedProgram.StackSpaceCallSites,
+                generatedProgram.DroppedStackSlotSites);
             return generatedProgram;
         }
 
         InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram);
         using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Sources);
-        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey,
+            discoveryFinalState, interpretedStates,
+            new HashSet<SegmentedAddress>(generatedProgram.FramelessServiceCallSites),
+            generatedProgram.StackSpaceCallSites,
+            generatedProgram.DroppedStackSlotSites);
         GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
             GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
         return generatedProgram;
     }
 
-    /// <summary>Runs every execution with <paramref name="supplier"/> and records a differential for each run of the
-    /// discovery's scenario variant.</summary>
-    private static void RunExecutions(IReadOnlyList<AsmRunScope> executions, IOverrideSupplier supplier,
-        AsmRunSettings discoverySettings, string goldenKey, AsmFinalState discoveryFinalState) {
-        foreach (AsmRunScope execution in executions) {
+    /// <summary>Runs every execution with <paramref name="supplier"/> - oracle, engine assertions
+    /// and generated-execution assertions - and gates its final state on the interpreted final
+    /// state of its own scenario variant: the discovery variant uses the discovery run's state,
+    /// every other variant the state its interpreted run captured. Executions marked
+    /// timing-dependent still run and check their oracle; their RAM and extended differential is
+    /// recorded as timing-dependent while every compared part is still checked.</summary>
+    private static void RunExecutions(
+        IReadOnlyList<(Func<AsmRunScope> Prepare, FinalStateComparison Comparison)> executions,
+        IOverrideSupplier supplier, AsmRunSettings discoverySettings, string goldenKey,
+        AsmFinalState discoveryFinalState,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates,
+        IReadOnlySet<SegmentedAddress> framelessServiceCallSites,
+        IReadOnlyList<(SegmentedAddress Address, int ArgumentBytes)> stackSpaceCallSites,
+        IReadOnlyList<(SegmentedAddress Address, int Bytes)> droppedStackSlotSites) {
+        foreach ((Func<AsmRunScope> prepare, FinalStateComparison comparison) in executions) {
+            using AsmRunScope execution = prepare();
+            string executionKey = GoldenKey(execution.Fixture.Settings);
+            if (executionKey != goldenKey) {
+                throw new ArgumentException(
+                    $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
+            }
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
-            if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
-                GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
+            AsmFinalState baseline = InterpretedBaseline(execution.Fixture.Settings, discoverySettings,
+                discoveryFinalState, interpretedStates);
+            GeneratedCodeDifferentialReport.Check(goldenKey,
+                execution.Fixture.Settings.GenerationPolicy, baseline,
+                AsmFinalState.Capture(run, execution.Fixture.Settings), framelessServiceCallSites,
+                stackSpaceCallSites, droppedStackSlotSites, comparison);
+        }
+    }
+
+    /// <summary>The interpreted final state of <paramref name="execution"/>'s own scenario variant.</summary>
+    private static AsmFinalState InterpretedBaseline(AsmRunSettings execution,
+        AsmRunSettings discoverySettings, AsmFinalState discoveryFinalState,
+        IReadOnlyList<(AsmRunSettings Settings, AsmFinalState State)> interpretedStates) {
+        if (IsEquivalentScenarioVariant(discoverySettings, execution)) {
+            return discoveryFinalState;
+        }
+        foreach ((AsmRunSettings settings, AsmFinalState state) in interpretedStates) {
+            if (IsEquivalentScenarioVariant(settings, execution)) {
+                return state;
             }
         }
+        throw new InvalidOperationException(
+            $"No interpreted final state for execution variant " +
+            $"{execution.ScenarioIdentity}/{execution.VariantName}.");
     }
 
     /// <summary>
@@ -193,19 +261,21 @@ internal sealed class GeneratedCodeMachineTestRunner {
     public CompiledGeneratedOverride CompileGeneratedProgram(AsmRunSettings settings, GeneratedCSharpProgram generatedProgram) {
         GeneratedOverrideCompiler compiler = new();
         GeneratedCompilation compilation = compiler.Compile(generatedProgram);
-        GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts = GeneratedCodeMetricsCollector.CollectParts(
             GoldenKey(settings), compilation);
         IReadOnlyDictionary<string, GeneratedCodeMetrics> methods =
             GeneratedCodeMetricsCollector.CollectMethods(GoldenKey(settings), compilation);
-        WriteMetrics(metrics, methods);
+        WriteMetrics(parts, methods);
         WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
-        generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
+        generatedProgram.GotoCensus.Total.Should().Be(parts.Program.GotoStatements + parts.Support.GotoStatements,
             $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
         WriteFlagReadCensus(FlagReadCensusLine.Format(GoldenKey(settings), generatedProgram.FlagReadCensus));
-        generatedProgram.FlagReadCensus.Total.Should().Be(metrics.StatusFlagReads,
+        generatedProgram.FlagReadCensus.Total.Should().Be(parts.Program.StatusFlagReads + parts.Support.StatusFlagReads,
             $"every printed flag read of {GoldenKey(settings)} has exactly one census line entry");
         WriteWebCensus(WebCensusLine.Format(GoldenKey(settings), generatedProgram.WebCensus));
-        GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText, methods);
+        WriteUntypedCensus(UntypedCensusLine.Format(GoldenKey(settings), generatedProgram.UntypedMethods));
+        // GeneratedCodeMetricsAssertions.WriteTightenedBounds(parts);
+        GeneratedCodeMetricsAssertions.AssertInvariants(parts, generatedProgram.SourceText, methods);
         return compiler.CompileSupplier(compilation);
     }
 
@@ -260,30 +330,13 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (!settings.HltStopsEmulation) {
             key += ".hltwait";
         }
+        key += settings.GenerationPolicy.GoldenSuffix();
         return key + settings.HandlerSegmentGoldenSuffix;
     }
 
     public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunScope scope) {
         (GeneratedCSharpProgram generatedProgram, _) = GenerateSourceAndFinalState(scope);
         return generatedProgram;
-    }
-
-    /// <summary>Compares the generated source to its golden.</summary>
-    public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
-        List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
-        // WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
-        string resPath = GetGoldenPath(goldenKey + ".cs.txt");
-        File.Exists(resPath).Should().BeTrue(
-            $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running the generated entry points once, then re-commenting it");
-        List<string> expectedLines = NormalizeLines(File.ReadAllText(resPath));
-        Assert.Equal(expectedLines, actualLines);
-    }
-
-    private static void WriteExpectedGeneratedSource(string goldenKey, string sourceText) {
-        // Write directly to the source tree so the golden file is committed alongside the code. The
-        // comparison reads the same path, so a golden written during a regeneration pass is readable
-        // again in that same pass.
-        File.WriteAllText(GetGoldenPath(goldenKey + ".cs.txt"), sourceText);
     }
 
     /// <summary>Path of a committed generated-source golden in the source tree, the file both the writer
@@ -323,15 +376,23 @@ internal sealed class GeneratedCodeMachineTestRunner {
     private static readonly object MetricsFileLock = new();
     private static readonly SortedDictionary<string, (string Summary, string[] Methods)> MetricsRows = new(StringComparer.Ordinal);
 
-    private static void WriteMetrics(GeneratedCodeMetrics metrics, IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
+    private static void WriteMetrics(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts,
+        IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         Directory.CreateDirectory(outputDirectory);
         string[] methodLines = methods.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .Select(pair => $"method={pair.Key} {pair.Value.SourceLocation} {pair.Value.ToLine()}").ToArray();
         lock (MetricsFileLock) {
-            MetricsRows[metrics.Fixture] = (metrics.ToLine(), methodLines);
+            MetricsRows[parts.Program.Fixture] = ("part=program " + parts.Program.ToLine()
+                + " | part=support " + parts.Support.ToLine(), methodLines);
             File.WriteAllLines(Path.Join(outputDirectory, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
             File.WriteAllLines(Path.Join(outputDirectory, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
+            string? dumpsFolder = Environment.GetEnvironmentVariable(Spice86Creator.DumpsFolderEnvironmentVariable);
+            if (dumpsFolder != null) {
+                Directory.CreateDirectory(dumpsFolder);
+                File.WriteAllLines(Path.Join(dumpsFolder, "metrics.txt"), MetricsRows.Values.Select(row => row.Summary));
+                File.WriteAllLines(Path.Join(dumpsFolder, "metrics-methods.txt"), MetricsRows.Values.SelectMany(row => row.Methods));
+            }
         }
     }
 
@@ -383,13 +444,71 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
     }
 
+    private static readonly object UntypedCensusFileLock = new();
+    private static bool _untypedCensusFileInitialized;
+
+    private static void WriteUntypedCensus(string line) {
+        string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
+        Directory.CreateDirectory(outputDirectory);
+        string censusPath = Path.Join(outputDirectory, "untyped-census.txt");
+        lock (UntypedCensusFileLock) {
+            if (!_untypedCensusFileInitialized) {
+                File.Delete(censusPath);
+                _untypedCensusFileInitialized = true;
+            }
+            File.AppendAllText(censusPath, line + Environment.NewLine);
+        }
+    }
+
     private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram =
-            new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
+            new CfgCSharpGenerator(collectCensuses: true, verify: true, printAsmComments: false,
+                scope.Fixture.Settings.GenerationPolicy).Generate(program);
+        AssertAddressMapCoversEveryInstruction(program, generatedProgram);
+        GeneratedCodeMetricsAssertions.AssertEventCheckFollowsInterruptEnablingInstructions(
+            GoldenKey(scope.Fixture.Settings), program, generatedProgram);
         IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);
+    }
+
+    /// <summary>The address map covers every instruction of every printed method: each instruction
+    /// address of the partitioned program has an entry, and every entry points to a line range
+    /// inside its own file, inside its own method.</summary>
+    private static void AssertAddressMapCoversEveryInstruction(CfgPartitionedProgram program,
+        GeneratedCSharpProgram generated) {
+        HashSet<string> expected = program.Partitions
+            .SelectMany(partition => partition.Blocks)
+            .SelectMany(block => block.Instructions.OfType<CfgInstruction>())
+            .Select(instruction => instruction.Address.ToString())
+            .ToHashSet();
+        HashSet<string> mapped = generated.Manifest.AddressMap.Select(entry => entry.Address).ToHashSet();
+        mapped.Should().BeSubsetOf(expected,
+            "every mapped instruction is an instruction of the partitioned program; coverage of "
+            + "printed instructions is structural - the printer records one entry per "
+            + "InstructionStartNode");
+        Dictionary<string, string[]> fileLines = generated.Files
+            .ToDictionary(file => file.Name, file => NormalizeLines(file.Text).ToArray());
+        foreach (AddressMapEntryManifest entry in generated.Manifest.AddressMap) {
+            fileLines.Should().ContainKey(entry.File, $"entry {entry.Address} names an existing file");
+            string[] lines = fileLines[entry.File];
+            entry.FirstLine.Should().BeGreaterThanOrEqualTo(1);
+            entry.FirstLine.Should().BeLessThanOrEqualTo(lines.Length,
+                $"entry {entry.Address} starts inside {entry.File}");
+            entry.LastLine.Should().BeLessThanOrEqualTo(lines.Length,
+                $"entry {entry.Address} ends inside {entry.File}");
+            int decl = Array.FindIndex(lines,
+                line => line.Contains("public virtual") && line.Contains($"{entry.Method}("));
+            decl.Should().BeGreaterThanOrEqualTo(0, $"entry {entry.Address}'s method {entry.Method} is declared in {entry.File}");
+            int methodEnd = Array.FindIndex(lines, decl + 1,
+                line => line.Equals("    }", StringComparison.Ordinal));
+            methodEnd.Should().BeGreaterThanOrEqualTo(0, $"{entry.Method}'s block closes");
+            (entry.FirstLine - 1).Should().BeGreaterThanOrEqualTo(decl,
+                $"entry {entry.Address} starts inside {entry.Method}");
+            (entry.LastLine - 1).Should().BeLessThanOrEqualTo(methodEnd,
+                $"entry {entry.Address} ends inside {entry.Method}");
+        }
     }
 
     /// <summary>The recorded program and finished-machine state of <paramref name="scope"/>'s
@@ -402,16 +521,16 @@ internal sealed class GeneratedCodeMachineTestRunner {
 
         Machine machine = run.Machine;
         string machineGoldenKey = MachineGoldens.GoldenKey(scope.Fixture);
-        MachineGoldens.CompareListingWithExpected(machineGoldenKey, machine);
-        MachineGoldens.CompareCfgBlocksJsonWithExpected(machineGoldenKey, machine);
+        CfgInvariants.AssertValid(machineGoldenKey, machine.CfgCpu.ExecutionContextManager);
 
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();
 
-        GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector.Capture();
+        GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector
+            .Capture(run.Machine.CfgCpu.ExecutionContextManager);
         CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph,
             machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
-        AsmFinalState finalState = AsmFinalState.Capture(run.Result);
+        AsmFinalState finalState = AsmFinalState.Capture(run, scope.Fixture.Settings);
         return (program, finalState);
     }
 

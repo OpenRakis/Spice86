@@ -9,6 +9,10 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public sealed class InterruptServiceAttribute : Attribute {
+    /// <summary>The <see cref="Al"/> value of a declaration that is not an AL sub-selector
+    /// variant.</summary>
+    public const int NoAl = -1;
+
     /// <summary>
     /// Declares the single contract of a handler without a selector register.
     /// </summary>
@@ -26,6 +30,17 @@ public sealed class InterruptServiceAttribute : Attribute {
     /// <summary>The selector register value, or <see langword="null"/> for the single-contract form.</summary>
     public int? SelectorValue { get; }
 
+    /// <summary>The AL sub-selector value this declaration is a variant of
+    /// <see cref="SelectorValue"/>, or <see cref="NoAl"/> (the default) for the base service
+    /// declaration. A variant refines the contract of the same dispatch entry when generated
+    /// code proves AL constant; runtime dispatch stays on the selector register alone.</summary>
+    public int Al { get; init; } = NoAl;
+
+    /// <summary>Whether the service implementation reads the interrupt frame pushed by the
+    /// <c>int</c> (for example the caller CS:IP an EXEC service stores in the child PSP).
+    /// A generated typed call then keeps the frame-pushing <c>ServiceCall</c> form.</summary>
+    public bool ReadsFrame { get; init; }
+
     /// <summary>The service name, or <see langword="null"/> to name the service after the
     /// annotated method.</summary>
     public string? Name { get; init; }
@@ -38,6 +53,10 @@ public sealed class InterruptServiceAttribute : Attribute {
     /// service can differ from the caller's).
     /// </summary>
     public CpuValues Writes { get; init; }
+
+    /// <summary>How the service hands control back: whether it returns to the caller, runs a
+    /// child program, or terminates the current process.</summary>
+    public ServiceTransferKind Transfer { get; init; }
 
     /// <summary>The effect the service has on emulated memory.</summary>
     public ServiceMemoryEffect Memory { get; init; }
@@ -70,12 +89,17 @@ public sealed class InterruptServiceAttribute : Attribute {
     /// once it knows the handler's selector register.</summary>
     /// <param name="methodName">The name of the annotated method.</param>
     internal InterruptServiceEntry ToEntry(string methodName, string declaringTypeName) {
+        if (SelectorValue is null && Al != NoAl) {
+            throw new InvalidOperationException(
+                $"{declaringTypeName}.{methodName}: an AL sub-selector variant needs the selector form");
+        }
         if (Unknown) {
             if (Reads != CpuValues.None || Writes != CpuValues.None ||
-                Memory != ServiceMemoryEffect.None || Io) {
+                Memory != ServiceMemoryEffect.None || Io ||
+                Transfer != ServiceTransferKind.Returns) {
                 throw new InvalidOperationException(
                     $"{declaringTypeName}.{methodName}: [InterruptService(Unknown = true)] cannot be combined " +
-                    "with Reads, Writes, Memory or Io");
+                    "with Reads, Writes, Memory, Io or Transfer");
             }
             if (Implementation is not null || Inputs is not null) {
                 throw new InvalidOperationException(
@@ -83,10 +107,10 @@ public sealed class InterruptServiceAttribute : Attribute {
                     "with Implementation or Inputs");
             }
             return new InterruptServiceEntry(SelectorValue ?? 0, Name ?? methodName,
-                ServiceContract.Unknown, StringArgument, null, []);
+                ServiceContract.Unknown, StringArgument, null, [], Al);
         }
         return new InterruptServiceEntry(SelectorValue ?? 0, Name ?? methodName,
-            new ServiceContract(new CallEffect(Reads, Writes), Memory, Io),
-            StringArgument, null, []);
+            new ServiceContract(new CallEffect(Reads, Writes), Memory, Io, Transfer),
+            StringArgument, null, [], Al) { ReadsFrame = ReadsFrame };
     }
 }

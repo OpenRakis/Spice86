@@ -17,5 +17,9 @@ public enum LoadedImageKind {
     BiosBinary,
 
     /// <summary>A floppy boot sector loaded at the boot address.</summary>
-    BootSector
+    BootSector,
+
+    /// <summary>Machine code the emulator writes into memory itself (interrupt stubs, callbacks,
+    /// installed drivers and managers), registered by the writer at each write.</summary>
+    EmulatorRoutines
 }

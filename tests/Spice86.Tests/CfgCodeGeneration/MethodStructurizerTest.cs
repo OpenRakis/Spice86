@@ -57,7 +57,7 @@ public class MethodStructurizerTest {
         Action structure = () => Structure(blocks, _loops, Entries());
 
         // Assert
-        structure.Should().Throw<InvalidOperationException>().WithMessage("*has no CheckExternalEvents at its entry*");
+        structure.Should().Throw<InvalidOperationException>().WithMessage("*has no CheckExternalEvents at its first instruction*");
     }
 
     [Fact]
@@ -541,7 +541,7 @@ public class MethodStructurizerTest {
         CfgBlock exit = CfgTestHelpers.CreateBlock(13, 0x60);
         NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([_entry, head, body, exit],
             new() { [_entry] = [head], [head] = [body, exit], [body] = [head, exit] });
-        LoweredBlock<CfgBlock> headBlock = Deciding(head, exit, body) with { HasEntryCheck = true };
+        LoweredBlock<CfgBlock> headBlock = Deciding(head, exit, body) with { ChecksAtFirstInstruction = true };
         LoweredBlock<CfgBlock>[] blocks = [
             Lowered(_entry, true, true, "entry"), headBlock, Branching(body, head, new GotoNode(Target(exit))), Lowered(exit, false, false, "exit")
         ];
@@ -1016,7 +1016,7 @@ public class MethodStructurizerTest {
             UntestedMessagePart.Hole(new RegisterNode(DataType.UINT16, 0), "X4")])),
         "tryCatch" => new CpuFaultTryCatchNode(
             new BlockNode(BackEdgeIf(Zero, toHeaderWhenTrue: true, new GotoNode(Target(_exit)))),
-            new SegmentedAddress(0x1000, 0x0010), []),
+            new SegmentedAddress(0x1000, 0x0010), [], []),
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown terminator.")
     };
 
@@ -1153,7 +1153,7 @@ public class MethodStructurizerTest {
         Action structure = () => StructureTestBlocks(blocks, loops, false);
 
         // Assert
-        structure.Should().Throw<InvalidOperationException>().WithMessage("*has no CheckExternalEvents at its entry*");
+        structure.Should().Throw<InvalidOperationException>().WithMessage("*has no CheckExternalEvents at its first instruction*");
     }
 
     [Fact]

@@ -11,18 +11,22 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 /// only its message parts instead of everything.
 /// </summary>
 internal sealed record IrExit : IrTerminator {
-    /// <summary>Creates an exit terminator for <paramref name="transfer"/>.</summary>
-    public IrExit(ICfgNode origin, IVisitableAstNode transfer) : base(origin) {
+    private readonly IrEffects? _effects;
+
+    /// <summary>Creates an exit terminator for <paramref name="transfer"/> with an explicit effect,
+    /// or <see langword="null"/> to compute it from the transfer.</summary>
+    public IrExit(ICfgNode origin, IVisitableAstNode transfer, IrEffects? effects = null) : base(origin) {
         Transfer = transfer;
+        _effects = effects;
     }
 
     /// <summary>The transfer out of the method.</summary>
     public IVisitableAstNode Transfer { get; }
 
     /// <inheritdoc />
-    public override IrEffects Effects => Transfer is FailAsUntestedNode or InterruptReturnNode
+    public override IrEffects Effects => _effects ?? (Transfer is FailAsUntestedNode or InterruptReturnNode
         ? IrEffectsVisitor.Of(Transfer, false)
-        : IrEffects.ExitUse;
+        : IrEffects.ExitUse);
 
     /// <inheritdoc />
     public override IReadOnlyList<IrEdge> Edges => [];

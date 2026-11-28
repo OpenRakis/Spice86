@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using System.Linq;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
@@ -18,6 +20,10 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// </summary>
 internal sealed class IrFlattener {
     private readonly bool _raw;
+    private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _exitEffects;
+    private readonly IReadOnlyDictionary<ICfgNode, IrEffects> _callEffects;
+    private readonly IReadOnlyDictionary<ICfgNode, CpuValues> _faultReads;
+    private readonly TypedSignatures? _typedSignatures;
     private readonly List<IrBlock> _blocks = [];
     private readonly Stack<Func<IrBlock>> _breakTargets = new();
     private readonly List<PendingJump> _pendingJumps = [];
@@ -27,8 +33,76 @@ internal sealed class IrFlattener {
     /// (<paramref name="raw"/> true): in raw mode the runtime transfer nodes become
     /// <see cref="IrExit"/>s and <see cref="WhileWithExitNode"/> lowers to a header branch plus an
     /// exit-condition branch at the body tail.</summary>
-    public IrFlattener(bool raw) {
+    /// <param name="exitEffects">Return-exit effect overrides by instruction origin.</param>
+    /// <param name="callEffects">Resolved-call effect summaries by instruction origin, applied to
+    /// the statement that carries the call.</param>
+    /// <param name="faultReads">Fault-path read sets by instruction origin, applied to the
+    /// statements of every instruction whose handlers and resume targets resolved.</param>
+    public IrFlattener(bool raw, IReadOnlyDictionary<ICfgNode, IrEffects> exitEffects,
+        IReadOnlyDictionary<ICfgNode, IrEffects> callEffects,
+        IReadOnlyDictionary<ICfgNode, CpuValues> faultReads,
+        TypedSignatures? typedSignatures) {
         _raw = raw;
+        _exitEffects = exitEffects;
+        _callEffects = callEffects;
+        _faultReads = faultReads;
+        _typedSignatures = typedSignatures;
+    }
+
+    private IrEffects? ExitEffectsOf(ICfgNode origin) =>
+        _exitEffects.TryGetValue(origin, out IrEffects effects) ? effects : null;
+
+    private IrStatement CreateStatement(IVisitableAstNode node, ICfgNode origin, string localSuffix) {
+        IVisitableAstNode typed = IrNodeTyper.TypeStatement(node, localSuffix);
+        if (_callEffects.TryGetValue(origin, out IrEffects effects)) {
+            typed = AttachSummary(typed, effects);
+        }
+        IrEffects statementEffects = IrEffectsVisitor.Of(typed, IrStatement.MayFault(typed, origin));
+        if (_faultReads.TryGetValue(origin, out CpuValues faultReads)) {
+            statementEffects = statementEffects with { FaultReads = faultReads };
+        }
+        return new IrStatement(typed, origin, statementEffects);
+    }
+
+    private IVisitableAstNode AttachSummary(IVisitableAstNode node, IrEffects effects) =>
+        node switch {
+            ProcedureCallHelperNode call => AttachCallSummary(call, effects),
+            ProcedureCallReturnedElsewhereHelperNode returnedElsewhere =>
+                returnedElsewhere with { Summary = effects },
+            _ => IrAstChildren.MapChildren(node, child => AttachSummary(child, effects))
+        };
+
+    /// <summary>Attaches the summary to a resolved call; a call whose only target is a typed
+    /// method also takes the callee's parameters as operand nodes, just before the
+    /// <see cref="MethodGroupNode"/>, and its summary drops the reads the operands now supply -
+    /// substitution of an operand then drops the read and lets the register write feeding it die.
+    /// An untyped target's call keeps the full reads: its callee reads live machine state.</summary>
+    private ProcedureCallHelperNode AttachCallSummary(ProcedureCallHelperNode call,
+        IrEffects effects) {
+        if (_typedSignatures?.TypedCallOf(call) is not { } signature
+            || signature.Parameters.Count == 0) {
+            return call with { Summary = effects };
+        }
+        CpuValues mask = signature.Parameters.Aggregate(CpuValues.None,
+            (set, parameter) => set | parameter.Mask);
+        IVisitableAstNode[] arguments = [.. call.Arguments.Take(call.Arguments.Count - 1),
+            .. signature.Parameters.Select(parameter => IrValueSets.NodeOf(parameter.Mask)),
+            call.Arguments[^1]];
+        IrEffects operandEffects = new(effects.Reads & ~mask, effects.MustWrite, effects.MayWrite,
+            effects.TokenReads, effects.TokenWrites, effects.MayFault, effects.DeliversInterrupts) {
+            FaultReads = effects.FaultReads
+        };
+        return (ProcedureCallHelperNode)call.WithArguments(arguments) with {
+            Summary = operandEffects,
+            TypedArgumentMask = mask
+        };
+    }
+
+    private ValueNode TypeCondition(IVisitableAstNode node, ICfgNode origin, string localSuffix) {
+        ValueNode typed = IrNodeTyper.TypeValue((ValueNode)node, localSuffix);
+        return _callEffects.TryGetValue(origin, out IrEffects effects)
+            ? (ValueNode)AttachSummary(typed, effects)
+            : typed;
     }
 
     /// <summary>The blocks created so far, in creation order (instruction layout order).</summary>
@@ -66,7 +140,7 @@ internal sealed class IrFlattener {
         }
         IrBlock next = NewBlock(false);
         if (!_current.HasTerminator) {
-            _current.Terminator = new IrJump(previousOrigin ?? node, new IrEdge(next, false));
+            _editor.SetTerminator(_current, new IrJump(previousOrigin ?? node, new IrEdge(next, false)));
         }
         _current = next;
         return _current;
@@ -77,7 +151,7 @@ internal sealed class IrFlattener {
         if (_current == null || _current.HasTerminator) {
             throw new InvalidOperationException($"Statement added after the block of {origin.Address} was closed.");
         }
-        _current.Statements.Add(IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+        _editor.Append(_current, CreateStatement(statement, origin, localSuffix));
     }
 
     /// <summary>Flattens the statements of <paramref name="node"/> into blocks starting at the current one.</summary>
@@ -130,7 +204,7 @@ internal sealed class IrFlattener {
                 _current = null;
                 break;
             case ReturnNode or FailAsUntestedNode or ThrowNode or CyclicJumpNode or InterruptReturnNode:
-                EndBlock(_current, new IrExit(origin, IrNodeTyper.RenameTemporaries(statement, localSuffix)));
+                EndBlock(_current, new IrExit(origin, IrNodeTyper.RenameTemporaries(statement, localSuffix), ExitEffectsOf(origin)));
                 break;
             case WhileWithExitNode whileWithExit when _raw:
                 yield return AstTrampoline.Call(FlattenWhileWithExitIt(whileWithExit, origin, localSuffix, isLocalFallthrough));
@@ -138,7 +212,7 @@ internal sealed class IrFlattener {
             case JumpNearNode or JumpFarNode or CallNearNode or CallFarNode or MoveIpNextNode
                 or HltNode or InvalidInstructionNode or CpuidNode or InterruptCallNode
                 or ReturnNearNode or ReturnFarNode or ReturnInterruptNode or CallbackNode when _raw:
-                EndBlock(_current, new IrExit(origin, statement));
+                EndBlock(_current, new IrExit(origin, statement, ExitEffectsOf(origin)));
                 break;
             case WhileWithExitNode or InfiniteLoopNode or DoWhileNode or ContinueNode or LabelNode
                 or CpuFaultTryCatchNode or InstructionBoundaryNode or EntryDispatcherLabelNode
@@ -148,7 +222,7 @@ internal sealed class IrFlattener {
                 or CallbackNode:
                 throw new NotSupportedException($"Lowered node {statement.GetType().Name} cannot appear inside an instruction at {origin.Address}.");
             default:
-                _current.Statements.Add(IrStatement.Create(IrNodeTyper.TypeStatement(statement, localSuffix), origin));
+                _editor.Append(_current, CreateStatement(statement, origin, localSuffix));
                 break;
         }
     }
@@ -159,12 +233,12 @@ internal sealed class IrFlattener {
             $"Flatten reached {origin.Address} with no open block.");
         IrBlock? join = null;
         IrBlock Join() => join ??= NewBlock(true);
-        ValueNode condition = IrNodeTyper.TypeValue(node.Condition, localSuffix);
+        ValueNode condition = TypeCondition(node.Condition, origin, localSuffix);
         AstResult<IrBlock> whenTrue = new();
         yield return AstTrampoline.Call(FlattenArmIt(node.TrueCase, origin, localSuffix, isLocalFallthrough, Join, whenTrue));
         AstResult<IrBlock> whenFalse = new();
         yield return AstTrampoline.Call(FlattenArmIt(node.FalseCase, origin, localSuffix, isLocalFallthrough, Join, whenFalse));
-        from.Terminator = new IrBranch(origin, condition, new IrEdge(whenTrue.Value!, true), new IrEdge(whenFalse.Value!, true));
+        _editor.SetTerminator(from, new IrBranch(origin, condition, new IrEdge(whenTrue.Value, true), new IrEdge(whenFalse.Value, true)));
         _current = join;
     }
 
@@ -182,7 +256,7 @@ internal sealed class IrFlattener {
         _current = start;
         yield return AstTrampoline.Call(FlattenIt(arm, origin, localSuffix, isLocalFallthrough));
         if (_current is { HasTerminator: false } tail) {
-            tail.Terminator = new IrJump(origin, new IrEdge(join(), true));
+            _editor.SetTerminator(tail, new IrJump(origin, new IrEdge(join(), true)));
         }
         result.Value = start;
     }
@@ -198,9 +272,9 @@ internal sealed class IrFlattener {
         IrBlock header = NewBlock(true);
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
-        from.Terminator = new IrJump(origin, new IrEdge(header, true));
-        header.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
-            new IrEdge(body, true), new IrEdge(exit, true));
+        _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
+        _editor.SetTerminator(header, new IrBranch(origin, TypeCondition(node.Condition, origin, localSuffix),
+            new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
             _current = body;
@@ -212,8 +286,8 @@ internal sealed class IrFlattener {
             throw new NotSupportedException(
                 $"WhileWithExitNode at {origin.Address} ends its body in a transfer; the exit condition has no block.");
         }
-        tail.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.ExitCondition, localSuffix),
-            new IrEdge(exit, true), new IrEdge(header, true));
+        _editor.SetTerminator(tail, new IrBranch(origin, TypeCondition(node.ExitCondition, origin, localSuffix),
+            new IrEdge(exit, true), new IrEdge(header, true)));
         _current = exit;
     }
 
@@ -224,9 +298,9 @@ internal sealed class IrFlattener {
         IrBlock header = NewBlock(true);
         IrBlock body = NewBlock(true);
         IrBlock exit = NewBlock(true);
-        from.Terminator = new IrJump(origin, new IrEdge(header, true));
-        header.Terminator = new IrBranch(origin, IrNodeTyper.TypeValue(node.Condition, localSuffix),
-            new IrEdge(body, true), new IrEdge(exit, true));
+        _editor.SetTerminator(from, new IrJump(origin, new IrEdge(header, true)));
+        _editor.SetTerminator(header, new IrBranch(origin, TypeCondition(node.Condition, origin, localSuffix),
+            new IrEdge(body, true), new IrEdge(exit, true)));
         _breakTargets.Push(() => exit);
         try {
             _current = body;
@@ -235,7 +309,7 @@ internal sealed class IrFlattener {
             _breakTargets.Pop();
         }
         if (_current is { HasTerminator: false } tail) {
-            tail.Terminator = new IrJump(origin, new IrEdge(header, true));
+            _editor.SetTerminator(tail, new IrJump(origin, new IrEdge(header, true)));
         }
         _current = exit;
     }
@@ -259,15 +333,17 @@ internal sealed class IrFlattener {
         } finally {
             _breakTargets.Pop();
         }
-        from.Terminator = new IrSwitch(origin, IrNodeTyper.TypeValue(node.Value, localSuffix), cases,
-            new IrEdge(defaultBlock.Value!, true));
+        _editor.SetTerminator(from, new IrSwitch(origin, TypeCondition(node.Value, origin, localSuffix), cases,
+            new IrEdge(defaultBlock.Value, true)));
         _current = join;
     }
 
     private void EndBlock(IrBlock block, IrTerminator terminator) {
-        block.Terminator = terminator;
+        _editor.SetTerminator(block, terminator);
         _current = null;
     }
+
+    private readonly IrEditor _editor = IrEditor.WithoutSsa;
 
     private readonly HashSet<IrBlock> _inner = [];
 

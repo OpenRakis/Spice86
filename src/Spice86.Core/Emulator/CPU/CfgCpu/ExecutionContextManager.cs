@@ -61,6 +61,11 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     /// </summary>
     public Dictionary<SegmentedAddress, ISet<CfgInstruction>> ExecutionContextEntryPoints { get; } = new();
 
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
+    /// a program can re-hook a vector, so a vector's delivery targets are not recoverable from the
+    /// final IVT alone.</summary>
+    public HashSet<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; } = new();
+
     public ExecutionContext CurrentExecutionContext { get; private set; }
 
     /// <summary>
@@ -77,6 +82,14 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
 
     private ExecutionContext NewExecutionContext(SegmentedAddress entryPoint) {
         return new(entryPoint, CurrentDepth, new(_memory, _state, _functionCatalogue, _useCodeOverride, _loggerService));
+    }
+
+    /// <summary>
+    /// Records the delivery of a hardware interrupt and opens the execution context its handler runs in.
+    /// </summary>
+    public void SignalHardwareInterrupt(byte vector, SegmentedAddress target, SegmentedAddress expectedReturn) {
+        HardwareInterruptDeliveries.Add((vector, target));
+        SignalNewExecutionContext(target, expectedReturn);
     }
 
     public void SignalNewExecutionContext(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress) {
@@ -150,13 +163,23 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     /// exploration is disabled (no seeded node is produced).
     /// </summary>
     /// <param name="handlerAddresses">Entry addresses of emulator-installed interrupt handlers.</param>
-    public void SeedKnownSafeHandlersAndRegisterEntryPoints(IReadOnlyList<SegmentedAddress> handlerAddresses) {
+    /// <param name="switchableCalls">Switchable calls to link after seeding. Their pointers were
+    /// written before the call instructions entered the graph, so the link made at write time was a
+    /// no-op; this link must happen even when no interrupt ever fires. They are linked in list order: linking
+    /// one call's target can create the call site of a later one (exploring the int 74h target
+    /// mints the mouse driver's own call-site node, which the driver's link then needs).</param>
+    public void SeedKnownSafeHandlersAndRegisterEntryPoints(IReadOnlyList<SegmentedAddress> handlerAddresses,
+        IReadOnlyList<SwitchableCall> switchableCalls) {
         _cfgNodeFeeder.SeedKnownSafeHandlers(handlerAddresses);
         foreach (CfgInstruction entryNode in handlerAddresses
             .Select(handlerAddress => _cfgNodeFeeder.NodeIndex.GetAtAddress(handlerAddress)
                 .FirstOrDefault(node => node.ContainingBlock is not null))
             .OfType<CfgInstruction>()) {
             RegisterEntryPoint(entryNode);
+        }
+        ICallTargetRegistry callTargetRegistry = _cfgNodeFeeder.InstructionsFeeder.CallTargetRegistry;
+        foreach (SwitchableCall call in switchableCalls) {
+            callTargetRegistry.RegisterCallTarget(call.CallSite, call.Target);
         }
     }
 
@@ -201,6 +224,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         _executionContextReturns.Clear();
         _functionCatalogue.Clear();
         ExecutionContextEntryPoints.Clear();
+        HardwareInterruptDeliveries.Clear();
         CurrentDepth = 0;
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
         ExecutingNode = null;

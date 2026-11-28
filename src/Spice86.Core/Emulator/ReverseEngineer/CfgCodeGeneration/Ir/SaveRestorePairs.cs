@@ -22,7 +22,9 @@ using System.Linq;
 /// provably the push's slot alone, every path between the two stays inside one region holding
 /// no call, interrupt delivery, fault, stack use or read of the slot, and a later push at the
 /// same SP overwrites the abandoned word before anything can read it. The pop's target is a
-/// general register, a segment register other than SS, or the flag register; the push's value
+/// general register, a segment register other than SS, or the flag register; a bare
+/// <c>Stack.Pop</c> the dead-write removal left also closes a pair, under the same slot and
+/// path conditions, and removes both statements. The push's value
 /// is any expression. Printing-only, like the register locals: the IR keeps the push and the
 /// pop.
 /// </summary>
@@ -32,7 +34,9 @@ internal static class SaveRestorePairs {
 
     /// <summary>One qualifying pair: the statement nodes to rewrite and the shared local.</summary>
     /// <param name="Push">The <see cref="StackCallNode"/> of the push statement.</param>
-    /// <param name="Pop">The <c>ASSIGN</c> of the pop statement.</param>
+    /// <param name="Pop">The <c>ASSIGN</c> of the pop statement, or the bare
+    /// <see cref="StackCallNode"/> of a pop whose register write the dead-write removal dropped:
+    /// such a pair removes the push and the pop and uses no local.</param>
     /// <param name="Direct">Nothing sits between the push and the pop: the pop prints
     /// <c>Y = X;</c> directly and no save local is used.</param>
     /// <param name="Pushed">The expression the push statement pushes.</param>
@@ -40,26 +44,52 @@ internal static class SaveRestorePairs {
     /// <param name="Declaration">Its <c>type name = 0;</c> declaration for the method top.</param>
     /// <param name="StackAdvance">The <c>SP += width</c> statement a pop into a segment
     /// register frees its slot with: removed together with the push.</param>
-    public sealed record Pair(StackCallNode Push, BinaryOperationNode Pop, bool Direct,
+    public sealed record Pair(StackCallNode Push, IVisitableAstNode Pop, bool Direct,
         ValueNode Pushed, MethodScopedVariableReferenceNode Variable, LocalDeclarationNode Declaration,
         IVisitableAstNode? StackAdvance);
 
+    /// <summary>A private save pair removed under the abandoned-stack-slots relaxation:
+    /// both statements leave the body and the bytes the push wrote are excluded from the
+    /// differential compare.</summary>
+    /// <param name="Push">The push node.</param>
+    /// <param name="Pop">The pop statement's node.</param>
+    /// <param name="SetBp">The frame's <c>bp = sp</c> node when the pair is a frame's
+    /// <c>push bp</c>: it leaves with the pair so BP keeps its entry value; <see langword="null"/>
+    /// for a pair that is not a frame's push.</param>
+    /// <param name="Site">The push instruction's address, matching the recorded pushes.</param>
+    /// <param name="Bytes">The saved word's width.</param>
+    public sealed record RemovedSave(StackCallNode Push, IVisitableAstNode Pop,
+        IVisitableAstNode? SetBp, SegmentedAddress Site, int Bytes);
+
     /// <summary>The pairs of one method, with the declarations to print at its top.</summary>
     /// <param name="Pairs">The qualifying pairs.</param>
-    public sealed record SavedPairPlan(IReadOnlyList<Pair> Pairs) {
+    /// <param name="RemovedSaves">The relaxed private pairs to drop entirely.</param>
+    public sealed record SavedPairPlan(IReadOnlyList<Pair> Pairs,
+        IReadOnlyList<RemovedSave> RemovedSaves) {
         /// <summary>No pair.</summary>
-        public static readonly SavedPairPlan Empty = new([]);
+        public static readonly SavedPairPlan Empty = new([], []);
     }
 
     /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
     /// slot analysis of its final IR.</summary>
-    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa) {
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa) =>
+        Plan(method, ssa, IrSegmentFacts.None, GenerationPolicy.Strict);
+
+    /// <summary>Finds the qualifying pairs of <paramref name="method"/> in strict mode.</summary>
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts) =>
+        Plan(method, ssa, entryFacts, GenerationPolicy.Strict);
+
+    /// <summary>Finds the qualifying pairs of <paramref name="method"/>, over the SSA and the stack
+    /// slot analysis of its final IR, resolving entry versions through the segment entry facts
+    /// the prepare round consumed.</summary>
+    public static SavedPairPlan Plan(IrMethod method, IrSsa ssa, IrSegmentFacts entryFacts,
+        GenerationPolicy policy) {
         if (!method.Blocks.SelectMany(block => block.Statements).Any(statement =>
                 statement.Node is StackCallNode { Operation: StackOperation.Push })) {
             return SavedPairPlan.Empty;
         }
-        IrMemoryAliasAnalysis alias = new(ssa);
-        IrStackSlots slots = IrStackSlots.Compute(method, alias);
+        IrMemoryAliasAnalysis alias = new(method, ssa, entryFacts, policy);
+        IrStackSlots slots = IrStackSlots.Compute(method, alias, _ => null);
         BlockGraph<IrBlock> graph = method.ToBlockGraph();
         DominatorTree<IrBlock> dominators = DominatorTreeBuilder.BuildFromEntries(graph);
         List<IrBlock> exits = [.. graph.Blocks.Where(block => graph.GetSuccessors(block).Count == 0)];
@@ -78,7 +108,12 @@ internal static class SaveRestorePairs {
                 }
             }
         }
-        return pairs.Count == 0 ? SavedPairPlan.Empty : new SavedPairPlan(pairs);
+        IReadOnlyList<RemovedSave> removedSaves = policy.AssumeAbandonedStackSlotsUnobserved
+            ? RemovedSavesOf(method, ssa, graph, dominators, postDominators, alias, slots)
+            : [];
+        return pairs.Count == 0 && removedSaves.Count == 0
+            ? SavedPairPlan.Empty
+            : new SavedPairPlan(pairs, removedSaves);
     }
 
     /// <summary>Rewrites every pair of <paramref name="plan"/> inside the structured
@@ -90,13 +125,16 @@ internal static class SaveRestorePairs {
             new(ReferenceEqualityComparer.Instance);
         HashSet<IVisitableAstNode> removed = new(ReferenceEqualityComparer.Instance);
         foreach (Pair pair in plan.Pairs) {
-            if (pair.Direct) {
+            if (pair.Pop is not BinaryOperationNode pop) {
                 removed.Add(pair.Push);
-                replacements[pair.Pop] = pair.Pop with { Right = pair.Pushed };
+                removed.Add(pair.Pop);
+            } else if (pair.Direct) {
+                removed.Add(pair.Push);
+                replacements[pop] = pop with { Right = pair.Pushed };
             } else {
                 replacements[pair.Push] = new BinaryOperationNode(pair.Variable.DataType,
                     pair.Variable, BinaryOperation.ASSIGN, pair.Pushed);
-                replacements[pair.Pop] = pair.Pop with { Right = pair.Variable };
+                replacements[pop] = pop with { Right = pair.Variable };
             }
             if (pair.StackAdvance is { } advance) {
                 removed.Add(advance);
@@ -125,63 +163,102 @@ internal static class SaveRestorePairs {
         }
     }
 
+    /// <summary>Removes every relaxed pair of <paramref name="saves"/> from the structured
+    /// <paramref name="body"/>: a push or pop that is a direct child of a block is dropped.
+    /// A save is removed only when all of its nodes are direct children of blocks - a
+    /// statement nested in a duplicated boundary keeps the whole save, which is not an
+    /// error. Returns the saves actually removed.</summary>
+    public static (BlockNode Body, IReadOnlyList<RemovedSave> Removed) ApplyRemoved(
+        BlockNode body, IReadOnlyList<RemovedSave> saves) {
+        Dictionary<IVisitableAstNode, RemovedSave> wanted = new(ReferenceEqualityComparer.Instance);
+        foreach (RemovedSave save in saves) {
+            wanted[save.Push] = save;
+            wanted[save.Pop] = save;
+            if (save.SetBp is { } setBp) {
+                wanted[setBp] = save;
+            }
+        }
+        HashSet<IVisitableAstNode> found = new(ReferenceEqualityComparer.Instance);
+        Collect(body);
+        List<RemovedSave> dropped = [];
+        foreach (RemovedSave save in saves.Where(save =>
+                found.Contains(save.Push) && found.Contains(save.Pop)
+                    && (save.SetBp is null || found.Contains(save.SetBp)))) {
+            dropped.Add(save);
+        }
+        HashSet<IVisitableAstNode> remove = new(ReferenceEqualityComparer.Instance);
+        foreach (RemovedSave save in dropped) {
+            remove.Add(save.Push);
+            remove.Add(save.Pop);
+            if (save.SetBp is { } setBp) {
+                remove.Add(setBp);
+            }
+        }
+        BlockNode rewritten = (BlockNode)Rewrite(body);
+        return (rewritten, dropped);
+
+        void Collect(IVisitableAstNode node) {
+            if (node is BlockNode block) {
+                foreach (IVisitableAstNode statement in block.Statements) {
+                    if (wanted.ContainsKey(statement)) {
+                        found.Add(statement);
+                    } else {
+                        Collect(statement);
+                    }
+                }
+                return;
+            }
+            foreach (IVisitableAstNode child in IrAstChildren.ChildrenOf(node)) {
+                Collect(child);
+            }
+        }
+
+        IVisitableAstNode Rewrite(IVisitableAstNode node) {
+            if (node is BlockNode block) {
+                List<IVisitableAstNode> statements = [];
+                foreach (IVisitableAstNode statement in block.Statements) {
+                    if (remove.Contains(statement)) {
+                        continue;
+                    }
+                    statements.Add(Rewrite(statement));
+                }
+                return new BlockNode([.. statements]);
+            }
+            return IrAstChildren.MapChildren(node, Rewrite);
+        }
+    }
+
     /// <summary>The declarations of <paramref name="plan"/>'s save locals, printed at the method
     /// top so the restore is always in scope and definitely assigned. Adjacent pairs print the
-    /// pushed expression directly and declare nothing.</summary>
+    /// pushed expression directly, and bare-pop pairs remove both statements - both declare
+    /// nothing.</summary>
     public static IEnumerable<LocalDeclarationNode> Declarations(SavedPairPlan plan) =>
-        plan.Pairs.Where(pair => !pair.Direct).Select(pair => pair.Declaration);
+        plan.Pairs.Where(pair => pair.Pop is BinaryOperationNode && !pair.Direct)
+            .Select(pair => pair.Declaration);
 
     /// <summary>The candidate pair of the pop at <paramref name="popIndex"/> of
     /// <paramref name="popBlock"/>, or <c>null</c> when any condition fails. The pop's target is
-    /// a general register, a segment register other than SS or the flag register.</summary>
+    /// a general register, a segment register other than SS, the flag register, or nothing - a
+    /// bare <see cref="StackCallNode"/> pop the dead-write removal left discards the word, so the
+    /// pair removes both statements and no local is declared.</summary>
     private static Pair? PairOf(IrMethod method, BlockGraph<IrBlock> graph,
         DominatorTree<IrBlock> dominators, DominatorTree<IrBlock>? postDominators,
         IrMemoryAliasAnalysis alias, IrStackSlots slots, IrBlock popBlock, int popIndex,
         HashSet<string> reserved) {
         IrStatement popStatement = popBlock.Statements[popIndex];
-        if (popStatement.Node is not BinaryOperationNode {
-                BinaryOperation: BinaryOperation.ASSIGN } pop) {
-            return null;
-        }
+        IVisitableAstNode popNode = popStatement.Node;
         IVisitableAstNode? stackAdvance = null;
         BitWidth popWidth;
-        switch (pop.Left) {
-            case RegisterNode { RegisterIndex: <= (int)RegisterIndex.DiIndex } popRegister
-                when popRegister is not SegmentRegisterNode
-                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
-                    && popCall.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)
-                    && popRegister.DataType.BitWidth == popCall.Width:
-                popWidth = popCall.Width;
-                break;
-            case FlagRegisterNode flags
-                when pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
-                    && flags.DataType.BitWidth == popCall.Width:
-                popWidth = popCall.Width;
-                break;
-            case SegmentRegisterNode segment
-                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex
-                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } segmentPopCall
-                    && segment.DataType.BitWidth == segmentPopCall.Width:
-                popWidth = segmentPopCall.Width;
-                break;
-            case SegmentRegisterNode segment
-                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex:
-                // A `pop ss` blocks interrupt delivery until the next instruction retires, which
-                // an assignment does not reproduce; every other segment target stays in the pair.
-                // When the pop is not a `Stack.Pop` call - a mov reading the top word - the SP
-                // advance must be a separate statement, also part of the pair; without it the
-                // push's slot is not freed and cannot be removed.
-                popWidth = segment.DataType.BitWidth;
-                if (popIndex + 1 >= popBlock.Statements.Count
-                    || !IrStackSlots.TryStackPointerAdjustment(
-                            popBlock.Statements[popIndex + 1].Node, out int adjustment)
-                    || adjustment != (int)popWidth / 8) {
-                    return null;
-                }
-                stackAdvance = popBlock.Statements[popIndex + 1].Node;
-                break;
-            default:
-                return null;
+        BinaryOperationNode? pop = null;
+        if (popNode is StackCallNode { Operation: StackOperation.Pop } barePop
+                && barePop.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)) {
+            popWidth = barePop.Width;
+        } else if (popNode is BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN } popAssign
+            && PopTargetOf(popAssign, popBlock, popIndex, out popWidth, out stackAdvance)) {
+            pop = popAssign;
+        } else {
+            return null;
         }
         if (postDominators is null || slots.OffsetBefore(popStatement) is not {
                 Kind: IrStackOffsetKind.Known } popOffset) {
@@ -193,13 +270,14 @@ internal static class SaveRestorePairs {
         IrStatement? pushStatement = null;
         ValueNode? pushed = null;
         foreach (IrStackSlotRead read in slots.ReadsOf(popStatement)) {
-            if (!read.Complete || read.Delta != popOffset.Delta || read.Definitions.Count != 1
+            if (!read.Complete || !read.ProvedRam || read.Delta != popOffset.Delta
+                || read.Definitions.Count != 1
                 || read.Definitions.Single().Statement is not { } definition
                 || definition.Node is not StackCallNode {
                     Operation: StackOperation.Push } candidate
                 || candidate.Width != popWidth
                 || candidate.Arguments is not [ValueNode pushedValue]
-                || pushedValue.DataType.BitWidth != pop.Left.DataType.BitWidth) {
+                || pushedValue.DataType.BitWidth != popWidth) {
                 continue;
             }
             push = candidate;
@@ -274,7 +352,7 @@ internal static class SaveRestorePairs {
                 popOffset.Base, popOffset.Delta)) {
             return null;
         }
-        string stem = $"saved{TargetName(pop.Left)}_{pushStatement.Origin.Address.Offset:X4}";
+        string stem = $"saved{(pop is null ? "Discarded" : TargetName(pop.Left))}_{pushStatement.Origin.Address.Offset:X4}";
         string name = stem;
         for (int suffix = 2; !reserved.Add(name); suffix++) {
             name = $"{stem}_{suffix}";
@@ -287,15 +365,232 @@ internal static class SaveRestorePairs {
                 popBlock.Statements[index].Node is InstructionStartNode or CommentNode);
         DataType type = DataType.UnsignedFromBitWidth(popWidth);
         MethodScopedVariableReferenceNode variable = new(type, name);
-        return new Pair(push, pop, direct, pushed, variable,
+        return new Pair(push, popNode, direct, pushed, variable,
             new LocalDeclarationNode(type, name, new ConstantNode(type, 0)), stackAdvance);
+    }
+
+    /// <summary>Whether <paramref name="pop"/>'s assignment target is a general register, a
+    /// segment register other than SS or the flag register, and its popped width. A segment
+    /// target reading the top word without a <c>Stack.Pop</c> call needs its SP advance as the
+    /// next statement: it is part of the pair (<paramref name="stackAdvance"/>).</summary>
+    private static bool PopTargetOf(BinaryOperationNode pop, IrBlock popBlock, int popIndex,
+        out BitWidth popWidth, out IVisitableAstNode? stackAdvance) {
+        stackAdvance = null;
+        switch (pop.Left) {
+            case RegisterNode { RegisterIndex: <= (int)RegisterIndex.DiIndex } popRegister
+                when popRegister is not SegmentRegisterNode
+                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
+                    && popCall.Width is (BitWidth.WORD_16 or BitWidth.DWORD_32)
+                    && popRegister.DataType.BitWidth == popCall.Width:
+                popWidth = popCall.Width;
+                return true;
+            case FlagRegisterNode flags
+                when pop.Right is StackCallValueNode { Operation: StackOperation.Pop } popCall
+                    && flags.DataType.BitWidth == popCall.Width:
+                popWidth = popCall.Width;
+                return true;
+            case SegmentRegisterNode segment
+                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex
+                    && pop.Right is StackCallValueNode { Operation: StackOperation.Pop } segmentPopCall
+                    && segment.DataType.BitWidth == segmentPopCall.Width:
+                popWidth = segmentPopCall.Width;
+                return true;
+            case SegmentRegisterNode segment
+                when segment.RegisterIndex != (int)SegmentRegisterIndex.SsIndex:
+                // A `pop ss` blocks interrupt delivery until the next instruction retires, which
+                // an assignment does not reproduce; every other segment target stays in the pair.
+                // When the pop is not a `Stack.Pop` call - a mov reading the top word - the SP
+                // advance must be a separate statement, also part of the pair; without it the
+                // push's slot is not freed and cannot be removed.
+                popWidth = segment.DataType.BitWidth;
+                if (popIndex + 1 >= popBlock.Statements.Count
+                    || !IrStackSlots.TryStackPointerAdjustment(
+                            popBlock.Statements[popIndex + 1].Node, out int adjustment)
+                    || adjustment != (int)popWidth / 8) {
+                    return false;
+                }
+                stackAdvance = popBlock.Statements[popIndex + 1].Node;
+                return true;
+            default:
+                popWidth = default;
+                return false;
+        }
+    }
+
+    /// <summary>The relaxed pairs of <paramref name="method"/>: register save push/pop pairs
+    /// whose saved word nothing observes, planned only under the abandoned-stack-slots
+    /// relaxation. Requires a frame reserving no local bytes and no stack address escaping
+    /// (a proven frame access's SP/BP read is exempt - it resolves against the entry SP).</summary>
+    private static List<RemovedSave> RemovedSavesOf(IrMethod method, IrSsa ssa,
+        BlockGraph<IrBlock> graph, DominatorTree<IrBlock> dominators,
+        DominatorTree<IrBlock>? postDominators, IrMemoryAliasAnalysis alias, IrStackSlots slots) {
+        List<RemovedSave> saves = [];
+        if (postDominators is null) {
+            return saves;
+        }
+        IrFrames frames = IrFrames.Compute(method, ssa, slots, _ => CpuValues.Registers);
+        HashSet<IrStatement> frameWriters = [];
+        Dictionary<IrStatement, IrStatement> setBpOf = [];
+        foreach (IrEntry entry in method.Entries) {
+            if (frames.FrameAt(entry) is not { } frame) {
+                continue;
+            }
+            if (frame.LocalBytes != 0) {
+                return saves;
+            }
+            frameWriters.Add(frame.SetBp);
+            setBpOf[frame.PushBp] = frame.SetBp;
+        }
+        if (IrStackSlots.StackEscapes(method, frames)) {
+            return saves;
+        }
+        foreach (IrBlock block in method.Blocks) {
+            for (int index = 0; index < block.Statements.Count; index++) {
+                if (RemovedSaveOf(method, dominators, postDominators, alias, slots, frames,
+                        frameWriters, setBpOf, block, index) is { } save) {
+                    saves.Add(save);
+                }
+            }
+        }
+        return saves;
+    }
+
+    /// <summary>The relaxed pair of the same-register pop at <paramref name="popIndex"/> of
+    /// <paramref name="popBlock"/>, or <c>null</c> when any condition fails.</summary>
+    private static RemovedSave? RemovedSaveOf(IrMethod method, DominatorTree<IrBlock> dominators,
+        DominatorTree<IrBlock> postDominators, IrMemoryAliasAnalysis alias, IrStackSlots slots,
+        IrFrames frames, HashSet<IrStatement> frameWriters,
+        Dictionary<IrStatement, IrStatement> setBpOf, IrBlock popBlock, int popIndex) {
+        IrStatement popStatement = popBlock.Statements[popIndex];
+        if (popStatement.Node is not BinaryOperationNode {
+                BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode target,
+                Right: StackCallValueNode { Operation: StackOperation.Pop,
+                    Width: BitWidth.WORD_16 } popCall }
+            || target is SegmentRegisterNode
+            || target.DataType.BitWidth != popCall.Width
+            || slots.OffsetBefore(popStatement) is not {
+                Kind: IrStackOffsetKind.Known } popOffset) {
+            return null;
+        }
+        StackCallNode? push = null;
+        IrStatement? pushStatement = null;
+        foreach (IrStackSlotRead read in slots.ReadsOf(popStatement)) {
+            if (!read.Complete || !read.ProvedRam || read.Delta != popOffset.Delta
+                || read.Definitions.Count != 1
+                || read.Definitions.Single().Statement is not { } definition
+                || definition.Node is not StackCallNode {
+                    Operation: StackOperation.Push, Width: BitWidth.WORD_16 } candidate
+                || candidate.Arguments is not [RegisterNode pushed]
+                || pushed.RegisterIndex != target.RegisterIndex
+                || pushed.DataType.BitWidth != target.DataType.BitWidth) {
+                continue;
+            }
+            push = candidate;
+            pushStatement = definition;
+        }
+        if (push is null || pushStatement is null) {
+            return null;
+        }
+        (IrBlock pushBlock, int pushIndex) = SiteOf(method, pushStatement);
+        if (!StrictlyDominates(dominators, true, pushBlock, pushIndex, popBlock, popIndex)
+            || !StrictlyDominates(postDominators, false, popBlock, popIndex, pushBlock,
+                pushIndex)) {
+            return null;
+        }
+        CpuValues savedMask = IrValueSets.RegisterLowWordMasks[target.RegisterIndex];
+        foreach ((IrBlock betweenBlock, int betweenIndex) in
+                Between(dominators, pushBlock, pushIndex, popBlock, popIndex)) {
+            if (!PrivateStatement(betweenBlock.Statements[betweenIndex], betweenBlock,
+                    betweenIndex, alias, frames, frameWriters, savedMask,
+                    target.RegisterIndex, 2)) {
+                return null;
+            }
+        }
+        foreach (IrBlock betweenBlock in dominators.GetDominatedBlocks(pushBlock)) {
+            if (dominators.Dominates(popBlock, betweenBlock)) {
+                continue;
+            }
+            IrTerminator terminator = betweenBlock.Terminator;
+            if (terminator.Effects.MayFault || terminator.Effects.DeliversInterrupts
+                || (terminator.Effects.TokenWrites & IrTokens.Memory) != IrTokens.None
+                || ((terminator.Effects.Reads | terminator.Effects.MayWrite)
+                    & (StackValues | savedMask)) != CpuValues.None
+                || IrAstChildren.TerminatorNodes(terminator)
+                    .Any(node => node is StackCallNode or StackCallValueNode)) {
+                return null;
+            }
+            IrMemoryAccess slot = alias.StackAccess(betweenBlock,
+                betweenBlock.Statements.Count, 0, 2);
+            if (alias.Reads(betweenBlock, terminator).Any(read =>
+                    alias.Relation(read, slot) != IrAliasRelation.Disjoint)) {
+                return null;
+            }
+        }
+        // The frame's bp = sp leaves with the pair: with the pop gone its BP value would reach
+        // the method exit, and PrivateStatement already proved every BP read between push and
+        // pop is a frame access printed from the entry SP, so removing all three keeps BP at
+        // its entry value.
+        IVisitableAstNode? setBp = setBpOf.TryGetValue(pushStatement, out IrStatement? setBpStatement)
+            ? setBpStatement.Node
+            : null;
+        return new RemovedSave(push, popStatement.Node, setBp, pushStatement.Origin.Address, 2);
+    }
+
+    /// <summary>Whether <paramref name="between"/> cannot observe the relaxed pair's slot:
+    /// the strict S3 / S4 / S5 conditions plus the frame exceptions - the frame's own
+    /// <c>bp = sp</c> may touch SP and BP (it leaves with the pair when the push is the
+    /// frame's), and a proven frame access may read the saved register through its pointer (it
+    /// prints from the entry SP). Any other read of the saved register outside a frame access
+    /// refuses, as does every write of it.</summary>
+    private static bool PrivateStatement(IrStatement between, IrBlock block, int index,
+        IrMemoryAliasAnalysis alias, IrFrames frames, HashSet<IrStatement> frameWriters,
+        CpuValues savedMask, int savedIndex, int width) {
+        if (between.Effects.MayFault || between.Effects.DeliversInterrupts
+            || alias.IsFullMemoryBoundary(block, index)
+            || IrAstChildren.Descendants(between.Node)
+                .Any(node => node is StackCallNode or StackCallValueNode)) {
+            return false;
+        }
+        if (!frameWriters.Contains(between)) {
+            if (((between.Effects.Reads | between.Effects.MayWrite) & CpuValues.Esp)
+                    != CpuValues.None
+                || (between.Effects.MayWrite & savedMask) != CpuValues.None) {
+                return false;
+            }
+            if ((between.Effects.Reads & savedMask) != CpuValues.None
+                && !frames.AccessesOf(between).Any(access =>
+                    access.Register == (RegisterIndex)savedIndex)) {
+                return false;
+            }
+        }
+        IrMemoryAccess slot = alias.StackAccess(block, index, 0, width);
+        Dictionary<SegmentedPointerNode, IrFrameAccess> proven = [];
+        foreach (IrFrameAccess access in frames.AccessesOf(between)) {
+            proven[access.Pointer] = access;
+        }
+        foreach (IVisitableAstNode node in IrAstChildren.Descendants(between.Node)) {
+            if (node is not SegmentedPointerNode and not AbsolutePointerNode) {
+                continue;
+            }
+            if (node is SegmentedPointerNode pointer
+                    && proven.TryGetValue(pointer, out IrFrameAccess? frameAccess)) {
+                if (frameAccess.EntryOffset < 0 && frameAccess.EntryOffset + frameAccess.Width
+                        > -width) {
+                    return false;
+                }
+            } else if (alias.Relation(alias.OfPointer((ValueNode)node, between, block, index),
+                    slot) != IrAliasRelation.Disjoint) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /// <summary>The block and statement index of <paramref name="statement"/> in
     /// <paramref name="method"/>.</summary>
     private static (IrBlock, int) SiteOf(IrMethod method, IrStatement statement) {
         foreach (IrBlock block in method.Blocks) {
-            int index = block.Statements.IndexOf(statement);
+            int index = block.IndexOfStatement(statement);
             if (index >= 0) {
                 return (block, index);
             }

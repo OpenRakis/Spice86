@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.Storage;
@@ -211,6 +212,7 @@ public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDisc
     /// <param name="loadedImageRegistry">Records every program image the process manager loads.</param>
     /// <param name="emulatedClock">The emulated clock backing the DOS date/time services and FCB timestamps.</param>
     /// <param name="serviceCallEvents">The service call events the DOS interrupt handlers report their service calls to.</param>
+    /// <param name="recordedRunFacts">Records the run facts DOS observes for the code generator.</param>
     public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
@@ -225,7 +227,8 @@ public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDisc
         ExpandedMemoryManager? emsManager,
         LoadedImageRegistry loadedImageRegistry,
         IEmulatedClock emulatedClock,
-        ServiceCallEvents serviceCallEvents) {
+        ServiceCallEvents serviceCallEvents,
+        RecordedRunFacts recordedRunFacts) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -259,7 +262,7 @@ public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDisc
         _codePageState = DosCodePageState.CreateForCurrentCulture();
         DosStringDecoder dosStringDecoder = new(memory, state, _codePageState);
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, Devices);
+            _loggerService, Devices, emulatedClock);
 
         // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
         ushort initialPspSegment = (ushort)(options.ProgramEntryPointSegment - 0x10);
@@ -282,12 +285,12 @@ public sealed class Dos : IStatefulDevice<DosState>, IDriveStatusProvider, IDisc
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService, emulatedClock);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
-        ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, loadedImageRegistry, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, loadedImageRegistry, recordedRunFacts, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents,
             keyboardInt16Handler, CountryInfo, _codePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
-            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock);
+            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock, recordedRunFacts);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, ProcessManager, _loggerService);
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, serviceCallEvents, DosInt21Handler, _loggerService);

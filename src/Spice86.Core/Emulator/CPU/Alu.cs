@@ -113,23 +113,23 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     /// </summary>
     public abstract TUnsigned Xor(TUnsigned value1, TUnsigned value2);
 
-    public abstract TUnsigned Rcl(TUnsigned value, byte count);
+    public abstract TUnsigned Rcl(TUnsigned value, [ShiftCount] byte count);
 
-    public abstract TUnsigned Rcr(TUnsigned value, int count);
+    public abstract TUnsigned Rcr(TUnsigned value, [ShiftCount] int count);
 
-    public abstract TUnsigned Rol(TUnsigned value, byte count);
+    public abstract TUnsigned Rol(TUnsigned value, [ShiftCount] byte count);
 
-    public abstract TUnsigned Ror(TUnsigned value, int count);
+    public abstract TUnsigned Ror(TUnsigned value, [ShiftCount] int count);
 
-    public abstract TUnsigned Sar(TUnsigned value, int count);
+    public abstract TUnsigned Sar(TUnsigned value, [ShiftCount] int count);
 
-    public abstract TUnsigned Shl(TUnsigned value, int count);
+    public abstract TUnsigned Shl(TUnsigned value, [ShiftCount] int count);
 
-    public abstract TUnsigned Shld(TUnsigned destination, TUnsigned source, byte count);
+    public abstract TUnsigned Shld(TUnsigned destination, TUnsigned source, [ShiftCount] byte count);
 
-    public abstract TUnsigned Shrd(TUnsigned destination, TUnsigned source, byte count);
+    public abstract TUnsigned Shrd(TUnsigned destination, TUnsigned source, [ShiftCount] byte count);
 
-    public abstract TUnsigned Shr(TUnsigned value, int count);
+    public abstract TUnsigned Shr(TUnsigned value, [ShiftCount] int count);
 
     protected static uint BorrowBitsSub(uint value1, uint value2, uint dst) {
         return value1 ^ value2 ^ dst ^ ((value1 ^ dst) & (value1 ^ value2));

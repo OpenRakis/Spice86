@@ -1,7 +1,8 @@
 ; compile it with fasm
-; Joined RAM accesses: two word loads or stores at adjacent constant offsets should merge
-; into one dword access ONLY when the pair is proven - same known segment, constant adjacent
-; offsets (low <= FFFCh, high == low+2), no wrap, all in known RAM, no observer in between.
+; Joined RAM accesses: two word loads or stores at adjacent offsets should merge into one
+; dword access ONLY when the pair is proven - same known segment, constant adjacent offsets
+; (low <= FFFCh, high == low+2) or the same bounded index register at d and d+2 whose interval
+; keeps the widened access inside the segment, no wrap, all in known RAM, no observer between.
 ; DS = SS = 2000h, ES = 2100h, SP = 1000h. Pass p writes its results at offset 80h * p
 ; (physical 20000h + 80h * p). Initial RAM (fixture-side ConfigureMachine):
 ;   DS:0800..0803 = 89ABCDEFh   DS:0804..0807 = 01234567h
@@ -111,10 +112,45 @@ pass_loop:
     mov [bx+1Ah], dx        ;; CAFE + y + carry
     cmp di, di
 
+; J1: bounded-index word stores (di = bx & 0Fh = 0) -> joined dword store at 60h
+    mov ax, [0800h]
+    mov dx, [0802h]
+    mov di, bx
+    and di, 0Fh
+    mov [di+60h], ax        ;; dword at 60h = 89ABCDEF
+    mov [di+62h], dx
+    cmp di, di
+
     add bx, 80h
     add si, 4
     dec bp
     jnz pass_loop
+
+; J2: bounded index reaching the segment end (di in 0..FFF0h): the second word store wraps
+; to offset 0, so the pair must stay two word stores - a joined dword store would write the
+; high word at linear segment+10000h instead
+    mov di, bx
+    and di, 0Fh             ;; di = 0
+    not di                  ;; di = FFFFh
+    and di, 0FFF0h          ;; di = FFF0h, proven interval [0, FFF0h]
+    mov ax, 1111h
+    mov dx, 2222h
+    mov [di+0Eh], ax        ;; DS:FFFE = 1111h
+    mov [di+10h], dx        ;; wraps to DS:0000 = 2222h
+    cmp di, di
+
+; J3: a crossing pair through a register known constant (di = FFFEh): the second word store
+; wraps to offset 0, a known fact - even under the stay-in-segment relaxation the pair stays
+; two word stores
+    mov di, 0FFFEh
+    mov ax, 3333h
+    mov dx, 4444h
+    mov [di], ax            ;; DS:FFFE = 3333h
+    mov [di+2], dx          ;; wraps to DS:0000 = 4444h, overwrites J2's word
+    cmp di, di
+
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 observe_iret:

@@ -165,19 +165,14 @@ public sealed class IrInterruptServiceCallsTest {
     /// <see cref="IrPass.InterruptServiceCalls"/> with the production whole-vector predicate, so the
     /// statements hold the final generic or direct call nodes.</summary>
     private static IReadOnlyList<IrMethod> ServiceCallMethods(CfgPartitionedProgram program) {
-        AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program,
-            new InstructionMnemonic(renderer));
-        CfgGeneratorContext context = analysis.Context;
-        GenerationPlan plan = GenerationPlanBuilder.Build(context);
-        TransferEmitter transfer = new(context);
-        HardwareInterruptEffectBuilder effects = new(context, transfer, renderer, plan);
-        InstructionLowerer lowerer = new(context, transfer, effects, effects.Compute());
-        IrLifter lifter = new(context, lowerer, renderer);
-        List<IrMethod> methods = new(plan.Methods.Count);
-        foreach (IrMethod method in plan.Methods.Select(lifter.Lift)) {
+        EffectBuilderSetup setup = EffectBuilderSetup.Create(program);
+        InstructionLowerer lowerer = new(setup.Context, setup.Transfer, setup.Effects,
+            setup.Effects.Compute());
+        IrLifter lifter = new(setup.Context, lowerer, setup.Renderer);
+        List<IrMethod> methods = new(setup.Plan.Methods.Count);
+        foreach (IrMethod method in setup.Plan.Methods.Select(lifter.Lift)) {
             IrPassPipeline.Run(method, IrPass.InterruptServiceCalls, verify: true, buildWebs: false,
-                program.Inputs.IoPorts, effects.HasOnlyBuiltInTargets, new GenerationStepTimer());
+                program.Inputs.IoPorts, setup.Effects.HasOnlyBuiltInTargets, new GenerationStepTimer());
             methods.Add(method);
         }
         return methods;
@@ -305,9 +300,14 @@ public sealed class IrInterruptServiceCallsTest {
         CallNodes(methods).OfType<InterruptServiceCallNode>().Should().ContainSingle(
             "only the recorded stub-only site binds the implementation")
             .Which.Service.Implementation?.Name.Should().Be(nameof(DosInt21Handler.ReadDosVersion));
-        CallNodes(methods).OfType<InterruptCallHelperNode>().Should().ContainSingle(
-            "the speculative site itself stays generic")
-            .Which.Kind.Should().Be(InterruptSiteKind.NotObserved);
+        CallNodes(methods).OfType<InterruptCallHelperNode>().Should().BeEmpty(
+            "the never-executed site has no call to keep generic");
+        methods.SelectMany(method => method.Blocks).Select(block => block.Terminator)
+            .OfType<IrExit>().Where(exit => exit.Transfer is FailAsUntestedNode)
+            .Should().ContainSingle("the speculative site itself fails as untested")
+            .Which.Transfer.Should().BeOfType<FailAsUntestedNode>().Which.Parts
+            .Should().Equal(new FailAsUntestedNode(
+                [UntestedMessagePart.Literal("Untested interrupt at F000:0006")]).Parts);
     }
 
     /// <summary>A site that observed both the stub and a custom target keeps the whole vector
@@ -479,9 +479,10 @@ public sealed class IrInterruptServiceCallsTest {
             "a hooked call can deliver any handler, so a known DS does not survive it");
     }
 
-    /// <summary>A direct call must-writes only its result targets, reads only its bound input
-    /// arguments (added by the statement effects, not by the contract effects) and may-write
-    /// the contract's writes - no frame, no selector, no preserved outputs.</summary>
+    /// <summary>A direct call must-writes only its result targets and reads only the interrupt
+    /// frame's SS/SP/CS/FLAGS/DF; the contract's input reads come from the argument children. Its
+    /// may-writes are the contract's writes only, the popped frame restoring each flag's pre-call
+    /// value except declared flag results.</summary>
     [Fact]
     public void DirectEffectsWriteOnlyTheResultTargets() {
         // Arrange: int 17h WriteCharacter, declared Writes = Ah|Carry.
@@ -491,7 +492,9 @@ public sealed class IrInterruptServiceCallsTest {
         InterruptServiceCallNode call = new(0x17, ServiceSelector.Ah, entry, "Printer",
             [(RegisterNode)IrValueSets.NodeOf(CpuValues.Al),
                 (RegisterNode)IrValueSets.NodeOf(CpuValues.Dx)]) {
-            Results = [new RegisterNode(DataType.UINT8, 4), new CpuFlagNode(Flags.Carry)]
+            Results = [new RegisterNode(DataType.UINT8, 4), new CpuFlagNode(Flags.Carry)],
+            ReturnSegment = new SegmentVariableNode(0x1000),
+            ReturnOffset = new OffsetLiteralNode(0x1234)
         };
 
         // Act
@@ -500,10 +503,13 @@ public sealed class IrInterruptServiceCallsTest {
         // Assert
         effects.MustWrite.Should().Be(CpuValues.Ah | CpuValues.Carry,
             "only the result targets are must-written");
-        effects.Reads.Should().Be(CpuValues.None,
-            "the bound inputs arrive as arguments; the contract effects read nothing else");
+        effects.Reads.Should().Be(
+            CpuValues.Ss | CpuValues.Sp | CpuValues.Cs
+                | CpuValues.StatusFlags | CpuValues.Direction,
+            "the call pushes the interrupt frame; input reads come from the argument children");
         effects.MayWrite.Should().Be(CpuValues.Ah | CpuValues.Carry,
-            "may-write is the contract's writes");
+            "may-write is the contract's writes; the popped frame keeps each flag's pre-call " +
+            "value except declared flag results");
         effects.TokenReads.Should().Be(IrTokens.Memory,
             "a direct call still touches memory conservatively");
         effects.TokenWrites.Should().Be(IrTokens.Memory);

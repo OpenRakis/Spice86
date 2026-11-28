@@ -2,12 +2,18 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using System.Reflection;
-using System.Text.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -16,8 +22,12 @@ using System.Text.RegularExpressions;
 /// baseline.
 /// </summary>
 internal static class GeneratedCodeMetricsAssertions {
-    internal sealed record ReadabilityBaseline(string SourceSha256,
-        IReadOnlyDictionary<string, int> Minimum, IReadOnlyDictionary<string, int> Maximum);
+    /// <summary>Minimum and maximum readability bounds of one part of one fixture.</summary>
+    internal sealed record PartBounds(IReadOnlyDictionary<string, int> Minimum,
+        IReadOnlyDictionary<string, int> Maximum);
+
+    /// <summary>Bounds of one fixture, split into the program part and the support part.</summary>
+    internal sealed record ReadabilityBaseline(PartBounds Program, PartBounds Support);
 
     internal static string BaselineDirectory =>
         Path.Join(MachineGoldens.SourceResourcesDirectory(), "GeneratedCodeReadability");
@@ -53,12 +63,7 @@ internal static class GeneratedCodeMetricsAssertions {
     internal static IReadOnlyDictionary<string, ReadabilityBaseline> LoadBaseline() => Baseline.Value;
 
     private static IReadOnlyDictionary<string, ReadabilityBaseline> ReadBaseline() {
-        string metadata = File.ReadAllText(Path.Join(BaselineDirectory, "metadata.json"));
-        Dictionary<string, string> fixtures = Directory.EnumerateFiles(BaselineDirectory, "*.json")
-            .Where(path => Path.GetFileName(path) != "metadata.json")
-            .Order(StringComparer.Ordinal)
-            .ToDictionary(path => Path.GetFileNameWithoutExtension(path), File.ReadAllText, StringComparer.Ordinal);
-        return ParseBaseline(metadata, fixtures);
+        return ParseBaseline(File.ReadAllText(Path.Join(BaselineDirectory, "bounds.tsv")));
     }
 
     internal static ReadabilityBaseline GetBaseline(string fixture,
@@ -69,74 +74,89 @@ internal static class GeneratedCodeMetricsAssertions {
         return baseline;
     }
 
-    internal static IReadOnlyDictionary<string, ReadabilityBaseline> ParseBaseline(
-        string metadataJson, IReadOnlyDictionary<string, string> fixtureSources) {
-        using JsonDocument document = JsonDocument.Parse(metadataJson);
-        JsonElement root = document.RootElement;
-        RequireFields(root, "schemaVersion", "referenceRevision");
-        if (root.GetProperty("schemaVersion").ValueKind != JsonValueKind.Number
-            || !root.GetProperty("schemaVersion").TryGetInt32(out int schemaVersion) || schemaVersion != 2) {
-            throw new InvalidDataException("Readability baseline schemaVersion must be 2.");
+    private static string HeaderLine => string.Join('\t',
+        new[] { "key", "part" }.Concat(MandatoryMaximumMetrics).Append("other"));
+
+    internal static IReadOnlyDictionary<string, ReadabilityBaseline> ParseBaseline(string table) {
+        string[] lines = table.Replace("\r\n", "\n").Split('\n');
+        if (lines.Length != 0 && lines[^1].Length == 0) {
+            lines = lines[..^1];
         }
-        RequireHash(root.GetProperty("referenceRevision"), 40, "referenceRevision");
-        SortedDictionary<string, ReadabilityBaseline> baselines = new(StringComparer.Ordinal);
-        foreach ((string fixture, string source) in fixtureSources) {
-            if (string.IsNullOrWhiteSpace(fixture)) {
-                throw new InvalidDataException("A readability fixture key must not be empty.");
+        if (lines.Length == 0 || lines[0] != HeaderLine) {
+            throw new InvalidDataException("Readability baseline table header does not match the expected columns.");
+        }
+        int fieldCount = 2 + MandatoryMaximumMetrics.Count + 1;
+        Dictionary<string, Dictionary<string, PartBounds>> rows = new(StringComparer.Ordinal);
+        for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++) {
+            string[] fields = lines[lineIndex].Split('\t');
+            if (fields.Length != fieldCount) {
+                throw new InvalidDataException($"Readability baseline row {lineIndex + 1} has the wrong field count.");
             }
-            using JsonDocument fixtureDocument = JsonDocument.Parse(source);
-            JsonElement entry = fixtureDocument.RootElement;
-            RequireFields(entry, "sourceSha256", "minimum", "maximum");
-            string hash = RequireHash(entry.GetProperty("sourceSha256"), 64, fixture);
-            IReadOnlyDictionary<string, int> minimum = ReadBounds(entry.GetProperty("minimum"), true, fixture);
-            IReadOnlyDictionary<string, int> maximum = ReadBounds(entry.GetProperty("maximum"), false, fixture);
-            RequireMetrics(minimum, MandatoryMinimumMetrics, fixture);
-            RequireMetrics(maximum, MandatoryMaximumMetrics, fixture);
-            baselines.Add(fixture, new(hash, minimum, maximum));
+            string key = fields[0];
+            string part = fields[1];
+            if (key.Length == 0) {
+                throw new InvalidDataException("A readability baseline key must not be empty.");
+            }
+            if (part is not ("program" or "support")) {
+                throw new InvalidDataException($"{key}: readability baseline part must be program or support.");
+            }
+            Dictionary<string, int> maximum = new(StringComparer.Ordinal);
+            for (int column = 0; column < MandatoryMaximumMetrics.Count; column++) {
+                maximum.Add(MandatoryMaximumMetrics[column], ParseCount(fields[2 + column], key));
+            }
+            Dictionary<string, int> minimum = new(StringComparer.Ordinal);
+            ReadOther(fields[^1], key, minimum, maximum);
+            if (!rows.TryGetValue(key, out Dictionary<string, PartBounds>? parts)) {
+                parts = new Dictionary<string, PartBounds>(StringComparer.Ordinal);
+                rows.Add(key, parts);
+            }
+            if (!parts.TryAdd(part, new PartBounds(minimum, maximum))) {
+                throw new InvalidDataException($"{key}: duplicate readability baseline row for {part}.");
+            }
+        }
+        SortedDictionary<string, ReadabilityBaseline> baselines = new(StringComparer.Ordinal);
+        foreach ((string key, Dictionary<string, PartBounds> parts) in rows) {
+            if (!parts.TryGetValue("program", out PartBounds? program)
+                || !parts.TryGetValue("support", out PartBounds? support) || parts.Count != 2) {
+                throw new InvalidDataException($"{key}: readability baseline requires one program row and one support row.");
+            }
+            baselines.Add(key, new ReadabilityBaseline(program, support));
         }
         return baselines;
     }
 
-    private static void RequireObject(JsonElement element, string name) {
-        if (element.ValueKind != JsonValueKind.Object) {
-            throw new InvalidDataException($"Readability baseline '{name}' must be an object.");
+    private static int ParseCount(string text, string key) {
+        if (text.Length == 0 || !text.All(char.IsDigit) || !int.TryParse(text, out int value)) {
+            throw new InvalidDataException($"{key}: readability bound '{text}' is not a non-negative integer.");
         }
+        return value;
     }
 
-    private static void RequireFields(JsonElement element, params string[] names) {
-        RequireObject(element, string.Join("/", names));
-        string[] actual = element.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal).ToArray();
-        if (!actual.SequenceEqual(names.Order(StringComparer.Ordinal))) {
-            throw new InvalidDataException($"Readability baseline requires exactly: {string.Join(", ", names)}.");
+    private static void ReadOther(string text, string key,
+        Dictionary<string, int> minimum, Dictionary<string, int> maximum) {
+        if (text == "-") {
+            return;
         }
-    }
-
-    private static string RequireHash(JsonElement element, int length, string name) {
-        if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } hash
-            || hash.Length != length || !hash.All(char.IsAsciiHexDigit)) {
-            throw new InvalidDataException($"Readability baseline '{name}' requires a {length}-digit hexadecimal hash.");
+        if (text.Length == 0) {
+            throw new InvalidDataException($"{key}: malformed readability bounds in other.");
         }
-        return hash;
-    }
-
-    private static void RequireMetrics(IReadOnlyDictionary<string, int> bounds, IReadOnlyList<string> required, string fixture) {
-        string[] missing = required.Where(key => !bounds.ContainsKey(key)).ToArray();
-        if (missing.Length != 0) {
-            throw new InvalidDataException($"{fixture}: missing readability metrics: {string.Join(", ", missing)}.");
-        }
-    }
-
-    private static IReadOnlyDictionary<string, int> ReadBounds(JsonElement element, bool minimum, string fixture) {
-        RequireObject(element, fixture);
-        SortedDictionary<string, int> bounds = new(StringComparer.Ordinal);
-        foreach (JsonProperty property in element.EnumerateObject()) {
-            ValidateMetric(property.Name, minimum);
-            if (property.Value.ValueKind != JsonValueKind.Number || !property.Value.TryGetInt32(out int value)
-                || value < 0 || !bounds.TryAdd(property.Name, value)) {
-                throw new InvalidDataException($"{fixture}: invalid or duplicate readability bound '{property.Name}'.");
+        foreach (string item in text.Split(' ')) {
+            int separator = item.IndexOfAny(['<', '>']);
+            if (separator <= 0 || separator + 1 >= item.Length || item[separator + 1] != '=') {
+                throw new InvalidDataException($"{key}: malformed readability bound '{item}'.");
+            }
+            string name = item[..separator];
+            bool minimumDirection = item[separator] == '>';
+            int value = ParseCount(item[(separator + 2)..], key);
+            ValidateMetric(name, minimumDirection);
+            if (!minimumDirection && MandatoryMaximumMetrics.Contains(name, StringComparer.Ordinal)) {
+                throw new InvalidDataException($"{key}: mandatory maximum '{name}' must use its table column.");
+            }
+            Dictionary<string, int> target = minimumDirection ? minimum : maximum;
+            if (!target.TryAdd(name, value)) {
+                throw new InvalidDataException($"{key}: duplicate readability bound '{name}'.");
             }
         }
-        return bounds;
     }
 
     private static void ValidateMetric(string key, bool minimum) {
@@ -151,6 +171,113 @@ internal static class GeneratedCodeMetricsAssertions {
         if (minimum ? !isMinimum : !isMaximum || isMinimum) {
             throw new InvalidDataException($"Unknown readability metric or invalid bound direction: '{key}'.");
         }
+    }
+
+    private static readonly object TighteningGate = new();
+    private static readonly Dictionary<(string Fixture, string Part, bool Minimum, string Key), int>
+        LoosestMeasured = new();
+    private static readonly Dictionary<string, ReadabilityBaseline> SeededBaselines = new(StringComparer.Ordinal);
+
+    /// <summary>Tightens the bounds table toward the values this run measured: a maximum goes down to
+    /// the largest measured value, a minimum up to the smallest, never past the baseline.</summary>
+    internal static void WriteTightenedBounds(
+        GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts) {
+        string fixture = parts.Program.Fixture;
+        lock (TighteningGate) {
+            IReadOnlyDictionary<string, ReadabilityBaseline> baselines = LoadBaseline();
+            if (!baselines.TryGetValue(fixture, out ReadabilityBaseline? baseline)
+                && !SeededBaselines.TryGetValue(fixture, out baseline)) {
+                baseline = new ReadabilityBaseline(UnboundedPart(), UnboundedPart());
+                SeededBaselines.Add(fixture, baseline);
+            }
+            Accumulate(parts.Program, "program", fixture, baseline.Program);
+            Accumulate(parts.Support, "support", fixture, baseline.Support);
+            Dictionary<string, ReadabilityBaseline> rows = new(StringComparer.Ordinal);
+            foreach ((string key, ReadabilityBaseline row) in baselines) {
+                rows[key] = TightenedBaseline(key, row);
+            }
+            foreach ((string key, ReadabilityBaseline row) in SeededBaselines) {
+                rows[key] = TightenedBaseline(key, row);
+            }
+            File.WriteAllText(Path.Join(BaselineDirectory, "bounds.tsv"), FormatBaseline(rows));
+        }
+    }
+
+    private static PartBounds UnboundedPart() {
+        Dictionary<string, int> maximum = MandatoryMaximumMetrics
+            .ToDictionary(key => key, _ => int.MaxValue, StringComparer.Ordinal);
+        return new PartBounds(new Dictionary<string, int>(StringComparer.Ordinal), maximum);
+    }
+
+    private static void Accumulate(GeneratedCodeMetrics metrics, string part, string fixture, PartBounds bounds) {
+        IEnumerable<string> minimumKeys = MandatoryMinimumMetrics.Concat(bounds.Minimum.Keys).Distinct(StringComparer.Ordinal);
+        Record(metrics, part, fixture, minimumKeys, true);
+        Record(metrics, part, fixture, bounds.Maximum.Keys, false);
+    }
+
+    private static void Record(GeneratedCodeMetrics metrics, string part, string fixture,
+        IEnumerable<string> keys, bool minimum) {
+        foreach (string key in keys) {
+            (string, string, bool, string) boundKey = (fixture, part, minimum, key);
+            int measured = MetricValue(metrics, key);
+            if (!LoosestMeasured.TryGetValue(boundKey, out int seen)) {
+                LoosestMeasured[boundKey] = measured;
+                continue;
+            }
+            LoosestMeasured[boundKey] = minimum ? Math.Min(seen, measured) : Math.Max(seen, measured);
+        }
+    }
+
+    private static ReadabilityBaseline TightenedBaseline(string fixture, ReadabilityBaseline baseline) {
+        return new ReadabilityBaseline(TightenedPart(fixture, "program", baseline.Program),
+            TightenedPart(fixture, "support", baseline.Support));
+    }
+
+    private static PartBounds TightenedPart(string fixture, string part, PartBounds bounds) {
+        Dictionary<string, int> minimum = new(StringComparer.Ordinal);
+        foreach (string key in MandatoryMinimumMetrics.Concat(bounds.Minimum.Keys).Distinct(StringComparer.Ordinal)) {
+            int baseline = bounds.Minimum.GetValueOrDefault(key, 0);
+            int measured = LoosestMeasured.GetValueOrDefault((fixture, part, true, key), int.MinValue);
+            minimum[key] = Math.Max(baseline, measured);
+        }
+        Dictionary<string, int> maximum = new(StringComparer.Ordinal);
+        foreach ((string key, int baseline) in bounds.Maximum) {
+            int measured = LoosestMeasured.GetValueOrDefault((fixture, part, false, key), int.MaxValue);
+            maximum[key] = Math.Min(baseline, measured);
+        }
+        return new PartBounds(minimum, maximum);
+    }
+
+    internal static string FormatBaseline(IReadOnlyDictionary<string, ReadabilityBaseline> baselines) {
+        StringBuilder builder = new();
+        builder.Append(HeaderLine).Append('\n');
+        foreach ((string key, ReadabilityBaseline baseline) in baselines.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
+            AppendRow(builder, key, "program", baseline.Program);
+            AppendRow(builder, key, "support", baseline.Support);
+        }
+        return builder.ToString();
+    }
+
+    private static void AppendRow(StringBuilder builder, string key, string part, PartBounds bounds) {
+        builder.Append(key).Append('\t').Append(part);
+        foreach (string metric in MandatoryMaximumMetrics) {
+            if (!bounds.Maximum.TryGetValue(metric, out int value)) {
+                throw new InvalidDataException($"{key}: missing mandatory readability maximum '{metric}'.");
+            }
+            builder.Append('\t').Append(value);
+        }
+        SortedDictionary<string, string> other = new(StringComparer.Ordinal);
+        foreach ((string metric, int value) in bounds.Minimum) {
+            if (value > 0) {
+                other[metric] = $"{metric}>={value}";
+            }
+        }
+        foreach ((string metric, int value) in bounds.Maximum) {
+            if (!MandatoryMaximumMetrics.Contains(metric, StringComparer.Ordinal)) {
+                other[metric] = $"{metric}<={value}";
+            }
+        }
+        builder.Append('\t').Append(other.Count == 0 ? "-" : string.Join(' ', other.Values)).Append('\n');
     }
 
     internal static int MetricValue(GeneratedCodeMetrics metrics, string key) {
@@ -170,15 +297,15 @@ internal static class GeneratedCodeMetricsAssertions {
     }
 
     internal static IReadOnlyList<string> FindReadabilityRegressions(GeneratedCodeMetrics actual,
-        IReadOnlyDictionary<string, int> minimum, IReadOnlyDictionary<string, int> maximum) {
+        string part, IReadOnlyDictionary<string, int> minimum, IReadOnlyDictionary<string, int> maximum) {
         List<string> failures = new();
-        AppendRegressions(actual, minimum, true, failures);
-        AppendRegressions(actual, maximum, false, failures);
+        AppendRegressions(actual, part, minimum, true, failures);
+        AppendRegressions(actual, part, maximum, false, failures);
         return failures;
     }
 
-    private static void AppendRegressions(GeneratedCodeMetrics actual, IReadOnlyDictionary<string, int> bounds,
-        bool minimum, List<string> failures) {
+    private static void AppendRegressions(GeneratedCodeMetrics actual, string part,
+        IReadOnlyDictionary<string, int> bounds, bool minimum, List<string> failures) {
         foreach ((string key, int limit) in bounds.OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
             ValidateMetric(key, minimum);
             if (limit < 0) {
@@ -188,39 +315,41 @@ internal static class GeneratedCodeMetricsAssertions {
             long delta = (long)count - limit;
             if (minimum ? delta < 0 : delta > 0) {
                 string direction = minimum ? "minimum" : "maximum";
-                failures.Add($"{actual.Fixture}: {key} {direction}={limit}, actual={count}, delta={delta:+0;-0;0}.");
+                failures.Add($"{actual.Fixture} {part}: {key} {direction}={limit}, actual={count}, delta={delta:+0;-0;0}.");
             }
         }
     }
 
-    private static readonly Regex InterruptEnablingAsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} (sti|popf|popfd)$");
-    private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 
     /// <summary>
     /// Asserts the invariants that every generated fixture must satisfy: no warnings, no unchecked
-    /// expression, every emitted label targeted by at least one goto, an event check after every
-    /// interrupt-enabling instruction, no identical CheckExternalEvents call repeated with only label
-    /// lines in between, and the reviewed per-fixture readability baseline.
+    /// expression, every emitted label targeted by at least one goto, no identical
+    /// CheckExternalEvents call repeated with only label lines in between, and the reviewed
+    /// per-fixture readability baseline.
     /// </summary>
-    /// <param name="metrics">The metrics computed for the fixture.</param>
+    /// <param name="parts">The program and support metrics computed for the fixture.</param>
     /// <param name="source">The generated source text the metrics were computed from.</param>
     /// <param name="methods">Method counts and source locations for regression diagnostics.</param>
-    public static void AssertInvariants(GeneratedCodeMetrics metrics, string source,
+    public static void AssertInvariants(GeneratedCodeMetricsCollector.GeneratedCodePartMetrics parts, string source,
         IReadOnlyDictionary<string, GeneratedCodeMetrics> methods) {
-        metrics.Warnings.Should().Be(0, "generated code of {0} must compile without warnings", metrics.Fixture);
-        metrics.UncheckedExpressions.Should().Be(0, "generated code of {0} must not use unchecked(...)", metrics.Fixture);
-        metrics.Labels.Should().Be(metrics.DistinctGotoTargets,
-            "every label emitted for {0} must be the target of at least one goto", metrics.Fixture);
-        AssertEventCheckFollowsInterruptEnablingInstructions(metrics, source);
-        AssertNoConsecutiveDuplicateEventChecks(metrics, source);
-        ReadabilityBaseline baseline = GetBaseline(metrics.Fixture, LoadBaseline());
-        IReadOnlyList<string> failures = FindReadabilityRegressions(metrics, baseline.Minimum, baseline.Maximum);
+        foreach (GeneratedCodeMetrics metrics in parts.Parts) {
+            metrics.Warnings.Should().Be(0, "generated code of {0} must compile without warnings", metrics.Fixture);
+            metrics.UncheckedExpressions.Should().Be(0, "generated code of {0} must not use unchecked(...)", metrics.Fixture);
+            metrics.Labels.Should().Be(metrics.DistinctGotoTargets,
+                "every label emitted for {0} must be the target of at least one goto", metrics.Fixture);
+            AssertNoConsecutiveDuplicateEventChecks(metrics, source);
+        }
+        ReadabilityBaseline baseline = GetBaseline(parts.Program.Fixture, LoadBaseline());
+        List<string> failures = new(FindReadabilityRegressions(parts.Program, "program",
+            baseline.Program.Minimum, baseline.Program.Maximum));
+        failures.AddRange(FindReadabilityRegressions(parts.Support, "support",
+            baseline.Support.Minimum, baseline.Support.Maximum));
         if (failures.Count != 0) {
             string details = string.Join(Environment.NewLine, methods.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .Select(pair => $"{pair.Key} {pair.Value.SourceLocation}: {pair.Value.ToLine()}"));
             failures.Should().BeEmpty("generated code of {0} must preserve its readability bounds. Method details:{1}{2}",
-                metrics.Fixture, Environment.NewLine, details);
+                parts.Program.Fixture, Environment.NewLine, details);
         }
     }
 
@@ -252,26 +381,97 @@ internal static class GeneratedCodeMetricsAssertions {
         return duplicates;
     }
 
-    private static void AssertEventCheckFollowsInterruptEnablingInstructions(GeneratedCodeMetrics metrics, string source) {
-        string[] lines = SplitLines(source);
-        for (int i = 0; i < lines.Length; i++) {
-            if (!InterruptEnablingAsmCommentRegex.IsMatch(lines[i])) {
-                continue;
+    /// <summary>
+    /// Asserts that every instruction that may enable interrupts (<c>sti</c>, <c>popf</c>,
+    /// <c>popfd</c>) of the partitioned program is followed by a CheckExternalEvents call in the
+    /// generated source: inside the instruction's own line range of the manifest address map, or
+    /// anywhere up to the end of the line range of the first following instruction that starts no
+    /// interrupt shadow, which covers the check an interrupt shadow (sti, mov ss, lss) moves and the
+    /// check a checked fallthrough block prints at its entry. The check is also satisfied when the next
+    /// instruction is a <c>hlt</c>: its wait loop checks events itself.
+    /// </summary>
+    /// <param name="fixture">Golden key of the fixture under test.</param>
+    /// <param name="program">The partitioned program the source was generated from.</param>
+    /// <param name="generated">The generated program: its files and manifest address map.</param>
+    /// <returns>How many interrupt-enabling instructions were examined.</returns>
+    public static int AssertEventCheckFollowsInterruptEnablingInstructions(string fixture,
+        CfgPartitionedProgram program, GeneratedCSharpProgram generated) {
+        ILookup<string, AddressMapEntryManifest> entriesByAddress = generated.Manifest.AddressMap
+            .ToLookup(entry => entry.Address, StringComparer.Ordinal);
+        Dictionary<string, string[]> linesByFile = generated.Files
+            .ToDictionary(file => file.Name, file => SplitLines(file.Text));
+        int examined = 0;
+        foreach (CfgCodePartition partition in program.Partitions) {
+            BlockGraph<CfgBlock> graph =
+                CfgBlockGraphs.FromPartition(partition, partition.Entries[0].Node);
+            foreach (CfgBlock block in partition.Blocks) {
+                for (int i = 0; i < block.Instructions.Count; i++) {
+                    if (block.Instructions[i] is not CfgInstruction instruction
+                        || !InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)) {
+                        continue;
+                    }
+                    examined++;
+                    // The interrupt shadow of sti, mov ss and lss defers the check: the window ends
+                    // at the first following instruction that starts no shadow.
+                    CfgBlock nextBlock = block;
+                    int nextIndex = i;
+                    ICfgNode? next;
+                    HashSet<ICfgNode> visited = [];
+                    do {
+                        next = NextInstructionAfter(nextBlock, nextIndex, graph, out nextBlock, out nextIndex);
+                    } while (next is CfgInstruction nextInstruction
+                        && visited.Add(nextInstruction)
+                        && InterruptShadowDetectorVisitor.StartsInterruptShadow(nextInstruction.ExecutionAst));
+                    EventCheckFollows(instruction, next, entriesByAddress, linesByFile)
+                        .Should().BeTrue(
+                            "generated code of {0} must call CheckExternalEvents after the interrupt-enabling instruction at {1}",
+                            fixture, instruction.Address);
+                }
             }
-            bool foundCheck = HasEventCheckBeforeNextInstruction(lines, i);
-            foundCheck.Should().BeTrue(
-                "generated code of {0} must call CheckExternalEvents after the interrupt-enabling instruction at line {1}: {2}",
-                metrics.Fixture, i + 1, lines[i].Trim());
         }
+        return examined;
     }
 
-    private static bool HasEventCheckBeforeNextInstruction(string[] lines, int instructionLineIndex) {
-        for (int j = instructionLineIndex + 1; j < lines.Length; j++) {
-            if (AsmCommentRegex.IsMatch(lines[j])) {
-                return false;
+    /// <summary>The instruction that runs after <paramref name="block"/>'s instruction at
+    /// <paramref name="index"/>: the next one in the block, or the first one of its fallthrough block.
+    /// Outputs the block and index of that instruction so the walk can continue from it.</summary>
+    private static ICfgNode? NextInstructionAfter(CfgBlock block, int index, BlockGraph<CfgBlock> graph,
+        out CfgBlock nextBlock, out int nextIndex) {
+        if (index + 1 < block.Instructions.Count) {
+            nextBlock = block;
+            nextIndex = index + 1;
+            return block.Instructions[nextIndex];
+        }
+        nextBlock = graph.GetFallthroughSuccessor(block)!;
+        nextIndex = 0;
+        return nextBlock?.Instructions.FirstOrDefault();
+    }
+
+    private static bool EventCheckFollows(CfgInstruction instruction, ICfgNode? next,
+        ILookup<string, AddressMapEntryManifest> entriesByAddress,
+        Dictionary<string, string[]> linesByFile) {
+        if (next is CfgInstruction { Kind: InstructionKind.None } nextInstruction
+            && CallReturnHaltDetectorVisitor.ContainsHlt(nextInstruction.ExecutionAst)) {
+            return true;
+        }
+        string key = instruction.Address.ToString();
+        string? nextKey = next?.Address.ToString();
+        // One instruction can print in several methods: any printing that holds the check
+        // satisfies the invariant. The window ends with the next instruction's entry in the
+        // same method when it has one.
+        foreach (AddressMapEntryManifest entry in entriesByAddress[key]) {
+            int lastLine = entry.LastLine;
+            if (nextKey is not null) {
+                foreach (AddressMapEntryManifest nextEntry in entriesByAddress[nextKey]
+                             .Where(nextEntry => nextEntry.Method == entry.Method)) {
+                    lastLine = Math.Max(lastLine, nextEntry.LastLine);
+                }
             }
-            if (lines[j].Contains("CheckExternalEvents(")) {
-                return true;
+            string[] lines = linesByFile[entry.File];
+            for (int line = entry.FirstLine; line <= lastLine && line <= lines.Length; line++) {
+                if (lines[line - 1].Contains("CheckExternalEvents(")) {
+                    return true;
+                }
             }
         }
         return false;

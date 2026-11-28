@@ -14,54 +14,66 @@ using System.Linq;
 /// <c>VerifySpeculativeRunOrFail</c> at the run's first instruction. A run is only merged when all of
 /// these hold, stated with the IR effects model:
 /// <list type="bullet">
-/// <item><description>SG-1: no statement of the run writes memory that may alias the code bytes -
+/// <item><description>no statement of the run writes memory that may alias the code bytes -
 /// a <see cref="IrTokens.Memory"/> write that is not <see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/>
 /// keeps the merge only when every access of <see cref="IrMemoryAliasAnalysis.Writes"/> is
-/// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> and <see cref="IrAliasRelation.Disjoint"/> from the
+/// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> and <see cref="IrAliasRelation.Disjoint"/> from the
 /// raw linear range run start .. block code end. The code range needs no
-/// <see cref="IrMemoryAliasAnalysis.IsKnownRam"/> proof of its own: a write proven to be conventional
+/// <see cref="IrMemoryAliasAnalysis.AllowsRam"/> proof of its own: a write proven to be conventional
 /// RAM below 0xA0000 cannot reach a device mapping, nothing at or above 0xA0000 is backed by
 /// conventional RAM, and the A20 wrap is already handled by <see cref="IrMemoryAliasAnalysis.Relation"/>;
 /// so a known-RAM write that is linearly disjoint from the code bytes cannot change them, wherever the
 /// code is.</description></item>
-/// <item><description>SG-2: no statement of the run delivers interrupts
+/// <item><description>no statement of the run delivers interrupts
 /// (<see cref="IrEffects.DeliversInterrupts"/>) - an interrupt delivered mid-run can write the
 /// run's bytes.</description></item>
-/// <item><description>SG-3: no statement of the run may fault (<see cref="IrEffects.MayFault"/>) -
+/// <item><description>no statement of the run may fault (<see cref="IrEffects.MayFault"/>) -
 /// a fault handler can leave the run or change its bytes.</description></item>
-/// <item><description>SG-4: no statement of the run accesses a port
+/// <item><description>no statement of the run accesses a port
 /// (<see cref="IrEffects.TokenWrites"/> &amp; <see cref="IrTokens.Io"/>) - a device the port access
 /// arms can write the run's bytes through DMA.</description></item>
-/// <item><description>SG-5: the guarded instructions are contiguous in memory - a later guard joins the
+/// <item><description>the guarded instructions are contiguous in memory - a later guard joins the
 /// open run only when its offset is the end offset of the run's last instruction, so no observed
 /// instruction and no other byte sits between two merged guards.</description></item>
 /// </list>
-/// SG-2 to SG-4 have no ASM fixture: a trap for them would need a hardware interrupt, a fault or a DMA
+/// The interrupt, fault and port conditions have no ASM fixture: a trap for them would need a hardware interrupt, a fault or a DMA
 /// write patching a later speculative instruction at a chosen moment, so they are covered by unit
-/// tests only (SG-1 by the existing self-modification fixture). Runs never cross a block boundary: a
+/// tests only (the write condition by the existing self-modification fixture). Runs never cross a block boundary: a
 /// jump target in the middle of a run starts a new block, whose first statement is a boundary, not a
 /// body statement of the previous run.
 /// </summary>
 internal static class IrSpeculativeGuardMerge {
     /// <summary>Merges the speculative guards of every block of <paramref name="method"/>.
     /// Runs on the final statements: it must run last so no other pass sees a merged guard.</summary>
-    public static void Apply(IrMethod method, IrSsa ssa) {
-        IrMemoryAliasAnalysis alias = new(ssa);
+    /// <summary>Applies the pass in strict mode.</summary>
+    public static void Apply(IrMethod method, IrEditor editor) =>
+        Apply(method, editor, GenerationPolicy.Strict);
+
+    public static void Apply(IrMethod method, IrEditor editor, GenerationPolicy policy) {
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements = [];
+        List<(IrBlock Block, int Index)> removals = [];
         foreach (IrBlock block in method.Blocks) {
-            MergeBlock(block, alias);
+            CollectBlock(block, new IrMemoryAliasAnalysis(method, editor.Ssa, policy), replacements, removals);
+        }
+        foreach ((IrBlock block, int index, IrStatement merged) in replacements) {
+            editor.Replace(block, index, merged);
+        }
+        foreach ((IrBlock block, int index) in removals.OrderByDescending(pair => pair.Index)) {
+            editor.Remove(block, index);
         }
     }
 
     private sealed class GuardRun {
-        public required int KeptIndex { get; init; }
+        public required int Index { get; init; }
         public required CfgInstruction FirstInstruction { get; init; }
         public required List<string> Fields { get; init; }
         public required int RunEnd { get; set; }
     }
 
-    private static void MergeBlock(IrBlock block, IrMemoryAliasAnalysis alias) {
+    private static void CollectBlock(IrBlock block, IrMemoryAliasAnalysis alias,
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements,
+        List<(IrBlock Block, int Index)> removals) {
         Dictionary<ushort, int> blockCodeEndBySegment = BlockCodeEndBySegment(block);
-        List<IrStatement> kept = new(block.Statements.Count);
         GuardRun? run = null;
         for (int index = 0; index < block.Statements.Count; index++) {
             IrStatement statement = block.Statements[index];
@@ -71,36 +83,34 @@ internal static class IrSpeculativeGuardMerge {
                     && guard.Address.Offset == run.RunEnd) {
                     run.Fields.AddRange(guard.SignatureFields);
                     run.RunEnd = instruction.Address.Offset + instruction.Length;
+                    removals.Add((block, index));
                     continue;
                 }
-                Close(run, kept);
+                Close(block, run, replacements);
                 run = new GuardRun {
-                    KeptIndex = kept.Count,
+                    Index = index,
                     FirstInstruction = instruction,
                     Fields = [.. guard.SignatureFields],
                     RunEnd = instruction.Address.Offset + instruction.Length
                 };
-                kept.Add(statement);
                 continue;
             }
             if (run is not null && IsBarrier(block, index, alias, run, blockCodeEndBySegment)) {
-                Close(run, kept);
+                Close(block, run, replacements);
                 run = null;
             }
-            kept.Add(statement);
         }
-        Close(run, kept);
-        block.Statements.Clear();
-        block.Statements.AddRange(kept);
+        Close(block, run, replacements);
     }
 
-    private static void Close(GuardRun? run, List<IrStatement> kept) {
+    private static void Close(IrBlock block, GuardRun? run,
+        List<(IrBlock Block, int Index, IrStatement Statement)> replacements) {
         if (run is null || run.Fields.Count == 1) {
             return;
         }
-        SegmentedAddress address = run.FirstInstruction.Address;
-        kept[run.KeptIndex] = IrStatement.Create(
-            new SpeculativeGuardNode(address, run.Fields), run.FirstInstruction);
+        replacements.Add((block, run.Index, IrStatement.Create(
+            new SpeculativeGuardNode(run.FirstInstruction.Address, run.Fields),
+            run.FirstInstruction)));
     }
 
     /// <summary>The largest <c>offset + Length</c> of the block's <see cref="CfgInstruction"/>
@@ -117,7 +127,7 @@ internal static class IrSpeculativeGuardMerge {
     }
 
     /// <summary>Whether <paramref name="statement"/> can change the open run's code bytes or leave the
-    /// run before a later guard re-checks them: the barrier conditions SG-1 to SG-4.</summary>
+    /// run before a later guard re-checks them: the barrier conditions of the class summary.</summary>
     private static bool IsBarrier(IrBlock block, int index, IrMemoryAliasAnalysis alias,
         GuardRun run, Dictionary<ushort, int> blockCodeEndBySegment) {
         IrStatement statement = block.Statements[index];
@@ -148,7 +158,7 @@ internal static class IrSpeculativeGuardMerge {
             Width = blockCodeEnd - runStartOffset
         };
         foreach (IrMemoryAccess write in alias.Writes(block, index)) {
-            if (!alias.IsKnownRam(write) || alias.Relation(write, codeRange) != IrAliasRelation.Disjoint) {
+            if (!alias.AllowsRam(write) || alias.Relation(write, codeRange) != IrAliasRelation.Disjoint) {
                 return false;
             }
         }

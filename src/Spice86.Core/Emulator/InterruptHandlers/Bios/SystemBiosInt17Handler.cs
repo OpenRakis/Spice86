@@ -46,7 +46,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
             if (LoggerService.IsEnabled(LogLevel.Warning)) {
                 LoggerService.LogWarning("BIOS INT17H: Unsupported function AH=0x{Function:X2}", operation);
             }
-            SetCarryFlag(true, true);
+            SetCarryFlag(true);
             return;
         }
 
@@ -74,7 +74,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     /// <summary>Writes <paramref name="character"/> to printer <paramref name="printerIndex"/> and
     /// returns the status in AH with CF clear.</summary>
-    public (byte ah, bool carryFlag) WriteCharacter(byte character, ushort printerIndex) {
+    public (byte status, bool failed) WriteCharacter(byte character, ushort printerIndex) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT17H: Write character 0x{Character:X2} to printer index {PrinterIndex}",
                 character, printerIndex);
@@ -85,15 +85,15 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(WriteCharacter), Inputs = [CpuValues.Al, CpuValues.Dx])]
-    private void WriteCharacter(bool calledFromVm) {
+    private void WriteCharacter() {
         (byte ah, bool carryFlag) = WriteCharacter(State.AL, State.DX);
         State.AH = ah;
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Initializes printer port <paramref name="printerIndex"/> and returns the status
     /// in AH with CF clear.</summary>
-    public (byte ah, bool carryFlag) InitializePrinterPort(ushort printerIndex) {
+    public (byte status, bool failed) InitializePrinterPort(ushort printerIndex) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT17H: Initialize printer index {PrinterIndex}", printerIndex);
         }
@@ -103,15 +103,15 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(InitializePrinterPort), Inputs = [CpuValues.Dx])]
-    private void InitializePrinterPort(bool calledFromVm) {
+    private void InitializePrinterPort() {
         (byte ah, bool carryFlag) = InitializePrinterPort(State.DX);
         State.AH = ah;
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 
     /// <summary>Returns the status of printer <paramref name="printerIndex"/> in AH with CF
     /// clear.</summary>
-    public (byte ah, bool carryFlag) GetPrinterStatus(ushort printerIndex) {
+    public (byte status, bool failed) GetPrinterStatus(ushort printerIndex) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT17H: Get status for printer index {PrinterIndex}", printerIndex);
         }
@@ -121,9 +121,9 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None,
         Implementation = nameof(GetPrinterStatus), Inputs = [CpuValues.Dx])]
-    private void GetPrinterStatus(bool calledFromVm) {
+    private void GetPrinterStatus() {
         (byte ah, bool carryFlag) = GetPrinterStatus(State.DX);
         State.AH = ah;
-        SetCarryFlag(carryFlag, calledFromVm);
+        SetCarryFlag(carryFlag);
     }
 }

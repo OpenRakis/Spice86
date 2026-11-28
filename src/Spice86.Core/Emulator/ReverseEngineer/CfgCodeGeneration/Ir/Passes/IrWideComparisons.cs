@@ -34,7 +34,8 @@ using System.Linq;
 internal static class IrWideComparisons {
     /// <summary>Folds the wide comparisons of <paramref name="method"/>'s branches; returns the
     /// number of rewritten roots. The caller rebuilds the SSA and webs when it is not zero.</summary>
-    public static int Apply(IrMethod method, IrSsa ssa) {
+    public static int Apply(IrMethod method, IrEditor editor) {
+        IrSsa ssa = editor.Ssa;
         Dictionary<IrBlock, List<(IrBlock Block, IrEdge Edge)>> predecessors =
             method.PredecessorEdges();
         HashSet<ICfgNode> pinned = IrInstructionIdioms.PinnedOriginsOf(method);
@@ -78,26 +79,17 @@ internal static class IrWideComparisons {
             }
         }
         foreach ((IrBlock block, IrBranch terminator) in branchEdits) {
-            if (ssa.HasSite(block.Terminator)) {
-                ssa.ReplaceTerminator(block.Terminator, terminator);
-            }
-            block.Terminator = terminator;
+            editor.SetTerminator(block, terminator);
         }
         foreach ((IrBlock block, int index, IrStatement replacement) in replacedStatements) {
-            IrStatement old = block.Statements[index];
-            block.Statements[index] = replacement;
-            if (ssa.HasSite(old)) {
-                ssa.Replace(old, replacement);
-            }
+            editor.Replace(block, index, replacement);
         }
-        foreach ((IrBlock block, int index) in removedStatements) {
-            IrStatement old = block.Statements[index];
-            block.Statements.RemoveAt(index);
-            if (ssa.HasSite(old)) {
-                ssa.Remove(old);
-            }
+        foreach ((IrBlock block, int index) in removedStatements.OrderByDescending(edit => edit.Index)) {
+            editor.Remove(block, index);
         }
-        method.Blocks.RemoveAll(removedBlocks.Contains);
+        if (method.Blocks.RemoveAll(removedBlocks.Contains) != 0) {
+            editor.Ssa.MarkStale("wide comparisons removed test blocks");
+        }
         return branchEdits.Count;
     }
 
@@ -292,25 +284,22 @@ internal static class IrWideComparisons {
             HashSet<ICfgNode> pinned, HashSet<IrBlock> entryBlocks, List<IrBlock> inner,
             IrSsa ssa) {
         // Read the root as `high dir other ? leafA : mid` for each strict direction.
-        foreach (BinaryOperation direction in new[] {
-                     BinaryOperation.LESS_THAN, BinaryOperation.GREATER_THAN }) {
-            if (Step(branch, direction) is { } first) {
-                if (TryThreeWay(root, first, direction, predecessors, pinned, entryBlocks, inner,
-                        ssa) is { } wide) {
-                    return wide;
-                }
-            }
-        }
-        return null;
+        return new[] { BinaryOperation.LESS_THAN, BinaryOperation.GREATER_THAN }
+            .Select(direction => TryThreeWay(root, branch, direction, predecessors, pinned,
+                entryBlocks, inner, ssa))
+            .FirstOrDefault(wide => wide is not null);
     }
 
     private static (ICfgNode Origin, ValueNode Condition, IrBlock WhenTrue, IrBlock WhenFalse)? TryThreeWay(
             IrBlock root,
-            (ValueNode Left, ValueNode Right, IrBlock WhenTrue, IrBlock WhenFalse) first,
+            IrBranch branch,
             BinaryOperation direction,
             Dictionary<IrBlock, List<(IrBlock Block, IrEdge Edge)>> predecessors,
             HashSet<ICfgNode> pinned, HashSet<IrBlock> entryBlocks, List<IrBlock> inner,
             IrSsa ssa) {
+        if (Step(branch, direction) is not { } first) {
+            return null;
+        }
         IrBlock leafA = first.WhenTrue;
         IrBlock mid = first.WhenFalse;
         if (!IsWord(first.Left) || !IsWord(first.Right)
@@ -544,19 +533,13 @@ internal static class IrWideComparisons {
         }
         bool orTest = compare.Operation is BinaryOperation.EQUAL or BinaryOperation.NOT_EQUAL
             && right is BinaryOperationNode { BinaryOperation: BinaryOperation.BITWISE_OR }
-            && (Reads(compare.Left, target)
-                && ConstantEvaluation.Resolved(compare.Right) is { Value: 0 }
-                || Reads(compare.Right, target)
-                && ConstantEvaluation.Resolved(compare.Left) is { Value: 0 });
+            && ConstantAgainst(compare, target) is { Value: 0 };
         bool rangeTest = compare.Operation is BinaryOperation.LESS_THAN
                 or BinaryOperation.GREATER_THAN or BinaryOperation.LESS_THAN_OR_EQUAL
                 or BinaryOperation.GREATER_THAN_OR_EQUAL
             && !compare.Left.DataType.Signed && !compare.Right.DataType.Signed
             && Subtraction(right) is not null
-            && (Reads(compare.Left, target)
-                && ConstantEvaluation.Resolved(compare.Right) is not null
-                || Reads(compare.Right, target)
-                && ConstantEvaluation.Resolved(compare.Left) is not null);
+            && ConstantAgainst(compare, target) is not null;
         if (!orTest && !rangeTest) {
             return null;
         }
@@ -622,6 +605,19 @@ internal static class IrWideComparisons {
     private static BinaryOperationNode? ConstantSubtrahend(BinaryOperationNode node) =>
         node.BinaryOperation == BinaryOperation.MINUS
         && ConstantEvaluation.Resolved(node.Right) is not null ? node : null;
+
+    /// <summary>The constant on the other side of <paramref name="compare"/> from an operand
+    /// that reads <paramref name="target"/>, or null.</summary>
+    private static ConstantNode? ConstantAgainst(
+            (BinaryOperation Operation, ValueNode Left, ValueNode Right) compare,
+            RegisterNode target) {
+        if (Reads(compare.Left, target)
+            && ConstantEvaluation.Resolved(compare.Right) is { } right) {
+            return right;
+        }
+        return Reads(compare.Right, target)
+            ? ConstantEvaluation.Resolved(compare.Left) : null;
+    }
 
     private static bool Reads(ValueNode node, RegisterNode register) =>
         node is RegisterNode self && self.Equals(register)

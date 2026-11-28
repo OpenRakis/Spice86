@@ -42,30 +42,103 @@ internal sealed class AsmScenario {
     /// that program to another file name. Empty when the started program is the resource itself.</summary>
     public string PrimaryResourceFileName { get; init; } = "";
 
+    /// <summary>Why this scenario's observable state depends on timing, or <see langword="null"/> when
+    /// it does not. The generated run still executes and checks the fixture oracle; only the
+    /// interpreted-vs-generated final-state differential is relaxed, with this reason.</summary>
+    public string? TimingDependentReason { get; private set; }
+
+    /// <summary>Returns the same scenario marked as timing-dependent.</summary>
+    /// <param name="reason">Why the scenario's observable state depends on timing.</param>
+    /// <returns>The scenario, with the timing-dependent reason recorded.</returns>
+    public AsmScenario WithTimingDependentState(string reason) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        TimingDependentReason = reason;
+        return this;
+    }
+
+    /// <summary>Final-state parts the interpreted-vs-generated comparison leaves out for this
+    /// scenario, or <see cref="FinalStateParts.None"/> when every part is compared.</summary>
+    public FinalStateParts UncomparedParts { get; private set; } = FinalStateParts.None;
+
+    /// <summary>Why <see cref="UncomparedParts"/> are not compared, or empty when none are
+    /// left out.</summary>
+    public string UncomparedPartsReason { get; private set; } = "";
+
+    /// <summary>RAM ranges the interpreted-vs-generated comparison leaves out for this scenario,
+    /// each with the reason it cannot be compared.</summary>
+    public IReadOnlyList<(uint Address, int Length, string Reason)> UncomparedRamRanges { get; private set; } = [];
+
+    /// <summary>Check lines asserted on the program-only generated code of this scenario.</summary>
+    public IReadOnlyList<GeneratedCodeCheck> GeneratedCodeChecks { get; private set; } = [];
+
+    /// <summary>Returns the same scenario with generated-code check lines asserted after the
+    /// differential.</summary>
+    /// <param name="checks">The check lines.</param>
+    /// <returns>The scenario, with the check lines recorded.</returns>
+    public AsmScenario WithGeneratedCodeChecks(params GeneratedCodeCheck[] checks) {
+        GeneratedCodeChecks = [.. GeneratedCodeChecks, .. checks];
+        return this;
+    }
+
+    /// <summary>Returns the same scenario with the given RAM range left out of the
+    /// interpreted-vs-generated comparison.</summary>
+    /// <param name="linearAddress">Start of the range, as a linear address.</param>
+    /// <param name="length">Length of the range in bytes.</param>
+    /// <param name="reason">Why the range cannot be compared between the two runs.</param>
+    /// <returns>The scenario, with the uncompared range appended.</returns>
+    public AsmScenario WithUncomparedRam(uint linearAddress, int length, string reason) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        if (length <= 0) {
+            throw new ArgumentException("An uncompared RAM range needs a positive length.", nameof(length));
+        }
+        UncomparedRamRanges = [.. UncomparedRamRanges, (linearAddress, length, reason)];
+        return this;
+    }
+
+    /// <summary>Returns the same scenario with the given final-state parts left out of the
+    /// interpreted-vs-generated comparison.</summary>
+    /// <param name="parts">The parts not to compare.</param>
+    /// <param name="reason">Why those parts cannot be compared between the two runs.</param>
+    /// <returns>The scenario, with the uncompared parts recorded.</returns>
+    public AsmScenario WithUncomparedParts(FinalStateParts parts, string reason) {
+        if (parts == FinalStateParts.None) {
+            throw new ArgumentException("Uncompared parts cannot be None.", nameof(parts));
+        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        UncomparedParts |= parts;
+        UncomparedPartsReason = UncomparedPartsReason.Length == 0
+            ? reason
+            : $"{UncomparedPartsReason}; {reason}";
+        return this;
+    }
+
     /// <summary>Creates a scenario with the same identity, resources and preparation, but another oracle.
     /// Used by discrimination tests that prove a wrong expectation fails in both execution modes.</summary>
     /// <param name="rewriteOracle">Rewrites the fixture the preparation produced.</param>
     /// <returns>The scenario with the rewritten oracle.</returns>
     public AsmScenario WithOracle(Func<AsmFixture, AsmFixture> rewriteOracle) {
         return new AsmScenario(Identity, scope => rewriteOracle(_prepareFixture(scope)), ResourceDependencies) {
-            PrimaryResourceFileName = PrimaryResourceFileName
+            PrimaryResourceFileName = PrimaryResourceFileName,
+            TimingDependentReason = TimingDependentReason,
+            UncomparedParts = UncomparedParts,
+            UncomparedPartsReason = UncomparedPartsReason,
+            UncomparedRamRanges = UncomparedRamRanges,
+            GeneratedCodeChecks = GeneratedCodeChecks
         };
     }
 
     /// <summary>Prepares a fresh run of this scenario: a new scope, a new working directory when the scenario
     /// needs one, new observation handlers and a new fixture holding the one oracle.</summary>
     /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
-    public AsmRunScope Prepare() {
-        AsmRunScope scope = new();
-        bool succeeded = false;
-        try {
-            scope.AttachFixture(_prepareFixture(scope));
-            succeeded = true;
-            return scope;
-        } finally {
-            if (!succeeded) {
-                scope.Dispose();
-            }
-        }
-    }
+    public AsmRunScope Prepare() => PrepareInto(new AsmRunScope());
+
+    /// <summary>Prepares a run of this scenario under an earlier run's key, so its host paths match
+    /// that run's. Used for the generated execution of a variant, which must reproduce the host
+    /// environment its interpreted baseline ran in.</summary>
+    /// <param name="runKey">Run key of the interpreted baseline run.</param>
+    /// <returns>The prepared run, owned by the caller, which disposes it on success or failure.</returns>
+    public AsmRunScope Prepare(string runKey) => PrepareInto(new AsmRunScope(runKey));
+
+    private AsmRunScope PrepareInto(AsmRunScope scope) =>
+        Ownership.DisposeOnFailure(scope, () => scope.AttachFixture(_prepareFixture(scope)));
 }

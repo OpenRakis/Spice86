@@ -31,7 +31,7 @@ public sealed class ChangedMemoryMapTest {
 
     private static void RegisterImage(LoadedImageRegistry registry, uint start, uint size,
         LoadedImageKind kind) {
-        registry.Register(new LoadedImage(kind, "TEST.COM", (ushort)(start >> 4), start, size));
+        registry.Register(new LoadedImage(kind, "TEST.COM", (ushort)(start >> 4), start, size, null));
     }
 
     [Fact]

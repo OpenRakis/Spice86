@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 
+using Spice86.Shared.Emulator.Memory;
+
 /// <summary>
 /// A single <c>DefineFunctionWithoutInterpreterFallback</c> registration the generated constructor emits for a partition entry.
 /// <see cref="LoadOffset"/> is <c>0</c> for the primary entry (registered directly) and the entry offset
@@ -12,6 +14,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 /// through the symbol file without accumulating duplicate triplets or node ids across generate cycles.
 /// </para>
 /// </summary>
+/// <param name="Address">The segmented address the registration installs the override at.</param>
 /// <param name="SingleEntry"><c>true</c> when the method has one entry: its registration passes the cached
 /// <c>Entry(M)</c> wrapper so the override delegate shares the dispatcher identity.</param>
-internal sealed record OverrideRegistration(string SegmentVariable, ushort Offset, string MethodName, int LoadOffset, string BaseName, bool SingleEntry);
+internal sealed record OverrideRegistration(SegmentedAddress Address, string SegmentVariable, ushort Offset, string MethodName, int LoadOffset, string BaseName, bool SingleEntry);

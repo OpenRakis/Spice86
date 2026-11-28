@@ -54,6 +54,7 @@ internal abstract class StatementPredicateVisitor : IAstVisitor<bool> {
     public virtual bool VisitVariableReferenceNode(VariableReferenceNode node) => false;
     public virtual bool VisitVariableDeclarationNode(VariableDeclarationNode node) => false;
     public virtual bool VisitThrowNode(ThrowNode node) => false;
+    public virtual bool VisitStackRangeCheckNode(StackRangeCheckNode node) => false;
     public virtual bool VisitCpuidNode(CpuidNode node) => false;
     public virtual bool VisitInstructionNode(InstructionNode node) => false;
     public virtual bool VisitMethodCallNode(MethodCallNode node) => false;

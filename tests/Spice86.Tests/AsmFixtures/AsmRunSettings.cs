@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>Run settings of an ASM fixture: the bin to run, the cycle failsafe and the machine configuration.</summary>
@@ -59,11 +60,19 @@ internal sealed record AsmRunSettings {
     /// <summary>Whether speculative CFG exploration runs during discovery.</summary>
     public bool EnableSpeculativeCfgExploration { get; init; } = true;
 
+    /// <summary>Whether the machine observes service calls (the generated-code check build): the
+    /// interrupt stubs register their notifying callback only then.</summary>
+    public bool CheckBuild { get; init; }
+
     /// <summary>Scheduler mode used by this fixture's video device.</summary>
     public RenderingMode RenderingMode { get; init; } = RenderingMode.Async;
 
     /// <summary>Segment for installed BIOS callbacks, separate from BIOS-image fixture code when needed.</summary>
     public ushort AsmHandlersSegment { get; init; } = 0xF000;
+
+    /// <summary>The generation policy the generated execution runs under; strict by default. A
+    /// relaxed policy selects the relaxed generated source golden and reports its policy name.</summary>
+    public GenerationPolicy GenerationPolicy { get; init; } = GenerationPolicy.Strict;
 
     /// <summary>Golden suffix for relocated callbacks; unchanged when callbacks are not installed.</summary>
     public string HandlerSegmentGoldenSuffix {
@@ -120,6 +129,13 @@ internal sealed record AsmRunSettings {
     /// <summary>CPU model the machine emulates, or null for the configuration default. It picks the
     /// MMU, so only a non-8086 model raises real-mode segment faults.</summary>
     public CpuModel? CpuModel { get; init; }
+
+    /// <summary>Directory the run records its dumps into; caller-owned (e.g. shared across a
+    /// dump-then-reload pair of runs). Null means a throwaway folder the creator cleans up.</summary>
+    public string? RecordedDataDirectory { get; init; }
+
+    /// <summary>Whether the run reloads the CFG graph dumped in <see cref="RecordedDataDirectory"/>.</summary>
+    public bool ReloadCfgGraph { get; init; }
 
     /// <summary>Runs on the fresh machine before the program runs. Never null.</summary>
     public Action<Machine> ConfigureMachine { get; init; } = NoMachineConfiguration;

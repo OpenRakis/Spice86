@@ -1,9 +1,11 @@
 namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
@@ -258,6 +260,24 @@ public class StackBoundaryTest {
 
         // Act & Assert
         Assert.Throws<CpuStackSegmentFaultException>(() => stack.PopInterruptPointer32());
+    }
+
+    [Theory]
+    [InlineData(CallDistance.Near, BitWidth.WORD_16, new byte[] { 0x34, 0x12 })]
+    [InlineData(CallDistance.Near, BitWidth.DWORD_32, new byte[] { 0x34, 0x12, 0x00, 0x00 })]
+    [InlineData(CallDistance.Far, BitWidth.WORD_16, new byte[] { 0x34, 0x12, 0xCD, 0xAB })]
+    [InlineData(CallDistance.Far, BitWidth.DWORD_32, new byte[] { 0x34, 0x12, 0x00, 0x00, 0xCD, 0xAB, 0x00, 0x00 })]
+    public void PushReturnAddressWritesTheInterpreterBytes(CallDistance distance, BitWidth width,
+        byte[] expectedBytes) {
+        const ushort startSp = 0x8000;
+        State state = new(CpuModel.INTEL_80286) { SS = 0, SP = startSp };
+        Memory memory = CreateMemory(new RealModeMmu386());
+        Stack stack = new(memory, state);
+
+        stack.PushReturnAddress(distance, width, new SegmentedAddress(0xABCD, 0x1234));
+
+        Assert.Equal((ushort)(startSp - expectedBytes.Length), state.SP);
+        Assert.Equal(expectedBytes, memory.ReadRam((uint)expectedBytes.Length, state.SP));
     }
 
     private static Memory CreateMemory(IMmu mmu) {

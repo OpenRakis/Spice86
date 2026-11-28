@@ -30,8 +30,19 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 /// </remarks>
 public interface IServiceCallObserver {
     /// <summary>
+    /// The observer of a run that does not compare service calls: <see cref="OnServiceCall"/> is never
+    /// called on it. This is the default <see cref="ServiceCallEvents.Observer"/>.
+    /// </summary>
+    static IServiceCallObserver None { get; } = new NullServiceCallObserver();
+
+    /// <summary>
     /// Called when a service is about to run.
     /// </summary>
     /// <param name="call">The service and the values it was called with.</param>
     void OnServiceCall(in ServiceCall call);
+
+    private sealed class NullServiceCallObserver : IServiceCallObserver {
+        public void OnServiceCall(in ServiceCall call) {
+        }
+    }
 }

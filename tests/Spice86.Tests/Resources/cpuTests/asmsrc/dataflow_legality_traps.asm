@@ -34,12 +34,12 @@ start:
     mov es, ax
 
 pass_loop:
-; PT-3: a temporary's initializer reads a register written before the temporary's last read
+; a temporary's initializer reads a register written before the temporary's last read
     mov ax, [cs:si+2]
     mul word [cs:si+4]
     mov [bx+00h], dx
 
-; EP-1: an operand register redefined between the write and the only read blocks the merge
+; an operand register redefined between the write and the only read blocks the merge
     mov cx, [cs:si+20h]
     sub cx, [cs:si+22h]
     mov dx, cx
@@ -51,7 +51,7 @@ pass_loop:
     mov [bx+18h], di
     mov edx, 0
 
-; EP-5: a memory read must not move past a store that may write its address
+; a memory read must not move past a store that may write its address
     mov ax, [cs:si+0Ah]
     mov [0F30h], ax
     mov dx, [0F30h]
@@ -60,13 +60,13 @@ pass_loop:
     mov [bx+04h], cx
     mov edx, 0
 
-; EP-7b: the merge target's address reads the merged register, so the address keeps the old value
+; the merge target's address reads the merged register, so the address keeps the old value
     mov di, 74h
     mov di, [cs:si+1Eh]
     mov [di], di
     mov edi, 0
 
-; FP-1: a flag the rewritten jump consumed is still read by the pushf that follows
+; a flag the rewritten jump consumed is still read by the pushf that follows
     mov ax, [cs:si+0Ch]
     cmp ax, [cs:si+0Eh]
     jae .fp1zero
@@ -79,7 +79,7 @@ pass_loop:
     pop ax
     mov [bx+0Ah], al
 
-; AA-4: a masked shift emits no flag write, so the call form stays while a flag is live
+; a masked shift emits no flag write, so the call form stays while a flag is live
     mov dx, [cs:si+10h]
     mov cx, [cs:si+12h]
     shl dx, cl
@@ -91,7 +91,7 @@ pass_loop:
 .aa4done:
     mov [bx+0Eh], dx
 
-; SSA-1: a call rewrites the flags, so a setter before it must not feed a jump after it
+; a call rewrites the flags, so a setter before it must not feed a jump after it
     mov ax, [cs:si+14h]
     mov cx, [cs:si+16h]
     sub ax, cx
@@ -103,7 +103,7 @@ pass_loop:
     mov word [bx+10h], 0
 .ssa1done:
 
-; ID-2: les/lds evaluate the segment part's address before the value part writes the register
+; les/lds evaluate the segment part's address before the value part writes the register
     mov word [0F60h], 0AAAAh
     mov word [0F62h], 0BEEFh
     mov di, 0F60h
@@ -114,7 +114,7 @@ pass_loop:
     mov cx, 2000h
     mov es, cx
 
-; CC-2: a nested test moved out of a boundary a goto lands on must keep the first test
+; a nested test moved out of a boundary a goto lands on must keep the first test
     mov ax, [cs:si+18h]
     mov bp, [cs:si+1Ah]
     mov dx, [cs:si]
@@ -131,7 +131,7 @@ pass_loop:
     mov word [bx+14h], 0
 .cc2done:
 
-; RC-phi: a byte of a join constant is known only when every path agrees on it
+; A byte of a join constant is known only when every path agrees on it
     mov ax, [cs:si+1Ch]
     test al, 1
     jz .rcphi2
@@ -142,21 +142,21 @@ pass_loop:
 .rcphijoin:
     mov [bx+16h], ah
 
-; PT-1: xadd swaps a memory value with a register; its memory temp is used where it reads
+; xadd swaps a memory value with a register; its memory temp is used where it reads
     mov ax, [cs:si+32h]
     mov [0F40h], ax
     mov cx, [cs:si+34h]
     xadd word [0F40h], cx
     mov [bx+06h], cx
 
-; CR-2: a register written then read inside one instruction keeps the incoming constant out of the read
+; a register written then read inside one instruction keeps the incoming constant out of the read
     mov cx, 1
     or ax, 1
     loopne .cr2fwd
     mov word [bx+1Ah], 0BBBBh
 .cr2fwd:
 
-; DW-1: a dead pop still moves the stack pointer
+; a dead pop still moves the stack pointer
     mov ax, [cs:si+2Ah]
     mov dx, [cs:si+2Ch]
     push ax
@@ -167,13 +167,13 @@ pass_loop:
     mov [bx+1Eh], di
     mov edi, 0
 
-; DF-2: a dead flag write whose value is a call still moves the stack pointer
+; a dead flag write whose value is a call still moves the stack pointer
     pushfd
     popfd
     mov ax, [cs:si+2Eh]
     cmp ax, [cs:si+30h]
 
-; FP-4: two flag setters on two paths join into one conditional jump
+; two flag setters on two paths join into one conditional jump
     mov ax, [cs:si+24h]
     test al, 10h
     jnz .fp4b
@@ -189,18 +189,18 @@ pass_loop:
     mov word [bx+22h], 0
 .fp4done:
 
-; RC-4: a node writing a register in several statements seeds no constant
+; a node writing a register in several statements seeds no constant
     mov ax, 4433h
     xchg al, ah
     mov [bx+26h], ax
     mov eax, 0
 
-; SSA-8: an iret exit uses the registers the handler writes, so the add survives
+; an iret exit uses the registers the handler writes, so the add survives
     mov cx, 41h
     int 61h
     mov [bx+28h], cx
 
-; DS-4: a timer handler (which sets DF itself) runs between std and movsb; the interrupt pushes
+; a timer handler (which sets DF itself) runs between std and movsb; the interrupt pushes
 ; FLAGS and the iret restores them, so the step stays -1. The PIT is armed and interrupts are
 ; enabled only for this section so the handler cannot disturb the other traps; the mask keeps
 ; IRQ0 only.
@@ -233,7 +233,7 @@ wait_df:
     mov al, 0FFh
     out 21h, al
 
-; SSA-9: a register written before a wait loop is read by the timer handler that runs at the loop
+; a register written before a wait loop is read by the timer handler that runs at the loop
 ; head's event check; the write is dead in the main code (overwritten after the loop) but must stay.
     mov word [0E08h], 0
     mov byte [0E0Ah], 0
@@ -273,7 +273,7 @@ wait_df:
     mov [bx+38h], cx
 .fpm_skip:
 
-; DW-3: a byte write fully overwritten by a later write is dead, even in a loop whose phi
+; a byte write fully overwritten by a later write is dead, even in a loop whose phi
 ; joins both versions into one web; a full-register write whose upper half the low-word write
 ; keeps stays
     mov eax, [cs:dw3_init]
@@ -290,7 +290,7 @@ wait_df:
     mov [bx+30h], edx
     mov edx, 0
 
-; PT-5: a declaration nobody reads stays when its initializer reads memory - the VGA read loads the
+; a declaration nobody reads stays when its initializer reads memory - the VGA read loads the
 ; latches, and dropping it would make the write-mode-1 copy write stale latches. Planar memory at
 ; A000h: one CPU address spans the 4 planes; a read loads the 4 latches, a write-mode-1 write copies
 ; them back out. A word read loads the latches once per byte, so the new plane bytes sit at [es:1]:
@@ -373,7 +373,7 @@ wait_df:
     out dx, ax
     pop es
 
-; CF-1: a value xored with or subtracted from itself folds to zero
+; a value xored with or subtracted from itself folds to zero
     mov ax, [cs:si+6]
     xor ax, ax
     mov [bx+20h], ax
@@ -385,11 +385,85 @@ wait_df:
     add si, 54
     dec word [0F00h]
     jnz pass_loop
+
+; a word read is composed from its byte writers, in either order; a zero high
+; half folds to the zero-extension
+    mov ah, 12h
+    mov al, 34h
+    mov si, ax
+    mov [bx+00h], si
+    mov cl, 56h
+    mov ch, 78h
+    mov di, cx
+    mov [bx+02h], di
+    mov dl, 9Eh
+    mov dh, 0
+    mov si, dx
+    mov [bx+04h], si
+
+; a wider write whose high half a later byte write overwrites keeps the writes
+; apart - only the latest version of each half may compose
+    mov si, inputs
+    mov ch, [cs:si+0Ch]
+    mov ax, 0507h
+    mov ah, ch
+    mov di, ax
+    mov [bx+06h], di
+
+; a faulting bound between the halves - its handler observes the half-written
+; register, so the byte writes must stay where the exception saw them
+    mov word [0E0Ch], 0
+    mov word [0E0Eh], 0
+    push es
+    mov ax, 0
+    mov es, ax
+    mov word [es:5*4], bound_handler
+    mov [es:5*4+2], cs
+    pop es
+    mov word [0E14h], 8
+    mov word [0E16h], 0Fh
+    mov edx, 0
+    mov cx, 0
+    mov dl, 7
+    bound cx, [0E14h]
+    mov dh, 4
+    mov di, dx
+    mov [bx+08h], di
+    mov ax, [0E0Ch]
+    mov [bx+0Ah], ax
+    mov ax, [0E0Eh]
+    mov [bx+0Ch], ax
+
+; the wide register is read again after the word read - the byte writes stay
+    mov al, 9Ah
+    mov ah, 0
+    mov si, ax
+    mov [bx+0Eh], si
+    mov [bx+10h], ax
+
+; a byte of the pair is read on its own after the word read - the writes stay
+    mov dl, 77h
+    mov dh, 0
+    mov si, dx
+    mov [bx+12h], si
+    mov [bx+14h], dl
+
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 set_carry_flag:
     stc
     ret
+
+bound_handler:
+    push bp
+    mov bp, sp
+    mov [0E0Ch], cx
+    mov [0E0Eh], dx
+    add word [bp+2], 4
+    pop bp
+    iret
 
 ssa8_handler:
     add cx, 1
@@ -413,9 +487,9 @@ ssa9_timer_handler:
     pop ax
     iret
 
-; per pass: sel for the CC-2 goto, mul a/b, EP-1 cx2, EP-5 value, FP-1 a/b, AA-4 dx/cl,
-; SSA-1 a/b, CC-2 ax/bp, RC-phi selector, EP-7b di, EP-1 cx init/subtrahend,
-; FP-4 sel/x/y, DW-1 a/b, DF-2 cmp pair, PT-1 xadd mem/reg
+; per pass: sel for the nested-test goto, mul a/b, the blocked merge cx2, the store-crossing value, the pushf a/b, the masked shift dx/cl,
+; the call-severed flags a/b, the nested-test ax/bp, the phi selector, the address-cycling di, the blocked merge cx init and subtrahend,
+; the joined-setters sel/x/y, the dead pop a/b, the call-valued flag write cmp pair, the xadd mem/reg
 inputs:
     dw 8, 8000h, 2, 11h, 22h, 4, 1, 2, 8001h, 1, 2, 1, 0, 5, 1, 76h, 0100h, 11h
     dw 0, 7, 4, 0A1h, 0B2h, 3, 5, 41h, 7

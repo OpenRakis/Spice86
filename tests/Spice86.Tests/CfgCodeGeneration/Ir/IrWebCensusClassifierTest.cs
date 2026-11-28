@@ -31,9 +31,9 @@ public sealed class IrWebCensusClassifierTest {
         // Arrange: mov-like write of EAX, one instruction read, then an exit reading everything
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(Writes(instruction, Eax));
-        block.Statements.Add(Reads(instruction, Eax));
-        block.Terminator = new IrExit(instruction, ReturnValue());
+        IrEditor.WithoutSsa.Append(block, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.Append(block, Reads(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, ReturnValue()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -55,8 +55,8 @@ public sealed class IrWebCensusClassifierTest {
         // Arrange: an instruction reads EAX without any write; the abort exit reads nothing
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        block.Statements.Add(Reads(instruction, Eax));
-        block.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(block, Reads(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(block, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
 
         // Act
@@ -74,10 +74,10 @@ public sealed class IrWebCensusClassifierTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock define = Block(0);
         IrBlock read = Block(1);
-        define.Statements.Add(Writes(instruction, Eax));
-        define.Terminator = new IrJump(instruction, new IrEdge(read, false));
-        read.Statements.Add(Reads(instruction, Eax));
-        read.Terminator = new IrExit(instruction, Fail());
+        IrEditor.WithoutSsa.Append(define, Writes(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(define, new IrJump(instruction, new IrEdge(read, false)));
+        IrEditor.WithoutSsa.Append(read, Reads(instruction, Eax));
+        IrEditor.WithoutSsa.SetTerminator(read, new IrExit(instruction, Fail()));
         IrMethod method = Method([Entry(instruction, define)], [instruction], define, read);
 
         // Act

@@ -23,6 +23,36 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// actual writing to source text happens elsewhere.
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
+    private readonly object _callLandingsLock = new();
+    private readonly Dictionary<(SegmentedAddress ExpectedReturn, MethodGroupNode? Target), CallLandingListNode> _callLandings = [];
+
+    /// <summary>The mid-call landings of every generated call site, keyed by the site's expected
+    /// return address and callee (<c>null</c> for interrupt calls); the wiring constructor arms them
+    /// with <c>DefineCallLandings</c>.</summary>
+    internal IReadOnlyDictionary<(SegmentedAddress ExpectedReturn, MethodGroupNode? Target), CallLandingListNode> CallLandings => _callLandings;
+
+    /// <summary>Records the landings of the call site expecting to return to
+    /// <paramref name="expectedReturn"/> through <paramref name="target"/>; recording the same pair
+    /// twice with the same arms is a no-op.</summary>
+    /// <exception cref="InvalidOperationException">Two records for the same return address and callee
+    /// observed different landings.</exception>
+    internal void RecordCallLandings(SegmentedAddress expectedReturn, MethodGroupNode? target, CallLandingListNode? landings) {
+        if (landings is null) {
+            return;
+        }
+        (SegmentedAddress, MethodGroupNode?) key = (expectedReturn, target);
+        lock (_callLandingsLock) {
+            if (_callLandings.TryGetValue(key, out CallLandingListNode? existing)) {
+                if (!existing.Arms.SequenceEqual(landings.Arms)) {
+                    throw new InvalidOperationException(
+                        $"Two call sites returning to {expectedReturn} observed different landing tables.");
+                }
+                return;
+            }
+            _callLandings[key] = landings;
+        }
+    }
+
     /// <summary>
     /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, preceded by a CS
     /// assignment when the edge crosses a segment inside one generated method, a partition return, or a cyclic-flow
@@ -33,7 +63,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     public IVisitableAstNode Emit(ResolvedCfgEdge edge, bool allowCallOutContinuation = false) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
-        if (sourcePartition == targetPartition) {
+        if (ReferenceEquals(sourcePartition, targetPartition)) {
             GotoNode jump = new(new CfgNodeGotoTarget(edge.Target));
             if (edge.Source.Address.Segment != edge.Target.Address.Segment) {
                 BinaryOperationNode setCs = new(DataType.UINT16,
@@ -92,12 +122,14 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// observed post-call continuation. The helper (NearCall / FarCall) preserves emulated stack behavior and
     /// validates the actual return target against the pushed return address.
     /// </summary>
-    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs) {
+    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, ResolvedCfgEdge calleeEdge, ushort? farCallTargetCs) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
+        MethodGroupNode function = FunctionReference(calleeEdge);
+        CallLandingListNode? landings = LandingsList(calleeEdge, continuation);
         return CodeGenerationAst.Sequence(
             EmitCallWithRedirectedDispatch(call, continuation,
-                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, true, continuation),
-                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation)),
+                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, true, continuation, landings),
+                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation, landings)),
             EmitPostCallContinuation(call, continuation));
     }
 
@@ -108,25 +140,72 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// omitted.
     /// </summary>
     public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs,
-        bool singleObservedTarget, CallContinuation continuation) =>
-        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs)) {
+        bool singleObservedTarget, CallContinuation continuation, CallLandingListNode? landings) {
+        RecordCallLandings(expectedReturn, function, landings);
+        return new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs)) {
             SingleObservedTarget = singleObservedTarget,
-            ObservedContinuation = continuation.ObservedContinuationEdge is not null
+            ObservedContinuation = continuation.ObservedContinuationEdge is not null,
+            ObservedLandings = landings is not null
         };
+    }
 
     /// <summary>
     /// The <c>&lt;helper&gt;ReturnedElsewhere</c> variant of <see cref="CallHelper"/>: same arguments plus the
     /// redirected return addresses of <paramref name="continuation"/>, returning whether the call ended there.
     /// </summary>
     public MethodCallValueNode CallHelperReturnedElsewhere(CallDistance distance, BitWidth width,
-        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation) =>
-        new ProcedureCallReturnedElsewhereHelperNode(distance, width,
-            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)]);
+        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation, CallLandingListNode? landings) {
+        RecordCallLandings(expectedReturn, function, landings);
+        List<IVisitableAstNode> arguments =
+            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)];
+        return new ProcedureCallReturnedElsewhereHelperNode(distance, width, arguments.ToArray());
+    }
 
     /// <summary>The redirected return addresses of <paramref name="continuation"/> as a
     /// <c>SegmentedAddress[]</c> argument.</summary>
     public SegmentedAddressListNode RedirectedAddressList(CallContinuation continuation) =>
         new(continuation.RedirectedContinuationEdges.Select(edge => edge.Target.Address).ToArray());
+
+    /// <summary>
+    /// The mid-call landings discovery observed for a call into <paramref name="calleeEdge"/>'s partition as a
+    /// wiring-table row, or <c>null</c> when the callee's activation transfers to no partition
+    /// entry while the call's frame is open and no row is needed.
+    /// </summary>
+    public CallLandingListNode? LandingsList(ResolvedCfgEdge calleeEdge, CallContinuation continuation) =>
+        LandingsList([context.GetPartition(calleeEdge.Target)], continuation);
+
+    /// <summary>The <see cref="LandingsList(ResolvedCfgEdge, CallContinuation)"/> argument for a call whose
+    /// callee is known as a partition rather than an edge (the program interrupt handler the vector was
+    /// observed to point to).</summary>
+    public CallLandingListNode? LandingsList(CfgCodePartition calleePartition, CallContinuation continuation) =>
+        LandingsList([calleePartition], continuation);
+
+    /// <summary>The union of mid-call landings of all observed target partitions at one
+    /// indirect call or interrupt site, keyed by the site's expected return address.</summary>
+    public CallLandingListNode? ObservedCallLandingsList(CfgInstruction instruction, CallContinuation continuation) =>
+        LandingsList(context.GetSuccessorEdges(instruction, InstructionSuccessorType.Normal)
+            .Select(edge => context.GetPartition(edge.Target)), continuation);
+
+    private CallLandingListNode? LandingsList(IEnumerable<CfgCodePartition> calleePartitions, CallContinuation continuation) {
+        List<(SegmentedAddress Address, MethodGroupNode Entry)> arms = [];
+        HashSet<SegmentedAddress> seen = [];
+        foreach (CfgCodePartition calleePartition in calleePartitions) {
+            foreach ((CfgCodePartition partition, CfgCodePartitionEntry entry) in
+                context.ResolveCallLandings(calleePartition, continuation.ExpectedReturnAddress)) {
+                if (!seen.Add(entry.Address)) {
+                    continue;
+                }
+                arms.Add((entry.Address, new MethodGroupNode(
+                    context.GetMethodName(partition),
+                    context.GetEntryLoadOffset(partition, entry.Node),
+                    context.GetEntries(partition).Count == 1)));
+            }
+        }
+        if (arms.Count == 0) {
+            return null;
+        }
+        return new CallLandingListNode(arms.OrderBy(arm => arm.Address.Linear).ToList());
+    }
 
     /// <summary>
     /// The call statement to emit for a call that may return to a redirected target: when the call has
@@ -207,7 +286,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     public CpuFaultHandler FaultHandler(ResolvedCfgEdge edge) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
-        if (sourcePartition == targetPartition) {
+        if (ReferenceEquals(sourcePartition, targetPartition)) {
             throw new NotSupportedException($"CPU fault transfer from {edge.Source.Address} to {edge.Target.Address} cannot be lowered as same-method control flow.");
         }
 

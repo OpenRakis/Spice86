@@ -3,6 +3,7 @@
 using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.Cmos;
@@ -82,6 +83,10 @@ public class CSharpOverrideHelper {
     public Machine Machine { get; }
 
     private readonly InterruptVectorTable _interruptVectorTable;
+
+    private readonly TypedCallRunner _typedCalls;
+    private readonly ServiceCallRunner _serviceCalls;
+    private readonly DosChildProcessRunner _dosChildProcesses;
 
     private readonly HashSet<(SegmentedAddress, SegmentedAddress)> _warnedNestedOverrideCalls = new();
 
@@ -392,6 +397,18 @@ public class CSharpOverrideHelper {
     public bool ZeroFlag { get => State.ZeroFlag; set => State.ZeroFlag = value; }
 
     /// <summary>
+    /// Sets the six status flags at once, the flag result of one operation.
+    /// </summary>
+    public void SetStatusFlags(bool carry, bool parity, bool auxiliary, bool zero, bool sign, bool overflow) {
+        CarryFlag = carry;
+        ParityFlag = parity;
+        AuxiliaryFlag = auxiliary;
+        ZeroFlag = zero;
+        SignFlag = sign;
+        OverflowFlag = overflow;
+    }
+
+    /// <summary>
     /// Gets or sets the value of the flags register (32 bit value).
     /// </summary>
     public uint FlagRegister { get => State.Flags.FlagRegister; set => State.Flags.FlagRegister = value; }
@@ -549,6 +566,10 @@ public class CSharpOverrideHelper {
         Alu16 = new(machine.CpuState);
         Alu32 = new(machine.CpuState);
         ReturnOperationsHelper = new(State, Stack);
+        _typedCalls = new(State, Stack, FailAsUntested);
+        _serviceCalls = new(State, Stack, FailAsUntested);
+        _dosChildProcesses = new(State, Stack, Memory, () => Dos.ReadPspAddress(),
+            _interruptVectorTable, FailAsUntested, SearchFunctionOverride);
         VgaPorts = new(machine.IoPortDispatcher);
         PitPorts = new(machine.IoPortDispatcher);
         PicPorts = new(machine.IoPortDispatcher);
@@ -599,6 +620,15 @@ public class CSharpOverrideHelper {
 
     /// <summary>The installed INT 21h DOS handler.</summary>
     public DosInt21Handler Dos => GetInterruptHandler<DosInt21Handler>();
+
+    /// <summary>DOS INT 20h handler (legacy program terminate).</summary>
+    public DosInt20Handler DosInt20 => GetInterruptHandler<DosInt20Handler>();
+
+    /// <summary>DOS INT 22h handler (terminate address, invoked directly).</summary>
+    public DosInt22Handler DosInt22 => GetInterruptHandler<DosInt22Handler>();
+
+    /// <summary>DOS INT 23h handler (Ctrl-Break terminate).</summary>
+    public DosInt23Handler DosInt23 => GetInterruptHandler<DosInt23Handler>();
 
     /// <summary>The installed INT 24h critical error handler.</summary>
     public DosInt24Handler CriticalError => GetInterruptHandler<DosInt24Handler>();
@@ -827,10 +857,11 @@ public class CSharpOverrideHelper {
     /// ended at the expected return address.</returns>
     public bool NearCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
-            Stack.Push16(expectedReturnIp);
+            Stack.PushReturnAddress(CallDistance.Near, BitWidth.WORD_16,
+                new SegmentedAddress(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, false);
     }
 
     /// <summary>
@@ -856,10 +887,11 @@ public class CSharpOverrideHelper {
     /// ended at the expected return address.</returns>
     public bool NearCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
-            Stack.Push32(expectedReturnIp);
+            Stack.PushReturnAddress(CallDistance.Near, BitWidth.DWORD_32,
+                new SegmentedAddress(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, false);
     }
 
     /// <summary>
@@ -886,11 +918,11 @@ public class CSharpOverrideHelper {
     /// ended at the expected return address.</returns>
     public bool FarCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
-            Stack.Push16(expectedReturnCs);
-            Stack.Push16(expectedReturnIp);
+            Stack.PushReturnAddress(CallDistance.Far, BitWidth.WORD_16,
+                new SegmentedAddress(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, false);
     }
 
     /// <summary>
@@ -919,10 +951,11 @@ public class CSharpOverrideHelper {
     /// ended at the expected return address.</returns>
     public bool FarCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
-            Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
+            Stack.PushReturnAddress(CallDistance.Far, BitWidth.DWORD_32,
+                new SegmentedAddress(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, false);
     }
 
     /// <summary>
@@ -948,7 +981,8 @@ public class CSharpOverrideHelper {
     /// </remarks>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public T NearCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, Func<T> typedCall) {
-        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        return _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, CallDistance.Near,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -960,7 +994,8 @@ public class CSharpOverrideHelper {
     /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Action typedCall) {
-        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+        _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, CallDistance.Near,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -978,7 +1013,8 @@ public class CSharpOverrideHelper {
     /// <returns>The value the typed callee returned.</returns>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public T FarCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<T> typedCall) {
-        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+        return _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, CallDistance.Far,
+            BitWidth.WORD_16, typedCall);
     }
 
     /// <summary>
@@ -991,7 +1027,73 @@ public class CSharpOverrideHelper {
     /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
     /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Action typedCall) {
-        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+        _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, CallDistance.Far,
+            BitWidth.WORD_16, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed near call with a 32-bit operand size: pushes a 32-bit return EIP exactly like
+    /// <see cref="NearCall32(ushort, ushort, Func{int, Action})"/>, runs the typed callee and then
+    /// requires CS:IP to be the expected return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T NearCall32<T>(ushort expectedReturnCs, ushort expectedReturnIp, Func<T> typedCall) {
+        return _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, CallDistance.Near,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed near call of a callee that returns no value: same stack contract as
+    /// <see cref="NearCall32{T}(ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void NearCall32(ushort expectedReturnCs, ushort expectedReturnIp, Action typedCall) {
+        _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, CallDistance.Near,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call with a 32-bit operand size: pushes the return address as a 32-bit
+    /// far pointer exactly like <see cref="FarCall32(ushort, ushort, ushort, Func{int, Action})"/>,
+    /// sets CS to <paramref name="targetCs"/>, runs the typed callee and then requires CS:IP to be
+    /// the expected return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T FarCall32<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<T> typedCall) {
+        return _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, CallDistance.Far,
+            BitWidth.DWORD_32, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call of a callee that returns no value: same stack contract as
+    /// <see cref="FarCall32{T}(ushort, ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn32"/> or
+    /// <see cref="FarReturn32"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Action typedCall) {
+        _typedCalls.ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, CallDistance.Far,
+            BitWidth.DWORD_32, typedCall);
     }
 
     /// <summary>
@@ -1021,6 +1123,174 @@ public class CSharpOverrideHelper {
     public void FarReturn() => FarReturn(0);
 
     /// <summary>
+    /// Pops the stacked near return address (EIP) immediately, with the same operand bytes as an
+    /// <c>o32 ret n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>o32 ret</c>).</param>
+    public void NearReturn32(ushort numberOfBytesToPop) => ReturnOperationsHelper.NearRet32(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked near return address (EIP) immediately, the plain <c>o32 ret</c> of a typed
+    /// callee that pops no parameter bytes.
+    /// </summary>
+    public void NearReturn32() => NearReturn32(0);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:EIP) immediately, with the same operand bytes as an
+    /// <c>o32 retf n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>o32 retf</c>).</param>
+    public void FarReturn32(ushort numberOfBytesToPop) => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:EIP) immediately, the plain <c>o32 retf</c> of a
+    /// typed callee that pops no parameter bytes.
+    /// </summary>
+    public void FarReturn32() => FarReturn32(0);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, without a caller
+    /// clean-up: the no-<paramref name="cleanupBytes"/> form of
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order (first slot first); the helper
+    /// pushes the last word first.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackArguments<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> typedCall, params ushort[] arguments) =>
+        CallWithStackArguments(expectedReturnCs, expectedReturnIp, 0, typedCall, arguments);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call: pushes
+    /// <paramref name="arguments"/> in reverse argument order (the order the original
+    /// <c>push</c> instructions ran, so the memory writes are identical), then performs the same
+    /// near typed call as <see cref="NearCall{T}(ushort, ushort, Func{T})"/> and finally steps SP by
+    /// <paramref name="cleanupBytes"/> (the caller's <c>add sp,n</c> whose flags were dead).
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call; 0 when the callee's
+    /// <c>ret n</c> or no clean-up instruction consumes the arguments.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order (first slot first); the helper
+    /// pushes the last word first.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackArguments<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Func<T> typedCall, params ushort[] arguments) =>
+        _typedCalls.CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            arguments, 0);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it: steps SP
+    /// by <paramref name="argumentBytes"/> exactly as the pushes of
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/> would, but
+    /// leaves the bytes untouched because the callee reads them as parameters and the slots are
+    /// proved private. Generated code calls this only under the
+    /// <c>AbandonedStackSlotsUnobserved</c> relaxation.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackSpace<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int argumentBytes, Func<T> typedCall) =>
+        CallWithStackSpace(expectedReturnCs, expectedReturnIp, 0, argumentBytes, typedCall);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it: same
+    /// stack contract as
+    /// <see cref="CallWithStackSpace{T}(ushort, ushort, int, Func{T})"/> plus the caller's
+    /// <paramref name="cleanupBytes"/> step afterwards.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T CallWithStackSpace<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, int argumentBytes, Func<T> typedCall) =>
+        _typedCalls.CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            [], argumentBytes);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, for a callee that
+    /// returns no value and whose caller runs no clean-up: the no-cleanup form of
+    /// <see cref="CallWithStackArguments(ushort, ushort, int, Action, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>.</param>
+    /// <param name="arguments">The argument words in callee slot order.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackArguments(ushort expectedReturnCs, ushort expectedReturnIp,
+        Action typedCall, params ushort[] arguments) =>
+        CallWithStackArguments(expectedReturnCs, expectedReturnIp, 0, typedCall, arguments);
+
+    /// <summary>
+    /// Performs a typed near call with the argument pushes folded into the call, for a callee that
+    /// returns no value: same stack contract as
+    /// <see cref="CallWithStackArguments{T}(ushort, ushort, int, Func{T}, ushort[])"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <param name="arguments">The argument words in callee slot order.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackArguments(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, Action typedCall, params ushort[] arguments) =>
+        _typedCalls.CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            arguments, 0);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it, for a
+    /// callee that returns no value: same stack contract as
+    /// <see cref="CallWithStackSpace{T}(ushort, ushort, int, int, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackSpace(ushort expectedReturnCs, ushort expectedReturnIp,
+        int argumentBytes, Action typedCall) =>
+        CallWithStackSpace(expectedReturnCs, expectedReturnIp, 0, argumentBytes, typedCall);
+
+    /// <summary>
+    /// Performs a typed near call reserving the argument stack space without writing it, for a
+    /// callee that returns no value and whose caller pops <paramref name="cleanupBytes"/> after
+    /// the call.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="cleanupBytes">The bytes the caller pops after the call.</param>
+    /// <param name="argumentBytes">The bytes the argument pushes would have written.</param>
+    /// <param name="typedCall">The typed callee.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void CallWithStackSpace(ushort expectedReturnCs, ushort expectedReturnIp,
+        int cleanupBytes, int argumentBytes, Action typedCall) =>
+        _typedCalls.CallWithStackArgumentsCore(expectedReturnCs, expectedReturnIp, cleanupBytes, typedCall,
+            [], argumentBytes);
+
+    /// <summary>
     /// The no-op <see cref="Action"/> an entry wrapper returns after its typed method already performed
     /// the return (<see cref="NearReturn"/> / <see cref="FarReturn"/> popped the stacked return address and
     /// set CS:IP). Returning it is exact: the wrapper adds no frame and the action does nothing.
@@ -1028,53 +1298,11 @@ public class CSharpOverrideHelper {
     public static Action Returned { get; } = () => { };
 
     /// <summary>
-    /// Runs a typed call dispatch: pushes the return frame the untyped helpers push, then requires the
-    /// callee to have returned to the expected return address with the stack at or above the level it had
-    /// before the pushes.
-    /// </summary>
-    private T ExecuteTypedCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
-        bool isFar, Func<T> typedCall) {
-        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
-        T result = typedCall.Invoke();
-        CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
-        return result;
-    }
-
-    private void ExecuteTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
-        bool isFar, Action typedCall) {
-        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
-        typedCall.Invoke();
-        CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
-    }
-
-    private uint PrepareTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, bool isFar) {
-        uint expectedStackAddress = State.StackPhysicalAddress;
-        if (isFar) {
-            Stack.Push16(expectedReturnCs);
-        }
-        Stack.Push16(expectedReturnIp);
-        State.CS = targetCs;
-        State.IP = expectedReturnIp;
-        return expectedStackAddress;
-    }
-
-    private void CheckTypedCallReturn(ushort expectedReturnCs, ushort expectedReturnIp, uint expectedStackAddress) {
-        if (State.StackPhysicalAddress < expectedStackAddress) {
-            throw FailAsUntested($"Typed call consumed the stack down to {State.StackPhysicalAddress:X5}, below {expectedStackAddress:X5}");
-        }
-        if (State.CS != expectedReturnCs || State.IP != expectedReturnIp) {
-            SegmentedAddress actual = new(State.CS, State.IP);
-            throw new CallStackUnwindException(actual,
-                $"Typed call returned to {actual} instead of {expectedReturnCs:X4}:{expectedReturnIp:X4}");
-        }
-    }
-
-    /// <summary>
     /// Call the given callback number
     /// </summary>
     /// <param name="callbackNumber">The callback identifier.</param>
     public void Callback(ushort callbackNumber) {
-        _callbackHandler.RunFromOverriden(callbackNumber);
+        _callbackHandler.Run(callbackNumber);
     }
 
     /// <summary>
@@ -1092,7 +1320,7 @@ public class CSharpOverrideHelper {
     public bool CallbackMovedCsIp(ushort cs, ushort ip, ushort callbackNumber) {
         State.CS = cs;
         State.IP = ip;
-        _callbackHandler.RunFromOverriden(callbackNumber);
+        _callbackHandler.Run(callbackNumber);
         if (!State.IsRunning) {
             Exit();
         }
@@ -1115,6 +1343,36 @@ public class CSharpOverrideHelper {
             throw FailAsUntested($"Untested callback CS:IP change at {cs:X4}:{ip:X4}: moved to {State.CS:X4}:{State.IP:X4}");
         }
     }
+
+    /// <summary>
+    /// Runs a managed internal-program child to its terminate, then resumes the parent's observed
+    /// fallthrough at <paramref name="resumeCs"/>:<paramref name="resumeIp"/>. A terminate
+    /// targeting anywhere else propagates.
+    /// </summary>
+    /// <param name="resumeCs">Segment of the parent's observed resume address.</param>
+    /// <param name="resumeIp">Offset of the parent's observed resume address.</param>
+    /// <param name="child">The child's generated entry.</param>
+    /// <param name="continuation">The parent's generated continuation at the resume address.</param>
+    /// <returns>The action ending the dispatch.</returns>
+    public Action RunInternalProgramChild(ushort resumeCs, ushort resumeIp,
+        Func<int, Action> child, Func<int, Action> continuation) =>
+        _dosChildProcesses.RunInternalProgramChild(resumeCs, resumeIp, child, continuation);
+
+    /// <summary>
+    /// The root entry of a program a terminate can resume through the batch engine: runs
+    /// <paramref name="program"/>, and while a terminate resumes at an entry
+    /// <paramref name="batchPrograms"/> arms - a batch launch's observed entry - runs that entry,
+    /// so a batch of programs plays inside the root's dispatch like the interpreted run. A resume
+    /// at an address discovery never armed fails as untested; a halt propagates.
+    /// </summary>
+    /// <param name="program">The generated entry the program starts at.</param>
+    /// <param name="batchPrograms">The (resume address, entry) pairs the observed terminates
+    /// resume at.</param>
+    /// <returns>The root entry action: it ends only when the program halts or an unobserved
+    /// resume unwinds.</returns>
+    public Func<int, Action> RunBatchPrograms(Func<int, Action> program,
+        params CallLanding[] batchPrograms) =>
+        _dosChildProcesses.RunBatchPrograms(program, batchPrograms);
 
     /// <summary>
     /// Performs an interrupt call by executing the given function and returning to the specified return address.
@@ -1154,13 +1412,11 @@ public class CSharpOverrideHelper {
 
     private bool ExecuteInterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
         return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
-            Stack.Push16(State.Flags.FlagRegister16);
+            Stack.PushInterruptFrame(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
             InterruptFlag = false;
-            Stack.Push16(expectedReturnCs);
-            Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        }, redirectedReturns);
+        }, redirectedReturns, true);
     }
 
     /// <summary>
@@ -1243,6 +1499,151 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a typed interrupt service call with the same stack traffic the interpreted
+    /// <c>int</c> + stub + <c>iret</c> path performs: pushes the FLAGS/CS/IP frame, clears IF,
+    /// runs the handler's entry bookkeeping (<see cref="InterruptHandler.OnInterruptEntry"/>),
+    /// invokes the service implementation, then pops the frame like <c>iret</c> does and restores
+    /// the stacked FLAGS (including the flags <paramref name="stackedFlags"/> wrote into the stack
+    /// image). Used only where the service returns normally.
+    /// </summary>
+    /// <param name="expectedReturnCs">The CS of the continuation the frame must return to.</param>
+    /// <param name="expectedReturnIp">The IP of the continuation the frame must return to.</param>
+    /// <param name="handler">The installed handler the service belongs to.</param>
+    /// <param name="invocation">The typed service implementation call; runs with the frame pushed.</param>
+    /// <param name="stackedFlags">Writes the service's flag results into the stacked FLAGS word,
+    /// the way the interpreted dispatch's <c>SetFlagOnInterruptStack</c> does.</param>
+    /// <returns>The service implementation's return value.</returns>
+    /// <exception cref="UnrecoverableException">The frame the service left does not return to the
+    /// expected continuation.</exception>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Func<T> invocation, Action<T> stackedFlags) =>
+        _serviceCalls.ServiceCallCore(expectedReturnCs, expectedReturnIp, invocation, stackedFlags,
+            handler as InterruptHandler);
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// typed service that has no entry bookkeeping: the printer selects this overload when the
+    /// bound service entry keeps the handler's entry hook off.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> invocation, Action<T> stackedFlags) =>
+        _serviceCalls.ServiceCallCore(expectedReturnCs, expectedReturnIp, invocation, stackedFlags, null);
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// service that returns no flag on the interrupt stack.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Func<T> invocation) =>
+        ServiceCall(expectedReturnCs, expectedReturnIp, handler, invocation, _ => { });
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, Func{T}, Action{T})"/> for a service that returns
+    /// no flag on the interrupt stack.
+    /// </summary>
+    public T ServiceCall<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<T> invocation) =>
+        ServiceCall(expectedReturnCs, expectedReturnIp, invocation, _ => { });
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, IInterruptHandler, Func{T}, Action{T})"/> for a
+    /// service with no return value.
+    /// </summary>
+    public void ServiceCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        IInterruptHandler handler, Action invocation) {
+        ServiceCall<int>(expectedReturnCs, expectedReturnIp, handler,
+            () => { invocation(); return 0; }, _ => { });
+    }
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(ushort, ushort, Func{T}, Action{T})"/> for a service with no
+    /// return value.
+    /// </summary>
+    public void ServiceCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        Action invocation) {
+        ServiceCall<int>(expectedReturnCs, expectedReturnIp,
+            () => { invocation(); return 0; }, _ => { });
+    }
+
+    /// <summary>
+    /// A typed service call that does not write the interrupt frame: IF is saved and cleared for
+    /// the call, SP is lowered by six around the handler's <see cref="InterruptHandler.OnInterruptEntry"/>
+    /// so the entry bookkeeping sees the stack pointer the frame would have left, and the
+    /// invocation runs frameless. Flag results stay plain outputs; no return address is checked.
+    /// </summary>
+    /// <param name="handler">The installed handler whose entry bookkeeping the call runs.</param>
+    /// <param name="invocation">The typed service implementation to call.</param>
+    /// <returns>The service implementation's return value.</returns>
+    public T ServiceCall<T>(IInterruptHandler handler, Func<T> invocation) =>
+        _serviceCalls.ServiceCallFramelessCore(handler as InterruptHandler, invocation);
+
+    /// <summary>
+    /// <see cref="ServiceCall{T}(IInterruptHandler, Func{T})"/> for a service with no return value.
+    /// </summary>
+    public void ServiceCall(IInterruptHandler handler, Action invocation) {
+        ServiceCall<int>(handler, () => { invocation(); return 0; });
+    }
+
+    /// <summary>
+    /// A terminating service call invoked directly by generated code
+    /// (<c>return TerminateCall(cs1, 0x0451, () => Dos.Terminate(AL))</c>): positions CS:IP at the
+    /// <c>int</c>'s return address so the implementation pushes the same frame bytes the
+    /// interpreted <c>int</c> pushed, then never returns to the call site - it halts or unwinds.
+    /// </summary>
+    /// <param name="expectedReturnCs">The segment the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="expectedReturnIp">The offset the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="invocation">The terminating service implementation to call.</param>
+    /// <returns>Never returns: the type only lets the call print as a method's returned action.</returns>
+    public Action TerminateCall(ushort expectedReturnCs, ushort expectedReturnIp,
+        Func<Action> invocation) =>
+        _serviceCalls.TerminateCall(expectedReturnCs, expectedReturnIp, invocation);
+
+    /// <summary>
+    /// A typed DOS EXEC-and-run call
+    /// (<c>(AX, flag1, DS, ES) = ExecChild(cs1, 0x0193, 0x21)</c>): the helper pushes the
+    /// <c>int</c> frame the interpreted call pushed, clears IF like interrupt entry, then invokes
+    /// the generated interrupt stub of the call's vector. The stub runs its dispatch, the DOS
+    /// callback loads and launches the child and the callback-moved CS:IP check jumps to the
+    /// observed child entry, which runs to its terminate; the termination restores this parent
+    /// and unwinds here through the pushed frame. A failed EXEC ran no child: the stub's own
+    /// <c>iret</c> pops the frame back and the service's carry/AX outputs are returned.
+    /// </summary>
+    /// <param name="expectedReturnCs">The segment the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="expectedReturnIp">The offset the interpreted <c>int</c> frame returns to.</param>
+    /// <param name="vectorNumber">The interrupt vector whose generated stub the call runs.</param>
+    /// <returns>AX, the carry flag and DS/ES as the resumed parent leaves them.</returns>
+    /// <exception cref="UnrecoverableException">The EXEC vector had no generated stub or a
+    /// termination resumed at an address discovery did not observe.</exception>
+    public (ushort ax, bool carryFlag, ushort ds, ushort es) ExecChild(
+        ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) =>
+        _dosChildProcesses.ExecChild(expectedReturnCs, expectedReturnIp, vectorNumber);
+
+    /// <summary>Writes a carry result into the stacked FLAGS of a
+    /// <see cref="ServiceCall"/> frame.</summary>
+    protected void CarryOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Carry, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void ParityOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Parity, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void AuxiliaryOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Auxiliary, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void ZeroOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Zero, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void SignOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Sign, value);
+
+    /// <inheritdoc cref="CarryOnInterruptStack" />
+    protected void OverflowOnInterruptStack(bool value) =>
+        Stack.SetFlagOnInterruptStack(Flags.Overflow, value);
+
+    /// <summary>
     /// Returns the installed interrupt handler of type <typeparamref name="THandler"/>.
     /// </summary>
     /// <typeparam name="THandler">The handler type.</typeparam>
@@ -1286,8 +1687,7 @@ public class CSharpOverrideHelper {
     /// <param name="faultingInstructionIp">The IP of the instruction that faulted, pushed as the return offset.</param>
     /// <param name="target">The fault handler address resolved through the interrupt vector table.</param>
     public void EnterCpuFaultHandler(ushort faultingInstructionCs, ushort faultingInstructionIp, SegmentedAddress target) {
-        Stack.Push16(State.Flags.FlagRegister16);
-        Stack.PushSegmentedAddress(new SegmentedAddress(faultingInstructionCs, faultingInstructionIp));
+        Stack.PushInterruptFrame(new SegmentedAddress(faultingInstructionCs, faultingInstructionIp));
         InterruptFlag = false;
         CS = target.Segment;
         IP = target.Offset;
@@ -1300,17 +1700,37 @@ public class CSharpOverrideHelper {
     /// <param name="faultCs">The CS of the faulting instruction.</param>
     /// <param name="faultIp">The IP of the faulting instruction.</param>
     /// <param name="targets">The list of fault handler targets to match against the live IVT.</param>
+    /// <param name="resumeTargets">The addresses discovery observed this fault resuming at; the
+    /// return action fails as untested when the handler leaves control anywhere else.</param>
     /// <returns>The return action from the matching handler partition.</returns>
     /// <exception cref="UnrecoverableException">Thrown when no target matches the live IVT handler.</exception>
-    public Action DispatchCpuFault(CpuException exception, ushort faultCs, ushort faultIp, IReadOnlyList<CpuFaultTarget> targets) {
+    public Action DispatchCpuFault(CpuException exception, ushort faultCs, ushort faultIp,
+        IReadOnlyList<CpuFaultTarget> targets, SegmentedAddress[] resumeTargets) {
         SegmentedAddress handler = _interruptVectorTable[exception.InterruptVector];
         foreach (CpuFaultTarget target in targets) {
             if (target.Handler == handler) {
                 EnterCpuFaultHandler(faultCs, faultIp, handler);
-                return target.Invoke();
+                Action resume = target.Invoke();
+                return () => {
+                    resume();
+                    VerifyObservedFaultResume(faultCs, faultIp, handler, resumeTargets);
+                };
             }
         }
         throw FailAsUntested($"Untested CPU fault target {handler} at {faultCs:X4}:{faultIp:X4}");
+    }
+
+    /// <summary>Fails as untested when the fault handler's return left control at an address
+    /// discovery did not observe the fault resuming at.</summary>
+    private void VerifyObservedFaultResume(ushort faultCs, ushort faultIp, SegmentedAddress handler,
+        SegmentedAddress[] resumeTargets) {
+        SegmentedAddress landedAddress = State.IpSegmentedAddress;
+        foreach (SegmentedAddress target in resumeTargets) {
+            if (target == landedAddress) {
+                return;
+            }
+        }
+        throw FailAsUntested($"The fault at {faultCs:X4}:{faultIp:X4} through {handler} resumed at {landedAddress}, which discovery did not observe it resuming on");
     }
 
     /// <summary>
@@ -1328,6 +1748,27 @@ public class CSharpOverrideHelper {
     }
 
     private static readonly SegmentedAddress[] NoRedirectedReturns = [];
+    private readonly Dictionary<(SegmentedAddress ExpectedReturn, Func<int, Action>? Target), CallLanding[]> _callLandings = new();
+
+    /// <summary>
+    /// Whether generated code may only run the call landings and hardware interrupt handlers that
+    /// discovery observed (<see langword="true"/>) or any override registered there
+    /// (<see langword="false"/>). The base implementation keeps the permissive chain for hand-written
+    /// overrides; a generated program overrides it so unobserved landings and unobserved handler
+    /// deliveries fail as untested.
+    /// </summary>
+    protected virtual bool ObservedTransfersOnly => false;
+
+    /// <summary>
+    /// Arms the mid-call landings discovery observed for the call site expecting to return to
+    /// <paramref name="expectedReturn"/>, for every callee of that site. A landing on another registered
+    /// override fails as untested.
+    /// </summary>
+    protected void DefineCallLandings(SegmentedAddress expectedReturn, Func<int, Action>?[] targets, params CallLanding[] landings) {
+        foreach (Func<int, Action>? target in targets) {
+            _callLandings[(expectedReturn, target)] = landings;
+        }
+    }
 
     /// <summary>
     /// Runs a call dispatch and its override chain, then tells whether the call ended at one of
@@ -1335,7 +1776,7 @@ public class CSharpOverrideHelper {
     /// (<c>false</c>).
     /// </summary>
     private bool ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
-        ushort targetCs, Func<int, Action> function, Action action, SegmentedAddress[] redirectedReturns) {
+        ushort targetCs, Func<int, Action> function, Action action, SegmentedAddress[] redirectedReturns, bool interruptCall) {
         uint expectedStackAddress = State.StackPhysicalAddress;
         // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
         // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom) observe the right value.
@@ -1348,8 +1789,54 @@ public class CSharpOverrideHelper {
         SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
         ExecuteCallConsumingUnwindTo(function, action, expectedReturn, expectedStackAddress, redirectedReturns);
         CSharpCallChainCaller caller = new(this, expectedReturn, expectedStackAddress, redirectedReturns);
-        Machine.CfgCpu.FunctionHandlerInUse.RunOverrideChain(caller, null);
-        return caller.EndedAtRedirectedReturn;
+        if (!ObservedTransfersOnly) {
+            Machine.CfgCpu.FunctionHandlerInUse.RunOverrideChain(caller, null);
+            return caller.EndedAtRedirectedReturn;
+        }
+        Func<int, Action>? landingTarget = interruptCall ? null : function;
+        return RunObservedLandingChain(caller, expectedReturn,
+            _callLandings.GetValueOrDefault((expectedReturn, landingTarget), []));
+    }
+
+    /// <summary>
+    /// The generated calls' landing dispatch: where the override chain runs whatever override is
+    /// registered at a mid-call landing, this loop runs only the entries <paramref name="landings"/>
+    /// arms - the landings discovery observed for this call. Landing on an address another override
+    /// is registered at but the call never observed fails as untested; a landing with no override at
+    /// all unwinds exactly like the chain does.
+    /// </summary>
+    private bool RunObservedLandingChain(CSharpCallChainCaller caller, SegmentedAddress expectedReturn,
+        CallLanding[] landings) {
+        while (true) {
+            if (!State.IsRunning) {
+                caller.OnMachineStopped();
+                return caller.EndedAtRedirectedReturn;
+            }
+            SegmentedAddress landedAddress = State.IpSegmentedAddress;
+            if (landedAddress == expectedReturn
+                || caller.AcceptsRedirectedReturn(landedAddress, State.StackPhysicalAddress)) {
+                return caller.EndedAtRedirectedReturn;
+            }
+            CallLanding? landing = null;
+            foreach (CallLanding candidate in landings) {
+                if (candidate.Address == landedAddress) {
+                    landing = candidate;
+                    break;
+                }
+            }
+            if (landing is { } armed) {
+                caller.RunLanding(armed);
+                continue;
+            }
+            if (SearchFunctionOverride(landedAddress) is not null) {
+                throw FailAsUntested(
+                    $"The call expecting to return to {expectedReturn} landed at {landedAddress}, which discovery did not observe it landing on");
+            }
+            throw new CallStackUnwindException(landedAddress,
+                $"The call expecting to return to {expectedReturn} transferred control to {landedAddress} " +
+                $"but there is no C# override at {landedAddress} and it is not the call's expected return address. " +
+                "Refusing to fall back to the interpreter.");
+        }
     }
 
     /// <summary>
@@ -1621,8 +2108,29 @@ public class CSharpOverrideHelper {
         byte? vectorNumber = _dualPic.ComputeVectorNumber(new SegmentedAddress(expectedReturnCs, expectedReturnIp));
         if (vectorNumber != null) {
             State.IsHalted = false;
-            InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
+            SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber.Value];
+            Func<int, Action> function = HardwareInterruptFunction(vectorNumber.Value, target);
+            ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, NoRedirectedReturns);
         }
+    }
+
+    /// <summary>
+    /// Resolves the function a hardware interrupt on <paramref name="vectorNumber"/> invokes when its IVT
+    /// entry points at <paramref name="target"/>. The base implementation accepts any override registered
+    /// at <paramref name="target"/>, except that a delivery under <see cref="ObservedTransfersOnly"/>
+    /// fails as untested; a generated program that observed deliveries overrides it with a switch over
+    /// the (vector, handler) pairs discovery observed.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector the PIC raised.</param>
+    /// <param name="target">The address the vector's IVT entry holds.</param>
+    /// <exception cref="UnrecoverableException">No override is registered at <paramref name="target"/>,
+    /// or <see cref="ObservedTransfersOnly"/> rejects the delivery.</exception>
+    protected virtual Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) {
+        if (ObservedTransfersOnly) {
+            throw FailAsUntested($"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector");
+        }
+        return SearchFunctionOverride(target)
+            ?? throw FailAsUntested($"Could not find an override at address {target}");
     }
 
     /// <summary>
@@ -1630,7 +2138,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="vectorNumber">The vector number to call</param>
     public void Interrupt(byte vectorNumber) {
-        _callbackHandler.RunFromOverriden(vectorNumber);
+        _callbackHandler.Run(vectorNumber);
     }
 
     /// <summary>
@@ -1646,7 +2154,7 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                _callbackHandler.RunFromOverriden(callback);
+                _callbackHandler.Run(callback);
 
                 return InterruptRet();
             }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
@@ -1947,6 +2455,28 @@ public class CSharpOverrideHelper {
             _helper.ExecuteCallConsumingUnwindTo(functionOverride,
                 () => functionOverride.Invoke(0).Invoke(), _expectedReturn, _expectedStackAddress, _redirectedReturns);
             return false;
+        }
+
+        /// <summary>Runs an armed landing inside the call, with the same nesting logging
+        /// <see cref="RunOverride"/> performs.</summary>
+        /// <param name="landing">The observed landing control reached.</param>
+        public void RunLanding(CallLanding landing) {
+            SegmentedAddress actualReturn = _helper.State.IpSegmentedAddress;
+            uint actualStackAddress = _helper.State.StackPhysicalAddress;
+            string? functionName = landing.Entry.Method.Name;
+            if (actualStackAddress < _expectedStackAddress) {
+                if (_helper._loggerService.IsEnabled(LogLevel.Debug)) {
+                    _helper._loggerService.LogDebug(
+                        "The call expecting to return to {ExpectedReturn} continued at {ActualReturn} while the callee's frame was still on the stack (stack {ActualStackAddress}, before the call {ExpectedStackAddress}). Running {FunctionName} inside the call.",
+                        _expectedReturn, actualReturn, actualStackAddress, _expectedStackAddress, functionName);
+                }
+            } else {
+                _helper.LogNestedOverrideCall(_expectedReturn, actualReturn, _expectedStackAddress,
+                    actualStackAddress, functionName);
+            }
+
+            _helper.ExecuteCallConsumingUnwindTo(landing.Entry,
+                () => landing.Entry.Invoke(0).Invoke(), _expectedReturn, _expectedStackAddress, _redirectedReturns);
         }
 
         /// <inheritdoc />

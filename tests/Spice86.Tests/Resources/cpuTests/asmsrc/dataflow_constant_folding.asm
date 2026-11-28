@@ -138,7 +138,7 @@ cf_zero_taken:
     mov ax, [bx]
     mov [0DAh], ax
 
-; CR-3 trap: di read inside a rep body is not the entry constant
+; loop-constant trap: di read inside a rep body is not the entry constant
     mov di, 0DCh
     mov al, 5Ah
     mov cx, 4
@@ -176,6 +176,8 @@ cf_zero_taken:
     pushf
     pop dx
     mov [0E6h], dx
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 cf_callee:

@@ -37,6 +37,8 @@ delay:
     dec dx
     jnz delay
     cli
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 irq0_handler:

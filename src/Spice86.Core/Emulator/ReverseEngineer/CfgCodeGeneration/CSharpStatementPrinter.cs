@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -25,7 +26,25 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// <paramref name="serviceCallNotifications"/> a <c>ServiceCalled</c> statement is printed before each direct
 /// interrupt service call (see <see cref="GeneratorOptions.ServiceCallNotifications"/>).
 /// </summary>
-internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf, bool serviceCallNotifications = false) {
+internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions,
+    Func<IGotoTarget, string> labelOf, bool printAsmComments, bool serviceCallNotifications = false) {
+    private (SegmentedAddress Address, int FirstLine)? _openInstruction;
+
+    /// <summary>The line range of every instruction printed so far, in method-relative line
+    /// indices; populated even when <paramref name="printAsmComments"/> suppresses the comment.</summary>
+    public List<MethodInstructionLine> InstructionLines { get; } = [];
+
+    /// <summary>Closes the open instruction's line range; the emitter calls it after the method
+    /// body so the last instruction ends at the method's last printed line.</summary>
+    public void FinishInstructions() => CloseInstruction();
+
+    private void CloseInstruction() {
+        if (_openInstruction is { } open) {
+            InstructionLines.Add(new MethodInstructionLine(open.Address, open.FirstLine,
+                writer.LineCount - 1));
+            _openInstruction = null;
+        }
+    }
     /// <summary>The goto targets of the whole method being printed. A
     /// <c>for</c> rewrite refuses a loop when any statement of the method - not only of the block
     /// being dispatched - jumps to its header or its step.</summary>
@@ -50,6 +69,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                     break;
                 case BoundaryPrint boundaryPrint:
                     PushBoundaryPrint(pending, boundaryPrint);
+                    break;
+                case StatusFlagRun statusFlagRun:
+                    writer.Line(statusFlagRun.Text);
                     break;
             }
         }
@@ -103,14 +125,36 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 writer.Line($"goto {labelOf(gotoNode.Target)};");
                 return;
             case LabelNode label:
+                CloseInstruction();
                 writer.Label(labelOf(label.Target));
                 return;
             case EntryDispatcherLabelNode:
+                CloseInstruction();
                 writer.Label("entrydispatcher");
                 return;
             case ReturnNode { Value: ProcedureReturnHelperNode helper } when
                     expressions.TypedSignature is { } typed:
                 PrintTypedReturn(helper, typed);
+                return;
+            case ReturnNode { Value: InterruptServiceCallNode {
+                    Contract.Transfer: ServiceTransferKind.Terminates } terminating }:
+                // A terminating service never reaches the code after the site: the call is the
+                // method's exit, and TerminateCall positions CS:IP at the int's return address so
+                // the implementation pushes the frame bytes the interpreted int pushed.
+                writer.Line($"return {HelperCallNames.TerminateCallMethodName}(" +
+                    $"{expressions.Print(terminating.ReturnSegment).Text}, " +
+                    $"{expressions.Print(terminating.ReturnOffset).Text}, " +
+                    $"() => {expressions.Print(terminating).Text});");
+                return;
+            case ReturnNode { Value: MethodCallNode tailCall }
+                    when expressions.TypedSignature is not null
+                    && expressions.TypedSignatures?.Of(tailCall.MethodName) is { } tailSignature:
+                string tailInvocation = $"{tailCall.MethodName}({tailSignature.ArgumentList})";
+                writer.Line(tailSignature.Outputs.Count == 0
+                    ? $"{tailInvocation};" : $"return {tailInvocation};");
+                if (tailSignature.Outputs.Count == 0) {
+                    writer.Line("return;");
+                }
                 return;
             case ReturnNode returnNode:
                 writer.Line($"return {expressions.Print(returnNode.Value)};");
@@ -129,7 +173,13 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 writer.Line($"// {comment.Text}");
                 return;
             case InstructionStartNode instructionStart:
-                writer.Line($"// {instructionStart.Comment}");
+                CloseInstruction();
+                if (instructionStart.Address is { } address) {
+                    _openInstruction = (address, writer.LineCount);
+                }
+                if (printAsmComments) {
+                    writer.Line($"// {instructionStart.Comment}");
+                }
                 return;
             case CheckExternalEventsNode checkExternalEvents:
                 PrintCheckExternalEvents(checkExternalEvents);
@@ -150,6 +200,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 return;
             case InterruptServiceCallNode serviceCall:
                 PrintInterruptServiceCall(serviceCall);
+                return;
+            case StackRestoreNode restore:
+                writer.Line($"({string.Join(", ", restore.Targets.Select(target => target is null ? "_" : expressions.Print(target).Text))}) = Stack.{restore.MethodName}();");
                 return;
             default:
                 writer.Line(expressions.Print(node).Text + ";");
@@ -198,28 +251,73 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     }
 
     /// <summary>A typed service call and the assignment of its return value to the contract's
-    /// output lvalues: the bare invocation for a void contract, <c>AX = call</c> for one output
-    /// or <c>(AX, CarryFlag) = call</c> for several. Register-local promotion can turn an output
-    /// target into a local (<c>ax = call</c>), which the existing writeback machinery stores back.</summary>
+    /// output lvalues. When <see cref="InterruptServiceCallNode.WritesFrame"/> the call keeps the
+    /// <c>int</c> frame form: <c>ServiceCall(cs1, 0x0108, Dos, () => Dos.ReadDosVersion())</c> for a
+    /// void contract, or <c>(AX, CarryFlag) = ServiceCall(cs1, 0x0108, Dos,
+    /// () => Dos.OpenFile(0, ...), r => CarryOnInterruptStack(r.carryFlag))</c>; the helper pushes
+    /// the interrupt frame, runs the handler's entry bookkeeping when
+    /// <see cref="InterruptServiceCallNode.RunsEntryHook"/> (the handler argument is printed only
+    /// then), invokes the service and pops the frame back. A frameless call with entry
+    /// bookkeeping prints <c>ServiceCall(Dos, () => Dos.ReadDosVersion())</c> with plain flag
+    /// outputs, and a call with no bookkeeping prints the bare service call
+    /// <c>AX = Equipment.GetEquipmentList();</c>. Register-local
+    /// promotion can turn an output target into a local (<c>ax = call</c>), which the existing
+    /// writeback machinery stores back.</summary>
     private void PrintInterruptServiceCall(InterruptServiceCallNode call) {
-        if (call.Vector == 0x21 && DosInt21Handler.SavesCallerStack((byte)call.SelectorValue)) {
-            // The saved pointer addresses the frame top, six bytes below this caller SP.
+        bool hookWritesCallerStack = call.RunsEntryHook && !serviceCallNotifications;
+        if (call.Vector == 0x21 && !hookWritesCallerStack
+            && DosInt21Handler.SavesCallerStack((byte)call.SelectorValue)) {
+            // The saved pointer addresses the frame top, six bytes below this caller SP. In a check
+            // build it is printed for an entry-hook call too: a duplicate write of the same value, so
+            // the save still precedes the ServiceCalled event as it does through the stub.
             writer.Line($"{call.PropertyPath}.{nameof(DosInt21Handler.RecordCallerStack)}(SS, SP);");
         }
         if (serviceCallNotifications) {
-            // After the caller stack save: through the stub, DosInt21Handler.Run() saves it before Run(int)
-            // raises the event, so in both forms the PSP write comes before the event.
             writer.Line(ServiceCallNotification(call));
         }
-        string invocation = expressions.Print(call).Text;
-        if (call.Results.Count == 0) {
-            writer.Line(invocation + ";");
+        if (call.Contract.Transfer is ServiceTransferKind.RunsChild) {
+            // A typed EXEC call: (AX, flag1, DS, ES) = ExecChild(cs1, 0x0193, 0x21).
+            string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
+                $"{expressions.Print(call.ReturnOffset).Text}";
+            writer.Line($"{ResultTargets(call)} = {HelperCallNames.ExecChildMethodName}(" +
+                $"{returnAddress}, 0x{call.Vector:X2});");
             return;
         }
+        string invocation = expressions.Print(call).Text;
+        if (!call.WritesFrame && !call.RunsEntryHook) {
+            if (call.Results.Count == 0) {
+                writer.Line(invocation + ";");
+                return;
+            }
+            writer.Line($"{ResultTargets(call)} = {invocation};");
+            return;
+        }
+        string helper;
+        if (call.WritesFrame) {
+            string returnAddress = $"{expressions.Print(call.ReturnSegment).Text}, " +
+                $"{expressions.Print(call.ReturnOffset).Text}";
+            string handlerArgument = call.RunsEntryHook ? $"{call.PropertyPath}, " : string.Empty;
+            helper = $"{HelperCallNames.ServiceCallMethodName}({returnAddress}, " +
+                $"{handlerArgument}() => {invocation}";
+        } else {
+            helper = $"{HelperCallNames.ServiceCallMethodName}({call.PropertyPath}, " +
+                $"() => {invocation}";
+        }
+        if (call.Results.Count == 0) {
+            writer.Line(helper + ");");
+            return;
+        }
+        string stackedFlags = call.WritesFrame
+            && expressions.ServiceCallStackedFlags(call) is { } writer_
+            ? $", {writer_}"
+            : string.Empty;
+        writer.Line($"{ResultTargets(call)} = {helper}{stackedFlags});");
+    }
+
+    private string ResultTargets(InterruptServiceCallNode call) {
         string targets = string.Join(", ",
             call.Results.Select(result => expressions.Print(result).Text));
-        string left = call.Results.Count == 1 ? targets : $"({targets})";
-        writer.Line($"{left} = {invocation};");
+        return call.Results.Count == 1 ? targets : $"({targets})";
     }
 
     /// <summary>The <c>ServiceCalled(vector, selector, inputs);</c> statement of a direct service call. The
@@ -332,6 +430,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// suffix like <see cref="PushInstructionBoundary"/>.</summary>
     private sealed record BoundaryPrint(InstructionBoundaryNode Boundary, IReadOnlyList<object> Items);
 
+    /// <summary>A whole six-flag run merged into one <c>SetStatusFlags(...)</c> line.</summary>
+    private sealed record StatusFlagRun(string Text);
+
     /// <summary>The condition, step and rewritten body of a <see cref="PreTestLoopNode"/> eligible for the
     /// <c>for</c> form, before its init statement is located.</summary>
     private sealed record CountedLoopShape(string Counter, IVisitableAstNode Step, BlockNode Body);
@@ -348,41 +449,86 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>while</c>.</summary>
     private void PushBlockStatements(Stack<object> pending, BlockNode block) {
         IReadOnlyList<IVisitableAstNode> statements = block.Statements;
-        if (expressions.LocalReads is null) {
-            for (int index = statements.Count - 1; index >= 0; index--) {
-                pending.Push(statements[index]);
-            }
-            return;
-        }
         object?[] slots = new object?[statements.Count];
         for (int index = 0; index < statements.Count; index++) {
             slots[index] = statements[index];
         }
-        for (int index = 0; index < statements.Count; index++) {
-            switch (statements[index]) {
-                case PreTestLoopNode loop:
-                    if (CountedLoopShapeOf(block, MethodGotoTargets, loop.Condition, loop.Body, loop.HeaderTarget) is { } shape
-                        && InitBefore(slots, statements, index, shape.Counter) is { } init) {
-                        slots[index] = new CountedLoop(loop.Condition, init, shape.Step, shape.Body);
-                    }
-                    break;
-                case WhileNode whileNode:
-                    if (CountedLoopShapeOf(block, MethodGotoTargets, whileNode.Condition, whileNode.Body, null) is { } whileShape
-                        && InitBefore(slots, statements, index, whileShape.Counter) is { } whileInit) {
-                        slots[index] = new CountedLoop(whileNode.Condition, whileInit, whileShape.Step, whileShape.Body);
-                    }
-                    break;
-                case InstructionBoundaryNode boundary:
-                    BoundaryCountedLoops(block, MethodGotoTargets, slots, index, boundary);
-                    break;
+        if (expressions.LocalReads is not null) {
+            for (int index = 0; index < statements.Count; index++) {
+                switch (statements[index]) {
+                    case PreTestLoopNode loop:
+                        if (CountedLoopShapeOf(block, MethodGotoTargets, loop.Condition, loop.Body, loop.HeaderTarget) is { } shape
+                            && InitBefore(slots, statements, index, shape.Counter) is { } init) {
+                            slots[index] = new CountedLoop(loop.Condition, init, shape.Step, shape.Body);
+                        }
+                        break;
+                    case WhileNode whileNode:
+                        if (CountedLoopShapeOf(block, MethodGotoTargets, whileNode.Condition, whileNode.Body, null) is { } whileShape
+                            && InitBefore(slots, statements, index, whileShape.Counter) is { } whileInit) {
+                            slots[index] = new CountedLoop(whileNode.Condition, whileInit, whileShape.Step, whileShape.Body);
+                        }
+                        break;
+                    case InstructionBoundaryNode boundary:
+                        BoundaryCountedLoops(block, MethodGotoTargets, slots, index, boundary);
+                        break;
+                }
             }
         }
+        MergeStatusFlagRuns(slots);
         for (int index = statements.Count - 1; index >= 0; index--) {
             if (slots[index] is { } item) {
                 pending.Push(item);
             }
         }
     }
+
+    private static readonly ushort[] StatusFlagMasks = [
+        Flags.Carry, Flags.Parity, Flags.Auxiliary, Flags.Zero, Flags.Sign, Flags.Overflow];
+    private static readonly string[] StatusFlagArgumentNames = [
+        "carry", "parity", "auxiliary", "zero", "sign", "overflow"];
+
+    /// <summary>Replaces every run of six consecutive statements assigning each of the six status flags
+    /// once - the flag result of one operation, kept for an observer - with a single
+    /// <see cref="StatusFlagRun"/>. Any other statement between them, a repeated or non-status flag, or a
+    /// value that reads a status flag, or a flag target printed as a local keeps the run unmerged.</summary>
+    private void MergeStatusFlagRuns(object?[] slots) {
+        for (int index = 0; index + StatusFlagMasks.Length <= slots.Length; index++) {
+            if (StatusFlagRunOf(slots, index) is not { } run) {
+                continue;
+            }
+            slots[index] = run;
+            for (int skip = 1; skip < StatusFlagMasks.Length; skip++) {
+                slots[index + skip] = null;
+            }
+            index += StatusFlagMasks.Length - 1;
+        }
+    }
+
+    private StatusFlagRun? StatusFlagRunOf(object?[] slots, int index) {
+        string?[] values = new string?[StatusFlagMasks.Length];
+        for (int offset = 0; offset < StatusFlagMasks.Length; offset++) {
+            if (slots[index + offset] is not BinaryOperationNode {
+                    BinaryOperation: BinaryOperation.ASSIGN,
+                    Left: CpuFlagNode flag, Right: ValueNode value }) {
+                return null;
+            }
+            int position = Array.IndexOf(StatusFlagMasks, flag.FlagMask);
+            if (position < 0 || values[position] is not null || ReadsStatusFlag(value)
+                || expressions.LocalReads?.ContainsKey(flag) == true) {
+                return null;
+            }
+            values[position] = expressions.Print(value).Text;
+        }
+        string arguments = string.Join(", ", StatusFlagArgumentNames
+            .Select((name, position) => $"{name}: {values[position]}"));
+        return new StatusFlagRun($"SetStatusFlags({arguments});");
+    }
+
+    /// <summary>Whether <paramref name="value"/> reads a status flag, directly or through a local that
+    /// stands for one (a promoted flag's read node stays a <see cref="CpuFlagNode"/>).</summary>
+    private static bool ReadsStatusFlag(ValueNode value) =>
+        IrAstChildren.Descendants(value).OfType<CpuFlagNode>()
+            .Any(flag => StatusFlagMasks.Contains(flag.FlagMask));
 
     /// <summary>Queues a boundary body's statements in which every counted loop whose init is the last
     /// statement of the previous sibling boundary became a <see cref="CountedLoop"/> marker.</summary>
@@ -663,10 +809,37 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>FarReturn(n)</c> statement, then <c>return</c> of the signature's outputs. A count of
     /// <c>0</c> prints the parameterless overload.</summary>
     private void PrintTypedReturn(ProcedureReturnHelperNode helper, TypedSignature typed) {
-        string helperName = helper.Distance == CallDistance.Near ? "NearReturn" : "FarReturn";
+        string helperName = (helper.Distance, helper.Width) switch {
+            (CallDistance.Near, BitWidth.DWORD_32) => "NearReturn32",
+            (CallDistance.Far, BitWidth.DWORD_32) => "FarReturn32",
+            (CallDistance.Near, _) => "NearReturn",
+            _ => "FarReturn"
+        };
         string arguments = TypedReturnArguments(helper);
         writer.Line(arguments == "0" ? $"{helperName}();" : $"{helperName}({arguments});");
-        writer.Line(typed.ReturnStatement);
+        writer.Line(ReturnText(helper, typed));
+    }
+
+    /// <summary>The <c>return</c> text of a typed <c>ret</c>: the outputs' register names, or the
+    /// local the register-local plan serves an output's exit read from.</summary>
+    private string ReturnText(ProcedureReturnHelperNode helper, TypedSignature typed) {
+        IReadOnlyList<string?>? outputs = null;
+        expressions.ReturnOutputs?.TryGetValue(helper, out outputs);
+        IReadOnlyList<ReturnExpression?>? merged = null;
+        expressions.ReturnExpressions?.TryGetValue(helper, out merged);
+        if (outputs is null && merged is null) {
+            return typed.ReturnStatement;
+        }
+        string[] elements = new string[typed.Outputs.Count];
+        for (int index = 0; index < elements.Length; index++) {
+            elements[index] = merged is not null && index < merged.Count
+                    && merged[index] is { } mergedElement
+                ? CSharpExpressionPrinter.Cast(mergedElement.Type,
+                    expressions.Print(mergedElement.Expression))
+                : outputs is not null && index < outputs.Count && outputs[index] is { } text
+                ? text : typed.Outputs[index].Register;
+        }
+        return TypedSignature.ReturnStatementText(elements);
     }
 
     private string TypedReturnArguments(ProcedureReturnHelperNode helper) {
@@ -706,7 +879,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         items.Add((Action)(() => writer.OpenBlock("catch (CpuException cpuException)")));
         items.Add((Action)(() => {
             string resumeSegment = expressions.SegmentVariable(node.FaultingInstruction.Segment);
-            writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}]);");
+            writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}], [{ResumeTargets(node.ResumeTargets)}]);");
         }));
         items.Add((Action)(() => writer.CloseBlock()));
         PushItems(pending, items);
@@ -714,6 +887,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private string FaultHandlers(IReadOnlyList<CpuFaultHandler> handlers) =>
         string.Join(", ", handlers.Select(FaultHandler));
+
+    private string ResumeTargets(IReadOnlyList<SegmentedAddress> targets) =>
+        string.Join(", ", targets.Select(target =>
+            $"new SegmentedAddress({expressions.SegmentVariable(target.Segment)}, 0x{target.Offset:X4})"));
 
     private string FaultHandler(CpuFaultHandler handler) {
         string handlerSegment = expressions.SegmentVariable(handler.Handler.Segment);

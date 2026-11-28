@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Runtime.CompilerServices;
 
@@ -67,8 +68,9 @@ public class ReturnOperationsHelper {
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void InterruptRet() {
-        _state.IpSegmentedAddress = _stack.PopSegmentedAddress();
-        _state.Flags.FlagRegister = _stack.Pop16();
+        (SegmentedAddress returnAddress, ushort flags) = _stack.PopInterruptFrame();
+        _state.IpSegmentedAddress = returnAddress;
+        _state.Flags.FlagRegister = flags;
     }
 
     /// <summary>

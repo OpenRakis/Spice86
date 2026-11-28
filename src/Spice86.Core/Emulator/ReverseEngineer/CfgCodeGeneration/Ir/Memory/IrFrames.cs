@@ -44,7 +44,6 @@ using System.Linq;
 /// </summary>
 internal sealed class IrFrames {
     private static readonly CpuValues FrameValues = CpuValues.Esp | CpuValues.Ebp;
-    private static readonly CpuValues StackValues = CpuValues.Esp | CpuValues.Ss;
 
     private readonly IrSsa _ssa;
     private readonly IrStackSlots _slots;
@@ -64,16 +63,16 @@ internal sealed class IrFrames {
     /// (<see cref="CpuValues.Registers"/> when unknown).</summary>
     internal static IrFrames Compute(IrMethod method, IrSsa ssa, IrStackSlots slots,
         Func<IrStatement, CpuValues> callWrites) {
-        IrFrames frames = new(ssa, slots, callWrites);
+        IrFrames frames = new(method, ssa, slots, callWrites);
         frames.CollectAccesses(method);
         frames.CollectFrames(method);
         return frames;
     }
 
-    private IrFrames(IrSsa ssa, IrStackSlots slots, Func<IrStatement, CpuValues> callWrites) {
+    private IrFrames(IrMethod method, IrSsa ssa, IrStackSlots slots, Func<IrStatement, CpuValues> callWrites) {
         _ssa = ssa;
         _slots = slots;
-        _alias = new IrMemoryAliasAnalysis(ssa);
+        _alias = new IrMemoryAliasAnalysis(method, ssa);
         _callWrites = callWrites;
         _phiByResult = ssa.Phis.ToDictionary(phi => phi.Result);
     }
@@ -107,16 +106,18 @@ internal sealed class IrFrames {
 
     private void CollectAccesses(IrMethod method) {
         foreach (IrBlock block in method.Blocks) {
-            foreach (IrStatement statement in block.Statements) {
-                CollectAccesses(statement);
+            for (int index = 0; index < block.Statements.Count; index++) {
+                CollectAccesses(block, index);
             }
         }
     }
 
-    /// <summary>Every pointer occurrence of <paramref name="statement"/> is evaluated once (the
-    /// store target of an <c>ASSIGN</c> is the write, every other occurrence a read), so a shared
-    /// node is judged occurrence by occurrence.</summary>
-    private void CollectAccesses(IrStatement statement) {
+    /// <summary>Every pointer occurrence of the statement at <paramref name="index"/> of
+    /// <paramref name="block"/> is evaluated once (the store target of an <c>ASSIGN</c> is the
+    /// write, every other occurrence a read), so a shared node is judged occurrence by
+    /// occurrence.</summary>
+    private void CollectAccesses(IrBlock block, int index) {
+        IrStatement statement = block.Statements[index];
         ValueNode? storeTarget = null;
         if (statement.Node is BinaryOperationNode {
                 BinaryOperation: BinaryOperation.ASSIGN,
@@ -127,7 +128,7 @@ internal sealed class IrFrames {
             if (node is not SegmentedPointerNode pointer) {
                 continue;
             }
-            IrFrameAccess? access = FrameAccessOf(statement, pointer,
+            IrFrameAccess? access = FrameAccessOf(statement, pointer, block, index,
                 ReferenceEquals(pointer, storeTarget));
             _pointerResults.Add((pointer, access));
             if (access is null) {
@@ -147,8 +148,8 @@ internal sealed class IrFrames {
     /// be through SS with exactly one 16-bit register term (not SP) whose version is an SP copy at
     /// a known entry delta.</summary>
     private IrFrameAccess? FrameAccessOf(IrStatement statement, SegmentedPointerNode pointer,
-        bool isWrite) {
-        IrMemoryAccess access = _alias.OfPointer(pointer, statement);
+        IrBlock block, int index, bool isWrite) {
+        IrMemoryAccess access = _alias.OfPointer(pointer, statement, block, index);
         if (access.SegmentRegister != IrSsaValue.Ss || access.OffsetTerms is not [OffsetTerm term]
             || term.Register.DataType.BitWidth != BitWidth.WORD_16
             || term.Register.RegisterIndex == (int)RegisterIndex.SpIndex) {
@@ -258,8 +259,8 @@ internal sealed class IrFrames {
     }
 
     private IrFrame? DetectFrame(IrEntry entry, List<IrFrameEpilogue> epilogues) {
-        List<IrStatement> statements = entry.Block.Statements;
-        int pushIndex = statements.FindIndex(IsPushBp);
+        IReadOnlyList<IrStatement> statements = entry.Block.Statements;
+        int pushIndex = entry.Block.IndexOfStatement(IsPushBp);
         if (pushIndex < 0 || !EntryDelta(statements[pushIndex], 0)) {
             return null;
         }
@@ -293,26 +294,9 @@ internal sealed class IrFrames {
     /// writes neither SP / ESP nor SS (an event check, a memory-boundary store): SP after such a
     /// statement is SP before it. Any SP / SS write ends the chain - a rebase on it left the
     /// entry-relative SP unknown.</summary>
-    internal int? EntryDelta(IrStackOffset? offset) {
-        if (offset is not { Kind: IrStackOffsetKind.Known } current) {
-            return null;
-        }
-        int delta = current.Delta;
-        HashSet<IrStatement> seen = [];
-        for (IrStatement? base_ = current.Base; base_ is not null && seen.Add(base_);
-             base_ = current.Base) {
-            if (((base_.Effects.MustWrite | base_.Effects.MayWrite) & StackValues)
-                != CpuValues.None
-                || _slots.OffsetBefore(base_) is not { Kind: IrStackOffsetKind.Known } before) {
-                return null;
-            }
-            current = before;
-            delta += before.Delta;
-        }
-        return delta;
-    }
+    internal int? EntryDelta(IrStackOffset? offset) => _slots.EntryDelta(offset);
 
-    private int LocalBytes(List<IrStatement> statements, int setBpIndex) {
+    private int LocalBytes(IReadOnlyList<IrStatement> statements, int setBpIndex) {
         for (int index = setBpIndex + 1; index < statements.Count; index++) {
             IrStatement statement = statements[index];
             if (!TouchesFrameRegister(statement)) {
@@ -331,24 +315,27 @@ internal sealed class IrFrames {
         [.. method.Blocks
             .Where(block => block.Terminator is IrExit { Origin: CfgInstruction instruction }
                 && instruction.Kind.HasFlag(InstructionKind.Return))
-            .Select(block => new IrFrameEpilogue((IrExit)block.Terminator, EpilogueKind(block)))];
+            .Select(block => EpilogueOf(block))];
 
-    private IrFrameEpilogueKind EpilogueKind(IrBlock block) {
-        List<IrStatement> stackStatements = [.. block.Statements.Where(TouchesFrameRegister)];
-        if (stackStatements.Count == 0) {
-            return IrFrameEpilogueKind.Other;
+    private IrFrameEpilogue EpilogueOf(IrBlock block) {
+        IReadOnlyList<IrStatement> stackStatements = [.. block.Statements.Where(TouchesFrameRegister)];
+        IrStatement? last = stackStatements.Count == 0 ? null : stackStatements[^1];
+        IrFrameEpilogueKind kind = IrFrameEpilogueKind.Other;
+        if (last is not null) {
+            if (last.Node is StackCallNode { Operation: StackOperation.Leave }) {
+                kind = IrFrameEpilogueKind.Leave;
+            } else if (IsPopBp(last)) {
+                if (stackStatements.Count >= 2 && IsSetBpFromCopy(stackStatements[^2])) {
+                    kind = IrFrameEpilogueKind.MoveSpPopBp;
+                } else if (EntryDelta(last, -2)) {
+                    kind = IrFrameEpilogueKind.PopBp;
+                }
+            }
         }
-        IrStatement last = stackStatements[^1];
-        if (last.Node is StackCallNode { Operation: StackOperation.Leave }) {
-            return IrFrameEpilogueKind.Leave;
-        }
-        if (!IsPopBp(last)) {
-            return IrFrameEpilogueKind.Other;
-        }
-        if (stackStatements.Count >= 2 && IsSetBpFromCopy(stackStatements[^2])) {
-            return IrFrameEpilogueKind.MoveSpPopBp;
-        }
-        return EntryDelta(last, -2) ? IrFrameEpilogueKind.PopBp : IrFrameEpilogueKind.Other;
+        IrStatement? restore = kind is IrFrameEpilogueKind.PopBp or IrFrameEpilogueKind.MoveSpPopBp
+            ? last
+            : null;
+        return new IrFrameEpilogue((IrExit)block.Terminator, kind, restore);
     }
 
     /// <summary>2 / 4 / 6 when every return exit is uniformly a near <c>ret</c>, a <c>retf</c> or an
@@ -408,7 +395,7 @@ internal sealed class IrFrames {
             descendant is ProcedureReturnHelperNode or InterruptReturnNode);
     }
 
-    private static bool IsPushBp(IrStatement statement) =>
+    internal static bool IsPushBp(IrStatement statement) =>
         statement.Node is StackCallNode {
             Operation: StackOperation.Push,
             Arguments: [RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
@@ -425,7 +412,9 @@ internal sealed class IrFrames {
         };
 
     private static bool IsPopBp(IrStatement statement) =>
-        statement.Node is BinaryOperationNode {
+        statement.Node is StackCallNode {
+            Operation: StackOperation.Pop, Width: BitWidth.WORD_16 }
+        || statement.Node is BinaryOperationNode {
             BinaryOperation: BinaryOperation.ASSIGN,
             Left: RegisterNode { DataType.BitWidth: BitWidth.WORD_16,
                 RegisterIndex: (int)RegisterIndex.BpIndex },

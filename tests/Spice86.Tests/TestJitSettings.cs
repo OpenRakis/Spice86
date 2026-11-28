@@ -15,6 +15,10 @@ internal static class TestJitSettings {
     /// </summary>
     public static bool GeneratorIr { get; } = Environment.GetEnvironmentVariable(GeneratorIrVariable) == "1";
 
+    /// <summary>The execution AST rewriter matching <see cref="GeneratorIr"/>.</summary>
+    public static IExecutionAstRewriter Rewriter =>
+        GeneratorIr ? new GeneratorIrRoundTrip() : new IdentityExecutionAstRewriter();
+
     /// <summary>Environment variable that turns <see cref="CompiledRun"/> on when set to <c>1</c>.</summary>
     public const string CompiledRunVariable = "SPICE86_JIT_COMPILED_RUN";
 
@@ -25,10 +29,4 @@ internal static class TestJitSettings {
     /// </summary>
     public static bool CompiledRun { get; } = Environment.GetEnvironmentVariable(CompiledRunVariable) == "1";
 
-    /// <summary>The execution AST rewriter the compiler applies: the IR round trip when enabled.</summary>
-    public static IExecutionAstRewriter Rewriter { get; } =
-        GeneratorIr ? new GeneratorIrRoundTrip() : new IdentityExecutionAstRewriter();
-
-    /// <summary>True when the compiler expands ALU calls inline: with the IR round trip.</summary>
-    public static bool ExpandAluCalls { get; } = GeneratorIr;
 }

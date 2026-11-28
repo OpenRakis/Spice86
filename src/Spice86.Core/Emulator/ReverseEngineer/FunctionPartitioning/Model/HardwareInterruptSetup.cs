@@ -7,6 +7,9 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Linq;
+using System.Reflection;
+
 /// <summary>
 /// What a partitioned program knows about the hardware interrupts that can fire during its
 /// execution: which vectors are hardware-triggered, the entry addresses of every emulator-installed
@@ -24,6 +27,11 @@ internal sealed record HardwareInterruptSetup {
     /// <summary>The IVT target of each hardware vector, read from memory when the snapshot is taken.</summary>
     public required IReadOnlyDictionary<byte, SegmentedAddress> HardwareVectorTargets { get; init; }
 
+    /// <summary>The (vector, handler) pair of every hardware interrupt delivered during the run:
+    /// a program can re-hook a vector, so its delivery targets are not recoverable from the
+    /// snapshot IVT alone.</summary>
+    public required IReadOnlyList<(byte Vector, SegmentedAddress Target)> HardwareInterruptDeliveries { get; init; }
+
     /// <summary>The IVT target of each vector an installed hardware handler raises itself (the
     /// int 1Ch user hook of the int 8 stub), read from memory when the snapshot is taken.</summary>
     public required IReadOnlyDictionary<byte, SegmentedAddress> ChainedVectorTargets { get; init; }
@@ -34,16 +42,33 @@ internal sealed record HardwareInterruptSetup {
     /// <summary>A one-line description of every registered callback, keyed by callback number.</summary>
     public required IReadOnlyDictionary<ushort, string> CallbackDescriptions { get; init; }
 
+    /// <summary>The service contract of every registered callback whose contract is known
+    /// (a single-service interrupt handler's <c>Run</c>, or a method carrying exactly one
+    /// selectorless <see cref="InterruptServiceAttribute"/>), keyed by callback number.</summary>
+    public required IReadOnlyDictionary<ushort, ServiceContract> CallbackContracts { get; init; }
+
     /// <summary>A mouse user subroutine was registered at some point of the run, so the int 74h
     /// path may run program code at a mouse event.</summary>
     public bool MouseUserSubroutineRegistered { get; init; }
 
+    /// <summary>The program set the current PSP itself through DOS AH=50h or created a child PSP
+    /// through AH=55h during the run, so a terminate can resume the parent through an interrupt
+    /// frame a typed call wrote; every typed service call of such a program keeps writing the
+    /// frame.</summary>
+    public bool ProgramSetCurrentPsp { get; init; }
+
+    /// <summary>The entry addresses a terminate during the run resumed at through the batch
+    /// engine launching the next program: generated code resumes them from the root entry's
+    /// <c>RunBatchPrograms</c> loop.</summary>
+    public IReadOnlySet<SegmentedAddress> TerminateResumeTargets { get; init; } =
+        new HashSet<SegmentedAddress>();
+
     /// <summary>Captures the setup from the installed handlers, the current interrupt vector
-    /// table, the registered callbacks and whether a mouse user subroutine was registered during
-    /// the run.</summary>
+    /// table, the registered callbacks and the run facts DOS and the mouse driver recorded.</summary>
     public static HardwareInterruptSetup Capture(InstalledInterruptHandlers installed,
         InterruptVectorTable interruptVectorTable, CallbackHandler callbackHandler,
-        bool mouseUserSubroutineRegistered) {
+        RecordedRunFacts recordedRunFacts,
+        IEnumerable<(byte Vector, SegmentedAddress Target)> hardwareInterruptDeliveries) {
         Dictionary<byte, SegmentedAddress> targets = new();
         foreach (byte vector in installed.HardwareVectorNumbers) {
             targets[vector] = interruptVectorTable[vector];
@@ -56,20 +81,62 @@ internal sealed record HardwareInterruptSetup {
             HardwareVectorNumbers = new HashSet<byte>(installed.HardwareVectorNumbers),
             InstalledInterruptHandlerAddresses = [.. installed.Addresses],
             HardwareVectorTargets = targets,
+            HardwareInterruptDeliveries = [.. hardwareInterruptDeliveries],
             ChainedVectorTargets = chainedTargets,
             ServiceVectors = CaptureServiceVectors(installed),
             CallbackDescriptions = Emulator.InterruptHandlers.Common.Callback.CallbackDescriptions.Describe(callbackHandler),
-            MouseUserSubroutineRegistered = mouseUserSubroutineRegistered
+            CallbackContracts = CaptureCallbackContracts(callbackHandler, recordedRunFacts.MouseUserSubroutineRegistered),
+            MouseUserSubroutineRegistered = recordedRunFacts.MouseUserSubroutineRegistered,
+            ProgramSetCurrentPsp = recordedRunFacts.ProgramSetCurrentPsp,
+            TerminateResumeTargets = new HashSet<SegmentedAddress>(recordedRunFacts.TerminateResumeTargets)
         };
+    }
+
+    private static Dictionary<ushort, ServiceContract> CaptureCallbackContracts(
+        CallbackHandler callbackHandler, bool mouseUserSubroutineRegistered) {
+        Dictionary<ushort, ServiceContract> contracts = new();
+        foreach (Callback callback in callbackHandler.AllRunnables.OfType<Callback>()) {
+            if (mouseUserSubroutineRegistered
+                && callback.Index is CallbackNumbers.MouseBeforeUserHandler
+                    or CallbackNumbers.MouseAfterUserHandler) {
+                continue;
+            }
+            if (ServiceEntryOf(callback.Runnable) is { } entry) {
+                contracts[callback.Index] = entry.Contract;
+            }
+        }
+        return contracts;
+    }
+
+    /// <summary>The service entry of a callback runnable: the contract of a single-service
+    /// handler's <c>Run</c> (or its stub wrapper <c>RunServiceFromStub</c>), or the entry of the
+    /// method's single selectorless
+    /// <see cref="InterruptServiceAttribute"/>; <see langword="null"/> when it is
+    /// <see cref="ServiceContract.Unknown"/> or undeclared.</summary>
+    internal static InterruptServiceEntry? ServiceEntryOf(Action runnable) {
+        if (InterruptHandler.ServiceCallbackHandler(runnable) is { } handler) {
+            return handler.Services is HandlerServices.SingleService single
+                && !ReferenceEquals(single.Service.Contract, ServiceContract.Unknown)
+                ? single.Service
+                : null;
+        }
+        List<InterruptServiceAttribute> attributes = [.. runnable.Method
+            .GetCustomAttributes<InterruptServiceAttribute>()
+            .Where(attribute => attribute.SelectorValue is null)];
+        if (attributes.Count != 1) {
+            return null;
+        }
+        InterruptServiceEntry entry = attributes[0]
+            .ToEntry(runnable.Method.Name, runnable.Method.DeclaringType?.Name ?? "");
+        return ReferenceEquals(entry.Contract, ServiceContract.Unknown) ? null : entry;
     }
 
     private static Dictionary<byte, InterruptServiceVector> CaptureServiceVectors(
         InstalledInterruptHandlers installed) {
         Dictionary<byte, InterruptServiceVector> vectors = new();
-        foreach ((byte vector, IInterruptHandler handler) in installed.Handlers) {
-            if (!installed.TryGetInstalledAddress(vector, out SegmentedAddress stub)) {
-                continue;
-            }
+        foreach ((byte vector, IInterruptHandler handler) in installed.Handlers
+                .Where(pair => installed.TryGetInstalledAddress(pair.Key, out _))) {
+            installed.TryGetInstalledAddress(vector, out SegmentedAddress stub);
             vectors[vector] = new InterruptServiceVector(vector, stub, handler.Services,
                 handler.GetType());
         }

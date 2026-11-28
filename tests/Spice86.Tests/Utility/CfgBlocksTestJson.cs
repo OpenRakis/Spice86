@@ -5,13 +5,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.StateSerialization;
@@ -30,8 +30,8 @@ using System.Text.Json.Serialization;
 /// </summary>
 internal static class CfgBlocksTestJson {
     /// <summary>
-    /// Serializer options matching the on-disk DumpedCfgBlocks fixtures. The goldens use LF line endings on every
-    /// OS, so the new line is fixed instead of taken from the host.
+    /// Serializer options of the CFG blocks test JSON. The new line is fixed to LF instead of taken from the
+    /// host, so a serialization is identical on every OS.
     /// </summary>
     public static readonly JsonSerializerOptions Options = new() {
         WriteIndented = true,
@@ -90,7 +90,7 @@ internal static class CfgBlocksTestJson {
             new FunctionCatalogue(),
             new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
                 new InterruptVectorTable(memory), new CallbackHandler(state, NullLogger.Instance),
-                loadedImageRegistry, new SharedMouseData(),
+                loadedImageRegistry, new RecordedRunFacts(),
                 new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),
                 memory, new IOPortDispatcher(new(), state, NullLogger.Instance, false),
                 Spice86Creator.ProgramEntryPointSegment),

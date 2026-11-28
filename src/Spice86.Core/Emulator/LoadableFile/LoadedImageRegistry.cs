@@ -35,4 +35,29 @@ public sealed class LoadedImageRegistry {
         }
         handler?.Invoke(this, image);
     }
+
+    /// <summary>Adds <paramref name="image"/> to the registry, extending the last
+    /// <see cref="LoadedImageKind.EmulatorRoutines"/> entry instead when it has the same name and
+    /// first segment and the new range is contiguous with it. Keeps one registry entry per
+    /// contiguous run a writer produced. Raises <see cref="ImageLoaded"/> with the resulting
+    /// image; watchers that only follow loaded programs skip the routine kind.</summary>
+    public void RegisterOrExtendContiguous(LoadedImage image) {
+        LoadedImage registered = image;
+        EventHandler<LoadedImage>? handler;
+        lock (_lock) {
+            if (image.Kind == LoadedImageKind.EmulatorRoutines
+                && _images.Count > 0
+                && _images[^1] is { Kind: LoadedImageKind.EmulatorRoutines } last
+                && last.Name == image.Name
+                && last.FirstSegment == image.FirstSegment
+                && last.StartAddress + last.SizeInBytes == image.StartAddress) {
+                registered = last with { SizeInBytes = last.SizeInBytes + image.SizeInBytes };
+                _images[^1] = registered;
+            } else {
+                _images.Add(image);
+            }
+            handler = ImageLoaded;
+        }
+        handler?.Invoke(this, registered);
+    }
 }

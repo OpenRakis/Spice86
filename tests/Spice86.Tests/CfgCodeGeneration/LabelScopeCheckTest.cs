@@ -56,7 +56,7 @@ public class LabelScopeCheckTest {
             new WhileNode(Zero, labeled),
             new InfiniteLoopNode(labeled),
             new DoWhileNode(labeled, Zero),
-            new CpuFaultTryCatchNode(labeled, new SegmentedAddress(0x1000, 0x0010), []),
+            new CpuFaultTryCatchNode(labeled, new SegmentedAddress(0x1000, 0x0010), [], []),
             new SwitchNode(new LoadOffsetParameterNode(), [new SwitchSection(1, labeled)], new BlockNode())
         ];
 

@@ -35,7 +35,7 @@ public sealed class UntestedMessagesTest {
     private static void AssertPrints(FailAsUntestedNode node, string expected) {
         CSharpSourceWriter writer = new();
         CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string>()),
-            _ => throw new InvalidOperationException("No label expected."));
+            _ => throw new InvalidOperationException("No label expected."), printAsmComments: true);
 
         printer.Print(node);
 

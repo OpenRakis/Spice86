@@ -301,7 +301,7 @@ public class CSharpStatementPrinterTest {
 
     private string Print(IVisitableAstNode node, CSharpExpressionPrinter expressions) {
         CSharpSourceWriter writer = new();
-        CSharpStatementPrinter printer = new(writer, expressions, LabelOf);
+        CSharpStatementPrinter printer = new(writer, expressions, LabelOf, printAsmComments: true);
         printer.Print(node);
         return writer.ToString();
     }

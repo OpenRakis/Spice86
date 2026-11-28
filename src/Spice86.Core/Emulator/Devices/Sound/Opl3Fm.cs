@@ -44,6 +44,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     // Register cache for two chips (512 bytes)
     private readonly byte[] _registerCache = new byte[512];
 
+    /// <summary>
+    ///     The last value written to each OPL register, both banks (512 entries). Read-only view for
+    ///     state inspection.
+    /// </summary>
+    public IReadOnlyList<byte> RegisterCache => _registerCache;
+
     // Time tracking for cycle-accurate rendering
     private double _lastRenderedMs;
     private readonly double _msPerFrame;

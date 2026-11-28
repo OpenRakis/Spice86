@@ -32,6 +32,39 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     /// <summary>
+    /// A terminate's batch-launch resume is a recorded run fact: the CFG reload dump carries it and
+    /// the reloading run merges it before the program runs again.
+    /// </summary>
+    [Fact]
+    public void TerminateResumeTargetsSurviveCfgReload() {
+        using TempFile recordedDataDirectory = new(nameof(TerminateResumeTargetsSurviveCfgReload));
+        AsmScenario scenario = AsmScenarioCatalog.TsrBatchContinues();
+        using AsmRunScope scope = scenario.Prepare();
+        AsmFixture fixture = scope.Fixture;
+        AsmRunSettings settings = fixture.Settings with { RecordedDataDirectory = recordedDataDirectory.Path };
+
+        IReadOnlySet<SegmentedAddress> firstRunTargets;
+        using (AsmFixtureRun run = AsmFixtureRunner.RunEmulated(
+                new AsmFixture(settings, [], fixture.AssertResult), JitMode.InterpretedOnly)) {
+            firstRunTargets = run.DependencyInjection.GeneratorInputsCollector
+                .Capture(run.Machine.CfgCpu.ExecutionContextManager).HardwareInterrupts.TerminateResumeTargets;
+        }
+
+        firstRunTargets.Should().NotBeEmpty(
+            "the batch launch of WRITER.COM after the TSR terminates records a resume target");
+
+        // AsmFixtureRun builds the emulator without running the program: the reload merged the
+        // dump's targets before the program runs again.
+        using AsmFixtureRun reloaded = new(
+            (settings with { ReloadCfgGraph = true }).CreateEmulatedCreator(JitMode.InterpretedOnly),
+            new AsmRunScope());
+        reloaded.DependencyInjection.GeneratorInputsCollector
+            .Capture(reloaded.Machine.CfgCpu.ExecutionContextManager).HardwareInterrupts.TerminateResumeTargets
+            .Should().Contain(firstRunTargets,
+                "the reloading run merged the terminate-resume targets the dump recorded");
+    }
+
+    /// <summary>
     /// The BOOT command loads the boot sector of a mounted floppy image at 0000:7C00 with DL=0.
     /// This test checks the initial loading state immediately after Create(), without executing the CPU.
     /// This is an initialization-only test, not an execution test.
@@ -104,5 +137,36 @@ public class DosBatchRoutingIntegrationTests {
             new SegmentedAddress(DosProcessManager.CommandComSegment, 0x0100),
             "nothing runs, so the root COMMAND.COM program area must not become an entry point");
         File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Should().NotBeEmpty("VER wrote its output through the redirection");
+    }
+
+    /// <summary>
+    /// An IF line that launches a program appends its redirection exactly once: the appended redirection of
+    /// the IF parse and the inherited redirection of ApplyInheritedRedirection must not both write.
+    /// </summary>
+    [Fact]
+    public void IfLineLaunchingProgram_AppendsRedirectionOnce() {
+        using TempFile tempFile = new("dos_batch_if_append_once");
+        string tempDir = tempFile.Path;
+
+        // Arrange
+        File.WriteAllText(Path.Join(tempDir, "OUT.TXT"), "FIRST\r\n");
+        File.WriteAllBytes(Path.Join(tempDir, "PROG.COM"),
+            File.ReadAllBytes(Path.Join("Resources", "DosConsoleProgramTests", "print_dollar_string.com")));
+        string startBatchPath = Path.Join(tempDir, "START.BAT");
+        File.WriteAllText(startBatchPath, "if not errorlevel 1 CALL PROG.COM >> OUT.TXT\r\n");
+        using Spice86Creator creator = new(
+            binName: startBatchPath,
+            enablePit: false,
+            maxCycles: 100000L,
+            installInterruptVectors: true,
+            cDrive: tempDir);
+        using Spice86DependencyInjection spice86 = creator.Create();
+
+        // Act
+        spice86.ProgramExecutor.Run();
+
+        // Assert
+        File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Should().Be("FIRST\r\nHello DOS",
+            "the redirection of the IF line applies exactly once to the launched program");
     }
 }

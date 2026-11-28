@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
@@ -236,7 +237,7 @@ public sealed class MouseDriverStateTests : IDisposable {
         Mouse mouse = new(state, sharedMouseData, pic, MouseType.Ps2, NullLogger.Instance, false, clock, scheduler, gui);
         IVgaFunctionality video = Substitute.For<IVgaFunctionality>();
         video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
-        MouseDriver driver = new(state, sharedMouseData, memory, mouse, video, NullLogger.Instance, gui);
+        MouseDriver driver = new(state, sharedMouseData, memory, mouse, video, NullLogger.Instance, ICallTargetRegistry.None, new Spice86.Core.Emulator.ReverseEngineer.RecordedRunFacts(), gui);
         driver.WriteAssemblyInRam(new MemoryAsmWriter(memory, new(DriverStubSegment, 0),
             new CallbackHandler(state, NullLogger.Instance)));
         return driver;

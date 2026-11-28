@@ -62,6 +62,8 @@ start:
     mov es, bx
     mov [es:52h], al
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 writer:

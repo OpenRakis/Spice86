@@ -12,7 +12,8 @@ public static class StronglyConnectedComponents {
     /// </summary>
     /// <remarks>
     /// This implementation keeps its own depth-first search stack instead of using recursion, so it can process large
-    /// generated graphs without depending on the process call-stack limit.
+    /// generated graphs without depending on the process call-stack limit. Component ids are numbered in completion
+    /// order: every component reachable from another gets a lower id, so callees come before their callers.
     /// </remarks>
     public static Dictionary<T, int> Find<T>(IEnumerable<T> nodes, Func<T, IEnumerable<T>> getNeighbors) where T : notnull {
         Dictionary<T, int> indexByNode = new();

@@ -51,7 +51,8 @@ internal sealed class DumpProgressUiService : IDisposable {
 
     /// <summary>
     /// Coalesces steps to the latest one: a step already queued for the UI thread is replaced instead of
-    /// stacking up posts. The step naming the currently emitting method always reaches the window.
+    /// stacking up posts. A code-method step reports a completed method, so the last completed method
+    /// always reaches the window.
     /// </summary>
     private void OnStepReported(DumpPhase phase, int current, int total, string item) {
         lock (_stepLock) {

@@ -81,7 +81,8 @@ At this stage there are no partitions yet. The partitioner only knows which bloc
 
 - execution-context entry points become observed roots;
 - call targets become observed function roots;
-- CPU fault targets become observed execution-context roots.
+- CPU fault targets become observed execution-context roots;
+- callback successors that moved CS:IP (an EXEC child's entry, a terminate's resume landing) become observed roots with an `execChildEntry` entry - the target runs a fresh activation and must not inline into the stub's partition.
 
 At least one observed root is required for a non-empty graph. If root collection finds none, partitioning fails with an `InvalidOperationException`; a graph with no execution-context entry, call target, or CPU fault handler target does not contain enough evidence to partition safely. After this validation, the partitioner grows ownership from the roots. If any block is still ownerless, it runs a rescue pass (see below) and re-grows. A block that is ownerless **and** has no incoming edge at all is genuine lost control-flow evidence and fails the ownerless-block guard; that signals the emulator/export path needs a fix.
 
@@ -174,7 +175,7 @@ Ownerless blocks are rejected before assembly. The assembler still guards agains
 
 ### Stage 5: Normalization
 
-`CfgPartitionNormalizer` refines only synthetic partitions with multiple entry blocks. If the entries do not directly transfer to each other, it builds a dominator tree inside the synthetic partition and splits dominated regions into smaller single-entry synthetic partitions.
+`CfgPartitionNormalizer` refines only synthetic partitions with multiple entry blocks. When no entry reaches another, it builds a dominator tree inside the synthetic partition and splits dominated regions into smaller single-entry synthetic partitions. When an entry does reach another, the internal graph is first cut at the edges into a different entry block (self-loops on an entry stay), so each entry dominates its own region; the cut edges become ordinary cross-partition flows and the split is then kept only when the graph of the replacement partitions is acyclic - a cycle between split methods could only run through the cyclic-jump dispatcher or C# recursion, so a cyclic multi-entry partition keeps its `switch` as before.
 
 For a multi-entry shared component such as this:
 
@@ -322,6 +323,7 @@ Current entry kinds include:
 | `graphComponentEntry` | Entry came from a self-contained exported graph component, usually after non-assembly control flow such as a code override jump. |
 | `returnTargetEntry` | Entry came from a return target that does not match aligned call-continuation evidence. |
 | `sharedEntry` | Entry chosen for a synthetic shared partition. |
+| `execChildEntry` | Entry came from a stub callback that moved CS:IP to a fresh execution context - an EXEC child's program entry or a terminate's resume landing (`ClassifiedEdgeKind.CallbackMovedTarget`). Unlike `executionContextEntry` it is not an unknown way in: its callers are the `ExecChild` sites that name it, so the conventions bound its inputs and outputs by the parent continuations' demand instead of the whole reportable machine state. |
 
 In short: `entries` records the observed evidence for entering the partition.
 

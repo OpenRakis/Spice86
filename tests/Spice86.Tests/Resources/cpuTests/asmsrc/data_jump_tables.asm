@@ -225,6 +225,8 @@ j3_back:
     jnz j3_pass
 j3_out:
 
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 j1_h0: jmp j1_t0
@@ -356,6 +358,9 @@ j4_table:
     dw j4_h5
     dw j4_h6
 
+    rb 65516-$
+    dw j2_table
+    dw j2_h1
     rb 65520-$
     jmp start
     rb 65535-$

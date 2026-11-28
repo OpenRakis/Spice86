@@ -2,6 +2,8 @@ namespace Spice86.Tests.AsmFixtures;
 
 using FluentAssertions;
 
+using Spice86.Shared.Emulator.Memory;
+
 using Spice86.Tests.Dos;
 
 using System.Text;
@@ -248,8 +250,8 @@ internal static class ConsoleProgramScenarioCatalog {
         return Scenario("console_ah06_output_redirect", run => run
             .ResourceCopy(ProgramDirectory, "direct_console_io.com", "DCOUT.COM")
             .StartBatch("DCOUT.COM > OUTPUT.TXT\r\n",
-                _ => run.TextFile("OUTPUT.TXT").Should().Contain("Q",
-                    "AH=06h output mode should write the character to stdout")));
+                _ => run.TextFile("OUTPUT.TXT").Should().Be("Q",
+                    "AH=06h output mode writes only the dl_value character 'Q' of direct_console_io.asm to stdout")));
     }
 
     /// <summary>INT 21h AH=02h checks the standard input for a pending break before writing, so the
@@ -258,9 +260,13 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario DisplayOutputChecksForPendingBreak() {
         return Scenario("console_ah02_ctrl_c_break", run => run
             .ResourceCopy(ProgramDirectory, "display_output_then_write_sentinel.com", "AH02C.COM")
-            .RunWithKeys("AH02C.COM", [CtrlCBiosKeyCode], result =>
+            .RunWithKeys("AH02C.COM", [CtrlCBiosKeyCode], result => {
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
-                    "AH=02h should perform break check and terminate before subsequent instructions")));
+                    "AH=02h should perform break check and terminate before subsequent instructions");
+                ConsoleText(result).Should().NotContain("Q",
+                    "AH=02h terminates during the call, so the output_character 'Q' of the asm is never displayed");
+                AssertSecondInt21NeverExecuted(result, "console_ah02_ctrl_c_break", 0x0116);
+            }));
     }
 
     /// <summary>INT 21h with the given AH function checks the standard input for a pending break before
@@ -271,9 +277,11 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario BreakCheckAfterCall(string identity, byte ahFunction) {
         return Scenario(identity, run => run
             .ResourceCopy(ProgramDirectory, $"int21_call_then_write_sentinel_{ahFunction:x}.com", "BRKCHK.COM")
-            .RunWithKeys("BRKCHK.COM", [CtrlCBiosKeyCode], result =>
+            .RunWithKeys("BRKCHK.COM", [CtrlCBiosKeyCode], result => {
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
-                    $"AH={ahFunction:X2} should perform break check and terminate before subsequent instructions")));
+                    $"AH={ahFunction:X2} should perform break check and terminate before subsequent instructions");
+                AssertSecondInt21NeverExecuted(result, identity, 0x0114);
+            }));
     }
 
     /// <summary>INT 21h AH=09h writes its dollar terminated string to the redirected standard output.</summary>
@@ -282,8 +290,9 @@ internal static class ConsoleProgramScenarioCatalog {
         return Scenario("console_ah09_print_string", run => run
             .ResourceCopy(ProgramDirectory, "print_dollar_string.com", "PRINT.COM")
             .StartBatch("PRINT.COM > OUTPUT.TXT\r\n",
-                _ => run.TextFile("OUTPUT.TXT").Should().Contain("Hello DOS",
-                    "AH=09h should write the string to stdout (stopping at $)")));
+                _ => run.TextFile("OUTPUT.TXT").Should().Be("Hello DOS",
+                    "AH=09h writes the print_dollar_string.asm string to stdout and stops at '$'")))
+            .WithGeneratedCodeChecks(GeneratedCodeFeatureChecks.ConsoleAh09PrintString);
     }
 
     /// <summary>INT 21h AH=09h checks the standard input for a pending break before writing, so the
@@ -292,9 +301,12 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario PrintStringChecksForPendingBreak() {
         return Scenario("console_ah09_ctrl_c_break", run => run
             .ResourceCopy(ProgramDirectory, "print_string_then_write_sentinel.com", "AH09C.COM")
-            .RunWithKeys("AH09C.COM", [CtrlCBiosKeyCode], result =>
+            .RunWithKeys("AH09C.COM", [CtrlCBiosKeyCode], result => {
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
-                    "AH=09h should perform break check and terminate before subsequent instructions")));
+                    "AH=09h should perform break check and terminate before subsequent instructions");
+                ConsoleText(result).Should().NotContain("HELLO",
+                    "AH=09h terminates during the call, so the message of the asm is never printed");
+            }));
     }
 
     /// <summary>INT 21h AH=0Bh reports a pending keystroke in the BIOS keyboard buffer.</summary>
@@ -365,7 +377,7 @@ internal static class ConsoleProgramScenarioCatalog {
                 VideoByte(result, 0).Should().Be(0x61, "INT 16h AH=00h should return 'a' in AL");
                 VideoByte(result, 1).Should().Be(0x1E, "INT 16h AH=00h should return the scancode of A in AH");
                 VideoByte(result, 2).Should().Be(0x1E, "the hooked INT 9 handler should have seen the scancode on port 60h");
-            }));
+            })).WithTimingDependentState("the key is injected through a chained INT 9 on a timer tick, so the landing point is timing-dependent");
     }
 
     /// <summary>A second blocking INT 16h AH=00h call waits with interrupts enabled until the next timer
@@ -377,7 +389,7 @@ internal static class ConsoleProgramScenarioCatalog {
             .RunWithKeys("NEXTKEY.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x61, "the first INT 16h AH=00h should return 'a'");
                 VideoByte(result, 1).Should().Be(0x62, "the second INT 16h AH=00h should return 'b', not the stale 'a' again");
-            }));
+            })).WithTimingDependentState("the second blocking INT 16h waits for a key injected on a timer tick, which is timing-dependent");
     }
 
     private static AsmScenario Scenario(string identity, Func<DosProgramRun, AsmFixture> build) {
@@ -386,5 +398,19 @@ internal static class ConsoleProgramScenarioCatalog {
 
     private static IReadOnlyList<ushort> Keys(ushort keyCode) {
         return keyCode == 0 ? NoKeys : [keyCode];
+    }
+
+    private static string ConsoleText(AsmFixtureResult result) =>
+        result.Observations.Get<ConsoleOutputRecorder>(AsmRunScope.ConsoleOutputObservation).Text;
+
+    private static void AssertSecondInt21NeverExecuted(AsmFixtureResult result, string identity, ushort offset) {
+        // The program image ends with mov ax, 4C00h / int 21h: a call that returned normally reaches
+        // the terminating int 21h at this offset of the 016Eh load segment, which the software-interrupt
+        // recorder would list. A correct break check terminates inside the first call, so the address
+        // never executes.
+        result.Observations.Get<SoftwareInterruptRecorder>(AsmRunScope.SoftwareInterruptsObservation)
+            .Interrupts.Should().NotContain(
+                entry => entry.Address == new SegmentedAddress(0x016E, offset),
+                $"{identity}: the break check must terminate the program before the terminating int 21h at 016E:{offset:X4}");
     }
 }

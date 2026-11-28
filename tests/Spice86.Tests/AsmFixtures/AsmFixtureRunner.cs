@@ -109,22 +109,18 @@ internal static class AsmFixtureRunner {
         AsmFixtureRun run = new(settings.CreateOverrideCreator(tracking), scope);
         ApplicationExecutionObserver observer = new();
         scope.Register(AsmRunScope.InterpreterExecutionObservation, observer);
-        bool transferredToCaller = false;
-        try {
-            RunProgram(run, settings, scope, fixtureRun => {
-                observer.Install(fixtureRun.Machine);
-                fixtureRun.DependencyInjection.FunctionCatalogue.FunctionInformations.Values
-                    .Should().Contain(functionInformation => functionInformation.HasOverride);
-            });
-            AssertGeneratedExecution(tracking, observer, scope, settings.ScenarioIdentity, run.Machine.CpuState.Cycles);
-            transferredToCaller = true;
-            return run;
-        } finally {
-            observer.Uninstall();
-            if (!transferredToCaller) {
-                run.Dispose();
+        return Ownership.DisposeOnFailure(run, () => {
+            try {
+                RunProgram(run, settings, scope, fixtureRun => {
+                    observer.Install(fixtureRun.Machine);
+                    fixtureRun.DependencyInjection.FunctionCatalogue.FunctionInformations.Values
+                        .Should().Contain(functionInformation => functionInformation.HasOverride);
+                });
+                AssertGeneratedExecution(tracking, observer, scope, settings.ScenarioIdentity, run.Machine.CpuState.Cycles);
+            } finally {
+                observer.Uninstall();
             }
-        }
+        });
     }
 
     /// <summary>
@@ -145,18 +141,8 @@ internal static class AsmFixtureRunner {
     }
 
     private static AsmFixtureRun Execute(AsmFixtureRun run, AsmRunSettings settings, AsmRunScope scope,
-        Action<AsmFixtureRun> beforeProgram) {
-        bool succeeded = false;
-        try {
-            RunProgram(run, settings, scope, beforeProgram);
-            succeeded = true;
-            return run;
-        } finally {
-            if (!succeeded) {
-                run.Dispose();
-            }
-        }
-    }
+        Action<AsmFixtureRun> beforeProgram) =>
+        Ownership.DisposeOnFailure(run, () => RunProgram(run, settings, scope, beforeProgram));
 
     private static void RunProgram(AsmFixtureRun run, AsmRunSettings settings, AsmRunScope scope,
         Action<AsmFixtureRun> beforeProgram) {
@@ -170,6 +156,14 @@ internal static class AsmFixtureRunner {
             // Captured here, after the machine is fully built and its program is loaded but before the
             // program executes anything, so the emulator code it records cannot be the program's own.
             scope.Register(AsmRunScope.EmulatorCodeInventoryObservation, EmulatorCodeInventory.Capture(run.Machine));
+            using SoftwareInterruptRecorder softwareInterrupts = new(run.Machine);
+            scope.Register(AsmRunScope.SoftwareInterruptsObservation, softwareInterrupts);
+            using StackCallRecorder stackCalls = new(run.Machine);
+            scope.Register(AsmRunScope.StackCallsObservation, stackCalls);
+            using ConsoleOutputRecorder consoleOutput = new(run.Machine);
+            scope.Register(AsmRunScope.ConsoleOutputObservation, consoleOutput);
+            DriveFileRecorder driveFiles = new(settings.CDrive);
+            scope.Register(AsmRunScope.DriveFilesObservation, driveFiles);
             beforeProgram(run);
             run.DependencyInjection.ProgramExecutor.Run();
             scope.CollectObservations(run.Machine);
@@ -217,31 +211,11 @@ internal static class AsmFixtureRunner {
         }
     }
 
-    private static AsmFixtureRun AssertEngineAndReturn(AsmFixtureRun run, AsmRunScope scope) {
-        bool succeeded = false;
-        try {
-            scope.Fixture.AssertEngine(scope, run.Machine);
-            succeeded = true;
-            return run;
-        } finally {
-            if (!succeeded) {
-                run.Dispose();
-            }
-        }
-    }
+    private static AsmFixtureRun AssertEngineAndReturn(AsmFixtureRun run, AsmRunScope scope) =>
+        Ownership.DisposeOnFailure(run, () => scope.Fixture.AssertEngine(scope, run.Machine));
 
-    private static AsmFixtureRun AssertOracleAndReturn(AsmFixtureRun run, AsmFixture fixture) {
-        bool succeeded = false;
-        try {
-            AssertOracle(fixture, run.Result);
-            succeeded = true;
-            return run;
-        } finally {
-            if (!succeeded) {
-                run.Dispose();
-            }
-        }
-    }
+    private static AsmFixtureRun AssertOracleAndReturn(AsmFixtureRun run, AsmFixture fixture) =>
+        Ownership.DisposeOnFailure(run, () => AssertOracle(fixture, run.Result));
 
     private static void AssertOracle(AsmFixture fixture, AsmFixtureResult result) {
         CompareMemoryWithExpected(fixture.Settings.ScenarioIdentity, result.Memory, fixture.ExpectedMemory);

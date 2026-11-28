@@ -438,6 +438,10 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         throw CreateUnsupportedNodeException(nameof(ThrowNode));
     }
 
+    public TOutput VisitStackRangeCheckNode(StackRangeCheckNode node) {
+        throw CreateUnsupportedNodeException(nameof(StackRangeCheckNode));
+    }
+
     public TOutput VisitHltNode(HltNode node) {
         throw CreateUnsupportedNodeException(nameof(HltNode));
     }

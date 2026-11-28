@@ -86,6 +86,8 @@ pass_loop:
     add si, 22
     dec word [0F00h]
     jnz pass_loop
+    mov word [ss:600h], sp
+    mov word [ss:602h], ss
     hlt
 
 ; per pass: T1 word + T1 dword + T2 test word + T3 ax/bp + T4 ax/bp (+pad)

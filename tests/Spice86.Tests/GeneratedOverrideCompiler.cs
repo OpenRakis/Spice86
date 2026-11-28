@@ -19,6 +19,20 @@ internal sealed class GeneratedOverrideCompiler {
         SyntaxTree[] syntaxTrees = sources
             .Select(source => CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview)))
             .ToArray();
+        return CompileTrees(syntaxTrees, sources);
+    }
+
+    /// <summary>Compiles <paramref name="files"/> keeping each file's name as its syntax tree's path,
+    /// so the metrics can split program and support parts by file.</summary>
+    public GeneratedCompilation Compile(IReadOnlyList<GeneratedSourceFile> files) {
+        SyntaxTree[] syntaxTrees = files
+            .Select(file => CSharpSyntaxTree.ParseText(file.Text,
+                CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview), path: file.Name))
+            .ToArray();
+        return CompileTrees(syntaxTrees, files.Select(file => file.Text).ToArray());
+    }
+
+    private GeneratedCompilation CompileTrees(SyntaxTree[] syntaxTrees, IReadOnlyList<string> sources) {
         CSharpCompilation compilation = CSharpCompilation.Create(
             assemblyName: "Spice86.GeneratedCode.Tests." + Guid.NewGuid().ToString("N"),
             syntaxTrees: syntaxTrees,
@@ -33,7 +47,7 @@ internal sealed class GeneratedOverrideCompiler {
         return new GeneratedCompilation(sources, compilation, emitResult, peStream);
     }
 
-    public GeneratedCompilation Compile(GeneratedCSharpProgram program) => Compile(TextsOf(program));
+    public GeneratedCompilation Compile(GeneratedCSharpProgram program) => Compile(program.Files);
 
     public CompiledGeneratedOverride CompileSupplier(IReadOnlyList<string> sources) {
         return CompileSupplier(Compile(sources));

@@ -141,7 +141,7 @@ public sealed class MachineDeviceStateTests {
     }
 
     private static bool IsA20Enabled(Machine machine) {
-        return machine.SystemBiosInt15Handler.ToggleA20GateOrGetStatus(QueryA20Status).al == 1;
+        return machine.SystemBiosInt15Handler.ToggleA20GateOrGetStatus(QueryA20Status).a20Enabled == 1;
     }
 
     private static ushort AllocateXms(Machine machine, ExtendedMemoryManager xms) {

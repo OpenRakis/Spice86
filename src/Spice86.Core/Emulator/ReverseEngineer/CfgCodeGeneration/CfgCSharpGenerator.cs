@@ -4,15 +4,18 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
@@ -24,7 +27,10 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Text;
 
 /// <summary>
 /// The top-level orchestrator: takes a partitioned CFG program and produces a complete, compilable C# source
@@ -44,11 +50,14 @@ internal sealed class CfgCSharpGenerator {
     private readonly bool _serviceCallNotifications;
     private readonly bool _branchProbes;
     private readonly bool _deviceOperations;
-    private readonly bool _manifest;
     private readonly int _maxLinesPerFile;
+    private readonly bool _printAsmComments;
+    private readonly GenerationPolicy _policy;
+    private readonly int _maxDegreeOfParallelism;
 
-    /// <summary>The production generator: no census collection, no IR verification.</summary>
-    public CfgCSharpGenerator() : this(false, false) {
+    /// <summary>The production generator: no census collection, no IR verification, no ASM
+    /// instruction comments.</summary>
+    public CfgCSharpGenerator() : this(false, false, false) {
     }
 
     /// <summary>Creates a generator; production uses the parameterless options.</summary>
@@ -57,12 +66,40 @@ internal sealed class CfgCSharpGenerator {
     /// <param name="verify">Whether the IR invariants are checked after the passes; tests enable it.
     /// </param>
     public CfgCSharpGenerator(bool collectCensuses, bool verify)
-        : this(collectCensuses, verify, MaxLinesPerFile) {
+        : this(collectCensuses, verify, false, MaxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with the ASM comment option.</summary>
+    /// <param name="printAsmComments">Whether every instruction keeps its
+    /// <c>// SSSS:OOOO asm</c> comment; the address map records the address either way.</param>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments)
+        : this(collectCensuses, verify, printAsmComments, MaxLinesPerFile) {
     }
 
     /// <summary>Creates a generator with a per-file line limit; tests use a small limit.</summary>
     internal CfgCSharpGenerator(bool collectCensuses, bool verify, int maxLinesPerFile)
         : this(new GeneratorOptions { CollectCensuses = collectCensuses, Verify = verify }, maxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with the ASM comment option and an explicit policy.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        GenerationPolicy policy) : this(collectCensuses, verify, printAsmComments, policy,
+        MaxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with a per-file line limit and explicit comment option.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        int maxLinesPerFile)
+        : this(collectCensuses, verify, printAsmComments, GenerationPolicy.Strict,
+        maxLinesPerFile) {
+    }
+
+    /// <summary>Creates a generator with a per-file line limit, explicit comment option and
+    /// explicit policy.</summary>
+    internal CfgCSharpGenerator(bool collectCensuses, bool verify, bool printAsmComments,
+        GenerationPolicy policy, int maxLinesPerFile)
+        : this(new GeneratorOptions { CollectCensuses = collectCensuses, Verify = verify,
+            PrintAsmComments = printAsmComments, Policy = policy }, maxLinesPerFile) {
     }
 
     /// <summary>Creates a generator from its options.</summary>
@@ -77,7 +114,11 @@ internal sealed class CfgCSharpGenerator {
         _serviceCallNotifications = options.ServiceCallNotifications;
         _branchProbes = options.BranchProbes;
         _deviceOperations = options.DeviceOperations;
-        _manifest = options.Manifest;
+        _printAsmComments = options.PrintAsmComments;
+        _policy = options.Policy;
+        _maxDegreeOfParallelism = options.BranchProbes
+            ? 1
+            : Math.Max(1, options.MaxDegreeOfParallelism);
         _maxLinesPerFile = maxLinesPerFile;
     }
 
@@ -90,13 +131,24 @@ internal sealed class CfgCSharpGenerator {
     /// and per-method emission phases through <paramref name="progress"/>.
     /// </summary>
     public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
+        try {
+            return GenerateCore(program, progress);
+        } catch (AggregateException aggregate) {
+            if (aggregate.Flatten().InnerExceptions is [Exception single]) {
+                ExceptionDispatchInfo.Capture(single).Throw();
+            }
+            throw;
+        }
+    }
+
+    private GeneratedCSharpProgram GenerateCore(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
             throw new InvalidOperationException("Cannot generate C# for an empty CFG partitioned program.");
         }
-
         progress.BeginPhase(DumpPhase.CodeAnalysis);
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        GeneratorAnalysis generatorAnalysis = GeneratorAnalysis.Build(program, instructionMnemonic,
+            _policy);
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePlan);
@@ -110,13 +162,15 @@ internal sealed class CfgCSharpGenerator {
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
         BranchProbeSites? branchProbes = _branchProbes ? new BranchProbeSites() : null;
         IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
-            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, branchProbes,
-            _deviceOperations);
+            effectBuilder, _collectCensuses, _verify, _serviceCallNotifications, _printAsmComments,
+            branchProbes, _deviceOperations);
 
         List<GeneratedSourceFile> files = new(2 + plan.Methods.Count);
 
         CSharpSourceWriter supplierWriter = new();
         EmitFilePreamble(supplierWriter, false);
+        supplierWriter.Line(_policy.HeaderLine);
+        supplierWriter.Line();
         EmitSupplier(supplierWriter, plan);
         progress.EndPhase();
 
@@ -125,71 +179,115 @@ internal sealed class CfgCSharpGenerator {
         FlagReadCensus flagReadCensus = new();
         WebCensus webCensus = new();
         ConstantMemoryAccessTable constantMemoryAccesses = new();
-        List<PreparedMethod> prepared = new(plan.Methods.Count);
-        List<GenerationStepTimer> timers = new(plan.Methods.Count);
-        for (int i = 0; i < plan.Methods.Count; i++) {
+        PreparedMethod[] prepared = new PreparedMethod[plan.Methods.Count];
+        GenerationStepTimer[] timers = new GenerationStepTimer[plan.Methods.Count];
+        object progressLock = new();
+        ParallelOptions parallelOptions = new() { MaxDegreeOfParallelism = _maxDegreeOfParallelism };
+        int preparedCount = 0;
+        Parallel.For(0, plan.Methods.Count, parallelOptions, i => {
             MethodPlan method = plan.Methods[i];
-            progress.Step(i + 1, plan.Methods.Count, method.MethodName);
             GenerationStepTimer timer = new();
-            PreparedMethod preparedMethod = methodEmitter.Prepare(method, timer);
-            prepared.Add(preparedMethod);
-            timers.Add(timer);
-            MethodCensus methodCensus = preparedMethod.Emission.Census;
+            prepared[i] = methodEmitter.Prepare(method, timer);
+            timers[i] = timer;
+            lock (progressLock) {
+                int completed = ++preparedCount;
+                progress.Step(completed, plan.Methods.Count, method.MethodName);
+            }
+        });
+        for (int i = 0; i < plan.Methods.Count; i++) {
+            PreparedMethod preparedMethod = prepared[i];
             constantMemoryAccesses.Merge(preparedMethod.Emission.ConstantMemoryAccesses);
-            flagReadCensus.Merge(methodCensus.FlagReads);
-            webCensus.Merge(methodCensus.Webs);
+            webCensus.Merge(preparedMethod.Emission.Census.Webs);
         }
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodeProgramAnalysis);
         ProgramAnalysis analysis = ProgramAnalysis.Compute(prepared, context, effectBuilder,
-            program.Inputs.ProgramImages, progress);
+            program.Inputs.ProgramImages, progress, parallelOptions);
 
+        analysis = new RoundTwoPreparation().Run(prepared, plan, timers, methodEmitter, context,
+            effectBuilder, lowerer.HardwareInterruptEffect, program.Inputs.ProgramImages, _verify,
+            parallelOptions, progress, analysis);
+        IReadOnlyList<SegmentedAddress> nonConverged = effectBuilder.NonConvergedSummaryEntries();
+        if (nonConverged.Count != 0) {
+            progress.Detail($"Call summaries kept conservative after {HardwareInterruptEffectBuilder.MaxSummaryRounds} fixed-point rounds: {nonConverged.Count} SCC(s) entered at {string.Join(", ", nonConverged)}");
+        }
         RewritePreparedBodies(prepared, program, analysis);
 
         IReadOnlyList<SpeculativeRunFieldPlan> speculativeRunFields = NameSpeculativeRunFields(prepared);
         progress.EndPhase();
 
         progress.BeginPhase(DumpPhase.CodePrinting);
-        List<(ushort Segment, string Text, bool HasFrame)> methodTexts = new(plan.Methods.Count);
+        List<PrintedMethod> methodTexts = new(plan.Methods.Count);
         List<(MethodPlan Method, TypedSignature? Signature)> manifestMethods = new(plan.Methods.Count);
-        for (int i = 0; i < prepared.Count; i++) {
+        List<(SegmentedAddress Address, int Bytes)> droppedStackSlots = [];
+        for (int i = 0; i < prepared.Length; i++) {
             PreparedMethod preparedMethod = prepared[i];
-            progress.Step(i + 1, prepared.Count, preparedMethod.Method.MethodName);
+            progress.Step(i + 1, prepared.Length, preparedMethod.Method.MethodName);
             GenerationStepTimer timer = timers[i];
             CSharpSourceWriter methodWriter = new();
             methodWriter.Indent();
             AnalyzedMethod analyzed = methodEmitter.Analyze(preparedMethod, analysis, timer);
-            methodEmitter.Print(methodWriter, analyzed, analysis, timer);
+            droppedStackSlots.AddRange(analyzed.RemovedSaves
+                .Select(save => (save.Site, save.Bytes)));
+            List<MethodInstructionLine> instructionLines =
+                methodEmitter.Print(methodWriter, analyzed, analysis, timer);
             manifestMethods.Add((preparedMethod.Method, analyzed.Signature));
-            methodTexts.Add((preparedMethod.Method.PrimaryEntry.Address.Segment, methodWriter.ToString(),
-                preparedMethod.FramePlan is not null));
+            bool support = program.Inputs.ProgramImages.IsSupportCode(preparedMethod.Method.Nodes
+                .OfType<CfgInstruction>()
+                .Select(instruction => instruction.Address.Linear)
+                .ToList());
+            methodTexts.Add(new PrintedMethod(preparedMethod.Method.PrimaryEntry.Address.Segment,
+                methodWriter.ToString(), preparedMethod.FramePlan is not null, support,
+                preparedMethod.Method.PrimaryEntry.Address.Linear,
+                preparedMethod.Method.MethodName, instructionLines));
             MethodCensus methodCensus = preparedMethod.Emission.Census;
             census.Merge(methodCensus.Gotos);
+            if (_collectCensuses) {
+                flagReadCensus.Merge(IrFlagReadCensusClassifier.Classify(preparedMethod.IrMethod,
+                    analyzed.Ssa, analyzed.Body,
+                    analyzed.RegisterLocals?.Reads));
+            }
             if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
                 MethodPlan method = preparedMethod.Method;
-                progress.Detail(SlowMethodLine(i + 1, prepared.Count, method.MethodName,
+                progress.Detail(SlowMethodLine(i + 1, prepared.Length, method.MethodName,
                     method.Nodes.OfType<CfgInstruction>().Count(),
                     methodCensus.LiftedBlocks, methodCensus.LiftedStatements, timer));
             }
         }
-        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupplierFileName, supplierWriter.ToString()));
-
-        CSharpSourceWriter mainWriter = new();
-        EmitFilePreamble(mainWriter, false);
-        mainWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
-        EmitSegmentFields(mainWriter, plan);
-        EmitSignatureFields(mainWriter, plan.SignatureFields);
-        EmitSpeculativeRunFields(mainWriter, speculativeRunFields);
-        EmitEntryFields(mainWriter, plan, analysis.TypedSignatures);
-        EmitGlobalsFields(mainWriter, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses);
-        EmitConstructor(mainWriter, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
-            analysis.TypedSignatures);
-        mainWriter.CloseBlock();
-        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.DumpFileSuffix, mainWriter.ToString()));
-        files.AddRange(BuildSegmentFiles(methodTexts));
+        List<AddressMapEntryManifest> addressMap = new(plan.Methods
+            .Sum(method => method.Nodes.OfType<CfgInstruction>().Count()));
+        files.AddRange(BuildSegmentFiles(methodTexts
+            .Where(method => !method.Support)
+            .ToList(), addressMap));
         files.AddRange(EmitGlobalsFiles(analysis.GlobalClasses));
         files.AddRange(EmitTableFiles(analysis.GlobalClasses));
+
+        CSharpSourceWriter wiringWriter = new();
+        EmitFilePreamble(wiringWriter, false);
+        wiringWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
+        EmitSegmentFields(wiringWriter, plan);
+        EmitEntryFields(wiringWriter, plan, analysis.TypedSignatures);
+        EmitGlobalsFields(wiringWriter, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses);
+        EmitConstructor(wiringWriter, program, plan, analysis.GlobalClasses.Classes, analysis.GlobalClasses.TableClasses,
+            analysis.TypedSignatures, transferEmitter.CallLandings);
+        EmitHardwareInterruptDispatch(wiringWriter, program, plan, analysis.TypedSignatures);
+        wiringWriter.Line("protected override bool ObservedTransfersOnly => true;");
+        wiringWriter.CloseBlock();
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportWiringFileName, wiringWriter.ToString()));
+
+        CSharpSourceWriter guardsWriter = new();
+        EmitFilePreamble(guardsWriter, false);
+        guardsWriter.OpenBlock($"public partial class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
+        EmitSignatureFields(guardsWriter, plan.SignatureFields);
+        EmitSpeculativeRunFields(guardsWriter, speculativeRunFields);
+        guardsWriter.CloseBlock();
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupportGuardsFileName, guardsWriter.ToString()));
+
+        files.AddRange(BuildSupportStubFiles(methodTexts
+            .Where(method => method.Support)
+            .ToList(), addressMap));
+        files.Add(new GeneratedSourceFile(GeneratedOverrideNames.SupplierFileName, supplierWriter.ToString()));
         progress.EndPhase();
 
         return new GeneratedCSharpProgram {
@@ -197,11 +295,23 @@ internal sealed class CfgCSharpGenerator {
             GotoCensus = census,
             FlagReadCensus = flagReadCensus,
             WebCensus = webCensus,
+            UntypedMethods = analysis.TypedSignatures.Untyped,
             ConstantMemoryAccesses = constantMemoryAccesses,
             DataSymbolLabels = DataSymbolLabels(prepared, analysis.GlobalClasses),
-            Manifest = _manifest
-                ? BuildManifest(manifestMethods, branchProbes, methodTexts.Select(method => method.Text))
-                : null
+            Manifest = BuildManifest(manifestMethods, branchProbes,
+                methodTexts.Select(method => method.Text), addressMap),
+            FramelessServiceCallSites = [.. prepared
+                .SelectMany(method => method.IrMethod.Blocks.SelectMany(block => block.Statements))
+                .Where(statement => statement.Node is InterruptServiceCallNode { WritesFrame: false })
+                .Select(statement => statement.Origin.Address)
+                .Concat(prepared
+                    .SelectMany(method => method.IrMethod.Blocks)
+                    .Where(block => block.Terminator is IrExit {
+                        Transfer: ReturnNode { Value: InterruptServiceCallNode {
+                            Contract.Transfer: ServiceTransferKind.Terminates } } })
+                    .Select(block => block.Terminator.Origin.Address))],
+            StackSpaceCallSites = [.. analysis.StackArguments.SpaceCallSites],
+            DroppedStackSlotSites = droppedStackSlots
         };
     }
 
@@ -209,7 +319,7 @@ internal sealed class CfgCSharpGenerator {
     /// the probe sites present in <paramref name="methodTexts"/>.</summary>
     private static GeneratedCodeManifest BuildManifest(
         List<(MethodPlan Method, TypedSignature? Signature)> methods, BranchProbeSites? branchProbes,
-        IEnumerable<string> methodTexts) {
+        IEnumerable<string> methodTexts, List<AddressMapEntryManifest> addressMap) {
         ILookup<string, BranchProbeSite> sitesByMethod =
             (branchProbes?.SitesIn(methodTexts) ?? []).ToLookup(site => site.Method);
         List<GeneratedMethodManifest> manifestMethods = new(methods.Count);
@@ -223,7 +333,7 @@ internal sealed class CfgCSharpGenerator {
                 sitesByMethod[method.MethodName].Select(site => new ProbeSiteManifest(site.Id, site.Kind,
                     site.Address?.Segment, site.Address?.Offset, site.Text)).ToList()));
         }
-        return new GeneratedCodeManifest(manifestMethods);
+        return new GeneratedCodeManifest(manifestMethods) { AddressMap = addressMap };
     }
 
     private static List<MethodValueManifest> ManifestValues(IReadOnlyList<TypedParameter>? values) =>
@@ -232,9 +342,9 @@ internal sealed class CfgCSharpGenerator {
     /// <summary>Applies DOS call comments, single-case switch simplification and direction-flag
     /// step folding to the prepared bodies.</summary>
     private static void RewritePreparedBodies(
-        List<PreparedMethod> prepared, CfgPartitionedProgram program, ProgramAnalysis analysis) {
+        PreparedMethod[] prepared, CfgPartitionedProgram program, ProgramAnalysis analysis) {
         ApplyDosCallComments(prepared, program, analysis.SegmentSummaries);
-        for (int i = 0; i < prepared.Count; i++) {
+        for (int i = 0; i < prepared.Length; i++) {
             PreparedMethod method = prepared[i];
             prepared[i] = method with { Body = SingleCaseSwitchRewriter.Apply(method.Body) };
         }
@@ -245,8 +355,8 @@ internal sealed class CfgCSharpGenerator {
     /// <see cref="ProgramAnalysis"/> because the direction at a partition entry comes from the
     /// program-wide call-graph meet.</summary>
     private static void ApplyDirectionSteps(
-        List<PreparedMethod> prepared, IrSegmentSummaries summaries) {
-        for (int i = 0; i < prepared.Count; i++) {
+        PreparedMethod[] prepared, IrSegmentSummaries summaries) {
+        for (int i = 0; i < prepared.Length; i++) {
             PreparedMethod preparedMethod = prepared[i];
             BlockNode body = IrEntryDirectionSteps.Apply(preparedMethod.IrMethod,
                 summaries.ValuesFor(preparedMethod.Method), preparedMethod.Body);
@@ -260,9 +370,9 @@ internal sealed class CfgCSharpGenerator {
     /// the segment values fully describe, from bytes the changed-memory snapshot proves untouched.
     /// A snapshot that proves no byte unchanged gives no comments.</summary>
     private static void ApplyDosCallComments(
-        List<PreparedMethod> prepared,
+        PreparedMethod[] prepared,
         CfgPartitionedProgram program, IrSegmentSummaries summaries) {
-        for (int i = 0; i < prepared.Count; i++) {
+        for (int i = 0; i < prepared.Length; i++) {
             PreparedMethod preparedMethod = prepared[i];
             Dictionary<SegmentedAddress, DosCallResolution> resolutions = DosCallComments.Resolve(
                 preparedMethod, summaries.ValuesFor(preparedMethod.Method),
@@ -332,7 +442,7 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     internal IReadOnlyList<LiftedMethod> LiftMethods(CfgPartitionedProgram program) {
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic, _policy);
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);
@@ -357,23 +467,77 @@ internal sealed class CfgCSharpGenerator {
     /// method boundaries into numbered parts.
     /// </summary>
     private List<GeneratedSourceFile> BuildSegmentFiles(
-        List<(ushort Segment, string Text, bool HasFrame)> methodTexts) {
+        List<PrintedMethod> methodTexts,
+        List<AddressMapEntryManifest> addressMap) {
         List<GeneratedSourceFile> files = [];
-        foreach (IGrouping<ushort, (ushort Segment, string Text, bool HasFrame)> group in methodTexts
+        foreach (var group in methodTexts
             .GroupBy(method => method.Segment)
             .OrderBy(group => group.Key)) {
-            files.AddRange(BuildSegmentPartFiles(group.Key,
-                group.Select(method => (method.Text, method.HasFrame)).ToList()));
+            files.AddRange(BuildSegmentPartFiles(group.Key, group.ToList(), addressMap));
+        }
+        return files;
+    }
+
+    /// <summary>
+    /// Builds the support-stub files: every method the emulator wrote itself, in entry-address
+    /// order, split at method boundaries on the same line limit as the segment files.
+    /// </summary>
+    private List<GeneratedSourceFile> BuildSupportStubFiles(
+        List<PrintedMethod> methodTexts,
+        List<AddressMapEntryManifest> addressMap) {
+        var chunks = methodTexts
+            .OrderBy(method => method.EntryLinear)
+            .ToList();
+        if (chunks.Count == 0) {
+            return [];
+        }
+        List<List<PrintedMethod>> parts = SplitChunks(chunks);
+        List<GeneratedSourceFile> files = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++) {
+            string name = GeneratedOverrideNames.SupportStubsFileName(i + 1, parts.Count);
+            files.Add(new GeneratedSourceFile(name, BuildPartFileText(parts[i], name, addressMap)));
         }
         return files;
     }
 
     private List<GeneratedSourceFile> BuildSegmentPartFiles(ushort segment,
-        List<(string Text, bool HasFrame)> chunks) {
+        List<PrintedMethod> chunks,
+        List<AddressMapEntryManifest> addressMap) {
+        var parts = SplitChunks(chunks);
+        List<GeneratedSourceFile> files = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++) {
+            string name = SegmentFileName(segment, i + 1, parts.Count);
+            files.Add(new GeneratedSourceFile(name, BuildPartFileText(parts[i], name, addressMap)));
+        }
+        return files;
+    }
+
+    /// <summary>Assembles one segment or stubs file and records every instruction's 1-based line
+    /// range of its methods into <paramref name="addressMap"/>.</summary>
+    private static string BuildPartFileText(
+        List<PrintedMethod> part, string fileName,
+        List<AddressMapEntryManifest> addressMap) {
+        string prefix = SegmentFilePrefix(part.Any(chunk => chunk.HasFrame));
+        int startIndex = CountLines(prefix);
+        StringBuilder text = new(prefix);
+        foreach (var chunk in part) {
+            foreach (MethodInstructionLine instruction in chunk.Instructions) {
+                addressMap.Add(new AddressMapEntryManifest(instruction.Address.ToString(), fileName,
+                    chunk.MethodName, startIndex + instruction.FirstLine + 1,
+                    startIndex + instruction.LastLine + 1));
+            }
+            text.Append(chunk.Text);
+            startIndex += CountLines(chunk.Text);
+        }
+        text.Append("}\n");
+        return text.ToString();
+    }
+
+    private List<List<PrintedMethod>> SplitChunks(List<PrintedMethod> chunks) {
         int overhead = CountLines(SegmentFilePrefix(true)) + 1;
-        List<List<(string Text, bool HasFrame)>> parts = [[]];
+        List<List<PrintedMethod>> parts = [[]];
         int lines = overhead;
-        foreach ((string Text, bool HasFrame) chunk in chunks) {
+        foreach (var chunk in chunks) {
             int chunkLines = CountLines(chunk.Text);
             if (parts[^1].Count > 0 && lines + chunkLines > _maxLinesPerFile) {
                 parts.Add([]);
@@ -382,13 +546,7 @@ internal sealed class CfgCSharpGenerator {
             parts[^1].Add(chunk);
             lines += chunkLines;
         }
-        List<GeneratedSourceFile> files = new(parts.Count);
-        for (int i = 0; i < parts.Count; i++) {
-            files.Add(new GeneratedSourceFile(SegmentFileName(segment, i + 1, parts.Count),
-                SegmentFilePrefix(parts[i].Any(chunk => chunk.HasFrame)) +
-                string.Concat(parts[i].Select(chunk => chunk.Text)) + "}\n"));
-        }
-        return files;
+        return parts;
     }
 
     private static string SegmentFilePrefix(bool frameTypes) {
@@ -465,7 +623,7 @@ internal sealed class CfgCSharpGenerator {
     /// underscores, so each name remains a valid C# identifier.
     /// </summary>
     private static IReadOnlyList<SpeculativeRunFieldPlan> NameSpeculativeRunFields(
-        List<PreparedMethod> prepared) {
+        PreparedMethod[] prepared) {
         Dictionary<(SegmentedAddress Address, string Fields), IReadOnlyList<string>> runs = [];
         foreach (PreparedMethod preparedMethod in prepared) {
             foreach (SpeculativeGuardNode node in SpeculativeRuns(preparedMethod.Body)) {
@@ -483,7 +641,7 @@ internal sealed class CfgCSharpGenerator {
                 entry => string.Join("_", entry.Value));
         Dictionary<(SegmentedAddress, string), string> nameByRun =
             ordered.ToDictionary(entry => entry.Key, entry => names[entry]);
-        for (int i = 0; i < prepared.Count; i++) {
+        for (int i = 0; i < prepared.Length; i++) {
             PreparedMethod preparedMethod = prepared[i];
             prepared[i] = preparedMethod with {
                 Body = (BlockNode)AssignRunFieldNames(preparedMethod.Body, nameByRun)
@@ -543,11 +701,17 @@ internal sealed class CfgCSharpGenerator {
     /// </summary>
     private static void EmitEntryFields(CSharpSourceWriter writer, GenerationPlan plan,
         TypedSignatures typedSignatures) {
-        List<string> fields = plan.OverrideRegistrations
-            .Where(registration => registration.SingleEntry)
-            .Select(registration => GeneratedOverrideNames.EntryFieldNameOf(
-                typedSignatures.DelegateNameOf(registration.MethodName)))
+        // One field per single-entry method, whether or not its address registration survived
+        // deduplication: helper call sites reference the field of any single-entry method.
+        List<string> fields = plan.Methods
+            .Where(method => method.Entries.Count == 1)
+            .Select(method => GeneratedOverrideNames.EntryFieldNameOf(
+                typedSignatures.DelegateNameOf(method.MethodName)))
             .ToList();
+        fields.AddRange(plan.Methods.Where(method => method.Entries.Count > 1)
+            .SelectMany(method => method.Entries.Skip(1)
+                .Where(entry => entry.Address.Offset != 0)
+                .Select(entry => GeneratedOverrideNames.EntryFieldNameOf(method.MethodName, entry.Address.Offset))));
         if (fields.Count == 0) {
             return;
         }
@@ -941,10 +1105,12 @@ internal sealed class CfgCSharpGenerator {
         }
     }
 
-    private static void EmitConstructor(CSharpSourceWriter writer, GenerationPlan plan,
+    private static void EmitConstructor(CSharpSourceWriter writer, CfgPartitionedProgram program,
+        GenerationPlan plan,
         IReadOnlyList<GlobalAccessClassification.GlobalClassInfo> globalsClasses,
         IReadOnlyList<GlobalAccessClassification.TableClassInfo> tableClasses,
-        TypedSignatures typedSignatures) {
+        TypedSignatures typedSignatures,
+        IReadOnlyDictionary<(SegmentedAddress ExpectedReturn, MethodGroupNode? Target), CallLandingListNode> callLandings) {
         writer.OpenBlock($"public {GeneratedOverrideNames.OverrideClassName}(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration)");
         foreach (SegmentFieldPlan segment in plan.SegmentFields) {
             writer.Line($"{segment.FieldName} = {segment.Initializer};");
@@ -964,23 +1130,138 @@ internal sealed class CfgCSharpGenerator {
             }
         }
         writer.Line();
-        foreach (string delegateName in plan.OverrideRegistrations
-            .Where(registration => registration.SingleEntry)
-            .Select(registration => typedSignatures.DelegateNameOf(registration.MethodName))) {
+        foreach (string delegateName in plan.Methods
+            .Where(method => method.Entries.Count == 1)
+            .Select(method => typedSignatures.DelegateNameOf(method.MethodName))) {
             writer.Line($"{GeneratedOverrideNames.EntryFieldNameOf(delegateName)} = _ => {delegateName}();");
         }
-        foreach (OverrideRegistration registration in plan.OverrideRegistrations) {
-            if (registration.SingleEntry) {
-                string delegateName = typedSignatures.DelegateNameOf(registration.MethodName);
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {GeneratedOverrideNames.EntryFieldNameOf(delegateName)}, \"{registration.BaseName}\");");
-            } else if (registration.LoadOffset == 0) {
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {registration.MethodName}, \"{registration.BaseName}\");");
-            } else {
-                string entryName = BuildSecondaryEntryName(registration.BaseName);
-                writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, _ => {registration.MethodName}(0x{registration.LoadOffset:X4}), \"{entryName}\");");
+        foreach (MethodPlan method in plan.Methods.Where(method => method.Entries.Count > 1)) {
+            foreach (CfgCodePartitionEntry entry in method.Entries.Skip(1).Where(entry => entry.Address.Offset != 0)) {
+                int loadOffset = entry.Address.Offset;
+                writer.Line($"{GeneratedOverrideNames.EntryFieldNameOf(method.MethodName, loadOffset)} = _ => {method.MethodName}(0x{loadOffset:X4});");
             }
         }
+        Dictionary<ushort, string> segmentVariable = plan.SegmentFields
+            .ToDictionary(field => field.Segment, field => field.FieldName);
+        // The entries a terminate's batch-launch resume runs: the armed call landings pointing at
+        // the recorded resume targets - the arm names the right entry even when several partitions
+        // serve the same address under different contexts.
+        List<(SegmentedAddress Address, MethodGroupNode Entry)> batchResumes = [.. callLandings
+            .SelectMany(row => row.Value.Arms)
+            .Where(arm => program.Inputs.HardwareInterrupts.TerminateResumeTargets
+                .Contains(arm.Address))
+            .Distinct()];
+        foreach (OverrideRegistration registration in plan.OverrideRegistrations) {
+            string symbolName = registration.SingleEntry || registration.LoadOffset == 0
+                ? registration.BaseName
+                : BuildSecondaryEntryName(registration.BaseName);
+            string delegateExpression = DelegateExpressionOf(registration, typedSignatures);
+            if (batchResumes.Count > 0
+                && registration.Address.Equals(program.Inputs.ProgramEntryPoint)) {
+                string arms = string.Join(", ", batchResumes
+                    .OrderBy(arm => arm.Address.Linear)
+                    .ThenBy(arm => arm.Entry.MethodName)
+                    .Select(arm =>
+                        $"new CallLanding(new({segmentVariable[arm.Address.Segment]}, 0x{arm.Address.Offset:X4}), {EntryDelegateExpression(arm.Entry.MethodName, arm.Entry.LoadOffset, arm.Entry.SingleEntry, typedSignatures)})"));
+                delegateExpression = $"RunBatchPrograms({delegateExpression}, {arms})";
+            }
+            writer.Line($"DefineFunctionWithoutInterpreterFallback({registration.SegmentVariable}, 0x{registration.Offset:X4}, {delegateExpression}, \"{symbolName}\");");
+        }
+        List<(SegmentedAddress ExpectedReturn, string Arms, List<string> Targets)> landingGroups = [];
+        Dictionary<(SegmentedAddress ExpectedReturn, string Arms), List<string>> targetsByGroup = [];
+        foreach (KeyValuePair<(SegmentedAddress ExpectedReturn, MethodGroupNode? Target), CallLandingListNode> row in callLandings
+            .OrderBy(row => row.Key.ExpectedReturn.Linear)
+            .ThenBy(row => row.Key.Target?.MethodName)
+            .ThenBy(row => row.Key.Target?.LoadOffset)) {
+            SegmentedAddress expectedReturn = row.Key.ExpectedReturn;
+            string target = row.Key.Target is { } function
+                ? EntryDelegateExpression(function.MethodName, function.LoadOffset, function.SingleEntry, typedSignatures)
+                : "null";
+            string arms = string.Join(", ", row.Value.Arms.Select(arm =>
+                $"new CallLanding(new({segmentVariable[arm.Address.Segment]}, 0x{arm.Address.Offset:X4}), {EntryDelegateExpression(arm.Entry.MethodName, arm.Entry.LoadOffset, arm.Entry.SingleEntry, typedSignatures)})"));
+            (SegmentedAddress ExpectedReturn, string Arms) groupKey = (expectedReturn, arms);
+            if (!targetsByGroup.TryGetValue(groupKey, out List<string>? targets)) {
+                targets = [];
+                targetsByGroup.Add(groupKey, targets);
+                landingGroups.Add((expectedReturn, arms, targets));
+            }
+            targets.Add(target);
+        }
+        foreach ((SegmentedAddress expectedReturn, string arms, List<string> targets) in landingGroups) {
+            writer.Line($"DefineCallLandings(new({segmentVariable[expectedReturn.Segment]}, 0x{expectedReturn.Offset:X4}), [{string.Join(", ", targets)}], {arms});");
+        }
         writer.CloseBlock();
+        writer.Line();
+    }
+
+    /// <summary>The <c>Func&lt;int, Action&gt;</c> expression a registration installs at its address:
+    /// the cached entry delegate of a single-entry method, the method itself for a primary entry, or a
+    /// <c>loadOffset</c>-passing lambda for a secondary entry.</summary>
+    private static string DelegateExpressionOf(OverrideRegistration registration,
+        TypedSignatures typedSignatures) =>
+        EntryDelegateExpression(registration.MethodName, registration.LoadOffset,
+            registration.SingleEntry, typedSignatures);
+
+    /// <summary>The <c>Func&lt;int, Action&gt;</c> expression for an entry of the method
+    /// <paramref name="methodName"/>: its cached entry delegate when the method has one entry, the
+    /// method itself for a primary entry, or the cached <c>loadOffset</c>-passing delegate field for a
+    /// secondary entry.</summary>
+    private static string EntryDelegateExpression(string methodName, int loadOffset, bool singleEntry,
+        TypedSignatures typedSignatures) {
+        if (singleEntry) {
+            return GeneratedOverrideNames.EntryFieldNameOf(typedSignatures.DelegateNameOf(methodName));
+        }
+        if (loadOffset == 0) {
+            return methodName;
+        }
+        return GeneratedOverrideNames.EntryFieldNameOf(methodName, loadOffset);
+    }
+
+    /// <summary>
+    /// Emits the generated <c>HardwareInterruptFunction</c>: a switch over the (vector, handler) pairs
+    /// discovery observed as hardware-interrupt deliveries, so a delivery to a handler the run never
+    /// observed fails as untested instead of silently running whatever override happens to be registered
+    /// there. The observed pairs are the deliveries <see cref="CfgCpu"/> recorded during the run
+    /// (<see cref="HardwareInterruptSetup.HardwareInterruptDeliveries"/>) restricted to targets that got a
+    /// generated entry; each arm returns the same entry delegate the constructor registers at that address.
+    /// A program with no observed delivery emits nothing: the base
+    /// <c>CSharpOverrideHelper.HardwareInterruptFunction</c> then fails every delivery as untested.
+    /// </summary>
+    private static void EmitHardwareInterruptDispatch(CSharpSourceWriter writer, CfgPartitionedProgram program,
+        GenerationPlan plan, TypedSignatures typedSignatures) {
+        HardwareInterruptSetup setup = program.Inputs.HardwareInterrupts;
+        HashSet<SegmentedAddress> delivered = program.Partitions
+            .SelectMany(partition => partition.Entries)
+            .Where(entry => entry.Kind == CfgCodePartitionEntryKind.ExecutionContextEntry
+                && !entry.Address.Equals(program.Inputs.ProgramEntryPoint))
+            .Select(entry => entry.Address)
+            .ToHashSet();
+        Dictionary<SegmentedAddress, string> functionByAddress = plan.OverrideRegistrations
+            .ToDictionary(registration => registration.Address,
+                registration => DelegateExpressionOf(registration, typedSignatures));
+        List<string> arms = setup.HardwareInterruptDeliveries
+            .OrderBy(delivery => delivery.Vector)
+            .ThenBy(delivery => delivery.Target.Linear)
+            .Distinct()
+            .Where(delivery => delivered.Contains(delivery.Target)
+                && functionByAddress.TryGetValue(delivery.Target, out _))
+            .Select(delivery =>
+                $"(0x{delivery.Vector:X2}, 0x{delivery.Target.Segment:X4}, 0x{delivery.Target.Offset:X4}) => {functionByAddress[delivery.Target]},")
+            .ToList();
+        if (arms.Count == 0) {
+            return;
+        }
+        writer.Line("protected override Func<int, Action> HardwareInterruptFunction(byte vectorNumber, SegmentedAddress target) =>");
+        writer.Indent();
+        writer.Line("(vectorNumber, target.Segment, target.Offset) switch {");
+        writer.Indent();
+        foreach (string arm in arms) {
+            writer.Line(arm);
+        }
+        writer.Line("_ => throw FailAsUntested($\"Hardware interrupt 0x{vectorNumber:X2} targets {target}, which discovery did not observe as a handler of that vector\")");
+        writer.Dedent();
+        writer.Line("};");
+        writer.Dedent();
         writer.Line();
     }
 

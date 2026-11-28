@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Dos;
 using Spice86.Shared.Emulator.Memory;
@@ -52,6 +53,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly ILogger _loggerService;
     private readonly DosBatchExecutionEngine _batchExecutionEngine;
     private readonly LoadedImageRegistry _loadedImageRegistry;
+    private readonly RecordedRunFacts _recordedRunFacts;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
@@ -120,6 +122,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to UI subscribers.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
     /// <param name="loadedImageRegistry">Records every program image the load paths write.</param>
+    /// <param name="recordedRunFacts">Records the entries terminates resume at through batch launches.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
@@ -132,6 +135,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         IDriveActivityNotifier activityNotifier,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         LoadedImageRegistry loadedImageRegistry,
+        RecordedRunFacts recordedRunFacts,
         IDictionary<string, string> envVars, ILogger loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
@@ -144,6 +148,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _state = state;
         _loggerService = loggerService;
         _loadedImageRegistry = loadedImageRegistry;
+        _recordedRunFacts = recordedRunFacts;
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
             driveStatusProvider,
@@ -195,10 +200,14 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Gets or sets the return code of the last terminated child process.
     /// </summary>
     /// <remarks>
+    /// Stored in the SDA at offset 14h, where real DOS keeps it for INT 21h/4Dh.
     /// The low byte (AL) contains the exit code, and the high byte (AH) contains
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
     /// </remarks>
-    public ushort LastChildReturnCode { get; set; }
+    public ushort LastChildReturnCode {
+        get => _sda.ReturnCode;
+        set => _sda.ReturnCode = value;
+    }
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
 
@@ -358,9 +367,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
         // Read CS:IP from the stack to get the address where the parent will resume.
-        ushort callerIP = _stack.Peek16(0);
-        ushort callerCS = _stack.Peek16(2);
-        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, loadType, environmentSegment, callerCS, callerIP);
+        SegmentedAddress callerAddress = _stack.PeekInterruptFrameReturnAddress();
+        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, loadType, environmentSegment, callerAddress.Segment, callerAddress.Offset);
     }
 
     /// <summary>
@@ -551,7 +559,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosProgram, hostPath,
             block.DataBlockSegment,
-            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize));
+            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize,
+            (ushort)(exeFile.InitSS + loadImageSegment)));
 
         return exeResult;
     }
@@ -605,7 +614,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loadedImageRegistry.Register(new LoadedImage(imageKind, hostPath,
             comBlock.DataBlockSegment,
             MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize),
-            (uint)fileBytes.Length));
+            (uint)fileBytes.Length, comBlock.DataBlockSegment));
 
         return comResult;
     }
@@ -776,8 +785,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _stack.Poke16(2, terminateAddr.Segment);
 
         if (_loggerService.IsEnabled(LogLevel.Information)) {
-            _loggerService.LogInformation("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
-                _state.SS, _state.SP, _stack.Peek16(2), _stack.Peek16(0));
+            _loggerService.LogInformation("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2}",
+                _state.SS, _state.SP, _stack.PeekInterruptFrameReturnAddress());
         }
 
         _state.DS = parentPspSegment;
@@ -790,6 +799,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 // Halt emulation; COMMAND.COM has no execution context.
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
+            } else {
+                _recordedRunFacts.RecordTerminateResume(_state.IpSegmentedAddress);
             }
         }
     }
