@@ -95,6 +95,8 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<ICfgNode, List<(MethodData Caller, CallSite Site)>> _callSitesByContinuation = new();
     private readonly Dictionary<CfgCodePartitionEntry, MethodData> _methodByEntry = new();
     private readonly Dictionary<CfgCodePartitionEntry, List<MethodData>> _methodsByCallTarget = new();
+    private readonly Dictionary<CfgCodePartitionEntry, CpuValues> _observedEntryReads = new();
+    private int _inputsGeneration;
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly HashSet<ICfgNode> _executionContextNodes = [];
     private readonly List<MethodData> _methods = [];
@@ -232,8 +234,11 @@ internal sealed class IrCallingConventions {
     /// under the code conventions this is <see cref="CpuValues.None"/> so the printed inputs stay
     /// code demand; under the observed conventions it widens what a transfer or a return landing
     /// on the entry must deliver.</summary>
-    private CpuValues ObservedEntryReads(CfgCodePartitionEntry entry) {
-        if (!_observed || !_methodByEntry.TryGetValue(entry, out MethodData? target)) {
+    private CpuValues ObservedEntryReads(CfgCodePartitionEntry entry) =>
+        _observedEntryReads.GetValueOrDefault(entry, CpuValues.None);
+
+    private CpuValues ComputeObservedEntryReads(CfgCodePartitionEntry entry) {
+        if (!_methodByEntry.TryGetValue(entry, out MethodData? target)) {
             return CpuValues.None;
         }
         CpuValues reads = CpuValues.None;
@@ -763,6 +768,7 @@ internal sealed class IrCallingConventions {
         /// then run again after the call.</summary>
         public HashSet<IrBlock>? AfterBlocks { get; set; }
         public required List<CfgCodePartitionEntry> Targets { get; init; }
+        public TargetsInputsMemo? InputsMemo { get; set; }
         public required bool Resolved { get; init; }
         /// <summary>Whether a continuation was observed after the call during discovery.</summary>
         public required bool ObservedContinuation { get; init; }
@@ -802,6 +808,8 @@ internal sealed class IrCallingConventions {
         /// not generated.</summary>
         public bool LandingsResolved { get; init; }
     }
+
+    private sealed record TargetsInputsMemo(int Generation, CpuValues Inputs);
 
     private sealed class MethodData {
         public required PreparedMethod Source { get; init; }
@@ -879,6 +887,11 @@ internal sealed class IrCallingConventions {
                     _methodsByCallTarget[target] = callers;
                 }
                 callers.Add(method);
+            }
+        }
+        if (_observed) {
+            foreach (CfgCodePartitionEntry entry in _methodByEntry.Keys) {
+                _observedEntryReads[entry] = ComputeObservedEntryReads(entry);
             }
         }
     }
@@ -1355,6 +1368,7 @@ internal sealed class IrCallingConventions {
                     CpuValues inputs = ComputeInputs(method, site);
                     if (inputs != state.Inputs) {
                         state.Inputs = inputs;
+                        _inputsGeneration++;
                         changed = true;
                         if (_readersOf.TryGetValue(site.Entry, out HashSet<MethodData>? readers)) {
                             foreach (MethodData reader in readers) {
@@ -1427,6 +1441,7 @@ internal sealed class IrCallingConventions {
                 // convergence is not guaranteed: fall back to the conservative answer.
                 foreach (EntryState state in _states.Values) {
                     state.Inputs = Reportable;
+                    _inputsGeneration++;
                     state.Changes = Reportable;
                     state.Outputs = Reportable;
                 }
@@ -1826,6 +1841,9 @@ internal sealed class IrCallingConventions {
     /// <summary>The machine values the site reads at call time: its resolved targets' inputs,
     /// plus the six status flags and DF when it is an <c>int</c> pushing the FLAGS image.</summary>
     private CpuValues TargetsInputs(CallSite call) {
+        if (call.InputsMemo is { } memo && memo.Generation == _inputsGeneration) {
+            return memo.Inputs;
+        }
         CpuValues inputs = CpuValues.None;
         foreach (CfgCodePartitionEntry target in call.Targets) {
             inputs |= _states[target].Inputs | ObservedEntryReads(target);
@@ -1833,6 +1851,7 @@ internal sealed class IrCallingConventions {
         if (call.WritesInterruptFrame) {
             inputs |= CpuValues.StatusFlags | CpuValues.Direction;
         }
+        call.InputsMemo = new(_inputsGeneration, inputs);
         return inputs;
     }
 
