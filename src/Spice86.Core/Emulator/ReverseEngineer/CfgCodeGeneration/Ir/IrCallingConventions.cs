@@ -94,6 +94,7 @@ internal sealed class IrCallingConventions {
     private readonly Dictionary<CfgCodePartitionEntry, List<(MethodData Caller, ExitSite Site)>> _transfersTo = new();
     private readonly Dictionary<ICfgNode, List<(MethodData Caller, CallSite Site)>> _callSitesByContinuation = new();
     private readonly Dictionary<CfgCodePartitionEntry, MethodData> _methodByEntry = new();
+    private readonly Dictionary<CfgCodePartitionEntry, List<MethodData>> _methodsByCallTarget = new();
     private readonly Dictionary<CfgCodePartitionEntry, HashSet<MethodData>> _readersOf = new();
     private readonly HashSet<ICfgNode> _executionContextNodes = [];
     private readonly List<MethodData> _methods = [];
@@ -816,6 +817,10 @@ internal sealed class IrCallingConventions {
         /// <summary>The partition entries the method's terminators (exits and conditional
         /// branches alike) hand control to, resolved or not.</summary>
         public required List<CfgCodePartitionEntry> TransferTargets { get; init; }
+        public CfgCodePartitionEntry[] DistinctCallTargets { get; set; } = [];
+        /// <summary><see langword="true"/> means every entry of <see cref="Entries"/> is in the dirty-site
+        /// set and every entry of <see cref="DistinctCallTargets"/> is in the dirty-output set.</summary>
+        public bool MarkPending { get; set; }
         /// <summary>Whether a terminator transfers to a target that maps to no partition
         /// entry - an edge into unmodelled code.</summary>
         public bool HasUnresolvedTransfer { get; set; }
@@ -862,6 +867,19 @@ internal sealed class IrCallingConventions {
         // only once that method has been preprocessed.
         foreach (MethodData method in _methods) {
             PreprocessExits(method);
+        }
+        foreach (MethodData method in _methods) {
+            method.DistinctCallTargets = method.Calls
+                .SelectMany(call => call.Targets)
+                .Distinct()
+                .ToArray();
+            foreach (CfgCodePartitionEntry target in method.DistinctCallTargets) {
+                if (!_methodsByCallTarget.TryGetValue(target, out List<MethodData>? callers)) {
+                    callers = [];
+                    _methodsByCallTarget[target] = callers;
+                }
+                callers.Add(method);
+            }
         }
     }
 
@@ -1270,14 +1288,16 @@ internal sealed class IrCallingConventions {
     private void MarkDirtyMethod(MethodData method, HashSet<CfgCodePartitionEntry> sitesDirty,
         HashSet<CfgCodePartitionEntry> outputsDirty) {
         method.MemoStale = true;
+        if (method.MarkPending) {
+            return;
+        }
         foreach (EntrySite site in method.Entries) {
             sitesDirty.Add(site.Entry);
         }
-        foreach (CallSite call in method.Calls) {
-            foreach (CfgCodePartitionEntry target in call.Targets) {
-                outputsDirty.Add(target);
-            }
+        foreach (CfgCodePartitionEntry target in method.DistinctCallTargets) {
+            outputsDirty.Add(target);
         }
+        method.MarkPending = true;
     }
 
     /// <summary>Drops <paramref name="method"/>'s memos when a state they were computed under
@@ -1318,6 +1338,9 @@ internal sealed class IrCallingConventions {
         // result is identical.
         HashSet<CfgCodePartitionEntry> sitesDirty = new(_methodByEntry.Keys);
         HashSet<CfgCodePartitionEntry> outputsDirty = new(_states.Keys);
+        foreach (MethodData method in _methods) {
+            method.MarkPending = false;
+        }
         for (int iteration = 0; ; iteration++) {
             roundStarted(iteration + 1);
             bool changed = false;
@@ -1326,6 +1349,7 @@ internal sealed class IrCallingConventions {
                     if (!sitesDirty.Remove(site.Entry)) {
                         continue;
                     }
+                    method.MarkPending = false;
                     ClearMemosIfStale(method);
                     EntryState state = _states[site.Entry];
                     CpuValues inputs = ComputeInputs(method, site);
@@ -1354,6 +1378,11 @@ internal sealed class IrCallingConventions {
             foreach ((CfgCodePartitionEntry entry, EntryState state) in _states) {
                 if (!outputsDirty.Remove(entry)) {
                     continue;
+                }
+                if (_methodsByCallTarget.TryGetValue(entry, out List<MethodData>? callers)) {
+                    foreach (MethodData caller in callers) {
+                        caller.MarkPending = false;
+                    }
                 }
                 CpuValues outputs = state.Changes & LiveAfter(entry, state);
                 if (outputs != state.Outputs) {
