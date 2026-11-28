@@ -21,6 +21,7 @@ using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Linq;
 
 /// <summary>
@@ -92,6 +93,7 @@ internal sealed class HardwareInterruptEffectBuilder {
         IrValueSets.ValuesIn(CpuValues.Registers | DeliveredFlags);
 
     private readonly object _summaryLock = new();
+    private readonly ConcurrentDictionary<InterruptServiceVector, bool> _builtInOnly = new();
     private readonly CfgGeneratorContext _context;
     private readonly TransferEmitter _transferEmitter;
     private readonly AstInstructionRenderer _assemblyRenderer;
@@ -783,7 +785,10 @@ internal sealed class HardwareInterruptEffectBuilder {
     /// is skipped. The dump-time vector table
     /// entry, when the snapshot covers it, must still point at the stub: a custom handler that
     /// was seen and later uninstalled is a conflicting live target like any other.</summary>
-    internal bool HasOnlyBuiltInTargets(InterruptServiceVector service) {
+    internal bool HasOnlyBuiltInTargets(InterruptServiceVector service) =>
+        _builtInOnly.GetOrAdd(service, ComputeHasOnlyBuiltInTargets);
+
+    private bool ComputeHasOnlyBuiltInTargets(InterruptServiceVector service) {
         bool anySite = false;
         foreach (CfgInstruction instruction in _context.Program.Partitions
                 .SelectMany(partition => partition.Blocks)
